@@ -506,7 +506,7 @@
           {{ t('common.back') placeholderplaceholder
         </button>
         <button
-          v-if="oauthFlowRef?.inputMethod?.value === 'manual'"
+          v-if="isManualInputMethod"
           type="button"
           :disabled="!canExchangeCode"
           class="btn btn-primary"
@@ -533,13 +533,21 @@ import { ref, reactive, computed, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
-import { useAccountOAuth, type AddMethod placeholder from '@/composables/useAccountOAuth'
+import { useAccountOAuth, type AddMethod, type AuthInputMethod placeholder from '@/composables/useAccountOAuth'
 import type { Proxy, Group, AccountPlatform, AccountType placeholder from '@/types'
 import Modal from '@/components/common/Modal.vue'
-import Select from '@/components/common/Select.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
 import OAuthAuthorizationFlow from './OAuthAuthorizationFlow.vue'
+
+// Type for exposed OAuthAuthorizationFlow component
+// Note: defineExpose automatically unwraps refs, so we use the unwrapped types
+interface OAuthFlowExposed {
+  authCode: string
+  sessionKey: string
+  inputMethod: AuthInputMethod
+  reset: () => void
+placeholder
 
 const { t placeholder = useI18n()
 
@@ -561,7 +569,7 @@ const appStore = useAppStore()
 const oauth = useAccountOAuth()
 
 // Refs
-const oauthFlowRef = ref<InstanceType<typeof OAuthAuthorizationFlow> | null>(null)
+const oauthFlowRef = ref<OAuthFlowExposed | null>(null)
 
 // Model mapping type
 interface ModelMapping {
@@ -630,8 +638,12 @@ placeholder)
 // Helper to check if current type needs OAuth flow
 const isOAuthFlow = computed(() => accountCategory.value === 'oauth-based')
 
+const isManualInputMethod = computed(() => {
+  return oauthFlowRef.value?.inputMethod === 'manual'
+placeholder)
+
 const canExchangeCode = computed(() => {
-  const authCode = oauthFlowRef.value?.authCode?.value || ''
+  const authCode = oauthFlowRef.value?.authCode || ''
   return authCode.trim() && oauth.sessionId.value && !oauth.loading.value
 placeholder)
 
@@ -815,7 +827,7 @@ const handleGenerateUrl = async () => {
 placeholder
 
 const handleExchangeCode = async () => {
-  const authCode = oauthFlowRef.value?.authCode?.value || ''
+  const authCode = oauthFlowRef.value?.authCode || ''
   if (!authCode.trim() || !oauth.sessionId.value) return
 
   oauth.loading.value = true

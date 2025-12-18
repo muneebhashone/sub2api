@@ -86,15 +86,9 @@
 <script setup lang="ts">
 import { computed, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
+import type { Column placeholder from './types'
 
 const { t placeholder = useI18n()
-
-export interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  formatter?: (value: any, row: any) => string
-placeholder
 
 interface Props {
   columns: Column[]

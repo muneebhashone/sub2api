@@ -10,4 +10,4 @@ export { default as EmptyState placeholder from './EmptyState.vue'
 export { default as LocaleSwitcher placeholder from './LocaleSwitcher.vue'
 
 // Export types
-export type { Column placeholder from './DataTable.vue'
+export type { Column placeholder from './types'

@@ -152,6 +152,12 @@ placeholder
 
 // ==================== API Response Types ====================
 
+export interface ApiResponse<T = unknown> {
+  code: number;
+  message: string;
+  data: T;
+placeholder
+
 export interface ApiError {
   detail: string;
   code?: string;
@@ -357,6 +363,7 @@ placeholder
 
 export interface UpdateAccountRequest {
   name?: string;
+  type?: AccountType;
   credentials?: Record<string, unknown>;
   extra?: Record<string, string>;
   proxy_id?: number | null;

@@ -641,7 +641,7 @@ const { t placeholder = useI18n()
 import { adminAPI placeholder from '@/api/admin'
 import type { User, ApiKey, Group placeholder from '@/types'
 import type { BatchUserUsageStats placeholder from '@/api/admin/dashboard'
-import type { Column placeholder from '@/components/common/DataTable.vue'
+import type { Column placeholder from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Pagination from '@/components/common/Pagination.vue'

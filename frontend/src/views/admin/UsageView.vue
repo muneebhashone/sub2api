@@ -292,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch placeholder from 'vue'
+import { ref, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
@@ -303,7 +303,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import Select from '@/components/common/Select.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import type { UsageLog placeholder from '@/types'
-import type { Column placeholder from '@/components/common/DataTable.vue'
+import type { Column placeholder from '@/components/common/types'
 import type { SimpleUser, SimpleApiKey, AdminUsageStatsResponse, AdminUsageQueryParams placeholder from '@/api/admin/usage'
 
 const { t placeholder = useI18n()

@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted placeholder from 'vue';
+import { ref, onMounted, onUnmounted placeholder from 'vue';
 import { useRouter placeholder from 'vue-router';
 import { AuthLayout placeholder from '@/components/layout';
 import TurnstileWidget from '@/components/TurnstileWidget.vue';

@@ -69,7 +69,6 @@
 
 <script setup lang="ts">
 import type { Component placeholder from 'vue'
-import { RouterLink placeholder from 'vue-router'
 
 interface Props {
   icon?: Component | string
@@ -81,7 +80,7 @@ interface Props {
   message?: string
 placeholder
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   title: 'No data found',
   description: '',
   actionIcon: true

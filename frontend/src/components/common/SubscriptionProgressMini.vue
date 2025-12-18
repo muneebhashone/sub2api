@@ -121,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch placeholder from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount placeholder from 'vue';
 import { useI18n placeholder from 'vue-i18n';
 import subscriptionsAPI from '@/api/subscriptions';
 import type { UserSubscription placeholder from '@/types';

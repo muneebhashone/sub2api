@@ -450,7 +450,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
 import type { Group, GroupPlatform, SubscriptionType placeholder from '@/types'
-import type { Column placeholder from '@/components/common/DataTable.vue'
+import type { Column placeholder from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Pagination from '@/components/common/Pagination.vue'
@@ -570,7 +570,7 @@ const loadGroups = async () => {
       pagination.page,
       pagination.page_size,
       {
-        platform: filters.platform || undefined,
+        platform: (filters.platform as GroupPlatform) || undefined,
         status: filters.status as any,
         is_exclusive: filters.is_exclusive ? filters.is_exclusive === 'true' : undefined
       placeholder
