@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { RouterView, useRouter, useRoute placeholder from 'vue-router'
-import { onMounted placeholder from 'vue'
+import { onMounted, watch placeholder from 'vue'
 import Toast from '@/components/common/Toast.vue'
-import { getPublicSettings placeholder from '@/api/auth'
+import { useAppStore placeholder from '@/stores'
 import { getSetupStatus placeholder from '@/api/setup'
 
 const router = useRouter()
 const route = useRoute()
+const appStore = useAppStore()
 
 /**
  * Update favicon dynamically
@@ -24,6 +25,19 @@ function updateFavicon(logoUrl: string) {
   link.href = logoUrl
 placeholder
 
+// Watch for site settings changes and update favicon/title
+watch(() => appStore.siteLogo, (newLogo) => {
+  if (newLogo) {
+    updateFavicon(newLogo)
+  placeholder
+placeholder, { immediate: true placeholder)
+
+watch(() => appStore.siteName, (newName) => {
+  if (newName) {
+    document.title = `${newNameplaceholder - AI API Gateway`
+  placeholder
+placeholder, { immediate: true placeholder)
+
 onMounted(async () => {
   // Check if setup is needed
   try {
@@ -36,21 +50,8 @@ onMounted(async () => {
     // If setup endpoint fails, assume normal mode and continue
   placeholder
 
-  try {
-    const settings = await getPublicSettings()
-
-    // Update favicon if logo is set
-    if (settings.site_logo) {
-      updateFavicon(settings.site_logo)
-    placeholder
-
-    // Update page title if site name is set
-    if (settings.site_name) {
-      document.title = `${settings.site_nameplaceholder - AI API Gateway`
-    placeholder
-  placeholder catch (error) {
-    console.error('Failed to load public settings for favicon:', error)
-  placeholder
+  // Load public settings into appStore (will be cached for other components)
+  await appStore.fetchPublicSettings()
 placeholder)
 </script>
 

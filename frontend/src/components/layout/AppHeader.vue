@@ -156,7 +156,6 @@ import { ref, computed, onMounted, onBeforeUnmount placeholder from 'vue';
 import { useRouter, useRoute placeholder from 'vue-router';
 import { useI18n placeholder from 'vue-i18n';
 import { useAppStore, useAuthStore placeholder from '@/stores';
-import { authAPI placeholder from '@/api';
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue';
 import SubscriptionProgressMini from '@/components/common/SubscriptionProgressMini.vue';
 
@@ -169,7 +168,7 @@ const authStore = useAuthStore();
 const user = computed(() => authStore.user);
 const dropdownOpen = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
-const contactInfo = ref('');
+const contactInfo = computed(() => appStore.contactInfo);
 
 const userInitials = computed(() => {
   if (!user.value) return '';
@@ -230,14 +229,8 @@ function handleClickOutside(event: MouseEvent) {
   placeholder
 placeholder
 
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-  try {
-    const settings = await authAPI.getPublicSettings();
-    contactInfo.value = settings.contact_info || '';
-  placeholder catch (error) {
-    console.error('Failed to load contact info:', error);
-  placeholder
 placeholder);
 
 onBeforeUnmount(() => {
