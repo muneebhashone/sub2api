@@ -943,7 +943,7 @@ export default {
       batchAdd: '快捷添加',
       batchInput: '代理列表',
       batchInputPlaceholder: "每行输入一个代理，支持以下格式：\nsocks5://user:pass{'@'placeholder192.168.1.1:1080\nhttp://192.168.1.1:8080\nhttps://user:pass{'@'placeholderproxy.example.com:443",
-      batchInputHint: '支持 http、https、socks5 协议，格式：协议://[用户名:密码@]主机:端口',
+      batchInputHint: "支持 http、https、socks5 协议，格式：协议://[用户名:密码{'@'placeholder]主机:端口",
       parsedCount: '有效 {countplaceholder 个',
       invalidCount: '无效 {countplaceholder 个',
       duplicateCount: '重复 {countplaceholder 个',
