@@ -281,6 +281,7 @@ placeholder
 	gateway.Use(middleware.ApiKeyAuthWithSubscription(s.ApiKey, s.Subscription))
 	{
 		gateway.POST("/messages", h.Gateway.Messages)
+		gateway.POST("/messages/count_tokens", h.Gateway.CountTokens)
 		gateway.GET("/models", h.Gateway.Models)
 		gateway.GET("/usage", h.Gateway.Usage)
 placeholder
