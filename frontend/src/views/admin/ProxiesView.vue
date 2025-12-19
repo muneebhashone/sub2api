@@ -647,10 +647,10 @@ placeholder | null => {
 
   return {
     protocol: protocol.toLowerCase() as ProxyProtocol,
-    host,
+    host: host.trim(),
     port: portNum,
-    username: username || '',
-    password: password || ''
+    username: username?.trim() || '',
+    password: password?.trim() || ''
   placeholder
 placeholder
 
@@ -714,9 +714,12 @@ const handleCreateProxy = async () => {
   submitting.value = true
   try {
     await adminAPI.proxies.create({
-      ...createForm,
-      username: createForm.username || null,
-      password: createForm.password || null
+      name: createForm.name.trim(),
+      protocol: createForm.protocol,
+      host: createForm.host.trim(),
+      port: createForm.port,
+      username: createForm.username.trim() || null,
+      password: createForm.password.trim() || null
     placeholder)
     appStore.showSuccess(t('admin.proxies.proxyCreated'))
     closeCreateModal()
@@ -752,17 +755,18 @@ const handleUpdateProxy = async () => {
   submitting.value = true
   try {
     const updateData: any = {
-      name: editForm.name,
+      name: editForm.name.trim(),
       protocol: editForm.protocol,
-      host: editForm.host,
+      host: editForm.host.trim(),
       port: editForm.port,
-      username: editForm.username || null,
+      username: editForm.username.trim() || null,
       status: editForm.status
     placeholder
 
     // Only include password if it was changed
-    if (editForm.password) {
-      updateData.password = editForm.password
+    const trimmedPassword = editForm.password.trim()
+    if (trimmedPassword) {
+      updateData.password = trimmedPassword
     placeholder
 
     await adminAPI.proxies.update(editingProxy.value.id, updateData)
