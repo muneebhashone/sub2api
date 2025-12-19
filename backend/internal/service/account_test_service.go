@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"sub2api/internal/pkg/claude"
 	"sub2api/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -62,7 +63,7 @@ func generateSessionString() string {
 	return fmt.Sprintf("user_%s_account__session_%s", hex64, sessionUUID)
 placeholder
 
-// createTestPayload creates a minimal test request payload for OAuth/Setup Token accounts
+// createTestPayload creates a Claude Code style test request payload
 func createTestPayload() map[string]interface{placeholder {
 	return map[string]interface{placeholder{
 		"model": testModel,
@@ -98,22 +99,8 @@ func createTestPayload() map[string]interface{placeholder {
 placeholder
 placeholder
 
-// createApiKeyTestPayload creates a simpler test request payload for API Key accounts
-func createApiKeyTestPayload(model string) map[string]interface{placeholder {
-	return map[string]interface{placeholder{
-		"model": model,
-		"messages": []map[string]interface{placeholder{
-			{
-				"role":    "user",
-				"content": "hi",
-		placeholder,
-	placeholder,
-		"max_tokens": 1024,
-		"stream":     true,
-placeholder
-placeholder
-
 // TestAccountConnection tests an account's connection by sending a test request
+// All account types use full Claude Code client characteristics, only auth header differs
 func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int64) error {
 	ctx := c.Request.Context()
 
@@ -123,14 +110,14 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 		return s.sendErrorAndEnd(c, "Account not found")
 placeholder
 
-	// Determine authentication method based on account type
+	// Determine authentication method and API URL
 	var authToken string
-	var authType string // "bearer" for OAuth, "apikey" for API Key
+	var useBearer bool
 	var apiURL string
 
 	if account.IsOAuth() {
-		// OAuth or Setup Token account
-		authType = "bearer"
+		// OAuth or Setup Token - use Bearer token
+		useBearer = true
 		apiURL = testClaudeAPIURL
 		authToken = account.GetCredential("access_token")
 		if authToken == "" {
@@ -141,7 +128,7 @@ placeholder
 		needRefresh := false
 		if expiresAtStr := account.GetCredential("expires_at"); expiresAtStr != "" {
 			expiresAt, err := strconv.ParseInt(expiresAtStr, 10, 64)
-			if err == nil && time.Now().Unix()+300 > expiresAt { // 5 minute buffer
+			if err == nil && time.Now().Unix()+300 > expiresAt {
 				needRefresh = true
 		placeholder
 	placeholder
@@ -154,19 +141,17 @@ placeholder
 			authToken = tokenInfo.AccessToken
 	placeholder
 placeholder else if account.Type == "apikey" {
-		// API Key account
-		authType = "apikey"
+		// API Key - use x-api-key header
+		useBearer = false
 		authToken = account.GetCredential("api_key")
 		if authToken == "" {
 			return s.sendErrorAndEnd(c, "No API key available")
 	placeholder
 
-		// Get base URL (use default if not set)
 		apiURL = account.GetBaseURL()
 		if apiURL == "" {
 			apiURL = "https://api.anthropic.com"
 	placeholder
-		// Append /v1/messages endpoint
 		apiURL = strings.TrimSuffix(apiURL, "/") + "/v1/messages"
 placeholder else {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Unsupported account type: %s", account.Type))
@@ -179,37 +164,32 @@ placeholder
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
 	c.Writer.Flush()
 
-	// Create test request payload
-	var payload map[string]interface{placeholder
-	var actualModel string
-	if authType == "apikey" {
-		// Use simpler payload for API Key (without Claude Code specific fields)
-		// Apply model mapping if configured
-		actualModel = account.GetMappedModel(testModel)
-		payload = createApiKeyTestPayload(actualModel)
-placeholder else {
-		actualModel = testModel
-		payload = createTestPayload()
-placeholder
+	// Create Claude Code style payload (same for all account types)
+	payload := createTestPayload()
 	payloadBytes, _ := json.Marshal(payload)
 
-	// Send test_start event with model info
-	s.sendEvent(c, TestEvent{Type: "test_start", Model: actualModelplaceholder)
+	// Send test_start event
+	s.sendEvent(c, TestEvent{Type: "test_start", Model: testModelplaceholder)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewReader(payloadBytes))
 	if err != nil {
 		return s.sendErrorAndEnd(c, "Failed to create request")
 placeholder
 
-	// Set headers based on auth type
+	// Set common headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("anthropic-beta", claude.DefaultBetaHeader)
 
-	if authType == "bearer" {
+	// Apply Claude Code client headers
+	for key, value := range claude.DefaultHeaders {
+		req.Header.Set(key, value)
+placeholder
+
+	// Set authentication header
+	if useBearer {
 		req.Header.Set("Authorization", "Bearer "+authToken)
-		req.Header.Set("anthropic-beta", "prompt-caching-2024-07-31,placeholder,output-128k-2025-02-19")
 placeholder else {
-		// API Key uses x-api-key header
 		req.Header.Set("x-api-key", authToken)
 placeholder
 
@@ -252,7 +232,6 @@ func (s *AccountTestService) processStream(c *gin.Context, body io.Reader) error
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				// Stream ended, send complete event
 				s.sendEvent(c, TestEvent{Type: "test_complete", Success: trueplaceholder)
 				return nil
 		placeholder
