@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"sub2api/internal/middleware"
@@ -124,6 +125,16 @@ placeholder
 	account, err := h.gatewayService.SelectAccountForModel(c.Request.Context(), apiKey.GroupID, sessionHash, req.Model)
 	if err != nil {
 		h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
+		return
+placeholder
+
+	// 检查预热请求拦截（在账号选择后、转发前检查）
+	if account.IsInterceptWarmupEnabled() && isWarmupRequest(body) {
+		if req.Stream {
+			sendMockWarmupStream(c, req.Model)
+	placeholder else {
+			sendMockWarmupResponse(c, req.Model)
+	placeholder
 		return
 placeholder
 
@@ -488,4 +499,90 @@ placeholder
 		// 错误响应已在 ForwardCountTokens 中处理
 		return
 placeholder
+placeholder
+
+// isWarmupRequest 检测是否为预热请求（标题生成、Warmup等）
+func isWarmupRequest(body []byte) bool {
+	// 快速检查：如果body不包含关键字，直接返回false
+	bodyStr := string(body)
+	if !strings.Contains(bodyStr, "title") && !strings.Contains(bodyStr, "Warmup") {
+		return false
+placeholder
+
+	// 解析完整请求
+	var req struct {
+		Messages []struct {
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+		placeholder `json:"content"`
+	placeholder `json:"messages"`
+		System []struct {
+			Text string `json:"text"`
+	placeholder `json:"system"`
+placeholder
+	if err := json.Unmarshal(body, &req); err != nil {
+		return false
+placeholder
+
+	// 检查 messages 中的标题提示模式
+	for _, msg := range req.Messages {
+		for _, content := range msg.Content {
+			if content.Type == "text" {
+				if strings.Contains(content.Text, "Please write a 5-10 word title for the following conversation:") ||
+					content.Text == "Warmup" {
+					return true
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	// 检查 system 中的标题提取模式
+	for _, system := range req.System {
+		if strings.Contains(system.Text, "nalyze if this message indicates a new conversation topic. If it does, extract a 2-3 word title") {
+			return true
+	placeholder
+placeholder
+
+	return false
+placeholder
+
+// sendMockWarmupStream 发送流式 mock 响应（用于预热请求拦截）
+func sendMockWarmupStream(c *gin.Context, model string) {
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	events := []string{
+		`event: message_start` + "\n" + `data: {"message":{"content":[],"id":"msg_mock_warmup","model":"` + model + `","role":"assistant","stop_reason":null,"stop_sequence":null,"type":"message","usage":{"input_tokens":10,"output_tokens":0placeholderplaceholder,"type":"message_start"placeholder`,
+		`event: content_block_start` + "\n" + `data: {"content_block":{"text":"","type":"text"placeholder,"index":0,"type":"content_block_start"placeholder`,
+		`event: content_block_delta` + "\n" + `data: {"delta":{"text":"New","type":"text_delta"placeholder,"index":0,"type":"content_block_delta"placeholder`,
+		`event: content_block_delta` + "\n" + `data: {"delta":{"text":" Conversation","type":"text_delta"placeholder,"index":0,"type":"content_block_delta"placeholder`,
+		`event: content_block_stop` + "\n" + `data: {"index":0,"type":"content_block_stop"placeholder`,
+		`event: message_delta` + "\n" + `data: {"delta":{"stop_reason":"end_turn","stop_sequence":nullplaceholder,"type":"message_delta","usage":{"input_tokens":10,"output_tokens":2placeholderplaceholder`,
+		`event: message_stop` + "\n" + `data: {"type":"message_stop"placeholder`,
+placeholder
+
+	for _, event := range events {
+		_, _ = c.Writer.WriteString(event + "\n\n")
+		c.Writer.Flush()
+		time.Sleep(20 * time.Millisecond)
+placeholder
+placeholder
+
+// sendMockWarmupResponse 发送非流式 mock 响应（用于预热请求拦截）
+func sendMockWarmupResponse(c *gin.Context, model string) {
+	c.JSON(http.StatusOK, gin.H{
+		"id":      "msg_mock_warmup",
+		"type":    "message",
+		"role":    "assistant",
+		"model":   model,
+		"content": []gin.H{{"type": "text", "text": "New Conversation"placeholderplaceholder,
+		"stop_reason": "end_turn",
+		"usage": gin.H{
+			"input_tokens":  10,
+			"output_tokens": 2,
+	placeholder,
+placeholder)
 placeholder
