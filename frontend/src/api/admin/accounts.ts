@@ -11,6 +11,7 @@ import type {
   PaginatedResponse,
   AccountUsageInfo,
   WindowStats,
+  ClaudeModel,
 placeholder from '@/types';
 
 /**
@@ -247,6 +248,16 @@ export async function setSchedulable(id: number, schedulable: boolean): Promise<
   return data;
 placeholder
 
+/**
+ * Get available models for an account
+ * @param id - Account ID
+ * @returns List of available models for this account
+ */
+export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
+  const { data placeholder = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${idplaceholder/models`);
+  return data;
+placeholder
+
 export const accountsAPI = {
   list,
   getById,
@@ -262,6 +273,7 @@ export const accountsAPI = {
   getTodayStats,
   clearRateLimit,
   setSchedulable,
+  getAvailableModels,
   generateAuthUrl,
   exchangeCode,
   batchCreate,
