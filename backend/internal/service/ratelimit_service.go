@@ -9,20 +9,20 @@ import (
 
 	"sub2api/internal/config"
 	"sub2api/internal/model"
-	"sub2api/internal/repository"
+	"sub2api/internal/service/ports"
 )
 
 // RateLimitService 处理限流和过载状态管理
 type RateLimitService struct {
-	repos *repository.Repositories
-	cfg   *config.Config
+	accountRepo ports.AccountRepository
+	cfg         *config.Config
 placeholder
 
 // NewRateLimitService 创建RateLimitService实例
-func NewRateLimitService(repos *repository.Repositories, cfg *config.Config) *RateLimitService {
+func NewRateLimitService(accountRepo ports.AccountRepository, cfg *config.Config) *RateLimitService {
 	return &RateLimitService{
-		repos: repos,
-		cfg:   cfg,
+		accountRepo: accountRepo,
+		cfg:         cfg,
 placeholder
 placeholder
 
@@ -62,7 +62,7 @@ placeholder
 
 // handleAuthError 处理认证类错误(401/403)，停止账号调度
 func (s *RateLimitService) handleAuthError(ctx context.Context, account *model.Account, errorMsg string) {
-	if err := s.repos.Account.SetError(ctx, account.ID, errorMsg); err != nil {
+	if err := s.accountRepo.SetError(ctx, account.ID, errorMsg); err != nil {
 		log.Printf("SetError failed for account %d: %v", account.ID, err)
 		return
 placeholder
@@ -77,7 +77,7 @@ func (s *RateLimitService) handle429(ctx context.Context, account *model.Account
 	if resetTimestamp == "" {
 		// 没有重置时间，使用默认5分钟
 		resetAt := time.Now().Add(5 * time.Minute)
-		if err := s.repos.Account.SetRateLimited(ctx, account.ID, resetAt); err != nil {
+		if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
 			log.Printf("SetRateLimited failed for account %d: %v", account.ID, err)
 	placeholder
 		return
@@ -88,7 +88,7 @@ placeholder
 	if err != nil {
 		log.Printf("Parse reset timestamp failed: %v", err)
 		resetAt := time.Now().Add(5 * time.Minute)
-		if err := s.repos.Account.SetRateLimited(ctx, account.ID, resetAt); err != nil {
+		if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
 			log.Printf("SetRateLimited failed for account %d: %v", account.ID, err)
 	placeholder
 		return
@@ -97,7 +97,7 @@ placeholder
 	resetAt := time.Unix(ts, 0)
 
 	// 标记限流状态
-	if err := s.repos.Account.SetRateLimited(ctx, account.ID, resetAt); err != nil {
+	if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
 		log.Printf("SetRateLimited failed for account %d: %v", account.ID, err)
 		return
 placeholder
@@ -105,7 +105,7 @@ placeholder
 	// 根据重置时间反推5h窗口
 	windowEnd := resetAt
 	windowStart := resetAt.Add(-5 * time.Hour)
-	if err := s.repos.Account.UpdateSessionWindow(ctx, account.ID, &windowStart, &windowEnd, "rejected"); err != nil {
+	if err := s.accountRepo.UpdateSessionWindow(ctx, account.ID, &windowStart, &windowEnd, "rejected"); err != nil {
 		log.Printf("UpdateSessionWindow failed for account %d: %v", account.ID, err)
 placeholder
 
@@ -121,7 +121,7 @@ func (s *RateLimitService) handle529(ctx context.Context, account *model.Account
 placeholder
 
 	until := time.Now().Add(time.Duration(cooldownMinutes) * time.Minute)
-	if err := s.repos.Account.SetOverloaded(ctx, account.ID, until); err != nil {
+	if err := s.accountRepo.SetOverloaded(ctx, account.ID, until); err != nil {
 		log.Printf("SetOverloaded failed for account %d: %v", account.ID, err)
 		return
 placeholder
@@ -152,13 +152,13 @@ placeholder
 		log.Printf("Account %d: initializing 5h window from %v to %v (status: %s)", account.ID, start, end, status)
 placeholder
 
-	if err := s.repos.Account.UpdateSessionWindow(ctx, account.ID, windowStart, windowEnd, status); err != nil {
+	if err := s.accountRepo.UpdateSessionWindow(ctx, account.ID, windowStart, windowEnd, status); err != nil {
 		log.Printf("UpdateSessionWindow failed for account %d: %v", account.ID, err)
 placeholder
 
 	// 如果状态为allowed且之前有限流，说明窗口已重置，清除限流状态
 	if status == "allowed" && account.IsRateLimited() {
-		if err := s.repos.Account.ClearRateLimit(ctx, account.ID); err != nil {
+		if err := s.accountRepo.ClearRateLimit(ctx, account.ID); err != nil {
 			log.Printf("ClearRateLimit failed for account %d: %v", account.ID, err)
 	placeholder
 placeholder
@@ -166,5 +166,5 @@ placeholder
 
 // ClearRateLimit 清除账号的限流状态
 func (s *RateLimitService) ClearRateLimit(ctx context.Context, accountID int64) error {
-	return s.repos.Account.ClearRateLimit(ctx, accountID)
+	return s.accountRepo.ClearRateLimit(ctx, accountID)
 placeholder
