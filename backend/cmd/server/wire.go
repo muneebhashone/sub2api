@@ -73,6 +73,10 @@ func provideCleanup(
 			name string
 			fn   func() error
 	placeholder{
+			{"TokenRefreshService", func() error {
+				services.TokenRefresh.Stop()
+				return nil
+	placeholder
 			{"PricingService", func() error {
 				services.Pricing.Stop()
 				return nil
