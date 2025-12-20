@@ -44,7 +44,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	var result service.TurnstileVerifyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

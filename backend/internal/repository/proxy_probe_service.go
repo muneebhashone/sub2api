@@ -43,7 +43,7 @@ placeholder
 	if err != nil {
 		return nil, 0, fmt.Errorf("proxy connection failed: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	latencyMs := time.Since(startTime).Milliseconds()
 

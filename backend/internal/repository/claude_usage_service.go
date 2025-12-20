@@ -43,7 +43,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

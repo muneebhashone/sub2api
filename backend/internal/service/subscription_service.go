@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"sub2api/internal/model"
@@ -78,7 +79,7 @@ placeholder
 		go func() {
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
+			_ = s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
 	placeholder()
 placeholder
 
@@ -146,7 +147,7 @@ placeholder
 		placeholder
 			newNotes += input.Notes
 			if err := s.userSubRepo.UpdateNotes(ctx, existingSub.ID, newNotes); err != nil {
-				// 备注更新失败不影响主流程
+				log.Printf("update subscription notes failed: sub_id=%d err=%v", existingSub.ID, err)
 		placeholder
 	placeholder
 
@@ -156,7 +157,7 @@ placeholder
 			go func() {
 				cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
+				_ = s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
 		placeholder()
 	placeholder
 
@@ -177,7 +178,7 @@ placeholder
 		go func() {
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
+			_ = s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
 	placeholder()
 placeholder
 
@@ -278,7 +279,7 @@ placeholder
 		go func() {
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
+			_ = s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
 	placeholder()
 placeholder
 
@@ -311,7 +312,7 @@ placeholder
 		go func() {
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
+			_ = s.billingCacheService.InvalidateSubscription(cacheCtx, userID, groupID)
 	placeholder()
 placeholder
 

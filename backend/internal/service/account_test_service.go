@@ -51,16 +51,23 @@ placeholder
 placeholder
 
 // generateSessionString generates a Claude Code style session string
-func generateSessionString() string {
+func generateSessionString() (string, error) {
 	bytes := make([]byte, 32)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+placeholder
 	hex64 := hex.EncodeToString(bytes)
 	sessionUUID := uuid.New().String()
-	return fmt.Sprintf("user_%s_account__session_%s", hex64, sessionUUID)
+	return fmt.Sprintf("user_%s_account__session_%s", hex64, sessionUUID), nil
 placeholder
 
 // createTestPayload creates a Claude Code style test request payload
-func createTestPayload(modelID string) map[string]interface{placeholder {
+func createTestPayload(modelID string) (map[string]interface{placeholder, error) {
+	sessionID, err := generateSessionString()
+	if err != nil {
+		return nil, err
+placeholder
+
 	return map[string]interface{placeholder{
 		"model": modelID,
 		"messages": []map[string]interface{placeholder{
@@ -87,12 +94,12 @@ func createTestPayload(modelID string) map[string]interface{placeholder {
 		placeholder,
 	placeholder,
 		"metadata": map[string]string{
-			"user_id": generateSessionString(),
+			"user_id": sessionID,
 	placeholder,
 		"max_tokens":  1024,
 		"temperature": 1,
 		"stream":      true,
-placeholder
+placeholder, nil
 placeholder
 
 // TestAccountConnection tests an account's connection by sending a test request
@@ -116,7 +123,7 @@ placeholder
 	// For API Key accounts with model mapping, map the model
 	if account.Type == "apikey" {
 		mapping := account.GetModelMapping()
-		if mapping != nil && len(mapping) > 0 {
+		if len(mapping) > 0 {
 			if mappedModel, exists := mapping[testModelID]; exists {
 				testModelID = mappedModel
 		placeholder
@@ -178,7 +185,10 @@ placeholder
 	c.Writer.Flush()
 
 	// Create Claude Code style payload (same for all account types)
-	payload := createTestPayload(testModelID)
+	payload, err := createTestPayload(testModelID)
+	if err != nil {
+		return s.sendErrorAndEnd(c, "Failed to create test payload")
+placeholder
 	payloadBytes, _ := json.Marshal(payload)
 
 	// Send test_start event
@@ -216,7 +226,7 @@ placeholder
 	if err != nil {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Request failed: %s", err.Error()))
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -284,7 +294,10 @@ placeholder
 // sendEvent sends a SSE event to the client
 func (s *AccountTestService) sendEvent(c *gin.Context, event TestEvent) {
 	eventJSON, _ := json.Marshal(event)
-	fmt.Fprintf(c.Writer, "data: %s\n\n", eventJSON)
+	if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", eventJSON); err != nil {
+		log.Printf("failed to write SSE event: %v", err)
+		return
+placeholder
 	c.Writer.Flush()
 placeholder
 

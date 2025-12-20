@@ -281,7 +281,9 @@ func (s *GatewayService) SelectAccountForModel(ctx context.Context, groupID *int
 			// 同时检查模型支持
 			if err == nil && account.IsSchedulable() && (requestedModel == "" || account.IsModelSupported(requestedModel)) {
 				// 续期粘性会话
-				s.cache.RefreshSessionTTL(ctx, sessionHash, stickySessionTTL)
+				if err := s.cache.RefreshSessionTTL(ctx, sessionHash, stickySessionTTL); err != nil {
+					log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+			placeholder
 				return account, nil
 		placeholder
 	placeholder
@@ -331,7 +333,9 @@ placeholder
 
 	// 4. 建立粘性绑定
 	if sessionHash != "" {
-		s.cache.SetSessionAccountID(ctx, sessionHash, selected.ID, stickySessionTTL)
+		if err := s.cache.SetSessionAccountID(ctx, sessionHash, selected.ID, stickySessionTTL); err != nil {
+			log.Printf("set session account failed: session=%s account_id=%d err=%v", sessionHash, selected.ID, err)
+	placeholder
 placeholder
 
 	return selected, nil
@@ -411,7 +415,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("upstream request failed: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	// 处理错误响应（包括401，由后台TokenRefreshService维护token有效性）
 	if resp.StatusCode >= 400 {
@@ -678,7 +682,9 @@ placeholder
 	placeholder
 
 		// 转发行
-		fmt.Fprintf(w, "%s\n", line)
+		if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
+			return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+	placeholder
 		flusher.Flush()
 
 		// 解析usage数据
@@ -985,7 +991,9 @@ placeholder
 		s.countTokensError(c, http.StatusBadGateway, "upstream_error", "Request failed")
 		return fmt.Errorf("upstream request failed: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+placeholder()
 
 	// 读取响应体
 	respBody, err := io.ReadAll(resp.Body)

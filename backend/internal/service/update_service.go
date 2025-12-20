@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -190,7 +191,7 @@ placeholder
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 placeholder
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) placeholder()
 
 	// Download archive
 	archivePath := filepath.Join(tempDir, filepath.Base(downloadURL))
@@ -223,7 +224,7 @@ placeholder
 	backupPath := exePath + ".backup"
 
 	// Remove old backup if exists
-	os.Remove(backupPath)
+	_ = os.Remove(backupPath)
 
 	// Step 1: Move current binary to backup
 	if err := os.Rename(exePath, backupPath); err != nil {
@@ -349,7 +350,7 @@ placeholder
 	if err != nil {
 		return err
 placeholder
-	defer f.Close()
+	defer func() { _ = f.Close() placeholder()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -379,7 +380,7 @@ func (s *UpdateService) extractBinary(archivePath, destPath string) error {
 	if err != nil {
 		return err
 placeholder
-	defer f.Close()
+	defer func() { _ = f.Close() placeholder()
 
 	var reader io.Reader = f
 
@@ -389,7 +390,7 @@ placeholder
 		if err != nil {
 			return err
 	placeholder
-		defer gzr.Close()
+		defer func() { _ = gzr.Close() placeholder()
 		reader = gzr
 placeholder
 
@@ -435,10 +436,12 @@ placeholder
 				// Use LimitReader to prevent decompression bombs
 				limited := io.LimitReader(tr, maxBinarySize)
 				if _, err := io.Copy(out, limited); err != nil {
-					out.Close()
+					_ = out.Close()
 					return err
 			placeholder
-				out.Close()
+				if err := out.Close(); err != nil {
+					return err
+			placeholder
 				return nil
 		placeholder
 	placeholder
@@ -451,11 +454,13 @@ placeholder
 	if err != nil {
 		return err
 placeholder
-	defer out.Close()
 
 	limited := io.LimitReader(reader, maxBinarySize)
-	_, err = io.Copy(out, limited)
-	return err
+	if _, err := io.Copy(out, limited); err != nil {
+		_ = out.Close()
+		return err
+placeholder
+	return out.Close()
 placeholder
 
 func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
@@ -499,7 +504,7 @@ placeholder{
 placeholder
 
 	data, _ := json.Marshal(cacheData)
-	s.cache.SetUpdateInfo(ctx, string(data), time.Duration(updateCacheTTL)*time.Second)
+	_ = s.cache.SetUpdateInfo(ctx, string(data), time.Duration(updateCacheTTL)*time.Second)
 placeholder
 
 // compareVersions compares two semantic versions
@@ -523,7 +528,9 @@ func parseVersion(v string) [3]int {
 	parts := strings.Split(v, ".")
 	result := [3]int{0, 0, 0placeholder
 	for i := 0; i < len(parts) && i < 3; i++ {
-		fmt.Sscanf(parts[i], "%d", &result[i])
+		if parsed, err := strconv.Atoi(parts[i]); err == nil {
+			result[i] = parsed
+	placeholder
 placeholder
 	return result
 placeholder
