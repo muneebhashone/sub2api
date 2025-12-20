@@ -180,51 +180,14 @@
 
           <!-- Charts Grid -->
           <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <!-- Model Distribution Chart -->
-            <div class="card p-4">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">{{ t('admin.dashboard.modelDistribution') placeholderplaceholder</h3>
-              <div class="flex items-center gap-6">
-                <div class="w-48 h-48">
-                  <Doughnut v-if="modelChartData" :data="modelChartData" :options="doughnutOptions" />
-                  <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
-                    {{ t('admin.dashboard.noDataAvailable') placeholderplaceholder
-                  </div>
-                </div>
-                <div class="flex-1 max-h-48 overflow-y-auto">
-                  <table class="w-full text-xs">
-                    <thead>
-                      <tr class="text-gray-500 dark:text-gray-400">
-                        <th class="text-left pb-2">{{ t('admin.dashboard.model') placeholderplaceholder</th>
-                        <th class="text-right pb-2">{{ t('admin.dashboard.requests') placeholderplaceholder</th>
-                        <th class="text-right pb-2">{{ t('admin.dashboard.tokens') placeholderplaceholder</th>
-                        <th class="text-right pb-2">{{ t('admin.dashboard.actual') placeholderplaceholder</th>
-                        <th class="text-right pb-2">{{ t('admin.dashboard.standard') placeholderplaceholder</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="model in modelStats" :key="model.model" class="border-t border-gray-100 dark:border-gray-700">
-                        <td class="py-1.5 text-gray-900 dark:text-white font-medium truncate max-w-[100px]" :title="model.model">{{ model.model placeholderplaceholder</td>
-                        <td class="py-1.5 text-right text-gray-600 dark:text-gray-400">{{ formatNumber(model.requests) placeholderplaceholder</td>
-                        <td class="py-1.5 text-right text-gray-600 dark:text-gray-400">{{ formatTokens(model.total_tokens) placeholderplaceholder</td>
-                        <td class="py-1.5 text-right text-green-600 dark:text-green-400">${{ formatCost(model.actual_cost) placeholderplaceholder</td>
-                        <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">${{ formatCost(model.cost) placeholderplaceholder</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <!-- Token Usage Trend Chart -->
-            <div class="card p-4">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">{{ t('admin.dashboard.tokenUsageTrend') placeholderplaceholder</h3>
-              <div class="h-48">
-                <Line v-if="trendChartData" :data="trendChartData" :options="lineOptions" />
-                <div v-else class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
-                  {{ t('admin.dashboard.noDataAvailable') placeholderplaceholder
-                </div>
-              </div>
-            </div>
+            <ModelDistributionChart
+              :model-stats="modelStats"
+              :loading="chartsLoading"
+            />
+            <TokenUsageTrend
+              :trend-data="trendData"
+              :loading="chartsLoading"
+            />
           </div>
 
           <!-- User Usage Trend (Full Width) -->
@@ -244,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch placeholder from 'vue'
+import { ref, computed, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 
@@ -255,6 +218,8 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Select from '@/components/common/Select.vue'
+import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'
+import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
 
 import {
   Chart as ChartJS,
@@ -262,13 +227,12 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend,
   Filler
 placeholder from 'chart.js'
-import { Line, Doughnut placeholder from 'vue-chartjs'
+import { Line placeholder from 'vue-chartjs'
 
 // Register Chart.js components
 ChartJS.register(
@@ -276,7 +240,6 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend,
@@ -286,6 +249,7 @@ ChartJS.register(
 const appStore = useAppStore()
 const stats = ref<DashboardStats | null>(null)
 const loading = ref(false)
+const chartsLoading = ref(false)
 
 // Chart data
 const trendData = ref<TrendDataPoint[]>([])
@@ -312,34 +276,9 @@ placeholder)
 const chartColors = computed(() => ({
   text: isDarkMode.value ? '#e5e7eb' : '#374151',
   grid: isDarkMode.value ? '#374151' : '#e5e7eb',
-  input: '#3b82f6',
-  output: '#10b981',
-  cache: '#f59e0b',
-  total: '#8b5cf6',
 placeholder))
 
-// Doughnut chart options
-const doughnutOptions = computed(() => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false,
-    placeholder,
-    tooltip: {
-      callbacks: {
-        label: (context: any) => {
-          const value = context.raw as number
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
-          const percentage = ((value / total) * 100).toFixed(1)
-          return `${context.labelplaceholder: ${formatTokens(value)placeholder (${percentageplaceholder%)`
-        placeholder,
-      placeholder,
-    placeholder,
-  placeholder,
-placeholder))
-
-// Line chart options
+// Line chart options (for user trend chart)
 const lineOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
@@ -364,15 +303,6 @@ const lineOptions = computed(() => ({
       callbacks: {
         label: (context: any) => {
           return `${context.dataset.labelplaceholder: ${formatTokens(context.raw)placeholder`
-        placeholder,
-        footer: (tooltipItems: any) => {
-          // Show both costs for the day if we have trend data
-          const dataIndex = tooltipItems[0]?.dataIndex
-          if (dataIndex !== undefined && trendData.value[dataIndex]) {
-            const data = trendData.value[dataIndex]
-            return `Actual: $${formatCost(data.actual_cost)placeholder | Standard: $${formatCost(data.cost)placeholder`
-          placeholder
-          return ''
         placeholder,
       placeholder,
     placeholder,
@@ -403,60 +333,6 @@ const lineOptions = computed(() => ({
     placeholder,
   placeholder,
 placeholder))
-
-// Model chart data
-const modelChartData = computed(() => {
-  if (!modelStats.value?.length) return null
-
-  const colors = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
-    '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
-  ]
-
-  return {
-    labels: modelStats.value.map(m => m.model),
-    datasets: [{
-      data: modelStats.value.map(m => m.total_tokens),
-      backgroundColor: colors.slice(0, modelStats.value.length),
-      borderWidth: 0,
-    placeholder],
-  placeholder
-placeholder)
-
-// Trend chart data
-const trendChartData = computed(() => {
-  if (!trendData.value?.length) return null
-
-  return {
-    labels: trendData.value.map(d => d.date),
-    datasets: [
-      {
-        label: 'Input',
-        data: trendData.value.map(d => d.input_tokens),
-        borderColor: chartColors.value.input,
-        backgroundColor: `${chartColors.value.inputplaceholder20`,
-        fill: true,
-        tension: 0.3,
-      placeholder,
-      {
-        label: 'Output',
-        data: trendData.value.map(d => d.output_tokens),
-        borderColor: chartColors.value.output,
-        backgroundColor: `${chartColors.value.outputplaceholder20`,
-        fill: true,
-        tension: 0.3,
-      placeholder,
-      {
-        label: 'Cache',
-        data: trendData.value.map(d => d.cache_tokens),
-        borderColor: chartColors.value.cache,
-        backgroundColor: `${chartColors.value.cacheplaceholder20`,
-        fill: true,
-        tension: 0.3,
-      placeholder,
-    ],
-  placeholder
-placeholder)
 
 // User trend chart data
 const userTrendChartData = computed(() => {
@@ -578,6 +454,7 @@ const loadDashboardStats = async () => {
 placeholder
 
 const loadChartData = async () => {
+  chartsLoading.value = true
   try {
     const params = {
       start_date: startDate.value,
@@ -596,6 +473,8 @@ const loadChartData = async () => {
     userTrend.value = userResponse.trend || []
   placeholder catch (error) {
     console.error('Error loading chart data:', error)
+  placeholder finally {
+    chartsLoading.value = false
   placeholder
 placeholder
 
@@ -603,11 +482,6 @@ onMounted(() => {
   loadDashboardStats()
   initializeDateRange()
   loadChartData()
-placeholder)
-
-// Watch for dark mode changes
-watch(isDarkMode, () => {
-  // Force chart re-render on theme change
 placeholder)
 </script>
 
