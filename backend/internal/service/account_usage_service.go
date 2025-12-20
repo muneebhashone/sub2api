@@ -98,8 +98,10 @@ placeholder
 	if account.CanGetUsage() {
 		// 检查缓存
 		if cached, ok := usageCacheMap.Load(accountID); ok {
-			cache := cached.(*usageCache)
-			if time.Since(cache.timestamp) < cacheTTL {
+			cache, ok := cached.(*usageCache)
+			if !ok {
+				usageCacheMap.Delete(accountID)
+		placeholder else if time.Since(cache.timestamp) < cacheTTL {
 				return cache.data, nil
 		placeholder
 	placeholder
