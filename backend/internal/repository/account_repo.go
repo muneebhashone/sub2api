@@ -131,7 +131,7 @@ placeholder
 
 func (r *AccountRepository) SetError(ctx context.Context, id int64, errorMsg string) error {
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
-		Updates(map[string]interface{placeholder{
+		Updates(map[string]any{
 			"status":        model.StatusError,
 			"error_message": errorMsg,
 	placeholder).Error
@@ -226,7 +226,7 @@ placeholder
 func (r *AccountRepository) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
-		Updates(map[string]interface{placeholder{
+		Updates(map[string]any{
 			"rate_limited_at":     now,
 			"rate_limit_reset_at": resetAt,
 	placeholder).Error
@@ -241,7 +241,7 @@ placeholder
 // ClearRateLimit 清除账号的限流状态
 func (r *AccountRepository) ClearRateLimit(ctx context.Context, id int64) error {
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
-		Updates(map[string]interface{placeholder{
+		Updates(map[string]any{
 			"rate_limited_at":     nil,
 			"rate_limit_reset_at": nil,
 			"overload_until":      nil,
@@ -250,7 +250,7 @@ placeholder
 
 // UpdateSessionWindow 更新账号的5小时时间窗口信息
 func (r *AccountRepository) UpdateSessionWindow(ctx context.Context, id int64, start, end *time.Time, status string) error {
-	updates := map[string]interface{placeholder{
+	updates := map[string]any{
 		"session_window_status": status,
 placeholder
 	if start != nil {

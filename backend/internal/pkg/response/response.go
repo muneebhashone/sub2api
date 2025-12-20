@@ -9,22 +9,22 @@ import (
 
 // Response 标准API响应格式
 type Response struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{placeholder `json:"data,omitempty"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 placeholder
 
 // PaginatedData 分页数据格式（匹配前端期望）
 type PaginatedData struct {
-	Items    interface{placeholder `json:"items"`
-	Total    int64       `json:"total"`
-	Page     int         `json:"page"`
-	PageSize int         `json:"page_size"`
-	Pages    int         `json:"pages"`
+	Items    any   `json:"items"`
+	Total    int64 `json:"total"`
+	Page     int   `json:"page"`
+	PageSize int   `json:"page_size"`
+	Pages    int   `json:"pages"`
 placeholder
 
 // Success 返回成功响应
-func Success(c *gin.Context, data interface{placeholder) {
+func Success(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, Response{
 		Code:    0,
 		Message: "success",
@@ -33,7 +33,7 @@ placeholder)
 placeholder
 
 // Created 返回创建成功响应
-func Created(c *gin.Context, data interface{placeholder) {
+func Created(c *gin.Context, data any) {
 	c.JSON(http.StatusCreated, Response{
 		Code:    0,
 		Message: "success",
@@ -75,7 +75,7 @@ func InternalError(c *gin.Context, message string) {
 placeholder
 
 // Paginated 返回分页数据
-func Paginated(c *gin.Context, items interface{placeholder, total int64, page, pageSize int) {
+func Paginated(c *gin.Context, items any, total int64, page, pageSize int) {
 	pages := int(math.Ceil(float64(total) / float64(pageSize)))
 	if pages < 1 {
 		pages = 1
@@ -99,7 +99,7 @@ type PaginationResult struct {
 placeholder
 
 // PaginatedWithResult 使用PaginationResult返回分页数据
-func PaginatedWithResult(c *gin.Context, items interface{placeholder, pagination *PaginationResult) {
+func PaginatedWithResult(c *gin.Context, items any, pagination *PaginationResult) {
 	if pagination == nil {
 		Success(c, PaginatedData{
 			Items:    items,

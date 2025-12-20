@@ -358,7 +358,7 @@ placeholder
 placeholder
 
 	if len(req.ApiKeyIDs) == 0 {
-		response.Success(c, gin.H{"stats": map[string]interface{placeholder{placeholderplaceholder)
+		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 
@@ -383,7 +383,7 @@ placeholder
 placeholder
 
 	if len(validApiKeyIDs) == 0 {
-		response.Success(c, gin.H{"stats": map[string]interface{placeholder{placeholderplaceholder)
+		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 

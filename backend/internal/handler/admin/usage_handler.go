@@ -193,7 +193,7 @@ placeholder
 func (h *UsageHandler) SearchUsers(c *gin.Context) {
 	keyword := c.Query("q")
 	if keyword == "" {
-		response.Success(c, []interface{placeholder{placeholder)
+		response.Success(c, []any{placeholder)
 		return
 placeholder
 

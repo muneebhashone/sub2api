@@ -149,12 +149,12 @@ func (s *IdentityService) RewriteUserID(body []byte, accountID int64, accountUUI
 placeholder
 
 	// 解析JSON
-	var reqMap map[string]interface{placeholder
+	var reqMap map[string]any
 	if err := json.Unmarshal(body, &reqMap); err != nil {
 		return body, nil
 placeholder
 
-	metadata, ok := reqMap["metadata"].(map[string]interface{placeholder)
+	metadata, ok := reqMap["metadata"].(map[string]any)
 	if !ok {
 		return body, nil
 placeholder

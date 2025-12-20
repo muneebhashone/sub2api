@@ -278,7 +278,7 @@ placeholder
 
 // ValidateToken 验证JWT token并返回用户声明
 func (s *AuthService) ValidateToken(tokenString string) (*JWTClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{placeholder, func(token *jwt.Token) (interface{placeholder, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{placeholder, func(token *jwt.Token) (any, error) {
 		// 验证签名方法
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

@@ -515,11 +515,11 @@ placeholder
 placeholder
 
 // GetStatus 获取服务状态
-func (s *PricingService) GetStatus() map[string]interface{placeholder {
+func (s *PricingService) GetStatus() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return map[string]interface{placeholder{
+	return map[string]any{
 		"model_count":  len(s.pricingData),
 		"last_updated": s.lastUpdated,
 		"local_hash":   s.localHash[:min(8, len(s.localHash))],

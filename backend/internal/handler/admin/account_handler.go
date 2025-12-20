@@ -44,29 +44,29 @@ placeholder
 
 // CreateAccountRequest represents create account request
 type CreateAccountRequest struct {
-	Name        string                 `json:"name" binding:"required"`
-	Platform    string                 `json:"platform" binding:"required"`
-	Type        string                 `json:"type" binding:"required,oneof=oauth setup-token apikey"`
-	Credentials map[string]interface{placeholder `json:"credentials" binding:"required"`
-	Extra       map[string]interface{placeholder `json:"extra"`
-	ProxyID     *int64                 `json:"proxy_id"`
-	Concurrency int                    `json:"concurrency"`
-	Priority    int                    `json:"priority"`
-	GroupIDs    []int64                `json:"group_ids"`
+	Name        string         `json:"name" binding:"required"`
+	Platform    string         `json:"platform" binding:"required"`
+	Type        string         `json:"type" binding:"required,oneof=oauth setup-token apikey"`
+	Credentials map[string]any `json:"credentials" binding:"required"`
+	Extra       map[string]any `json:"extra"`
+	ProxyID     *int64         `json:"proxy_id"`
+	Concurrency int            `json:"concurrency"`
+	Priority    int            `json:"priority"`
+	GroupIDs    []int64        `json:"group_ids"`
 placeholder
 
 // UpdateAccountRequest represents update account request
 // 使用指针类型来区分"未提供"和"设置为0"
 type UpdateAccountRequest struct {
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type" binding:"omitempty,oneof=oauth setup-token apikey"`
-	Credentials map[string]interface{placeholder `json:"credentials"`
-	Extra       map[string]interface{placeholder `json:"extra"`
-	ProxyID     *int64                 `json:"proxy_id"`
-	Concurrency *int                   `json:"concurrency"`
-	Priority    *int                   `json:"priority"`
-	Status      string                 `json:"status" binding:"omitempty,oneof=active inactive"`
-	GroupIDs    *[]int64               `json:"group_ids"`
+	Name        string         `json:"name"`
+	Type        string         `json:"type" binding:"omitempty,oneof=oauth setup-token apikey"`
+	Credentials map[string]any `json:"credentials"`
+	Extra       map[string]any `json:"extra"`
+	ProxyID     *int64         `json:"proxy_id"`
+	Concurrency *int           `json:"concurrency"`
+	Priority    *int           `json:"priority"`
+	Status      string         `json:"status" binding:"omitempty,oneof=active inactive"`
+	GroupIDs    *[]int64       `json:"group_ids"`
 placeholder
 
 // List handles listing all accounts with pagination
@@ -240,7 +240,7 @@ placeholder
 placeholder
 
 	// Copy existing credentials to preserve non-token settings (e.g., intercept_warmup_requests)
-	newCredentials := make(map[string]interface{placeholder)
+	newCredentials := make(map[string]any)
 	for k, v := range account.Credentials {
 		newCredentials[k] = v
 placeholder

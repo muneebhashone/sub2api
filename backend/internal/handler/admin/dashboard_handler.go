@@ -255,7 +255,7 @@ func (h *DashboardHandler) GetBatchUsersUsage(c *gin.Context) {
 placeholder
 
 	if len(req.UserIDs) == 0 {
-		response.Success(c, gin.H{"stats": map[string]interface{placeholder{placeholderplaceholder)
+		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 
@@ -283,7 +283,7 @@ func (h *DashboardHandler) GetBatchApiKeysUsage(c *gin.Context) {
 placeholder
 
 	if len(req.ApiKeyIDs) == 0 {
-		response.Success(c, gin.H{"stats": map[string]interface{placeholder{placeholderplaceholder)
+		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 

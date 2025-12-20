@@ -259,11 +259,11 @@ placeholder
 placeholder
 
 // GetPricingServiceStatus 获取价格服务状态
-func (s *BillingService) GetPricingServiceStatus() map[string]interface{placeholder {
+func (s *BillingService) GetPricingServiceStatus() map[string]any {
 	if s.pricingService != nil {
 		return s.pricingService.GetStatus()
 placeholder
-	return map[string]interface{placeholder{
+	return map[string]any{
 		"model_count":  len(s.fallbackPrices),
 		"last_updated": "using fallback",
 		"local_hash":   "N/A",
