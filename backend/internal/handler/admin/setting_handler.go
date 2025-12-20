@@ -256,3 +256,43 @@ placeholder
 
 	response.Success(c, gin.H{"message": "Test email sent successfully"placeholder)
 placeholder
+
+// GetAdminApiKey 获取管理员 API Key 状态
+// GET /api/v1/admin/settings/admin-api-key
+func (h *SettingHandler) GetAdminApiKey(c *gin.Context) {
+	maskedKey, exists, err := h.settingService.GetAdminApiKeyStatus(c.Request.Context())
+	if err != nil {
+		response.InternalError(c, "Failed to get admin API key status: "+err.Error())
+		return
+placeholder
+
+	response.Success(c, gin.H{
+		"exists":     exists,
+		"masked_key": maskedKey,
+placeholder)
+placeholder
+
+// RegenerateAdminApiKey 生成/重新生成管理员 API Key
+// POST /api/v1/admin/settings/admin-api-key/regenerate
+func (h *SettingHandler) RegenerateAdminApiKey(c *gin.Context) {
+	key, err := h.settingService.GenerateAdminApiKey(c.Request.Context())
+	if err != nil {
+		response.InternalError(c, "Failed to generate admin API key: "+err.Error())
+		return
+placeholder
+
+	response.Success(c, gin.H{
+		"key": key, // 完整 key 只在生成时返回一次
+placeholder)
+placeholder
+
+// DeleteAdminApiKey 删除管理员 API Key
+// DELETE /api/v1/admin/settings/admin-api-key
+func (h *SettingHandler) DeleteAdminApiKey(c *gin.Context) {
+	if err := h.settingService.DeleteAdminApiKey(c.Request.Context()); err != nil {
+		response.InternalError(c, "Failed to delete admin API key: "+err.Error())
+		return
+placeholder
+
+	response.Success(c, gin.H{"message": "Admin API key deleted"placeholder)
+placeholder
