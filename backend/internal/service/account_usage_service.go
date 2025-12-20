@@ -70,16 +70,14 @@ placeholder
 type AccountUsageService struct {
 	accountRepo  ports.AccountRepository
 	usageLogRepo ports.UsageLogRepository
-	oauthService *OAuthService
 	usageFetcher ClaudeUsageFetcher
 placeholder
 
 // NewAccountUsageService 创建AccountUsageService实例
-func NewAccountUsageService(accountRepo ports.AccountRepository, usageLogRepo ports.UsageLogRepository, oauthService *OAuthService, usageFetcher ClaudeUsageFetcher) *AccountUsageService {
+func NewAccountUsageService(accountRepo ports.AccountRepository, usageLogRepo ports.UsageLogRepository, usageFetcher ClaudeUsageFetcher) *AccountUsageService {
 	return &AccountUsageService{
 		accountRepo:  accountRepo,
 		usageLogRepo: usageLogRepo,
-		oauthService: oauthService,
 		usageFetcher: usageFetcher,
 placeholder
 placeholder
