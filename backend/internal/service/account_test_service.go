@@ -10,7 +10,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -37,19 +36,17 @@ placeholder
 
 // AccountTestService handles account testing operations
 type AccountTestService struct {
-	accountRepo  ports.AccountRepository
-	oauthService *OAuthService
-	httpClient   *http.Client
+	accountRepo    ports.AccountRepository
+	oauthService   *OAuthService
+	claudeUpstream ClaudeUpstream
 placeholder
 
 // NewAccountTestService creates a new AccountTestService
-func NewAccountTestService(accountRepo ports.AccountRepository, oauthService *OAuthService) *AccountTestService {
+func NewAccountTestService(accountRepo ports.AccountRepository, oauthService *OAuthService, claudeUpstream ClaudeUpstream) *AccountTestService {
 	return &AccountTestService{
-		accountRepo:  accountRepo,
-		oauthService: oauthService,
-		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
-	placeholder,
+		accountRepo:    accountRepo,
+		oauthService:   oauthService,
+		claudeUpstream: claudeUpstream,
 placeholder
 placeholder
 
@@ -209,23 +206,13 @@ placeholder else {
 		req.Header.Set("x-api-key", authToken)
 placeholder
 
-	// Configure proxy if account has one
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Get proxy URL
+	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
-		proxyURL := account.Proxy.URL()
-		if proxyURL != "" {
-			if parsedURL, err := url.Parse(proxyURL); err == nil {
-				transport.Proxy = http.ProxyURL(parsedURL)
-		placeholder
-	placeholder
+		proxyURL = account.Proxy.URL()
 placeholder
 
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   60 * time.Second,
-placeholder
-
-	resp, err := client.Do(req)
+	resp, err := s.claudeUpstream.Do(req, proxyURL)
 	if err != nil {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Request failed: %s", err.Error()))
 placeholder

@@ -1,13 +1,12 @@
 package service
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,13 +19,19 @@ import (
 // LiteLLMModelPricing LiteLLM价格数据结构
 // 只保留我们需要的字段，使用指针来处理可能缺失的值
 type LiteLLMModelPricing struct {
-	InputCostPerToken            float64 `json:"input_cost_per_token"`
-	OutputCostPerToken           float64 `json:"output_cost_per_token"`
-	CacheCreationInputTokenCost  float64 `json:"cache_creation_input_token_cost"`
-	CacheReadInputTokenCost      float64 `json:"cache_read_input_token_cost"`
-	LiteLLMProvider              string  `json:"litellm_provider"`
-	Mode                         string  `json:"mode"`
-	SupportsPromptCaching        bool    `json:"supports_prompt_caching"`
+	InputCostPerToken           float64 `json:"input_cost_per_token"`
+	OutputCostPerToken          float64 `json:"output_cost_per_token"`
+	CacheCreationInputTokenCost float64 `json:"cache_creation_input_token_cost"`
+	CacheReadInputTokenCost     float64 `json:"cache_read_input_token_cost"`
+	LiteLLMProvider             string  `json:"litellm_provider"`
+	Mode                        string  `json:"mode"`
+	SupportsPromptCaching       bool    `json:"supports_prompt_caching"`
+placeholder
+
+// PricingRemoteClient 远程价格数据获取接口
+type PricingRemoteClient interface {
+	FetchPricingJSON(ctx context.Context, url string) ([]byte, error)
+	FetchHashText(ctx context.Context, url string) (string, error)
 placeholder
 
 // LiteLLMRawEntry 用于解析原始JSON数据
@@ -42,11 +47,12 @@ placeholder
 
 // PricingService 动态价格服务
 type PricingService struct {
-	cfg         *config.Config
-	mu          sync.RWMutex
-	pricingData map[string]*LiteLLMModelPricing
-	lastUpdated time.Time
-	localHash   string
+	cfg          *config.Config
+	remoteClient PricingRemoteClient
+	mu           sync.RWMutex
+	pricingData  map[string]*LiteLLMModelPricing
+	lastUpdated  time.Time
+	localHash    string
 
 	// 停止信号
 	stopCh chan struct{placeholder
@@ -54,11 +60,12 @@ type PricingService struct {
 placeholder
 
 // NewPricingService 创建价格服务
-func NewPricingService(cfg *config.Config) *PricingService {
+func NewPricingService(cfg *config.Config, remoteClient PricingRemoteClient) *PricingService {
 	s := &PricingService{
-		cfg:         cfg,
-		pricingData: make(map[string]*LiteLLMModelPricing),
-		stopCh:      make(chan struct{placeholder),
+		cfg:          cfg,
+		remoteClient: remoteClient,
+		pricingData:  make(map[string]*LiteLLMModelPricing),
+		stopCh:       make(chan struct{placeholder),
 placeholder
 	return s
 placeholder
@@ -199,20 +206,12 @@ placeholder
 func (s *PricingService) downloadPricingData() error {
 	log.Printf("[Pricing] Downloading from %s", s.cfg.Pricing.RemoteURL)
 
-	client := &http.Client{Timeout: 30 * time.Secondplaceholder
-	resp, err := client.Get(s.cfg.Pricing.RemoteURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, err := s.remoteClient.FetchPricingJSON(ctx, s.cfg.Pricing.RemoteURL)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
-placeholder
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
-placeholder
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response failed: %w", err)
 placeholder
 
 	// 解析JSON数据（使用灵活的解析方式）
@@ -367,29 +366,10 @@ placeholder
 
 // fetchRemoteHash 从远程获取哈希值
 func (s *PricingService) fetchRemoteHash() (string, error) {
-	client := &http.Client{Timeout: 10 * time.Secondplaceholder
-	resp, err := client.Get(s.cfg.Pricing.HashURL)
-	if err != nil {
-		return "", err
-placeholder
-	defer resp.Body.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d", resp.StatusCode)
-placeholder
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-placeholder
-
-	// 哈希文件格式：hash  filename 或者纯 hash
-	hash := strings.TrimSpace(string(body))
-	parts := strings.Fields(hash)
-	if len(parts) > 0 {
-		return parts[0], nil
-placeholder
-	return hash, nil
+	return s.remoteClient.FetchHashText(ctx, s.cfg.Pricing.HashURL)
 placeholder
 
 // computeFileHash 计算文件哈希
@@ -466,14 +446,14 @@ placeholder
 func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 	// Claude模型系列匹配规则
 	familyPatterns := map[string][]string{
-		"opus-4.5":       {"claude-opus-4.5", "claude-opus-4-5"placeholder,
-		"opus-4":         {"claude-opus-4", "claude-3-opus"placeholder,
-		"sonnet-4.5":     {"claude-sonnet-4.5", "claude-sonnet-4-5"placeholder,
-		"sonnet-4":       {"claude-sonnet-4", "claude-3-5-sonnet"placeholder,
-		"sonnet-3.5":     {"claude-3-5-sonnet", "claude-3.5-sonnet"placeholder,
-		"sonnet-3":       {"claude-3-sonnet"placeholder,
-		"haiku-3.5":      {"claude-3-5-haiku", "claude-3.5-haiku"placeholder,
-		"haiku-3":        {"claude-3-haiku"placeholder,
+		"opus-4.5":   {"claude-opus-4.5", "claude-opus-4-5"placeholder,
+		"opus-4":     {"claude-opus-4", "claude-3-opus"placeholder,
+		"sonnet-4.5": {"claude-sonnet-4.5", "claude-sonnet-4-5"placeholder,
+		"sonnet-4":   {"claude-sonnet-4", "claude-3-5-sonnet"placeholder,
+		"sonnet-3.5": {"claude-3-5-sonnet", "claude-3.5-sonnet"placeholder,
+		"sonnet-3":   {"claude-3-sonnet"placeholder,
+		"haiku-3.5":  {"claude-3-5-haiku", "claude-3.5-haiku"placeholder,
+		"haiku-3":    {"claude-3-haiku"placeholder,
 placeholder
 
 	// 确定模型属于哪个系列
