@@ -284,3 +284,8 @@ placeholder
 
 	return s.RefreshToken(ctx, refreshToken, proxyURL)
 placeholder
+
+// Stop stops the session store cleanup goroutine
+func (s *OAuthService) Stop() {
+	s.sessionStore.Stop()
+placeholder

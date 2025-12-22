@@ -85,6 +85,14 @@ func provideCleanup(
 				services.EmailQueue.Stop()
 				return nil
 	placeholder
+			{"OAuthService", func() error {
+				services.OAuth.Stop()
+				return nil
+	placeholder
+			{"OpenAIOAuthService", func() error {
+				services.OpenAIOAuth.Stop()
+				return nil
+	placeholder
 			{"Redis", func() error {
 				return rdb.Close()
 	placeholder
