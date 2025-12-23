@@ -11,7 +11,20 @@ import type { User, ChangePasswordRequest placeholder from '@/types';
  * @returns User profile data
  */
 export async function getProfile(): Promise<User> {
-  const { data placeholder = await apiClient.get<User>('/users/me');
+  const { data placeholder = await apiClient.get<User>('/user/profile');
+  return data;
+placeholder
+
+/**
+ * Update current user profile
+ * @param profile - Profile data to update
+ * @returns Updated user profile data
+ */
+export async function updateProfile(profile: {
+  username?: string;
+  wechat?: string;
+placeholder): Promise<User> {
+  const { data placeholder = await apiClient.put<User>('/user', profile);
   return data;
 placeholder
 
@@ -29,12 +42,13 @@ export async function changePassword(
     new_password: newPassword,
   placeholder;
 
-  const { data placeholder = await apiClient.post<{ message: string placeholder>('/users/me/password', payload);
+  const { data placeholder = await apiClient.put<{ message: string placeholder>('/user/password', payload);
   return data;
 placeholder
 
 export const userAPI = {
   getProfile,
+  updateProfile,
   changePassword,
 placeholder;
 

@@ -21,6 +21,8 @@ var (
 // UpdateProfileRequest 更新用户资料请求
 type UpdateProfileRequest struct {
 	Email       *string `json:"email"`
+	Username    *string `json:"username"`
+	Wechat      *string `json:"wechat"`
 	Concurrency *int    `json:"concurrency"`
 placeholder
 
@@ -75,6 +77,14 @@ placeholder
 			return nil, ErrEmailExists
 	placeholder
 		user.Email = *req.Email
+placeholder
+
+	if req.Username != nil {
+		user.Username = *req.Username
+placeholder
+
+	if req.Wechat != nil {
+		user.Wechat = *req.Wechat
 placeholder
 
 	if req.Concurrency != nil {
