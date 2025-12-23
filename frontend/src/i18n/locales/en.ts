@@ -581,6 +581,10 @@ export default {
       weekly: 'Weekly',
       monthly: 'Monthly',
       noLimits: 'No limits configured',
+      resetNow: 'Resetting soon',
+      resetInMinutes: 'Resets in {minutesplaceholderm',
+      resetInHoursMinutes: 'Resets in {hoursplaceholderh {minutesplaceholderm',
+      resetInDaysHours: 'Resets in {daysplaceholderd {hoursplaceholderh',
       daysRemaining: 'days remaining',
       noExpiration: 'No expiration',
       status: {
