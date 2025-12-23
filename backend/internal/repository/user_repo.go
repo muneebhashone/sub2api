@@ -66,7 +66,10 @@ placeholder
 placeholder
 	if search != "" {
 		searchPattern := "%" + search + "%"
-		db = db.Where("email ILIKE ?", searchPattern)
+		db = db.Where(
+			"email ILIKE ? OR username ILIKE ? OR wechat ILIKE ?",
+			searchPattern, searchPattern, searchPattern,
+		)
 placeholder
 
 	if err := db.Count(&total).Error; err != nil {
