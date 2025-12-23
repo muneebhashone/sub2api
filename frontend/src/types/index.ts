@@ -645,3 +645,51 @@ export interface UsageQueryParams {
   start_date?: string;
   end_date?: string;
 placeholder
+
+// ==================== Account Usage Statistics ====================
+
+export interface AccountUsageHistory {
+  date: string;
+  label: string;
+  requests: number;
+  tokens: number;
+  cost: number;
+  actual_cost: number;
+placeholder
+
+export interface AccountUsageSummary {
+  days: number;
+  actual_days_used: number;
+  total_cost: number;
+  total_standard_cost: number;
+  total_requests: number;
+  total_tokens: number;
+  avg_daily_cost: number;
+  avg_daily_requests: number;
+  avg_daily_tokens: number;
+  avg_duration_ms: number;
+  today: {
+    date: string;
+    cost: number;
+    requests: number;
+    tokens: number;
+  placeholder | null;
+  highest_cost_day: {
+    date: string;
+    label: string;
+    cost: number;
+    requests: number;
+  placeholder | null;
+  highest_request_day: {
+    date: string;
+    label: string;
+    requests: number;
+    cost: number;
+  placeholder | null;
+placeholder
+
+export interface AccountUsageStatsResponse {
+  history: AccountUsageHistory[];
+  summary: AccountUsageSummary;
+  models: ModelStat[];
+placeholder

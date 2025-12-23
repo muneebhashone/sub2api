@@ -5,3 +5,6 @@ export { default as OAuthAuthorizationFlow placeholder from './OAuthAuthorizatio
 export { default as AccountStatusIndicator placeholder from './AccountStatusIndicator.vue'
 export { default as AccountUsageCell placeholder from './AccountUsageCell.vue'
 export { default as UsageProgressBar placeholder from './UsageProgressBar.vue'
+export { default as AccountStatsModal placeholder from './AccountStatsModal.vue'
+export { default as AccountTestModal placeholder from './AccountTestModal.vue'
+export { default as AccountTodayStatsCell placeholder from './AccountTodayStatsCell.vue'
