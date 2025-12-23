@@ -639,6 +639,7 @@ export default {
       monthly: '每月',
       noLimits: '未配置限额',
       resetNow: '即将重置',
+      windowNotActive: '窗口未激活',
       resetInMinutes: '{minutesplaceholder 分钟后重置',
       resetInHoursMinutes: '{hoursplaceholder 小时 {minutesplaceholder 分钟后重置',
       resetInDaysHours: '{daysplaceholder 天 {hoursplaceholder 小时后重置',
@@ -1302,6 +1303,7 @@ export default {
     daysRemaining: '剩余 {daysplaceholder 天',
     expiresOn: '{dateplaceholder 到期',
     resetIn: '{timeplaceholder 后重置',
+    windowNotActive: '等待首次使用',
     usageOf: '已用 {usedplaceholder / {limitplaceholder',
   placeholder,
 placeholder
