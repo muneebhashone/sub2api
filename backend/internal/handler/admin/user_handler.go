@@ -49,8 +49,9 @@ placeholder
 
 // UpdateBalanceRequest represents balance update request
 type UpdateBalanceRequest struct {
-	Balance   float64 `json:"balance" binding:"required"`
+	Balance   float64 `json:"balance" binding:"required,gt=0"`
 	Operation string  `json:"operation" binding:"required,oneof=set add subtract"`
+	Notes     string  `json:"notes"`
 placeholder
 
 // List handles listing all users with pagination
@@ -183,7 +184,7 @@ placeholder
 		return
 placeholder
 
-	user, err := h.adminService.UpdateUserBalance(c.Request.Context(), userID, req.Balance, req.Operation)
+	user, err := h.adminService.UpdateUserBalance(c.Request.Context(), userID, req.Balance, req.Operation, req.Notes)
 	if err != nil {
 		response.InternalError(c, "Failed to update balance: "+err.Error())
 		return
