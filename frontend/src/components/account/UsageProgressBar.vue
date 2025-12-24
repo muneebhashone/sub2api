@@ -1,37 +1,50 @@
 <template>
-  <div class="flex items-center gap-1">
-    <!-- Label badge (fixed width for alignment) -->
-    <span
-      :class="[
-        'text-[10px] font-medium px-1 rounded w-[32px] text-center shrink-0',
-        labelClass
-      ]"
-    >
-      {{ label placeholderplaceholder
-    </span>
-
-    <!-- Progress bar container -->
-    <div class="w-8 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shrink-0">
-      <div
-        :class="['h-full transition-all duration-300', barClass]"
-        :style="{ width: barWidth placeholder"
-      ></div>
+  <div>
+    <!-- Window stats row (above progress bar, left-right aligned with progress bar) -->
+    <div v-if="windowStats" class="flex items-center justify-between mb-0.5" :title="`5h 窗口用量统计`">
+      <div class="flex items-center gap-1.5 text-[9px] text-gray-500 dark:text-gray-400 cursor-help">
+        <span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800">
+          {{ formatRequests placeholderplaceholder req
+        </span>
+        <span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800">
+          {{ formatTokens placeholderplaceholder
+        </span>
+        <span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800">
+          ${{ formatCost placeholderplaceholder
+        </span>
+      </div>
     </div>
 
-    <!-- Percentage -->
-    <span :class="['text-[10px] font-medium w-[32px] text-right shrink-0', textClass]">
-      {{ displayPercent placeholderplaceholder
-    </span>
+    <!-- Progress bar row -->
+    <div class="flex items-center gap-1">
+      <!-- Label badge (fixed width for alignment) -->
+      <span
+        :class="[
+          'text-[10px] font-medium px-1 rounded w-[32px] text-center shrink-0',
+          labelClass
+        ]"
+      >
+        {{ label placeholderplaceholder
+      </span>
 
-    <!-- Reset time -->
-    <span v-if="resetsAt" class="text-[10px] text-gray-400 shrink-0">
-      {{ formatResetTime placeholderplaceholder
-    </span>
+      <!-- Progress bar container -->
+      <div class="w-8 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shrink-0">
+        <div
+          :class="['h-full transition-all duration-300', barClass]"
+          :style="{ width: barWidth placeholder"
+        ></div>
+      </div>
 
-    <!-- Window stats (only for 5h window) -->
-    <span v-if="windowStats" class="text-[10px] text-gray-400 shrink-0 ml-1">
-      ({{ formatStats placeholderplaceholder)
-    </span>
+      <!-- Percentage -->
+      <span :class="['text-[10px] font-medium w-[32px] text-right shrink-0', textClass]">
+        {{ displayPercent placeholderplaceholder
+      </span>
+
+      <!-- Reset time -->
+      <span v-if="resetsAt" class="text-[10px] text-gray-400 shrink-0">
+        {{ formatResetTime placeholderplaceholder
+      </span>
+    </div>
   </div>
 </template>
 
@@ -113,17 +126,25 @@ const formatResetTime = computed(() => {
 placeholder)
 
 // Format window stats
-const formatStats = computed(() => {
+const formatRequests = computed(() => {
   if (!props.windowStats) return ''
-  const { requests, tokens, cost placeholder = props.windowStats
+  const r = props.windowStats.requests
+  if (r >= 1000000) return `${(r / 1000000).toFixed(1)placeholderM`
+  if (r >= 1000) return `${(r / 1000).toFixed(1)placeholderK`
+  return r.toString()
+placeholder)
 
-  // Format tokens (e.g., 1234567 -> 1.2M)
-  const formatTokens = (t: number): string => {
-    if (t >= 1000000) return `${(t / 1000000).toFixed(1)placeholderM`
-    if (t >= 1000) return `${(t / 1000).toFixed(1)placeholderK`
-    return t.toString()
-  placeholder
+const formatTokens = computed(() => {
+  if (!props.windowStats) return ''
+  const t = props.windowStats.tokens
+  if (t >= 1000000000) return `${(t / 1000000000).toFixed(1)placeholderB`
+  if (t >= 1000000) return `${(t / 1000000).toFixed(1)placeholderM`
+  if (t >= 1000) return `${(t / 1000).toFixed(1)placeholderK`
+  return t.toString()
+placeholder)
 
-  return `${requestsplaceholderreq ${formatTokens(tokens)placeholdertok $${cost.toFixed(2)placeholder`
+const formatCost = computed(() => {
+  if (!props.windowStats) return '0.00'
+  return props.windowStats.cost.toFixed(2)
 placeholder)
 </script>
