@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"github.com/Wei-Shaw/sub2api/internal/model"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"time"
@@ -35,6 +36,22 @@ placeholder
 		if ag.Group != nil {
 			account.Groups = append(account.Groups, ag.Group)
 	placeholder
+placeholder
+	return &account, nil
+placeholder
+
+func (r *AccountRepository) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*model.Account, error) {
+	if crsAccountID == "" {
+		return nil, nil
+placeholder
+
+	var account model.Account
+	err := r.db.WithContext(ctx).Where("extra->>'crs_account_id' = ?", crsAccountID).First(&account).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+	placeholder
+		return nil, err
 placeholder
 	return &account, nil
 placeholder
