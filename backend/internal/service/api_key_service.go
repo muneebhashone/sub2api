@@ -455,3 +455,11 @@ placeholder
 	// 标准类型分组：使用原有逻辑
 	return user.CanBindGroup(group.ID, group.IsExclusive)
 placeholder
+
+func (s *ApiKeyService) SearchApiKeys(ctx context.Context, userID int64, keyword string, limit int) ([]model.ApiKey, error) {
+	keys, err := s.apiKeyRepo.SearchApiKeys(ctx, userID, keyword, limit)
+	if err != nil {
+		return nil, fmt.Errorf("search api keys: %w", err)
+placeholder
+	return keys, nil
+placeholder
