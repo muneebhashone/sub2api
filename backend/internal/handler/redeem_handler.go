@@ -57,7 +57,7 @@ placeholder
 
 	result, err := h.redeemService.Redeem(c.Request.Context(), user.ID, req.Code)
 	if err != nil {
-		response.BadRequest(c, "Failed to redeem code: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -84,7 +84,7 @@ placeholder
 
 	codes, err := h.redeemService.GetUserHistory(c.Request.Context(), user.ID, limit)
 	if err != nil {
-		response.InternalError(c, "Failed to get history: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 

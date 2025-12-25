@@ -58,7 +58,7 @@ placeholder
 
 	subscriptions, err := h.subscriptionService.ListUserSubscriptions(c.Request.Context(), u.ID)
 	if err != nil {
-		response.InternalError(c, "Failed to list subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -82,7 +82,7 @@ placeholder
 
 	subscriptions, err := h.subscriptionService.ListActiveUserSubscriptions(c.Request.Context(), u.ID)
 	if err != nil {
-		response.InternalError(c, "Failed to get active subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -107,7 +107,7 @@ placeholder
 	// Get all active subscriptions with progress
 	subscriptions, err := h.subscriptionService.ListActiveUserSubscriptions(c.Request.Context(), u.ID)
 	if err != nil {
-		response.InternalError(c, "Failed to get subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -146,7 +146,7 @@ placeholder
 	// Get all active subscriptions
 	subscriptions, err := h.subscriptionService.ListActiveUserSubscriptions(c.Request.Context(), u.ID)
 	if err != nil {
-		response.InternalError(c, "Failed to get subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 

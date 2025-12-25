@@ -19,13 +19,13 @@ type UsageLogRepoSuite struct {
 	suite.Suite
 	ctx  context.Context
 	db   *gorm.DB
-	repo *UsageLogRepository
+	repo *usageLogRepository
 placeholder
 
 func (s *UsageLogRepoSuite) SetupTest() {
 	s.ctx = context.Background()
 	s.db = testTx(s.T())
-	s.repo = NewUsageLogRepository(s.db)
+	s.repo = NewUsageLogRepository(s.db).(*usageLogRepository)
 placeholder
 
 func TestUsageLogRepoSuite(t *testing.T) {

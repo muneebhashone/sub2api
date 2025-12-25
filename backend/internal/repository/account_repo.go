@@ -13,23 +13,23 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type AccountRepository struct {
+type accountRepository struct {
 	db *gorm.DB
 placeholder
 
-func NewAccountRepository(db *gorm.DB) *AccountRepository {
-	return &AccountRepository{db: dbplaceholder
+func NewAccountRepository(db *gorm.DB) service.AccountRepository {
+	return &accountRepository{db: dbplaceholder
 placeholder
 
-func (r *AccountRepository) Create(ctx context.Context, account *model.Account) error {
+func (r *accountRepository) Create(ctx context.Context, account *model.Account) error {
 	return r.db.WithContext(ctx).Create(account).Error
 placeholder
 
-func (r *AccountRepository) GetByID(ctx context.Context, id int64) (*model.Account, error) {
+func (r *accountRepository) GetByID(ctx context.Context, id int64) (*model.Account, error) {
 	var account model.Account
 	err := r.db.WithContext(ctx).Preload("Proxy").Preload("AccountGroups.Group").First(&account, id).Error
 	if err != nil {
-		return nil, err
+		return nil, translatePersistenceError(err, service.ErrAccountNotFound, nil)
 placeholder
 	// 填充 GroupIDs 和 Groups 虚拟字段
 	account.GroupIDs = make([]int64, 0, len(account.AccountGroups))
@@ -43,7 +43,7 @@ placeholder
 	return &account, nil
 placeholder
 
-func (r *AccountRepository) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*model.Account, error) {
+func (r *accountRepository) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*model.Account, error) {
 	if crsAccountID == "" {
 		return nil, nil
 placeholder
@@ -59,11 +59,11 @@ placeholder
 	return &account, nil
 placeholder
 
-func (r *AccountRepository) Update(ctx context.Context, account *model.Account) error {
+func (r *accountRepository) Update(ctx context.Context, account *model.Account) error {
 	return r.db.WithContext(ctx).Save(account).Error
 placeholder
 
-func (r *AccountRepository) Delete(ctx context.Context, id int64) error {
+func (r *accountRepository) Delete(ctx context.Context, id int64) error {
 	// 先删除账号与分组的绑定关系
 	if err := r.db.WithContext(ctx).Where("account_id = ?", id).Delete(&model.AccountGroup{placeholder).Error; err != nil {
 		return err
@@ -72,12 +72,12 @@ placeholder
 	return r.db.WithContext(ctx).Delete(&model.Account{placeholder, id).Error
 placeholder
 
-func (r *AccountRepository) List(ctx context.Context, params pagination.PaginationParams) ([]model.Account, *pagination.PaginationResult, error) {
+func (r *accountRepository) List(ctx context.Context, params pagination.PaginationParams) ([]model.Account, *pagination.PaginationResult, error) {
 	return r.ListWithFilters(ctx, params, "", "", "", "")
 placeholder
 
 // ListWithFilters lists accounts with optional filtering by platform, type, status, and search query
-func (r *AccountRepository) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, accountType, status, search string) ([]model.Account, *pagination.PaginationResult, error) {
+func (r *accountRepository) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, accountType, status, search string) ([]model.Account, *pagination.PaginationResult, error) {
 	var accounts []model.Account
 	var total int64
 
@@ -131,7 +131,7 @@ placeholder
 placeholder, nil
 placeholder
 
-func (r *AccountRepository) ListByGroup(ctx context.Context, groupID int64) ([]model.Account, error) {
+func (r *accountRepository) ListByGroup(ctx context.Context, groupID int64) ([]model.Account, error) {
 	var accounts []model.Account
 	err := r.db.WithContext(ctx).
 		Joins("JOIN account_groups ON account_groups.account_id = accounts.id").
@@ -142,7 +142,7 @@ func (r *AccountRepository) ListByGroup(ctx context.Context, groupID int64) ([]m
 	return accounts, err
 placeholder
 
-func (r *AccountRepository) ListActive(ctx context.Context) ([]model.Account, error) {
+func (r *accountRepository) ListActive(ctx context.Context) ([]model.Account, error) {
 	var accounts []model.Account
 	err := r.db.WithContext(ctx).
 		Where("status = ?", model.StatusActive).
@@ -152,12 +152,12 @@ func (r *AccountRepository) ListActive(ctx context.Context) ([]model.Account, er
 	return accounts, err
 placeholder
 
-func (r *AccountRepository) UpdateLastUsed(ctx context.Context, id int64) error {
+func (r *accountRepository) UpdateLastUsed(ctx context.Context, id int64) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).Update("last_used_at", now).Error
 placeholder
 
-func (r *AccountRepository) SetError(ctx context.Context, id int64, errorMsg string) error {
+func (r *accountRepository) SetError(ctx context.Context, id int64, errorMsg string) error {
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
 		Updates(map[string]any{
 			"status":        model.StatusError,
@@ -165,7 +165,7 @@ func (r *AccountRepository) SetError(ctx context.Context, id int64, errorMsg str
 	placeholder).Error
 placeholder
 
-func (r *AccountRepository) AddToGroup(ctx context.Context, accountID, groupID int64, priority int) error {
+func (r *accountRepository) AddToGroup(ctx context.Context, accountID, groupID int64, priority int) error {
 	ag := &model.AccountGroup{
 		AccountID: accountID,
 		GroupID:   groupID,
@@ -174,12 +174,12 @@ placeholder
 	return r.db.WithContext(ctx).Create(ag).Error
 placeholder
 
-func (r *AccountRepository) RemoveFromGroup(ctx context.Context, accountID, groupID int64) error {
+func (r *accountRepository) RemoveFromGroup(ctx context.Context, accountID, groupID int64) error {
 	return r.db.WithContext(ctx).Where("account_id = ? AND group_id = ?", accountID, groupID).
 		Delete(&model.AccountGroup{placeholder).Error
 placeholder
 
-func (r *AccountRepository) GetGroups(ctx context.Context, accountID int64) ([]model.Group, error) {
+func (r *accountRepository) GetGroups(ctx context.Context, accountID int64) ([]model.Group, error) {
 	var groups []model.Group
 	err := r.db.WithContext(ctx).
 		Joins("JOIN account_groups ON account_groups.group_id = groups.id").
@@ -188,7 +188,7 @@ func (r *AccountRepository) GetGroups(ctx context.Context, accountID int64) ([]m
 	return groups, err
 placeholder
 
-func (r *AccountRepository) ListByPlatform(ctx context.Context, platform string) ([]model.Account, error) {
+func (r *accountRepository) ListByPlatform(ctx context.Context, platform string) ([]model.Account, error) {
 	var accounts []model.Account
 	err := r.db.WithContext(ctx).
 		Where("platform = ? AND status = ?", platform, model.StatusActive).
@@ -198,7 +198,7 @@ func (r *AccountRepository) ListByPlatform(ctx context.Context, platform string)
 	return accounts, err
 placeholder
 
-func (r *AccountRepository) BindGroups(ctx context.Context, accountID int64, groupIDs []int64) error {
+func (r *accountRepository) BindGroups(ctx context.Context, accountID int64, groupIDs []int64) error {
 	// 删除现有绑定
 	if err := r.db.WithContext(ctx).Where("account_id = ?", accountID).Delete(&model.AccountGroup{placeholder).Error; err != nil {
 		return err
@@ -221,7 +221,7 @@ placeholder
 placeholder
 
 // ListSchedulable 获取所有可调度的账号
-func (r *AccountRepository) ListSchedulable(ctx context.Context) ([]model.Account, error) {
+func (r *accountRepository) ListSchedulable(ctx context.Context) ([]model.Account, error) {
 	var accounts []model.Account
 	now := time.Now()
 	err := r.db.WithContext(ctx).
@@ -235,7 +235,7 @@ func (r *AccountRepository) ListSchedulable(ctx context.Context) ([]model.Accoun
 placeholder
 
 // ListSchedulableByGroupID 按组获取可调度的账号
-func (r *AccountRepository) ListSchedulableByGroupID(ctx context.Context, groupID int64) ([]model.Account, error) {
+func (r *accountRepository) ListSchedulableByGroupID(ctx context.Context, groupID int64) ([]model.Account, error) {
 	var accounts []model.Account
 	now := time.Now()
 	err := r.db.WithContext(ctx).
@@ -251,7 +251,7 @@ func (r *AccountRepository) ListSchedulableByGroupID(ctx context.Context, groupI
 placeholder
 
 // ListSchedulableByPlatform 按平台获取可调度的账号
-func (r *AccountRepository) ListSchedulableByPlatform(ctx context.Context, platform string) ([]model.Account, error) {
+func (r *accountRepository) ListSchedulableByPlatform(ctx context.Context, platform string) ([]model.Account, error) {
 	var accounts []model.Account
 	now := time.Now()
 	err := r.db.WithContext(ctx).
@@ -266,7 +266,7 @@ func (r *AccountRepository) ListSchedulableByPlatform(ctx context.Context, platf
 placeholder
 
 // ListSchedulableByGroupIDAndPlatform 按组和平台获取可调度的账号
-func (r *AccountRepository) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]model.Account, error) {
+func (r *accountRepository) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]model.Account, error) {
 	var accounts []model.Account
 	now := time.Now()
 	err := r.db.WithContext(ctx).
@@ -283,7 +283,7 @@ func (r *AccountRepository) ListSchedulableByGroupIDAndPlatform(ctx context.Cont
 placeholder
 
 // SetRateLimited 标记账号为限流状态(429)
-func (r *AccountRepository) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
+func (r *accountRepository) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	now := time.Now()
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
 		Updates(map[string]any{
@@ -293,13 +293,13 @@ func (r *AccountRepository) SetRateLimited(ctx context.Context, id int64, resetA
 placeholder
 
 // SetOverloaded 标记账号为过载状态(529)
-func (r *AccountRepository) SetOverloaded(ctx context.Context, id int64, until time.Time) error {
+func (r *accountRepository) SetOverloaded(ctx context.Context, id int64, until time.Time) error {
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
 		Update("overload_until", until).Error
 placeholder
 
 // ClearRateLimit 清除账号的限流状态
-func (r *AccountRepository) ClearRateLimit(ctx context.Context, id int64) error {
+func (r *accountRepository) ClearRateLimit(ctx context.Context, id int64) error {
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
 		Updates(map[string]any{
 			"rate_limited_at":     nil,
@@ -309,7 +309,7 @@ func (r *AccountRepository) ClearRateLimit(ctx context.Context, id int64) error 
 placeholder
 
 // UpdateSessionWindow 更新账号的5小时时间窗口信息
-func (r *AccountRepository) UpdateSessionWindow(ctx context.Context, id int64, start, end *time.Time, status string) error {
+func (r *accountRepository) UpdateSessionWindow(ctx context.Context, id int64, start, end *time.Time, status string) error {
 	updates := map[string]any{
 		"session_window_status": status,
 placeholder
@@ -323,14 +323,14 @@ placeholder
 placeholder
 
 // SetSchedulable 设置账号的调度开关
-func (r *AccountRepository) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
+func (r *accountRepository) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
 	return r.db.WithContext(ctx).Model(&model.Account{placeholder).Where("id = ?", id).
 		Update("schedulable", schedulable).Error
 placeholder
 
 // UpdateExtra updates specific fields in account's Extra JSONB field
 // It merges the updates into existing Extra data without overwriting other fields
-func (r *AccountRepository) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
+func (r *accountRepository) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
 	if len(updates) == 0 {
 		return nil
 placeholder
@@ -358,7 +358,7 @@ placeholder
 
 // BulkUpdate updates multiple accounts with the provided fields.
 // It merges credentials/extra JSONB fields instead of overwriting them.
-func (r *AccountRepository) BulkUpdate(ctx context.Context, ids []int64, updates service.AccountBulkUpdate) (int64, error) {
+func (r *accountRepository) BulkUpdate(ctx context.Context, ids []int64, updates service.AccountBulkUpdate) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
 placeholder

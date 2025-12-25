@@ -64,7 +64,7 @@ func (h *UserHandler) List(c *gin.Context) {
 
 	users, total, err := h.adminService.ListUsers(c.Request.Context(), page, pageSize, status, role, search)
 	if err != nil {
-		response.InternalError(c, "Failed to list users: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -82,7 +82,7 @@ placeholder
 
 	user, err := h.adminService.GetUser(c.Request.Context(), userID)
 	if err != nil {
-		response.NotFound(c, "User not found")
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -109,7 +109,7 @@ placeholder
 		AllowedGroups: req.AllowedGroups,
 placeholder)
 	if err != nil {
-		response.BadRequest(c, "Failed to create user: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -144,7 +144,7 @@ placeholder
 		AllowedGroups: req.AllowedGroups,
 placeholder)
 	if err != nil {
-		response.InternalError(c, "Failed to update user: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -162,7 +162,7 @@ placeholder
 
 	err = h.adminService.DeleteUser(c.Request.Context(), userID)
 	if err != nil {
-		response.InternalError(c, "Failed to delete user: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -186,7 +186,7 @@ placeholder
 
 	user, err := h.adminService.UpdateUserBalance(c.Request.Context(), userID, req.Balance, req.Operation, req.Notes)
 	if err != nil {
-		response.InternalError(c, "Failed to update balance: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -206,7 +206,7 @@ placeholder
 
 	keys, total, err := h.adminService.GetUserAPIKeys(c.Request.Context(), userID, page, pageSize)
 	if err != nil {
-		response.InternalError(c, "Failed to get user API keys: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -226,7 +226,7 @@ placeholder
 
 	stats, err := h.adminService.GetUserUsageStats(c.Request.Context(), userID, period)
 	if err != nil {
-		response.InternalError(c, "Failed to get user usage: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 

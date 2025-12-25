@@ -57,7 +57,7 @@ placeholder
 
 	keys, result, err := h.apiKeyService.List(c.Request.Context(), user.ID, params)
 	if err != nil {
-		response.InternalError(c, "Failed to list API keys: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -87,7 +87,7 @@ placeholder
 
 	key, err := h.apiKeyService.GetByID(c.Request.Context(), keyID)
 	if err != nil {
-		response.NotFound(c, "API key not found")
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -128,7 +128,7 @@ placeholder
 placeholder
 	key, err := h.apiKeyService.Create(c.Request.Context(), user.ID, svcReq)
 	if err != nil {
-		response.InternalError(c, "Failed to create API key: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -173,7 +173,7 @@ placeholder
 
 	key, err := h.apiKeyService.Update(c.Request.Context(), keyID, user.ID, svcReq)
 	if err != nil {
-		response.InternalError(c, "Failed to update API key: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -203,7 +203,7 @@ placeholder
 
 	err = h.apiKeyService.Delete(c.Request.Context(), keyID, user.ID)
 	if err != nil {
-		response.InternalError(c, "Failed to delete API key: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -227,7 +227,7 @@ placeholder
 
 	groups, err := h.apiKeyService.GetAvailableGroups(c.Request.Context(), user.ID)
 	if err != nil {
-		response.InternalError(c, "Failed to get available groups: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 

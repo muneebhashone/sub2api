@@ -78,7 +78,7 @@ placeholder
 
 	subscriptions, pagination, err := h.subscriptionService.List(c.Request.Context(), page, pageSize, userID, groupID, status)
 	if err != nil {
-		response.InternalError(c, "Failed to list subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -96,7 +96,7 @@ placeholder
 
 	subscription, err := h.subscriptionService.GetByID(c.Request.Context(), subscriptionID)
 	if err != nil {
-		response.NotFound(c, "Subscription not found")
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -141,7 +141,7 @@ placeholder
 		Notes:        req.Notes,
 placeholder)
 	if err != nil {
-		response.BadRequest(c, "Failed to assign subscription: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -168,7 +168,7 @@ placeholder
 		Notes:        req.Notes,
 placeholder)
 	if err != nil {
-		response.InternalError(c, "Failed to bulk assign subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -192,7 +192,7 @@ placeholder
 
 	subscription, err := h.subscriptionService.ExtendSubscription(c.Request.Context(), subscriptionID, req.Days)
 	if err != nil {
-		response.InternalError(c, "Failed to extend subscription: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -210,7 +210,7 @@ placeholder
 
 	err = h.subscriptionService.RevokeSubscription(c.Request.Context(), subscriptionID)
 	if err != nil {
-		response.InternalError(c, "Failed to revoke subscription: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -230,7 +230,7 @@ placeholder
 
 	subscriptions, pagination, err := h.subscriptionService.ListGroupSubscriptions(c.Request.Context(), groupID, page, pageSize)
 	if err != nil {
-		response.InternalError(c, "Failed to list group subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -248,7 +248,7 @@ placeholder
 
 	subscriptions, err := h.subscriptionService.ListUserSubscriptions(c.Request.Context(), userID)
 	if err != nil {
-		response.InternalError(c, "Failed to list user subscriptions: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 

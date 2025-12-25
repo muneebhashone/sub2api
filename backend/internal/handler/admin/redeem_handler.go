@@ -43,7 +43,7 @@ func (h *RedeemHandler) List(c *gin.Context) {
 
 	codes, total, err := h.adminService.ListRedeemCodes(c.Request.Context(), page, pageSize, codeType, status, search)
 	if err != nil {
-		response.InternalError(c, "Failed to list redeem codes: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -61,7 +61,7 @@ placeholder
 
 	code, err := h.adminService.GetRedeemCode(c.Request.Context(), codeID)
 	if err != nil {
-		response.NotFound(c, "Redeem code not found")
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -85,7 +85,7 @@ placeholder
 		ValidityDays: req.ValidityDays,
 placeholder)
 	if err != nil {
-		response.InternalError(c, "Failed to generate redeem codes: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -103,7 +103,7 @@ placeholder
 
 	err = h.adminService.DeleteRedeemCode(c.Request.Context(), codeID)
 	if err != nil {
-		response.InternalError(c, "Failed to delete redeem code: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -123,7 +123,7 @@ placeholder
 
 	deleted, err := h.adminService.BatchDeleteRedeemCodes(c.Request.Context(), req.IDs)
 	if err != nil {
-		response.InternalError(c, "Failed to batch delete redeem codes: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -144,7 +144,7 @@ placeholder
 
 	code, err := h.adminService.ExpireRedeemCode(c.Request.Context(), codeID)
 	if err != nil {
-		response.InternalError(c, "Failed to expire redeem code: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -178,7 +178,7 @@ func (h *RedeemHandler) Export(c *gin.Context) {
 	// Get all codes without pagination (use large page size)
 	codes, _, err := h.adminService.ListRedeemCodes(c.Request.Context(), 1, 10000, codeType, status, "")
 	if err != nil {
-		response.InternalError(c, "Failed to export redeem codes: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 

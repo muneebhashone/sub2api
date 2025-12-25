@@ -40,7 +40,7 @@ placeholder
 
 	result, err := h.openaiOAuthService.GenerateAuthURL(c.Request.Context(), req.ProxyID, req.RedirectURI)
 	if err != nil {
-		response.InternalError(c, "Failed to generate auth URL: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -71,7 +71,7 @@ placeholder
 		ProxyID:     req.ProxyID,
 placeholder)
 	if err != nil {
-		response.BadRequest(c, "Failed to exchange code: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -103,7 +103,7 @@ placeholder
 
 	tokenInfo, err := h.openaiOAuthService.RefreshToken(c.Request.Context(), req.RefreshToken, proxyURL)
 	if err != nil {
-		response.BadRequest(c, "Failed to refresh token: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -122,7 +122,7 @@ placeholder
 	// Get account
 	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
 	if err != nil {
-		response.NotFound(c, "Account not found")
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -141,7 +141,7 @@ placeholder
 	// Use OpenAI OAuth service to refresh token
 	tokenInfo, err := h.openaiOAuthService.RefreshAccountToken(c.Request.Context(), account)
 	if err != nil {
-		response.InternalError(c, "Failed to refresh credentials: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -159,7 +159,7 @@ placeholder
 		Credentials: newCredentials,
 placeholder)
 	if err != nil {
-		response.InternalError(c, "Failed to update account credentials: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -192,7 +192,7 @@ placeholder
 		ProxyID:     req.ProxyID,
 placeholder)
 	if err != nil {
-		response.BadRequest(c, "Failed to exchange code: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
@@ -220,7 +220,7 @@ placeholder
 		GroupIDs:    req.GroupIDs,
 placeholder)
 	if err != nil {
-		response.InternalError(c, "Failed to create account: "+err.Error())
+		response.ErrorFrom(c, err)
 		return
 placeholder
 
