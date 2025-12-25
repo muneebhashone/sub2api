@@ -1,0 +1,355 @@
+//go:build integration
+
+package repository
+
+import (
+	"context"
+	"testing"
+
+	"github.com/Wei-Shaw/sub2api/internal/model"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
+)
+
+type ApiKeyRepoSuite struct {
+	suite.Suite
+	ctx  context.Context
+	db   *gorm.DB
+	repo *ApiKeyRepository
+placeholder
+
+func (s *ApiKeyRepoSuite) SetupTest() {
+	s.ctx = context.Background()
+	s.db = testTx(s.T())
+	s.repo = NewApiKeyRepository(s.db)
+placeholder
+
+func TestApiKeyRepoSuite(t *testing.T) {
+	suite.Run(t, new(ApiKeyRepoSuite))
+placeholder
+
+// --- Create / GetByID / GetByKey ---
+
+func (s *ApiKeyRepoSuite) TestCreate() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "create@test.com"placeholder)
+
+	key := &model.ApiKey{
+		UserID: user.ID,
+		Key:    "sk-create-test",
+		Name:   "Test Key",
+		Status: model.StatusActive,
+placeholder
+
+	err := s.repo.Create(s.ctx, key)
+	s.Require().NoError(err, "Create")
+	s.Require().NotZero(key.ID, "expected ID to be set")
+
+	got, err := s.repo.GetByID(s.ctx, key.ID)
+	s.Require().NoError(err, "GetByID")
+	s.Require().Equal("sk-create-test", got.Key)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestGetByID_NotFound() {
+	_, err := s.repo.GetByID(s.ctx, 999999)
+	s.Require().Error(err, "expected error for non-existent ID")
+placeholder
+
+func (s *ApiKeyRepoSuite) TestGetByKey() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "getbykey@test.com"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-key"placeholder)
+
+	key := mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+		UserID:  user.ID,
+		Key:     "sk-getbykey",
+		Name:    "My Key",
+		GroupID: &group.ID,
+		Status:  model.StatusActive,
+placeholder)
+
+	got, err := s.repo.GetByKey(s.ctx, key.Key)
+	s.Require().NoError(err, "GetByKey")
+	s.Require().Equal(key.ID, got.ID)
+	s.Require().NotNil(got.User, "expected User preload")
+	s.Require().Equal(user.ID, got.User.ID)
+	s.Require().NotNil(got.Group, "expected Group preload")
+	s.Require().Equal(group.ID, got.Group.ID)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestGetByKey_NotFound() {
+	_, err := s.repo.GetByKey(s.ctx, "non-existent-key")
+	s.Require().Error(err, "expected error for non-existent key")
+placeholder
+
+// --- Update ---
+
+func (s *ApiKeyRepoSuite) TestUpdate() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "update@test.com"placeholder)
+	key := mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+		UserID: user.ID,
+		Key:    "sk-update",
+		Name:   "Original",
+		Status: model.StatusActive,
+placeholder)
+
+	key.Name = "Renamed"
+	key.Status = model.StatusDisabled
+	err := s.repo.Update(s.ctx, key)
+	s.Require().NoError(err, "Update")
+
+	got, err := s.repo.GetByID(s.ctx, key.ID)
+	s.Require().NoError(err, "GetByID after update")
+	s.Require().Equal("sk-update", got.Key, "Update should not change key")
+	s.Require().Equal(user.ID, got.UserID, "Update should not change user_id")
+	s.Require().Equal("Renamed", got.Name)
+	s.Require().Equal(model.StatusDisabled, got.Status)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestUpdate_ClearGroupID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "cleargroup@test.com"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-clear"placeholder)
+	key := mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+		UserID:  user.ID,
+		Key:     "sk-clear-group",
+		Name:    "Group Key",
+		GroupID: &group.ID,
+placeholder)
+
+	key.GroupID = nil
+	err := s.repo.Update(s.ctx, key)
+	s.Require().NoError(err, "Update")
+
+	got, err := s.repo.GetByID(s.ctx, key.ID)
+	s.Require().NoError(err)
+	s.Require().Nil(got.GroupID, "expected GroupID to be cleared")
+placeholder
+
+// --- Delete ---
+
+func (s *ApiKeyRepoSuite) TestDelete() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "delete@test.com"placeholder)
+	key := mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+		UserID: user.ID,
+		Key:    "sk-delete",
+		Name:   "Delete Me",
+placeholder)
+
+	err := s.repo.Delete(s.ctx, key.ID)
+	s.Require().NoError(err, "Delete")
+
+	_, err = s.repo.GetByID(s.ctx, key.ID)
+	s.Require().Error(err, "expected error after delete")
+placeholder
+
+// --- ListByUserID / CountByUserID ---
+
+func (s *ApiKeyRepoSuite) TestListByUserID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "listbyuser@test.com"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-list-1", Name: "Key 1"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-list-2", Name: "Key 2"placeholder)
+
+	keys, page, err := s.repo.ListByUserID(s.ctx, user.ID, pagination.PaginationParams{Page: 1, PageSize: 10placeholder)
+	s.Require().NoError(err, "ListByUserID")
+	s.Require().Len(keys, 2)
+	s.Require().Equal(int64(2), page.Total)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestListByUserID_Pagination() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "paging@test.com"placeholder)
+	for i := 0; i < 5; i++ {
+		mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+			UserID: user.ID,
+			Key:    "sk-page-" + string(rune('a'+i)),
+			Name:   "Key",
+	placeholder)
+placeholder
+
+	keys, page, err := s.repo.ListByUserID(s.ctx, user.ID, pagination.PaginationParams{Page: 1, PageSize: 2placeholder)
+	s.Require().NoError(err)
+	s.Require().Len(keys, 2)
+	s.Require().Equal(int64(5), page.Total)
+	s.Require().Equal(3, page.Pages)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestCountByUserID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "count@test.com"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-count-1", Name: "K1"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-count-2", Name: "K2"placeholder)
+
+	count, err := s.repo.CountByUserID(s.ctx, user.ID)
+	s.Require().NoError(err, "CountByUserID")
+	s.Require().Equal(int64(2), count)
+placeholder
+
+// --- ListByGroupID / CountByGroupID ---
+
+func (s *ApiKeyRepoSuite) TestListByGroupID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "listbygroup@test.com"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-list"placeholder)
+
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-grp-1", Name: "K1", GroupID: &group.IDplaceholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-grp-2", Name: "K2", GroupID: &group.IDplaceholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-grp-3", Name: "K3"placeholder) // no group
+
+	keys, page, err := s.repo.ListByGroupID(s.ctx, group.ID, pagination.PaginationParams{Page: 1, PageSize: 10placeholder)
+	s.Require().NoError(err, "ListByGroupID")
+	s.Require().Len(keys, 2)
+	s.Require().Equal(int64(2), page.Total)
+	// User preloaded
+	s.Require().NotNil(keys[0].User)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestCountByGroupID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "countgroup@test.com"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-count"placeholder)
+
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-gc-1", Name: "K1", GroupID: &group.IDplaceholder)
+
+	count, err := s.repo.CountByGroupID(s.ctx, group.ID)
+	s.Require().NoError(err, "CountByGroupID")
+	s.Require().Equal(int64(1), count)
+placeholder
+
+// --- ExistsByKey ---
+
+func (s *ApiKeyRepoSuite) TestExistsByKey() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "exists@test.com"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-exists", Name: "K"placeholder)
+
+	exists, err := s.repo.ExistsByKey(s.ctx, "sk-exists")
+	s.Require().NoError(err, "ExistsByKey")
+	s.Require().True(exists)
+
+	notExists, err := s.repo.ExistsByKey(s.ctx, "sk-not-exists")
+	s.Require().NoError(err)
+	s.Require().False(notExists)
+placeholder
+
+// --- SearchApiKeys ---
+
+func (s *ApiKeyRepoSuite) TestSearchApiKeys() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "search@test.com"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-search-1", Name: "Production Key"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-search-2", Name: "Development Key"placeholder)
+
+	found, err := s.repo.SearchApiKeys(s.ctx, user.ID, "prod", 10)
+	s.Require().NoError(err, "SearchApiKeys")
+	s.Require().Len(found, 1)
+	s.Require().Contains(found[0].Name, "Production")
+placeholder
+
+func (s *ApiKeyRepoSuite) TestSearchApiKeys_NoKeyword() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "searchnokw@test.com"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-nk-1", Name: "K1"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-nk-2", Name: "K2"placeholder)
+
+	found, err := s.repo.SearchApiKeys(s.ctx, user.ID, "", 10)
+	s.Require().NoError(err)
+	s.Require().Len(found, 2)
+placeholder
+
+func (s *ApiKeyRepoSuite) TestSearchApiKeys_NoUserID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "searchnouid@test.com"placeholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-nu-1", Name: "TestKey"placeholder)
+
+	found, err := s.repo.SearchApiKeys(s.ctx, 0, "testkey", 10)
+	s.Require().NoError(err)
+	s.Require().Len(found, 1)
+placeholder
+
+// --- ClearGroupIDByGroupID ---
+
+func (s *ApiKeyRepoSuite) TestClearGroupIDByGroupID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "cleargrp@test.com"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-clear-bulk"placeholder)
+
+	k1 := mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-clr-1", Name: "K1", GroupID: &group.IDplaceholder)
+	k2 := mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-clr-2", Name: "K2", GroupID: &group.IDplaceholder)
+	mustCreateApiKey(s.T(), s.db, &model.ApiKey{UserID: user.ID, Key: "sk-clr-3", Name: "K3"placeholder) // no group
+
+	affected, err := s.repo.ClearGroupIDByGroupID(s.ctx, group.ID)
+	s.Require().NoError(err, "ClearGroupIDByGroupID")
+	s.Require().Equal(int64(2), affected)
+
+	got1, _ := s.repo.GetByID(s.ctx, k1.ID)
+	got2, _ := s.repo.GetByID(s.ctx, k2.ID)
+	s.Require().Nil(got1.GroupID)
+	s.Require().Nil(got2.GroupID)
+
+	count, _ := s.repo.CountByGroupID(s.ctx, group.ID)
+	s.Require().Zero(count)
+placeholder
+
+// --- Combined CRUD/Search/ClearGroupID (original test preserved as integration) ---
+
+func (s *ApiKeyRepoSuite) TestCRUD_Search_ClearGroupID() {
+	user := mustCreateUser(s.T(), s.db, &model.User{Email: "k@example.com"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-k"placeholder)
+
+	key := mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+		UserID:  user.ID,
+		Key:     "sk-test-1",
+		Name:    "My Key",
+		GroupID: &group.ID,
+		Status:  model.StatusActive,
+placeholder)
+
+	got, err := s.repo.GetByKey(s.ctx, key.Key)
+	s.Require().NoError(err, "GetByKey")
+	s.Require().Equal(key.ID, got.ID)
+	s.Require().NotNil(got.User)
+	s.Require().Equal(user.ID, got.User.ID)
+	s.Require().NotNil(got.Group)
+	s.Require().Equal(group.ID, got.Group.ID)
+
+	key.Name = "Renamed"
+	key.Status = model.StatusDisabled
+	key.GroupID = nil
+	s.Require().NoError(s.repo.Update(s.ctx, key), "Update")
+
+	got2, err := s.repo.GetByID(s.ctx, key.ID)
+	s.Require().NoError(err, "GetByID")
+	s.Require().Equal("sk-test-1", got2.Key, "Update should not change key")
+	s.Require().Equal(user.ID, got2.UserID, "Update should not change user_id")
+	s.Require().Equal("Renamed", got2.Name)
+	s.Require().Equal(model.StatusDisabled, got2.Status)
+	s.Require().Nil(got2.GroupID)
+
+	keys, page, err := s.repo.ListByUserID(s.ctx, user.ID, pagination.PaginationParams{Page: 1, PageSize: 10placeholder)
+	s.Require().NoError(err, "ListByUserID")
+	s.Require().Equal(int64(1), page.Total)
+	s.Require().Len(keys, 1)
+
+	exists, err := s.repo.ExistsByKey(s.ctx, "sk-test-1")
+	s.Require().NoError(err, "ExistsByKey")
+	s.Require().True(exists, "expected key to exist")
+
+	found, err := s.repo.SearchApiKeys(s.ctx, user.ID, "renam", 10)
+	s.Require().NoError(err, "SearchApiKeys")
+	s.Require().Len(found, 1)
+	s.Require().Equal(key.ID, found[0].ID)
+
+	// ClearGroupIDByGroupID
+	k2 := mustCreateApiKey(s.T(), s.db, &model.ApiKey{
+		UserID:  user.ID,
+		Key:     "sk-test-2",
+		Name:    "Group Key",
+		GroupID: &group.ID,
+placeholder)
+
+	countBefore, err := s.repo.CountByGroupID(s.ctx, group.ID)
+	s.Require().NoError(err, "CountByGroupID")
+	s.Require().Equal(int64(1), countBefore, "expected 1 key in group before clear")
+
+	affected, err := s.repo.ClearGroupIDByGroupID(s.ctx, group.ID)
+	s.Require().NoError(err, "ClearGroupIDByGroupID")
+	s.Require().Equal(int64(1), affected, "expected 1 affected row")
+
+	got3, err := s.repo.GetByID(s.ctx, k2.ID)
+	s.Require().NoError(err, "GetByID")
+	s.Require().Nil(got3.GroupID, "expected GroupID cleared")
+
+	countAfter, err := s.repo.CountByGroupID(s.ctx, group.ID)
+	s.Require().NoError(err, "CountByGroupID after clear")
+	s.Require().Equal(int64(0), countAfter, "expected 0 keys in group after clear")
+placeholder

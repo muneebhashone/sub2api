@@ -16,20 +16,28 @@ import (
 	"github.com/imroc/req/v3"
 )
 
-type claudeOAuthService struct{placeholder
-
 func NewClaudeOAuthClient() service.ClaudeOAuthClient {
-	return &claudeOAuthService{placeholder
+	return &claudeOAuthService{
+		baseURL:       "https://claude.ai",
+		tokenURL:      oauth.TokenURL,
+		clientFactory: createReqClient,
+placeholder
+placeholder
+
+type claudeOAuthService struct {
+	baseURL       string
+	tokenURL      string
+	clientFactory func(proxyURL string) *req.Client
 placeholder
 
 func (s *claudeOAuthService) GetOrganizationUUID(ctx context.Context, sessionKey, proxyURL string) (string, error) {
-	client := createReqClient(proxyURL)
+	client := s.clientFactory(proxyURL)
 
 	var orgs []struct {
 		UUID string `json:"uuid"`
 placeholder
 
-	targetURL := "https://claude.ai/api/organizations"
+	targetURL := s.baseURL + "/api/organizations"
 	log.Printf("[OAuth] Step 1: Getting organization UUID from %s", targetURL)
 
 	resp, err := client.R().
@@ -61,9 +69,9 @@ placeholder
 placeholder
 
 func (s *claudeOAuthService) GetAuthorizationCode(ctx context.Context, sessionKey, orgUUID, scope, codeChallenge, state, proxyURL string) (string, error) {
-	client := createReqClient(proxyURL)
+	client := s.clientFactory(proxyURL)
 
-	authURL := fmt.Sprintf("https://claude.ai/v1/oauth/%s/authorize", orgUUID)
+	authURL := fmt.Sprintf("%s/v1/oauth/%s/authorize", s.baseURL, orgUUID)
 
 	reqBody := map[string]any{
 		"response_type":         "code",
@@ -133,12 +141,12 @@ placeholder
 		fullCode = authCode + "#" + responseState
 placeholder
 
-	log.Printf("[OAuth] Step 2 SUCCESS - Got authorization code: %s...", authCode[:20])
+	log.Printf("[OAuth] Step 2 SUCCESS - Got authorization code: %s...", prefix(authCode, 20))
 	return fullCode, nil
 placeholder
 
 func (s *claudeOAuthService) ExchangeCodeForToken(ctx context.Context, code, codeVerifier, state, proxyURL string) (*oauth.TokenResponse, error) {
-	client := createReqClient(proxyURL)
+	client := s.clientFactory(proxyURL)
 
 	// Parse code which may contain state in format "authCode#state"
 	authCode := code
@@ -161,7 +169,7 @@ placeholder
 placeholder
 
 	reqBodyJSON, _ := json.Marshal(reqBody)
-	log.Printf("[OAuth] Step 3: Exchanging code for token at %s", oauth.TokenURL)
+	log.Printf("[OAuth] Step 3: Exchanging code for token at %s", s.tokenURL)
 	log.Printf("[OAuth] Step 3 Request Body: %s", string(reqBodyJSON))
 
 	var tokenResp oauth.TokenResponse
@@ -171,7 +179,7 @@ placeholder
 		SetHeader("Content-Type", "application/json").
 		SetBody(reqBody).
 		SetSuccessResult(&tokenResp).
-		Post(oauth.TokenURL)
+		Post(s.tokenURL)
 
 	if err != nil {
 		log.Printf("[OAuth] Step 3 FAILED - Request error: %v", err)
@@ -189,7 +197,7 @@ placeholder
 placeholder
 
 func (s *claudeOAuthService) RefreshToken(ctx context.Context, refreshToken, proxyURL string) (*oauth.TokenResponse, error) {
-	client := createReqClient(proxyURL)
+	client := s.clientFactory(proxyURL)
 
 	formData := url.Values{placeholder
 	formData.Set("grant_type", "refresh_token")
@@ -202,7 +210,7 @@ func (s *claudeOAuthService) RefreshToken(ctx context.Context, refreshToken, pro
 		SetContext(ctx).
 		SetFormDataFromValues(formData).
 		SetSuccessResult(&tokenResp).
-		Post(oauth.TokenURL)
+		Post(s.tokenURL)
 
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
@@ -225,4 +233,14 @@ func createReqClient(proxyURL string) *req.Client {
 placeholder
 
 	return client
+placeholder
+
+func prefix(s string, n int) string {
+	if n <= 0 {
+		return ""
+placeholder
+	if len(s) <= n {
+		return s
+placeholder
+	return s[:n]
 placeholder
