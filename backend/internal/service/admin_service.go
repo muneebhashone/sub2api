@@ -45,6 +45,7 @@ type AdminService interface {
 	RefreshAccountCredentials(ctx context.Context, id int64) (*model.Account, error)
 	ClearAccountError(ctx context.Context, id int64) (*model.Account, error)
 	SetAccountSchedulable(ctx context.Context, id int64, schedulable bool) (*model.Account, error)
+	BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error)
 
 	// Proxy management
 	ListProxies(ctx context.Context, page, pageSize int, protocol, status, search string) ([]model.Proxy, int64, error)
@@ -138,6 +139,33 @@ type UpdateAccountInput struct {
 	Priority    *int // 使用指针区分"未提供"和"设置为0"
 	Status      string
 	GroupIDs    *[]int64
+placeholder
+
+// BulkUpdateAccountsInput describes the payload for bulk updating accounts.
+type BulkUpdateAccountsInput struct {
+	AccountIDs  []int64
+	Name        string
+	ProxyID     *int64
+	Concurrency *int
+	Priority    *int
+	Status      string
+	GroupIDs    *[]int64
+	Credentials map[string]any
+	Extra       map[string]any
+placeholder
+
+// BulkUpdateAccountResult captures the result for a single account update.
+type BulkUpdateAccountResult struct {
+	AccountID int64  `json:"account_id"`
+	Success   bool   `json:"success"`
+	Error     string `json:"error,omitempty"`
+placeholder
+
+// BulkUpdateAccountsResult is the aggregated response for bulk updates.
+type BulkUpdateAccountsResult struct {
+	Success int                       `json:"success"`
+	Failed  int                       `json:"failed"`
+	Results []BulkUpdateAccountResult `json:"results"`
 placeholder
 
 type CreateProxyInput struct {
@@ -692,6 +720,65 @@ placeholder
 placeholder
 
 	return account, nil
+placeholder
+
+// BulkUpdateAccounts updates multiple accounts in one request.
+// It merges credentials/extra keys instead of overwriting the whole object.
+func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error) {
+	result := &BulkUpdateAccountsResult{
+		Results: make([]BulkUpdateAccountResult, 0, len(input.AccountIDs)),
+placeholder
+
+	if len(input.AccountIDs) == 0 {
+		return result, nil
+placeholder
+
+	// Prepare bulk updates for columns and JSONB fields.
+	repoUpdates := ports.AccountBulkUpdate{
+		Credentials: input.Credentials,
+		Extra:       input.Extra,
+placeholder
+	if input.Name != "" {
+		repoUpdates.Name = &input.Name
+placeholder
+	if input.ProxyID != nil {
+		repoUpdates.ProxyID = input.ProxyID
+placeholder
+	if input.Concurrency != nil {
+		repoUpdates.Concurrency = input.Concurrency
+placeholder
+	if input.Priority != nil {
+		repoUpdates.Priority = input.Priority
+placeholder
+	if input.Status != "" {
+		repoUpdates.Status = &input.Status
+placeholder
+
+	// Run bulk update for column/jsonb fields first.
+	if _, err := s.accountRepo.BulkUpdate(ctx, input.AccountIDs, repoUpdates); err != nil {
+		return nil, err
+placeholder
+
+	// Handle group bindings per account (requires individual operations).
+	for _, accountID := range input.AccountIDs {
+		entry := BulkUpdateAccountResult{AccountID: accountIDplaceholder
+
+		if input.GroupIDs != nil {
+			if err := s.accountRepo.BindGroups(ctx, accountID, *input.GroupIDs); err != nil {
+				entry.Success = false
+				entry.Error = err.Error()
+				result.Failed++
+				result.Results = append(result.Results, entry)
+				continue
+		placeholder
+	placeholder
+
+		entry.Success = true
+		result.Success++
+		result.Results = append(result.Results, entry)
+placeholder
+
+	return result, nil
 placeholder
 
 func (s *adminServiceImpl) DeleteAccount(ctx context.Context, id int64) error {

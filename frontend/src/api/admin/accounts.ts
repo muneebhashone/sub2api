@@ -255,7 +255,7 @@ placeholder> {
     results: Array<{ account_id: number; success: boolean; error?: string placeholder>;
   placeholder>('/admin/accounts/bulk-update', {
     account_ids: accountIds,
-    updates
+    ...updates
   placeholder);
   return data;
 placeholder

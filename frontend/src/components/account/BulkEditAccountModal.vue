@@ -443,7 +443,7 @@ import { ref, watch, computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
-import type { Proxy, Group, Account placeholder from '@/types'
+import type { Proxy, Group placeholder from '@/types'
 import Modal from '@/components/common/Modal.vue'
 import Select from '@/components/common/Select.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
@@ -496,7 +496,6 @@ const concurrency = ref(1)
 const priority = ref(1)
 const status = ref<'active' | 'inactive'>('active')
 const groupIds = ref<number[]>([])
-const accountCache = ref<Record<number, Account>>({placeholder)
 
 // All models list (combined Anthropic + OpenAI)
 const allModels = [
@@ -613,22 +612,10 @@ const buildModelMappingObject = (): Record<string, string> | null => {
   return Object.keys(mapping).length > 0 ? mapping : null
 placeholder
 
-const getDefaultBaseUrl = (platform: string) => {
-  return platform === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com'
-placeholder
-
-const getAccountDetails = async (accountId: number): Promise<Account> => {
-  if (accountCache.value[accountId]) return accountCache.value[accountId]
-  const account = await adminAPI.accounts.getById(accountId)
-  accountCache.value[accountId] = account
-  return account
-placeholder
-
-const buildUpdatePayload = (account: Account): Record<string, unknown> | null => {
+const buildUpdatePayload = (): Record<string, unknown> | null => {
   const updates: Record<string, unknown> = {placeholder
-  let credentials: Record<string, unknown> | null = null
+  const credentials: Record<string, unknown> = {placeholder
   let credentialsChanged = false
-  const isAnthropic = account.platform === 'anthropic'
 
   if (enableProxy.value) {
     updates.proxy_id = proxyId.value
@@ -650,47 +637,34 @@ const buildUpdatePayload = (account: Account): Record<string, unknown> | null =>
     updates.group_ids = groupIds.value
   placeholder
 
-  if (account.type === 'apikey') {
-    const baseCredentials = (account.credentials || {placeholder) as Record<string, unknown>
-    credentials = { ...baseCredentials placeholder
-
-    if (enableBaseUrl.value) {
-      credentials.base_url = baseUrl.value.trim() || getDefaultBaseUrl(account.platform)
+  if (enableBaseUrl.value) {
+    const baseUrlValue = baseUrl.value.trim()
+    if (baseUrlValue) {
+      credentials.base_url = baseUrlValue
       credentialsChanged = true
     placeholder
+  placeholder
 
-    if (enableModelRestriction.value) {
-      const modelMapping = buildModelMappingObject()
-      if (modelMapping) {
-        credentials.model_mapping = modelMapping
-      placeholder else {
-        delete credentials.model_mapping
-      placeholder
+  if (enableModelRestriction.value) {
+    const modelMapping = buildModelMappingObject()
+    if (modelMapping) {
+      credentials.model_mapping = modelMapping
       credentialsChanged = true
     placeholder
+  placeholder
 
-    if (enableCustomErrorCodes.value) {
-      credentials.custom_error_codes_enabled = true
-      credentials.custom_error_codes = [...selectedErrorCodes.value]
-      credentialsChanged = true
-    placeholder
-
-    if (enableInterceptWarmup.value && isAnthropic) {
-      credentials.intercept_warmup_requests = interceptWarmupRequests.value
-      credentialsChanged = true
-    placeholder
-  placeholder else if (enableInterceptWarmup.value && isAnthropic) {
-    const baseCredentials = (account.credentials || {placeholder) as Record<string, unknown>
-    credentials = { ...baseCredentials placeholder
-    if (interceptWarmupRequests.value) {
-      credentials.intercept_warmup_requests = true
-    placeholder else {
-      delete credentials.intercept_warmup_requests
-    placeholder
+  if (enableCustomErrorCodes.value) {
+    credentials.custom_error_codes_enabled = true
+    credentials.custom_error_codes = [...selectedErrorCodes.value]
     credentialsChanged = true
   placeholder
 
-  if (credentials && credentialsChanged) {
+  if (enableInterceptWarmup.value) {
+    credentials.intercept_warmup_requests = interceptWarmupRequests.value
+    credentialsChanged = true
+  placeholder
+
+  if (credentialsChanged) {
     updates.credentials = credentials
   placeholder
 
@@ -722,39 +696,37 @@ const handleSubmit = async () => {
     return
   placeholder
 
+  const updates = buildUpdatePayload()
+  if (!updates) {
+    appStore.showError(t('admin.accounts.bulkEdit.noFieldsSelected'))
+    return
+  placeholder
+
   submitting.value = true
-  let success = 0
-  let failed = 0
 
-  for (const accountId of props.accountIds) {
-    try {
-      const account = await getAccountDetails(accountId)
-      const updates = buildUpdatePayload(account)
-      if (!updates) {
-        continue
-      placeholder
-      await adminAPI.accounts.update(accountId, updates)
-      success++
-    placeholder catch (error: any) {
-      failed++
-      console.error(`Error bulk updating account ${accountIdplaceholder:`, error)
+  try {
+    const res = await adminAPI.accounts.bulkUpdate(props.accountIds, updates)
+    const success = res.success || 0
+    const failed = res.failed || 0
+
+    if (success > 0 && failed === 0) {
+      appStore.showSuccess(t('admin.accounts.bulkEdit.success', { count: success placeholder))
+    placeholder else if (success > 0) {
+      appStore.showError(t('admin.accounts.bulkEdit.partialSuccess', { success, failed placeholder))
+    placeholder else {
+      appStore.showError(t('admin.accounts.bulkEdit.failed'))
     placeholder
-  placeholder
 
-  if (success > 0 && failed === 0) {
-    appStore.showSuccess(t('admin.accounts.bulkEdit.success', { count: success placeholder))
-  placeholder else if (success > 0) {
-    appStore.showError(t('admin.accounts.bulkEdit.partialSuccess', { success, failed placeholder))
-  placeholder else {
-    appStore.showError(t('admin.accounts.bulkEdit.failed'))
+    if (success > 0) {
+      emit('updated')
+      handleClose()
+    placeholder
+  placeholder catch (error: any) {
+    appStore.showError(error.response?.data?.detail || t('admin.accounts.bulkEdit.failed'))
+    console.error('Error bulk updating accounts:', error)
+  placeholder finally {
+    submitting.value = false
   placeholder
-
-  if (success > 0) {
-    emit('updated')
-    handleClose()
-  placeholder
-
-  submitting.value = false
 placeholder
 
 // Reset form when modal closes
@@ -784,7 +756,6 @@ watch(() => props.show, (newShow) => {
     priority.value = 1
     status.value = 'active'
     groupIds.value = []
-    accountCache.value = {placeholder
   placeholder
 placeholder)
 </script>
