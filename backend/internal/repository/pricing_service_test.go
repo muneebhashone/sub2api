@@ -120,10 +120,9 @@ placeholder
 
 func (s *PricingServiceSuite) TestFetchPricingJSON_ContextCancel() {
 	started := make(chan struct{placeholder)
-	block := make(chan struct{placeholder)
 	s.setupServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		close(started)
-		<-block
+		<-r.Context().Done()
 placeholder))
 
 	ctx, cancel := context.WithCancel(s.ctx)
@@ -136,7 +135,6 @@ placeholder()
 
 	<-started
 	cancel()
-	close(block)
 
 	err := <-done
 	require.Error(s.T(), err)
