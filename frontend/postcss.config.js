@@ -1,6 +1,6 @@
 export default {
   plugins: {
     tailwindcss: {placeholder,
-    autoprefixer: {placeholder,
-  placeholder,
+    autoprefixer: {placeholder
+  placeholder
 placeholder
