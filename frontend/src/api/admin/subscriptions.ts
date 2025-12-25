@@ -3,15 +3,15 @@
  * Handles user subscription management for administrators
  */
 
-import { apiClient placeholder from '../client';
+import { apiClient placeholder from '../client'
 import type {
   UserSubscription,
   SubscriptionProgress,
   AssignSubscriptionRequest,
   BulkAssignSubscriptionRequest,
   ExtendSubscriptionRequest,
-  PaginatedResponse,
-placeholder from '@/types';
+  PaginatedResponse
+placeholder from '@/types'
 
 /**
  * List all subscriptions with pagination
@@ -24,19 +24,22 @@ export async function list(
   page: number = 1,
   pageSize: number = 20,
   filters?: {
-    status?: 'active' | 'expired' | 'revoked';
-    user_id?: number;
-    group_id?: number;
+    status?: 'active' | 'expired' | 'revoked'
+    user_id?: number
+    group_id?: number
   placeholder
 ): Promise<PaginatedResponse<UserSubscription>> {
-  const { data placeholder = await apiClient.get<PaginatedResponse<UserSubscription>>('/admin/subscriptions', {
-    params: {
-      page,
-      page_size: pageSize,
-      ...filters,
-    placeholder,
-  placeholder);
-  return data;
+  const { data placeholder = await apiClient.get<PaginatedResponse<UserSubscription>>(
+    '/admin/subscriptions',
+    {
+      params: {
+        page,
+        page_size: pageSize,
+        ...filters
+      placeholder
+    placeholder
+  )
+  return data
 placeholder
 
 /**
@@ -45,8 +48,8 @@ placeholder
  * @returns Subscription details
  */
 export async function getById(id: number): Promise<UserSubscription> {
-  const { data placeholder = await apiClient.get<UserSubscription>(`/admin/subscriptions/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.get<UserSubscription>(`/admin/subscriptions/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -55,8 +58,8 @@ placeholder
  * @returns Subscription progress with usage stats
  */
 export async function getProgress(id: number): Promise<SubscriptionProgress> {
-  const { data placeholder = await apiClient.get<SubscriptionProgress>(`/admin/subscriptions/${idplaceholder/progress`);
-  return data;
+  const { data placeholder = await apiClient.get<SubscriptionProgress>(`/admin/subscriptions/${idplaceholder/progress`)
+  return data
 placeholder
 
 /**
@@ -65,8 +68,8 @@ placeholder
  * @returns Created subscription
  */
 export async function assign(request: AssignSubscriptionRequest): Promise<UserSubscription> {
-  const { data placeholder = await apiClient.post<UserSubscription>('/admin/subscriptions/assign', request);
-  return data;
+  const { data placeholder = await apiClient.post<UserSubscription>('/admin/subscriptions/assign', request)
+  return data
 placeholder
 
 /**
@@ -74,9 +77,14 @@ placeholder
  * @param request - Bulk assignment request
  * @returns Created subscriptions
  */
-export async function bulkAssign(request: BulkAssignSubscriptionRequest): Promise<UserSubscription[]> {
-  const { data placeholder = await apiClient.post<UserSubscription[]>('/admin/subscriptions/bulk-assign', request);
-  return data;
+export async function bulkAssign(
+  request: BulkAssignSubscriptionRequest
+): Promise<UserSubscription[]> {
+  const { data placeholder = await apiClient.post<UserSubscription[]>(
+    '/admin/subscriptions/bulk-assign',
+    request
+  )
+  return data
 placeholder
 
 /**
@@ -85,9 +93,15 @@ placeholder
  * @param request - Extension request with days
  * @returns Updated subscription
  */
-export async function extend(id: number, request: ExtendSubscriptionRequest): Promise<UserSubscription> {
-  const { data placeholder = await apiClient.post<UserSubscription>(`/admin/subscriptions/${idplaceholder/extend`, request);
-  return data;
+export async function extend(
+  id: number,
+  request: ExtendSubscriptionRequest
+): Promise<UserSubscription> {
+  const { data placeholder = await apiClient.post<UserSubscription>(
+    `/admin/subscriptions/${idplaceholder/extend`,
+    request
+  )
+  return data
 placeholder
 
 /**
@@ -96,8 +110,8 @@ placeholder
  * @returns Success confirmation
  */
 export async function revoke(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/subscriptions/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/subscriptions/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -115,10 +129,10 @@ export async function listByGroup(
   const { data placeholder = await apiClient.get<PaginatedResponse<UserSubscription>>(
     `/admin/groups/${groupIdplaceholder/subscriptions`,
     {
-      params: { page, page_size: pageSize placeholder,
+      params: { page, page_size: pageSize placeholder
     placeholder
-  );
-  return data;
+  )
+  return data
 placeholder
 
 /**
@@ -136,10 +150,10 @@ export async function listByUser(
   const { data placeholder = await apiClient.get<PaginatedResponse<UserSubscription>>(
     `/admin/users/${userIdplaceholder/subscriptions`,
     {
-      params: { page, page_size: pageSize placeholder,
+      params: { page, page_size: pageSize placeholder
     placeholder
-  );
-  return data;
+  )
+  return data
 placeholder
 
 export const subscriptionsAPI = {
@@ -151,7 +165,7 @@ export const subscriptionsAPI = {
   extend,
   revoke,
   listByGroup,
-  listByUser,
-placeholder;
+  listByUser
+placeholder
 
-export default subscriptionsAPI;
+export default subscriptionsAPI

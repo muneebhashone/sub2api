@@ -3,14 +3,14 @@
  * Handles API key group management for administrators
  */
 
-import { apiClient placeholder from '../client';
+import { apiClient placeholder from '../client'
 import type {
   Group,
   GroupPlatform,
   CreateGroupRequest,
   UpdateGroupRequest,
-  PaginatedResponse,
-placeholder from '@/types';
+  PaginatedResponse
+placeholder from '@/types'
 
 /**
  * List all groups with pagination
@@ -23,19 +23,19 @@ export async function list(
   page: number = 1,
   pageSize: number = 20,
   filters?: {
-    platform?: GroupPlatform;
-    status?: 'active' | 'inactive';
-    is_exclusive?: boolean;
+    platform?: GroupPlatform
+    status?: 'active' | 'inactive'
+    is_exclusive?: boolean
   placeholder
 ): Promise<PaginatedResponse<Group>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<Group>>('/admin/groups', {
     params: {
       page,
       page_size: pageSize,
-      ...filters,
-    placeholder,
-  placeholder);
-  return data;
+      ...filters
+    placeholder
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -46,8 +46,8 @@ placeholder
 export async function getAll(platform?: GroupPlatform): Promise<Group[]> {
   const { data placeholder = await apiClient.get<Group[]>('/admin/groups/all', {
     params: platform ? { platform placeholder : undefined
-  placeholder);
-  return data;
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -56,7 +56,7 @@ placeholder
  * @returns List of groups for the specified platform
  */
 export async function getByPlatform(platform: GroupPlatform): Promise<Group[]> {
-  return getAll(platform);
+  return getAll(platform)
 placeholder
 
 /**
@@ -65,8 +65,8 @@ placeholder
  * @returns Group details
  */
 export async function getById(id: number): Promise<Group> {
-  const { data placeholder = await apiClient.get<Group>(`/admin/groups/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.get<Group>(`/admin/groups/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -75,8 +75,8 @@ placeholder
  * @returns Created group
  */
 export async function create(groupData: CreateGroupRequest): Promise<Group> {
-  const { data placeholder = await apiClient.post<Group>('/admin/groups', groupData);
-  return data;
+  const { data placeholder = await apiClient.post<Group>('/admin/groups', groupData)
+  return data
 placeholder
 
 /**
@@ -86,8 +86,8 @@ placeholder
  * @returns Updated group
  */
 export async function update(id: number, updates: UpdateGroupRequest): Promise<Group> {
-  const { data placeholder = await apiClient.put<Group>(`/admin/groups/${idplaceholder`, updates);
-  return data;
+  const { data placeholder = await apiClient.put<Group>(`/admin/groups/${idplaceholder`, updates)
+  return data
 placeholder
 
 /**
@@ -96,8 +96,8 @@ placeholder
  * @returns Success confirmation
  */
 export async function deleteGroup(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/groups/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/groups/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -106,11 +106,8 @@ placeholder
  * @param status - New status
  * @returns Updated group
  */
-export async function toggleStatus(
-  id: number,
-  status: 'active' | 'inactive'
-): Promise<Group> {
-  return update(id, { status placeholder);
+export async function toggleStatus(id: number, status: 'active' | 'inactive'): Promise<Group> {
+  return update(id, { status placeholder)
 placeholder
 
 /**
@@ -119,18 +116,18 @@ placeholder
  * @returns Group usage statistics
  */
 export async function getStats(id: number): Promise<{
-  total_api_keys: number;
-  active_api_keys: number;
-  total_requests: number;
-  total_cost: number;
+  total_api_keys: number
+  active_api_keys: number
+  total_requests: number
+  total_cost: number
 placeholder> {
   const { data placeholder = await apiClient.get<{
-    total_api_keys: number;
-    active_api_keys: number;
-    total_requests: number;
-    total_cost: number;
-  placeholder>(`/admin/groups/${idplaceholder/stats`);
-  return data;
+    total_api_keys: number
+    active_api_keys: number
+    total_requests: number
+    total_cost: number
+  placeholder>(`/admin/groups/${idplaceholder/stats`)
+  return data
 placeholder
 
 /**
@@ -145,13 +142,10 @@ export async function getGroupApiKeys(
   page: number = 1,
   pageSize: number = 20
 ): Promise<PaginatedResponse<any>> {
-  const { data placeholder = await apiClient.get<PaginatedResponse<any>>(
-    `/admin/groups/${idplaceholder/api-keys`,
-    {
-      params: { page, page_size: pageSize placeholder,
-    placeholder
-  );
-  return data;
+  const { data placeholder = await apiClient.get<PaginatedResponse<any>>(`/admin/groups/${idplaceholder/api-keys`, {
+    params: { page, page_size: pageSize placeholder
+  placeholder)
+  return data
 placeholder
 
 export const groupsAPI = {
@@ -164,7 +158,7 @@ export const groupsAPI = {
   delete: deleteGroup,
   toggleStatus,
   getStats,
-  getGroupApiKeys,
-placeholder;
+  getGroupApiKeys
+placeholder
 
-export default groupsAPI;
+export default groupsAPI

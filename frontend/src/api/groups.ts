@@ -3,8 +3,8 @@
  * Handles group-related operations for regular users
  */
 
-import { apiClient placeholder from './client';
-import type { Group placeholder from '@/types';
+import { apiClient placeholder from './client'
+import type { Group placeholder from '@/types'
 
 /**
  * Get available groups that the current user can bind to API keys
@@ -14,12 +14,12 @@ import type { Group placeholder from '@/types';
  * @returns List of available groups
  */
 export async function getAvailable(): Promise<Group[]> {
-  const { data placeholder = await apiClient.get<Group[]>('/groups/available');
-  return data;
+  const { data placeholder = await apiClient.get<Group[]>('/groups/available')
+  return data
 placeholder
 
 export const userGroupsAPI = {
-  getAvailable,
-placeholder;
+  getAvailable
+placeholder
 
-export default userGroupsAPI;
+export default userGroupsAPI

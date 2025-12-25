@@ -4,20 +4,20 @@
  */
 
 // Re-export the HTTP client
-export { apiClient placeholder from './client';
+export { apiClient placeholder from './client'
 
 // Auth API
-export { authAPI placeholder from './auth';
+export { authAPI placeholder from './auth'
 
 // User APIs
-export { keysAPI placeholder from './keys';
-export { usageAPI placeholder from './usage';
-export { userAPI placeholder from './user';
-export { redeemAPI, type RedeemHistoryItem placeholder from './redeem';
-export { userGroupsAPI placeholder from './groups';
+export { keysAPI placeholder from './keys'
+export { usageAPI placeholder from './usage'
+export { userAPI placeholder from './user'
+export { redeemAPI, type RedeemHistoryItem placeholder from './redeem'
+export { userGroupsAPI placeholder from './groups'
 
 // Admin APIs
-export { adminAPI placeholder from './admin';
+export { adminAPI placeholder from './admin'
 
 // Default export
-export { default placeholder from './client';
+export { default placeholder from './client'
