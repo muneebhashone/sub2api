@@ -26,17 +26,25 @@ function updateFavicon(logoUrl: string) {
 placeholder
 
 // Watch for site settings changes and update favicon/title
-watch(() => appStore.siteLogo, (newLogo) => {
-  if (newLogo) {
-    updateFavicon(newLogo)
-  placeholder
-placeholder, { immediate: true placeholder)
+watch(
+  () => appStore.siteLogo,
+  (newLogo) => {
+    if (newLogo) {
+      updateFavicon(newLogo)
+    placeholder
+  placeholder,
+  { immediate: true placeholder
+)
 
-watch(() => appStore.siteName, (newName) => {
-  if (newName) {
-    document.title = `${newNameplaceholder - AI API Gateway`
-  placeholder
-placeholder, { immediate: true placeholder)
+watch(
+  () => appStore.siteName,
+  (newName) => {
+    if (newName) {
+      document.title = `${newNameplaceholder - AI API Gateway`
+    placeholder
+  placeholder,
+  { immediate: true placeholder
+)
 
 onMounted(async () => {
   // Check if setup is needed
