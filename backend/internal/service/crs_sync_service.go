@@ -783,7 +783,7 @@ placeholder
 	if err != nil {
 		return "", err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -818,7 +818,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 5<<20))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
