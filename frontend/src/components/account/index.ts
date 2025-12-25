@@ -1,5 +1,6 @@
 export { default as CreateAccountModal placeholder from './CreateAccountModal.vue'
 export { default as EditAccountModal placeholder from './EditAccountModal.vue'
+export { default as BulkEditAccountModal placeholder from './BulkEditAccountModal.vue'
 export { default as ReAuthAccountModal placeholder from './ReAuthAccountModal.vue'
 export { default as OAuthAuthorizationFlow placeholder from './OAuthAuthorizationFlow.vue'
 export { default as AccountStatusIndicator placeholder from './AccountStatusIndicator.vue'
