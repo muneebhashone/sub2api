@@ -3,7 +3,7 @@
  * Handles AI platform account management for administrators
  */
 
-import { apiClient placeholder from '../client';
+import { apiClient placeholder from '../client'
 import type {
   Account,
   CreateAccountRequest,
@@ -13,7 +13,7 @@ import type {
   WindowStats,
   ClaudeModel,
   AccountUsageStatsResponse,
-placeholder from '@/types';
+placeholder from '@/types'
 
 /**
  * List all accounts with pagination
@@ -26,10 +26,10 @@ export async function list(
   page: number = 1,
   pageSize: number = 20,
   filters?: {
-    platform?: string;
-    type?: string;
-    status?: string;
-    search?: string;
+    platform?: string
+    type?: string
+    status?: string
+    search?: string
   placeholder
 ): Promise<PaginatedResponse<Account>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<Account>>('/admin/accounts', {
@@ -38,8 +38,8 @@ export async function list(
       page_size: pageSize,
       ...filters,
     placeholder,
-  placeholder);
-  return data;
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -48,8 +48,8 @@ placeholder
  * @returns Account details
  */
 export async function getById(id: number): Promise<Account> {
-  const { data placeholder = await apiClient.get<Account>(`/admin/accounts/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.get<Account>(`/admin/accounts/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -58,8 +58,8 @@ placeholder
  * @returns Created account
  */
 export async function create(accountData: CreateAccountRequest): Promise<Account> {
-  const { data placeholder = await apiClient.post<Account>('/admin/accounts', accountData);
-  return data;
+  const { data placeholder = await apiClient.post<Account>('/admin/accounts', accountData)
+  return data
 placeholder
 
 /**
@@ -69,8 +69,8 @@ placeholder
  * @returns Updated account
  */
 export async function update(id: number, updates: UpdateAccountRequest): Promise<Account> {
-  const { data placeholder = await apiClient.put<Account>(`/admin/accounts/${idplaceholder`, updates);
-  return data;
+  const { data placeholder = await apiClient.put<Account>(`/admin/accounts/${idplaceholder`, updates)
+  return data
 placeholder
 
 /**
@@ -79,8 +79,8 @@ placeholder
  * @returns Success confirmation
  */
 export async function deleteAccount(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/accounts/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/accounts/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -89,11 +89,8 @@ placeholder
  * @param status - New status
  * @returns Updated account
  */
-export async function toggleStatus(
-  id: number,
-  status: 'active' | 'inactive'
-): Promise<Account> {
-  return update(id, { status placeholder);
+export async function toggleStatus(id: number, status: 'active' | 'inactive'): Promise<Account> {
+  return update(id, { status placeholder)
 placeholder
 
 /**
@@ -102,16 +99,16 @@ placeholder
  * @returns Test result
  */
 export async function testAccount(id: number): Promise<{
-  success: boolean;
-  message: string;
-  latency_ms?: number;
+  success: boolean
+  message: string
+  latency_ms?: number
 placeholder> {
   const { data placeholder = await apiClient.post<{
-    success: boolean;
-    message: string;
-    latency_ms?: number;
-  placeholder>(`/admin/accounts/${idplaceholder/test`);
-  return data;
+    success: boolean
+    message: string
+    latency_ms?: number
+  placeholder>(`/admin/accounts/${idplaceholder/test`)
+  return data
 placeholder
 
 /**
@@ -120,8 +117,8 @@ placeholder
  * @returns Updated account
  */
 export async function refreshCredentials(id: number): Promise<Account> {
-  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/refresh`);
-  return data;
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/refresh`)
+  return data
 placeholder
 
 /**
@@ -133,8 +130,8 @@ placeholder
 export async function getStats(id: number, days: number = 30): Promise<AccountUsageStatsResponse> {
   const { data placeholder = await apiClient.get<AccountUsageStatsResponse>(`/admin/accounts/${idplaceholder/stats`, {
     params: { days placeholder,
-  placeholder);
-  return data;
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -143,8 +140,8 @@ placeholder
  * @returns Updated account
  */
 export async function clearError(id: number): Promise<Account> {
-  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/clear-error`);
-  return data;
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/clear-error`)
+  return data
 placeholder
 
 /**
@@ -153,8 +150,8 @@ placeholder
  * @returns Account usage info
  */
 export async function getUsage(id: number): Promise<AccountUsageInfo> {
-  const { data placeholder = await apiClient.get<AccountUsageInfo>(`/admin/accounts/${idplaceholder/usage`);
-  return data;
+  const { data placeholder = await apiClient.get<AccountUsageInfo>(`/admin/accounts/${idplaceholder/usage`)
+  return data
 placeholder
 
 /**
@@ -163,8 +160,10 @@ placeholder
  * @returns Success confirmation
  */
 export async function clearRateLimit(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.post<{ message: string placeholder>(`/admin/accounts/${idplaceholder/clear-rate-limit`);
-  return data;
+  const { data placeholder = await apiClient.post<{ message: string placeholder>(
+    `/admin/accounts/${idplaceholder/clear-rate-limit`
+  )
+  return data
 placeholder
 
 /**
@@ -177,8 +176,8 @@ export async function generateAuthUrl(
   endpoint: string,
   config: { proxy_id?: number placeholder
 ): Promise<{ auth_url: string; session_id: string placeholder> {
-  const { data placeholder = await apiClient.post<{ auth_url: string; session_id: string placeholder>(endpoint, config);
-  return data;
+  const { data placeholder = await apiClient.post<{ auth_url: string; session_id: string placeholder>(endpoint, config)
+  return data
 placeholder
 
 /**
@@ -191,8 +190,8 @@ export async function exchangeCode(
   endpoint: string,
   exchangeData: { session_id: string; code: string; proxy_id?: number placeholder
 ): Promise<Record<string, unknown>> {
-  const { data placeholder = await apiClient.post<Record<string, unknown>>(endpoint, exchangeData);
-  return data;
+  const { data placeholder = await apiClient.post<Record<string, unknown>>(endpoint, exchangeData)
+  return data
 placeholder
 
 /**
@@ -201,16 +200,63 @@ placeholder
  * @returns Results of batch creation
  */
 export async function batchCreate(accounts: CreateAccountRequest[]): Promise<{
-  success: number;
-  failed: number;
-  results: Array<{ success: boolean; account?: Account; error?: string placeholder>;
+  success: number
+  failed: number
+  results: Array<{ success: boolean; account?: Account; error?: string placeholder>
 placeholder> {
   const { data placeholder = await apiClient.post<{
-    success: number;
-    failed: number;
-    results: Array<{ success: boolean; account?: Account; error?: string placeholder>;
-  placeholder>('/admin/accounts/batch', { accounts placeholder);
-  return data;
+    success: number
+    failed: number
+    results: Array<{ success: boolean; account?: Account; error?: string placeholder>
+  placeholder>('/admin/accounts/batch', { accounts placeholder)
+  return data
+placeholder
+
+/**
+ * Batch update credentials fields for multiple accounts
+ * @param request - Batch update request containing account IDs, field name, and value
+ * @returns Results of batch update
+ */
+export async function batchUpdateCredentials(request: {
+  account_ids: number[]
+  field: string
+  value: any
+placeholder): Promise<{
+  success: number
+  failed: number
+  results: Array<{ account_id: number; success: boolean; error?: string placeholder>
+placeholder> {
+  const { data placeholder = await apiClient.post<{
+    success: number
+    failed: number
+    results: Array<{ account_id: number; success: boolean; error?: string placeholder>
+  placeholder>('/admin/accounts/batch-update-credentials', request)
+  return data
+placeholder
+
+/**
+ * Bulk update multiple accounts
+ * @param accountIds - Array of account IDs
+ * @param updates - Fields to update
+ * @returns Success confirmation
+ */
+export async function bulkUpdate(
+  accountIds: number[],
+  updates: Record<string, unknown>
+): Promise<{
+  success: number
+  failed: number
+  results: Array<{ account_id: number; success: boolean; error?: string placeholder>
+placeholder> {
+  const { data placeholder = await apiClient.post<{
+    success: number
+    failed: number
+    results: Array<{ account_id: number; success: boolean; error?: string placeholder>
+  placeholder>('/admin/accounts/bulk-update', {
+    account_ids: accountIds,
+    ...updates,
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -219,8 +265,8 @@ placeholder
  * @returns Today's stats (requests, tokens, cost)
  */
 export async function getTodayStats(id: number): Promise<WindowStats> {
-  const { data placeholder = await apiClient.get<WindowStats>(`/admin/accounts/${idplaceholder/today-stats`);
-  return data;
+  const { data placeholder = await apiClient.get<WindowStats>(`/admin/accounts/${idplaceholder/today-stats`)
+  return data
 placeholder
 
 /**
@@ -230,8 +276,10 @@ placeholder
  * @returns Updated account
  */
 export async function setSchedulable(id: number, schedulable: boolean): Promise<Account> {
-  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/schedulable`, { schedulable placeholder);
-  return data;
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/schedulable`, {
+    schedulable,
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -240,8 +288,30 @@ placeholder
  * @returns List of available models for this account
  */
 export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
-  const { data placeholder = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${idplaceholder/models`);
-  return data;
+  const { data placeholder = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${idplaceholder/models`)
+  return data
+placeholder
+
+export async function syncFromCrs(params: {
+  base_url: string
+  username: string
+  password: string
+  sync_proxies?: boolean
+placeholder): Promise<{
+  created: number
+  updated: number
+  skipped: number
+  failed: number
+  items: Array<{
+    crs_account_id: string
+    kind: string
+    name: string
+    action: string
+    error?: string
+  placeholder>
+placeholder> {
+  const { data placeholder = await apiClient.post('/admin/accounts/sync/crs', params)
+  return data
 placeholder
 
 export const accountsAPI = {
@@ -263,6 +333,9 @@ export const accountsAPI = {
   generateAuthUrl,
   exchangeCode,
   batchCreate,
-placeholder;
+  batchUpdateCredentials,
+  bulkUpdate,
+  syncFromCrs,
+placeholder
 
-export default accountsAPI;
+export default accountsAPI
