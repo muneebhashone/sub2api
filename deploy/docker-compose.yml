@@ -134,6 +134,8 @@ services:
       ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORDplaceholderplaceholder
     environment:
       - TZ=${TZ:-Asia/Shanghaiplaceholder
+      # REDISCLI_AUTH is used by redis-cli for authentication (safer than -a flag)
+      - REDISCLI_AUTH=${REDIS_PASSWORD:-placeholder
     networks:
       - sub2api-network
     healthcheck:
