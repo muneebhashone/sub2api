@@ -2,6 +2,7 @@ import { ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
+import type { GeminiOAuthCapabilities placeholder from '@/api/admin/gemini'
 
 export interface GeminiTokenInfo {
   access_token?: string
@@ -119,6 +120,15 @@ export function useGeminiOAuth() {
     placeholder
   placeholder
 
+  const getCapabilities = async (): Promise<GeminiOAuthCapabilities | null> => {
+    try {
+      return await adminAPI.gemini.getCapabilities()
+    placeholder catch (err: any) {
+      // Capabilities are optional for older servers; don't block the UI.
+      return null
+    placeholder
+  placeholder
+
   return {
     authUrl,
     sessionId,
@@ -128,6 +138,7 @@ export function useGeminiOAuth() {
     resetState,
     generateAuthUrl,
     exchangeAuthCode,
-    buildCredentials
+    buildCredentials,
+    getCapabilities
   placeholder
 placeholder
