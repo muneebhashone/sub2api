@@ -292,3 +292,19 @@ placeholder
 		AssignedByUser:     UserFromServiceShallow(sub.AssignedByUser),
 placeholder
 placeholder
+
+func BulkAssignResultFromService(r *service.BulkAssignResult) *BulkAssignResult {
+	if r == nil {
+		return nil
+placeholder
+	subs := make([]UserSubscription, 0, len(r.Subscriptions))
+	for i := range r.Subscriptions {
+		subs = append(subs, *UserSubscriptionFromService(&r.Subscriptions[i]))
+placeholder
+	return &BulkAssignResult{
+		SuccessCount:  r.SuccessCount,
+		FailedCount:   r.FailedCount,
+		Subscriptions: subs,
+		Errors:        r.Errors,
+placeholder
+placeholder

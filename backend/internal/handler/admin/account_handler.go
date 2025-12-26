@@ -376,7 +376,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, updatedAccount)
+	response.Success(c, dto.AccountFromService(updatedAccount))
 placeholder
 
 // GetStats handles getting account statistics

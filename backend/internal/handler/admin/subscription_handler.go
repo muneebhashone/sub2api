@@ -177,7 +177,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, result)
+	response.Success(c, dto.BulkAssignResultFromService(result))
 placeholder
 
 // Extend handles extending a subscription
