@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/model"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/googleapi"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/service/ports"
 
@@ -55,6 +56,11 @@ func NewGeminiMessagesCompatService(
 		rateLimitService: rateLimitService,
 		httpUpstream:     httpUpstream,
 placeholder
+placeholder
+
+// GetTokenProvider returns the token provider for OAuth accounts
+func (s *GeminiMessagesCompatService) GetTokenProvider() *GeminiTokenProvider {
+	return s.tokenProvider
 placeholder
 
 func (s *GeminiMessagesCompatService) SelectAccountForModel(ctx context.Context, groupID *int64, sessionHash string, requestedModel string) (*model.Account, error) {
@@ -94,8 +100,20 @@ placeholder
 		if acc.Priority < selected.Priority {
 			selected = acc
 	placeholder else if acc.Priority == selected.Priority {
-			if acc.LastUsedAt == nil || (selected.LastUsedAt != nil && acc.LastUsedAt.Before(*selected.LastUsedAt)) {
+			switch {
+			case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
 				selected = acc
+			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
+				// keep selected (never used is preferred)
+			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
+				// Prefer OAuth accounts when both are unused (more compatible for Code Assist flows).
+				if acc.Type == model.AccountTypeOAuth && selected.Type != model.AccountTypeOAuth {
+					selected = acc
+			placeholder
+			default:
+				if acc.LastUsedAt.Before(*selected.LastUsedAt) {
+					selected = acc
+			placeholder
 		placeholder
 	placeholder
 placeholder
@@ -111,6 +129,96 @@ placeholder
 		_ = s.cache.SetSessionAccountID(ctx, cacheKey, selected.ID, geminiStickySessionTTL)
 placeholder
 
+	return selected, nil
+placeholder
+
+// SelectAccountForAIStudioEndpoints selects an account that is likely to succeed against
+// generativelanguage.googleapis.com (e.g. GET /v1beta/models).
+//
+// Preference order:
+// 1) API key accounts (AI Studio)
+// 2) OAuth accounts without project_id (AI Studio OAuth)
+// 3) OAuth accounts explicitly marked as ai_studio
+// 4) Any remaining Gemini accounts (fallback)
+func (s *GeminiMessagesCompatService) SelectAccountForAIStudioEndpoints(ctx context.Context, groupID *int64) (*model.Account, error) {
+	var accounts []model.Account
+	var err error
+	if groupID != nil {
+		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, model.PlatformGemini)
+placeholder else {
+		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, model.PlatformGemini)
+placeholder
+	if err != nil {
+		return nil, fmt.Errorf("query accounts failed: %w", err)
+placeholder
+	if len(accounts) == 0 {
+		return nil, errors.New("no available Gemini accounts")
+placeholder
+
+	rank := func(a *model.Account) int {
+		if a == nil {
+			return 999
+	placeholder
+		switch a.Type {
+		case model.AccountTypeApiKey:
+			if strings.TrimSpace(a.GetCredential("api_key")) != "" {
+				return 0
+		placeholder
+			return 9
+		case model.AccountTypeOAuth:
+			if strings.TrimSpace(a.GetCredential("project_id")) == "" {
+				return 1
+		placeholder
+			if strings.TrimSpace(a.GetCredential("oauth_type")) == "ai_studio" {
+				return 2
+		placeholder
+			// Code Assist OAuth tokens often lack AI Studio scopes for models listing.
+			return 3
+		default:
+			return 10
+	placeholder
+placeholder
+
+	var selected *model.Account
+	for i := range accounts {
+		acc := &accounts[i]
+		if selected == nil {
+			selected = acc
+			continue
+	placeholder
+
+		r1, r2 := rank(acc), rank(selected)
+		if r1 < r2 {
+			selected = acc
+			continue
+	placeholder
+		if r1 > r2 {
+			continue
+	placeholder
+
+		if acc.Priority < selected.Priority {
+			selected = acc
+	placeholder else if acc.Priority == selected.Priority {
+			switch {
+			case acc.LastUsedAt == nil && selected.LastUsedAt != nil:
+				selected = acc
+			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
+				// keep selected
+			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
+				if acc.Type == model.AccountTypeOAuth && selected.Type != model.AccountTypeOAuth {
+					selected = acc
+			placeholder
+			default:
+				if acc.LastUsedAt.Before(*selected.LastUsedAt) {
+					selected = acc
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	if selected == nil {
+		return nil, errors.New("no available Gemini accounts")
+placeholder
 	return selected, nil
 placeholder
 
@@ -146,6 +254,11 @@ placeholder
 
 	var requestIDHeader string
 	var buildReq func(ctx context.Context) (*http.Request, string, error)
+	useUpstreamStream := req.Stream
+	if account.Type == model.AccountTypeOAuth && !req.Stream && strings.TrimSpace(account.GetCredential("project_id")) != "" {
+		// Code Assist's non-streaming generateContent may return no content; use streaming upstream and aggregate.
+		useUpstreamStream = true
+placeholder
 
 	switch account.Type {
 	case model.AccountTypeApiKey:
@@ -190,38 +303,61 @@ placeholder
 		placeholder
 
 			projectID := strings.TrimSpace(account.GetCredential("project_id"))
-			if projectID == "" {
-				return nil, "", errors.New("missing project_id in account credentials")
-		placeholder
 
 			action := "generateContent"
-			if req.Stream {
+			if useUpstreamStream {
 				action = "streamGenerateContent"
 		placeholder
-			fullURL := fmt.Sprintf("%s/v1internal:%s", geminicli.GeminiCliBaseURL, action)
-			if req.Stream {
-				fullURL += "?alt=sse"
-		placeholder
 
-			wrapped := map[string]any{
-				"model":   mappedModel,
-				"project": projectID,
-		placeholder
-			var inner any
-			if err := json.Unmarshal(geminiReq, &inner); err != nil {
-				return nil, "", fmt.Errorf("failed to parse gemini request: %w", err)
-		placeholder
-			wrapped["request"] = inner
-			wrappedBytes, _ := json.Marshal(wrapped)
+			// Two modes for OAuth:
+			// 1. With project_id -> Code Assist API (wrapped request)
+			// 2. Without project_id -> AI Studio API (direct OAuth, like API key but with Bearer token)
+			if projectID != "" {
+				// Mode 1: Code Assist API
+				fullURL := fmt.Sprintf("%s/v1internal:%s", geminicli.GeminiCliBaseURL, action)
+				if useUpstreamStream {
+					fullURL += "?alt=sse"
+			placeholder
 
-			upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(wrappedBytes))
-			if err != nil {
-				return nil, "", err
+				wrapped := map[string]any{
+					"model":   mappedModel,
+					"project": projectID,
+			placeholder
+				var inner any
+				if err := json.Unmarshal(geminiReq, &inner); err != nil {
+					return nil, "", fmt.Errorf("failed to parse gemini request: %w", err)
+			placeholder
+				wrapped["request"] = inner
+				wrappedBytes, _ := json.Marshal(wrapped)
+
+				upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(wrappedBytes))
+				if err != nil {
+					return nil, "", err
+			placeholder
+				upstreamReq.Header.Set("Content-Type", "application/json")
+				upstreamReq.Header.Set("Authorization", "Bearer "+accessToken)
+				upstreamReq.Header.Set("User-Agent", geminicli.GeminiCLIUserAgent)
+				return upstreamReq, "x-request-id", nil
+		placeholder else {
+				// Mode 2: AI Studio API with OAuth (like API key mode, but using Bearer token)
+				baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+				if baseURL == "" {
+					baseURL = geminicli.AIStudioBaseURL
+			placeholder
+
+				fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", baseURL, mappedModel, action)
+				if useUpstreamStream {
+					fullURL += "?alt=sse"
+			placeholder
+
+				upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(geminiReq))
+				if err != nil {
+					return nil, "", err
+			placeholder
+				upstreamReq.Header.Set("Content-Type", "application/json")
+				upstreamReq.Header.Set("Authorization", "Bearer "+accessToken)
+				return upstreamReq, "x-request-id", nil
 		placeholder
-			upstreamReq.Header.Set("Content-Type", "application/json")
-			upstreamReq.Header.Set("Authorization", "Bearer "+accessToken)
-			upstreamReq.Header.Set("User-Agent", geminicli.GeminiCLIUserAgent)
-			return upstreamReq, "x-request-id", nil
 	placeholder
 		requestIDHeader = "x-request-id"
 
@@ -301,9 +437,22 @@ placeholder
 		usage = streamRes.usage
 		firstTokenMs = streamRes.firstTokenMs
 placeholder else {
-		usage, err = s.handleNonStreamingResponse(c, resp, originalModel)
-		if err != nil {
-			return nil, err
+		if useUpstreamStream {
+			collected, usageObj, err := collectGeminiSSE(resp.Body, true)
+			if err != nil {
+				return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to read upstream stream")
+		placeholder
+			claudeResp, usageObj2 := convertGeminiToClaudeMessage(collected, originalModel)
+			c.JSON(http.StatusOK, claudeResp)
+			usage = usageObj2
+			if usageObj != nil && (usageObj.InputTokens > 0 || usageObj.OutputTokens > 0) {
+				usage = usageObj
+		placeholder
+	placeholder else {
+			usage, err = s.handleNonStreamingResponse(c, resp, originalModel)
+			if err != nil {
+				return nil, err
+		placeholder
 	placeholder
 placeholder
 
@@ -312,6 +461,291 @@ placeholder
 		Usage:        *usage,
 		Model:        originalModel,
 		Stream:       req.Stream,
+		Duration:     time.Since(startTime),
+		FirstTokenMs: firstTokenMs,
+placeholder, nil
+placeholder
+
+func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.Context, account *model.Account, originalModel string, action string, stream bool, body []byte) (*ForwardResult, error) {
+	startTime := time.Now()
+
+	if strings.TrimSpace(originalModel) == "" {
+		return nil, s.writeGoogleError(c, http.StatusBadRequest, "Missing model in URL")
+placeholder
+	if strings.TrimSpace(action) == "" {
+		return nil, s.writeGoogleError(c, http.StatusBadRequest, "Missing action in URL")
+placeholder
+	if len(body) == 0 {
+		return nil, s.writeGoogleError(c, http.StatusBadRequest, "Request body is empty")
+placeholder
+
+	switch action {
+	case "generateContent", "streamGenerateContent", "countTokens":
+		// ok
+	default:
+		return nil, s.writeGoogleError(c, http.StatusNotFound, "Unsupported action: "+action)
+placeholder
+
+	mappedModel := originalModel
+	if account.Type == model.AccountTypeApiKey {
+		mappedModel = account.GetMappedModel(originalModel)
+placeholder
+
+	proxyURL := ""
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+
+	useUpstreamStream := stream
+	upstreamAction := action
+	if account.Type == model.AccountTypeOAuth && !stream && action == "generateContent" && strings.TrimSpace(account.GetCredential("project_id")) != "" {
+		// Code Assist's non-streaming generateContent may return no content; use streaming upstream and aggregate.
+		useUpstreamStream = true
+		upstreamAction = "streamGenerateContent"
+placeholder
+	forceAIStudio := action == "countTokens"
+
+	var requestIDHeader string
+	var buildReq func(ctx context.Context) (*http.Request, string, error)
+
+	switch account.Type {
+	case model.AccountTypeApiKey:
+		buildReq = func(ctx context.Context) (*http.Request, string, error) {
+			apiKey := account.GetCredential("api_key")
+			if strings.TrimSpace(apiKey) == "" {
+				return nil, "", errors.New("Gemini api_key not configured")
+		placeholder
+
+			baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+			if baseURL == "" {
+				baseURL = geminicli.AIStudioBaseURL
+		placeholder
+
+			fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(baseURL, "/"), mappedModel, upstreamAction)
+			if useUpstreamStream {
+				fullURL += "?alt=sse"
+		placeholder
+
+			upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(body))
+			if err != nil {
+				return nil, "", err
+		placeholder
+			upstreamReq.Header.Set("Content-Type", "application/json")
+			upstreamReq.Header.Set("x-goog-api-key", apiKey)
+			return upstreamReq, "x-request-id", nil
+	placeholder
+		requestIDHeader = "x-request-id"
+
+	case model.AccountTypeOAuth:
+		buildReq = func(ctx context.Context) (*http.Request, string, error) {
+			if s.tokenProvider == nil {
+				return nil, "", errors.New("Gemini token provider not configured")
+		placeholder
+			accessToken, err := s.tokenProvider.GetAccessToken(ctx, account)
+			if err != nil {
+				return nil, "", err
+		placeholder
+
+			projectID := strings.TrimSpace(account.GetCredential("project_id"))
+
+			// Two modes for OAuth:
+			// 1. With project_id -> Code Assist API (wrapped request)
+			// 2. Without project_id -> AI Studio API (direct OAuth, like API key but with Bearer token)
+			if projectID != "" && !forceAIStudio {
+				// Mode 1: Code Assist API
+				fullURL := fmt.Sprintf("%s/v1internal:%s", geminicli.GeminiCliBaseURL, upstreamAction)
+				if useUpstreamStream {
+					fullURL += "?alt=sse"
+			placeholder
+
+				wrapped := map[string]any{
+					"model":   mappedModel,
+					"project": projectID,
+			placeholder
+				var inner any
+				if err := json.Unmarshal(body, &inner); err != nil {
+					return nil, "", fmt.Errorf("failed to parse gemini request: %w", err)
+			placeholder
+				wrapped["request"] = inner
+				wrappedBytes, _ := json.Marshal(wrapped)
+
+				upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(wrappedBytes))
+				if err != nil {
+					return nil, "", err
+			placeholder
+				upstreamReq.Header.Set("Content-Type", "application/json")
+				upstreamReq.Header.Set("Authorization", "Bearer "+accessToken)
+				upstreamReq.Header.Set("User-Agent", geminicli.GeminiCLIUserAgent)
+				return upstreamReq, "x-request-id", nil
+		placeholder else {
+				// Mode 2: AI Studio API with OAuth (like API key mode, but using Bearer token)
+				baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+				if baseURL == "" {
+					baseURL = geminicli.AIStudioBaseURL
+			placeholder
+
+				fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", baseURL, mappedModel, upstreamAction)
+				if useUpstreamStream {
+					fullURL += "?alt=sse"
+			placeholder
+
+				upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(body))
+				if err != nil {
+					return nil, "", err
+			placeholder
+				upstreamReq.Header.Set("Content-Type", "application/json")
+				upstreamReq.Header.Set("Authorization", "Bearer "+accessToken)
+				return upstreamReq, "x-request-id", nil
+		placeholder
+	placeholder
+		requestIDHeader = "x-request-id"
+
+	default:
+		return nil, s.writeGoogleError(c, http.StatusBadGateway, "Unsupported account type: "+account.Type)
+placeholder
+
+	var resp *http.Response
+	for attempt := 1; attempt <= geminiMaxRetries; attempt++ {
+		upstreamReq, idHeader, err := buildReq(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil, err
+		placeholder
+			// Local build error: don't retry.
+			if strings.Contains(err.Error(), "missing project_id") {
+				return nil, s.writeGoogleError(c, http.StatusBadRequest, err.Error())
+		placeholder
+			return nil, s.writeGoogleError(c, http.StatusBadGateway, err.Error())
+	placeholder
+		requestIDHeader = idHeader
+
+		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL)
+		if err != nil {
+			if attempt < geminiMaxRetries {
+				log.Printf("Gemini account %d: upstream request failed, retry %d/%d: %v", account.ID, attempt, geminiMaxRetries, err)
+				sleepGeminiBackoff(attempt)
+				continue
+		placeholder
+			if action == "countTokens" {
+				estimated := estimateGeminiCountTokens(body)
+				c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
+				return &ForwardResult{
+					RequestID:    "",
+					Usage:        ClaudeUsage{placeholder,
+					Model:        originalModel,
+					Stream:       false,
+					Duration:     time.Since(startTime),
+					FirstTokenMs: nil,
+			placeholder, nil
+		placeholder
+			return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries")
+	placeholder
+
+			if resp.StatusCode >= 400 && s.shouldRetryGeminiUpstreamError(account, resp.StatusCode) {
+				respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+				_ = resp.Body.Close()
+				if resp.StatusCode == 429 {
+					s.handleGeminiUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+			placeholder
+				if attempt < geminiMaxRetries {
+					log.Printf("Gemini account %d: upstream status %d, retry %d/%d", account.ID, resp.StatusCode, attempt, geminiMaxRetries)
+					sleepGeminiBackoff(attempt)
+					continue
+			placeholder
+				if action == "countTokens" {
+					estimated := estimateGeminiCountTokens(body)
+					c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
+					return &ForwardResult{
+						RequestID:    "",
+						Usage:        ClaudeUsage{placeholder,
+						Model:        originalModel,
+						Stream:       false,
+						Duration:     time.Since(startTime),
+						FirstTokenMs: nil,
+				placeholder, nil
+			placeholder
+				return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries")
+		placeholder
+
+		break
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	requestID := resp.Header.Get(requestIDHeader)
+	if requestID == "" {
+		requestID = resp.Header.Get("x-goog-request-id")
+placeholder
+	if requestID != "" {
+		c.Header("x-request-id", requestID)
+placeholder
+
+	isOAuth := account.Type == model.AccountTypeOAuth
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		s.handleGeminiUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+
+		// Best-effort fallback for OAuth tokens missing AI Studio scopes when calling countTokens.
+		// This avoids Gemini SDKs failing hard during preflight token counting.
+		if action == "countTokens" && isOAuth && isGeminiInsufficientScope(resp.Header, respBody) {
+			estimated := estimateGeminiCountTokens(body)
+			c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
+			return &ForwardResult{
+				RequestID:    requestID,
+				Usage:        ClaudeUsage{placeholder,
+				Model:        originalModel,
+				Stream:       false,
+				Duration:     time.Since(startTime),
+				FirstTokenMs: nil,
+		placeholder, nil
+	placeholder
+
+		respBody = unwrapIfNeeded(isOAuth, respBody)
+		contentType := resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "application/json"
+	placeholder
+		c.Data(resp.StatusCode, contentType, respBody)
+		return nil, fmt.Errorf("gemini upstream error: %d", resp.StatusCode)
+placeholder
+
+	var usage *ClaudeUsage
+	var firstTokenMs *int
+
+	if stream {
+		streamRes, err := s.handleNativeStreamingResponse(c, resp, startTime, isOAuth)
+		if err != nil {
+			return nil, err
+	placeholder
+		usage = streamRes.usage
+		firstTokenMs = streamRes.firstTokenMs
+placeholder else {
+		if useUpstreamStream {
+			collected, usageObj, err := collectGeminiSSE(resp.Body, isOAuth)
+			if err != nil {
+				return nil, s.writeGoogleError(c, http.StatusBadGateway, "Failed to read upstream stream")
+		placeholder
+			b, _ := json.Marshal(collected)
+			c.Data(http.StatusOK, "application/json", b)
+			usage = usageObj
+	placeholder else {
+			usageResp, err := s.handleNativeNonStreamingResponse(c, resp, isOAuth)
+			if err != nil {
+				return nil, err
+		placeholder
+			usage = usageResp
+	placeholder
+placeholder
+
+	if usage == nil {
+		usage = &ClaudeUsage{placeholder
+placeholder
+
+	return &ForwardResult{
+		RequestID:    requestID,
+		Usage:        *usage,
+		Model:        originalModel,
+		Stream:       stream,
 		Duration:     time.Since(startTime),
 		FirstTokenMs: firstTokenMs,
 placeholder, nil
@@ -590,22 +1024,29 @@ placeholder
 	openBlockIndex := -1
 	openBlockType := ""
 	seenText := ""
+	openToolIndex := -1
+	openToolID := ""
+	openToolName := ""
+	seenToolJSON := ""
 
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-		placeholder
+		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, fmt.Errorf("stream read error: %w", err)
 	placeholder
 
 		if !strings.HasPrefix(line, "data:") {
+			if errors.Is(err, io.EOF) {
+				break
+		placeholder
 			continue
 	placeholder
 		payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 		if payload == "" || payload == "[DONE]" {
+			if errors.Is(err, io.EOF) {
+				break
+		placeholder
 			continue
 	placeholder
 
@@ -670,7 +1111,7 @@ placeholder
 					name = "tool"
 			placeholder
 
-				// Close any open block before tool_use.
+				// Close any open text block before tool_use.
 				if openBlockIndex >= 0 {
 					writeSSE(c.Writer, "content_block_stop", map[string]any{
 						"type":  "content_block_stop",
@@ -680,40 +1121,63 @@ placeholder
 					openBlockType = ""
 			placeholder
 
-				toolID := "toolu_" + randomHex(8)
-				toolIndex := nextBlockIndex
-				nextBlockIndex++
-				sawToolUse = true
+				// If we receive streamed tool args in pieces, keep a single tool block open and emit deltas.
+				if openToolIndex >= 0 && openToolName != name {
+					writeSSE(c.Writer, "content_block_stop", map[string]any{
+						"type":  "content_block_stop",
+						"index": openToolIndex,
+				placeholder)
+					openToolIndex = -1
+					openToolID = ""
+					openToolName = ""
+					seenToolJSON = ""
+			placeholder
 
-				writeSSE(c.Writer, "content_block_start", map[string]any{
-					"type":  "content_block_start",
-					"index": toolIndex,
-					"content_block": map[string]any{
-						"type":  "tool_use",
-						"id":    toolID,
-						"name":  name,
-						"input": map[string]any{placeholder,
-				placeholder,
-			placeholder)
+				if openToolIndex < 0 {
+					openToolID = "toolu_" + randomHex(8)
+					openToolIndex = nextBlockIndex
+					openToolName = name
+					nextBlockIndex++
+					sawToolUse = true
 
-				argsJSON := "{placeholder"
-				if args != nil {
-					if b, err := json.Marshal(args); err == nil {
-						argsJSON = string(b)
+					writeSSE(c.Writer, "content_block_start", map[string]any{
+						"type":  "content_block_start",
+						"index": openToolIndex,
+						"content_block": map[string]any{
+							"type":  "tool_use",
+							"id":    openToolID,
+							"name":  name,
+							"input": map[string]any{placeholder,
+					placeholder,
+				placeholder)
+			placeholder
+
+				argsJSONText := "{placeholder"
+				switch v := args.(type) {
+				case nil:
+					// keep default "{placeholder"
+				case string:
+					if strings.TrimSpace(v) != "" {
+						argsJSONText = v
+				placeholder
+				default:
+					if b, err := json.Marshal(args); err == nil && len(b) > 0 {
+						argsJSONText = string(b)
 				placeholder
 			placeholder
-				writeSSE(c.Writer, "content_block_delta", map[string]any{
-					"type":  "content_block_delta",
-					"index": toolIndex,
-					"delta": map[string]any{
-						"type":         "input_json_delta",
-						"partial_json": argsJSON,
-				placeholder,
-			placeholder)
-				writeSSE(c.Writer, "content_block_stop", map[string]any{
-					"type":  "content_block_stop",
-					"index": toolIndex,
-			placeholder)
+
+				delta, newSeen := computeGeminiTextDelta(seenToolJSON, argsJSONText)
+				seenToolJSON = newSeen
+				if delta != "" {
+					writeSSE(c.Writer, "content_block_delta", map[string]any{
+						"type":  "content_block_delta",
+						"index": openToolIndex,
+						"delta": map[string]any{
+							"type":         "input_json_delta",
+							"partial_json": delta,
+					placeholder,
+				placeholder)
+			placeholder
 				flusher.Flush()
 		placeholder
 	placeholder
@@ -721,12 +1185,23 @@ placeholder
 		if u := extractGeminiUsage(geminiResp); u != nil {
 			usage = *u
 	placeholder
+
+		// Process the final unterminated line at EOF as well.
+		if errors.Is(err, io.EOF) {
+			break
+	placeholder
 placeholder
 
 	if openBlockIndex >= 0 {
 		writeSSE(c.Writer, "content_block_stop", map[string]any{
 			"type":  "content_block_stop",
 			"index": openBlockIndex,
+	placeholder)
+placeholder
+	if openToolIndex >= 0 {
+		writeSSE(c.Writer, "content_block_stop", map[string]any{
+			"type":  "content_block_stop",
+			"index": openToolIndex,
 	placeholder)
 placeholder
 
@@ -777,6 +1252,369 @@ func (s *GeminiMessagesCompatService) writeClaudeError(c *gin.Context, status in
 		"error": gin.H{"type": errType, "message": messageplaceholder,
 placeholder)
 	return fmt.Errorf("%s", message)
+placeholder
+
+func (s *GeminiMessagesCompatService) writeGoogleError(c *gin.Context, status int, message string) error {
+	c.JSON(status, gin.H{
+		"error": gin.H{
+			"code":    status,
+			"message": message,
+			"status":  googleapi.HTTPStatusToGoogleStatus(status),
+	placeholder,
+placeholder)
+	return fmt.Errorf("%s", message)
+placeholder
+
+func unwrapIfNeeded(isOAuth bool, raw []byte) []byte {
+	if !isOAuth {
+		return raw
+placeholder
+	inner, err := unwrapGeminiResponse(raw)
+	if err != nil {
+		return raw
+placeholder
+	b, err := json.Marshal(inner)
+	if err != nil {
+		return raw
+placeholder
+	return b
+placeholder
+
+func collectGeminiSSE(body io.Reader, isOAuth bool) (map[string]any, *ClaudeUsage, error) {
+	reader := bufio.NewReader(body)
+
+	var last map[string]any
+	var lastWithParts map[string]any
+	usage := &ClaudeUsage{placeholder
+
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			trimmed := strings.TrimRight(line, "\r\n")
+			if strings.HasPrefix(trimmed, "data:") {
+				payload := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
+				switch payload {
+				case "", "[DONE]":
+					if payload == "[DONE]" {
+						return pickGeminiCollectResult(last, lastWithParts), usage, nil
+				placeholder
+				default:
+					var parsed map[string]any
+					if isOAuth {
+						inner, err := unwrapGeminiResponse([]byte(payload))
+						if err == nil && inner != nil {
+							parsed = inner
+					placeholder
+				placeholder else {
+						_ = json.Unmarshal([]byte(payload), &parsed)
+				placeholder
+					if parsed != nil {
+						last = parsed
+						if u := extractGeminiUsage(parsed); u != nil {
+							usage = u
+					placeholder
+						if parts := extractGeminiParts(parsed); len(parts) > 0 {
+							lastWithParts = parsed
+					placeholder
+				placeholder
+			placeholder
+		placeholder
+	placeholder
+
+		if errors.Is(err, io.EOF) {
+			break
+	placeholder
+		if err != nil {
+			return nil, nil, err
+	placeholder
+placeholder
+
+	return pickGeminiCollectResult(last, lastWithParts), usage, nil
+placeholder
+
+func pickGeminiCollectResult(last map[string]any, lastWithParts map[string]any) map[string]any {
+	if lastWithParts != nil {
+		return lastWithParts
+placeholder
+	if last != nil {
+		return last
+placeholder
+	return map[string]any{placeholder
+placeholder
+
+type geminiNativeStreamResult struct {
+	usage        *ClaudeUsage
+	firstTokenMs *int
+placeholder
+
+func isGeminiInsufficientScope(headers http.Header, body []byte) bool {
+	if strings.Contains(strings.ToLower(headers.Get("Www-Authenticate")), "insufficient_scope") {
+		return true
+placeholder
+	lower := strings.ToLower(string(body))
+	return strings.Contains(lower, "insufficient authentication scopes") || strings.Contains(lower, "access_token_scope_insufficient")
+placeholder
+
+func estimateGeminiCountTokens(reqBody []byte) int {
+	var obj map[string]any
+	if err := json.Unmarshal(reqBody, &obj); err != nil {
+		return 0
+placeholder
+
+	var texts []string
+
+	// systemInstruction.parts[].text
+	if si, ok := obj["systemInstruction"].(map[string]any); ok {
+		if parts, ok := si["parts"].([]any); ok {
+			for _, p := range parts {
+				if pm, ok := p.(map[string]any); ok {
+					if t, ok := pm["text"].(string); ok && strings.TrimSpace(t) != "" {
+						texts = append(texts, t)
+				placeholder
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	// contents[].parts[].text
+	if contents, ok := obj["contents"].([]any); ok {
+		for _, c := range contents {
+			cm, ok := c.(map[string]any)
+			if !ok {
+				continue
+		placeholder
+			parts, ok := cm["parts"].([]any)
+			if !ok {
+				continue
+		placeholder
+			for _, p := range parts {
+				pm, ok := p.(map[string]any)
+				if !ok {
+					continue
+			placeholder
+				if t, ok := pm["text"].(string); ok && strings.TrimSpace(t) != "" {
+					texts = append(texts, t)
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	total := 0
+	for _, t := range texts {
+		total += estimateTokensForText(t)
+placeholder
+	if total < 0 {
+		return 0
+placeholder
+	return total
+placeholder
+
+func estimateTokensForText(s string) int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+placeholder
+	runes := []rune(s)
+	if len(runes) == 0 {
+		return 0
+placeholder
+	ascii := 0
+	for _, r := range runes {
+		if r <= 0x7f {
+			ascii++
+	placeholder
+placeholder
+	asciiRatio := float64(ascii) / float64(len(runes))
+	if asciiRatio >= 0.8 {
+		// Roughly 4 chars per token for English-like text.
+		return (len(runes) + 3) / 4
+placeholder
+	// For CJK-heavy text, approximate 1 rune per token.
+	return len(runes)
+placeholder
+
+type UpstreamHTTPResult struct {
+	StatusCode int
+	Headers    http.Header
+	Body       []byte
+placeholder
+
+func (s *GeminiMessagesCompatService) handleNativeNonStreamingResponse(c *gin.Context, resp *http.Response, isOAuth bool) (*ClaudeUsage, error) {
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+placeholder
+
+	var parsed map[string]any
+	if isOAuth {
+		parsed, err = unwrapGeminiResponse(respBody)
+		if err == nil && parsed != nil {
+			respBody, _ = json.Marshal(parsed)
+	placeholder
+placeholder else {
+		_ = json.Unmarshal(respBody, &parsed)
+placeholder
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/json"
+placeholder
+	c.Data(resp.StatusCode, contentType, respBody)
+
+	if parsed != nil {
+		if u := extractGeminiUsage(parsed); u != nil {
+			return u, nil
+	placeholder
+placeholder
+	return &ClaudeUsage{placeholder, nil
+placeholder
+
+func (s *GeminiMessagesCompatService) handleNativeStreamingResponse(c *gin.Context, resp *http.Response, startTime time.Time, isOAuth bool) (*geminiNativeStreamResult, error) {
+	c.Status(resp.StatusCode)
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "text/event-stream; charset=utf-8"
+placeholder
+	c.Header("Content-Type", contentType)
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		return nil, errors.New("streaming not supported")
+placeholder
+
+	reader := bufio.NewReader(resp.Body)
+	usage := &ClaudeUsage{placeholder
+	var firstTokenMs *int
+
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			trimmed := strings.TrimRight(line, "\r\n")
+			if strings.HasPrefix(trimmed, "data:") {
+				payload := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
+				// Keepalive / done markers
+				if payload == "" || payload == "[DONE]" {
+					_, _ = io.WriteString(c.Writer, line)
+					flusher.Flush()
+			placeholder else {
+					var rawToWrite string
+					rawToWrite = payload
+
+					var parsed map[string]any
+					if isOAuth {
+						inner, err := unwrapGeminiResponse([]byte(payload))
+						if err == nil && inner != nil {
+							parsed = inner
+							if b, err := json.Marshal(inner); err == nil {
+								rawToWrite = string(b)
+						placeholder
+					placeholder
+				placeholder else {
+						_ = json.Unmarshal([]byte(payload), &parsed)
+				placeholder
+
+					if parsed != nil {
+						if u := extractGeminiUsage(parsed); u != nil {
+							usage = u
+					placeholder
+				placeholder
+
+					if firstTokenMs == nil {
+						ms := int(time.Since(startTime).Milliseconds())
+						firstTokenMs = &ms
+				placeholder
+
+					if isOAuth {
+						// SSE format requires double newline (\n\n) to separate events
+						_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", rawToWrite)
+				placeholder else {
+						// Pass-through for AI Studio responses.
+						_, _ = io.WriteString(c.Writer, line)
+				placeholder
+					flusher.Flush()
+			placeholder
+		placeholder else {
+				_, _ = io.WriteString(c.Writer, line)
+				flusher.Flush()
+		placeholder
+	placeholder
+
+		if errors.Is(err, io.EOF) {
+			break
+	placeholder
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
+
+	return &geminiNativeStreamResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
+placeholder
+
+// ForwardAIStudioGET forwards a GET request to AI Studio (generativelanguage.googleapis.com) for
+// endpoints like /v1beta/models and /v1beta/models/{modelplaceholder.
+//
+// This is used to support Gemini SDKs that call models listing endpoints before generation.
+func (s *GeminiMessagesCompatService) ForwardAIStudioGET(ctx context.Context, account *model.Account, path string) (*UpstreamHTTPResult, error) {
+	if account == nil {
+		return nil, errors.New("account is nil")
+placeholder
+	path = strings.TrimSpace(path)
+	if path == "" || !strings.HasPrefix(path, "/") {
+		return nil, errors.New("invalid path")
+placeholder
+
+	baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+	if baseURL == "" {
+		baseURL = geminicli.AIStudioBaseURL
+placeholder
+	fullURL := strings.TrimRight(baseURL, "/") + path
+
+	var proxyURL string
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, err
+placeholder
+
+	switch account.Type {
+	case model.AccountTypeApiKey:
+		apiKey := strings.TrimSpace(account.GetCredential("api_key"))
+		if apiKey == "" {
+			return nil, errors.New("Gemini api_key not configured")
+	placeholder
+		req.Header.Set("x-goog-api-key", apiKey)
+	case model.AccountTypeOAuth:
+		if s.tokenProvider == nil {
+			return nil, errors.New("Gemini token provider not configured")
+	placeholder
+		accessToken, err := s.tokenProvider.GetAccessToken(ctx, account)
+		if err != nil {
+			return nil, err
+	placeholder
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	default:
+		return nil, fmt.Errorf("unsupported account type: %s", account.Type)
+placeholder
+
+	resp, err := s.httpUpstream.Do(req, proxyURL)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	return &UpstreamHTTPResult{
+		StatusCode: resp.StatusCode,
+		Headers:    resp.Header.Clone(),
+		Body:       body,
+placeholder, nil
 placeholder
 
 func unwrapGeminiResponse(raw []byte) (map[string]any, error) {
