@@ -377,22 +377,22 @@ placeholder else {
 			newCredentials[k] = v
 	placeholder
 
-			// Update token-related fields
-			newCredentials["access_token"] = tokenInfo.AccessToken
-			newCredentials["token_type"] = tokenInfo.TokenType
-			newCredentials["expires_in"] = strconv.FormatInt(tokenInfo.ExpiresIn, 10)
-			newCredentials["expires_at"] = strconv.FormatInt(tokenInfo.ExpiresAt, 10)
-			if strings.TrimSpace(tokenInfo.RefreshToken) != "" {
-				newCredentials["refresh_token"] = tokenInfo.RefreshToken
-		placeholder
-			if strings.TrimSpace(tokenInfo.Scope) != "" {
-				newCredentials["scope"] = tokenInfo.Scope
-		placeholder
+		// Update token-related fields
+		newCredentials["access_token"] = tokenInfo.AccessToken
+		newCredentials["token_type"] = tokenInfo.TokenType
+		newCredentials["expires_in"] = strconv.FormatInt(tokenInfo.ExpiresIn, 10)
+		newCredentials["expires_at"] = strconv.FormatInt(tokenInfo.ExpiresAt, 10)
+		if strings.TrimSpace(tokenInfo.RefreshToken) != "" {
+			newCredentials["refresh_token"] = tokenInfo.RefreshToken
 	placeholder
+		if strings.TrimSpace(tokenInfo.Scope) != "" {
+			newCredentials["scope"] = tokenInfo.Scope
+	placeholder
+placeholder
 
-		updatedAccount, err := h.adminService.UpdateAccount(c.Request.Context(), accountID, &service.UpdateAccountInput{
-			Credentials: newCredentials,
-	placeholder)
+	updatedAccount, err := h.adminService.UpdateAccount(c.Request.Context(), accountID, &service.UpdateAccountInput{
+		Credentials: newCredentials,
+placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

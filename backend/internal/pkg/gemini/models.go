@@ -40,4 +40,3 @@ placeholder
 placeholder
 	return Model{Name: "models/" + model, SupportedGenerationMethods: methodsplaceholder
 placeholder
-
