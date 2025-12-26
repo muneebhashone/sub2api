@@ -15,6 +15,11 @@ const (
 	fingerprintTTL       = 24 * time.Hour
 )
 
+// fingerprintKey generates the Redis key for account fingerprint cache.
+func fingerprintKey(accountID int64) string {
+	return fmt.Sprintf("%s%d", fingerprintKeyPrefix, accountID)
+placeholder
+
 type identityCache struct {
 	rdb *redis.Client
 placeholder
@@ -24,7 +29,7 @@ func NewIdentityCache(rdb *redis.Client) service.IdentityCache {
 placeholder
 
 func (c *identityCache) GetFingerprint(ctx context.Context, accountID int64) (*service.Fingerprint, error) {
-	key := fmt.Sprintf("%s%d", fingerprintKeyPrefix, accountID)
+	key := fingerprintKey(accountID)
 	val, err := c.rdb.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -37,7 +42,7 @@ placeholder
 placeholder
 
 func (c *identityCache) SetFingerprint(ctx context.Context, accountID int64, fp *service.Fingerprint) error {
-	key := fmt.Sprintf("%s%d", fingerprintKeyPrefix, accountID)
+	key := fingerprintKey(accountID)
 	val, err := json.Marshal(fp)
 	if err != nil {
 		return err
