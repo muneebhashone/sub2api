@@ -436,7 +436,7 @@ placeholder
 	if err != nil {
 		return "", fmt.Errorf("resource manager request failed: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
