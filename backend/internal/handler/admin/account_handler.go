@@ -6,6 +6,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/model"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
@@ -872,6 +873,44 @@ placeholder
 					Object:      "model",
 					Type:        "model",
 					DisplayName: requestedModel,
+			placeholder)
+		placeholder
+	placeholder
+		response.Success(c, models)
+		return
+placeholder
+
+	// Handle Gemini accounts
+	if account.IsGemini() {
+		// For OAuth accounts: return default Gemini models
+		if account.IsOAuth() {
+			response.Success(c, geminicli.DefaultModels)
+			return
+	placeholder
+
+		// For API Key accounts: return models based on model_mapping
+		mapping := account.GetModelMapping()
+		if len(mapping) == 0 {
+			response.Success(c, geminicli.DefaultModels)
+			return
+	placeholder
+
+		var models []geminicli.Model
+		for requestedModel := range mapping {
+			var found bool
+			for _, dm := range geminicli.DefaultModels {
+				if dm.ID == requestedModel {
+					models = append(models, dm)
+					found = true
+					break
+			placeholder
+		placeholder
+			if !found {
+				models = append(models, geminicli.Model{
+					ID:          requestedModel,
+					Type:        "model",
+					DisplayName: requestedModel,
+					CreatedAt:   "",
 			placeholder)
 		placeholder
 	placeholder
