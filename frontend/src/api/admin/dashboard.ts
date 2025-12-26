@@ -3,16 +3,22 @@
  * Provides system-wide statistics and metrics
  */
 
-import { apiClient placeholder from '../client';
-import type { DashboardStats, TrendDataPoint, ModelStat, ApiKeyUsageTrendPoint, UserUsageTrendPoint placeholder from '@/types';
+import { apiClient placeholder from '../client'
+import type {
+  DashboardStats,
+  TrendDataPoint,
+  ModelStat,
+  ApiKeyUsageTrendPoint,
+  UserUsageTrendPoint
+placeholder from '@/types'
 
 /**
  * Get dashboard statistics
  * @returns Dashboard statistics including users, keys, accounts, and token usage
  */
 export async function getStats(): Promise<DashboardStats> {
-  const { data placeholder = await apiClient.get<DashboardStats>('/admin/dashboard/stats');
-  return data;
+  const { data placeholder = await apiClient.get<DashboardStats>('/admin/dashboard/stats')
+  return data
 placeholder
 
 /**
@@ -20,33 +26,33 @@ placeholder
  * @returns Real-time system metrics
  */
 export async function getRealtimeMetrics(): Promise<{
-  active_requests: number;
-  requests_per_minute: number;
-  average_response_time: number;
-  error_rate: number;
+  active_requests: number
+  requests_per_minute: number
+  average_response_time: number
+  error_rate: number
 placeholder> {
   const { data placeholder = await apiClient.get<{
-    active_requests: number;
-    requests_per_minute: number;
-    average_response_time: number;
-    error_rate: number;
-  placeholder>('/admin/dashboard/realtime');
-  return data;
+    active_requests: number
+    requests_per_minute: number
+    average_response_time: number
+    error_rate: number
+  placeholder>('/admin/dashboard/realtime')
+  return data
 placeholder
 
 export interface TrendParams {
-  start_date?: string;
-  end_date?: string;
-  granularity?: 'day' | 'hour';
-  user_id?: number;
-  api_key_id?: number;
+  start_date?: string
+  end_date?: string
+  granularity?: 'day' | 'hour'
+  user_id?: number
+  api_key_id?: number
 placeholder
 
 export interface TrendResponse {
-  trend: TrendDataPoint[];
-  start_date: string;
-  end_date: string;
-  granularity: string;
+  trend: TrendDataPoint[]
+  start_date: string
+  end_date: string
+  granularity: string
 placeholder
 
 /**
@@ -55,21 +61,21 @@ placeholder
  * @returns Usage trend data
  */
 export async function getUsageTrend(params?: TrendParams): Promise<TrendResponse> {
-  const { data placeholder = await apiClient.get<TrendResponse>('/admin/dashboard/trend', { params placeholder);
-  return data;
+  const { data placeholder = await apiClient.get<TrendResponse>('/admin/dashboard/trend', { params placeholder)
+  return data
 placeholder
 
 export interface ModelStatsParams {
-  start_date?: string;
-  end_date?: string;
-  user_id?: number;
-  api_key_id?: number;
+  start_date?: string
+  end_date?: string
+  user_id?: number
+  api_key_id?: number
 placeholder
 
 export interface ModelStatsResponse {
-  models: ModelStat[];
-  start_date: string;
-  end_date: string;
+  models: ModelStat[]
+  start_date: string
+  end_date: string
 placeholder
 
 /**
@@ -78,19 +84,19 @@ placeholder
  * @returns Model usage statistics
  */
 export async function getModelStats(params?: ModelStatsParams): Promise<ModelStatsResponse> {
-  const { data placeholder = await apiClient.get<ModelStatsResponse>('/admin/dashboard/models', { params placeholder);
-  return data;
+  const { data placeholder = await apiClient.get<ModelStatsResponse>('/admin/dashboard/models', { params placeholder)
+  return data
 placeholder
 
 export interface ApiKeyTrendParams extends TrendParams {
-  limit?: number;
+  limit?: number
 placeholder
 
 export interface ApiKeyTrendResponse {
-  trend: ApiKeyUsageTrendPoint[];
-  start_date: string;
-  end_date: string;
-  granularity: string;
+  trend: ApiKeyUsageTrendPoint[]
+  start_date: string
+  end_date: string
+  granularity: string
 placeholder
 
 /**
@@ -98,20 +104,24 @@ placeholder
  * @param params - Query parameters for filtering
  * @returns API key usage trend data
  */
-export async function getApiKeyUsageTrend(params?: ApiKeyTrendParams): Promise<ApiKeyTrendResponse> {
-  const { data placeholder = await apiClient.get<ApiKeyTrendResponse>('/admin/dashboard/api-keys-trend', { params placeholder);
-  return data;
+export async function getApiKeyUsageTrend(
+  params?: ApiKeyTrendParams
+): Promise<ApiKeyTrendResponse> {
+  const { data placeholder = await apiClient.get<ApiKeyTrendResponse>('/admin/dashboard/api-keys-trend', {
+    params
+  placeholder)
+  return data
 placeholder
 
 export interface UserTrendParams extends TrendParams {
-  limit?: number;
+  limit?: number
 placeholder
 
 export interface UserTrendResponse {
-  trend: UserUsageTrendPoint[];
-  start_date: string;
-  end_date: string;
-  granularity: string;
+  trend: UserUsageTrendPoint[]
+  start_date: string
+  end_date: string
+  granularity: string
 placeholder
 
 /**
@@ -120,18 +130,20 @@ placeholder
  * @returns User usage trend data
  */
 export async function getUserUsageTrend(params?: UserTrendParams): Promise<UserTrendResponse> {
-  const { data placeholder = await apiClient.get<UserTrendResponse>('/admin/dashboard/users-trend', { params placeholder);
-  return data;
+  const { data placeholder = await apiClient.get<UserTrendResponse>('/admin/dashboard/users-trend', {
+    params
+  placeholder)
+  return data
 placeholder
 
 export interface BatchUserUsageStats {
-  user_id: number;
-  today_actual_cost: number;
-  total_actual_cost: number;
+  user_id: number
+  today_actual_cost: number
+  total_actual_cost: number
 placeholder
 
 export interface BatchUsersUsageResponse {
-  stats: Record<string, BatchUserUsageStats>;
+  stats: Record<string, BatchUserUsageStats>
 placeholder
 
 /**
@@ -141,19 +153,19 @@ placeholder
  */
 export async function getBatchUsersUsage(userIds: number[]): Promise<BatchUsersUsageResponse> {
   const { data placeholder = await apiClient.post<BatchUsersUsageResponse>('/admin/dashboard/users-usage', {
-    user_ids: userIds,
-  placeholder);
-  return data;
+    user_ids: userIds
+  placeholder)
+  return data
 placeholder
 
 export interface BatchApiKeyUsageStats {
-  api_key_id: number;
-  today_actual_cost: number;
-  total_actual_cost: number;
+  api_key_id: number
+  today_actual_cost: number
+  total_actual_cost: number
 placeholder
 
 export interface BatchApiKeysUsageResponse {
-  stats: Record<string, BatchApiKeyUsageStats>;
+  stats: Record<string, BatchApiKeyUsageStats>
 placeholder
 
 /**
@@ -161,11 +173,16 @@ placeholder
  * @param apiKeyIds - Array of API key IDs
  * @returns Usage stats map keyed by API key ID
  */
-export async function getBatchApiKeysUsage(apiKeyIds: number[]): Promise<BatchApiKeysUsageResponse> {
-  const { data placeholder = await apiClient.post<BatchApiKeysUsageResponse>('/admin/dashboard/api-keys-usage', {
-    api_key_ids: apiKeyIds,
-  placeholder);
-  return data;
+export async function getBatchApiKeysUsage(
+  apiKeyIds: number[]
+): Promise<BatchApiKeysUsageResponse> {
+  const { data placeholder = await apiClient.post<BatchApiKeysUsageResponse>(
+    '/admin/dashboard/api-keys-usage',
+    {
+      api_key_ids: apiKeyIds
+    placeholder
+  )
+  return data
 placeholder
 
 export const dashboardAPI = {
@@ -176,7 +193,7 @@ export const dashboardAPI = {
   getApiKeyUsageTrend,
   getUserUsageTrend,
   getBatchUsersUsage,
-  getBatchApiKeysUsage,
-placeholder;
+  getBatchApiKeysUsage
+placeholder
 
-export default dashboardAPI;
+export default dashboardAPI

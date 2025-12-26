@@ -3,8 +3,8 @@
  * Handles user management for administrators
  */
 
-import { apiClient placeholder from '../client';
-import type { User, UpdateUserRequest, PaginatedResponse placeholder from '@/types';
+import { apiClient placeholder from '../client'
+import type { User, UpdateUserRequest, PaginatedResponse placeholder from '@/types'
 
 /**
  * List all users with pagination
@@ -17,19 +17,19 @@ export async function list(
   page: number = 1,
   pageSize: number = 20,
   filters?: {
-    status?: 'active' | 'disabled';
-    role?: 'admin' | 'user';
-    search?: string;
+    status?: 'active' | 'disabled'
+    role?: 'admin' | 'user'
+    search?: string
   placeholder
 ): Promise<PaginatedResponse<User>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<User>>('/admin/users', {
     params: {
       page,
       page_size: pageSize,
-      ...filters,
-    placeholder,
-  placeholder);
-  return data;
+      ...filters
+    placeholder
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -38,8 +38,8 @@ placeholder
  * @returns User details
  */
 export async function getById(id: number): Promise<User> {
-  const { data placeholder = await apiClient.get<User>(`/admin/users/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.get<User>(`/admin/users/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -48,14 +48,14 @@ placeholder
  * @returns Created user
  */
 export async function create(userData: {
-  email: string;
-  password: string;
-  balance?: number;
-  concurrency?: number;
-  allowed_groups?: number[] | null;
+  email: string
+  password: string
+  balance?: number
+  concurrency?: number
+  allowed_groups?: number[] | null
 placeholder): Promise<User> {
-  const { data placeholder = await apiClient.post<User>('/admin/users', userData);
-  return data;
+  const { data placeholder = await apiClient.post<User>('/admin/users', userData)
+  return data
 placeholder
 
 /**
@@ -65,8 +65,8 @@ placeholder
  * @returns Updated user
  */
 export async function update(id: number, updates: UpdateUserRequest): Promise<User> {
-  const { data placeholder = await apiClient.put<User>(`/admin/users/${idplaceholder`, updates);
-  return data;
+  const { data placeholder = await apiClient.put<User>(`/admin/users/${idplaceholder`, updates)
+  return data
 placeholder
 
 /**
@@ -75,8 +75,8 @@ placeholder
  * @returns Success confirmation
  */
 export async function deleteUser(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/users/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/users/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -96,9 +96,9 @@ export async function updateBalance(
   const { data placeholder = await apiClient.post<User>(`/admin/users/${idplaceholder/balance`, {
     balance,
     operation,
-    notes: notes || '',
-  placeholder);
-  return data;
+    notes: notes || ''
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -108,7 +108,7 @@ placeholder
  * @returns Updated user
  */
 export async function updateConcurrency(id: number, concurrency: number): Promise<User> {
-  return update(id, { concurrency placeholder);
+  return update(id, { concurrency placeholder)
 placeholder
 
 /**
@@ -118,7 +118,7 @@ placeholder
  * @returns Updated user
  */
 export async function toggleStatus(id: number, status: 'active' | 'disabled'): Promise<User> {
-  return update(id, { status placeholder);
+  return update(id, { status placeholder)
 placeholder
 
 /**
@@ -127,8 +127,8 @@ placeholder
  * @returns List of user's API keys
  */
 export async function getUserApiKeys(id: number): Promise<PaginatedResponse<any>> {
-  const { data placeholder = await apiClient.get<PaginatedResponse<any>>(`/admin/users/${idplaceholder/api-keys`);
-  return data;
+  const { data placeholder = await apiClient.get<PaginatedResponse<any>>(`/admin/users/${idplaceholder/api-keys`)
+  return data
 placeholder
 
 /**
@@ -141,18 +141,18 @@ export async function getUserUsageStats(
   id: number,
   period: string = 'month'
 ): Promise<{
-  total_requests: number;
-  total_cost: number;
-  total_tokens: number;
+  total_requests: number
+  total_cost: number
+  total_tokens: number
 placeholder> {
   const { data placeholder = await apiClient.get<{
-    total_requests: number;
-    total_cost: number;
-    total_tokens: number;
+    total_requests: number
+    total_cost: number
+    total_tokens: number
   placeholder>(`/admin/users/${idplaceholder/usage`, {
-    params: { period placeholder,
-  placeholder);
-  return data;
+    params: { period placeholder
+  placeholder)
+  return data
 placeholder
 
 export const usersAPI = {
@@ -165,7 +165,7 @@ export const usersAPI = {
   updateConcurrency,
   toggleStatus,
   getUserApiKeys,
-  getUserUsageStats,
-placeholder;
+  getUserUsageStats
+placeholder
 
-export default usersAPI;
+export default usersAPI

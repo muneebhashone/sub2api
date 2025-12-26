@@ -27,6 +27,7 @@ placeholder
 
 		if strings.HasPrefix(path, "/api/") ||
 			strings.HasPrefix(path, "/v1/") ||
+			strings.HasPrefix(path, "/v1beta/") ||
 			strings.HasPrefix(path, "/setup/") ||
 			path == "/health" {
 			c.Next()

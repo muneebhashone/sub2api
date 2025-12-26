@@ -3,39 +3,35 @@
  * Handles admin-level usage logs and statistics retrieval
  */
 
-import { apiClient placeholder from '../client';
-import type {
-  UsageLog,
-  UsageQueryParams,
-  PaginatedResponse,
-placeholder from '@/types';
+import { apiClient placeholder from '../client'
+import type { UsageLog, UsageQueryParams, PaginatedResponse placeholder from '@/types'
 
 // ==================== Types ====================
 
 export interface AdminUsageStatsResponse {
-  total_requests: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  total_cache_tokens: number;
-  total_tokens: number;
-  total_cost: number;
-  total_actual_cost: number;
-  average_duration_ms: number;
+  total_requests: number
+  total_input_tokens: number
+  total_output_tokens: number
+  total_cache_tokens: number
+  total_tokens: number
+  total_cost: number
+  total_actual_cost: number
+  average_duration_ms: number
 placeholder
 
 export interface SimpleUser {
-  id: number;
-  email: string;
+  id: number
+  email: string
 placeholder
 
 export interface SimpleApiKey {
-  id: number;
-  name: string;
-  user_id: number;
+  id: number
+  name: string
+  user_id: number
 placeholder
 
 export interface AdminUsageQueryParams extends UsageQueryParams {
-  user_id?: number;
+  user_id?: number
 placeholder
 
 // ==================== API Functions ====================
@@ -47,9 +43,9 @@ placeholder
  */
 export async function list(params: AdminUsageQueryParams): Promise<PaginatedResponse<UsageLog>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<UsageLog>>('/admin/usage', {
-    params,
-  placeholder);
-  return data;
+    params
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -58,16 +54,16 @@ placeholder
  * @returns Usage statistics
  */
 export async function getStats(params: {
-  user_id?: number;
-  api_key_id?: number;
-  period?: string;
-  start_date?: string;
-  end_date?: string;
+  user_id?: number
+  api_key_id?: number
+  period?: string
+  start_date?: string
+  end_date?: string
 placeholder): Promise<AdminUsageStatsResponse> {
   const { data placeholder = await apiClient.get<AdminUsageStatsResponse>('/admin/usage/stats', {
-    params,
-  placeholder);
-  return data;
+    params
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -77,9 +73,9 @@ placeholder
  */
 export async function searchUsers(keyword: string): Promise<SimpleUser[]> {
   const { data placeholder = await apiClient.get<SimpleUser[]>('/admin/usage/search-users', {
-    params: { q: keyword placeholder,
-  placeholder);
-  return data;
+    params: { q: keyword placeholder
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -89,24 +85,24 @@ placeholder
  * @returns List of matching API keys (max 30)
  */
 export async function searchApiKeys(userId?: number, keyword?: string): Promise<SimpleApiKey[]> {
-  const params: Record<string, unknown> = {placeholder;
+  const params: Record<string, unknown> = {placeholder
   if (userId !== undefined) {
-    params.user_id = userId;
+    params.user_id = userId
   placeholder
   if (keyword) {
-    params.q = keyword;
+    params.q = keyword
   placeholder
   const { data placeholder = await apiClient.get<SimpleApiKey[]>('/admin/usage/search-api-keys', {
-    params,
-  placeholder);
-  return data;
+    params
+  placeholder)
+  return data
 placeholder
 
 export const adminUsageAPI = {
   list,
   getStats,
   searchUsers,
-  searchApiKeys,
-placeholder;
+  searchApiKeys
+placeholder
 
-export default adminUsageAPI;
+export default adminUsageAPI

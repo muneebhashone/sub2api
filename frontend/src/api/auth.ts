@@ -3,29 +3,37 @@
  * Handles user login, registration, and logout operations
  */
 
-import { apiClient placeholder from './client';
-import type { LoginRequest, RegisterRequest, AuthResponse, User, SendVerifyCodeRequest, SendVerifyCodeResponse, PublicSettings placeholder from '@/types';
+import { apiClient placeholder from './client'
+import type {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  User,
+  SendVerifyCodeRequest,
+  SendVerifyCodeResponse,
+  PublicSettings
+placeholder from '@/types'
 
 /**
  * Store authentication token in localStorage
  */
 export function setAuthToken(token: string): void {
-  localStorage.setItem('auth_token', token);
+  localStorage.setItem('auth_token', token)
 placeholder
 
 /**
  * Get authentication token from localStorage
  */
 export function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('auth_token')
 placeholder
 
 /**
  * Clear authentication token from localStorage
  */
 export function clearAuthToken(): void {
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('auth_user');
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth_user')
 placeholder
 
 /**
@@ -34,13 +42,13 @@ placeholder
  * @returns Authentication response with token and user data
  */
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
-  const { data placeholder = await apiClient.post<AuthResponse>('/auth/login', credentials);
+  const { data placeholder = await apiClient.post<AuthResponse>('/auth/login', credentials)
 
   // Store token and user data
-  setAuthToken(data.access_token);
-  localStorage.setItem('auth_user', JSON.stringify(data.user));
+  setAuthToken(data.access_token)
+  localStorage.setItem('auth_user', JSON.stringify(data.user))
 
-  return data;
+  return data
 placeholder
 
 /**
@@ -49,13 +57,13 @@ placeholder
  * @returns Authentication response with token and user data
  */
 export async function register(userData: RegisterRequest): Promise<AuthResponse> {
-  const { data placeholder = await apiClient.post<AuthResponse>('/auth/register', userData);
+  const { data placeholder = await apiClient.post<AuthResponse>('/auth/register', userData)
 
   // Store token and user data
-  setAuthToken(data.access_token);
-  localStorage.setItem('auth_user', JSON.stringify(data.user));
+  setAuthToken(data.access_token)
+  localStorage.setItem('auth_user', JSON.stringify(data.user))
 
-  return data;
+  return data
 placeholder
 
 /**
@@ -63,8 +71,8 @@ placeholder
  * @returns User profile data
  */
 export async function getCurrentUser(): Promise<User> {
-  const { data placeholder = await apiClient.get<User>('/auth/me');
-  return data;
+  const { data placeholder = await apiClient.get<User>('/auth/me')
+  return data
 placeholder
 
 /**
@@ -72,7 +80,7 @@ placeholder
  * Clears authentication token and user data from localStorage
  */
 export function logout(): void {
-  clearAuthToken();
+  clearAuthToken()
   // Optionally redirect to login page
   // window.location.href = '/login';
 placeholder
@@ -82,7 +90,7 @@ placeholder
  * @returns True if user has valid token
  */
 export function isAuthenticated(): boolean {
-  return getAuthToken() !== null;
+  return getAuthToken() !== null
 placeholder
 
 /**
@@ -90,8 +98,8 @@ placeholder
  * @returns Public settings including registration and Turnstile config
  */
 export async function getPublicSettings(): Promise<PublicSettings> {
-  const { data placeholder = await apiClient.get<PublicSettings>('/settings/public');
-  return data;
+  const { data placeholder = await apiClient.get<PublicSettings>('/settings/public')
+  return data
 placeholder
 
 /**
@@ -99,9 +107,11 @@ placeholder
  * @param request - Email and optional Turnstile token
  * @returns Response with countdown seconds
  */
-export async function sendVerifyCode(request: SendVerifyCodeRequest): Promise<SendVerifyCodeResponse> {
-  const { data placeholder = await apiClient.post<SendVerifyCodeResponse>('/auth/send-verify-code', request);
-  return data;
+export async function sendVerifyCode(
+  request: SendVerifyCodeRequest
+): Promise<SendVerifyCodeResponse> {
+  const { data placeholder = await apiClient.post<SendVerifyCodeResponse>('/auth/send-verify-code', request)
+  return data
 placeholder
 
 export const authAPI = {
@@ -114,7 +124,7 @@ export const authAPI = {
   getAuthToken,
   clearAuthToken,
   getPublicSettings,
-  sendVerifyCode,
-placeholder;
+  sendVerifyCode
+placeholder
 
-export default authAPI;
+export default authAPI

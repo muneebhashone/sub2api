@@ -3,47 +3,51 @@
  * Manages global UI state including sidebar, loading indicators, and toast notifications
  */
 
-import { defineStore placeholder from 'pinia';
-import { ref, computed placeholder from 'vue';
-import type { Toast, ToastType, PublicSettings placeholder from '@/types';
-import { checkUpdates as checkUpdatesAPI, type VersionInfo, type ReleaseInfo placeholder from '@/api/admin/system';
-import { getPublicSettings as fetchPublicSettingsAPI placeholder from '@/api/auth';
+import { defineStore placeholder from 'pinia'
+import { ref, computed placeholder from 'vue'
+import type { Toast, ToastType, PublicSettings placeholder from '@/types'
+import {
+  checkUpdates as checkUpdatesAPI,
+  type VersionInfo,
+  type ReleaseInfo
+placeholder from '@/api/admin/system'
+import { getPublicSettings as fetchPublicSettingsAPI placeholder from '@/api/auth'
 
 export const useAppStore = defineStore('app', () => {
   // ==================== State ====================
 
-  const sidebarCollapsed = ref<boolean>(false);
-  const mobileOpen = ref<boolean>(false);
-  const loading = ref<boolean>(false);
-  const toasts = ref<Toast[]>([]);
+  const sidebarCollapsed = ref<boolean>(false)
+  const mobileOpen = ref<boolean>(false)
+  const loading = ref<boolean>(false)
+  const toasts = ref<Toast[]>([])
 
   // Public settings cache state
-  const publicSettingsLoaded = ref<boolean>(false);
-  const publicSettingsLoading = ref<boolean>(false);
-  const siteName = ref<string>('Sub2API');
-  const siteLogo = ref<string>('');
-  const siteVersion = ref<string>('');
-  const contactInfo = ref<string>('');
-  const apiBaseUrl = ref<string>('');
-  const docUrl = ref<string>('');
+  const publicSettingsLoaded = ref<boolean>(false)
+  const publicSettingsLoading = ref<boolean>(false)
+  const siteName = ref<string>('Sub2API')
+  const siteLogo = ref<string>('')
+  const siteVersion = ref<string>('')
+  const contactInfo = ref<string>('')
+  const apiBaseUrl = ref<string>('')
+  const docUrl = ref<string>('')
 
   // Version cache state
-  const versionLoaded = ref<boolean>(false);
-  const versionLoading = ref<boolean>(false);
-  const currentVersion = ref<string>('');
-  const latestVersion = ref<string>('');
-  const hasUpdate = ref<boolean>(false);
-  const buildType = ref<string>('source');
-  const releaseInfo = ref<ReleaseInfo | null>(null);
+  const versionLoaded = ref<boolean>(false)
+  const versionLoading = ref<boolean>(false)
+  const currentVersion = ref<string>('')
+  const latestVersion = ref<string>('')
+  const hasUpdate = ref<boolean>(false)
+  const buildType = ref<string>('source')
+  const releaseInfo = ref<ReleaseInfo | null>(null)
 
   // Auto-incrementing ID for toasts
-  let toastIdCounter = 0;
+  let toastIdCounter = 0
 
   // ==================== Computed ====================
-  
-  const hasActiveToasts = computed(() => toasts.value.length > 0);
-  
-  const loadingCount = ref<number>(0);
+
+  const hasActiveToasts = computed(() => toasts.value.length > 0)
+
+  const loadingCount = ref<number>(0)
 
   // ==================== Actions ====================
 
@@ -51,7 +55,7 @@ export const useAppStore = defineStore('app', () => {
    * Toggle sidebar collapsed state
    */
   function toggleSidebar(): void {
-    sidebarCollapsed.value = !sidebarCollapsed.value;
+    sidebarCollapsed.value = !sidebarCollapsed.value
   placeholder
 
   /**
@@ -59,14 +63,14 @@ export const useAppStore = defineStore('app', () => {
    * @param collapsed - Whether sidebar should be collapsed
    */
   function setSidebarCollapsed(collapsed: boolean): void {
-    sidebarCollapsed.value = collapsed;
+    sidebarCollapsed.value = collapsed
   placeholder
 
   /**
    * Toggle mobile sidebar open state
    */
   function toggleMobileSidebar(): void {
-    mobileOpen.value = !mobileOpen.value;
+    mobileOpen.value = !mobileOpen.value
   placeholder
 
   /**
@@ -74,7 +78,7 @@ export const useAppStore = defineStore('app', () => {
    * @param open - Whether mobile sidebar should be open
    */
   function setMobileOpen(open: boolean): void {
-    mobileOpen.value = open;
+    mobileOpen.value = open
   placeholder
 
   /**
@@ -83,11 +87,11 @@ export const useAppStore = defineStore('app', () => {
    */
   function setLoading(isLoading: boolean): void {
     if (isLoading) {
-      loadingCount.value++;
+      loadingCount.value++
     placeholder else {
-      loadingCount.value = Math.max(0, loadingCount.value - 1);
+      loadingCount.value = Math.max(0, loadingCount.value - 1)
     placeholder
-    loading.value = loadingCount.value > 0;
+    loading.value = loadingCount.value > 0
   placeholder
 
   /**
@@ -97,30 +101,26 @@ export const useAppStore = defineStore('app', () => {
    * @param duration - Auto-dismiss duration in ms (undefined = no auto-dismiss)
    * @returns Toast ID for manual dismissal
    */
-  function showToast(
-    type: ToastType,
-    message: string,
-    duration?: number
-  ): string {
-    const id = `toast-${++toastIdCounterplaceholder`;
+  function showToast(type: ToastType, message: string, duration?: number): string {
+    const id = `toast-${++toastIdCounterplaceholder`
     const toast: Toast = {
       id,
       type,
       message,
       duration,
-      startTime: duration !== undefined ? Date.now() : undefined,
-    placeholder;
+      startTime: duration !== undefined ? Date.now() : undefined
+    placeholder
 
-    toasts.value.push(toast);
+    toasts.value.push(toast)
 
     // Auto-dismiss if duration is specified
     if (duration !== undefined) {
       setTimeout(() => {
-        hideToast(id);
-      placeholder, duration);
+        hideToast(id)
+      placeholder, duration)
     placeholder
 
-    return id;
+    return id
   placeholder
 
   /**
@@ -129,7 +129,7 @@ export const useAppStore = defineStore('app', () => {
    * @param duration - Auto-dismiss duration in ms (default: 3000)
    */
   function showSuccess(message: string, duration: number = 3000): string {
-    return showToast('success', message, duration);
+    return showToast('success', message, duration)
   placeholder
 
   /**
@@ -138,7 +138,7 @@ export const useAppStore = defineStore('app', () => {
    * @param duration - Auto-dismiss duration in ms (default: 5000)
    */
   function showError(message: string, duration: number = 5000): string {
-    return showToast('error', message, duration);
+    return showToast('error', message, duration)
   placeholder
 
   /**
@@ -147,7 +147,7 @@ export const useAppStore = defineStore('app', () => {
    * @param duration - Auto-dismiss duration in ms (default: 3000)
    */
   function showInfo(message: string, duration: number = 3000): string {
-    return showToast('info', message, duration);
+    return showToast('info', message, duration)
   placeholder
 
   /**
@@ -156,7 +156,7 @@ export const useAppStore = defineStore('app', () => {
    * @param duration - Auto-dismiss duration in ms (default: 4000)
    */
   function showWarning(message: string, duration: number = 4000): string {
-    return showToast('warning', message, duration);
+    return showToast('warning', message, duration)
   placeholder
 
   /**
@@ -164,9 +164,9 @@ export const useAppStore = defineStore('app', () => {
    * @param id - Toast ID to hide
    */
   function hideToast(id: string): void {
-    const index = toasts.value.findIndex((t) => t.id === id);
+    const index = toasts.value.findIndex((t) => t.id === id)
     if (index !== -1) {
-      toasts.value.splice(index, 1);
+      toasts.value.splice(index, 1)
     placeholder
   placeholder
 
@@ -174,7 +174,7 @@ export const useAppStore = defineStore('app', () => {
    * Clear all toasts
    */
   function clearAllToasts(): void {
-    toasts.value = [];
+    toasts.value = []
   placeholder
 
   /**
@@ -184,11 +184,11 @@ export const useAppStore = defineStore('app', () => {
    * @returns Promise resolving to operation result
    */
   async function withLoading<T>(operation: () => Promise<T>): Promise<T> {
-    setLoading(true);
+    setLoading(true)
     try {
-      return await operation();
+      return await operation()
     placeholder finally {
-      setLoading(false);
+      setLoading(false)
     placeholder
   placeholder
 
@@ -203,18 +203,15 @@ export const useAppStore = defineStore('app', () => {
     operation: () => Promise<T>,
     errorMessage?: string
   ): Promise<T | null> {
-    setLoading(true);
+    setLoading(true)
     try {
-      return await operation();
+      return await operation()
     placeholder catch (error) {
-      const message =
-        errorMessage ||
-        (error as { message?: string placeholder).message ||
-        'An error occurred';
-      showError(message);
-      return null;
+      const message = errorMessage || (error as { message?: string placeholder).message || 'An error occurred'
+      showError(message)
+      return null
     placeholder finally {
-      setLoading(false);
+      setLoading(false)
     placeholder
   placeholder
 
@@ -223,10 +220,10 @@ export const useAppStore = defineStore('app', () => {
    * Useful for cleanup or testing
    */
   function reset(): void {
-    sidebarCollapsed.value = false;
-    loading.value = false;
-    loadingCount.value = 0;
-    toasts.value = [];
+    sidebarCollapsed.value = false
+    loading.value = false
+    loadingCount.value = 0
+    toasts.value = []
   placeholder
 
   // ==================== Version Management ====================
@@ -244,30 +241,30 @@ export const useAppStore = defineStore('app', () => {
         has_update: hasUpdate.value,
         build_type: buildType.value,
         release_info: releaseInfo.value || undefined,
-        cached: true,
-      placeholder;
+        cached: true
+      placeholder
     placeholder
 
     // Prevent duplicate requests
     if (versionLoading.value) {
-      return null;
+      return null
     placeholder
 
-    versionLoading.value = true;
+    versionLoading.value = true
     try {
-      const data = await checkUpdatesAPI(force);
-      currentVersion.value = data.current_version;
-      latestVersion.value = data.latest_version;
-      hasUpdate.value = data.has_update;
-      buildType.value = data.build_type || 'source';
-      releaseInfo.value = data.release_info || null;
-      versionLoaded.value = true;
-      return data;
+      const data = await checkUpdatesAPI(force)
+      currentVersion.value = data.current_version
+      latestVersion.value = data.latest_version
+      hasUpdate.value = data.has_update
+      buildType.value = data.build_type || 'source'
+      releaseInfo.value = data.release_info || null
+      versionLoaded.value = true
+      return data
     placeholder catch (error) {
-      console.error('Failed to fetch version:', error);
-      return null;
+      console.error('Failed to fetch version:', error)
+      return null
     placeholder finally {
-      versionLoading.value = false;
+      versionLoading.value = false
     placeholder
   placeholder
 
@@ -275,8 +272,8 @@ export const useAppStore = defineStore('app', () => {
    * Clear version cache (e.g., after update)
    */
   function clearVersionCache(): void {
-    versionLoaded.value = false;
-    hasUpdate.value = false;
+    versionLoaded.value = false
+    hasUpdate.value = false
   placeholder
 
   // ==================== Public Settings Management ====================
@@ -299,31 +296,31 @@ export const useAppStore = defineStore('app', () => {
         api_base_url: apiBaseUrl.value,
         contact_info: contactInfo.value,
         doc_url: docUrl.value,
-        version: siteVersion.value,
-      placeholder;
+        version: siteVersion.value
+      placeholder
     placeholder
 
     // Prevent duplicate requests
     if (publicSettingsLoading.value) {
-      return null;
+      return null
     placeholder
 
-    publicSettingsLoading.value = true;
+    publicSettingsLoading.value = true
     try {
-      const data = await fetchPublicSettingsAPI();
-      siteName.value = data.site_name || 'Sub2API';
-      siteLogo.value = data.site_logo || '';
-      siteVersion.value = data.version || '';
-      contactInfo.value = data.contact_info || '';
-      apiBaseUrl.value = data.api_base_url || '';
-      docUrl.value = data.doc_url || '';
-      publicSettingsLoaded.value = true;
-      return data;
+      const data = await fetchPublicSettingsAPI()
+      siteName.value = data.site_name || 'Sub2API'
+      siteLogo.value = data.site_logo || ''
+      siteVersion.value = data.version || ''
+      contactInfo.value = data.contact_info || ''
+      apiBaseUrl.value = data.api_base_url || ''
+      docUrl.value = data.doc_url || ''
+      publicSettingsLoaded.value = true
+      return data
     placeholder catch (error) {
-      console.error('Failed to fetch public settings:', error);
-      return null;
+      console.error('Failed to fetch public settings:', error)
+      return null
     placeholder finally {
-      publicSettingsLoading.value = false;
+      publicSettingsLoading.value = false
     placeholder
   placeholder
 
@@ -331,7 +328,7 @@ export const useAppStore = defineStore('app', () => {
    * Clear public settings cache
    */
   function clearPublicSettingsCache(): void {
-    publicSettingsLoaded.value = false;
+    publicSettingsLoaded.value = false
   placeholder
 
   // ==================== Return Store API ====================
@@ -387,6 +384,6 @@ export const useAppStore = defineStore('app', () => {
 
     // Public settings actions
     fetchPublicSettings,
-    clearPublicSettingsCache,
-  placeholder;
-placeholder);
+    clearPublicSettingsCache
+  placeholder
+placeholder)

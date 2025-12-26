@@ -12,7 +12,7 @@ import type {
   AccountUsageInfo,
   WindowStats,
   ClaudeModel,
-  AccountUsageStatsResponse,
+  AccountUsageStatsResponse
 placeholder from '@/types'
 
 /**
@@ -36,8 +36,8 @@ export async function list(
     params: {
       page,
       page_size: pageSize,
-      ...filters,
-    placeholder,
+      ...filters
+    placeholder
   placeholder)
   return data
 placeholder
@@ -129,7 +129,7 @@ placeholder
  */
 export async function getStats(id: number, days: number = 30): Promise<AccountUsageStatsResponse> {
   const { data placeholder = await apiClient.get<AccountUsageStatsResponse>(`/admin/accounts/${idplaceholder/stats`, {
-    params: { days placeholder,
+    params: { days placeholder
   placeholder)
   return data
 placeholder
@@ -254,7 +254,7 @@ placeholder> {
     results: Array<{ account_id: number; success: boolean; error?: string placeholder>
   placeholder>('/admin/accounts/bulk-update', {
     account_ids: accountIds,
-    ...updates,
+    ...updates
   placeholder)
   return data
 placeholder
@@ -277,7 +277,7 @@ placeholder
  */
 export async function setSchedulable(id: number, schedulable: boolean): Promise<Account> {
   const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/schedulable`, {
-    schedulable,
+    schedulable
   placeholder)
   return data
 placeholder
@@ -335,7 +335,7 @@ export const accountsAPI = {
   batchCreate,
   batchUpdateCredentials,
   bulkUpdate,
-  syncFromCrs,
+  syncFromCrs
 placeholder
 
 export default accountsAPI

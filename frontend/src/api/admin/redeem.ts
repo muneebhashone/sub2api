@@ -3,13 +3,13 @@
  * Handles redeem code generation and management for administrators
  */
 
-import { apiClient placeholder from '../client';
+import { apiClient placeholder from '../client'
 import type {
   RedeemCode,
   GenerateRedeemCodesRequest,
   RedeemCodeType,
-  PaginatedResponse,
-placeholder from '@/types';
+  PaginatedResponse
+placeholder from '@/types'
 
 /**
  * List all redeem codes with pagination
@@ -22,19 +22,19 @@ export async function list(
   page: number = 1,
   pageSize: number = 20,
   filters?: {
-    type?: RedeemCodeType;
-    status?: 'active' | 'used' | 'expired' | 'unused';
-    search?: string;
+    type?: RedeemCodeType
+    status?: 'active' | 'used' | 'expired' | 'unused'
+    search?: string
   placeholder
 ): Promise<PaginatedResponse<RedeemCode>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<RedeemCode>>('/admin/redeem-codes', {
     params: {
       page,
       page_size: pageSize,
-      ...filters,
-    placeholder,
-  placeholder);
-  return data;
+      ...filters
+    placeholder
+  placeholder)
+  return data
 placeholder
 
 /**
@@ -43,8 +43,8 @@ placeholder
  * @returns Redeem code details
  */
 export async function getById(id: number): Promise<RedeemCode> {
-  const { data placeholder = await apiClient.get<RedeemCode>(`/admin/redeem-codes/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.get<RedeemCode>(`/admin/redeem-codes/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -66,19 +66,19 @@ export async function generate(
   const payload: GenerateRedeemCodesRequest = {
     count,
     type,
-    value,
-  placeholder;
+    value
+  placeholder
 
   // 订阅类型专用字段
   if (type === 'subscription') {
-    payload.group_id = groupId;
+    payload.group_id = groupId
     if (validityDays && validityDays > 0) {
-      payload.validity_days = validityDays;
+      payload.validity_days = validityDays
     placeholder
   placeholder
 
-  const { data placeholder = await apiClient.post<RedeemCode[]>('/admin/redeem-codes/generate', payload);
-  return data;
+  const { data placeholder = await apiClient.post<RedeemCode[]>('/admin/redeem-codes/generate', payload)
+  return data
 placeholder
 
 /**
@@ -87,8 +87,8 @@ placeholder
  * @returns Success confirmation
  */
 export async function deleteCode(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/redeem-codes/${idplaceholder`);
-  return data;
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/redeem-codes/${idplaceholder`)
+  return data
 placeholder
 
 /**
@@ -97,14 +97,14 @@ placeholder
  * @returns Success confirmation
  */
 export async function batchDelete(ids: number[]): Promise<{
-  deleted: number;
-  message: string;
+  deleted: number
+  message: string
 placeholder> {
   const { data placeholder = await apiClient.post<{
-    deleted: number;
-    message: string;
-  placeholder>('/admin/redeem-codes/batch-delete', { ids placeholder);
-  return data;
+    deleted: number
+    message: string
+  placeholder>('/admin/redeem-codes/batch-delete', { ids placeholder)
+  return data
 placeholder
 
 /**
@@ -113,8 +113,8 @@ placeholder
  * @returns Updated redeem code
  */
 export async function expire(id: number): Promise<RedeemCode> {
-  const { data placeholder = await apiClient.post<RedeemCode>(`/admin/redeem-codes/${idplaceholder/expire`);
-  return data;
+  const { data placeholder = await apiClient.post<RedeemCode>(`/admin/redeem-codes/${idplaceholder/expire`)
+  return data
 placeholder
 
 /**
@@ -122,22 +122,22 @@ placeholder
  * @returns Statistics about redeem codes
  */
 export async function getStats(): Promise<{
-  total_codes: number;
-  active_codes: number;
-  used_codes: number;
-  expired_codes: number;
-  total_value_distributed: number;
-  by_type: Record<RedeemCodeType, number>;
+  total_codes: number
+  active_codes: number
+  used_codes: number
+  expired_codes: number
+  total_value_distributed: number
+  by_type: Record<RedeemCodeType, number>
 placeholder> {
   const { data placeholder = await apiClient.get<{
-    total_codes: number;
-    active_codes: number;
-    used_codes: number;
-    expired_codes: number;
-    total_value_distributed: number;
-    by_type: Record<RedeemCodeType, number>;
-  placeholder>('/admin/redeem-codes/stats');
-  return data;
+    total_codes: number
+    active_codes: number
+    used_codes: number
+    expired_codes: number
+    total_value_distributed: number
+    by_type: Record<RedeemCodeType, number>
+  placeholder>('/admin/redeem-codes/stats')
+  return data
 placeholder
 
 /**
@@ -146,14 +146,14 @@ placeholder
  * @returns CSV data as blob
  */
 export async function exportCodes(filters?: {
-  type?: RedeemCodeType;
-  status?: 'active' | 'used' | 'expired';
+  type?: RedeemCodeType
+  status?: 'active' | 'used' | 'expired'
 placeholder): Promise<Blob> {
   const response = await apiClient.get('/admin/redeem-codes/export', {
     params: filters,
-    responseType: 'blob',
-  placeholder);
-  return response.data;
+    responseType: 'blob'
+  placeholder)
+  return response.data
 placeholder
 
 export const redeemAPI = {
@@ -164,7 +164,7 @@ export const redeemAPI = {
   batchDelete,
   expire,
   getStats,
-  exportCodes,
-placeholder;
+  exportCodes
+placeholder
 
-export default redeemAPI;
+export default redeemAPI

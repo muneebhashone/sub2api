@@ -3,31 +3,31 @@
  * Manages user authentication state, login/logout, and token persistence
  */
 
-import { defineStore placeholder from 'pinia';
-import { ref, computed placeholder from 'vue';
-import { authAPI placeholder from '@/api';
-import type { User, LoginRequest, RegisterRequest placeholder from '@/types';
+import { defineStore placeholder from 'pinia'
+import { ref, computed placeholder from 'vue'
+import { authAPI placeholder from '@/api'
+import type { User, LoginRequest, RegisterRequest placeholder from '@/types'
 
-const AUTH_TOKEN_KEY = 'auth_token';
-const AUTH_USER_KEY = 'auth_user';
-const AUTO_REFRESH_INTERVAL = 60 * 1000; // 60 seconds
+const AUTH_TOKEN_KEY = 'auth_token'
+const AUTH_USER_KEY = 'auth_user'
+const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds
 
 export const useAuthStore = defineStore('auth', () => {
   // ==================== State ====================
 
-  const user = ref<User | null>(null);
-  const token = ref<string | null>(null);
-  let refreshIntervalId: ReturnType<typeof setInterval> | null = null;
+  const user = ref<User | null>(null)
+  const token = ref<string | null>(null)
+  let refreshIntervalId: ReturnType<typeof setInterval> | null = null
 
   // ==================== Computed ====================
 
   const isAuthenticated = computed(() => {
-    return !!token.value && !!user.value;
-  placeholder);
+    return !!token.value && !!user.value
+  placeholder)
 
   const isAdmin = computed(() => {
-    return user.value?.role === 'admin';
-  placeholder);
+    return user.value?.role === 'admin'
+  placeholder)
 
   // ==================== Actions ====================
 
@@ -37,24 +37,24 @@ export const useAuthStore = defineStore('auth', () => {
    * Also starts auto-refresh and immediately fetches latest user data
    */
   function checkAuth(): void {
-    const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
-    const savedUser = localStorage.getItem(AUTH_USER_KEY);
+    const savedToken = localStorage.getItem(AUTH_TOKEN_KEY)
+    const savedUser = localStorage.getItem(AUTH_USER_KEY)
 
     if (savedToken && savedUser) {
       try {
-        token.value = savedToken;
-        user.value = JSON.parse(savedUser);
+        token.value = savedToken
+        user.value = JSON.parse(savedUser)
 
         // Immediately refresh user data from backend (async, don't block)
         refreshUser().catch((error) => {
-          console.error('Failed to refresh user on init:', error);
-        placeholder);
+          console.error('Failed to refresh user on init:', error)
+        placeholder)
 
         // Start auto-refresh interval
-        startAutoRefresh();
+        startAutoRefresh()
       placeholder catch (error) {
-        console.error('Failed to parse saved user data:', error);
-        clearAuth();
+        console.error('Failed to parse saved user data:', error)
+        clearAuth()
       placeholder
     placeholder
   placeholder
@@ -65,15 +65,15 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function startAutoRefresh(): void {
     // Clear existing interval if any
-    stopAutoRefresh();
+    stopAutoRefresh()
 
     refreshIntervalId = setInterval(() => {
       if (token.value) {
         refreshUser().catch((error) => {
-          console.error('Auto-refresh user failed:', error);
-        placeholder);
+          console.error('Auto-refresh user failed:', error)
+        placeholder)
       placeholder
-    placeholder, AUTO_REFRESH_INTERVAL);
+    placeholder, AUTO_REFRESH_INTERVAL)
   placeholder
 
   /**
@@ -81,8 +81,8 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function stopAutoRefresh(): void {
     if (refreshIntervalId) {
-      clearInterval(refreshIntervalId);
-      refreshIntervalId = null;
+      clearInterval(refreshIntervalId)
+      refreshIntervalId = null
     placeholder
   placeholder
 
@@ -94,24 +94,24 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function login(credentials: LoginRequest): Promise<User> {
     try {
-      const response = await authAPI.login(credentials);
+      const response = await authAPI.login(credentials)
 
       // Store token and user
-      token.value = response.access_token;
-      user.value = response.user;
+      token.value = response.access_token
+      user.value = response.user
 
       // Persist to localStorage
-      localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user));
+      localStorage.setItem(AUTH_TOKEN_KEY, response.access_token)
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user))
 
       // Start auto-refresh interval
-      startAutoRefresh();
+      startAutoRefresh()
 
-      return response.user;
+      return response.user
     placeholder catch (error) {
       // Clear any partial state on error
-      clearAuth();
-      throw error;
+      clearAuth()
+      throw error
     placeholder
   placeholder
 
@@ -123,24 +123,24 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function register(userData: RegisterRequest): Promise<User> {
     try {
-      const response = await authAPI.register(userData);
+      const response = await authAPI.register(userData)
 
       // Store token and user
-      token.value = response.access_token;
-      user.value = response.user;
+      token.value = response.access_token
+      user.value = response.user
 
       // Persist to localStorage
-      localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user));
+      localStorage.setItem(AUTH_TOKEN_KEY, response.access_token)
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user))
 
       // Start auto-refresh interval
-      startAutoRefresh();
+      startAutoRefresh()
 
-      return response.user;
+      return response.user
     placeholder catch (error) {
       // Clear any partial state on error
-      clearAuth();
-      throw error;
+      clearAuth()
+      throw error
     placeholder
   placeholder
 
@@ -150,10 +150,10 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function logout(): void {
     // Call API logout (client-side cleanup)
-    authAPI.logout();
+    authAPI.logout()
 
     // Clear state
-    clearAuth();
+    clearAuth()
   placeholder
 
   /**
@@ -164,23 +164,23 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function refreshUser(): Promise<User> {
     if (!token.value) {
-      throw new Error('Not authenticated');
+      throw new Error('Not authenticated')
     placeholder
 
     try {
-      const updatedUser = await authAPI.getCurrentUser();
-      user.value = updatedUser;
-      
-      // Update localStorage
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
+      const updatedUser = await authAPI.getCurrentUser()
+      user.value = updatedUser
 
-      return updatedUser;
+      // Update localStorage
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser))
+
+      return updatedUser
     placeholder catch (error) {
       // If refresh fails with 401, clear auth state
       if ((error as { status?: number placeholder).status === 401) {
-        clearAuth();
+        clearAuth()
       placeholder
-      throw error;
+      throw error
     placeholder
   placeholder
 
@@ -190,12 +190,12 @@ export const useAuthStore = defineStore('auth', () => {
    */
   function clearAuth(): void {
     // Stop auto-refresh
-    stopAutoRefresh();
+    stopAutoRefresh()
 
-    token.value = null;
-    user.value = null;
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_USER_KEY);
+    token.value = null
+    user.value = null
+    localStorage.removeItem(AUTH_TOKEN_KEY)
+    localStorage.removeItem(AUTH_USER_KEY)
   placeholder
 
   // ==================== Return Store API ====================
@@ -214,6 +214,6 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     checkAuth,
-    refreshUser,
-  placeholder;
-placeholder);
+    refreshUser
+  placeholder
+placeholder)

@@ -3,37 +3,37 @@
  * Handles system settings management for administrators
  */
 
-import { apiClient placeholder from '../client';
+import { apiClient placeholder from '../client'
 
 /**
  * System settings interface
  */
 export interface SystemSettings {
   // Registration settings
-  registration_enabled: boolean;
-  email_verify_enabled: boolean;
+  registration_enabled: boolean
+  email_verify_enabled: boolean
   // Default settings
-  default_balance: number;
-  default_concurrency: number;
+  default_balance: number
+  default_concurrency: number
   // OEM settings
-  site_name: string;
-  site_logo: string;
-  site_subtitle: string;
-  api_base_url: string;
-  contact_info: string;
-  doc_url: string;
+  site_name: string
+  site_logo: string
+  site_subtitle: string
+  api_base_url: string
+  contact_info: string
+  doc_url: string
   // SMTP settings
-  smtp_host: string;
-  smtp_port: number;
-  smtp_username: string;
-  smtp_password: string;
-  smtp_from_email: string;
-  smtp_from_name: string;
-  smtp_use_tls: boolean;
+  smtp_host: string
+  smtp_port: number
+  smtp_username: string
+  smtp_password: string
+  smtp_from_email: string
+  smtp_from_name: string
+  smtp_use_tls: boolean
   // Cloudflare Turnstile settings
-  turnstile_enabled: boolean;
-  turnstile_site_key: string;
-  turnstile_secret_key: string;
+  turnstile_enabled: boolean
+  turnstile_site_key: string
+  turnstile_secret_key: string
 placeholder
 
 /**
@@ -41,8 +41,8 @@ placeholder
  * @returns System settings
  */
 export async function getSettings(): Promise<SystemSettings> {
-  const { data placeholder = await apiClient.get<SystemSettings>('/admin/settings');
-  return data;
+  const { data placeholder = await apiClient.get<SystemSettings>('/admin/settings')
+  return data
 placeholder
 
 /**
@@ -51,19 +51,19 @@ placeholder
  * @returns Updated settings
  */
 export async function updateSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
-  const { data placeholder = await apiClient.put<SystemSettings>('/admin/settings', settings);
-  return data;
+  const { data placeholder = await apiClient.put<SystemSettings>('/admin/settings', settings)
+  return data
 placeholder
 
 /**
  * Test SMTP connection request
  */
 export interface TestSmtpRequest {
-  smtp_host: string;
-  smtp_port: number;
-  smtp_username: string;
-  smtp_password: string;
-  smtp_use_tls: boolean;
+  smtp_host: string
+  smtp_port: number
+  smtp_username: string
+  smtp_password: string
+  smtp_use_tls: boolean
 placeholder
 
 /**
@@ -72,22 +72,22 @@ placeholder
  * @returns Test result message
  */
 export async function testSmtpConnection(config: TestSmtpRequest): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.post<{ message: string placeholder>('/admin/settings/test-smtp', config);
-  return data;
+  const { data placeholder = await apiClient.post<{ message: string placeholder>('/admin/settings/test-smtp', config)
+  return data
 placeholder
 
 /**
  * Send test email request
  */
 export interface SendTestEmailRequest {
-  email: string;
-  smtp_host: string;
-  smtp_port: number;
-  smtp_username: string;
-  smtp_password: string;
-  smtp_from_email: string;
-  smtp_from_name: string;
-  smtp_use_tls: boolean;
+  email: string
+  smtp_host: string
+  smtp_port: number
+  smtp_username: string
+  smtp_password: string
+  smtp_from_email: string
+  smtp_from_name: string
+  smtp_use_tls: boolean
 placeholder
 
 /**
@@ -96,16 +96,19 @@ placeholder
  * @returns Test result message
  */
 export async function sendTestEmail(request: SendTestEmailRequest): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.post<{ message: string placeholder>('/admin/settings/send-test-email', request);
-  return data;
+  const { data placeholder = await apiClient.post<{ message: string placeholder>(
+    '/admin/settings/send-test-email',
+    request
+  )
+  return data
 placeholder
 
 /**
  * Admin API Key status response
  */
 export interface AdminApiKeyStatus {
-  exists: boolean;
-  masked_key: string;
+  exists: boolean
+  masked_key: string
 placeholder
 
 /**
@@ -113,8 +116,8 @@ placeholder
  * @returns Status indicating if key exists and masked version
  */
 export async function getAdminApiKey(): Promise<AdminApiKeyStatus> {
-  const { data placeholder = await apiClient.get<AdminApiKeyStatus>('/admin/settings/admin-api-key');
-  return data;
+  const { data placeholder = await apiClient.get<AdminApiKeyStatus>('/admin/settings/admin-api-key')
+  return data
 placeholder
 
 /**
@@ -122,8 +125,8 @@ placeholder
  * @returns The new full API key (only shown once)
  */
 export async function regenerateAdminApiKey(): Promise<{ key: string placeholder> {
-  const { data placeholder = await apiClient.post<{ key: string placeholder>('/admin/settings/admin-api-key/regenerate');
-  return data;
+  const { data placeholder = await apiClient.post<{ key: string placeholder>('/admin/settings/admin-api-key/regenerate')
+  return data
 placeholder
 
 /**
@@ -131,8 +134,8 @@ placeholder
  * @returns Success message
  */
 export async function deleteAdminApiKey(): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>('/admin/settings/admin-api-key');
-  return data;
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>('/admin/settings/admin-api-key')
+  return data
 placeholder
 
 export const settingsAPI = {
@@ -142,7 +145,7 @@ export const settingsAPI = {
   sendTestEmail,
   getAdminApiKey,
   regenerateAdminApiKey,
-  deleteAdminApiKey,
-placeholder;
+  deleteAdminApiKey
+placeholder
 
-export default settingsAPI;
+export default settingsAPI

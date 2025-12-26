@@ -3,64 +3,68 @@
  * API for regular users to view their own subscriptions and progress
  */
 
-import { apiClient placeholder from './client';
-import type { UserSubscription, SubscriptionProgress placeholder from '@/types';
+import { apiClient placeholder from './client'
+import type { UserSubscription, SubscriptionProgress placeholder from '@/types'
 
 /**
  * Subscription summary for user dashboard
  */
 export interface SubscriptionSummary {
-  active_count: number;
+  active_count: number
   subscriptions: Array<{
-    id: number;
-    group_name: string;
-    status: string;
-    daily_progress: number | null;
-    weekly_progress: number | null;
-    monthly_progress: number | null;
-    expires_at: string | null;
-    days_remaining: number | null;
-  placeholder>;
+    id: number
+    group_name: string
+    status: string
+    daily_progress: number | null
+    weekly_progress: number | null
+    monthly_progress: number | null
+    expires_at: string | null
+    days_remaining: number | null
+  placeholder>
 placeholder
 
 /**
  * Get list of current user's subscriptions
  */
 export async function getMySubscriptions(): Promise<UserSubscription[]> {
-  const response = await apiClient.get<UserSubscription[]>('/subscriptions');
-  return response.data;
+  const response = await apiClient.get<UserSubscription[]>('/subscriptions')
+  return response.data
 placeholder
 
 /**
  * Get current user's active subscriptions
  */
 export async function getActiveSubscriptions(): Promise<UserSubscription[]> {
-  const response = await apiClient.get<UserSubscription[]>('/subscriptions/active');
-  return response.data;
+  const response = await apiClient.get<UserSubscription[]>('/subscriptions/active')
+  return response.data
 placeholder
 
 /**
  * Get progress for all user's active subscriptions
  */
 export async function getSubscriptionsProgress(): Promise<SubscriptionProgress[]> {
-  const response = await apiClient.get<SubscriptionProgress[]>('/subscriptions/progress');
-  return response.data;
+  const response = await apiClient.get<SubscriptionProgress[]>('/subscriptions/progress')
+  return response.data
 placeholder
 
 /**
  * Get subscription summary for dashboard display
  */
 export async function getSubscriptionSummary(): Promise<SubscriptionSummary> {
-  const response = await apiClient.get<SubscriptionSummary>('/subscriptions/summary');
-  return response.data;
+  const response = await apiClient.get<SubscriptionSummary>('/subscriptions/summary')
+  return response.data
 placeholder
 
 /**
  * Get progress for a specific subscription
  */
-export async function getSubscriptionProgress(subscriptionId: number): Promise<SubscriptionProgress> {
-  const response = await apiClient.get<SubscriptionProgress>(`/subscriptions/${subscriptionIdplaceholder/progress`);
-  return response.data;
+export async function getSubscriptionProgress(
+  subscriptionId: number
+): Promise<SubscriptionProgress> {
+  const response = await apiClient.get<SubscriptionProgress>(
+    `/subscriptions/${subscriptionIdplaceholder/progress`
+  )
+  return response.data
 placeholder
 
 export default {
@@ -68,5 +72,5 @@ export default {
   getActiveSubscriptions,
   getSubscriptionsProgress,
   getSubscriptionSummary,
-  getSubscriptionProgress,
-placeholder;
+  getSubscriptionProgress
+placeholder
