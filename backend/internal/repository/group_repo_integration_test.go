@@ -6,8 +6,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Wei-Shaw/sub2api/internal/model"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 )
@@ -32,10 +32,10 @@ placeholder
 // --- Create / GetByID / Update / Delete ---
 
 func (s *GroupRepoSuite) TestCreate() {
-	group := &model.Group{
+	group := &service.Group{
 		Name:     "test-create",
-		Platform: model.PlatformAnthropic,
-		Status:   model.StatusActive,
+		Platform: service.PlatformAnthropic,
+		Status:   service.StatusActive,
 placeholder
 
 	err := s.repo.Create(s.ctx, group)
@@ -53,7 +53,7 @@ func (s *GroupRepoSuite) TestGetByID_NotFound() {
 placeholder
 
 func (s *GroupRepoSuite) TestUpdate() {
-	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "original"placeholder)
+	group := groupModelToService(mustCreateGroup(s.T(), s.db, &groupModel{Name: "original"placeholder))
 
 	group.Name = "updated"
 	err := s.repo.Update(s.ctx, group)
@@ -65,7 +65,7 @@ func (s *GroupRepoSuite) TestUpdate() {
 placeholder
 
 func (s *GroupRepoSuite) TestDelete() {
-	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "to-delete"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "to-delete"placeholder)
 
 	err := s.repo.Delete(s.ctx, group.ID)
 	s.Require().NoError(err, "Delete")
@@ -77,8 +77,8 @@ placeholder
 // --- List / ListWithFilters ---
 
 func (s *GroupRepoSuite) TestList() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g1"placeholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g2"placeholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1"placeholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g2"placeholder)
 
 	groups, page, err := s.repo.List(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder)
 	s.Require().NoError(err, "List")
@@ -87,28 +87,28 @@ func (s *GroupRepoSuite) TestList() {
 placeholder
 
 func (s *GroupRepoSuite) TestListWithFilters_Platform() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g1", Platform: model.PlatformAnthropicplaceholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g2", Platform: model.PlatformOpenAIplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1", Platform: service.PlatformAnthropicplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g2", Platform: service.PlatformOpenAIplaceholder)
 
-	groups, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, model.PlatformOpenAI, "", nil)
+	groups, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.PlatformOpenAI, "", nil)
 	s.Require().NoError(err)
 	s.Require().Len(groups, 1)
-	s.Require().Equal(model.PlatformOpenAI, groups[0].Platform)
+	s.Require().Equal(service.PlatformOpenAI, groups[0].Platform)
 placeholder
 
 func (s *GroupRepoSuite) TestListWithFilters_Status() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g1", Status: model.StatusActiveplaceholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g2", Status: model.StatusDisabledplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1", Status: service.StatusActiveplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g2", Status: service.StatusDisabledplaceholder)
 
-	groups, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", model.StatusDisabled, nil)
+	groups, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", service.StatusDisabled, nil)
 	s.Require().NoError(err)
 	s.Require().Len(groups, 1)
-	s.Require().Equal(model.StatusDisabled, groups[0].Status)
+	s.Require().Equal(service.StatusDisabled, groups[0].Status)
 placeholder
 
 func (s *GroupRepoSuite) TestListWithFilters_IsExclusive() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g1", IsExclusive: falseplaceholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g2", IsExclusive: trueplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1", IsExclusive: falseplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g2", IsExclusive: trueplaceholder)
 
 	isExclusive := true
 	groups, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", "", &isExclusive)
@@ -118,24 +118,24 @@ func (s *GroupRepoSuite) TestListWithFilters_IsExclusive() {
 placeholder
 
 func (s *GroupRepoSuite) TestListWithFilters_AccountCount() {
-	g1 := mustCreateGroup(s.T(), s.db, &model.Group{
+	g1 := mustCreateGroup(s.T(), s.db, &groupModel{
 		Name:     "g1",
-		Platform: model.PlatformAnthropic,
-		Status:   model.StatusActive,
+		Platform: service.PlatformAnthropic,
+		Status:   service.StatusActive,
 placeholder)
-	g2 := mustCreateGroup(s.T(), s.db, &model.Group{
+	g2 := mustCreateGroup(s.T(), s.db, &groupModel{
 		Name:        "g2",
-		Platform:    model.PlatformAnthropic,
-		Status:      model.StatusActive,
+		Platform:    service.PlatformAnthropic,
+		Status:      service.StatusActive,
 		IsExclusive: true,
 placeholder)
 
-	a := mustCreateAccount(s.T(), s.db, &model.Account{Name: "acc1"placeholder)
+	a := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc1"placeholder)
 	mustBindAccountToGroup(s.T(), s.db, a.ID, g1.ID, 1)
 	mustBindAccountToGroup(s.T(), s.db, a.ID, g2.ID, 1)
 
 	isExclusive := true
-	groups, page, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, model.PlatformAnthropic, model.StatusActive, &isExclusive)
+	groups, page, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.PlatformAnthropic, service.StatusActive, &isExclusive)
 	s.Require().NoError(err, "ListWithFilters")
 	s.Require().Equal(int64(1), page.Total)
 	s.Require().Len(groups, 1)
@@ -146,8 +146,8 @@ placeholder
 // --- ListActive / ListActiveByPlatform ---
 
 func (s *GroupRepoSuite) TestListActive() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "active1", Status: model.StatusActiveplaceholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "inactive1", Status: model.StatusDisabledplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "active1", Status: service.StatusActiveplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "inactive1", Status: service.StatusDisabledplaceholder)
 
 	groups, err := s.repo.ListActive(s.ctx)
 	s.Require().NoError(err, "ListActive")
@@ -156,11 +156,11 @@ func (s *GroupRepoSuite) TestListActive() {
 placeholder
 
 func (s *GroupRepoSuite) TestListActiveByPlatform() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g1", Platform: model.PlatformAnthropic, Status: model.StatusActiveplaceholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g2", Platform: model.PlatformOpenAI, Status: model.StatusActiveplaceholder)
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "g3", Platform: model.PlatformAnthropic, Status: model.StatusDisabledplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1", Platform: service.PlatformAnthropic, Status: service.StatusActiveplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g2", Platform: service.PlatformOpenAI, Status: service.StatusActiveplaceholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "g3", Platform: service.PlatformAnthropic, Status: service.StatusDisabledplaceholder)
 
-	groups, err := s.repo.ListActiveByPlatform(s.ctx, model.PlatformAnthropic)
+	groups, err := s.repo.ListActiveByPlatform(s.ctx, service.PlatformAnthropic)
 	s.Require().NoError(err, "ListActiveByPlatform")
 	s.Require().Len(groups, 1)
 	s.Require().Equal("g1", groups[0].Name)
@@ -169,7 +169,7 @@ placeholder
 // --- ExistsByName ---
 
 func (s *GroupRepoSuite) TestExistsByName() {
-	mustCreateGroup(s.T(), s.db, &model.Group{Name: "existing-group"placeholder)
+	mustCreateGroup(s.T(), s.db, &groupModel{Name: "existing-group"placeholder)
 
 	exists, err := s.repo.ExistsByName(s.ctx, "existing-group")
 	s.Require().NoError(err, "ExistsByName")
@@ -183,9 +183,9 @@ placeholder
 // --- GetAccountCount ---
 
 func (s *GroupRepoSuite) TestGetAccountCount() {
-	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-count"placeholder)
-	a1 := mustCreateAccount(s.T(), s.db, &model.Account{Name: "a1"placeholder)
-	a2 := mustCreateAccount(s.T(), s.db, &model.Account{Name: "a2"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-count"placeholder)
+	a1 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a1"placeholder)
+	a2 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a2"placeholder)
 	mustBindAccountToGroup(s.T(), s.db, a1.ID, group.ID, 1)
 	mustBindAccountToGroup(s.T(), s.db, a2.ID, group.ID, 2)
 
@@ -195,7 +195,7 @@ func (s *GroupRepoSuite) TestGetAccountCount() {
 placeholder
 
 func (s *GroupRepoSuite) TestGetAccountCount_Empty() {
-	group := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-empty"placeholder)
+	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-empty"placeholder)
 
 	count, err := s.repo.GetAccountCount(s.ctx, group.ID)
 	s.Require().NoError(err)
@@ -205,8 +205,8 @@ placeholder
 // --- DeleteAccountGroupsByGroupID ---
 
 func (s *GroupRepoSuite) TestDeleteAccountGroupsByGroupID() {
-	g := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-del"placeholder)
-	a := mustCreateAccount(s.T(), s.db, &model.Account{Name: "acc-del"placeholder)
+	g := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-del"placeholder)
+	a := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-del"placeholder)
 	mustBindAccountToGroup(s.T(), s.db, a.ID, g.ID, 1)
 
 	affected, err := s.repo.DeleteAccountGroupsByGroupID(s.ctx, g.ID)
@@ -219,10 +219,10 @@ func (s *GroupRepoSuite) TestDeleteAccountGroupsByGroupID() {
 placeholder
 
 func (s *GroupRepoSuite) TestDeleteAccountGroupsByGroupID_MultipleAccounts() {
-	g := mustCreateGroup(s.T(), s.db, &model.Group{Name: "g-multi"placeholder)
-	a1 := mustCreateAccount(s.T(), s.db, &model.Account{Name: "a1"placeholder)
-	a2 := mustCreateAccount(s.T(), s.db, &model.Account{Name: "a2"placeholder)
-	a3 := mustCreateAccount(s.T(), s.db, &model.Account{Name: "a3"placeholder)
+	g := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-multi"placeholder)
+	a1 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a1"placeholder)
+	a2 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a2"placeholder)
+	a3 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a3"placeholder)
 	mustBindAccountToGroup(s.T(), s.db, a1.ID, g.ID, 1)
 	mustBindAccountToGroup(s.T(), s.db, a2.ID, g.ID, 2)
 	mustBindAccountToGroup(s.T(), s.db, a3.ID, g.ID, 3)

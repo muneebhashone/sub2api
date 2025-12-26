@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Wei-Shaw/sub2api/internal/model"
+	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
@@ -107,7 +107,7 @@ placeholder
 
 // AccountWithConcurrency extends Account with real-time concurrency info
 type AccountWithConcurrency struct {
-	*model.Account
+	*dto.Account
 	CurrentConcurrency int `json:"current_concurrency"`
 placeholder
 
@@ -142,7 +142,7 @@ placeholder
 	result := make([]AccountWithConcurrency, len(accounts))
 	for i := range accounts {
 		result[i] = AccountWithConcurrency{
-			Account:            &accounts[i],
+			Account:            dto.AccountFromService(&accounts[i]),
 			CurrentConcurrency: concurrencyCounts[accounts[i].ID],
 	placeholder
 placeholder
@@ -165,7 +165,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, account)
+	response.Success(c, dto.AccountFromService(account))
 placeholder
 
 // Create handles creating a new account
@@ -193,7 +193,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, account)
+	response.Success(c, dto.AccountFromService(account))
 placeholder
 
 // Update handles updating an account
@@ -227,7 +227,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, account)
+	response.Success(c, dto.AccountFromService(account))
 placeholder
 
 // Delete handles deleting an account
@@ -398,7 +398,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, updatedAccount)
+	response.Success(c, dto.AccountFromService(updatedAccount))
 placeholder
 
 // GetStats handles getting account statistics
@@ -447,7 +447,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, account)
+	response.Success(c, dto.AccountFromService(account))
 placeholder
 
 // BatchCreate handles batch creating accounts
@@ -823,7 +823,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, account)
+	response.Success(c, dto.AccountFromService(account))
 placeholder
 
 // GetAvailableModels handles getting available models for an account
