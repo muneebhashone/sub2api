@@ -6,21 +6,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Wei-Shaw/sub2api/internal/model"
+	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-func mustCreateUser(t *testing.T, db *gorm.DB, u *model.User) *model.User {
+func mustCreateUser(t *testing.T, db *gorm.DB, u *userModel) *userModel {
 placeholder
 	if u.PasswordHash == "" {
 		u.PasswordHash = "test-password-hash"
 placeholder
 	if u.Role == "" {
-		u.Role = model.RoleUser
+		u.Role = service.RoleUser
 placeholder
 	if u.Status == "" {
-		u.Status = model.StatusActive
+		u.Status = service.StatusActive
+placeholder
+	if u.Concurrency == 0 {
+		u.Concurrency = 5
 placeholder
 	if u.CreatedAt.IsZero() {
 		u.CreatedAt = time.Now()
@@ -32,16 +36,16 @@ placeholder
 	return u
 placeholder
 
-func mustCreateGroup(t *testing.T, db *gorm.DB, g *model.Group) *model.Group {
+func mustCreateGroup(t *testing.T, db *gorm.DB, g *groupModel) *groupModel {
 placeholder
 	if g.Platform == "" {
-		g.Platform = model.PlatformAnthropic
+		g.Platform = service.PlatformAnthropic
 placeholder
 	if g.Status == "" {
-		g.Status = model.StatusActive
+		g.Status = service.StatusActive
 placeholder
 	if g.SubscriptionType == "" {
-		g.SubscriptionType = model.SubscriptionTypeStandard
+		g.SubscriptionType = service.SubscriptionTypeStandard
 placeholder
 	if g.CreatedAt.IsZero() {
 		g.CreatedAt = time.Now()
@@ -53,7 +57,7 @@ placeholder
 	return g
 placeholder
 
-func mustCreateProxy(t *testing.T, db *gorm.DB, p *model.Proxy) *model.Proxy {
+func mustCreateProxy(t *testing.T, db *gorm.DB, p *proxyModel) *proxyModel {
 placeholder
 	if p.Protocol == "" {
 		p.Protocol = "http"
@@ -65,7 +69,7 @@ placeholder
 		p.Port = 8080
 placeholder
 	if p.Status == "" {
-		p.Status = model.StatusActive
+		p.Status = service.StatusActive
 placeholder
 	if p.CreatedAt.IsZero() {
 		p.CreatedAt = time.Now()
@@ -77,25 +81,25 @@ placeholder
 	return p
 placeholder
 
-func mustCreateAccount(t *testing.T, db *gorm.DB, a *model.Account) *model.Account {
+func mustCreateAccount(t *testing.T, db *gorm.DB, a *accountModel) *accountModel {
 placeholder
 	if a.Platform == "" {
-		a.Platform = model.PlatformAnthropic
+		a.Platform = service.PlatformAnthropic
 placeholder
 	if a.Type == "" {
-		a.Type = model.AccountTypeOAuth
+		a.Type = service.AccountTypeOAuth
 placeholder
 	if a.Status == "" {
-		a.Status = model.StatusActive
+		a.Status = service.StatusActive
 placeholder
 	if !a.Schedulable {
 		a.Schedulable = true
 placeholder
 	if a.Credentials == nil {
-		a.Credentials = model.JSONB{placeholder
+		a.Credentials = datatypes.JSONMap{placeholder
 placeholder
 	if a.Extra == nil {
-		a.Extra = model.JSONB{placeholder
+		a.Extra = datatypes.JSONMap{placeholder
 placeholder
 	if a.CreatedAt.IsZero() {
 		a.CreatedAt = time.Now()
@@ -107,10 +111,10 @@ placeholder
 	return a
 placeholder
 
-func mustCreateApiKey(t *testing.T, db *gorm.DB, k *model.ApiKey) *model.ApiKey {
+func mustCreateApiKey(t *testing.T, db *gorm.DB, k *apiKeyModel) *apiKeyModel {
 placeholder
 	if k.Status == "" {
-		k.Status = model.StatusActive
+		k.Status = service.StatusActive
 placeholder
 	if k.CreatedAt.IsZero() {
 		k.CreatedAt = time.Now()
@@ -122,13 +126,13 @@ placeholder
 	return k
 placeholder
 
-func mustCreateRedeemCode(t *testing.T, db *gorm.DB, c *model.RedeemCode) *model.RedeemCode {
+func mustCreateRedeemCode(t *testing.T, db *gorm.DB, c *redeemCodeModel) *redeemCodeModel {
 placeholder
 	if c.Status == "" {
-		c.Status = model.StatusUnused
+		c.Status = service.StatusUnused
 placeholder
 	if c.Type == "" {
-		c.Type = model.RedeemTypeBalance
+		c.Type = service.RedeemTypeBalance
 placeholder
 	if c.CreatedAt.IsZero() {
 		c.CreatedAt = time.Now()
@@ -137,10 +141,10 @@ placeholder
 	return c
 placeholder
 
-func mustCreateSubscription(t *testing.T, db *gorm.DB, s *model.UserSubscription) *model.UserSubscription {
+func mustCreateSubscription(t *testing.T, db *gorm.DB, s *userSubscriptionModel) *userSubscriptionModel {
 placeholder
 	if s.Status == "" {
-		s.Status = model.SubscriptionStatusActive
+		s.Status = service.SubscriptionStatusActive
 placeholder
 	now := time.Now()
 	if s.StartsAt.IsZero() {
@@ -164,9 +168,10 @@ placeholder
 
 func mustBindAccountToGroup(t *testing.T, db *gorm.DB, accountID, groupID int64, priority int) {
 placeholder
-	require.NoError(t, db.Create(&model.AccountGroup{
+	require.NoError(t, db.Create(&accountGroupModel{
 		AccountID: accountID,
 		GroupID:   groupID,
 		Priority:  priority,
+		CreatedAt: time.Now(),
 placeholder).Error, "create account_group")
 placeholder

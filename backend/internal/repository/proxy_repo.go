@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
-	"github.com/Wei-Shaw/sub2api/internal/model"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 
 	"gorm.io/gorm"
@@ -19,37 +19,47 @@ func NewProxyRepository(db *gorm.DB) service.ProxyRepository {
 	return &proxyRepository{db: dbplaceholder
 placeholder
 
-func (r *proxyRepository) Create(ctx context.Context, proxy *model.Proxy) error {
-	return r.db.WithContext(ctx).Create(proxy).Error
+func (r *proxyRepository) Create(ctx context.Context, proxy *service.Proxy) error {
+	m := proxyModelFromService(proxy)
+	err := r.db.WithContext(ctx).Create(m).Error
+	if err == nil {
+		applyProxyModelToService(proxy, m)
+placeholder
+	return err
 placeholder
 
-func (r *proxyRepository) GetByID(ctx context.Context, id int64) (*model.Proxy, error) {
-	var proxy model.Proxy
-	err := r.db.WithContext(ctx).First(&proxy, id).Error
+func (r *proxyRepository) GetByID(ctx context.Context, id int64) (*service.Proxy, error) {
+	var m proxyModel
+	err := r.db.WithContext(ctx).First(&m, id).Error
 	if err != nil {
 		return nil, translatePersistenceError(err, service.ErrProxyNotFound, nil)
 placeholder
-	return &proxy, nil
+	return proxyModelToService(&m), nil
 placeholder
 
-func (r *proxyRepository) Update(ctx context.Context, proxy *model.Proxy) error {
-	return r.db.WithContext(ctx).Save(proxy).Error
+func (r *proxyRepository) Update(ctx context.Context, proxy *service.Proxy) error {
+	m := proxyModelFromService(proxy)
+	err := r.db.WithContext(ctx).Save(m).Error
+	if err == nil {
+		applyProxyModelToService(proxy, m)
+placeholder
+	return err
 placeholder
 
 func (r *proxyRepository) Delete(ctx context.Context, id int64) error {
-	return r.db.WithContext(ctx).Delete(&model.Proxy{placeholder, id).Error
+	return r.db.WithContext(ctx).Delete(&proxyModel{placeholder, id).Error
 placeholder
 
-func (r *proxyRepository) List(ctx context.Context, params pagination.PaginationParams) ([]model.Proxy, *pagination.PaginationResult, error) {
+func (r *proxyRepository) List(ctx context.Context, params pagination.PaginationParams) ([]service.Proxy, *pagination.PaginationResult, error) {
 	return r.ListWithFilters(ctx, params, "", "", "")
 placeholder
 
 // ListWithFilters lists proxies with optional filtering by protocol, status, and search query
-func (r *proxyRepository) ListWithFilters(ctx context.Context, params pagination.PaginationParams, protocol, status, search string) ([]model.Proxy, *pagination.PaginationResult, error) {
-	var proxies []model.Proxy
+func (r *proxyRepository) ListWithFilters(ctx context.Context, params pagination.PaginationParams, protocol, status, search string) ([]service.Proxy, *pagination.PaginationResult, error) {
+	var proxies []proxyModel
 	var total int64
 
-	db := r.db.WithContext(ctx).Model(&model.Proxy{placeholder)
+	db := r.db.WithContext(ctx).Model(&proxyModel{placeholder)
 
 	// Apply filters
 	if protocol != "" {
@@ -71,29 +81,31 @@ placeholder
 		return nil, nil, err
 placeholder
 
-	pages := int(total) / params.Limit()
-	if int(total)%params.Limit() > 0 {
-		pages++
+	outProxies := make([]service.Proxy, 0, len(proxies))
+	for i := range proxies {
+		outProxies = append(outProxies, *proxyModelToService(&proxies[i]))
 placeholder
 
-	return proxies, &pagination.PaginationResult{
-		Total:    total,
-		Page:     params.Page,
-		PageSize: params.Limit(),
-		Pages:    pages,
-placeholder, nil
+	return outProxies, paginationResultFromTotal(total, params), nil
 placeholder
 
-func (r *proxyRepository) ListActive(ctx context.Context) ([]model.Proxy, error) {
-	var proxies []model.Proxy
-	err := r.db.WithContext(ctx).Where("status = ?", model.StatusActive).Find(&proxies).Error
-	return proxies, err
+func (r *proxyRepository) ListActive(ctx context.Context) ([]service.Proxy, error) {
+	var proxies []proxyModel
+	err := r.db.WithContext(ctx).Where("status = ?", service.StatusActive).Find(&proxies).Error
+	if err != nil {
+		return nil, err
+placeholder
+	outProxies := make([]service.Proxy, 0, len(proxies))
+	for i := range proxies {
+		outProxies = append(outProxies, *proxyModelToService(&proxies[i]))
+placeholder
+	return outProxies, nil
 placeholder
 
 // ExistsByHostPortAuth checks if a proxy with the same host, port, username, and password exists
 func (r *proxyRepository) ExistsByHostPortAuth(ctx context.Context, host string, port int, username, password string) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Proxy{placeholder).
+	err := r.db.WithContext(ctx).Model(&proxyModel{placeholder).
 		Where("host = ? AND port = ? AND username = ? AND password = ?", host, port, username, password).
 		Count(&count).Error
 	if err != nil {
@@ -105,7 +117,7 @@ placeholder
 // CountAccountsByProxyID returns the number of accounts using a specific proxy
 func (r *proxyRepository) CountAccountsByProxyID(ctx context.Context, proxyID int64) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Account{placeholder).
+	err := r.db.WithContext(ctx).Table("accounts").
 		Where("proxy_id = ?", proxyID).
 		Count(&count).Error
 	return count, err
@@ -119,7 +131,7 @@ func (r *proxyRepository) GetAccountCountsForProxies(ctx context.Context) (map[i
 placeholder
 	var results []result
 	err := r.db.WithContext(ctx).
-		Model(&model.Account{placeholder).
+		Table("accounts").
 		Select("proxy_id, COUNT(*) as count").
 		Where("proxy_id IS NOT NULL").
 		Group("proxy_id").
@@ -136,10 +148,10 @@ placeholder
 placeholder
 
 // ListActiveWithAccountCount returns all active proxies with account count, sorted by creation time descending
-func (r *proxyRepository) ListActiveWithAccountCount(ctx context.Context) ([]model.ProxyWithAccountCount, error) {
-	var proxies []model.Proxy
+func (r *proxyRepository) ListActiveWithAccountCount(ctx context.Context) ([]service.ProxyWithAccountCount, error) {
+	var proxies []proxyModel
 	err := r.db.WithContext(ctx).
-		Where("status = ?", model.StatusActive).
+		Where("status = ?", service.StatusActive).
 		Order("created_at DESC").
 		Find(&proxies).Error
 	if err != nil {
@@ -153,13 +165,78 @@ placeholder
 placeholder
 
 	// Build result with account counts
-	result := make([]model.ProxyWithAccountCount, len(proxies))
-	for i, proxy := range proxies {
-		result[i] = model.ProxyWithAccountCount{
-			Proxy:        proxy,
-			AccountCount: counts[proxy.ID],
+	result := make([]service.ProxyWithAccountCount, 0, len(proxies))
+	for i := range proxies {
+		proxy := proxyModelToService(&proxies[i])
+		if proxy == nil {
+			continue
 	placeholder
+		result = append(result, service.ProxyWithAccountCount{
+			Proxy:        *proxy,
+			AccountCount: counts[proxy.ID],
+	placeholder)
 placeholder
 
 	return result, nil
+placeholder
+
+type proxyModel struct {
+	ID        int64          `gorm:"primaryKey"`
+	Name      string         `gorm:"size:100;not null"`
+	Protocol  string         `gorm:"size:20;not null"`
+	Host      string         `gorm:"size:255;not null"`
+	Port      int            `gorm:"not null"`
+	Username  string         `gorm:"size:100"`
+	Password  string         `gorm:"size:100"`
+	Status    string         `gorm:"size:20;default:active;not null"`
+	CreatedAt time.Time      `gorm:"not null"`
+	UpdatedAt time.Time      `gorm:"not null"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+placeholder
+
+func (proxyModel) TableName() string { return "proxies" placeholder
+
+func proxyModelToService(m *proxyModel) *service.Proxy {
+	if m == nil {
+		return nil
+placeholder
+	return &service.Proxy{
+		ID:        m.ID,
+		Name:      m.Name,
+		Protocol:  m.Protocol,
+		Host:      m.Host,
+		Port:      m.Port,
+		Username:  m.Username,
+		Password:  m.Password,
+		Status:    m.Status,
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+placeholder
+placeholder
+
+func proxyModelFromService(p *service.Proxy) *proxyModel {
+	if p == nil {
+		return nil
+placeholder
+	return &proxyModel{
+		ID:        p.ID,
+		Name:      p.Name,
+		Protocol:  p.Protocol,
+		Host:      p.Host,
+		Port:      p.Port,
+		Username:  p.Username,
+		Password:  p.Password,
+		Status:    p.Status,
+		CreatedAt: p.CreatedAt,
+		UpdatedAt: p.UpdatedAt,
+placeholder
+placeholder
+
+func applyProxyModelToService(proxy *service.Proxy, m *proxyModel) {
+	if proxy == nil || m == nil {
+		return
+placeholder
+	proxy.ID = m.ID
+	proxy.CreatedAt = m.CreatedAt
+	proxy.UpdatedAt = m.UpdatedAt
 placeholder
