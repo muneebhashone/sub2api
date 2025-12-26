@@ -143,7 +143,7 @@ placeholder{
 			wantHTTPCode: http.StatusInternalServerError,
 			wantBody: Response{
 				Code:    http.StatusInternalServerError,
-				Message: "boom",
+				Message: infraerrors.UnknownMessage,
 		placeholder,
 	placeholder,
 placeholder

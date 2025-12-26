@@ -84,7 +84,7 @@ placeholder
 
 func runSetupServer() {
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(middleware.Recovery())
 	r.Use(middleware.CORS())
 
 	// Register setup routes
