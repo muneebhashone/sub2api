@@ -30,6 +30,10 @@ const (
 	stickySessionTTL        = time.Hour // 粘性会话TTL
 )
 
+// sseDataRe matches SSE data lines with optional whitespace after colon.
+// Some upstream APIs return non-standard "data:" without space (should be "data: ").
+var sseDataRe = regexp.MustCompile(`^data:\s*`)
+
 // allowedHeaders 白名单headers（参考CRS项目）
 var allowedHeaders = map[string]bool{
 	"accept":                                    true,
@@ -745,26 +749,33 @@ placeholder
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// 如果有模型映射，替换响应中的model字段
-		if needModelReplace && strings.HasPrefix(line, "data: ") {
-			line = s.replaceModelInSSELine(line, mappedModel, originalModel)
-	placeholder
+		// Extract data from SSE line (supports both "data: " and "data:" formats)
+		if sseDataRe.MatchString(line) {
+			data := sseDataRe.ReplaceAllString(line, "")
 
-		// 转发行
-		if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
-			return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
-	placeholder
-		flusher.Flush()
+			// 如果有模型映射，替换响应中的model字段
+			if needModelReplace {
+				line = s.replaceModelInSSELine(line, mappedModel, originalModel)
+		placeholder
 
-		// 解析usage数据
-		if strings.HasPrefix(line, "data: ") {
-			data := line[6:]
+			// 转发行
+			if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
+				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+		placeholder
+			flusher.Flush()
+
 			// 记录首字时间：第一个有效的 content_block_delta 或 message_start
 			if firstTokenMs == nil && data != "" && data != "[DONE]" {
 				ms := int(time.Since(startTime).Milliseconds())
 				firstTokenMs = &ms
 		placeholder
 			s.parseSSEUsage(data, usage)
+	placeholder else {
+			// 非 data 行直接转发
+			if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
+				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+		placeholder
+			flusher.Flush()
 	placeholder
 placeholder
 
@@ -777,7 +788,10 @@ placeholder
 
 // replaceModelInSSELine 替换SSE数据行中的model字段
 func (s *GatewayService) replaceModelInSSELine(line, fromModel, toModel string) string {
-	data := line[6:] // 去掉 "data: " 前缀
+	if !sseDataRe.MatchString(line) {
+		return line
+placeholder
+	data := sseDataRe.ReplaceAllString(line, "")
 	if data == "" || data == "[DONE]" {
 		return line
 placeholder
