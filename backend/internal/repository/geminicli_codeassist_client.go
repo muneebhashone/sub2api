@@ -34,11 +34,15 @@ placeholder
 		SetSuccessResult(&out).
 		Post(c.baseURL + "/v1internal:loadCodeAssist")
 	if err != nil {
+		fmt.Printf("[CodeAssist] LoadCodeAssist request error: %v\n", err)
 		return nil, fmt.Errorf("request failed: %w", err)
 placeholder
 	if !resp.IsSuccessState() {
-		return nil, fmt.Errorf("loadCodeAssist failed: status %d, body: %s", resp.StatusCode, geminicli.SanitizeBodyForLogs(resp.String()))
+		body := geminicli.SanitizeBodyForLogs(resp.String())
+		fmt.Printf("[CodeAssist] LoadCodeAssist failed: status %d, body: %s\n", resp.StatusCode, body)
+		return nil, fmt.Errorf("loadCodeAssist failed: status %d, body: %s", resp.StatusCode, body)
 placeholder
+	fmt.Printf("[CodeAssist] LoadCodeAssist success: status %d, response: %+v\n", resp.StatusCode, out)
 	return &out, nil
 placeholder
 
@@ -46,6 +50,8 @@ func (c *geminiCliCodeAssistClient) OnboardUser(ctx context.Context, accessToken
 	if reqBody == nil {
 		reqBody = defaultOnboardUserRequest()
 placeholder
+
+	fmt.Printf("[CodeAssist] OnboardUser request body: %+v\n", reqBody)
 
 	var out geminicli.OnboardUserResponse
 	resp, err := createGeminiCliReqClient(proxyURL).R().
@@ -57,11 +63,15 @@ placeholder
 		SetSuccessResult(&out).
 		Post(c.baseURL + "/v1internal:onboardUser")
 	if err != nil {
+		fmt.Printf("[CodeAssist] OnboardUser request error: %v\n", err)
 		return nil, fmt.Errorf("request failed: %w", err)
 placeholder
 	if !resp.IsSuccessState() {
-		return nil, fmt.Errorf("onboardUser failed: status %d, body: %s", resp.StatusCode, geminicli.SanitizeBodyForLogs(resp.String()))
+		body := geminicli.SanitizeBodyForLogs(resp.String())
+		fmt.Printf("[CodeAssist] OnboardUser failed: status %d, body: %s\n", resp.StatusCode, body)
+		return nil, fmt.Errorf("onboardUser failed: status %d, body: %s", resp.StatusCode, body)
 placeholder
+	fmt.Printf("[CodeAssist] OnboardUser success: status %d, response: %+v\n", resp.StatusCode, out)
 	return &out, nil
 placeholder
 
