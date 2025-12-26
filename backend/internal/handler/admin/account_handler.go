@@ -350,7 +350,7 @@ placeholder
 				newCredentials[k] = v
 		placeholder
 	placeholder
-placeholder else if account.Platform == model.PlatformGemini {
+placeholder else if account.Platform == service.PlatformGemini {
 		tokenInfo, err := h.geminiOAuthService.RefreshAccountToken(c.Request.Context(), account)
 		if err != nil {
 			response.InternalError(c, "Failed to refresh credentials: "+err.Error())
