@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -127,55 +128,102 @@ placeholder
 	// Generate session hash (from header for OpenAI)
 	sessionHash := h.gatewayService.GenerateSessionHash(c)
 
-	// Select account supporting the requested model
-	log.Printf("[OpenAI Handler] Selecting account: groupID=%v model=%s", apiKey.GroupID, reqModel)
-	account, err := h.gatewayService.SelectAccountForModel(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel)
-	if err != nil {
-		log.Printf("[OpenAI Handler] SelectAccount failed: %v", err)
-		h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
-		return
-placeholder
-	log.Printf("[OpenAI Handler] Selected account: id=%d name=%s", account.ID, account.Name)
+	const maxAccountSwitches = 3
+	switchCount := 0
+	failedAccountIDs := make(map[int64]struct{placeholder)
+	lastFailoverStatus := 0
 
-	// 3. Acquire account concurrency slot
-	accountReleaseFunc, err := h.concurrencyHelper.AcquireAccountSlotWithWait(c, account.ID, account.Concurrency, reqStream, &streamStarted)
-	if err != nil {
-		log.Printf("Account concurrency acquire failed: %v", err)
-		h.handleConcurrencyError(c, err, "account", streamStarted)
-		return
-placeholder
-	if accountReleaseFunc != nil {
-		defer accountReleaseFunc()
-placeholder
-
-	// Forward request
-	result, err := h.gatewayService.Forward(c.Request.Context(), c, account, body)
-	if err != nil {
-		// Error response already handled in Forward, just log
-		log.Printf("Forward request failed: %v", err)
-		return
-placeholder
-
-	// Async record usage
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{
-			Result:       result,
-			ApiKey:       apiKey,
-			User:         apiKey.User,
-			Account:      account,
-			Subscription: subscription,
-	placeholder); err != nil {
-			log.Printf("Record usage failed: %v", err)
+	for {
+		// Select account supporting the requested model
+		log.Printf("[OpenAI Handler] Selecting account: groupID=%v model=%s", apiKey.GroupID, reqModel)
+		account, err := h.gatewayService.SelectAccountForModelWithExclusions(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel, failedAccountIDs)
+		if err != nil {
+			log.Printf("[OpenAI Handler] SelectAccount failed: %v", err)
+			if len(failedAccountIDs) == 0 {
+				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
+				return
+		placeholder
+			h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+			return
 	placeholder
-placeholder()
+		log.Printf("[OpenAI Handler] Selected account: id=%d name=%s", account.ID, account.Name)
+
+		// 3. Acquire account concurrency slot
+		accountReleaseFunc, err := h.concurrencyHelper.AcquireAccountSlotWithWait(c, account.ID, account.Concurrency, reqStream, &streamStarted)
+		if err != nil {
+			log.Printf("Account concurrency acquire failed: %v", err)
+			h.handleConcurrencyError(c, err, "account", streamStarted)
+			return
+	placeholder
+
+		// Forward request
+		result, err := h.gatewayService.Forward(c.Request.Context(), c, account, body)
+		if accountReleaseFunc != nil {
+			accountReleaseFunc()
+	placeholder
+		if err != nil {
+			var failoverErr *service.UpstreamFailoverError
+			if errors.As(err, &failoverErr) {
+				failedAccountIDs[account.ID] = struct{placeholder{placeholder
+				if switchCount >= maxAccountSwitches {
+					lastFailoverStatus = failoverErr.StatusCode
+					h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+					return
+			placeholder
+				lastFailoverStatus = failoverErr.StatusCode
+				switchCount++
+				log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
+				continue
+		placeholder
+			// Error response already handled in Forward, just log
+			log.Printf("Forward request failed: %v", err)
+			return
+	placeholder
+
+		// Async record usage
+		go func(result *service.OpenAIForwardResult, usedAccount *service.Account) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{
+				Result:       result,
+				ApiKey:       apiKey,
+				User:         apiKey.User,
+				Account:      usedAccount,
+				Subscription: subscription,
+		placeholder); err != nil {
+				log.Printf("Record usage failed: %v", err)
+		placeholder
+	placeholder(result, account)
+		return
+placeholder
 placeholder
 
 // handleConcurrencyError handles concurrency-related errors with proper 429 response
 func (h *OpenAIGatewayHandler) handleConcurrencyError(c *gin.Context, err error, slotType string, streamStarted bool) {
 	h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error",
 		fmt.Sprintf("Concurrency limit exceeded for %s, please retry later", slotType), streamStarted)
+placeholder
+
+func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, streamStarted bool) {
+	status, errType, errMsg := h.mapUpstreamError(statusCode)
+	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
+placeholder
+
+func (h *OpenAIGatewayHandler) mapUpstreamError(statusCode int) (int, string, string) {
+	switch statusCode {
+	case 401:
+		return http.StatusBadGateway, "upstream_error", "Upstream authentication failed, please contact administrator"
+	case 403:
+		return http.StatusBadGateway, "upstream_error", "Upstream access forbidden, please contact administrator"
+	case 429:
+		return http.StatusTooManyRequests, "rate_limit_error", "Upstream rate limit exceeded, please retry later"
+	case 529:
+		return http.StatusServiceUnavailable, "upstream_error", "Upstream service overloaded, please retry later"
+	case 500, 502, 503, 504:
+		return http.StatusBadGateway, "upstream_error", "Upstream service temporarily unavailable"
+	default:
+		return http.StatusBadGateway, "upstream_error", "Upstream request failed"
+placeholder
 placeholder
 
 // handleStreamingAwareError handles errors that may occur after streaming has started

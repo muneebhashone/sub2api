@@ -62,14 +62,20 @@ func (s *GeminiMessagesCompatService) GetTokenProvider() *GeminiTokenProvider {
 placeholder
 
 func (s *GeminiMessagesCompatService) SelectAccountForModel(ctx context.Context, groupID *int64, sessionHash string, requestedModel string) (*Account, error) {
+	return s.SelectAccountForModelWithExclusions(ctx, groupID, sessionHash, requestedModel, nil)
+placeholder
+
+func (s *GeminiMessagesCompatService) SelectAccountForModelWithExclusions(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{placeholder) (*Account, error) {
 	cacheKey := "gemini:" + sessionHash
 	if sessionHash != "" {
 		accountID, err := s.cache.GetSessionAccountID(ctx, cacheKey)
 		if err == nil && accountID > 0 {
-			account, err := s.accountRepo.GetByID(ctx, accountID)
-			if err == nil && account.IsSchedulable() && account.Platform == PlatformGemini && (requestedModel == "" || account.IsModelSupported(requestedModel)) {
-				_ = s.cache.RefreshSessionTTL(ctx, cacheKey, geminiStickySessionTTL)
-				return account, nil
+			if _, excluded := excludedIDs[accountID]; !excluded {
+				account, err := s.accountRepo.GetByID(ctx, accountID)
+				if err == nil && account.IsSchedulable() && account.Platform == PlatformGemini && (requestedModel == "" || account.IsModelSupported(requestedModel)) {
+					_ = s.cache.RefreshSessionTTL(ctx, cacheKey, geminiStickySessionTTL)
+					return account, nil
+			placeholder
 		placeholder
 	placeholder
 placeholder
@@ -88,6 +94,9 @@ placeholder
 	var selected *Account
 	for i := range accounts {
 		acc := &accounts[i]
+		if _, excluded := excludedIDs[acc.ID]; excluded {
+			continue
+	placeholder
 		if requestedModel != "" && !acc.IsModelSupported(requestedModel) {
 			continue
 	placeholder
@@ -425,6 +434,9 @@ placeholder
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 		s.handleGeminiUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+	placeholder
 		return nil, s.writeGeminiMappedError(c, resp.StatusCode, respBody)
 placeholder
 
@@ -724,6 +736,10 @@ placeholder
 		placeholder, nil
 	placeholder
 
+		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+	placeholder
+
 		respBody = unwrapIfNeeded(isOAuth, respBody)
 		contentType := resp.Header.Get("Content-Type")
 		if contentType == "" {
@@ -792,6 +808,15 @@ func (s *GeminiMessagesCompatService) shouldRetryGeminiUpstreamError(account *Ac
 		return oauthType == "code_assist"
 	default:
 		return false
+placeholder
+placeholder
+
+func (s *GeminiMessagesCompatService) shouldFailoverGeminiUpstreamError(statusCode int) bool {
+	switch statusCode {
+	case 401, 403, 429, 529:
+		return true
+	default:
+		return statusCode >= 500
 placeholder
 placeholder
 

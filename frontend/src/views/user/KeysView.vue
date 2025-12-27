@@ -493,6 +493,7 @@
 import { ref, computed, onMounted, onUnmounted, type ComponentPublicInstance placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
+import { useClipboard placeholder from '@/composables/useClipboard'
 
 const { t placeholder = useI18n()
 import { keysAPI, authAPI, usageAPI, userGroupsAPI placeholder from '@/api'
@@ -520,6 +521,7 @@ interface GroupOption {
 placeholder
 
 const appStore = useAppStore()
+const { copyToClipboard: clipboardCopy placeholder = useClipboard()
 
 const columns = computed<Column[]>(() => [
   { key: 'name', label: t('common.name'), sortable: true placeholder,
@@ -616,14 +618,12 @@ const maskKey = (key: string): string => {
 placeholder
 
 const copyToClipboard = async (text: string, keyId: number) => {
-  try {
-    await navigator.clipboard.writeText(text)
+  const success = await clipboardCopy(text, t('keys.copied'))
+  if (success) {
     copiedKeyId.value = keyId
     setTimeout(() => {
       copiedKeyId.value = null
     placeholder, 2000)
-  placeholder catch (error) {
-    appStore.showError(t('common.copyFailed'))
   placeholder
 placeholder
 
