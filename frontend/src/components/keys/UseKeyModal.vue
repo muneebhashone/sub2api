@@ -119,7 +119,7 @@
 import { ref, computed, h, watch, type Component placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import Modal from '@/components/common/Modal.vue'
-import { useAppStore placeholder from '@/stores/app'
+import { useClipboard placeholder from '@/composables/useClipboard'
 import type { GroupPlatform placeholder from '@/types'
 
 interface Props {
@@ -150,7 +150,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const { t placeholder = useI18n()
-const appStore = useAppStore()
+const { copyToClipboard: clipboardCopy placeholder = useClipboard()
 
 const copiedIndex = ref<number | null>(null)
 const activeTab = ref<string>('unix')
@@ -340,14 +340,12 @@ placeholder`
 placeholder
 
 const copyContent = async (content: string, index: number) => {
-  try {
-    await navigator.clipboard.writeText(content)
+  const success = await clipboardCopy(content, t('keys.copied'))
+  if (success) {
     copiedIndex.value = index
     setTimeout(() => {
       copiedIndex.value = null
     placeholder, 2000)
-  placeholder catch (error) {
-    appStore.showError(t('common.copyFailed'))
   placeholder
 placeholder
 </script>

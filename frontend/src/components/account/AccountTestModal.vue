@@ -280,10 +280,12 @@
 import { ref, watch, nextTick placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import Modal from '@/components/common/Modal.vue'
+import { useClipboard placeholder from '@/composables/useClipboard'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, ClaudeModel placeholder from '@/types'
 
 const { t placeholder = useI18n()
+const { copyToClipboard placeholder = useClipboard()
 
 interface OutputLine {
   text: string
@@ -501,6 +503,6 @@ placeholder
 
 const copyOutput = () => {
   const text = outputLines.value.map((l) => l.text).join('\n')
-  navigator.clipboard.writeText(text)
+  copyToClipboard(text, t('admin.accounts.outputCopied'))
 placeholder
 </script>
