@@ -5,6 +5,7 @@
 
 export { useAuthStore placeholder from './auth'
 export { useAppStore placeholder from './app'
+export { useSubscriptionStore placeholder from './subscriptions'
 
 // Re-export types for convenience
 export type { User, LoginRequest, RegisterRequest, AuthResponse placeholder from '@/types'

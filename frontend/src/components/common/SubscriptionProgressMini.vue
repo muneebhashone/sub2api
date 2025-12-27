@@ -178,17 +178,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import subscriptionsAPI from '@/api/subscriptions'
+import { useSubscriptionStore placeholder from '@/stores'
 import type { UserSubscription placeholder from '@/types'
 
 const { t placeholder = useI18n()
 
+const subscriptionStore = useSubscriptionStore()
+
 const containerRef = ref<HTMLElement | null>(null)
 const tooltipOpen = ref(false)
-const activeSubscriptions = ref<UserSubscription[]>([])
-const loading = ref(false)
 
-const hasActiveSubscriptions = computed(() => activeSubscriptions.value.length > 0)
+// Use store data instead of local state
+const activeSubscriptions = computed(() => subscriptionStore.activeSubscriptions)
+const hasActiveSubscriptions = computed(() => subscriptionStore.hasActiveSubscriptions)
 
 const displaySubscriptions = computed(() => {
   // Sort by most usage (highest percentage first)
@@ -275,36 +277,17 @@ function handleClickOutside(event: MouseEvent) {
   placeholder
 placeholder
 
-async function loadSubscriptions() {
-  try {
-    loading.value = true
-    activeSubscriptions.value = await subscriptionsAPI.getActiveSubscriptions()
-  placeholder catch (error) {
-    console.error('Failed to load subscriptions:', error)
-    activeSubscriptions.value = []
-  placeholder finally {
-    loading.value = false
-  placeholder
-placeholder
-
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
-  loadSubscriptions()
+  // Trigger initial fetch if not already loaded
+  // The actual data loading is handled by App.vue globally
+  subscriptionStore.fetchActiveSubscriptions().catch((error) => {
+    console.error('Failed to load subscriptions in SubscriptionProgressMini:', error)
+  placeholder)
 placeholder)
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
-placeholder)
-
-// Refresh subscriptions periodically (every 5 minutes)
-let refreshInterval: ReturnType<typeof setInterval> | null = null
-onMounted(() => {
-  refreshInterval = setInterval(loadSubscriptions, 5 * 60 * 1000)
-placeholder)
-onBeforeUnmount(() => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval)
-  placeholder
 placeholder)
 </script>
 

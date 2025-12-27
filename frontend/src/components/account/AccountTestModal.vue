@@ -1,8 +1,8 @@
 <template>
-  <Modal
+  <BaseDialog
     :show="show"
     :title="t('admin.accounts.testAccountConnection')"
-    size="md"
+    width="normal"
     @close="handleClose"
   >
     <div class="space-y-4">
@@ -273,13 +273,13 @@
         </button>
       </div>
     </template>
-  </Modal>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import Modal from '@/components/common/Modal.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, ClaudeModel placeholder from '@/types'
