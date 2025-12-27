@@ -257,6 +257,7 @@ import { useAppStore placeholder from '@/stores/app'
 import subscriptionsAPI from '@/api/subscriptions'
 import type { UserSubscription placeholder from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { formatDateOnly placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -300,11 +301,7 @@ function formatExpirationDate(expiresAt: string): string {
     return t('userSubscriptions.status.expired')
   placeholder
 
-  const dateStr = expires.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  placeholder)
+  const dateStr = formatDateOnly(expires)
 
   if (days === 0) {
     return `${dateStrplaceholder (Today)`

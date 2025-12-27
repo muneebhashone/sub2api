@@ -631,6 +631,21 @@ placeholder
 	if filters.ApiKeyID > 0 {
 		db = db.Where("api_key_id = ?", filters.ApiKeyID)
 placeholder
+	if filters.AccountID > 0 {
+		db = db.Where("account_id = ?", filters.AccountID)
+placeholder
+	if filters.GroupID > 0 {
+		db = db.Where("group_id = ?", filters.GroupID)
+placeholder
+	if filters.Model != "" {
+		db = db.Where("model = ?", filters.Model)
+placeholder
+	if filters.Stream != nil {
+		db = db.Where("stream = ?", *filters.Stream)
+placeholder
+	if filters.BillingType != nil {
+		db = db.Where("billing_type = ?", *filters.BillingType)
+placeholder
 	if filters.StartTime != nil {
 		db = db.Where("created_at >= ?", *filters.StartTime)
 placeholder
@@ -642,8 +657,8 @@ placeholder
 		return nil, nil, err
 placeholder
 
-	// Preload user and api_key for display
-	if err := db.Preload("User").Preload("ApiKey").
+	// Preload user, api_key, account, and group for display
+	if err := db.Preload("User").Preload("ApiKey").Preload("Account").Preload("Group").
 		Offset(params.Offset()).Limit(params.Limit()).
 		Order("id DESC").Find(&logs).Error; err != nil {
 		return nil, nil, err

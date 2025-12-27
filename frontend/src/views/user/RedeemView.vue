@@ -377,7 +377,7 @@
                     {{ getHistoryItemTitle(item) placeholderplaceholder
                   </p>
                   <p class="text-xs text-gray-500 dark:text-dark-400">
-                    {{ formatDate(item.used_at) placeholderplaceholder
+                    {{ formatDateTime(item.used_at) placeholderplaceholder
                   </p>
                 </div>
               </div>
@@ -447,6 +447,7 @@ import { useAuthStore placeholder from '@/stores/auth'
 import { useAppStore placeholder from '@/stores/app'
 import { redeemAPI, authAPI, type RedeemHistoryItem placeholder from '@/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { formatDateTime placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 const authStore = useAuthStore()
@@ -471,18 +472,6 @@ const errorMessage = ref('')
 const history = ref<RedeemHistoryItem[]>([])
 const loadingHistory = ref(false)
 const contactInfo = ref('')
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  placeholder)
-placeholder
 
 // Helper functions for history display
 const isBalanceType = (type: string) => {

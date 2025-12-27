@@ -4,7 +4,7 @@
     <div
       v-if="windowStats"
       class="mb-0.5 flex items-center justify-between"
-      :title="`5h 窗口用量统计`"
+      :title="t('admin.accounts.usageWindow.statsTitle')"
     >
       <div
         class="flex cursor-help items-center gap-1.5 text-[9px] text-gray-500 dark:text-gray-400"
@@ -51,6 +51,7 @@
 
 <script setup lang="ts">
 import { computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import type { WindowStats placeholder from '@/types'
 
 const props = defineProps<{
@@ -60,6 +61,8 @@ const props = defineProps<{
   color: 'indigo' | 'emerald' | 'purple'
   windowStats?: WindowStats | null
 placeholder>()
+
+const { t placeholder = useI18n()
 
 // Label background colors
 const labelClass = computed(() => {

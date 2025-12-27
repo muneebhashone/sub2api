@@ -1,7 +1,8 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
+    <TablePageLayout>
       <!-- Page Header Actions -->
+      <template #actions>
       <div class="flex justify-end gap-3">
         <button
           @click="loadSubscriptions"
@@ -36,8 +37,10 @@
           {{ t('admin.subscriptions.assignSubscription') placeholderplaceholder
         </button>
       </div>
+      </template>
 
       <!-- Filters -->
+      <template #filters>
       <div class="flex flex-wrap gap-3">
         <Select
           v-model="filters.status"
@@ -54,9 +57,10 @@
           @change="loadSubscriptions"
         />
       </div>
+      </template>
 
       <!-- Subscriptions Table -->
-      <div class="card overflow-hidden">
+      <template #table>
         <DataTable :columns="columns" :data="subscriptions" :loading="loading">
           <template #cell-user="{ row placeholder">
             <div class="flex items-center gap-2">
@@ -222,7 +226,7 @@
                     : 'text-gray-700 dark:text-gray-300'
                 "
               >
-                {{ formatDate(value) placeholderplaceholder
+                {{ formatDateOnly(value) placeholderplaceholder
               </span>
               <div v-if="getDaysRemaining(value) !== null" class="text-xs text-gray-500">
                 {{ getDaysRemaining(value) placeholderplaceholder {{ t('admin.subscriptions.daysRemaining') placeholderplaceholder
@@ -302,9 +306,10 @@
             />
           </template>
         </DataTable>
-      </div>
+      </template>
 
       <!-- Pagination -->
+      <template #pagination>
       <Pagination
         v-if="pagination.total > 0"
         :page="pagination.page"
@@ -312,7 +317,8 @@
         :page-size="pagination.page_size"
         @update:page="handlePageChange"
       />
-    </div>
+      </template>
+    </TablePageLayout>
 
     <!-- Assign Subscription Modal -->
     <Modal
@@ -401,7 +407,7 @@
             <span class="font-medium text-gray-900 dark:text-white">
               {{
                 extendingSubscription.expires_at
-                  ? formatDate(extendingSubscription.expires_at)
+                  ? formatDateOnly(extendingSubscription.expires_at)
                   : t('admin.subscriptions.noExpiration')
               placeholderplaceholder
             </span>
@@ -444,7 +450,9 @@ import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
 import type { UserSubscription, Group, User placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
+import { formatDateOnly placeholder from '@/utils/format'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import Modal from '@/components/common/Modal.vue'
@@ -640,14 +648,6 @@ const confirmRevoke = async () => {
 placeholder
 
 // Helper functions
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  placeholder)
-placeholder
-
 const getDaysRemaining = (expiresAt: string): number | null => {
   const now = new Date()
   const expires = new Date(expiresAt)
