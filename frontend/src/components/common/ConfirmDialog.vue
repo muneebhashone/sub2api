@@ -31,7 +31,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import Modal from './Modal.vue'
+
+const { t placeholder = useI18n()
 
 interface Props {
   show: boolean
@@ -47,11 +51,12 @@ interface Emits {
   (e: 'cancel'): void
 placeholder
 
-withDefaults(defineProps<Props>(), {
-  confirmText: 'Confirm',
-  cancelText: 'Cancel',
+const props = withDefaults(defineProps<Props>(), {
   danger: false
 placeholder)
+
+const confirmText = computed(() => props.confirmText || t('common.confirm'))
+const cancelText = computed(() => props.cancelText || t('common.cancel'))
 
 const emit = defineEmits<Emits>()
 
