@@ -25,7 +25,7 @@
 
     <!-- Title -->
     <h3 class="empty-state-title">
-      {{ title placeholderplaceholder
+      {{ displayTitle placeholderplaceholder
     </h3>
 
     <!-- Description -->
@@ -61,7 +61,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import type { Component placeholder from 'vue'
+
+const { t placeholder = useI18n()
 
 interface Props {
   icon?: Component | string
@@ -73,11 +77,12 @@ interface Props {
   message?: string
 placeholder
 
-withDefaults(defineProps<Props>(), {
-  title: 'No data found',
+const props = withDefaults(defineProps<Props>(), {
   description: '',
   actionIcon: true
 placeholder)
+
+const displayTitle = computed(() => props.title || t('common.noData'))
 
 defineEmits(['action'])
 </script>
