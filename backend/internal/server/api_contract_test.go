@@ -925,8 +925,38 @@ placeholder
 
 func (r *stubUsageLogRepo) ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters usagestats.UsageLogFilters) ([]service.UsageLog, *pagination.PaginationResult, error) {
 	logs := r.userLogs[filters.UserID]
-	total := int64(len(logs))
-	out := paginateLogs(logs, params)
+
+	// Apply filters
+	var filtered []service.UsageLog
+	for _, log := range logs {
+		// Apply ApiKeyID filter
+		if filters.ApiKeyID > 0 && log.ApiKeyID != filters.ApiKeyID {
+			continue
+	placeholder
+		// Apply Model filter
+		if filters.Model != "" && log.Model != filters.Model {
+			continue
+	placeholder
+		// Apply Stream filter
+		if filters.Stream != nil && log.Stream != *filters.Stream {
+			continue
+	placeholder
+		// Apply BillingType filter
+		if filters.BillingType != nil && log.BillingType != *filters.BillingType {
+			continue
+	placeholder
+		// Apply time range filters
+		if filters.StartTime != nil && log.CreatedAt.Before(*filters.StartTime) {
+			continue
+	placeholder
+		if filters.EndTime != nil && log.CreatedAt.After(*filters.EndTime) {
+			continue
+	placeholder
+		filtered = append(filtered, log)
+placeholder
+
+	total := int64(len(filtered))
+	out := paginateLogs(filtered, params)
 	return out, paginationResult(total, params), nil
 placeholder
 
