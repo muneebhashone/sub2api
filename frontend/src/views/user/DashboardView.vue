@@ -452,16 +452,16 @@
                           {{ log.model placeholderplaceholder
                         </p>
                         <p class="text-xs text-gray-500 dark:text-dark-400">
-                          {{ formatDate(log.created_at) placeholderplaceholder
+                          {{ formatDateTime(log.created_at) placeholderplaceholder
                         </p>
                       </div>
                     </div>
                     <div class="text-right">
                       <p class="text-sm font-semibold">
-                        <span class="text-green-600 dark:text-green-400" title="实际扣除"
+                        <span class="text-green-600 dark:text-green-400" :title="t('dashboard.actual')"
                           >${{ formatCost(log.actual_cost) placeholderplaceholder</span
                         >
-                        <span class="font-normal text-gray-400 dark:text-gray-500" title="标准计费">
+                        <span class="font-normal text-gray-400 dark:text-gray-500" :title="t('dashboard.standard')">
                           / ${{ formatCost(log.total_cost) placeholderplaceholder</span
                         >
                       </p>
@@ -649,6 +649,7 @@ import { ref, computed, onMounted, watch placeholder from 'vue'
 import { useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { useAuthStore placeholder from '@/stores/auth'
+import { formatDateTime placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 import { usageAPI, type UserDashboardStats placeholder from '@/api/usage'
@@ -912,16 +913,6 @@ const formatDuration = (ms: number): string => {
     return `${(ms / 1000).toFixed(2)placeholders`
   placeholder
   return `${Math.round(ms)placeholderms`
-placeholder
-
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  placeholder)
 placeholder
 
 const navigateTo = (path: string) => {

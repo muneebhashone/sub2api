@@ -105,6 +105,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, AccountUsageInfo placeholder from '@/types'
 import UsageProgressBar from './UsageProgressBar.vue'
@@ -112,6 +113,8 @@ import UsageProgressBar from './UsageProgressBar.vue'
 const props = defineProps<{
   account: Account
 placeholder>()
+
+const { t placeholder = useI18n()
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -282,7 +285,7 @@ const loadUsage = async () => {
   try {
     usageInfo.value = await adminAPI.accounts.getUsage(props.account.id)
   placeholder catch (e: any) {
-    error.value = 'Failed'
+    error.value = t('common.error')
     console.error('Failed to load usage:', e)
   placeholder finally {
     loading.value = false

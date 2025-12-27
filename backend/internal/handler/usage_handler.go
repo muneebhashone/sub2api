@@ -8,6 +8,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -61,16 +62,64 @@ placeholder
 		apiKeyID = id
 placeholder
 
-	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
-	var records []service.UsageLog
-	var result *pagination.PaginationResult
-	var err error
+	// Parse additional filters
+	model := c.Query("model")
 
-	if apiKeyID > 0 {
-		records, result, err = h.usageService.ListByApiKey(c.Request.Context(), apiKeyID, params)
-placeholder else {
-		records, result, err = h.usageService.ListByUser(c.Request.Context(), subject.UserID, params)
+	var stream *bool
+	if streamStr := c.Query("stream"); streamStr != "" {
+		val, err := strconv.ParseBool(streamStr)
+		if err != nil {
+			response.BadRequest(c, "Invalid stream value, use true or false")
+			return
+	placeholder
+		stream = &val
 placeholder
+
+	var billingType *int8
+	if billingTypeStr := c.Query("billing_type"); billingTypeStr != "" {
+		val, err := strconv.ParseInt(billingTypeStr, 10, 8)
+		if err != nil {
+			response.BadRequest(c, "Invalid billing_type")
+			return
+	placeholder
+		bt := int8(val)
+		billingType = &bt
+placeholder
+
+	// Parse date range
+	var startTime, endTime *time.Time
+	if startDateStr := c.Query("start_date"); startDateStr != "" {
+		t, err := timezone.ParseInLocation("2006-01-02", startDateStr)
+		if err != nil {
+			response.BadRequest(c, "Invalid start_date format, use YYYY-MM-DD")
+			return
+	placeholder
+		startTime = &t
+placeholder
+
+	if endDateStr := c.Query("end_date"); endDateStr != "" {
+		t, err := timezone.ParseInLocation("2006-01-02", endDateStr)
+		if err != nil {
+			response.BadRequest(c, "Invalid end_date format, use YYYY-MM-DD")
+			return
+	placeholder
+		// Set end time to end of day
+		t = t.Add(24*time.Hour - time.Nanosecond)
+		endTime = &t
+placeholder
+
+	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
+	filters := usagestats.UsageLogFilters{
+		UserID:      subject.UserID, // Always filter by current user for security
+		ApiKeyID:    apiKeyID,
+		Model:       model,
+		Stream:      stream,
+		BillingType: billingType,
+		StartTime:   startTime,
+		EndTime:     endTime,
+placeholder
+
+	records, result, err := h.usageService.ListWithFilters(c.Request.Context(), params, filters)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
