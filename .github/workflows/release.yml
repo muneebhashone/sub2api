@@ -143,3 +143,56 @@ jobs:
           repository: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder/sub2api
           short-description: "Sub2API - AI API Gateway Platform"
           readme-filepath: ./deploy/DOCKER.md
+
+      # Send Telegram notification
+      - name: Send Telegram Notification
+        if: ${{ secrets.TELEGRAM_BOT_TOKEN != '' && secrets.TELEGRAM_CHAT_ID != '' placeholderplaceholder
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN placeholderplaceholder
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID placeholderplaceholder
+        continue-on-error: true
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/placeholder
+          VERSION=${TAG_NAME#vplaceholder
+          REPO="${{ github.repository placeholderplaceholder"
+          DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder/sub2api"
+
+          # 获取 tag message 内容
+          TAG_MESSAGE='${{ steps.tag_message.outputs.message placeholderplaceholder'
+
+          # 限制消息长度（Telegram 消息限制 4096 字符，预留空间给头尾固定内容）
+          if [ ${#TAG_MESSAGEplaceholder -gt 3500 ]; then
+            TAG_MESSAGE="${TAG_MESSAGE:0:3500placeholder..."
+          fi
+
+          # 构建消息内容
+          MESSAGE="🚀 *Sub2API 新版本发布！*"$'\n'$'\n'
+          MESSAGE+="📦 版本号: \`${VERSIONplaceholder\`"$'\n'$'\n'
+
+          # 添加更新内容
+          if [ -n "$TAG_MESSAGE" ]; then
+            MESSAGE+="${TAG_MESSAGEplaceholder"$'\n'$'\n'
+          fi
+
+          MESSAGE+="🐳 *Docker 部署:*"$'\n'
+          MESSAGE+="\`\`\`bash"$'\n'
+          MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
+          MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:latest"$'\n'
+          MESSAGE+="\`\`\`"$'\n'$'\n'
+          MESSAGE+="🔗 *相关链接:*"$'\n'
+          MESSAGE+="• [GitHub Release](https://github.com/${REPOplaceholder/releases/tag/${TAG_NAMEplaceholder)"$'\n'
+          MESSAGE+="• [Docker Hub](https://hub.docker.com/r/${DOCKER_IMAGEplaceholder)"$'\n'$'\n'
+          MESSAGE+="#Sub2API #Release #${TAG_NAME//./_placeholder"
+
+          # 发送消息
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKENplaceholder/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg chat_id "${TELEGRAM_CHAT_IDplaceholder" \
+              --arg text "${MESSAGEplaceholder" \
+              '{
+                chat_id: $chat_id,
+                text: $text,
+                parse_mode: "Markdown",
+                disable_web_page_preview: true
+              placeholder')"
