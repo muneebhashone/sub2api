@@ -47,9 +47,10 @@ var antigravityModelMapping = map[string]string{
 	"claude-sonnet-4-5-20250929": "claude-sonnet-4-5-thinking",
 	"claude-opus-4":              "claude-opus-4-5-thinking",
 	"claude-opus-4-5-20251101":   "claude-opus-4-5-thinking",
-	"claude-haiku-4":             "claude-sonnet-4-5",
-	"claude-3-haiku-20240307":    "claude-sonnet-4-5",
-	"placeholder":  "claude-sonnet-4-5",
+	"claude-haiku-4":             "gemini-3-flash",
+	"claude-haiku-4-5":           "gemini-3-flash",
+	"claude-3-haiku-20240307":    "gemini-3-flash",
+	"placeholder":  "gemini-3-flash",
 placeholder
 
 // AntigravityGatewayService 处理 Antigravity 平台的 API 转发
@@ -189,26 +190,23 @@ placeholder
 	return line
 placeholder
 
-// Forward 转发 Claude 协议请求
+// Forward 转发 Claude 协议请求（Claude → Gemini 转换）
 func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*ForwardResult, error) {
 	startTime := time.Now()
 
-	// 解析请求获取 model 和 stream
-	var req struct {
-		Model  string `json:"model"`
-		Stream bool   `json:"stream"`
+	// 解析 Claude 请求
+	var claudeReq antigravity.ClaudeRequest
+	if err := json.Unmarshal(body, &claudeReq); err != nil {
+		return nil, fmt.Errorf("parse claude request: %w", err)
 placeholder
-	if err := json.Unmarshal(body, &req); err != nil {
-		return nil, fmt.Errorf("parse request: %w", err)
-placeholder
-	if strings.TrimSpace(req.Model) == "" {
+	if strings.TrimSpace(claudeReq.Model) == "" {
 		return nil, fmt.Errorf("missing model")
 placeholder
 
-	originalModel := req.Model
-	mappedModel := s.getMappedModel(account, req.Model)
-	if mappedModel != req.Model {
-		log.Printf("Antigravity model mapping: %s -> %s (account: %s)", req.Model, mappedModel, account.Name)
+	originalModel := claudeReq.Model
+	mappedModel := s.getMappedModel(account, claudeReq.Model)
+	if mappedModel != claudeReq.Model {
+		log.Printf("Antigravity model mapping: %s -> %s (account: %s)", claudeReq.Model, mappedModel, account.Name)
 placeholder
 
 	// 获取 access_token
@@ -232,26 +230,26 @@ placeholder
 		proxyURL = account.Proxy.URL()
 placeholder
 
-	// 包装请求
-	wrappedBody, err := s.wrapV1InternalRequest(projectID, mappedModel, body)
+	// 转换 Claude 请求为 Gemini 格式
+	geminiBody, err := antigravity.TransformClaudeToGemini(&claudeReq, projectID, mappedModel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("transform request: %w", err)
 placeholder
 
 	// 构建上游 URL
 	action := "generateContent"
-	if req.Stream {
+	if claudeReq.Stream {
 		action = "streamGenerateContent"
 placeholder
 	fullURL := fmt.Sprintf("%s/v1internal:%s", antigravity.BaseURL, action)
-	if req.Stream {
+	if claudeReq.Stream {
 		fullURL += "?alt=sse"
 placeholder
 
 	// 重试循环
 	var resp *http.Response
 	for attempt := 1; attempt <= antigravityMaxRetries; attempt++ {
-		upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(wrappedBody))
+		upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(geminiBody))
 		if err != nil {
 			return nil, err
 	placeholder
@@ -313,15 +311,15 @@ placeholder
 
 	var usage *ClaudeUsage
 	var firstTokenMs *int
-	if req.Stream {
-		streamRes, err := s.handleStreamingResponse(c, resp, startTime, originalModel)
+	if claudeReq.Stream {
+		streamRes, err := s.handleClaudeStreamingResponse(c, resp, startTime, originalModel)
 		if err != nil {
 			return nil, err
 	placeholder
 		usage = streamRes.usage
 		firstTokenMs = streamRes.firstTokenMs
 placeholder else {
-		usage, err = s.handleNonStreamingResponse(c, resp, originalModel)
+		usage, err = s.handleClaudeNonStreamingResponse(c, resp, originalModel)
 		if err != nil {
 			return nil, err
 	placeholder
@@ -331,7 +329,7 @@ placeholder
 		RequestID:    requestID,
 		Usage:        *usage,
 		Model:        originalModel, // 使用原始模型用于计费和日志
-		Stream:       req.Stream,
+		Stream:       claudeReq.Stream,
 		Duration:     time.Since(startTime),
 		FirstTokenMs: firstTokenMs,
 placeholder, nil
@@ -782,6 +780,9 @@ placeholder)
 placeholder
 
 func (s *AntigravityGatewayService) writeMappedClaudeError(c *gin.Context, upstreamStatus int, body []byte) error {
+	// 记录上游错误详情便于调试
+	log.Printf("Antigravity upstream error %d: %s", upstreamStatus, string(body))
+
 	var statusCode int
 	var errType, errMsg string
 
@@ -842,4 +843,102 @@ placeholder
 	placeholder,
 placeholder)
 	return fmt.Errorf("%s", message)
+placeholder
+
+// handleClaudeNonStreamingResponse 处理 Claude 非流式响应（Gemini → Claude 转换）
+func (s *AntigravityGatewayService) handleClaudeNonStreamingResponse(c *gin.Context, resp *http.Response, originalModel string) (*ClaudeUsage, error) {
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil {
+		return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to read upstream response")
+placeholder
+
+	// 转换 Gemini 响应为 Claude 格式
+	claudeResp, agUsage, err := antigravity.TransformGeminiToClaude(body, originalModel)
+	if err != nil {
+		log.Printf("Transform Gemini to Claude failed: %v, body: %s", err, string(body))
+		return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to parse upstream response")
+placeholder
+
+	c.Data(http.StatusOK, "application/json", claudeResp)
+
+	// 转换为 service.ClaudeUsage
+	usage := &ClaudeUsage{
+		InputTokens:              agUsage.InputTokens,
+		OutputTokens:             agUsage.OutputTokens,
+		CacheCreationInputTokens: agUsage.CacheCreationInputTokens,
+		CacheReadInputTokens:     agUsage.CacheReadInputTokens,
+placeholder
+	return usage, nil
+placeholder
+
+// handleClaudeStreamingResponse 处理 Claude 流式响应（Gemini SSE → Claude SSE 转换）
+func (s *AntigravityGatewayService) handleClaudeStreamingResponse(c *gin.Context, resp *http.Response, startTime time.Time, originalModel string) (*antigravityStreamResult, error) {
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+	c.Status(http.StatusOK)
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		return nil, errors.New("streaming not supported")
+placeholder
+
+	processor := antigravity.NewStreamingProcessor(originalModel)
+	var firstTokenMs *int
+	reader := bufio.NewReader(resp.Body)
+
+	// 辅助函数：转换 antigravity.ClaudeUsage 到 service.ClaudeUsage
+	convertUsage := func(agUsage *antigravity.ClaudeUsage) *ClaudeUsage {
+		if agUsage == nil {
+			return &ClaudeUsage{placeholder
+	placeholder
+		return &ClaudeUsage{
+			InputTokens:              agUsage.InputTokens,
+			OutputTokens:             agUsage.OutputTokens,
+			CacheCreationInputTokens: agUsage.CacheCreationInputTokens,
+			CacheReadInputTokens:     agUsage.CacheReadInputTokens,
+	placeholder
+placeholder
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return nil, fmt.Errorf("stream read error: %w", err)
+	placeholder
+
+		if len(line) > 0 {
+			// 处理 SSE 行，转换为 Claude 格式
+			claudeEvents := processor.ProcessLine(strings.TrimRight(line, "\r\n"))
+
+			if len(claudeEvents) > 0 {
+				if firstTokenMs == nil {
+					ms := int(time.Since(startTime).Milliseconds())
+					firstTokenMs = &ms
+			placeholder
+
+				if _, writeErr := c.Writer.Write(claudeEvents); writeErr != nil {
+					finalEvents, agUsage := processor.Finish()
+					if len(finalEvents) > 0 {
+						_, _ = c.Writer.Write(finalEvents)
+				placeholder
+					return &antigravityStreamResult{usage: convertUsage(agUsage), firstTokenMs: firstTokenMsplaceholder, writeErr
+			placeholder
+				flusher.Flush()
+		placeholder
+	placeholder
+
+		if errors.Is(err, io.EOF) {
+			break
+	placeholder
+placeholder
+
+	// 发送结束事件
+	finalEvents, agUsage := processor.Finish()
+	if len(finalEvents) > 0 {
+		_, _ = c.Writer.Write(finalEvents)
+		flusher.Flush()
+placeholder
+
+	return &antigravityStreamResult{usage: convertUsage(agUsage), firstTokenMs: firstTokenMsplaceholder, nil
 placeholder
