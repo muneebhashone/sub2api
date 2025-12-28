@@ -27,6 +27,9 @@ export async function list(
     status?: 'active' | 'expired' | 'revoked'
     user_id?: number
     group_id?: number
+  placeholder,
+  options?: {
+    signal?: AbortSignal
   placeholder
 ): Promise<PaginatedResponse<UserSubscription>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<UserSubscription>>(
@@ -36,7 +39,8 @@ export async function list(
         page,
         page_size: pageSize,
         ...filters
-      placeholder
+      placeholder,
+      signal: options?.signal
     placeholder
   )
   return data

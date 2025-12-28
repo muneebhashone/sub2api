@@ -41,9 +41,13 @@ placeholder
  * @param params - Query parameters for filtering and pagination
  * @returns Paginated list of usage logs
  */
-export async function list(params: AdminUsageQueryParams): Promise<PaginatedResponse<UsageLog>> {
+export async function list(
+  params: AdminUsageQueryParams,
+  options?: { signal?: AbortSignal placeholder
+): Promise<PaginatedResponse<UsageLog>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<UsageLog>>('/admin/usage', {
-    params
+    params,
+    signal: options?.signal
   placeholder)
   return data
 placeholder

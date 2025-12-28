@@ -30,6 +30,9 @@ export async function list(
     type?: string
     status?: string
     search?: string
+  placeholder,
+  options?: {
+    signal?: AbortSignal
   placeholder
 ): Promise<PaginatedResponse<Account>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<Account>>('/admin/accounts', {
@@ -37,7 +40,8 @@ export async function list(
       page,
       page_size: pageSize,
       ...filters
-    placeholder
+    placeholder,
+    signal: options?.signal
   placeholder)
   return data
 placeholder

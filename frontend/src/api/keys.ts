@@ -10,14 +10,19 @@ import type { ApiKey, CreateApiKeyRequest, UpdateApiKeyRequest, PaginatedRespons
  * List all API keys for current user
  * @param page - Page number (default: 1)
  * @param pageSize - Items per page (default: 10)
+ * @param options - Optional request options
  * @returns Paginated list of API keys
  */
 export async function list(
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  options?: {
+    signal?: AbortSignal
+  placeholder
 ): Promise<PaginatedResponse<ApiKey>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<ApiKey>>('/keys', {
-    params: { page, page_size: pageSize placeholder
+    params: { page, page_size: pageSize placeholder,
+    signal: options?.signal
   placeholder)
   return data
 placeholder
