@@ -271,13 +271,14 @@ placeholder
 			respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 			_ = resp.Body.Close()
 
-			if resp.StatusCode == 429 {
-				s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
-		placeholder
 			if attempt < antigravityMaxRetries {
 				log.Printf("Antigravity account %d: upstream status %d, retry %d/%d", account.ID, resp.StatusCode, attempt, antigravityMaxRetries)
 				sleepAntigravityBackoff(attempt)
 				continue
+		placeholder
+			// 所有重试都失败，标记限流状态
+			if resp.StatusCode == 429 {
+				s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
 		placeholder
 			// 最后一次尝试也失败
 			resp = &http.Response{
