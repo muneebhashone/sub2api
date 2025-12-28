@@ -18,8 +18,10 @@ func DefaultModels() []Model {
 	methods := []string{"generateContent", "streamGenerateContent"placeholder
 	return []Model{
 		{Name: "models/gemini-3-pro-preview", SupportedGenerationMethods: methodsplaceholder,
+		{Name: "models/gemini-3-flash-preview", SupportedGenerationMethods: methodsplaceholder,
+		{Name: "models/gemini-2.5-pro", SupportedGenerationMethods: methodsplaceholder,
+		{Name: "models/gemini-2.5-flash", SupportedGenerationMethods: methodsplaceholder,
 		{Name: "models/gemini-2.0-flash", SupportedGenerationMethods: methodsplaceholder,
-		{Name: "models/gemini-2.0-flash-lite", SupportedGenerationMethods: methodsplaceholder,
 		{Name: "models/gemini-1.5-pro", SupportedGenerationMethods: methodsplaceholder,
 		{Name: "models/gemini-1.5-flash", SupportedGenerationMethods: methodsplaceholder,
 		{Name: "models/gemini-1.5-flash-8b", SupportedGenerationMethods: methodsplaceholder,
