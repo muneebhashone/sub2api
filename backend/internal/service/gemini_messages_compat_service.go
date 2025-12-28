@@ -33,11 +33,12 @@ const (
 )
 
 type GeminiMessagesCompatService struct {
-	accountRepo      AccountRepository
-	cache            GatewayCache
-	tokenProvider    *GeminiTokenProvider
-	rateLimitService *RateLimitService
-	httpUpstream     HTTPUpstream
+	accountRepo              AccountRepository
+	cache                    GatewayCache
+	tokenProvider            *GeminiTokenProvider
+	rateLimitService         *RateLimitService
+	httpUpstream             HTTPUpstream
+	antigravityGatewayService *AntigravityGatewayService
 placeholder
 
 func NewGeminiMessagesCompatService(
@@ -46,13 +47,15 @@ func NewGeminiMessagesCompatService(
 	tokenProvider *GeminiTokenProvider,
 	rateLimitService *RateLimitService,
 	httpUpstream HTTPUpstream,
+	antigravityGatewayService *AntigravityGatewayService,
 ) *GeminiMessagesCompatService {
 	return &GeminiMessagesCompatService{
-		accountRepo:      accountRepo,
-		cache:            cache,
-		tokenProvider:    tokenProvider,
-		rateLimitService: rateLimitService,
-		httpUpstream:     httpUpstream,
+		accountRepo:              accountRepo,
+		cache:                    cache,
+		tokenProvider:            tokenProvider,
+		rateLimitService:         rateLimitService,
+		httpUpstream:             httpUpstream,
+		antigravityGatewayService: antigravityGatewayService,
 placeholder
 placeholder
 
@@ -67,12 +70,15 @@ placeholder
 
 func (s *GeminiMessagesCompatService) SelectAccountForModelWithExclusions(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{placeholder) (*Account, error) {
 	cacheKey := "gemini:" + sessionHash
+	platforms := []string{PlatformGemini, PlatformAntigravityplaceholder
+
 	if sessionHash != "" {
 		accountID, err := s.cache.GetSessionAccountID(ctx, cacheKey)
 		if err == nil && accountID > 0 {
 			if _, excluded := excludedIDs[accountID]; !excluded {
 				account, err := s.accountRepo.GetByID(ctx, accountID)
-				if err == nil && account.IsSchedulable() && account.Platform == PlatformGemini && (requestedModel == "" || account.IsModelSupported(requestedModel)) {
+				// 支持 gemini 和 antigravity 平台的粘性会话
+				if err == nil && account.IsSchedulable() && (account.Platform == PlatformGemini || account.Platform == PlatformAntigravity) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
 					_ = s.cache.RefreshSessionTTL(ctx, cacheKey, geminiStickySessionTTL)
 					return account, nil
 			placeholder
@@ -80,12 +86,13 @@ func (s *GeminiMessagesCompatService) SelectAccountForModelWithExclusions(ctx co
 	placeholder
 placeholder
 
+	// 同时查询 gemini 和 antigravity 平台的可调度账户
 	var accounts []Account
 	var err error
 	if groupID != nil {
-		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, PlatformGemini)
+		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, platforms)
 placeholder else {
-		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, PlatformGemini)
+		accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, platforms)
 placeholder
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
@@ -97,7 +104,8 @@ placeholder
 		if _, excluded := excludedIDs[acc.ID]; excluded {
 			continue
 	placeholder
-		if requestedModel != "" && !acc.IsModelSupported(requestedModel) {
+		// 根据平台类型分别检查模型支持
+		if requestedModel != "" && !s.isModelSupportedByAccount(acc, requestedModel) {
 			continue
 	placeholder
 		if selected == nil {
@@ -127,9 +135,9 @@ placeholder
 
 	if selected == nil {
 		if requestedModel != "" {
-			return nil, fmt.Errorf("no available Gemini accounts supporting model: %s", requestedModel)
+			return nil, fmt.Errorf("no available Gemini/Antigravity accounts supporting model: %s", requestedModel)
 	placeholder
-		return nil, errors.New("no available Gemini accounts")
+		return nil, errors.New("no available Gemini/Antigravity accounts")
 placeholder
 
 	if sessionHash != "" {
@@ -137,6 +145,34 @@ placeholder
 placeholder
 
 	return selected, nil
+placeholder
+
+// isModelSupportedByAccount 根据账户平台检查模型支持
+func (s *GeminiMessagesCompatService) isModelSupportedByAccount(account *Account, requestedModel string) bool {
+	if account.Platform == PlatformAntigravity {
+		return IsAntigravityModelSupported(requestedModel)
+placeholder
+	return account.IsModelSupported(requestedModel)
+placeholder
+
+// GetAntigravityGatewayService 返回 AntigravityGatewayService
+func (s *GeminiMessagesCompatService) GetAntigravityGatewayService() *AntigravityGatewayService {
+	return s.antigravityGatewayService
+placeholder
+
+// HasAntigravityAccounts 检查是否有可用的 antigravity 账户
+func (s *GeminiMessagesCompatService) HasAntigravityAccounts(ctx context.Context, groupID *int64) (bool, error) {
+	var accounts []Account
+	var err error
+	if groupID != nil {
+		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, PlatformAntigravity)
+placeholder else {
+		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, PlatformAntigravity)
+placeholder
+	if err != nil {
+		return false, err
+placeholder
+	return len(accounts) > 0, nil
 placeholder
 
 // SelectAccountForAIStudioEndpoints selects an account that is likely to succeed against

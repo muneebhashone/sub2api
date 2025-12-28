@@ -32,6 +32,13 @@ placeholder
 
 	account, err := h.geminiCompatService.SelectAccountForAIStudioEndpoints(c.Request.Context(), apiKey.GroupID)
 	if err != nil {
+		// 没有 gemini 账户，检查是否有 antigravity 账户可用
+		hasAntigravity, _ := h.geminiCompatService.HasAntigravityAccounts(c.Request.Context(), apiKey.GroupID)
+		if hasAntigravity {
+			// antigravity 账户使用静态模型列表
+			c.JSON(http.StatusOK, gemini.FallbackModelsList())
+			return
+	placeholder
 		googleError(c, http.StatusServiceUnavailable, "No available Gemini accounts: "+err.Error())
 		return
 placeholder
@@ -69,6 +76,13 @@ placeholder
 
 	account, err := h.geminiCompatService.SelectAccountForAIStudioEndpoints(c.Request.Context(), apiKey.GroupID)
 	if err != nil {
+		// 没有 gemini 账户，检查是否有 antigravity 账户可用
+		hasAntigravity, _ := h.geminiCompatService.HasAntigravityAccounts(c.Request.Context(), apiKey.GroupID)
+		if hasAntigravity {
+			// antigravity 账户使用静态模型信息
+			c.JSON(http.StatusOK, gemini.FallbackModel(modelName))
+			return
+	placeholder
 		googleError(c, http.StatusServiceUnavailable, "No available Gemini accounts: "+err.Error())
 		return
 placeholder
@@ -182,8 +196,13 @@ placeholder
 			return
 	placeholder
 
-		// 5) forward (writes response to client)
-		result, err := h.geminiCompatService.ForwardNative(c.Request.Context(), c, account, modelName, action, stream, body)
+		// 5) forward (根据平台分流)
+		var result *service.ForwardResult
+		if account.Platform == service.PlatformAntigravity {
+			result, err = h.antigravityGatewayService.ForwardGemini(c.Request.Context(), c, account, modelName, action, stream, body)
+	placeholder else {
+			result, err = h.geminiCompatService.ForwardNative(c.Request.Context(), c, account, modelName, action, stream, body)
+	placeholder
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
 	placeholder
