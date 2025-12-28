@@ -280,6 +280,7 @@ placeholder{
 
 					service.SettingKeyDefaultConcurrency: "5",
 					service.SettingKeyDefaultBalance:     "1.25",
+					service.SettingKeySimpleMode:         "false",
 			placeholder)
 		placeholder,
 			method:     http.MethodGet,
@@ -308,7 +309,8 @@ placeholder{
 					"contact_info": "support",
 					"doc_url": "https://docs.example.com",
 					"default_concurrency": 5,
-					"default_balance": 1.25
+					"default_balance": 1.25,
+					"simple_mode": false
 			placeholder
 		placeholder`,
 	placeholder,
