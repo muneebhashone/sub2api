@@ -59,7 +59,8 @@ placeholder{
 					"status": "active",
 					"allowed_groups": null,
 					"created_at": "2025-01-02T03:04:05Z",
-					"updated_at": "2025-01-02T03:04:05Z"
+					"updated_at": "2025-01-02T03:04:05Z",
+					"run_mode": "standard"
 			placeholder
 		placeholder`,
 	placeholder,
@@ -371,6 +372,7 @@ placeholder
 		Default: config.DefaultConfig{
 			ApiKeyPrefix: "sk-",
 	placeholder,
+		RunMode: config.RunModeStandard,
 placeholder
 
 	userService := service.NewUserService(userRepo)
@@ -382,7 +384,7 @@ placeholder
 	settingRepo := newStubSettingRepo()
 	settingService := service.NewSettingService(settingRepo, cfg)
 
-	authHandler := handler.NewAuthHandler(nil, userService)
+	authHandler := handler.NewAuthHandler(cfg, nil, userService)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	usageHandler := handler.NewUsageHandler(usageService, apiKeyService)
 	adminSettingHandler := adminhandler.NewSettingHandler(settingService, nil, nil)
