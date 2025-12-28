@@ -46,7 +46,7 @@
         </div>
 
         <!-- Personal Section for Admin (hidden in simple mode) -->
-        <div v-if="!simpleMode" class="sidebar-section">
+        <div v-if="!authStore.isSimpleMode" class="sidebar-section">
           <div v-if="!sidebarCollapsed" class="sidebar-section-title">
             {{ t('nav.myAccount') placeholderplaceholder
           </div>
@@ -412,7 +412,7 @@ const userNavItems = computed(() => {
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
     { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
   ]
-  return simpleMode.value ? items.filter(item => !item.hideInSimpleMode) : items
+  return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
 placeholder)
 
 // Personal navigation items (for admin's "My Account" section, without Dashboard)
@@ -424,7 +424,7 @@ const personalNavItems = computed(() => {
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
     { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
   ]
-  return simpleMode.value ? items.filter(item => !item.hideInSimpleMode) : items
+  return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
 placeholder)
 
 // Admin navigation items
@@ -441,7 +441,7 @@ const adminNavItems = computed(() => {
   ]
 
   // 简单模式下，在系统设置前插入 API密钥
-  if (simpleMode.value) {
+  if (authStore.isSimpleMode) {
     const filtered = baseItems.filter(item => !item.hideInSimpleMode)
     filtered.push({ path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder)
     filtered.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder)
