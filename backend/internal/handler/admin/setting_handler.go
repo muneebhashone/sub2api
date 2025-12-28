@@ -12,13 +12,15 @@ import (
 type SettingHandler struct {
 	settingService *service.SettingService
 	emailService   *service.EmailService
+	userService    *service.UserService
 placeholder
 
 // NewSettingHandler 创建系统设置处理器
-func NewSettingHandler(settingService *service.SettingService, emailService *service.EmailService) *SettingHandler {
+func NewSettingHandler(settingService *service.SettingService, emailService *service.EmailService, userService *service.UserService) *SettingHandler {
 	return &SettingHandler{
 		settingService: settingService,
 		emailService:   emailService,
+		userService:    userService,
 placeholder
 placeholder
 
@@ -52,6 +54,7 @@ placeholder
 		DocUrl:              settings.DocUrl,
 		DefaultConcurrency:  settings.DefaultConcurrency,
 		DefaultBalance:      settings.DefaultBalance,
+		SimpleMode:          settings.SimpleMode,
 placeholder)
 placeholder
 
@@ -86,6 +89,9 @@ type UpdateSettingsRequest struct {
 	// 默认配置
 	DefaultConcurrency int     `json:"default_concurrency"`
 	DefaultBalance     float64 `json:"default_balance"`
+
+	// 使用模式
+	SimpleMode bool `json:"simple_mode"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -108,8 +114,14 @@ placeholder
 		req.SmtpPort = 587
 placeholder
 
+	// 简单模式下自动关闭开放注册
+	registrationEnabled := req.RegistrationEnabled
+	if req.SimpleMode {
+		registrationEnabled = false
+placeholder
+
 	settings := &service.SystemSettings{
-		RegistrationEnabled: req.RegistrationEnabled,
+		RegistrationEnabled: registrationEnabled,
 		EmailVerifyEnabled:  req.EmailVerifyEnabled,
 		SmtpHost:            req.SmtpHost,
 		SmtpPort:            req.SmtpPort,
@@ -129,11 +141,20 @@ placeholder
 		DocUrl:              req.DocUrl,
 		DefaultConcurrency:  req.DefaultConcurrency,
 		DefaultBalance:      req.DefaultBalance,
+		SimpleMode:          req.SimpleMode,
 placeholder
 
 	if err := h.settingService.UpdateSettings(c.Request.Context(), settings); err != nil {
 		response.ErrorFrom(c, err)
 		return
+placeholder
+
+	// 如果切换到简单模式，自动将管理员并发数设为 99999
+	if req.SimpleMode {
+		admin, err := h.userService.GetFirstAdmin(c.Request.Context())
+		if err == nil && admin != nil {
+			_ = h.userService.UpdateConcurrency(c.Request.Context(), admin.ID, 99999)
+	placeholder
 placeholder
 
 	// 重新获取设置返回
@@ -164,6 +185,7 @@ placeholder
 		DocUrl:              updatedSettings.DocUrl,
 		DefaultConcurrency:  updatedSettings.DefaultConcurrency,
 		DefaultBalance:      updatedSettings.DefaultBalance,
+		SimpleMode:          updatedSettings.SimpleMode,
 placeholder)
 placeholder
 
