@@ -148,6 +148,14 @@ func registerGeminiOAuthRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 placeholder
 placeholder
 
+func registerAntigravityOAuthRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	antigravity := admin.Group("/antigravity")
+	{
+		antigravity.POST("/oauth/auth-url", h.Admin.AntigravityOAuth.GenerateAuthURL)
+		antigravity.POST("/oauth/exchange-code", h.Admin.AntigravityOAuth.ExchangeCode)
+placeholder
+placeholder
+
 func registerProxyRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	proxies := admin.Group("/proxies")
 	{
