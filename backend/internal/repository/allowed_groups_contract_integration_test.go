@@ -20,7 +20,8 @@ placeholder
 
 func TestUserRepository_RemoveGroupFromAllowedGroups_RemovesAllOccurrences(t *testing.T) {
 	ctx := context.Background()
-	entClient, sqlTx := testEntSQLTx(t)
+	tx := testEntTx(t)
+	entClient := tx.Client()
 
 	targetGroup, err := entClient.Group.Create().
 		SetName(uniqueTestValue(t, "target-group")).
@@ -33,7 +34,7 @@ placeholder
 		Save(ctx)
 placeholder
 
-	repo := newUserRepositoryWithSQL(entClient, sqlTx)
+	repo := newUserRepositoryWithSQL(entClient, tx)
 
 	u1 := &service.User{
 		Email:         uniqueTestValue(t, "u1") + "@example.com",
@@ -81,7 +82,8 @@ placeholder
 
 func TestGroupRepository_DeleteCascade_RemovesAllowedGroupsAndClearsApiKeys(t *testing.T) {
 	ctx := context.Background()
-	entClient, sqlTx := testEntSQLTx(t)
+	tx := testEntTx(t)
+	entClient := tx.Client()
 
 	targetGroup, err := entClient.Group.Create().
 		SetName(uniqueTestValue(t, "delete-cascade-target")).
@@ -94,8 +96,8 @@ placeholder
 		Save(ctx)
 placeholder
 
-	userRepo := newUserRepositoryWithSQL(entClient, sqlTx)
-	groupRepo := newGroupRepositoryWithSQL(entClient, sqlTx)
+	userRepo := newUserRepositoryWithSQL(entClient, tx)
+	groupRepo := newGroupRepositoryWithSQL(entClient, tx)
 	apiKeyRepo := NewApiKeyRepository(entClient)
 
 	u := &service.User{
@@ -141,4 +143,3 @@ placeholder
 placeholder
 	require.Nil(t, keyAfter.GroupID)
 placeholder
-

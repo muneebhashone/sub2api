@@ -21,9 +21,9 @@ placeholder
 
 func (s *ApiKeyRepoSuite) SetupTest() {
 	s.ctx = context.Background()
-	entClient, _ := testEntSQLTx(s.T())
-	s.client = entClient
-	s.repo = NewApiKeyRepository(entClient).(*apiKeyRepository)
+	tx := testEntTx(s.T())
+	s.client = tx.Client()
+	s.repo = NewApiKeyRepository(s.client).(*apiKeyRepository)
 placeholder
 
 func TestApiKeyRepoSuite(t *testing.T) {

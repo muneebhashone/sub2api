@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"sort"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -17,7 +18,6 @@ import (
 type userRepository struct {
 	client *dbent.Client
 	sql    sqlExecutor
-	begin  sqlBeginner
 placeholder
 
 func NewUserRepository(client *dbent.Client, sqlDB *sql.DB) service.UserRepository {
@@ -25,11 +25,7 @@ func NewUserRepository(client *dbent.Client, sqlDB *sql.DB) service.UserReposito
 placeholder
 
 func newUserRepositoryWithSQL(client *dbent.Client, sqlq sqlExecutor) *userRepository {
-	var beginner sqlBeginner
-	if b, ok := sqlq.(sqlBeginner); ok {
-		beginner = b
-placeholder
-	return &userRepository{client: client, sql: sqlq, begin: beginnerplaceholder
+	return &userRepository{client: client, sql: sqlqplaceholder
 placeholder
 
 func (r *userRepository) Create(ctx context.Context, userIn *service.User) error {
@@ -37,22 +33,20 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 		return nil
 placeholder
 
-	exec := r.sql
-	txClient := r.client
-	var sqlTx *sql.Tx
+	// 统一使用 ent 的事务：保证用户与允许分组的更新原子化，
+	// 并避免基于 *sql.Tx 手动构造 ent client 导致的 ExecQuerier 断言错误。
+	tx, err := r.client.Tx(ctx)
+	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
+		return err
+placeholder
 
-	if r.begin != nil {
-		var err error
-		sqlTx, err = r.begin.BeginTx(ctx, nil)
-		if err != nil {
-			return err
-	placeholder
-		exec = sqlTx
-		txClient = entClientFromSQLTx(sqlTx)
-		// 注意：不能调用 txClient.Close()，因为基于事务的 ent client
-		// 在 Close() 时会尝试将 ExecQuerier 断言为 *sql.DB，但实际是 *sql.Tx
-		// 事务的清理通过 sqlTx.Rollback() 和 sqlTx.Commit() 完成
-		defer func() { _ = sqlTx.Rollback() placeholder()
+	var txClient *dbent.Client
+	if err == nil {
+		defer func() { _ = tx.Rollback() placeholder()
+		txClient = tx.Client()
+placeholder else {
+		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
+		txClient = r.client
 placeholder
 
 	created, err := txClient.User.Create().
@@ -70,12 +64,12 @@ placeholder
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
 placeholder
 
-	if err := r.syncUserAllowedGroups(ctx, txClient, exec, created.ID, userIn.AllowedGroups); err != nil {
+	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, created.ID, userIn.AllowedGroups); err != nil {
 		return err
 placeholder
 
-	if sqlTx != nil {
-		if err := sqlTx.Commit(); err != nil {
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
 			return err
 	placeholder
 placeholder
@@ -121,22 +115,19 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 		return nil
 placeholder
 
-	exec := r.sql
-	txClient := r.client
-	var sqlTx *sql.Tx
+	// 使用 ent 事务包裹用户更新与 allowed_groups 同步，避免跨层事务不一致。
+	tx, err := r.client.Tx(ctx)
+	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
+		return err
+placeholder
 
-	if r.begin != nil {
-		var err error
-		sqlTx, err = r.begin.BeginTx(ctx, nil)
-		if err != nil {
-			return err
-	placeholder
-		exec = sqlTx
-		txClient = entClientFromSQLTx(sqlTx)
-		// 注意：不能调用 txClient.Close()，因为基于事务的 ent client
-		// 在 Close() 时会尝试将 ExecQuerier 断言为 *sql.DB，但实际是 *sql.Tx
-		// 事务的清理通过 sqlTx.Rollback() 和 sqlTx.Commit() 完成
-		defer func() { _ = sqlTx.Rollback() placeholder()
+	var txClient *dbent.Client
+	if err == nil {
+		defer func() { _ = tx.Rollback() placeholder()
+		txClient = tx.Client()
+placeholder else {
+		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
+		txClient = r.client
 placeholder
 
 	updated, err := txClient.User.UpdateOneID(userIn.ID).
@@ -154,12 +145,12 @@ placeholder
 		return translatePersistenceError(err, service.ErrUserNotFound, service.ErrEmailExists)
 placeholder
 
-	if err := r.syncUserAllowedGroups(ctx, txClient, exec, updated.ID, userIn.AllowedGroups); err != nil {
+	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
 		return err
 placeholder
 
-	if sqlTx != nil {
-		if err := sqlTx.Commit(); err != nil {
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
 			return err
 	placeholder
 placeholder
@@ -289,8 +280,10 @@ func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool,
 placeholder
 
 func (r *userRepository) RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error) {
-	if r.sql == nil {
-		return 0, nil
+	exec := r.sql
+	if exec == nil {
+		// 未注入 sqlExecutor 时，退回到 ent client 的 ExecContext（支持事务）。
+		exec = r.client
 placeholder
 
 	joinAffected, err := r.client.UserAllowedGroup.Delete().
@@ -300,7 +293,7 @@ placeholder
 		return 0, err
 placeholder
 
-	arrayRes, err := r.sql.ExecContext(
+	arrayRes, err := exec.ExecContext(
 		ctx,
 		"UPDATE users SET allowed_groups = array_remove(allowed_groups, $1), updated_at = NOW() WHERE $1 = ANY(allowed_groups)",
 		groupID,
@@ -360,6 +353,56 @@ placeholder
 placeholder
 
 	return out, nil
+placeholder
+
+// syncUserAllowedGroupsWithClient 在 ent client/事务内同步用户允许分组：
+// 1) 以 user_allowed_groups 为读写源，确保新旧逻辑一致；
+// 2) 额外更新 users.allowed_groups（历史字段）以保持兼容。
+func (r *userRepository) syncUserAllowedGroupsWithClient(ctx context.Context, client *dbent.Client, userID int64, groupIDs []int64) error {
+	if client == nil {
+		return nil
+placeholder
+
+	// Keep join table as the source of truth for reads.
+	if _, err := client.UserAllowedGroup.Delete().Where(userallowedgroup.UserIDEQ(userID)).Exec(ctx); err != nil {
+		return err
+placeholder
+
+	unique := make(map[int64]struct{placeholder, len(groupIDs))
+	for _, id := range groupIDs {
+		if id <= 0 {
+			continue
+	placeholder
+		unique[id] = struct{placeholder{placeholder
+placeholder
+
+	legacyGroups := make([]int64, 0, len(unique))
+	if len(unique) > 0 {
+		creates := make([]*dbent.UserAllowedGroupCreate, 0, len(unique))
+		for groupID := range unique {
+			creates = append(creates, client.UserAllowedGroup.Create().SetUserID(userID).SetGroupID(groupID))
+			legacyGroups = append(legacyGroups, groupID)
+	placeholder
+		if err := client.UserAllowedGroup.
+			CreateBulk(creates...).
+			OnConflictColumns(userallowedgroup.FieldUserID, userallowedgroup.FieldGroupID).
+			DoNothing().
+			Exec(ctx); err != nil {
+			return err
+	placeholder
+placeholder
+
+	// Phase 1 兼容：保持 users.allowed_groups（数组字段）同步，避免旧查询路径读取到过期数据。
+	var legacy any
+	if len(legacyGroups) > 0 {
+		sort.Slice(legacyGroups, func(i, j int) bool { return legacyGroups[i] < legacyGroups[j] placeholder)
+		legacy = pq.Array(legacyGroups)
+placeholder
+	if _, err := client.ExecContext(ctx, "UPDATE users SET allowed_groups = $1::bigint[] WHERE id = $2", legacy, userID); err != nil {
+		return err
+placeholder
+
+	return nil
 placeholder
 
 func (r *userRepository) syncUserAllowedGroups(ctx context.Context, client *dbent.Client, exec sqlExecutor, userID int64, groupIDs []int64) error {
