@@ -114,7 +114,7 @@ placeholder
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Token 交换请求失败: %w", err)
+		return nil, fmt.Errorf("token 交换请求失败: %w", err)
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
@@ -124,12 +124,12 @@ placeholder
 placeholder
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Token 交换失败 (HTTP %d): %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("token 交换失败 (HTTP %d): %s", resp.StatusCode, string(bodyBytes))
 placeholder
 
 	var tokenResp TokenResponse
 	if err := json.Unmarshal(bodyBytes, &tokenResp); err != nil {
-		return nil, fmt.Errorf("Token 解析失败: %w", err)
+		return nil, fmt.Errorf("token 解析失败: %w", err)
 placeholder
 
 	return &tokenResp, nil
@@ -151,7 +151,7 @@ placeholder
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Token 刷新请求失败: %w", err)
+		return nil, fmt.Errorf("token 刷新请求失败: %w", err)
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
@@ -161,12 +161,12 @@ placeholder
 placeholder
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Token 刷新失败 (HTTP %d): %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("token 刷新失败 (HTTP %d): %s", resp.StatusCode, string(bodyBytes))
 placeholder
 
 	var tokenResp TokenResponse
 	if err := json.Unmarshal(bodyBytes, &tokenResp); err != nil {
-		return nil, fmt.Errorf("Token 解析失败: %w", err)
+		return nil, fmt.Errorf("token 解析失败: %w", err)
 placeholder
 
 	return &tokenResp, nil
