@@ -45,8 +45,8 @@
           </router-link>
         </div>
 
-        <!-- Personal Section for Admin -->
-        <div class="sidebar-section">
+        <!-- Personal Section for Admin (hidden in simple mode) -->
+        <div v-if="!authStore.isSimpleMode" class="sidebar-section">
           <div v-if="!sidebarCollapsed" class="sidebar-section-title">
             {{ t('nav.myAccount') placeholderplaceholder
           </div>
@@ -402,36 +402,54 @@ const ChevronDoubleRightIcon = {
 placeholder
 
 // User navigation items (for regular users)
-const userNavItems = computed(() => [
-  { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
-  { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
-  { path: '/usage', label: t('nav.usage'), icon: ChartIcon placeholder,
-  { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon placeholder,
-  { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon placeholder,
-  { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
-])
+const userNavItems = computed(() => {
+  const items = [
+    { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
+    { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
+    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
+    { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
+    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
+    { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
+  ]
+  return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
+placeholder)
 
 // Personal navigation items (for admin's "My Account" section, without Dashboard)
-const personalNavItems = computed(() => [
-  { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
-  { path: '/usage', label: t('nav.usage'), icon: ChartIcon placeholder,
-  { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon placeholder,
-  { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon placeholder,
-  { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
-])
+const personalNavItems = computed(() => {
+  const items = [
+    { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
+    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
+    { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
+    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
+    { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
+  ]
+  return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
+placeholder)
 
 // Admin navigation items
-const adminNavItems = computed(() => [
-  { path: '/admin/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
-  { path: '/admin/users', label: t('nav.users'), icon: UsersIcon placeholder,
-  { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon placeholder,
-  { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon placeholder,
-  { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon placeholder,
-  { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon placeholder,
-  { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon placeholder,
-  { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon placeholder,
-  { path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder
-])
+const adminNavItems = computed(() => {
+  const baseItems = [
+    { path: '/admin/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
+    { path: '/admin/users', label: t('nav.users'), icon: UsersIcon, hideInSimpleMode: true placeholder,
+    { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon, hideInSimpleMode: true placeholder,
+    { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
+    { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon placeholder,
+    { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon placeholder,
+    { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true placeholder,
+    { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon placeholder,
+  ]
+
+  // 简单模式下，在系统设置前插入 API密钥
+  if (authStore.isSimpleMode) {
+    const filtered = baseItems.filter(item => !item.hideInSimpleMode)
+    filtered.push({ path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder)
+    filtered.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder)
+    return filtered
+  placeholder
+
+  baseItems.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder)
+  return baseItems
+placeholder)
 
 function toggleSidebar() {
   appStore.toggleSidebar()

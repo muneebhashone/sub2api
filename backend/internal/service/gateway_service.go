@@ -357,7 +357,10 @@ placeholder
 	// 2. 获取可调度账号列表（单平台）
 	var accounts []Account
 	var err error
-	if groupID != nil {
+	if s.cfg.RunMode == config.RunModeSimple {
+		// 简易模式：忽略 groupID，查询所有可用账号
+		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, platform)
+placeholder else if groupID != nil {
 		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, platform)
 placeholder else {
 		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, platform)
@@ -1224,6 +1227,12 @@ placeholder
 
 	if err := s.usageLogRepo.Create(ctx, usageLog); err != nil {
 		log.Printf("Create usage log failed: %v", err)
+placeholder
+
+	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+		log.Printf("[SIMPLE MODE] Usage recorded (not billed): user=%d, tokens=%d", usageLog.UserID, usageLog.TotalTokens())
+		s.deferredService.ScheduleLastUsedUpdate(account.ID)
+		return nil
 placeholder
 
 	// 根据计费类型执行扣费

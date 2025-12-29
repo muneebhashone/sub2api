@@ -32,7 +32,7 @@
                   : 'https://api.anthropic.com'
             "
           />
-          <p class="input-hint">{{ t('admin.accounts.baseUrlHint') placeholderplaceholder</p>
+          <p class="input-hint">{{ baseUrlHint placeholderplaceholder</p>
         </div>
         <div>
           <label class="input-label">{{ t('admin.accounts.apiKey') placeholderplaceholder</label>
@@ -497,8 +497,9 @@
         </div>
       </div>
 
-      <!-- Group Selection -->
+      <!-- Group Selection - 仅标准模式显示 -->
       <GroupSelector
+        v-if="!authStore.isSimpleMode"
         v-model="form.group_ids"
         :groups="groups"
         :platform="account?.platform"
@@ -549,6 +550,7 @@
 import { ref, reactive, computed, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
+import { useAuthStore placeholder from '@/stores/auth'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, Proxy, Group placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
@@ -571,6 +573,15 @@ placeholder>()
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
+const authStore = useAuthStore()
+
+// Platform-specific hint for Base URL
+const baseUrlHint = computed(() => {
+  if (!props.account) return t('admin.accounts.baseUrlHint')
+  if (props.account.platform === 'openai') return t('admin.accounts.openai.baseUrlHint')
+  if (props.account.platform === 'gemini') return t('admin.accounts.gemini.baseUrlHint')
+  return t('admin.accounts.baseUrlHint')
+placeholder)
 
 // Model mapping type
 interface ModelMapping {
