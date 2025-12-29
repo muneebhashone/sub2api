@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, onUnmounted, nextTick placeholder from 'vue'
+import { onMounted, onUnmounted, nextTick placeholder from 'vue'
 import { driver, type Driver, type DriveStep placeholder from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { useAuthStore as useUserStore placeholder from '@/stores/auth'
@@ -7,10 +7,8 @@ import { useI18n placeholder from 'vue-i18n'
 import { getAdminSteps, getUserSteps placeholder from '@/components/Guide/steps'
 
 export interface OnboardingOptions {
-  steps: DriveStep[]
   storageKey?: string
   autoStart?: boolean
-  onComplete?: () => void
 placeholder
 
 export function useOnboardingTour(options: OnboardingOptions) {
@@ -22,10 +20,30 @@ export function useOnboardingTour(options: OnboardingOptions) {
   // Timing constants for better maintainability
   const TIMING = {
     INTERACTIVE_WAIT_MS: 800,        // Default wait time for interactive steps
-    SELECT_WAIT_MS: 2500,            // Extended wait for Select components
     ELEMENT_TIMEOUT_MS: 8000,        // Timeout for element detection
     AUTO_START_DELAY_MS: 1000        // Delay before auto-starting tour
   placeholder as const
+
+  // Helper: Check if a step is interactive (only close button shown)
+  const isInteractiveStep = (step: DriveStep): boolean => {
+    return step.popover?.showButtons?.length === 1 &&
+           step.popover.showButtons[0] === 'close'
+  placeholder
+
+  // Helper: Clean up click listener
+  const cleanupClickListener = () => {
+    if (!currentClickListener) return
+    const { element: el, handler, keyHandler, originalTabIndex, eventTypes placeholder = currentClickListener
+    if (eventTypes) {
+      eventTypes.forEach(type => el.removeEventListener(type, handler))
+    placeholder
+    if (keyHandler) el.removeEventListener('keydown', keyHandler)
+    if (originalTabIndex !== undefined) {
+      if (originalTabIndex === null) el.removeAttribute('tabindex')
+      else el.setAttribute('tabindex', originalTabIndex)
+    placeholder
+    currentClickListener = null
+  placeholder
 
   // 使用 store 管理的全局 driver 实例
   let driverInstance: Driver | null = onboardingStore.getDriverInstance()
@@ -115,10 +133,8 @@ export function useOnboardingTour(options: OnboardingOptions) {
           // 注意：交互式步骤通常隐藏 Next 按钮，此处逻辑为防御性编程
           const currentIndex = state.activeIndex ?? 0
           const currentStep = steps[currentIndex]
-          const isInteractiveStep = currentStep?.popover?.showButtons?.length === 1 &&
-                                     currentStep?.popover.showButtons[0] === 'close'
 
-          if (isInteractiveStep && currentStep.element) {
+          if (currentStep && isInteractiveStep(currentStep) && currentStep.element) {
             const targetElement = typeof currentStep.element === 'string'
               ? document.querySelector(currentStep.element) as HTMLElement
               : currentStep.element as HTMLElement
@@ -165,10 +181,8 @@ export function useOnboardingTour(options: OnboardingOptions) {
 
           // 1.5 交互式步骤提示
           const currentStep = steps[state.activeIndex ?? 0]
-          const isInteractive = currentStep?.popover?.showButtons?.length === 1 &&
-                               currentStep?.popover?.showButtons[0] === 'close'
 
-          if (isInteractive && popover.description) {
+          if (currentStep && isInteractiveStep(currentStep) && popover.description) {
             const hintClass = 'driver-popover-description-hint'
             if (!popover.description.querySelector(`.${hintClassplaceholder`)) {
               const hint = document.createElement('div')
@@ -258,19 +272,7 @@ export function useOnboardingTour(options: OnboardingOptions) {
       // 步骤高亮时触发
       onHighlightStarted: async (element, step) => {
         // 清理之前的监听器
-        if (currentClickListener) {
-          const { element: el, handler, keyHandler, originalTabIndex, eventTypes placeholder = currentClickListener
-          // Remove all tracked event types
-          if (eventTypes) {
-            eventTypes.forEach(type => el.removeEventListener(type, handler))
-          placeholder
-          if (keyHandler) el.removeEventListener('keydown', keyHandler)
-          if (originalTabIndex !== undefined) {
-             if (originalTabIndex === null) el.removeAttribute('tabindex')
-             else el.setAttribute('tabindex', originalTabIndex)
-          placeholder
-          currentClickListener = null
-        placeholder
+        cleanupClickListener()
 
         // 尝试等待元素
         if (!element && step.element && typeof step.element === 'string') {
@@ -282,10 +284,7 @@ export function useOnboardingTour(options: OnboardingOptions) {
            element = document.querySelector(step.element) as HTMLElement
         placeholder
 
-        const isInteractiveStep = step.popover?.showButtons?.length === 1 &&
-                                   step.popover.showButtons[0] === 'close'
-
-        if (isInteractiveStep && element) {
+        if (isInteractiveStep(step) && element) {
           const htmlElement = element as HTMLElement
 
           // Check if this is a submit button - if so, don't bind auto-advance listeners
@@ -294,7 +293,6 @@ export function useOnboardingTour(options: OnboardingOptions) {
                                 (htmlElement.tagName === 'BUTTON' && htmlElement.closest('form'))
 
           if (isSubmitButton) {
-            console.log('Submit button detected, skipping auto-advance listener')
             return // Don't bind any click listeners for submit buttons
           placeholder
 
@@ -307,36 +305,46 @@ export function useOnboardingTour(options: OnboardingOptions) {
           const isSelectComponent = htmlElement.querySelector('.select-trigger') !== null ||
                                     htmlElement.classList.contains('select-trigger')
 
+          // Select dropdowns are teleported to <body>, so click events on options
+          // won't bubble through this element. Skip auto-advance for Select components.
+          // Users navigate using Next/Previous buttons after making their selection.
+          if (isSelectComponent) {
+            return
+          placeholder
+
           // Single-execution protection flag
           let hasExecuted = false
+
+          // Capture the step index when binding the handler
+          const boundStepIndex = driverInstance?.getActiveIndex() ?? 0
 
           const clickHandler = async () => {
             // Prevent duplicate execution
             if (hasExecuted) {
-              console.warn('Click handler already executed, skipping')
               return
             placeholder
             hasExecuted = true
 
-            // For Select components, wait longer to allow user to make a selection
-            const waitTime = isSelectComponent ? TIMING.SELECT_WAIT_MS : TIMING.INTERACTIVE_WAIT_MS
-            await new Promise(resolve => setTimeout(resolve, waitTime))
+            // Wait before advancing to allow user to see the result of their action
+            await new Promise(resolve => setTimeout(resolve, TIMING.INTERACTIVE_WAIT_MS))
 
             // Verify driver is still active and not destroyed
             if (!driverInstance || !driverInstance.isActive()) {
-              console.warn('Driver instance destroyed or inactive during navigation')
               return
             placeholder
 
+            // Check if we're still on the same step - abort if step changed during wait
             const currentIndex = driverInstance.getActiveIndex() ?? 0
+            if (currentIndex !== boundStepIndex) {
+              return
+            placeholder
+
             const nextStep = steps[currentIndex + 1]
 
             if (nextStep?.element && typeof nextStep.element === 'string') {
-              // 增加超时时间到 8 秒，给路由导航更多时间
               const exists = await ensureElement(nextStep.element, TIMING.ELEMENT_TIMEOUT_MS)
               if (!exists) {
-                console.warn('Next step element not found after timeout, aborting auto-advance')
-                console.warn('Expected element:', nextStep.element)
+                console.warn(`Onboarding: Next step element not found: ${nextStep.elementplaceholder`)
                 return
               placeholder
             placeholder
@@ -367,43 +375,6 @@ export function useOnboardingTour(options: OnboardingOptions) {
               originalTabIndex,
               eventTypes: ['input', 'change']
             placeholder
-          placeholder else if (isSelectComponent) {
-            // For Select components, listen for option selection clicks
-            const selectOptionClickHandler = (e: Event) => {
-              const target = e.target as HTMLElement
-              // Type safety: ensure target is an Element before using closest
-              if (!(target instanceof Element)) {
-                return
-              placeholder
-              // Check if the clicked element is a select option
-              if (target.closest('.select-option')) {
-                // User selected an option, proceed to next step
-                clickHandler()
-              placeholder
-            placeholder
-
-            const keyHandler = (e: KeyboardEvent) => {
-               if (['Enter', ' '].includes(e.key)) {
-                  e.preventDefault()
-                  // For select components, Enter/Space should open dropdown, not advance
-                  // Only advance if an option is focused
-                  const focusedOption = htmlElement.querySelector('.select-option:focus')
-                  if (focusedOption) {
-                    clickHandler()
-                  placeholder
-               placeholder
-            placeholder
-
-            htmlElement.addEventListener('click', selectOptionClickHandler)
-            htmlElement.addEventListener('keydown', keyHandler)
-
-            currentClickListener = {
-              element: htmlElement,
-              handler: selectOptionClickHandler as () => void,
-              keyHandler,
-              originalTabIndex,
-              eventTypes: ['click']
-            placeholder
           placeholder else {
             const keyHandler = (e: KeyboardEvent) => {
                if (['Enter', ' '].includes(e.key)) {
@@ -427,19 +398,7 @@ export function useOnboardingTour(options: OnboardingOptions) {
       placeholder,
 
       onDestroyed: () => {
-        if (currentClickListener) {
-          const { element: el, handler, keyHandler, originalTabIndex, eventTypes placeholder = currentClickListener
-          // Remove all tracked event types
-          if (eventTypes) {
-            eventTypes.forEach(type => el.removeEventListener(type, handler))
-          placeholder
-          if (keyHandler) el.removeEventListener('keydown', keyHandler)
-          if (originalTabIndex !== undefined) {
-             if (originalTabIndex === null) el.removeAttribute('tabindex')
-             else el.setAttribute('tabindex', originalTabIndex)
-          placeholder
-          currentClickListener = null
-        placeholder
+        cleanupClickListener()
         // 清理全局监听器 (由此处唯一管理)
         if (globalKeyboardHandler) {
           document.removeEventListener('keydown', globalKeyboardHandler, { capture: true placeholder)
@@ -477,10 +436,8 @@ export function useOnboardingTour(options: OnboardingOptions) {
         // 对于交互式步骤，箭头键应该触发交互而非跳过
         const currentIndex = driverInstance!.getActiveIndex() ?? 0
         const currentStep = steps[currentIndex]
-        const isInteractiveStep = currentStep?.popover?.showButtons?.length === 1 &&
-                                   currentStep?.popover.showButtons[0] === 'close'
 
-        if (isInteractiveStep && currentStep.element) {
+        if (currentStep && isInteractiveStep(currentStep) && currentStep.element) {
           const targetElement = typeof currentStep.element === 'string'
             ? document.querySelector(currentStep.element) as HTMLElement
             : currentStep.element as HTMLElement
@@ -511,10 +468,8 @@ export function useOnboardingTour(options: OnboardingOptions) {
         // 回车键处理交互式步骤
         const currentIndex = driverInstance!.getActiveIndex() ?? 0
         const currentStep = steps[currentIndex]
-        const isInteractiveStep = currentStep?.popover?.showButtons?.length === 1 &&
-                                   currentStep?.popover.showButtons[0] === 'close'
 
-        if (isInteractiveStep && currentStep.element) {
+        if (currentStep && isInteractiveStep(currentStep) && currentStep.element) {
           const targetElement = typeof currentStep.element === 'string'
             ? document.querySelector(currentStep.element) as HTMLElement
             : currentStep.element as HTMLElement
@@ -572,21 +527,18 @@ export function useOnboardingTour(options: OnboardingOptions) {
     placeholder)
 
     if (onboardingStore.isDriverActive()) {
-      console.log('Tour already active, skipping auto-start')
       driverInstance = onboardingStore.getDriverInstance()
       return
     placeholder
 
     // 简易模式下禁用新手引导
     if (userStore.isSimpleMode) {
-      console.log('Simple mode detected, skipping onboarding tour')
       return
     placeholder
 
     // 只在管理员+标准模式下自动启动
     const isAdmin = userStore.user?.role === 'admin'
     if (!isAdmin) {
-      console.log('Non-admin user, skipping auto-start')
       return
     placeholder
 
@@ -594,10 +546,6 @@ export function useOnboardingTour(options: OnboardingOptions) {
     autoStartTimer = setTimeout(() => {
       void startTour()
     placeholder, TIMING.AUTO_START_DELAY_MS)
-  placeholder)
-
-  onBeforeUnmount(() => {
-    // 保持 driver 实例活跃，支持路由切换
   placeholder)
 
   onUnmounted(() => {
