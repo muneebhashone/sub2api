@@ -47,16 +47,16 @@ placeholder
 
 // GeminiFunctionCall Gemini 函数调用
 type GeminiFunctionCall struct {
-	Name string      `json:"name"`
-	Args any `json:"args,omitempty"`
-	ID   string      `json:"id,omitempty"`
+	Name string `json:"name"`
+	Args any    `json:"args,omitempty"`
+	ID   string `json:"id,omitempty"`
 placeholder
 
 // GeminiFunctionResponse Gemini 函数响应
 type GeminiFunctionResponse struct {
-	Name     string                 `json:"name"`
+	Name     string         `json:"name"`
 	Response map[string]any `json:"response"`
-	ID       string                 `json:"id,omitempty"`
+	ID       string         `json:"id,omitempty"`
 placeholder
 
 // GeminiGenerationConfig Gemini 生成配置
@@ -83,8 +83,8 @@ placeholder
 
 // GeminiFunctionDecl Gemini 函数声明
 type GeminiFunctionDecl struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
 	Parameters  map[string]any `json:"parameters,omitempty"`
 placeholder
 

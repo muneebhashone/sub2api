@@ -135,18 +135,18 @@ placeholder
 		responseID = "msg_" + generateRandomID()
 placeholder
 
-	message := map[string]interface{placeholder{
+	message := map[string]any{
 		"id":            responseID,
 		"type":          "message",
 		"role":          "assistant",
-		"content":       []interface{placeholder{placeholder,
+		"content":       []any{placeholder,
 		"model":         p.originalModel,
 		"stop_reason":   nil,
 		"stop_sequence": nil,
 		"usage":         usage,
 placeholder
 
-	event := map[string]interface{placeholder{
+	event := map[string]any{
 		"type":    "message_start",
 		"message": message,
 placeholder
@@ -205,14 +205,14 @@ placeholder
 
 	// 开始或继续 thinking 块
 	if p.blockType != BlockTypeThinking {
-		_, _ = result.Write(p.startBlock(BlockTypeThinking, map[string]interface{placeholder{
+		_, _ = result.Write(p.startBlock(BlockTypeThinking, map[string]any{
 			"type":     "thinking",
 			"thinking": "",
 	placeholder))
 placeholder
 
 	if text != "" {
-		_, _ = result.Write(p.emitDelta("thinking_delta", map[string]interface{placeholder{
+		_, _ = result.Write(p.emitDelta("thinking_delta", map[string]any{
 			"thinking": text,
 	placeholder))
 placeholder
@@ -246,11 +246,11 @@ placeholder
 
 	// 非空 text 带签名 - 特殊处理
 	if signature != "" {
-		_, _ = result.Write(p.startBlock(BlockTypeText, map[string]interface{placeholder{
+		_, _ = result.Write(p.startBlock(BlockTypeText, map[string]any{
 			"type": "text",
 			"text": "",
 	placeholder))
-		_, _ = result.Write(p.emitDelta("text_delta", map[string]interface{placeholder{
+		_, _ = result.Write(p.emitDelta("text_delta", map[string]any{
 			"text": text,
 	placeholder))
 		_, _ = result.Write(p.endBlock())
@@ -260,13 +260,13 @@ placeholder
 
 	// 普通 text (无签名)
 	if p.blockType != BlockTypeText {
-		_, _ = result.Write(p.startBlock(BlockTypeText, map[string]interface{placeholder{
+		_, _ = result.Write(p.startBlock(BlockTypeText, map[string]any{
 			"type": "text",
 			"text": "",
 	placeholder))
 placeholder
 
-	_, _ = result.Write(p.emitDelta("text_delta", map[string]interface{placeholder{
+	_, _ = result.Write(p.emitDelta("text_delta", map[string]any{
 		"text": text,
 placeholder))
 
@@ -284,11 +284,11 @@ func (p *StreamingProcessor) processFunctionCall(fc *GeminiFunctionCall, signatu
 		toolID = fmt.Sprintf("%s-%s", fc.Name, generateRandomID())
 placeholder
 
-	toolUse := map[string]interface{placeholder{
+	toolUse := map[string]any{
 		"type":  "tool_use",
 		"id":    toolID,
 		"name":  fc.Name,
-		"input": map[string]interface{placeholder{placeholder, // 必须为空，参数通过 delta 发送
+		"input": map[string]any{placeholder,
 placeholder
 
 	if signature != "" {
@@ -300,7 +300,7 @@ placeholder
 	// 发送 input_json_delta
 	if fc.Args != nil {
 		argsJSON, _ := json.Marshal(fc.Args)
-		_, _ = result.Write(p.emitDelta("input_json_delta", map[string]interface{placeholder{
+		_, _ = result.Write(p.emitDelta("input_json_delta", map[string]any{
 			"partial_json": string(argsJSON),
 	placeholder))
 placeholder
@@ -311,14 +311,14 @@ placeholder
 placeholder
 
 // startBlock 开始新的内容块
-func (p *StreamingProcessor) startBlock(blockType BlockType, contentBlock map[string]interface{placeholder) []byte {
+func (p *StreamingProcessor) startBlock(blockType BlockType, contentBlock map[string]any) []byte {
 	var result bytes.Buffer
 
 	if p.blockType != BlockTypeNone {
 		_, _ = result.Write(p.endBlock())
 placeholder
 
-	event := map[string]interface{placeholder{
+	event := map[string]any{
 		"type":          "content_block_start",
 		"index":         p.blockIndex,
 		"content_block": contentBlock,
@@ -340,13 +340,13 @@ placeholder
 
 	// Thinking 块结束时发送暂存的签名
 	if p.blockType == BlockTypeThinking && p.pendingSignature != "" {
-		_, _ = result.Write(p.emitDelta("signature_delta", map[string]interface{placeholder{
+		_, _ = result.Write(p.emitDelta("signature_delta", map[string]any{
 			"signature": p.pendingSignature,
 	placeholder))
 		p.pendingSignature = ""
 placeholder
 
-	event := map[string]interface{placeholder{
+	event := map[string]any{
 		"type":  "content_block_stop",
 		"index": p.blockIndex,
 placeholder
@@ -360,15 +360,15 @@ placeholder
 placeholder
 
 // emitDelta 发送 delta 事件
-func (p *StreamingProcessor) emitDelta(deltaType string, deltaContent map[string]interface{placeholder) []byte {
-	delta := map[string]interface{placeholder{
+func (p *StreamingProcessor) emitDelta(deltaType string, deltaContent map[string]any) []byte {
+	delta := map[string]any{
 		"type": deltaType,
 placeholder
 	for k, v := range deltaContent {
 		delta[k] = v
 placeholder
 
-	event := map[string]interface{placeholder{
+	event := map[string]any{
 		"type":  "content_block_delta",
 		"index": p.blockIndex,
 		"delta": delta,
@@ -381,14 +381,14 @@ placeholder
 func (p *StreamingProcessor) emitEmptyThinkingWithSignature(signature string) []byte {
 	var result bytes.Buffer
 
-	_, _ = result.Write(p.startBlock(BlockTypeThinking, map[string]interface{placeholder{
+	_, _ = result.Write(p.startBlock(BlockTypeThinking, map[string]any{
 		"type":     "thinking",
 		"thinking": "",
 placeholder))
-	_, _ = result.Write(p.emitDelta("thinking_delta", map[string]interface{placeholder{
+	_, _ = result.Write(p.emitDelta("thinking_delta", map[string]any{
 		"thinking": "",
 placeholder))
-	_, _ = result.Write(p.emitDelta("signature_delta", map[string]interface{placeholder{
+	_, _ = result.Write(p.emitDelta("signature_delta", map[string]any{
 		"signature": signature,
 placeholder))
 	_, _ = result.Write(p.endBlock())
@@ -422,9 +422,9 @@ placeholder
 		OutputTokens: p.outputTokens,
 placeholder
 
-	deltaEvent := map[string]interface{placeholder{
+	deltaEvent := map[string]any{
 		"type": "message_delta",
-		"delta": map[string]interface{placeholder{
+		"delta": map[string]any{
 			"stop_reason":   stopReason,
 			"stop_sequence": nil,
 	placeholder,
@@ -434,7 +434,7 @@ placeholder
 	_, _ = result.Write(p.formatSSE("message_delta", deltaEvent))
 
 	if !p.messageStopSent {
-		stopEvent := map[string]interface{placeholder{
+		stopEvent := map[string]any{
 			"type": "message_stop",
 	placeholder
 		_, _ = result.Write(p.formatSSE("message_stop", stopEvent))
@@ -445,7 +445,7 @@ placeholder
 placeholder
 
 // formatSSE 格式化 SSE 事件
-func (p *StreamingProcessor) formatSSE(eventType string, data interface{placeholder) []byte {
+func (p *StreamingProcessor) formatSSE(eventType string, data any) []byte {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return nil

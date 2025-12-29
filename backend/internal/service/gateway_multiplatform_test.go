@@ -20,9 +20,9 @@ placeholder
 
 // mockAccountRepoForPlatform 单平台测试用的 mock
 type mockAccountRepoForPlatform struct {
-	accounts          []Account
-	accountsByID      map[int64]*Account
-	listPlatformFunc  func(ctx context.Context, platform string) ([]Account, error)
+	accounts         []Account
+	accountsByID     map[int64]*Account
+	listPlatformFunc func(ctx context.Context, platform string) ([]Account, error)
 placeholder
 
 func (m *mockAccountRepoForPlatform) GetByID(ctx context.Context, id int64) (*Account, error) {
