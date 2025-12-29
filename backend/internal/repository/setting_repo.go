@@ -4,27 +4,33 @@ import (
 	"context"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/internal/service"
-
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type settingRepository struct {
-	db *gorm.DB
+	client *ent.Client
 placeholder
 
-func NewSettingRepository(db *gorm.DB) service.SettingRepository {
-	return &settingRepository{db: dbplaceholder
+func NewSettingRepository(client *ent.Client) service.SettingRepository {
+	return &settingRepository{client: clientplaceholder
 placeholder
 
 func (r *settingRepository) Get(ctx context.Context, key string) (*service.Setting, error) {
-	var m settingModel
-	err := r.db.WithContext(ctx).Where("key = ?", key).First(&m).Error
+	m, err := r.client.Setting.Query().Where(setting.KeyEQ(key)).Only(ctx)
 	if err != nil {
-		return nil, translatePersistenceError(err, service.ErrSettingNotFound, nil)
+		if ent.IsNotFound(err) {
+			return nil, service.ErrSettingNotFound
+	placeholder
+		return nil, err
 placeholder
-	return settingModelToService(&m), nil
+	return &service.Setting{
+		ID:        m.ID,
+		Key:       m.Key,
+		Value:     m.Value,
+		UpdatedAt: m.UpdatedAt,
+placeholder, nil
 placeholder
 
 func (r *settingRepository) GetValue(ctx context.Context, key string) (string, error) {
@@ -36,21 +42,22 @@ placeholder
 placeholder
 
 func (r *settingRepository) Set(ctx context.Context, key, value string) error {
-	m := &settingModel{
-		Key:       key,
-		Value:     value,
-		UpdatedAt: time.Now(),
-placeholder
-
-	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "key"placeholderplaceholder,
-		DoUpdates: clause.AssignmentColumns([]string{"value", "updated_at"placeholder),
-placeholder).Create(m).Error
+	now := time.Now()
+	return r.client.Setting.
+		Create().
+		SetKey(key).
+		SetValue(value).
+		SetUpdatedAt(now).
+		OnConflictColumns(setting.FieldKey).
+		UpdateNewValues().
+		Exec(ctx)
 placeholder
 
 func (r *settingRepository) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
-	var settings []settingModel
-	err := r.db.WithContext(ctx).Where("key IN ?", keys).Find(&settings).Error
+	if len(keys) == 0 {
+		return map[string]string{placeholder, nil
+placeholder
+	settings, err := r.client.Setting.Query().Where(setting.KeyIn(keys...)).All(ctx)
 	if err != nil {
 		return nil, err
 placeholder
@@ -63,27 +70,24 @@ placeholder
 placeholder
 
 func (r *settingRepository) SetMultiple(ctx context.Context, settings map[string]string) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for key, value := range settings {
-			m := &settingModel{
-				Key:       key,
-				Value:     value,
-				UpdatedAt: time.Now(),
-		placeholder
-			if err := tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "key"placeholderplaceholder,
-				DoUpdates: clause.AssignmentColumns([]string{"value", "updated_at"placeholder),
-		placeholder).Create(m).Error; err != nil {
-				return err
-		placeholder
-	placeholder
+	if len(settings) == 0 {
 		return nil
-placeholder)
+placeholder
+
+	now := time.Now()
+	builders := make([]*ent.SettingCreate, 0, len(settings))
+	for key, value := range settings {
+		builders = append(builders, r.client.Setting.Create().SetKey(key).SetValue(value).SetUpdatedAt(now))
+placeholder
+	return r.client.Setting.
+		CreateBulk(builders...).
+		OnConflictColumns(setting.FieldKey).
+		UpdateNewValues().
+		Exec(ctx)
 placeholder
 
 func (r *settingRepository) GetAll(ctx context.Context) (map[string]string, error) {
-	var settings []settingModel
-	err := r.db.WithContext(ctx).Find(&settings).Error
+	settings, err := r.client.Setting.Query().All(ctx)
 	if err != nil {
 		return nil, err
 placeholder
@@ -96,26 +100,6 @@ placeholder
 placeholder
 
 func (r *settingRepository) Delete(ctx context.Context, key string) error {
-	return r.db.WithContext(ctx).Where("key = ?", key).Delete(&settingModel{placeholder).Error
-placeholder
-
-type settingModel struct {
-	ID        int64     `gorm:"primaryKey"`
-	Key       string    `gorm:"uniqueIndex;size:100;not null"`
-	Value     string    `gorm:"type:text;not null"`
-	UpdatedAt time.Time `gorm:"not null"`
-placeholder
-
-func (settingModel) TableName() string { return "settings" placeholder
-
-func settingModelToService(m *settingModel) *service.Setting {
-	if m == nil {
-		return nil
-placeholder
-	return &service.Setting{
-		ID:        m.ID,
-		Key:       m.Key,
-		Value:     m.Value,
-		UpdatedAt: m.UpdatedAt,
-placeholder
+	_, err := r.client.Setting.Delete().Where(setting.KeyEQ(key)).Exec(ctx)
+	return err
 placeholder
