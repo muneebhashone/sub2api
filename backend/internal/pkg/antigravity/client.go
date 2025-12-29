@@ -74,7 +74,6 @@ placeholder
 // Client Antigravity API 客户端
 type Client struct {
 	httpClient *http.Client
-	proxyURL   string
 placeholder
 
 func NewClient(proxyURL string) *Client {
@@ -92,7 +91,6 @@ placeholder
 
 	return &Client{
 		httpClient: client,
-		proxyURL:   proxyURL,
 placeholder
 placeholder
 
