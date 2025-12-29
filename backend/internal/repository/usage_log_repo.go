@@ -70,9 +70,6 @@ placeholder
 placeholder
 
 	rateMultiplier := log.RateMultiplier
-	if rateMultiplier == 0 {
-		rateMultiplier = 1
-placeholder
 
 	query := `
 		INSERT INTO usage_logs (
