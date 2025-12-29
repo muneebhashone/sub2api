@@ -23,11 +23,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed placeholder from 'vue'
+import '@/styles/onboarding.css'
+import { computed, onMounted placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores'
+import { useAuthStore placeholder from '@/stores/auth'
+import { useOnboardingTour placeholder from '@/composables/useOnboardingTour'
+import { getAdminSteps, getUserSteps placeholder from '@/components/Guide/steps'
+import { useOnboardingStore placeholder from '@/stores/onboarding'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
 
 const appStore = useAppStore()
+const authStore = useAuthStore()
+const { t placeholder = useI18n()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+
+const { replayTour placeholder = useOnboardingTour({
+  steps: isAdmin.value ? getAdminSteps(t) : getUserSteps(t),
+  storageKey: isAdmin.value ? 'admin_guide' : 'user_guide',
+  autoStart: true
+placeholder)
+
+const onboardingStore = useOnboardingStore()
+
+onMounted(() => {
+  onboardingStore.setReplayCallback(replayTour)
+placeholder)
+
+defineExpose({ replayTour placeholder)
 </script>

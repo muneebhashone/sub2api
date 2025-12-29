@@ -38,7 +38,7 @@
             />
           </svg>
         </button>
-        <button @click="showCreateModal = true" class="btn btn-primary">
+        <button @click="showCreateModal = true" class="btn btn-primary" data-tour="accounts-create-btn">
           <svg
             class="mr-2 h-5 w-5"
             fill="none"
@@ -373,7 +373,7 @@
       :proxies="proxies"
       :groups="groups"
       @close="showCreateModal = false"
-      @created="loadAccounts"
+      @created="() => { loadAccounts(); if (onboardingStore.isCurrentStep(`[data-tour='account-form-submit']`)) onboardingStore.nextStep(500) placeholder"
     />
 
     <!-- Edit Account Modal -->
@@ -495,6 +495,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, type ComponentPublicIn
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
+import { useOnboardingStore placeholder from '@/stores/onboarding'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, Proxy, Group placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
@@ -524,6 +525,7 @@ import { formatRelativeTime placeholder from '@/utils/format'
 const { t placeholder = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const onboardingStore = useOnboardingStore()
 
 // Table columns
 const columns = computed<Column[]>(() => {
