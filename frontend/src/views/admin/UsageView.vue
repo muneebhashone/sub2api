@@ -224,7 +224,7 @@
                 v-model="filters.api_key_id"
                 :options="apiKeyOptions"
                 :placeholder="t('usage.allApiKeys')"
-                :disabled="!selectedUser && apiKeys.length === 0"
+                searchable
                 @change="applyFilters"
               />
             </div>
@@ -236,6 +236,7 @@
                 v-model="filters.model"
                 :options="modelOptions"
                 :placeholder="t('admin.usage.allModels')"
+                searchable
                 @change="applyFilters"
               />
             </div>
@@ -534,6 +535,7 @@
         :total="pagination.total"
         :page-size="pagination.page_size"
         @update:page="handlePageChange"
+        @update:pageSize="handlePageSizeChange"
       />
     </div>
   </AppLayout>
@@ -666,6 +668,7 @@ const models = ref<string[]>([])
 const accounts = ref<any[]>([])
 const groups = ref<any[]>([])
 const loading = ref(false)
+let abortController: AbortController | null = null
 
 // User search state
 const userSearchKeyword = ref('')
@@ -675,7 +678,7 @@ const showUserDropdown = ref(false)
 const selectedUser = ref<SimpleUser | null>(null)
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-// API Key options computed from selected user's keys
+// API Key options computed from loaded keys
 const apiKeyOptions = computed(() => {
   return [
     { value: null, label: t('usage.allApiKeys') placeholder,
@@ -733,9 +736,19 @@ const groupOptions = computed(() => {
   ]
 placeholder)
 
+// Helper function to format date in local timezone
+const formatLocalDate = (date: Date): string => {
+  return `${date.getFullYear()placeholder-${String(date.getMonth() + 1).padStart(2, '0')placeholder-${String(date.getDate()).padStart(2, '0')placeholder`
+placeholder
+
+// Initialize date range immediately
+const now = new Date()
+const weekAgo = new Date(now)
+weekAgo.setDate(weekAgo.getDate() - 6)
+
 // Date range state
-const startDate = ref('')
-const endDate = ref('')
+const startDate = ref(formatLocalDate(weekAgo))
+const endDate = ref(formatLocalDate(now))
 
 const filters = ref<AdminUsageQueryParams>({
   user_id: undefined,
@@ -749,18 +762,9 @@ const filters = ref<AdminUsageQueryParams>({
   end_date: undefined
 placeholder)
 
-// Initialize default date range (last 7 days)
-const initializeDateRange = () => {
-  const now = new Date()
-  const today = now.toISOString().split('T')[0]
-  const weekAgo = new Date(now)
-  weekAgo.setDate(weekAgo.getDate() - 6)
-
-  startDate.value = weekAgo.toISOString().split('T')[0]
-  endDate.value = today
-  filters.value.start_date = startDate.value
-  filters.value.end_date = endDate.value
-placeholder
+// Initialize filters with date range
+filters.value.start_date = startDate.value
+filters.value.end_date = endDate.value
 
 // User search with debounce
 const debounceSearchUsers = () => {
@@ -796,7 +800,7 @@ const selectUser = async (user: SimpleUser) => {
   filters.value.api_key_id = undefined
 
   // Load API keys for selected user
-  await loadApiKeysForUser(user.id)
+  await loadApiKeys(user.id)
   applyFilters()
 placeholder
 
@@ -807,10 +811,11 @@ const clearUserFilter = () => {
   filters.value.user_id = undefined
   filters.value.api_key_id = undefined
   apiKeys.value = []
+  loadApiKeys()
   applyFilters()
 placeholder
 
-const loadApiKeysForUser = async (userId: number) => {
+const loadApiKeys = async (userId?: number) => {
   try {
     apiKeys.value = await adminAPI.usage.searchApiKeys(userId)
   placeholder catch (error) {
@@ -863,7 +868,24 @@ const formatCacheTokens = (value: number): string => {
   return value.toLocaleString()
 placeholder
 
+const isAbortError = (error: unknown): boolean => {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return true
+  placeholder
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as { code?: string; name?: string placeholder
+    return maybeError.code === 'ERR_CANCELED' || maybeError.name === 'CanceledError'
+  placeholder
+  return false
+placeholder
+
 const loadUsageLogs = async () => {
+  if (abortController) {
+    abortController.abort()
+  placeholder
+  const controller = new AbortController()
+  abortController = controller
+  const { signal placeholder = controller
   loading.value = true
   try {
     const params: AdminUsageQueryParams = {
@@ -872,17 +894,23 @@ const loadUsageLogs = async () => {
       ...filters.value
     placeholder
 
-    const response = await adminAPI.usage.list(params)
+    const response = await adminAPI.usage.list(params, { signal placeholder)
+    if (signal.aborted) {
+      return
+    placeholder
     usageLogs.value = response.items
     pagination.value.total = response.total
     pagination.value.pages = response.pages
 
-    // Extract models from loaded logs for filter options
-    extractModelsFromLogs()
   placeholder catch (error) {
+    if (signal.aborted || isAbortError(error)) {
+      return
+    placeholder
     appStore.showError(t('usage.failedToLoad'))
   placeholder finally {
-    loading.value = false
+    if (!signal.aborted && abortController === controller) {
+      loading.value = false
+    placeholder
   placeholder
 placeholder
 
@@ -944,27 +972,40 @@ placeholder
 // Load filter options
 const loadFilterOptions = async () => {
   try {
-    // Load accounts
-    const accountsResponse = await adminAPI.accounts.list(1, 1000)
+    const [accountsResponse, groupsResponse] = await Promise.all([
+      adminAPI.accounts.list(1, 1000),
+      adminAPI.groups.list(1, 1000)
+    ])
     accounts.value = accountsResponse.items || []
-
-    // Load groups
-    const groupsResponse = await adminAPI.groups.list(1, 1000)
     groups.value = groupsResponse.items || []
   placeholder catch (error) {
     console.error('Failed to load filter options:', error)
   placeholder
+  await loadModelOptions()
 placeholder
 
-// Extract unique models from usage logs
-const extractModelsFromLogs = () => {
-  const uniqueModels = new Set<string>()
-  usageLogs.value.forEach(log => {
-    if (log.model) {
-      uniqueModels.add(log.model)
-    placeholder
-  placeholder)
-  models.value = Array.from(uniqueModels).sort()
+const loadModelOptions = async () => {
+  try {
+    const endDate = new Date()
+    const startDateRange = new Date(endDate)
+    startDateRange.setDate(startDateRange.getDate() - 29)
+    // Use local timezone instead of UTC
+    const endDateStr = `${endDate.getFullYear()placeholder-${String(endDate.getMonth() + 1).padStart(2, '0')placeholder-${String(endDate.getDate()).padStart(2, '0')placeholder`
+    const startDateStr = `${startDateRange.getFullYear()placeholder-${String(startDateRange.getMonth() + 1).padStart(2, '0')placeholder-${String(startDateRange.getDate()).padStart(2, '0')placeholder`
+    const response = await adminAPI.dashboard.getModelStats({
+      start_date: startDateStr,
+      end_date: endDateStr
+    placeholder)
+    const uniqueModels = new Set<string>()
+    response.models?.forEach((stat) => {
+      if (stat.model) {
+        uniqueModels.add(stat.model)
+      placeholder
+    placeholder)
+    models.value = Array.from(uniqueModels).sort()
+  placeholder catch (error) {
+    console.error('Failed to load model options:', error)
+  placeholder
 placeholder
 
 const resetFilters = () => {
@@ -985,8 +1026,15 @@ const resetFilters = () => {
   placeholder
   granularity.value = 'day'
   // Reset date range to default (last 7 days)
-  initializeDateRange()
+  const now = new Date()
+  const weekAgo = new Date(now)
+  weekAgo.setDate(weekAgo.getDate() - 6)
+  startDate.value = formatLocalDate(weekAgo)
+  endDate.value = formatLocalDate(now)
+  filters.value.start_date = startDate.value
+  filters.value.end_date = endDate.value
   pagination.value.page = 1
+  loadApiKeys()
   loadUsageLogs()
   loadUsageStats()
   loadChartData()
@@ -994,6 +1042,12 @@ placeholder
 
 const handlePageChange = (page: number) => {
   pagination.value.page = page
+  loadUsageLogs()
+placeholder
+
+const handlePageSizeChange = (pageSize: number) => {
+  pagination.value.page_size = pageSize
+  pagination.value.page = 1
   loadUsageLogs()
 placeholder
 
@@ -1070,8 +1124,8 @@ const hideTooltip = () => {
 placeholder
 
 onMounted(() => {
-  initializeDateRange()
   loadFilterOptions()
+  loadApiKeys()
   loadUsageLogs()
   loadUsageStats()
   loadChartData()
@@ -1082,6 +1136,9 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   if (searchTimeout) {
     clearTimeout(searchTimeout)
+  placeholder
+  if (abortController) {
+    abortController.abort()
   placeholder
 placeholder)
 </script>

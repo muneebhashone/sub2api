@@ -11,6 +11,7 @@ import type { User, UpdateUserRequest, PaginatedResponse placeholder from '@/typ
  * @param page - Page number (default: 1)
  * @param pageSize - Items per page (default: 20)
  * @param filters - Optional filters (status, role, search)
+ * @param options - Optional request options (signal)
  * @returns Paginated list of users
  */
 export async function list(
@@ -20,6 +21,9 @@ export async function list(
     status?: 'active' | 'disabled'
     role?: 'admin' | 'user'
     search?: string
+  placeholder,
+  options?: {
+    signal?: AbortSignal
   placeholder
 ): Promise<PaginatedResponse<User>> {
   const { data placeholder = await apiClient.get<PaginatedResponse<User>>('/admin/users', {
@@ -27,7 +31,8 @@ export async function list(
       page,
       page_size: pageSize,
       ...filters
-    placeholder
+    placeholder,
+    signal: options?.signal
   placeholder)
   return data
 placeholder

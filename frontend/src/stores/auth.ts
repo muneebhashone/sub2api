@@ -4,7 +4,7 @@
  */
 
 import { defineStore placeholder from 'pinia'
-import { ref, computed placeholder from 'vue'
+import { ref, computed, readonly placeholder from 'vue'
 import { authAPI placeholder from '@/api'
 import type { User, LoginRequest, RegisterRequest placeholder from '@/types'
 
@@ -17,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = ref<User | null>(null)
   const token = ref<string | null>(null)
+  const runMode = ref<'standard' | 'simple'>('standard')
   let refreshIntervalId: ReturnType<typeof setInterval> | null = null
 
   // ==================== Computed ====================
@@ -28,6 +29,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => {
     return user.value?.role === 'admin'
   placeholder)
+
+  const isSimpleMode = computed(() => runMode.value === 'simple')
 
   // ==================== Actions ====================
 
@@ -98,16 +101,22 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Store token and user
       token.value = response.access_token
-      user.value = response.user
+
+      // Extract run_mode if present
+      if (response.user.run_mode) {
+        runMode.value = response.user.run_mode
+      placeholder
+      const { run_mode, ...userData placeholder = response.user
+      user.value = userData
 
       // Persist to localStorage
       localStorage.setItem(AUTH_TOKEN_KEY, response.access_token)
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user))
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData))
 
       // Start auto-refresh interval
       startAutoRefresh()
 
-      return response.user
+      return userData
     placeholder catch (error) {
       // Clear any partial state on error
       clearAuth()
@@ -127,16 +136,22 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Store token and user
       token.value = response.access_token
-      user.value = response.user
+
+      // Extract run_mode if present
+      if (response.user.run_mode) {
+        runMode.value = response.user.run_mode
+      placeholder
+      const { run_mode, ...userDataWithoutRunMode placeholder = response.user
+      user.value = userDataWithoutRunMode
 
       // Persist to localStorage
       localStorage.setItem(AUTH_TOKEN_KEY, response.access_token)
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user))
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userDataWithoutRunMode))
 
       // Start auto-refresh interval
       startAutoRefresh()
 
-      return response.user
+      return userDataWithoutRunMode
     placeholder catch (error) {
       // Clear any partial state on error
       clearAuth()
@@ -168,13 +183,17 @@ export const useAuthStore = defineStore('auth', () => {
     placeholder
 
     try {
-      const updatedUser = await authAPI.getCurrentUser()
-      user.value = updatedUser
+      const response = await authAPI.getCurrentUser()
+      if (response.data.run_mode) {
+        runMode.value = response.data.run_mode
+      placeholder
+      const { run_mode, ...userData placeholder = response.data
+      user.value = userData
 
       // Update localStorage
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser))
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData))
 
-      return updatedUser
+      return userData
     placeholder catch (error) {
       // If refresh fails with 401, clear auth state
       if ((error as { status?: number placeholder).status === 401) {
@@ -204,10 +223,12 @@ export const useAuthStore = defineStore('auth', () => {
     // State
     user,
     token,
+    runMode: readonly(runMode),
 
     // Computed
     isAuthenticated,
     isAdmin,
+    isSimpleMode,
 
     // Actions
     login,
