@@ -239,7 +239,6 @@ placeholder
 	exec := r.sql
 	txClient := r.client
 	var sqlTx *sql.Tx
-	var txClientClose func() error
 
 	if r.begin != nil {
 		sqlTx, err = r.begin.BeginTx(ctx, nil)
@@ -248,11 +247,10 @@ placeholder
 	placeholder
 		exec = sqlTx
 		txClient = entClientFromSQLTx(sqlTx)
-		txClientClose = txClient.Close
+		// 注意：不能调用 txClient.Close()，因为基于事务的 ent client
+		// 在 Close() 时会尝试将 ExecQuerier 断言为 *sql.DB，但实际是 *sql.Tx
+		// 事务的清理通过 sqlTx.Rollback() 和 sqlTx.Commit() 完成
 		defer func() { _ = sqlTx.Rollback() placeholder()
-placeholder
-	if txClientClose != nil {
-		defer func() { _ = txClientClose() placeholder()
 placeholder
 
 	// Lock the group row to avoid concurrent writes while we cascade.
