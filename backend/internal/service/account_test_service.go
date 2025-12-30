@@ -328,7 +328,7 @@ placeholder else if account.Type == "apikey" {
 		if baseURL == "" {
 			baseURL = "https://api.openai.com"
 	placeholder
-		apiURL = strings.TrimSuffix(baseURL, "/") + "/v1/responses"
+		apiURL = strings.TrimSuffix(baseURL, "/") + "/responses"
 placeholder else {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Unsupported account type: %s", account.Type))
 placeholder
