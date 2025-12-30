@@ -335,12 +335,59 @@
       >
         <div>
           <label class="input-label">{{ t('admin.subscriptions.form.user') placeholderplaceholder</label>
-          <Select
-            v-model="assignForm.user_id"
-            :options="userOptions"
-            :placeholder="t('admin.subscriptions.selectUser')"
-            searchable
-          />
+          <div class="relative">
+            <input
+              v-model="userSearchKeyword"
+              type="text"
+              class="input pr-8"
+              :placeholder="t('admin.usage.searchUserPlaceholder')"
+              @input="debounceSearchUsers"
+              @focus="showUserDropdown = true"
+            />
+            <button
+              v-if="selectedUser"
+              @click="clearUserSelection"
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <!-- User Dropdown -->
+            <div
+              v-if="showUserDropdown && (userSearchResults.length > 0 || userSearchKeyword)"
+              class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div
+                v-if="userSearchLoading"
+                class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"
+              >
+                {{ t('common.loading') placeholderplaceholder
+              </div>
+              <div
+                v-else-if="userSearchResults.length === 0 && userSearchKeyword"
+                class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"
+              >
+                {{ t('common.noOptionsFound') placeholderplaceholder
+              </div>
+              <button
+                v-for="user in userSearchResults"
+                :key="user.id"
+                type="button"
+                @click="selectUser(user)"
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <span class="font-medium text-gray-900 dark:text-white">{{ user.email placeholderplaceholder</span>
+                <span class="ml-2 text-gray-500 dark:text-gray-400">#{{ user.id placeholderplaceholder</span>
+              </button>
+            </div>
+          </div>
         </div>
         <div>
           <label class="input-label">{{ t('admin.subscriptions.form.group') placeholderplaceholder</label>
@@ -462,11 +509,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted placeholder from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
-import type { UserSubscription, Group, User placeholder from '@/types'
+import type { UserSubscription, Group placeholder from '@/types'
+import type { SimpleUser placeholder from '@/api/admin/usage'
 import type { Column placeholder from '@/components/common/types'
 import { formatDateOnly placeholder from '@/utils/format'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -501,9 +549,17 @@ const statusOptions = computed(() => [
 
 const subscriptions = ref<UserSubscription[]>([])
 const groups = ref<Group[]>([])
-const users = ref<User[]>([])
 const loading = ref(false)
 let abortController: AbortController | null = null
+
+// User search state
+const userSearchKeyword = ref('')
+const userSearchResults = ref<SimpleUser[]>([])
+const userSearchLoading = ref(false)
+const showUserDropdown = ref(false)
+const selectedUser = ref<SimpleUser | null>(null)
+let userSearchTimeout: ReturnType<typeof setTimeout> | null = null
+
 const filters = reactive({
   status: '',
   group_id: ''
@@ -544,9 +600,6 @@ const subscriptionGroupOptions = computed(() =>
     .filter((g) => g.subscription_type === 'subscription' && g.status === 'active')
     .map((g) => ({ value: g.id, label: g.name placeholder))
 )
-
-// User options for assign
-const userOptions = computed(() => users.value.map((u) => ({ value: u.id, label: u.email placeholder)))
 
 const loadSubscriptions = async () => {
   if (abortController) {
@@ -590,13 +643,51 @@ const loadGroups = async () => {
   placeholder
 placeholder
 
-const loadUsers = async () => {
-  try {
-    const response = await adminAPI.users.list(1, 1000)
-    users.value = response.items
-  placeholder catch (error) {
-    console.error('Error loading users:', error)
+// User search with debounce
+const debounceSearchUsers = () => {
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout)
   placeholder
+  userSearchTimeout = setTimeout(searchUsers, 300)
+placeholder
+
+const searchUsers = async () => {
+  const keyword = userSearchKeyword.value.trim()
+
+  // Clear selection if user modified the search keyword
+  if (selectedUser.value && keyword !== selectedUser.value.email) {
+    selectedUser.value = null
+    assignForm.user_id = null
+  placeholder
+
+  if (!keyword) {
+    userSearchResults.value = []
+    return
+  placeholder
+
+  userSearchLoading.value = true
+  try {
+    userSearchResults.value = await adminAPI.usage.searchUsers(keyword)
+  placeholder catch (error) {
+    console.error('Failed to search users:', error)
+    userSearchResults.value = []
+  placeholder finally {
+    userSearchLoading.value = false
+  placeholder
+placeholder
+
+const selectUser = (user: SimpleUser) => {
+  selectedUser.value = user
+  userSearchKeyword.value = user.email
+  showUserDropdown.value = false
+  assignForm.user_id = user.id
+placeholder
+
+const clearUserSelection = () => {
+  selectedUser.value = null
+  userSearchKeyword.value = ''
+  userSearchResults.value = []
+  assignForm.user_id = null
 placeholder
 
 const handlePageChange = (page: number) => {
@@ -615,6 +706,11 @@ const closeAssignModal = () => {
   assignForm.user_id = null
   assignForm.group_id = null
   assignForm.validity_days = 30
+  // Clear user search state
+  selectedUser.value = null
+  userSearchKeyword.value = ''
+  userSearchResults.value = []
+  showUserDropdown.value = false
 placeholder
 
 const handleAssignSubscription = async () => {
@@ -754,10 +850,25 @@ const formatResetTime = (windowStart: string, period: 'daily' | 'weekly' | 'mont
   placeholder
 placeholder
 
+// Handle click outside to close user dropdown
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.relative')) {
+    showUserDropdown.value = false
+  placeholder
+placeholder
+
 onMounted(() => {
   loadSubscriptions()
   loadGroups()
-  loadUsers()
+  document.addEventListener('click', handleClickOutside)
+placeholder)
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout)
+  placeholder
 placeholder)
 </script>
 
