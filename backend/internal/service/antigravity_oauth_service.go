@@ -149,6 +149,12 @@ placeholder else if loadResp != nil && loadResp.CloudAICompanionProject != "" {
 		result.ProjectID = loadResp.CloudAICompanionProject
 placeholder
 
+	// 兜底：随机生成 project_id
+	if result.ProjectID == "" {
+		result.ProjectID = antigravity.GenerateMockProjectID()
+		fmt.Printf("[AntigravityOAuth] 使用随机生成的 project_id: %s\n", result.ProjectID)
+placeholder
+
 	return result, nil
 placeholder
 
