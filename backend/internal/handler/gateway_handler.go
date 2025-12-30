@@ -216,7 +216,7 @@ placeholder
 	placeholder
 placeholder
 
-	const maxAccountSwitches = 3
+	const maxAccountSwitches = 10
 	switchCount := 0
 	failedAccountIDs := make(map[int64]struct{placeholder)
 	lastFailoverStatus := 0

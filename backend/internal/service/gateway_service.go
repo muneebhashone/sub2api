@@ -695,6 +695,11 @@ placeholder
 	if req.Stream {
 		streamResult, err := s.handleStreamingResponse(ctx, resp, c, account, startTime, originalModel, req.Model)
 		if err != nil {
+			if err.Error() == "have error in stream" {
+				return nil, &UpstreamFailoverError{
+					StatusCode: 403,
+			placeholder
+		placeholder
 			return nil, err
 	placeholder
 		usage = streamResult.usage
@@ -969,6 +974,9 @@ placeholder
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		if line == "event: error" {
+			return nil, errors.New("have error in stream")
+	placeholder
 
 		// Extract data from SSE line (supports both "data: " and "data:" formats)
 		if sseDataRe.MatchString(line) {
