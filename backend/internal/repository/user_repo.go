@@ -405,53 +405,6 @@ placeholder
 	return nil
 placeholder
 
-func (r *userRepository) syncUserAllowedGroups(ctx context.Context, client *dbent.Client, exec sqlExecutor, userID int64, groupIDs []int64) error {
-	if client == nil || exec == nil {
-		return nil
-placeholder
-
-	// Keep join table as the source of truth for reads.
-	if _, err := client.UserAllowedGroup.Delete().Where(userallowedgroup.UserIDEQ(userID)).Exec(ctx); err != nil {
-		return err
-placeholder
-
-	unique := make(map[int64]struct{placeholder, len(groupIDs))
-	for _, id := range groupIDs {
-		if id <= 0 {
-			continue
-	placeholder
-		unique[id] = struct{placeholder{placeholder
-placeholder
-
-	legacyGroups := make([]int64, 0, len(unique))
-	if len(unique) > 0 {
-		creates := make([]*dbent.UserAllowedGroupCreate, 0, len(unique))
-		for groupID := range unique {
-			creates = append(creates, client.UserAllowedGroup.Create().SetUserID(userID).SetGroupID(groupID))
-			legacyGroups = append(legacyGroups, groupID)
-	placeholder
-		if err := client.UserAllowedGroup.
-			CreateBulk(creates...).
-			OnConflictColumns(userallowedgroup.FieldUserID, userallowedgroup.FieldGroupID).
-			DoNothing().
-			Exec(ctx); err != nil {
-			return err
-	placeholder
-placeholder
-
-	// Phase 1 compatibility: keep legacy users.allowed_groups array updated for existing raw SQL paths.
-	var legacy any
-	if len(legacyGroups) > 0 {
-		sort.Slice(legacyGroups, func(i, j int) bool { return legacyGroups[i] < legacyGroups[j] placeholder)
-		legacy = pq.Array(legacyGroups)
-placeholder
-	if _, err := exec.ExecContext(ctx, "UPDATE users SET allowed_groups = $1::bigint[] WHERE id = $2", legacy, userID); err != nil {
-		return err
-placeholder
-
-	return nil
-placeholder
-
 func applyUserEntityToService(dst *service.User, src *dbent.User) {
 	if dst == nil || src == nil {
 		return

@@ -154,7 +154,7 @@ func (r *usageLogRepository) GetByID(ctx context.Context, id int64) (*service.Us
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
 			return nil, err
@@ -568,7 +568,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	results := make([]ApiKeyUsageTrendPoint, 0)
 	for rows.Next() {
@@ -621,7 +621,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	results := make([]UserUsageTrendPoint, 0)
 	for rows.Next() {
@@ -766,7 +766,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	return scanTrendRows(rows)
 placeholder
@@ -792,7 +792,7 @@ func (r *usageLogRepository) GetUserModelStats(ctx context.Context, userID int64
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	return scanModelStatsRows(rows)
 placeholder
@@ -1029,7 +1029,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	return scanTrendRows(rows)
 placeholder
@@ -1068,7 +1068,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	return scanModelStatsRows(rows)
 placeholder
@@ -1141,7 +1141,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	history := make([]AccountUsageHistory, 0)
 	for rows.Next() {
@@ -1291,7 +1291,7 @@ func (r *usageLogRepository) queryUsageLogs(ctx context.Context, query string, a
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	logs := make([]service.UsageLog, 0)
 	for rows.Next() {
