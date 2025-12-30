@@ -1,0 +1,67 @@
+package admin
+
+import (
+	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
+	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/gin-gonic/gin"
+)
+
+type AntigravityOAuthHandler struct {
+	antigravityOAuthService *service.AntigravityOAuthService
+placeholder
+
+func NewAntigravityOAuthHandler(antigravityOAuthService *service.AntigravityOAuthService) *AntigravityOAuthHandler {
+	return &AntigravityOAuthHandler{antigravityOAuthService: antigravityOAuthServiceplaceholder
+placeholder
+
+type AntigravityGenerateAuthURLRequest struct {
+	ProxyID *int64 `json:"proxy_id"`
+placeholder
+
+// GenerateAuthURL generates Google OAuth authorization URL
+// POST /api/v1/admin/antigravity/oauth/auth-url
+func (h *AntigravityOAuthHandler) GenerateAuthURL(c *gin.Context) {
+	var req AntigravityGenerateAuthURLRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求无效: "+err.Error())
+		return
+placeholder
+
+	result, err := h.antigravityOAuthService.GenerateAuthURL(c.Request.Context(), req.ProxyID)
+	if err != nil {
+		response.InternalError(c, "生成授权链接失败: "+err.Error())
+		return
+placeholder
+
+	response.Success(c, result)
+placeholder
+
+type AntigravityExchangeCodeRequest struct {
+	SessionID string `json:"session_id" binding:"required"`
+	State     string `json:"state" binding:"required"`
+	Code      string `json:"code" binding:"required"`
+	ProxyID   *int64 `json:"proxy_id"`
+placeholder
+
+// ExchangeCode 用 authorization code 交换 token
+// POST /api/v1/admin/antigravity/oauth/exchange-code
+func (h *AntigravityOAuthHandler) ExchangeCode(c *gin.Context) {
+	var req AntigravityExchangeCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请求无效: "+err.Error())
+		return
+placeholder
+
+	tokenInfo, err := h.antigravityOAuthService.ExchangeCode(c.Request.Context(), &service.AntigravityExchangeCodeInput{
+		SessionID: req.SessionID,
+		State:     req.State,
+		Code:      req.Code,
+		ProxyID:   req.ProxyID,
+placeholder)
+	if err != nil {
+		response.BadRequest(c, "Token 交换失败: "+err.Error())
+		return
+placeholder
+
+	response.Success(c, tokenInfo)
+placeholder
