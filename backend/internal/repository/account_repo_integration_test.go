@@ -7,24 +7,25 @@ import (
 	"testing"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/accountgroup"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 type AccountRepoSuite struct {
 	suite.Suite
-	ctx  context.Context
-	db   *gorm.DB
-	repo *accountRepository
+	ctx    context.Context
+	client *dbent.Client
+	repo   *accountRepository
 placeholder
 
 func (s *AccountRepoSuite) SetupTest() {
 	s.ctx = context.Background()
-	s.db = testTx(s.T())
-	s.repo = NewAccountRepository(s.db).(*accountRepository)
+	tx := testEntTx(s.T())
+	s.client = tx.Client()
+	s.repo = newAccountRepositoryWithSQL(s.client, tx)
 placeholder
 
 func TestAccountRepoSuite(t *testing.T) {
@@ -61,7 +62,7 @@ func (s *AccountRepoSuite) TestGetByID_NotFound() {
 placeholder
 
 func (s *AccountRepoSuite) TestUpdate() {
-	account := accountModelToService(mustCreateAccount(s.T(), s.db, &accountModel{Name: "original"placeholder))
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "original"placeholder)
 
 	account.Name = "updated"
 	err := s.repo.Update(s.ctx, account)
@@ -73,7 +74,7 @@ func (s *AccountRepoSuite) TestUpdate() {
 placeholder
 
 func (s *AccountRepoSuite) TestDelete() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "to-delete"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "to-delete"placeholder)
 
 	err := s.repo.Delete(s.ctx, account.ID)
 	s.Require().NoError(err, "Delete")
@@ -83,23 +84,23 @@ func (s *AccountRepoSuite) TestDelete() {
 placeholder
 
 func (s *AccountRepoSuite) TestDelete_WithGroupBindings() {
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-del"placeholder)
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-del"placeholder)
-	mustBindAccountToGroup(s.T(), s.db, account.ID, group.ID, 1)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g-del"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-del"placeholder)
+	mustBindAccountToGroup(s.T(), s.client, account.ID, group.ID, 1)
 
 	err := s.repo.Delete(s.ctx, account.ID)
 	s.Require().NoError(err, "Delete should cascade remove bindings")
 
-	var count int64
-	s.db.Model(&accountGroupModel{placeholder).Where("account_id = ?", account.ID).Count(&count)
+	count, err := s.client.AccountGroup.Query().Where(accountgroup.AccountIDEQ(account.ID)).Count(s.ctx)
+	s.Require().NoError(err)
 	s.Require().Zero(count, "expected bindings to be removed")
 placeholder
 
 // --- List / ListWithFilters ---
 
 func (s *AccountRepoSuite) TestList() {
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc1"placeholder)
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc2"placeholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc1"placeholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc2"placeholder)
 
 	accounts, page, err := s.repo.List(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder)
 	s.Require().NoError(err, "List")
@@ -110,7 +111,7 @@ placeholder
 func (s *AccountRepoSuite) TestListWithFilters() {
 	tests := []struct {
 		name      string
-		setup     func(db *gorm.DB)
+		setup     func(client *dbent.Client)
 		platform  string
 		accType   string
 		status    string
@@ -120,9 +121,9 @@ func (s *AccountRepoSuite) TestListWithFilters() {
 placeholder{
 		{
 			name: "filter_by_platform",
-			setup: func(db *gorm.DB) {
-				mustCreateAccount(s.T(), db, &accountModel{Name: "a1", Platform: service.PlatformAnthropicplaceholder)
-				mustCreateAccount(s.T(), db, &accountModel{Name: "a2", Platform: service.PlatformOpenAIplaceholder)
+			setup: func(client *dbent.Client) {
+				mustCreateAccount(s.T(), client, &service.Account{Name: "a1", Platform: service.PlatformAnthropicplaceholder)
+				mustCreateAccount(s.T(), client, &service.Account{Name: "a2", Platform: service.PlatformOpenAIplaceholder)
 		placeholder,
 			platform:  service.PlatformOpenAI,
 			wantCount: 1,
@@ -132,9 +133,9 @@ placeholder{
 	placeholder,
 		{
 			name: "filter_by_type",
-			setup: func(db *gorm.DB) {
-				mustCreateAccount(s.T(), db, &accountModel{Name: "t1", Type: service.AccountTypeOAuthplaceholder)
-				mustCreateAccount(s.T(), db, &accountModel{Name: "t2", Type: service.AccountTypeApiKeyplaceholder)
+			setup: func(client *dbent.Client) {
+				mustCreateAccount(s.T(), client, &service.Account{Name: "t1", Type: service.AccountTypeOAuthplaceholder)
+				mustCreateAccount(s.T(), client, &service.Account{Name: "t2", Type: service.AccountTypeApiKeyplaceholder)
 		placeholder,
 			accType:   service.AccountTypeApiKey,
 			wantCount: 1,
@@ -144,9 +145,9 @@ placeholder{
 	placeholder,
 		{
 			name: "filter_by_status",
-			setup: func(db *gorm.DB) {
-				mustCreateAccount(s.T(), db, &accountModel{Name: "s1", Status: service.StatusActiveplaceholder)
-				mustCreateAccount(s.T(), db, &accountModel{Name: "s2", Status: service.StatusDisabledplaceholder)
+			setup: func(client *dbent.Client) {
+				mustCreateAccount(s.T(), client, &service.Account{Name: "s1", Status: service.StatusActiveplaceholder)
+				mustCreateAccount(s.T(), client, &service.Account{Name: "s2", Status: service.StatusDisabledplaceholder)
 		placeholder,
 			status:    service.StatusDisabled,
 			wantCount: 1,
@@ -156,9 +157,9 @@ placeholder{
 	placeholder,
 		{
 			name: "filter_by_search",
-			setup: func(db *gorm.DB) {
-				mustCreateAccount(s.T(), db, &accountModel{Name: "alpha-account"placeholder)
-				mustCreateAccount(s.T(), db, &accountModel{Name: "beta-account"placeholder)
+			setup: func(client *dbent.Client) {
+				mustCreateAccount(s.T(), client, &service.Account{Name: "alpha-account"placeholder)
+				mustCreateAccount(s.T(), client, &service.Account{Name: "beta-account"placeholder)
 		placeholder,
 			search:    "alpha",
 			wantCount: 1,
@@ -171,11 +172,12 @@ placeholder
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			// 每个 case 重新获取隔离资源
-			db := testTx(s.T())
-			repo := NewAccountRepository(db).(*accountRepository)
+			tx := testEntTx(s.T())
+			client := tx.Client()
+			repo := newAccountRepositoryWithSQL(client, tx)
 			ctx := context.Background()
 
-			tt.setup(db)
+			tt.setup(client)
 
 			accounts, _, err := repo.ListWithFilters(ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, tt.platform, tt.accType, tt.status, tt.search)
 			s.Require().NoError(err)
@@ -190,11 +192,11 @@ placeholder
 // --- ListByGroup / ListActive / ListByPlatform ---
 
 func (s *AccountRepoSuite) TestListByGroup() {
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-list"placeholder)
-	acc1 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a1", Status: service.StatusActiveplaceholder)
-	acc2 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a2", Status: service.StatusActiveplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, acc1.ID, group.ID, 2)
-	mustBindAccountToGroup(s.T(), s.db, acc2.ID, group.ID, 1)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g-list"placeholder)
+	acc1 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "a1", Status: service.StatusActiveplaceholder)
+	acc2 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "a2", Status: service.StatusActiveplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, acc1.ID, group.ID, 2)
+	mustBindAccountToGroup(s.T(), s.client, acc2.ID, group.ID, 1)
 
 	accounts, err := s.repo.ListByGroup(s.ctx, group.ID)
 	s.Require().NoError(err, "ListByGroup")
@@ -204,8 +206,8 @@ func (s *AccountRepoSuite) TestListByGroup() {
 placeholder
 
 func (s *AccountRepoSuite) TestListActive() {
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "active1", Status: service.StatusActiveplaceholder)
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "inactive1", Status: service.StatusDisabledplaceholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "active1", Status: service.StatusActiveplaceholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "inactive1", Status: service.StatusDisabledplaceholder)
 
 	accounts, err := s.repo.ListActive(s.ctx)
 	s.Require().NoError(err, "ListActive")
@@ -214,8 +216,8 @@ func (s *AccountRepoSuite) TestListActive() {
 placeholder
 
 func (s *AccountRepoSuite) TestListByPlatform() {
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "p1", Platform: service.PlatformAnthropic, Status: service.StatusActiveplaceholder)
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "p2", Platform: service.PlatformOpenAI, Status: service.StatusActiveplaceholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "p1", Platform: service.PlatformAnthropic, Status: service.StatusActiveplaceholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "p2", Platform: service.PlatformOpenAI, Status: service.StatusActiveplaceholder)
 
 	accounts, err := s.repo.ListByPlatform(s.ctx, service.PlatformAnthropic)
 	s.Require().NoError(err, "ListByPlatform")
@@ -226,14 +228,14 @@ placeholder
 // --- Preload and VirtualFields ---
 
 func (s *AccountRepoSuite) TestPreload_And_VirtualFields() {
-	proxy := mustCreateProxy(s.T(), s.db, &proxyModel{Name: "p1"placeholder)
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1"placeholder)
+	proxy := mustCreateProxy(s.T(), s.client, &service.Proxy{Name: "p1"placeholder)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g1"placeholder)
 
-	account := mustCreateAccount(s.T(), s.db, &accountModel{
+	account := mustCreateAccount(s.T(), s.client, &service.Account{
 		Name:    "acc1",
 		ProxyID: &proxy.ID,
 placeholder)
-	mustBindAccountToGroup(s.T(), s.db, account.ID, group.ID, 1)
+	mustBindAccountToGroup(s.T(), s.client, account.ID, group.ID, 1)
 
 	got, err := s.repo.GetByID(s.ctx, account.ID)
 	s.Require().NoError(err, "GetByID")
@@ -257,9 +259,9 @@ placeholder
 // --- GroupBinding / AddToGroup / RemoveFromGroup / BindGroups / GetGroups ---
 
 func (s *AccountRepoSuite) TestGroupBinding_And_BindGroups() {
-	g1 := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g1"placeholder)
-	g2 := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g2"placeholder)
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc"placeholder)
+	g1 := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g1"placeholder)
+	g2 := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g2"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc"placeholder)
 
 	s.Require().NoError(s.repo.AddToGroup(s.ctx, account.ID, g1.ID, 10), "AddToGroup")
 	groups, err := s.repo.GetGroups(s.ctx, account.ID)
@@ -279,9 +281,9 @@ func (s *AccountRepoSuite) TestGroupBinding_And_BindGroups() {
 placeholder
 
 func (s *AccountRepoSuite) TestBindGroups_EmptyList() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-empty"placeholder)
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-empty"placeholder)
-	mustBindAccountToGroup(s.T(), s.db, account.ID, group.ID, 1)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-empty"placeholder)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g-empty"placeholder)
+	mustBindAccountToGroup(s.T(), s.client, account.ID, group.ID, 1)
 
 	s.Require().NoError(s.repo.BindGroups(s.ctx, account.ID, []int64{placeholder), "BindGroups empty")
 
@@ -294,14 +296,14 @@ placeholder
 
 func (s *AccountRepoSuite) TestListSchedulable() {
 	now := time.Now()
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-sched"placeholder)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g-sched"placeholder)
 
-	okAcc := mustCreateAccount(s.T(), s.db, &accountModel{Name: "ok", Schedulable: trueplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, okAcc.ID, group.ID, 1)
+	okAcc := mustCreateAccount(s.T(), s.client, &service.Account{Name: "ok", Schedulable: trueplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, okAcc.ID, group.ID, 1)
 
 	future := now.Add(10 * time.Minute)
-	overloaded := mustCreateAccount(s.T(), s.db, &accountModel{Name: "over", Schedulable: true, OverloadUntil: &futureplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, overloaded.ID, group.ID, 1)
+	overloaded := mustCreateAccount(s.T(), s.client, &service.Account{Name: "over", Schedulable: true, OverloadUntil: &futureplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, overloaded.ID, group.ID, 1)
 
 	sched, err := s.repo.ListSchedulable(s.ctx)
 	s.Require().NoError(err, "ListSchedulable")
@@ -312,17 +314,17 @@ placeholder
 
 func (s *AccountRepoSuite) TestListSchedulableByGroupID_TimeBoundaries_And_StatusUpdates() {
 	now := time.Now()
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-sched"placeholder)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g-sched"placeholder)
 
-	okAcc := mustCreateAccount(s.T(), s.db, &accountModel{Name: "ok", Schedulable: trueplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, okAcc.ID, group.ID, 1)
+	okAcc := mustCreateAccount(s.T(), s.client, &service.Account{Name: "ok", Schedulable: trueplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, okAcc.ID, group.ID, 1)
 
 	future := now.Add(10 * time.Minute)
-	overloaded := mustCreateAccount(s.T(), s.db, &accountModel{Name: "over", Schedulable: true, OverloadUntil: &futureplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, overloaded.ID, group.ID, 1)
+	overloaded := mustCreateAccount(s.T(), s.client, &service.Account{Name: "over", Schedulable: true, OverloadUntil: &futureplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, overloaded.ID, group.ID, 1)
 
-	rateLimited := mustCreateAccount(s.T(), s.db, &accountModel{Name: "rl", Schedulable: trueplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, rateLimited.ID, group.ID, 1)
+	rateLimited := mustCreateAccount(s.T(), s.client, &service.Account{Name: "rl", Schedulable: trueplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, rateLimited.ID, group.ID, 1)
 	s.Require().NoError(s.repo.SetRateLimited(s.ctx, rateLimited.ID, now.Add(10*time.Minute)), "SetRateLimited")
 
 	s.Require().NoError(s.repo.SetError(s.ctx, overloaded.ID, "boom"), "SetError")
@@ -339,8 +341,8 @@ func (s *AccountRepoSuite) TestListSchedulableByGroupID_TimeBoundaries_And_Statu
 placeholder
 
 func (s *AccountRepoSuite) TestListSchedulableByPlatform() {
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "a1", Platform: service.PlatformAnthropic, Schedulable: trueplaceholder)
-	mustCreateAccount(s.T(), s.db, &accountModel{Name: "a2", Platform: service.PlatformOpenAI, Schedulable: trueplaceholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "a1", Platform: service.PlatformAnthropic, Schedulable: trueplaceholder)
+	mustCreateAccount(s.T(), s.client, &service.Account{Name: "a2", Platform: service.PlatformOpenAI, Schedulable: trueplaceholder)
 
 	accounts, err := s.repo.ListSchedulableByPlatform(s.ctx, service.PlatformAnthropic)
 	s.Require().NoError(err)
@@ -349,11 +351,11 @@ func (s *AccountRepoSuite) TestListSchedulableByPlatform() {
 placeholder
 
 func (s *AccountRepoSuite) TestListSchedulableByGroupIDAndPlatform() {
-	group := mustCreateGroup(s.T(), s.db, &groupModel{Name: "g-sp"placeholder)
-	a1 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a1", Platform: service.PlatformAnthropic, Schedulable: trueplaceholder)
-	a2 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "a2", Platform: service.PlatformOpenAI, Schedulable: trueplaceholder)
-	mustBindAccountToGroup(s.T(), s.db, a1.ID, group.ID, 1)
-	mustBindAccountToGroup(s.T(), s.db, a2.ID, group.ID, 2)
+	group := mustCreateGroup(s.T(), s.client, &service.Group{Name: "g-sp"placeholder)
+	a1 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "a1", Platform: service.PlatformAnthropic, Schedulable: trueplaceholder)
+	a2 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "a2", Platform: service.PlatformOpenAI, Schedulable: trueplaceholder)
+	mustBindAccountToGroup(s.T(), s.client, a1.ID, group.ID, 1)
+	mustBindAccountToGroup(s.T(), s.client, a2.ID, group.ID, 2)
 
 	accounts, err := s.repo.ListSchedulableByGroupIDAndPlatform(s.ctx, group.ID, service.PlatformAnthropic)
 	s.Require().NoError(err)
@@ -362,7 +364,7 @@ func (s *AccountRepoSuite) TestListSchedulableByGroupIDAndPlatform() {
 placeholder
 
 func (s *AccountRepoSuite) TestSetSchedulable() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-sched", Schedulable: trueplaceholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-sched", Schedulable: trueplaceholder)
 
 	s.Require().NoError(s.repo.SetSchedulable(s.ctx, account.ID, false))
 
@@ -374,7 +376,7 @@ placeholder
 // --- SetOverloaded / SetRateLimited / ClearRateLimit ---
 
 func (s *AccountRepoSuite) TestSetOverloaded() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-over"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-over"placeholder)
 	until := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
 
 	s.Require().NoError(s.repo.SetOverloaded(s.ctx, account.ID, until))
@@ -386,7 +388,7 @@ func (s *AccountRepoSuite) TestSetOverloaded() {
 placeholder
 
 func (s *AccountRepoSuite) TestSetRateLimited() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-rl"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-rl"placeholder)
 	resetAt := time.Date(2025, 6, 15, 14, 0, 0, 0, time.UTC)
 
 	s.Require().NoError(s.repo.SetRateLimited(s.ctx, account.ID, resetAt))
@@ -399,7 +401,7 @@ func (s *AccountRepoSuite) TestSetRateLimited() {
 placeholder
 
 func (s *AccountRepoSuite) TestClearRateLimit() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-clear"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-clear"placeholder)
 	until := time.Now().Add(1 * time.Hour)
 	s.Require().NoError(s.repo.SetOverloaded(s.ctx, account.ID, until))
 	s.Require().NoError(s.repo.SetRateLimited(s.ctx, account.ID, until))
@@ -416,7 +418,7 @@ placeholder
 // --- UpdateLastUsed ---
 
 func (s *AccountRepoSuite) TestUpdateLastUsed() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-used"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-used"placeholder)
 	s.Require().Nil(account.LastUsedAt)
 
 	s.Require().NoError(s.repo.UpdateLastUsed(s.ctx, account.ID))
@@ -429,7 +431,7 @@ placeholder
 // --- SetError ---
 
 func (s *AccountRepoSuite) TestSetError() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-err", Status: service.StatusActiveplaceholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-err", Status: service.StatusActiveplaceholder)
 
 	s.Require().NoError(s.repo.SetError(s.ctx, account.ID, "something went wrong"))
 
@@ -442,7 +444,7 @@ placeholder
 // --- UpdateSessionWindow ---
 
 func (s *AccountRepoSuite) TestUpdateSessionWindow() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-win"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-win"placeholder)
 	start := time.Date(2025, 6, 15, 10, 0, 0, 0, time.UTC)
 	end := time.Date(2025, 6, 15, 15, 0, 0, 0, time.UTC)
 
@@ -458,9 +460,9 @@ placeholder
 // --- UpdateExtra ---
 
 func (s *AccountRepoSuite) TestUpdateExtra_MergesFields() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{
+	account := mustCreateAccount(s.T(), s.client, &service.Account{
 		Name:  "acc-extra",
-		Extra: datatypes.JSONMap{"a": "1"placeholder,
+		Extra: map[string]any{"a": "1"placeholder,
 placeholder)
 	s.Require().NoError(s.repo.UpdateExtra(s.ctx, account.ID, map[string]any{"b": "2"placeholder), "UpdateExtra")
 
@@ -471,12 +473,12 @@ placeholder)
 placeholder
 
 func (s *AccountRepoSuite) TestUpdateExtra_EmptyUpdates() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-extra-empty"placeholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-extra-empty"placeholder)
 	s.Require().NoError(s.repo.UpdateExtra(s.ctx, account.ID, map[string]any{placeholder))
 placeholder
 
 func (s *AccountRepoSuite) TestUpdateExtra_NilExtra() {
-	account := mustCreateAccount(s.T(), s.db, &accountModel{Name: "acc-nil-extra", Extra: nilplaceholder)
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-nil-extra", Extra: nilplaceholder)
 	s.Require().NoError(s.repo.UpdateExtra(s.ctx, account.ID, map[string]any{"key": "val"placeholder))
 
 	got, err := s.repo.GetByID(s.ctx, account.ID)
@@ -488,9 +490,9 @@ placeholder
 
 func (s *AccountRepoSuite) TestGetByCRSAccountID() {
 	crsID := "crs-12345"
-	mustCreateAccount(s.T(), s.db, &accountModel{
+	mustCreateAccount(s.T(), s.client, &service.Account{
 		Name:  "acc-crs",
-		Extra: datatypes.JSONMap{"crs_account_id": crsIDplaceholder,
+		Extra: map[string]any{"crs_account_id": crsIDplaceholder,
 placeholder)
 
 	got, err := s.repo.GetByCRSAccountID(s.ctx, crsID)
@@ -514,8 +516,8 @@ placeholder
 // --- BulkUpdate ---
 
 func (s *AccountRepoSuite) TestBulkUpdate() {
-	a1 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "bulk1", Priority: 1placeholder)
-	a2 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "bulk2", Priority: 1placeholder)
+	a1 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "bulk1", Priority: 1placeholder)
+	a2 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "bulk2", Priority: 1placeholder)
 
 	newPriority := 99
 	affected, err := s.repo.BulkUpdate(s.ctx, []int64{a1.ID, a2.IDplaceholder, service.AccountBulkUpdate{
@@ -531,13 +533,13 @@ placeholder)
 placeholder
 
 func (s *AccountRepoSuite) TestBulkUpdate_MergeCredentials() {
-	a1 := mustCreateAccount(s.T(), s.db, &accountModel{
+	a1 := mustCreateAccount(s.T(), s.client, &service.Account{
 		Name:        "bulk-cred",
-		Credentials: datatypes.JSONMap{"existing": "value"placeholder,
+placeholder"existing": "value"placeholder,
 placeholder)
 
 	_, err := s.repo.BulkUpdate(s.ctx, []int64{a1.IDplaceholder, service.AccountBulkUpdate{
-		Credentials: datatypes.JSONMap{"new_key": "new_value"placeholder,
+placeholder"new_key": "new_value"placeholder,
 placeholder)
 	s.Require().NoError(err)
 
@@ -547,13 +549,13 @@ placeholder)
 placeholder
 
 func (s *AccountRepoSuite) TestBulkUpdate_MergeExtra() {
-	a1 := mustCreateAccount(s.T(), s.db, &accountModel{
+	a1 := mustCreateAccount(s.T(), s.client, &service.Account{
 		Name:  "bulk-extra",
-		Extra: datatypes.JSONMap{"existing": "val"placeholder,
+		Extra: map[string]any{"existing": "val"placeholder,
 placeholder)
 
 	_, err := s.repo.BulkUpdate(s.ctx, []int64{a1.IDplaceholder, service.AccountBulkUpdate{
-		Extra: datatypes.JSONMap{"new_key": "new_val"placeholder,
+		Extra: map[string]any{"new_key": "new_val"placeholder,
 placeholder)
 	s.Require().NoError(err)
 
@@ -569,7 +571,7 @@ func (s *AccountRepoSuite) TestBulkUpdate_EmptyIDs() {
 placeholder
 
 func (s *AccountRepoSuite) TestBulkUpdate_EmptyUpdates() {
-	a1 := mustCreateAccount(s.T(), s.db, &accountModel{Name: "bulk-empty"placeholder)
+	a1 := mustCreateAccount(s.T(), s.client, &service.Account{Name: "bulk-empty"placeholder)
 
 	affected, err := s.repo.BulkUpdate(s.ctx, []int64{a1.IDplaceholder, service.AccountBulkUpdate{placeholder)
 	s.Require().NoError(err)

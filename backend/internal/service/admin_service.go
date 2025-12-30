@@ -366,7 +366,11 @@ placeholder
 	if user.Role == "admin" {
 		return errors.New("cannot delete admin user")
 placeholder
-	return s.userRepo.Delete(ctx, id)
+	if err := s.userRepo.Delete(ctx, id); err != nil {
+		log.Printf("delete user failed: user_id=%d err=%v", id, err)
+		return err
+placeholder
+	return nil
 placeholder
 
 func (s *adminServiceImpl) UpdateUserBalance(ctx context.Context, userID int64, balance float64, operation string, notes string) (*User, error) {

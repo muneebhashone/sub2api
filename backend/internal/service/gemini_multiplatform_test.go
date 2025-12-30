@@ -25,6 +25,14 @@ placeholder
 	return nil, errors.New("account not found")
 placeholder
 
+func (m *mockAccountRepoForGemini) ExistsByID(ctx context.Context, id int64) (bool, error) {
+	if m.accountsByID == nil {
+		return false, nil
+placeholder
+	_, ok := m.accountsByID[id]
+	return ok, nil
+placeholder
+
 func (m *mockAccountRepoForGemini) ListSchedulableByPlatform(ctx context.Context, platform string) ([]Account, error) {
 	var result []Account
 	for _, acc := range m.accounts {

@@ -32,6 +32,14 @@ placeholder
 	return nil, errors.New("account not found")
 placeholder
 
+func (m *mockAccountRepoForPlatform) ExistsByID(ctx context.Context, id int64) (bool, error) {
+	if m.accountsByID == nil {
+		return false, nil
+placeholder
+	_, ok := m.accountsByID[id]
+	return ok, nil
+placeholder
+
 func (m *mockAccountRepoForPlatform) ListSchedulableByPlatform(ctx context.Context, platform string) ([]Account, error) {
 	if m.listPlatformFunc != nil {
 		return m.listPlatformFunc(ctx, platform)
