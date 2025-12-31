@@ -98,6 +98,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
           password: ${{ secrets.DOCKERHUB_TOKEN placeholderplaceholder
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner placeholderplaceholder
+          password: ${{ secrets.GITHUB_TOKEN placeholderplaceholder
+
       - name: Fetch tags with annotations
         run: |
           # 确保获取完整的 annotated tag 信息
@@ -161,6 +168,7 @@ jobs:
           VERSION=${TAG_NAME#vplaceholder
           REPO="${{ github.repository placeholderplaceholder"
           DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder/sub2api"
+          GHCR_IMAGE="ghcr.io/${REPOplaceholder"
 
           # 获取 tag message 内容
           TAG_MESSAGE='${{ steps.tag_message.outputs.message placeholderplaceholder'
@@ -181,12 +189,15 @@ jobs:
 
           MESSAGE+="🐳 *Docker 部署:*"$'\n'
           MESSAGE+="\`\`\`bash"$'\n'
+          MESSAGE+="# Docker Hub"$'\n'
           MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
-          MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:latest"$'\n'
+          MESSAGE+="# GitHub Container Registry"$'\n'
+          MESSAGE+="docker pull ${GHCR_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
           MESSAGE+="\`\`\`"$'\n'$'\n'
           MESSAGE+="🔗 *相关链接:*"$'\n'
           MESSAGE+="• [GitHub Release](https://github.com/${REPOplaceholder/releases/tag/${TAG_NAMEplaceholder)"$'\n'
-          MESSAGE+="• [Docker Hub](https://hub.docker.com/r/${DOCKER_IMAGEplaceholder)"$'\n'$'\n'
+          MESSAGE+="• [Docker Hub](https://hub.docker.com/r/${DOCKER_IMAGEplaceholder)"$'\n'
+          MESSAGE+="• [GitHub Packages](https://github.com/${REPOplaceholder/pkgs/container/sub2api)"$'\n'$'\n'
           MESSAGE+="#Sub2API #Release #${TAG_NAME//./_placeholder"
 
           # 发送消息
