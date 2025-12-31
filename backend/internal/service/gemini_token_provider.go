@@ -50,7 +50,7 @@ placeholder
 placeholder
 
 	// 2) Refresh if needed (pre-expiry skew).
-	expiresAt := parseExpiresAt(account)
+	expiresAt := account.GetCredentialAsTime("expires_at")
 	needsRefresh := expiresAt == nil || time.Until(*expiresAt) <= geminiTokenRefreshSkew
 	if needsRefresh && p.tokenCache != nil {
 		locked, err := p.tokenCache.AcquireRefreshLock(ctx, cacheKey, 30*time.Second)
@@ -66,7 +66,7 @@ placeholder
 			if err == nil && fresh != nil {
 				account = fresh
 		placeholder
-			expiresAt = parseExpiresAt(account)
+			expiresAt = account.GetCredentialAsTime("expires_at")
 			if expiresAt == nil || time.Until(*expiresAt) <= geminiTokenRefreshSkew {
 				if p.geminiOAuthService == nil {
 					return "", errors.New("gemini oauth service not configured")
@@ -83,7 +83,7 @@ placeholder
 			placeholder
 				account.Credentials = newCredentials
 				_ = p.accountRepo.Update(ctx, account)
-				expiresAt = parseExpiresAt(account)
+				expiresAt = account.GetCredentialAsTime("expires_at")
 		placeholder
 	placeholder
 placeholder
@@ -153,19 +153,4 @@ func geminiTokenCacheKey(account *Account) string {
 		return projectID
 placeholder
 	return "account:" + strconv.FormatInt(account.ID, 10)
-placeholder
-
-func parseExpiresAt(account *Account) *time.Time {
-	raw := strings.TrimSpace(account.GetCredential("expires_at"))
-	if raw == "" {
-		return nil
-placeholder
-	if unixSec, err := strconv.ParseInt(raw, 10, 64); err == nil && unixSec > 0 {
-		t := time.Unix(unixSec, 0)
-		return &t
-placeholder
-	if t, err := time.Parse(time.RFC3339, raw); err == nil {
-		return &t
-placeholder
-	return nil
 placeholder
