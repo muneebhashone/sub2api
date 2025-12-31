@@ -347,7 +347,7 @@ func (c *concurrencyCache) GetAccountsLoadBatch(ctx context.Context, accounts []
 		return map[int64]*service.AccountLoadInfo{placeholder, nil
 placeholder
 
-	args := []interface{placeholder{c.slotTTLSecondsplaceholder
+	args := []any{c.slotTTLSecondsplaceholder
 	for _, acc := range accounts {
 		args = append(args, acc.ID, acc.MaxConcurrency)
 placeholder
