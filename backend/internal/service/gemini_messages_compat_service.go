@@ -2271,6 +2271,14 @@ placeholder
 			continue
 	placeholder
 
+		// 为 nil params 提供默认值
+		if params == nil {
+			params = map[string]any{
+				"type":       "object",
+				"properties": map[string]any{placeholder,
+		placeholder
+	placeholder
+
 		funcDecls = append(funcDecls, map[string]any{
 			"name":        name,
 			"description": desc,
