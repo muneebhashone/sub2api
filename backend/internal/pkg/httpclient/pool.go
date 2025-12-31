@@ -58,7 +58,9 @@ var sharedClients sync.Map
 func GetClient(opts Options) (*http.Client, error) {
 	key := buildClientKey(opts)
 	if cached, ok := sharedClients.Load(key); ok {
-		return cached.(*http.Client), nil
+		if client, ok := cached.(*http.Client); ok {
+			return client, nil
+	placeholder
 placeholder
 
 	client, err := buildClient(opts)
@@ -72,7 +74,10 @@ placeholder
 placeholder
 
 	actual, _ := sharedClients.LoadOrStore(key, client)
-	return actual.(*http.Client), nil
+	if c, ok := actual.(*http.Client); ok {
+		return c, nil
+placeholder
+	return client, nil
 placeholder
 
 func buildClient(opts Options) (*http.Client, error) {

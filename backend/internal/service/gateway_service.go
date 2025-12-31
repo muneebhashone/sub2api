@@ -197,7 +197,7 @@ placeholder
 				if cc, ok := partMap["cache_control"].(map[string]any); ok {
 					if cc["type"] == "ephemeral" {
 						if text, ok := partMap["text"].(string); ok {
-							builder.WriteString(text)
+							_, _ = builder.WriteString(text)
 					placeholder
 				placeholder
 			placeholder
