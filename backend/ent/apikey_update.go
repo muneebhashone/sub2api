@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
+	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 )
 
@@ -142,6 +143,21 @@ func (_u *ApiKeyUpdate) SetGroup(v *Group) *ApiKeyUpdate {
 	return _u.SetGroupID(v.ID)
 placeholder
 
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by IDs.
+func (_u *ApiKeyUpdate) AddUsageLogIDs(ids ...int64) *ApiKeyUpdate {
+	_u.mutation.AddUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// AddUsageLogs adds the "usage_logs" edges to the UsageLog entity.
+func (_u *ApiKeyUpdate) AddUsageLogs(v ...*UsageLog) *ApiKeyUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.AddUsageLogIDs(ids...)
+placeholder
+
 // Mutation returns the ApiKeyMutation object of the builder.
 func (_u *ApiKeyUpdate) Mutation() *ApiKeyMutation {
 	return _u.mutation
@@ -157,6 +173,27 @@ placeholder
 func (_u *ApiKeyUpdate) ClearGroup() *ApiKeyUpdate {
 	_u.mutation.ClearGroup()
 	return _u
+placeholder
+
+// ClearUsageLogs clears all "usage_logs" edges to the UsageLog entity.
+func (_u *ApiKeyUpdate) ClearUsageLogs() *ApiKeyUpdate {
+	_u.mutation.ClearUsageLogs()
+	return _u
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to UsageLog entities by IDs.
+func (_u *ApiKeyUpdate) RemoveUsageLogIDs(ids ...int64) *ApiKeyUpdate {
+	_u.mutation.RemoveUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// RemoveUsageLogs removes "usage_logs" edges to UsageLog entities.
+func (_u *ApiKeyUpdate) RemoveUsageLogs(v ...*UsageLog) *ApiKeyUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.RemoveUsageLogIDs(ids...)
 placeholder
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -312,6 +349,51 @@ placeholder
 	placeholder
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 placeholder
+	if _u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   apikey.UsageLogsTable,
+			Columns: []string{apikey.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.RemovedUsageLogsIDs(); len(nodes) > 0 && !_u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   apikey.UsageLogsTable,
+			Columns: []string{apikey.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.UsageLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   apikey.UsageLogsTable,
+			Columns: []string{apikey.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{apikey.Labelplaceholder
@@ -444,6 +526,21 @@ func (_u *ApiKeyUpdateOne) SetGroup(v *Group) *ApiKeyUpdateOne {
 	return _u.SetGroupID(v.ID)
 placeholder
 
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by IDs.
+func (_u *ApiKeyUpdateOne) AddUsageLogIDs(ids ...int64) *ApiKeyUpdateOne {
+	_u.mutation.AddUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// AddUsageLogs adds the "usage_logs" edges to the UsageLog entity.
+func (_u *ApiKeyUpdateOne) AddUsageLogs(v ...*UsageLog) *ApiKeyUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.AddUsageLogIDs(ids...)
+placeholder
+
 // Mutation returns the ApiKeyMutation object of the builder.
 func (_u *ApiKeyUpdateOne) Mutation() *ApiKeyMutation {
 	return _u.mutation
@@ -459,6 +556,27 @@ placeholder
 func (_u *ApiKeyUpdateOne) ClearGroup() *ApiKeyUpdateOne {
 	_u.mutation.ClearGroup()
 	return _u
+placeholder
+
+// ClearUsageLogs clears all "usage_logs" edges to the UsageLog entity.
+func (_u *ApiKeyUpdateOne) ClearUsageLogs() *ApiKeyUpdateOne {
+	_u.mutation.ClearUsageLogs()
+	return _u
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to UsageLog entities by IDs.
+func (_u *ApiKeyUpdateOne) RemoveUsageLogIDs(ids ...int64) *ApiKeyUpdateOne {
+	_u.mutation.RemoveUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// RemoveUsageLogs removes "usage_logs" edges to UsageLog entities.
+func (_u *ApiKeyUpdateOne) RemoveUsageLogs(v ...*UsageLog) *ApiKeyUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.RemoveUsageLogIDs(ids...)
 placeholder
 
 // Where appends a list predicates to the ApiKeyUpdate builder.
@@ -637,6 +755,51 @@ placeholder
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   apikey.UsageLogsTable,
+			Columns: []string{apikey.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.RemovedUsageLogsIDs(); len(nodes) > 0 && !_u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   apikey.UsageLogsTable,
+			Columns: []string{apikey.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.UsageLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   apikey.UsageLogsTable,
+			Columns: []string{apikey.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
 		placeholder,
 	placeholder
 		for _, k := range nodes {

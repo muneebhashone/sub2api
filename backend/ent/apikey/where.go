@@ -516,6 +516,29 @@ func HasGroupWith(preds ...predicate.Group) predicate.ApiKey {
 placeholder)
 placeholder
 
+// HasUsageLogs applies the HasEdge predicate on the "usage_logs" edge.
+func HasUsageLogs() predicate.ApiKey {
+	return predicate.ApiKey(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsageLogsTable, UsageLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+placeholder)
+placeholder
+
+// HasUsageLogsWith applies the HasEdge predicate on the "usage_logs" edge with a given conditions (other predicates).
+func HasUsageLogsWith(preds ...predicate.UsageLog) predicate.ApiKey {
+	return predicate.ApiKey(func(s *sql.Selector) {
+		step := newUsageLogsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+		placeholder
+	placeholder)
+placeholder)
+placeholder
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.ApiKey) predicate.ApiKey {
 	return predicate.ApiKey(sql.AndPredicates(predicates...))

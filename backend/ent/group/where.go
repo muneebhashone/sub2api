@@ -120,6 +120,11 @@ func MonthlyLimitUsd(v float64) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldMonthlyLimitUsd, v))
 placeholder
 
+// DefaultValidityDays applies equality check predicate on the "default_validity_days" field. It's identical to DefaultValidityDaysEQ.
+func DefaultValidityDays(v int) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldDefaultValidityDays, v))
+placeholder
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -785,6 +790,46 @@ func MonthlyLimitUsdNotNil() predicate.Group {
 	return predicate.Group(sql.FieldNotNull(FieldMonthlyLimitUsd))
 placeholder
 
+// DefaultValidityDaysEQ applies the EQ predicate on the "default_validity_days" field.
+func DefaultValidityDaysEQ(v int) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldDefaultValidityDays, v))
+placeholder
+
+// DefaultValidityDaysNEQ applies the NEQ predicate on the "default_validity_days" field.
+func DefaultValidityDaysNEQ(v int) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldDefaultValidityDays, v))
+placeholder
+
+// DefaultValidityDaysIn applies the In predicate on the "default_validity_days" field.
+func DefaultValidityDaysIn(vs ...int) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldDefaultValidityDays, vs...))
+placeholder
+
+// DefaultValidityDaysNotIn applies the NotIn predicate on the "default_validity_days" field.
+func DefaultValidityDaysNotIn(vs ...int) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldDefaultValidityDays, vs...))
+placeholder
+
+// DefaultValidityDaysGT applies the GT predicate on the "default_validity_days" field.
+func DefaultValidityDaysGT(v int) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldDefaultValidityDays, v))
+placeholder
+
+// DefaultValidityDaysGTE applies the GTE predicate on the "default_validity_days" field.
+func DefaultValidityDaysGTE(v int) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldDefaultValidityDays, v))
+placeholder
+
+// DefaultValidityDaysLT applies the LT predicate on the "default_validity_days" field.
+func DefaultValidityDaysLT(v int) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldDefaultValidityDays, v))
+placeholder
+
+// DefaultValidityDaysLTE applies the LTE predicate on the "default_validity_days" field.
+func DefaultValidityDaysLTE(v int) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldDefaultValidityDays, v))
+placeholder
+
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.
 func HasAPIKeys() predicate.Group {
 	return predicate.Group(func(s *sql.Selector) {
@@ -846,6 +891,29 @@ placeholder
 func HasSubscriptionsWith(preds ...predicate.UserSubscription) predicate.Group {
 	return predicate.Group(func(s *sql.Selector) {
 		step := newSubscriptionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+		placeholder
+	placeholder)
+placeholder)
+placeholder
+
+// HasUsageLogs applies the HasEdge predicate on the "usage_logs" edge.
+func HasUsageLogs() predicate.Group {
+	return predicate.Group(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsageLogsTable, UsageLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+placeholder)
+placeholder
+
+// HasUsageLogsWith applies the HasEdge predicate on the "usage_logs" edge with a given conditions (other predicates).
+func HasUsageLogsWith(preds ...predicate.UsageLog) predicate.Group {
+	return predicate.Group(func(s *sql.Selector) {
+		step := newUsageLogsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

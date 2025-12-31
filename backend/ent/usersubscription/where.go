@@ -65,6 +65,11 @@ func UpdatedAt(v time.Time) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldEQ(FieldUpdatedAt, v))
 placeholder
 
+// DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
+func DeletedAt(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldDeletedAt, v))
+placeholder
+
 // UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
 func UserID(v int64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldEQ(FieldUserID, v))
@@ -213,6 +218,56 @@ placeholder
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldLTE(FieldUpdatedAt, v))
+placeholder
+
+// DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
+func DeletedAtEQ(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldDeletedAt, v))
+placeholder
+
+// DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
+func DeletedAtNEQ(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNEQ(FieldDeletedAt, v))
+placeholder
+
+// DeletedAtIn applies the In predicate on the "deleted_at" field.
+func DeletedAtIn(vs ...time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIn(FieldDeletedAt, vs...))
+placeholder
+
+// DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
+func DeletedAtNotIn(vs ...time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotIn(FieldDeletedAt, vs...))
+placeholder
+
+// DeletedAtGT applies the GT predicate on the "deleted_at" field.
+func DeletedAtGT(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGT(FieldDeletedAt, v))
+placeholder
+
+// DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
+func DeletedAtGTE(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGTE(FieldDeletedAt, v))
+placeholder
+
+// DeletedAtLT applies the LT predicate on the "deleted_at" field.
+func DeletedAtLT(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLT(FieldDeletedAt, v))
+placeholder
+
+// DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
+func DeletedAtLTE(v time.Time) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLTE(FieldDeletedAt, v))
+placeholder
+
+// DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
+func DeletedAtIsNil() predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIsNull(FieldDeletedAt))
+placeholder
+
+// DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
+func DeletedAtNotNil() predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotNull(FieldDeletedAt))
 placeholder
 
 // UserIDEQ applies the EQ predicate on the "user_id" field.
@@ -876,6 +931,29 @@ placeholder
 func HasAssignedByUserWith(preds ...predicate.User) predicate.UserSubscription {
 	return predicate.UserSubscription(func(s *sql.Selector) {
 		step := newAssignedByUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+		placeholder
+	placeholder)
+placeholder)
+placeholder
+
+// HasUsageLogs applies the HasEdge predicate on the "usage_logs" edge.
+func HasUsageLogs() predicate.UserSubscription {
+	return predicate.UserSubscription(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsageLogsTable, UsageLogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+placeholder)
+placeholder
+
+// HasUsageLogsWith applies the HasEdge predicate on the "usage_logs" edge with a given conditions (other predicates).
+func HasUsageLogsWith(preds ...predicate.UsageLog) predicate.UserSubscription {
+	return predicate.UserSubscription(func(s *sql.Selector) {
+		step := newUsageLogsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

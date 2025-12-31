@@ -16,6 +16,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
+	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 )
@@ -251,6 +252,27 @@ func (_u *GroupUpdate) ClearMonthlyLimitUsd() *GroupUpdate {
 	return _u
 placeholder
 
+// SetDefaultValidityDays sets the "default_validity_days" field.
+func (_u *GroupUpdate) SetDefaultValidityDays(v int) *GroupUpdate {
+	_u.mutation.ResetDefaultValidityDays()
+	_u.mutation.SetDefaultValidityDays(v)
+	return _u
+placeholder
+
+// SetNillableDefaultValidityDays sets the "default_validity_days" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableDefaultValidityDays(v *int) *GroupUpdate {
+	if v != nil {
+		_u.SetDefaultValidityDays(*v)
+placeholder
+	return _u
+placeholder
+
+// AddDefaultValidityDays adds value to the "default_validity_days" field.
+func (_u *GroupUpdate) AddDefaultValidityDays(v int) *GroupUpdate {
+	_u.mutation.AddDefaultValidityDays(v)
+	return _u
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the ApiKey entity by IDs.
 func (_u *GroupUpdate) AddAPIKeyIDs(ids ...int64) *GroupUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -294,6 +316,21 @@ func (_u *GroupUpdate) AddSubscriptions(v ...*UserSubscription) *GroupUpdate {
 		ids[i] = v[i].ID
 placeholder
 	return _u.AddSubscriptionIDs(ids...)
+placeholder
+
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by IDs.
+func (_u *GroupUpdate) AddUsageLogIDs(ids ...int64) *GroupUpdate {
+	_u.mutation.AddUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// AddUsageLogs adds the "usage_logs" edges to the UsageLog entity.
+func (_u *GroupUpdate) AddUsageLogs(v ...*UsageLog) *GroupUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.AddUsageLogIDs(ids...)
 placeholder
 
 // AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
@@ -392,6 +429,27 @@ func (_u *GroupUpdate) RemoveSubscriptions(v ...*UserSubscription) *GroupUpdate 
 		ids[i] = v[i].ID
 placeholder
 	return _u.RemoveSubscriptionIDs(ids...)
+placeholder
+
+// ClearUsageLogs clears all "usage_logs" edges to the UsageLog entity.
+func (_u *GroupUpdate) ClearUsageLogs() *GroupUpdate {
+	_u.mutation.ClearUsageLogs()
+	return _u
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to UsageLog entities by IDs.
+func (_u *GroupUpdate) RemoveUsageLogIDs(ids ...int64) *GroupUpdate {
+	_u.mutation.RemoveUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// RemoveUsageLogs removes "usage_logs" edges to UsageLog entities.
+func (_u *GroupUpdate) RemoveUsageLogs(v ...*UsageLog) *GroupUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.RemoveUsageLogIDs(ids...)
 placeholder
 
 // ClearAccounts clears all "accounts" edges to the Account entity.
@@ -578,6 +636,12 @@ placeholder
 	if _u.mutation.MonthlyLimitUsdCleared() {
 		_spec.ClearField(group.FieldMonthlyLimitUsd, field.TypeFloat64)
 placeholder
+	if value, ok := _u.mutation.DefaultValidityDays(); ok {
+		_spec.SetField(group.FieldDefaultValidityDays, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.AddedDefaultValidityDays(); ok {
+		_spec.AddField(group.FieldDefaultValidityDays, field.TypeInt, value)
+placeholder
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -706,6 +770,51 @@ placeholder
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usersubscription.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.UsageLogsTable,
+			Columns: []string{group.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.RemovedUsageLogsIDs(); len(nodes) > 0 && !_u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.UsageLogsTable,
+			Columns: []string{group.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.UsageLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.UsageLogsTable,
+			Columns: []string{group.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
 		placeholder,
 	placeholder
 		for _, k := range nodes {
@@ -1065,6 +1174,27 @@ func (_u *GroupUpdateOne) ClearMonthlyLimitUsd() *GroupUpdateOne {
 	return _u
 placeholder
 
+// SetDefaultValidityDays sets the "default_validity_days" field.
+func (_u *GroupUpdateOne) SetDefaultValidityDays(v int) *GroupUpdateOne {
+	_u.mutation.ResetDefaultValidityDays()
+	_u.mutation.SetDefaultValidityDays(v)
+	return _u
+placeholder
+
+// SetNillableDefaultValidityDays sets the "default_validity_days" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableDefaultValidityDays(v *int) *GroupUpdateOne {
+	if v != nil {
+		_u.SetDefaultValidityDays(*v)
+placeholder
+	return _u
+placeholder
+
+// AddDefaultValidityDays adds value to the "default_validity_days" field.
+func (_u *GroupUpdateOne) AddDefaultValidityDays(v int) *GroupUpdateOne {
+	_u.mutation.AddDefaultValidityDays(v)
+	return _u
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the ApiKey entity by IDs.
 func (_u *GroupUpdateOne) AddAPIKeyIDs(ids ...int64) *GroupUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1108,6 +1238,21 @@ func (_u *GroupUpdateOne) AddSubscriptions(v ...*UserSubscription) *GroupUpdateO
 		ids[i] = v[i].ID
 placeholder
 	return _u.AddSubscriptionIDs(ids...)
+placeholder
+
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by IDs.
+func (_u *GroupUpdateOne) AddUsageLogIDs(ids ...int64) *GroupUpdateOne {
+	_u.mutation.AddUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// AddUsageLogs adds the "usage_logs" edges to the UsageLog entity.
+func (_u *GroupUpdateOne) AddUsageLogs(v ...*UsageLog) *GroupUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.AddUsageLogIDs(ids...)
 placeholder
 
 // AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
@@ -1206,6 +1351,27 @@ func (_u *GroupUpdateOne) RemoveSubscriptions(v ...*UserSubscription) *GroupUpda
 		ids[i] = v[i].ID
 placeholder
 	return _u.RemoveSubscriptionIDs(ids...)
+placeholder
+
+// ClearUsageLogs clears all "usage_logs" edges to the UsageLog entity.
+func (_u *GroupUpdateOne) ClearUsageLogs() *GroupUpdateOne {
+	_u.mutation.ClearUsageLogs()
+	return _u
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to UsageLog entities by IDs.
+func (_u *GroupUpdateOne) RemoveUsageLogIDs(ids ...int64) *GroupUpdateOne {
+	_u.mutation.RemoveUsageLogIDs(ids...)
+	return _u
+placeholder
+
+// RemoveUsageLogs removes "usage_logs" edges to UsageLog entities.
+func (_u *GroupUpdateOne) RemoveUsageLogs(v ...*UsageLog) *GroupUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.RemoveUsageLogIDs(ids...)
 placeholder
 
 // ClearAccounts clears all "accounts" edges to the Account entity.
@@ -1422,6 +1588,12 @@ placeholder
 	if _u.mutation.MonthlyLimitUsdCleared() {
 		_spec.ClearField(group.FieldMonthlyLimitUsd, field.TypeFloat64)
 placeholder
+	if value, ok := _u.mutation.DefaultValidityDays(); ok {
+		_spec.SetField(group.FieldDefaultValidityDays, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.AddedDefaultValidityDays(); ok {
+		_spec.AddField(group.FieldDefaultValidityDays, field.TypeInt, value)
+placeholder
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1550,6 +1722,51 @@ placeholder
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usersubscription.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.UsageLogsTable,
+			Columns: []string{group.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.RemovedUsageLogsIDs(); len(nodes) > 0 && !_u.mutation.UsageLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.UsageLogsTable,
+			Columns: []string{group.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.UsageLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.UsageLogsTable,
+			Columns: []string{group.UsageLogsColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
 		placeholder,
 	placeholder
 		for _, k := range nodes {

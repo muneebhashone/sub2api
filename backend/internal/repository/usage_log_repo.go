@@ -1109,6 +1109,9 @@ placeholder
 	if err := rows.Close(); err != nil {
 		return nil, err
 placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
 
 	today := timezone.Today()
 	todayQuery := `
@@ -1133,6 +1136,9 @@ placeholder
 	placeholder
 placeholder
 	if err := rows.Close(); err != nil {
+		return nil, err
+placeholder
+	if err := rows.Err(); err != nil {
 		return nil, err
 placeholder
 
@@ -1177,6 +1183,9 @@ placeholder
 	if err := rows.Close(); err != nil {
 		return nil, err
 placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
 
 	today := timezone.Today()
 	todayQuery := `
@@ -1201,6 +1210,9 @@ placeholder
 	placeholder
 placeholder
 	if err := rows.Close(); err != nil {
+		return nil, err
+placeholder
+	if err := rows.Err(); err != nil {
 		return nil, err
 placeholder
 
