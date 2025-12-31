@@ -233,9 +233,11 @@ placeholder
 				log.Printf("Account wait queue full: account=%d", account.ID)
 				googleError(c, http.StatusTooManyRequests, "Too many pending requests, please retry later")
 				return
-		placeholder
-			accountWaitRelease = func() {
-				geminiConcurrency.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+		placeholder else {
+				// Only set release function if increment succeeded
+				accountWaitRelease = func() {
+					geminiConcurrency.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+			placeholder
 		placeholder
 
 			accountReleaseFunc, err = geminiConcurrency.AcquireAccountSlotWithWaitTimeout(
