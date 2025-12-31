@@ -311,7 +311,7 @@ placeholder
 placeholder
 
 	// Send request
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL)
+	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
 		return nil, fmt.Errorf("upstream request failed: %w", err)
 placeholder
