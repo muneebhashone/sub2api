@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+const (
+	// antigravityRefreshWindow Antigravity token 提前刷新窗口：15分钟
+	// Google OAuth token 有效期55分钟，提前15分钟刷新
+	antigravityRefreshWindow = 15 * time.Minute
+)
+
 // AntigravityTokenRefresher 实现 TokenRefresher 接口
 type AntigravityTokenRefresher struct {
 	antigravityOAuthService *AntigravityOAuthService
@@ -23,7 +29,8 @@ func (r *AntigravityTokenRefresher) CanRefresh(account *Account) bool {
 placeholder
 
 // NeedsRefresh 检查账户是否需要刷新
-func (r *AntigravityTokenRefresher) NeedsRefresh(account *Account, refreshWindow time.Duration) bool {
+// Antigravity 使用固定的10分钟刷新窗口，忽略全局配置
+func (r *AntigravityTokenRefresher) NeedsRefresh(account *Account, _ time.Duration) bool {
 	if !r.CanRefresh(account) {
 		return false
 placeholder
@@ -36,7 +43,7 @@ placeholder
 		return false
 placeholder
 	expiryTime := time.Unix(expiresAt, 0)
-	return time.Until(expiryTime) < refreshWindow
+	return time.Until(expiryTime) < antigravityRefreshWindow
 placeholder
 
 // Refresh 执行 token 刷新
