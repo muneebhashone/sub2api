@@ -121,16 +121,13 @@
                 />
               </svg>
             </div>
-            <div>
-              <span class="block text-sm font-medium text-gray-900 dark:text-white">{{
-                t('admin.accounts.types.codeAssist')
-              placeholderplaceholder</span>
-              <span class="block text-xs font-medium text-blue-600 dark:text-blue-400">{{
-                t('admin.accounts.oauth.gemini.needsProjectId')
-              placeholderplaceholder</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{
-                t('admin.accounts.oauth.gemini.needsProjectIdDesc')
-              placeholderplaceholder</span>
+            <div class="min-w-0">
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">
+                {{ t('admin.accounts.gemini.oauthType.builtInTitle') placeholderplaceholder
+              </span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.accounts.gemini.oauthType.builtInDesc') placeholderplaceholder
+              </span>
             </div>
           </button>
 
@@ -168,14 +165,13 @@
                 />
               </svg>
             </div>
-            <div>
-              <span class="block text-sm font-medium text-gray-900 dark:text-white">AI Studio</span>
-              <span class="block text-xs font-medium text-purple-600 dark:text-purple-400">{{
-                t('admin.accounts.oauth.gemini.noProjectIdNeeded')
-              placeholderplaceholder</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{
-                t('admin.accounts.oauth.gemini.noProjectIdNeededDesc')
-              placeholderplaceholder</span>
+            <div class="min-w-0">
+              <span class="block text-sm font-medium text-gray-900 dark:text-white">
+                {{ t('admin.accounts.gemini.oauthType.customTitle') placeholderplaceholder
+              </span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.accounts.gemini.oauthType.customDesc') placeholderplaceholder
+              </span>
               <div v-if="!geminiAIStudioOAuthEnabled" class="group relative mt-1 inline-block">
                 <span
                   class="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
