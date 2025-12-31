@@ -204,7 +204,7 @@ placeholder
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
-		{Name: "name", Type: field.TypeString, Unique: true, Size: 100placeholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
 		{Name: "description", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "rate_multiplier", Type: field.TypeFloat64, Default: 1, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 		{Name: "is_exclusive", Type: field.TypeBool, Default: falseplaceholder,
@@ -470,7 +470,7 @@ placeholder
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
-		{Name: "email", Type: field.TypeString, Unique: true, Size: 255placeholder,
+		{Name: "email", Type: field.TypeString, Size: 255placeholder,
 		{Name: "password_hash", Type: field.TypeString, Size: 255placeholder,
 		{Name: "role", Type: field.TypeString, Size: 20, Default: "user"placeholder,
 		{Name: "balance", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
@@ -605,7 +605,7 @@ placeholder
 		placeholder,
 			{
 				Name:    "usersubscription_user_id_group_id",
-				Unique:  true,
+				Unique:  false,
 				Columns: []*schema.Column{UserSubscriptionsColumns[16], UserSubscriptionsColumns[15]placeholder,
 		placeholder,
 			{
