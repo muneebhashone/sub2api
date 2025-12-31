@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -12,15 +13,19 @@ import (
 
 // RateLimitService 处理限流和过载状态管理
 type RateLimitService struct {
-	accountRepo AccountRepository
-	cfg         *config.Config
+	accountRepo        AccountRepository
+	usageRepo          UsageLogRepository
+	cfg                *config.Config
+	geminiQuotaService *GeminiQuotaService
 placeholder
 
 // NewRateLimitService 创建RateLimitService实例
-func NewRateLimitService(accountRepo AccountRepository, cfg *config.Config) *RateLimitService {
+func NewRateLimitService(accountRepo AccountRepository, usageRepo UsageLogRepository, cfg *config.Config, geminiQuotaService *GeminiQuotaService) *RateLimitService {
 	return &RateLimitService{
-		accountRepo: accountRepo,
-		cfg:         cfg,
+		accountRepo:        accountRepo,
+		usageRepo:          usageRepo,
+		cfg:                cfg,
+		geminiQuotaService: geminiQuotaService,
 placeholder
 placeholder
 
@@ -60,6 +65,68 @@ placeholder
 	placeholder
 		return false
 placeholder
+placeholder
+
+// PreCheckUsage proactively checks local quota before dispatching a request.
+// Returns false when the account should be skipped.
+func (s *RateLimitService) PreCheckUsage(ctx context.Context, account *Account, requestedModel string) (bool, error) {
+	if account == nil || !account.IsGeminiCodeAssist() || strings.TrimSpace(requestedModel) == "" {
+		return true, nil
+placeholder
+	if s.usageRepo == nil {
+		return true, nil
+placeholder
+
+	quota, ok := s.geminiQuotaService.QuotaForAccount(ctx, account)
+	if !ok {
+		return true, nil
+placeholder
+
+	var limit int64
+	switch geminiModelClassFromName(requestedModel) {
+	case geminiModelFlash:
+		limit = quota.FlashRPD
+	default:
+		limit = quota.ProRPD
+placeholder
+	if limit <= 0 {
+		return true, nil
+placeholder
+
+	now := time.Now()
+	start := geminiDailyWindowStart(now)
+	stats, err := s.usageRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID)
+	if err != nil {
+		return true, err
+placeholder
+	totals := geminiAggregateUsage(stats)
+
+	var used int64
+	switch geminiModelClassFromName(requestedModel) {
+	case geminiModelFlash:
+		used = totals.FlashRequests
+	default:
+		used = totals.ProRequests
+placeholder
+
+	if used >= limit {
+		resetAt := geminiDailyResetTime(now)
+		if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
+			log.Printf("SetRateLimited failed for account %d: %v", account.ID, err)
+	placeholder
+		log.Printf("[Gemini PreCheck] Account %d reached daily quota (%d/%d), rate limited until %v", account.ID, used, limit, resetAt)
+		return false, nil
+placeholder
+
+	return true, nil
+placeholder
+
+// GeminiCooldown returns the fallback cooldown duration for Gemini 429s based on tier.
+func (s *RateLimitService) GeminiCooldown(ctx context.Context, account *Account) time.Duration {
+	if account == nil {
+		return 5 * time.Minute
+placeholder
+	return s.geminiQuotaService.CooldownForTier(ctx, account.GeminiTierID())
 placeholder
 
 // handleAuthError 处理认证类错误(401/403)，停止账号调度
