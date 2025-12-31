@@ -82,12 +82,8 @@ placeholder
 placeholder
 
 func createOpenAIReqClient(proxyURL string) *req.Client {
-	client := req.C().
-		SetTimeout(60 * time.Second)
-
-	if proxyURL != "" {
-		client.SetProxyURL(proxyURL)
-placeholder
-
-	return client
+	return getSharedReqClient(reqClientOptions{
+		ProxyURL: proxyURL,
+		Timeout:  60 * time.Second,
+placeholder)
 placeholder

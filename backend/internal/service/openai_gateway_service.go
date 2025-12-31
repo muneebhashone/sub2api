@@ -768,20 +768,12 @@ placeholder
 	if isSubscriptionBilling {
 		if cost.TotalCost > 0 {
 			_ = s.userSubRepo.IncrementUsage(ctx, subscription.ID, cost.TotalCost)
-			go func() {
-				cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				_ = s.billingCacheService.UpdateSubscriptionUsage(cacheCtx, user.ID, *apiKey.GroupID, cost.TotalCost)
-		placeholder()
+			s.billingCacheService.QueueUpdateSubscriptionUsage(user.ID, *apiKey.GroupID, cost.TotalCost)
 	placeholder
 placeholder else {
 		if cost.ActualCost > 0 {
 			_ = s.userRepo.DeductBalance(ctx, user.ID, cost.ActualCost)
-			go func() {
-				cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				_ = s.billingCacheService.DeductBalanceCache(cacheCtx, user.ID, cost.ActualCost)
-		placeholder()
+			s.billingCacheService.QueueDeductBalance(user.ID, cost.ActualCost)
 	placeholder
 placeholder
 

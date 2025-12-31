@@ -67,6 +67,7 @@ func provideCleanup(
 	tokenRefresh *service.TokenRefreshService,
 	pricing *service.PricingService,
 	emailQueue *service.EmailQueueService,
+	billingCache *service.BillingCacheService,
 	oauth *service.OAuthService,
 	openaiOAuth *service.OpenAIOAuthService,
 	geminiOAuth *service.GeminiOAuthService,
@@ -92,6 +93,10 @@ func provideCleanup(
 	placeholder
 			{"EmailQueueService", func() error {
 				emailQueue.Stop()
+				return nil
+	placeholder
+			{"BillingCacheService", func() error {
+				billingCache.Stop()
 				return nil
 	placeholder
 			{"OAuthService", func() error {
