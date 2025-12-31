@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -66,6 +67,20 @@ type GatewayCache interface {
 	RefreshSessionTTL(ctx context.Context, sessionHash string, ttl time.Duration) error
 placeholder
 
+type AccountWaitPlan struct {
+	AccountID      int64
+	MaxConcurrency int
+	Timeout        time.Duration
+	MaxWaiting     int
+placeholder
+
+type AccountSelectionResult struct {
+	Account     *Account
+	Acquired    bool
+	ReleaseFunc func()
+	WaitPlan    *AccountWaitPlan // nil means no wait allowed
+placeholder
+
 // ClaudeUsage 表示Claude API返回的usage信息
 type ClaudeUsage struct {
 	InputTokens              int `json:"input_tokens"`
@@ -108,6 +123,7 @@ type GatewayService struct {
 	identityService     *IdentityService
 	httpUpstream        HTTPUpstream
 	deferredService     *DeferredService
+	concurrencyService  *ConcurrencyService
 placeholder
 
 // NewGatewayService creates a new GatewayService
@@ -119,6 +135,7 @@ func NewGatewayService(
 	userSubRepo UserSubscriptionRepository,
 	cache GatewayCache,
 	cfg *config.Config,
+	concurrencyService *ConcurrencyService,
 	billingService *BillingService,
 	rateLimitService *RateLimitService,
 	billingCacheService *BillingCacheService,
@@ -134,6 +151,7 @@ func NewGatewayService(
 		userSubRepo:         userSubRepo,
 		cache:               cache,
 		cfg:                 cfg,
+		concurrencyService:  concurrencyService,
 		billingService:      billingService,
 		rateLimitService:    rateLimitService,
 		billingCacheService: billingCacheService,
@@ -181,6 +199,14 @@ placeholder
 placeholder
 
 	return ""
+placeholder
+
+// BindStickySession sets session -> account binding with standard TTL.
+func (s *GatewayService) BindStickySession(ctx context.Context, sessionHash string, accountID int64) error {
+	if sessionHash == "" || accountID <= 0 {
+		return nil
+placeholder
+	return s.cache.SetSessionAccountID(ctx, sessionHash, accountID, stickySessionTTL)
 placeholder
 
 func (s *GatewayService) extractCacheableContent(parsed *ParsedRequest) string {
@@ -332,8 +358,360 @@ placeholder
 	return s.selectAccountForModelWithPlatform(ctx, groupID, sessionHash, requestedModel, excludedIDs, platform)
 placeholder
 
+// SelectAccountWithLoadAwareness selects account with load-awareness and wait plan.
+func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{placeholder) (*AccountSelectionResult, error) {
+	cfg := s.schedulingConfig()
+	var stickyAccountID int64
+	if sessionHash != "" && s.cache != nil {
+		if accountID, err := s.cache.GetSessionAccountID(ctx, sessionHash); err == nil {
+			stickyAccountID = accountID
+	placeholder
+placeholder
+	if s.concurrencyService == nil || !cfg.LoadBatchEnabled {
+		account, err := s.SelectAccountForModelWithExclusions(ctx, groupID, sessionHash, requestedModel, excludedIDs)
+		if err != nil {
+			return nil, err
+	placeholder
+		result, err := s.tryAcquireAccountSlot(ctx, account.ID, account.Concurrency)
+		if err == nil && result.Acquired {
+			return &AccountSelectionResult{
+				Account:     account,
+				Acquired:    true,
+				ReleaseFunc: result.ReleaseFunc,
+		placeholder, nil
+	placeholder
+		if stickyAccountID > 0 && stickyAccountID == account.ID && s.concurrencyService != nil {
+			waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, account.ID)
+			if waitingCount < cfg.StickySessionMaxWaiting {
+				return &AccountSelectionResult{
+					Account: account,
+					WaitPlan: &AccountWaitPlan{
+						AccountID:      account.ID,
+						MaxConcurrency: account.Concurrency,
+						Timeout:        cfg.StickySessionWaitTimeout,
+						MaxWaiting:     cfg.StickySessionMaxWaiting,
+				placeholder,
+			placeholder, nil
+		placeholder
+	placeholder
+		return &AccountSelectionResult{
+			Account: account,
+			WaitPlan: &AccountWaitPlan{
+				AccountID:      account.ID,
+				MaxConcurrency: account.Concurrency,
+				Timeout:        cfg.FallbackWaitTimeout,
+				MaxWaiting:     cfg.FallbackMaxWaiting,
+		placeholder,
+	placeholder, nil
+placeholder
+
+	platform, hasForcePlatform, err := s.resolvePlatform(ctx, groupID)
+	if err != nil {
+		return nil, err
+placeholder
+	preferOAuth := platform == PlatformGemini
+
+	accounts, useMixed, err := s.listSchedulableAccounts(ctx, groupID, platform, hasForcePlatform)
+	if err != nil {
+		return nil, err
+placeholder
+	if len(accounts) == 0 {
+		return nil, errors.New("no available accounts")
+placeholder
+
+	isExcluded := func(accountID int64) bool {
+		if excludedIDs == nil {
+			return false
+	placeholder
+		_, excluded := excludedIDs[accountID]
+		return excluded
+placeholder
+
+	// ============ Layer 1: 粘性会话优先 ============
+	if sessionHash != "" {
+		accountID, err := s.cache.GetSessionAccountID(ctx, sessionHash)
+		if err == nil && accountID > 0 && !isExcluded(accountID) {
+			account, err := s.accountRepo.GetByID(ctx, accountID)
+			if err == nil && s.isAccountAllowedForPlatform(account, platform, useMixed) &&
+				account.IsSchedulable() &&
+				(requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
+				result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
+				if err == nil && result.Acquired {
+					_ = s.cache.RefreshSessionTTL(ctx, sessionHash, stickySessionTTL)
+					return &AccountSelectionResult{
+						Account:     account,
+						Acquired:    true,
+						ReleaseFunc: result.ReleaseFunc,
+				placeholder, nil
+			placeholder
+
+				waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, accountID)
+				if waitingCount < cfg.StickySessionMaxWaiting {
+					return &AccountSelectionResult{
+						Account: account,
+						WaitPlan: &AccountWaitPlan{
+							AccountID:      accountID,
+							MaxConcurrency: account.Concurrency,
+							Timeout:        cfg.StickySessionWaitTimeout,
+							MaxWaiting:     cfg.StickySessionMaxWaiting,
+					placeholder,
+				placeholder, nil
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	// ============ Layer 2: 负载感知选择 ============
+	candidates := make([]*Account, 0, len(accounts))
+	for i := range accounts {
+		acc := &accounts[i]
+		if isExcluded(acc.ID) {
+			continue
+	placeholder
+		if !s.isAccountAllowedForPlatform(acc, platform, useMixed) {
+			continue
+	placeholder
+		if requestedModel != "" && !s.isModelSupportedByAccount(acc, requestedModel) {
+			continue
+	placeholder
+		candidates = append(candidates, acc)
+placeholder
+
+	if len(candidates) == 0 {
+		return nil, errors.New("no available accounts")
+placeholder
+
+	accountLoads := make([]AccountWithConcurrency, 0, len(candidates))
+	for _, acc := range candidates {
+		accountLoads = append(accountLoads, AccountWithConcurrency{
+			ID:             acc.ID,
+			MaxConcurrency: acc.Concurrency,
+	placeholder)
+placeholder
+
+	loadMap, err := s.concurrencyService.GetAccountsLoadBatch(ctx, accountLoads)
+	if err != nil {
+		if result, ok := s.tryAcquireByLegacyOrder(ctx, candidates, sessionHash, preferOAuth); ok {
+			return result, nil
+	placeholder
+placeholder else {
+		type accountWithLoad struct {
+			account  *Account
+			loadInfo *AccountLoadInfo
+	placeholder
+		var available []accountWithLoad
+		for _, acc := range candidates {
+			loadInfo := loadMap[acc.ID]
+			if loadInfo == nil {
+				loadInfo = &AccountLoadInfo{AccountID: acc.IDplaceholder
+		placeholder
+			if loadInfo.LoadRate < 100 {
+				available = append(available, accountWithLoad{
+					account:  acc,
+					loadInfo: loadInfo,
+			placeholder)
+		placeholder
+	placeholder
+
+		if len(available) > 0 {
+			sort.SliceStable(available, func(i, j int) bool {
+				a, b := available[i], available[j]
+				if a.account.Priority != b.account.Priority {
+					return a.account.Priority < b.account.Priority
+			placeholder
+				if a.loadInfo.LoadRate != b.loadInfo.LoadRate {
+					return a.loadInfo.LoadRate < b.loadInfo.LoadRate
+			placeholder
+				switch {
+				case a.account.LastUsedAt == nil && b.account.LastUsedAt != nil:
+					return true
+				case a.account.LastUsedAt != nil && b.account.LastUsedAt == nil:
+					return false
+				case a.account.LastUsedAt == nil && b.account.LastUsedAt == nil:
+					if preferOAuth && a.account.Type != b.account.Type {
+						return a.account.Type == AccountTypeOAuth
+				placeholder
+					return false
+				default:
+					return a.account.LastUsedAt.Before(*b.account.LastUsedAt)
+			placeholder
+		placeholder)
+
+			for _, item := range available {
+				result, err := s.tryAcquireAccountSlot(ctx, item.account.ID, item.account.Concurrency)
+				if err == nil && result.Acquired {
+					if sessionHash != "" {
+						_ = s.cache.SetSessionAccountID(ctx, sessionHash, item.account.ID, stickySessionTTL)
+				placeholder
+					return &AccountSelectionResult{
+						Account:     item.account,
+						Acquired:    true,
+						ReleaseFunc: result.ReleaseFunc,
+				placeholder, nil
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	// ============ Layer 3: 兜底排队 ============
+	sortAccountsByPriorityAndLastUsed(candidates, preferOAuth)
+	for _, acc := range candidates {
+		return &AccountSelectionResult{
+			Account: acc,
+			WaitPlan: &AccountWaitPlan{
+				AccountID:      acc.ID,
+				MaxConcurrency: acc.Concurrency,
+				Timeout:        cfg.FallbackWaitTimeout,
+				MaxWaiting:     cfg.FallbackMaxWaiting,
+		placeholder,
+	placeholder, nil
+placeholder
+	return nil, errors.New("no available accounts")
+placeholder
+
+func (s *GatewayService) tryAcquireByLegacyOrder(ctx context.Context, candidates []*Account, sessionHash string, preferOAuth bool) (*AccountSelectionResult, bool) {
+	ordered := append([]*Account(nil), candidates...)
+	sortAccountsByPriorityAndLastUsed(ordered, preferOAuth)
+
+	for _, acc := range ordered {
+		result, err := s.tryAcquireAccountSlot(ctx, acc.ID, acc.Concurrency)
+		if err == nil && result.Acquired {
+			if sessionHash != "" {
+				_ = s.cache.SetSessionAccountID(ctx, sessionHash, acc.ID, stickySessionTTL)
+		placeholder
+			return &AccountSelectionResult{
+				Account:     acc,
+				Acquired:    true,
+				ReleaseFunc: result.ReleaseFunc,
+		placeholder, true
+	placeholder
+placeholder
+
+	return nil, false
+placeholder
+
+func (s *GatewayService) schedulingConfig() config.GatewaySchedulingConfig {
+	if s.cfg != nil {
+		return s.cfg.Gateway.Scheduling
+placeholder
+	return config.GatewaySchedulingConfig{
+		StickySessionMaxWaiting:  3,
+		StickySessionWaitTimeout: 45 * time.Second,
+		FallbackWaitTimeout:      30 * time.Second,
+		FallbackMaxWaiting:       100,
+		LoadBatchEnabled:         true,
+		SlotCleanupInterval:      30 * time.Second,
+placeholder
+placeholder
+
+func (s *GatewayService) resolvePlatform(ctx context.Context, groupID *int64) (string, bool, error) {
+	forcePlatform, hasForcePlatform := ctx.Value(ctxkey.ForcePlatform).(string)
+	if hasForcePlatform && forcePlatform != "" {
+		return forcePlatform, true, nil
+placeholder
+	if groupID != nil {
+		group, err := s.groupRepo.GetByID(ctx, *groupID)
+		if err != nil {
+			return "", false, fmt.Errorf("get group failed: %w", err)
+	placeholder
+		return group.Platform, false, nil
+placeholder
+	return PlatformAnthropic, false, nil
+placeholder
+
+func (s *GatewayService) listSchedulableAccounts(ctx context.Context, groupID *int64, platform string, hasForcePlatform bool) ([]Account, bool, error) {
+	useMixed := (platform == PlatformAnthropic || platform == PlatformGemini) && !hasForcePlatform
+	if useMixed {
+		platforms := []string{platform, PlatformAntigravityplaceholder
+		var accounts []Account
+		var err error
+		if groupID != nil {
+			accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, platforms)
+	placeholder else {
+			accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, platforms)
+	placeholder
+		if err != nil {
+			return nil, useMixed, err
+	placeholder
+		filtered := make([]Account, 0, len(accounts))
+		for _, acc := range accounts {
+			if acc.Platform == PlatformAntigravity && !acc.IsMixedSchedulingEnabled() {
+				continue
+		placeholder
+			filtered = append(filtered, acc)
+	placeholder
+		return filtered, useMixed, nil
+placeholder
+
+	var accounts []Account
+	var err error
+	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, platform)
+placeholder else if groupID != nil {
+		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, platform)
+		if err == nil && len(accounts) == 0 && hasForcePlatform {
+			accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, platform)
+	placeholder
+placeholder else {
+		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, platform)
+placeholder
+	if err != nil {
+		return nil, useMixed, err
+placeholder
+	return accounts, useMixed, nil
+placeholder
+
+func (s *GatewayService) isAccountAllowedForPlatform(account *Account, platform string, useMixed bool) bool {
+	if account == nil {
+		return false
+placeholder
+	if useMixed {
+		if account.Platform == platform {
+			return true
+	placeholder
+		return account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()
+placeholder
+	return account.Platform == platform
+placeholder
+
+func (s *GatewayService) tryAcquireAccountSlot(ctx context.Context, accountID int64, maxConcurrency int) (*AcquireResult, error) {
+	if s.concurrencyService == nil {
+		return &AcquireResult{Acquired: true, ReleaseFunc: func() {placeholderplaceholder, nil
+placeholder
+	return s.concurrencyService.AcquireAccountSlot(ctx, accountID, maxConcurrency)
+placeholder
+
+func sortAccountsByPriority(accounts []*Account) {
+	sort.SliceStable(accounts, func(i, j int) bool {
+		return accounts[i].Priority < accounts[j].Priority
+placeholder)
+placeholder
+
+func sortAccountsByPriorityAndLastUsed(accounts []*Account, preferOAuth bool) {
+	sort.SliceStable(accounts, func(i, j int) bool {
+		a, b := accounts[i], accounts[j]
+		if a.Priority != b.Priority {
+			return a.Priority < b.Priority
+	placeholder
+		switch {
+		case a.LastUsedAt == nil && b.LastUsedAt != nil:
+			return true
+		case a.LastUsedAt != nil && b.LastUsedAt == nil:
+			return false
+		case a.LastUsedAt == nil && b.LastUsedAt == nil:
+			if preferOAuth && a.Type != b.Type {
+				return a.Type == AccountTypeOAuth
+		placeholder
+			return false
+		default:
+			return a.LastUsedAt.Before(*b.LastUsedAt)
+	placeholder
+placeholder)
+placeholder
+
 // selectAccountForModelWithPlatform 选择单平台账户（完全隔离）
 func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{placeholder, platform string) (*Account, error) {
+	preferOAuth := platform == PlatformGemini
 	// 1. 查询粘性会话
 	if sessionHash != "" {
 		accountID, err := s.cache.GetSessionAccountID(ctx, sessionHash)
@@ -389,7 +767,9 @@ placeholder
 			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
 				// keep selected (never used is preferred)
 			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-				// keep selected (both never used)
+				if preferOAuth && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+					selected = acc
+			placeholder
 			default:
 				if acc.LastUsedAt.Before(*selected.LastUsedAt) {
 					selected = acc
@@ -419,6 +799,7 @@ placeholder
 // 查询原生平台账户 + 启用 mixed_scheduling 的 antigravity 账户
 func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{placeholder, nativePlatform string) (*Account, error) {
 	platforms := []string{nativePlatform, PlatformAntigravityplaceholder
+	preferOAuth := nativePlatform == PlatformGemini
 
 	// 1. 查询粘性会话
 	if sessionHash != "" {
@@ -478,7 +859,9 @@ placeholder
 			case acc.LastUsedAt != nil && selected.LastUsedAt == nil:
 				// keep selected (never used is preferred)
 			case acc.LastUsedAt == nil && selected.LastUsedAt == nil:
-				// keep selected (both never used)
+				if preferOAuth && acc.Platform == PlatformGemini && selected.Platform == PlatformGemini && acc.Type != selected.Type && acc.Type == AccountTypeOAuth {
+					selected = acc
+			placeholder
 			default:
 				if acc.LastUsedAt.Before(*selected.LastUsedAt) {
 					selected = acc

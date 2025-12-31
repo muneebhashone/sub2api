@@ -261,6 +261,34 @@ placeholder
 	require.Equal(t, int64(2), acc.ID, "同优先级应选择最久未用的账户")
 placeholder
 
+func TestGatewayService_SelectAccountForModelWithPlatform_GeminiOAuthPreference(t *testing.T) {
+	ctx := context.Background()
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformGemini, Priority: 1, Status: StatusActive, Schedulable: true, Type: AccountTypeApiKeyplaceholder,
+			{ID: 2, Platform: PlatformGemini, Priority: 1, Status: StatusActive, Schedulable: true, Type: AccountTypeOAuthplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	cache := &mockGatewayCacheForPlatform{placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		cache:       cache,
+		cfg:         testConfig(),
+placeholder
+
+	acc, err := svc.selectAccountForModelWithPlatform(ctx, nil, "", "gemini-2.5-pro", nil, PlatformGemini)
+placeholder
+	require.NotNil(t, acc)
+	require.Equal(t, int64(2), acc.ID, "同优先级且未使用时应优先选择OAuth账户")
+placeholder
+
 // TestGatewayService_SelectAccountForModelWithPlatform_NoAvailableAccounts 测试无可用账户
 func TestGatewayService_SelectAccountForModelWithPlatform_NoAvailableAccounts(t *testing.T) {
 	ctx := context.Background()
@@ -575,6 +603,32 @@ placeholder
 // TestGatewayService_selectAccountWithMixedScheduling 测试混合调度
 func TestGatewayService_selectAccountWithMixedScheduling(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("混合调度-Gemini优先选择OAuth账户", func(t *testing.T) {
+		repo := &mockAccountRepoForPlatform{
+			accounts: []Account{
+				{ID: 1, Platform: PlatformGemini, Priority: 1, Status: StatusActive, Schedulable: true, Type: AccountTypeApiKeyplaceholder,
+				{ID: 2, Platform: PlatformGemini, Priority: 1, Status: StatusActive, Schedulable: true, Type: AccountTypeOAuthplaceholder,
+		placeholder,
+			accountsByID: map[int64]*Account{placeholder,
+	placeholder
+		for i := range repo.accounts {
+			repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	placeholder
+
+		cache := &mockGatewayCacheForPlatform{placeholder
+
+		svc := &GatewayService{
+			accountRepo: repo,
+			cache:       cache,
+			cfg:         testConfig(),
+	placeholder
+
+		acc, err := svc.selectAccountWithMixedScheduling(ctx, nil, "", "gemini-2.5-pro", nil, PlatformGemini)
+	placeholder
+		require.NotNil(t, acc)
+		require.Equal(t, int64(2), acc.ID, "同优先级且未使用时应优先选择OAuth账户")
+placeholder)
 
 	t.Run("混合调度-包含启用mixed_scheduling的antigravity账户", func(t *testing.T) {
 		repo := &mockAccountRepoForPlatform{
