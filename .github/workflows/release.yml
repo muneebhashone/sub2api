@@ -168,7 +168,7 @@ jobs:
           VERSION=${TAG_NAME#vplaceholder
           REPO="${{ github.repository placeholderplaceholder"
           DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder/sub2api"
-          GHCR_IMAGE="ghcr.io/${REPOplaceholder"
+          GHCR_IMAGE="ghcr.io/${REPO,,placeholder"  # ${,,placeholder converts to lowercase
 
           # 获取 tag message 内容
           TAG_MESSAGE='${{ steps.tag_message.outputs.message placeholderplaceholder'
