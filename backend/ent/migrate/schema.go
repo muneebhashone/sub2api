@@ -477,7 +477,6 @@ placeholder
 		{Name: "concurrency", Type: field.TypeInt, Default: 5placeholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "username", Type: field.TypeString, Size: 100, Default: ""placeholder,
-		{Name: "wechat", Type: field.TypeString, Size: 100, Default: ""placeholder,
 		{Name: "notes", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 placeholder
 	// UsersTable holds the schema information for the "users" table.
@@ -528,6 +527,92 @@ placeholder
 				Name:    "userallowedgroup_group_id",
 				Unique:  false,
 				Columns: []*schema.Column{UserAllowedGroupsColumns[2]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// UserAttributeDefinitionsColumns holds the columns for the "user_attribute_definitions" table.
+	UserAttributeDefinitionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "key", Type: field.TypeString, Size: 100placeholder,
+		{Name: "name", Type: field.TypeString, Size: 255placeholder,
+		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "type", Type: field.TypeString, Size: 20placeholder,
+		{Name: "options", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "required", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "validation", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "placeholder", Type: field.TypeString, Size: 255, Default: ""placeholder,
+		{Name: "display_order", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "enabled", Type: field.TypeBool, Default: trueplaceholder,
+placeholder
+	// UserAttributeDefinitionsTable holds the schema information for the "user_attribute_definitions" table.
+	UserAttributeDefinitionsTable = &schema.Table{
+		Name:       "user_attribute_definitions",
+		Columns:    UserAttributeDefinitionsColumns,
+		PrimaryKey: []*schema.Column{UserAttributeDefinitionsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "userattributedefinition_key",
+				Unique:  false,
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[4]placeholder,
+		placeholder,
+			{
+				Name:    "userattributedefinition_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[13]placeholder,
+		placeholder,
+			{
+				Name:    "userattributedefinition_display_order",
+				Unique:  false,
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[12]placeholder,
+		placeholder,
+			{
+				Name:    "userattributedefinition_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[3]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// UserAttributeValuesColumns holds the columns for the "user_attribute_values" table.
+	UserAttributeValuesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "value", Type: field.TypeString, Size: 2147483647, Default: ""placeholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+		{Name: "attribute_id", Type: field.TypeInt64placeholder,
+placeholder
+	// UserAttributeValuesTable holds the schema information for the "user_attribute_values" table.
+	UserAttributeValuesTable = &schema.Table{
+		Name:       "user_attribute_values",
+		Columns:    UserAttributeValuesColumns,
+		PrimaryKey: []*schema.Column{UserAttributeValuesColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "user_attribute_values_users_attribute_values",
+				Columns:    []*schema.Column{UserAttributeValuesColumns[4]placeholder,
+				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+			{
+				Symbol:     "user_attribute_values_user_attribute_definitions_values",
+				Columns:    []*schema.Column{UserAttributeValuesColumns[5]placeholder,
+				RefColumns: []*schema.Column{UserAttributeDefinitionsColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "userattributevalue_user_id_attribute_id",
+				Unique:  true,
+				Columns: []*schema.Column{UserAttributeValuesColumns[4], UserAttributeValuesColumns[5]placeholder,
+		placeholder,
+			{
+				Name:    "userattributevalue_attribute_id",
+				Unique:  false,
+				Columns: []*schema.Column{UserAttributeValuesColumns[5]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -627,6 +712,8 @@ placeholder
 		UsageLogsTable,
 		UsersTable,
 		UserAllowedGroupsTable,
+		UserAttributeDefinitionsTable,
+		UserAttributeValuesTable,
 		UserSubscriptionsTable,
 placeholder
 )
@@ -675,6 +762,14 @@ placeholder
 	UserAllowedGroupsTable.ForeignKeys[1].RefTable = GroupsTable
 	UserAllowedGroupsTable.Annotation = &entsql.Annotation{
 		Table: "user_allowed_groups",
+placeholder
+	UserAttributeDefinitionsTable.Annotation = &entsql.Annotation{
+		Table: "user_attribute_definitions",
+placeholder
+	UserAttributeValuesTable.ForeignKeys[0].RefTable = UsersTable
+	UserAttributeValuesTable.ForeignKeys[1].RefTable = UserAttributeDefinitionsTable
+	UserAttributeValuesTable.Annotation = &entsql.Annotation{
+		Table: "user_attribute_values",
 placeholder
 	UserSubscriptionsTable.ForeignKeys[0].RefTable = GroupsTable
 	UserSubscriptionsTable.ForeignKeys[1].RefTable = UsersTable

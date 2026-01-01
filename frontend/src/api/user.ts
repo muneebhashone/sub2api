@@ -22,7 +22,6 @@ placeholder
  */
 export async function updateProfile(profile: {
   username?: string
-  wechat?: string
 placeholder): Promise<User> {
   const { data placeholder = await apiClient.put<User>('/user', profile)
   return data

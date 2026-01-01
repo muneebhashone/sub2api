@@ -30,7 +30,6 @@ placeholder
 // UpdateProfileRequest represents the update profile request payload
 type UpdateProfileRequest struct {
 	Username *string `json:"username"`
-	Wechat   *string `json:"wechat"`
 placeholder
 
 // GetProfile handles getting user profile
@@ -99,7 +98,6 @@ placeholder
 
 	svcReq := service.UpdateProfileRequest{
 		Username: req.Username,
-		Wechat:   req.Wechat,
 placeholder
 	updatedUser, err := h.userService.UpdateProfile(c.Request.Context(), subject.UserID, svcReq)
 	if err != nil {
