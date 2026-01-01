@@ -17,6 +17,15 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
 )
 
+const (
+	TierAIPremium         = "AI_PREMIUM"
+	TierGoogleOneStandard = "GOOGLE_ONE_STANDARD"
+	TierGoogleOneBasic    = "GOOGLE_ONE_BASIC"
+	TierFree              = "FREE"
+	TierGoogleOneUnknown  = "GOOGLE_ONE_UNKNOWN"
+	TierGoogleOneUnlimited = "GOOGLE_ONE_UNLIMITED"
+)
+
 type GeminiOAuthService struct {
 	sessionStore *geminicli.SessionStore
 	proxyRepo    ProxyRepository
@@ -89,13 +98,14 @@ placeholder
 
 	// OAuth client selection:
 	// - code_assist: always use built-in Gemini CLI OAuth client (public), regardless of configured client_id/secret.
+	// - google_one: same as code_assist, uses built-in client for personal Google accounts.
 	// - ai_studio: requires a user-provided OAuth client.
 	oauthCfg := geminicli.OAuthConfig{
 		ClientID:     s.cfg.Gemini.OAuth.ClientID,
 		ClientSecret: s.cfg.Gemini.OAuth.ClientSecret,
 		Scopes:       s.cfg.Gemini.OAuth.Scopes,
 placeholder
-	if oauthType == "code_assist" {
+	if oauthType == "code_assist" || oauthType == "google_one" {
 		oauthCfg.ClientID = ""
 		oauthCfg.ClientSecret = ""
 placeholder
@@ -156,15 +166,16 @@ type GeminiExchangeCodeInput struct {
 placeholder
 
 type GeminiTokenInfo struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
-	ExpiresAt    int64  `json:"expires_at"`
-	TokenType    string `json:"token_type"`
-	Scope        string `json:"scope,omitempty"`
-	ProjectID    string `json:"project_id,omitempty"`
-	OAuthType    string `json:"oauth_type,omitempty"` // "code_assist" 或 "ai_studio"
-	TierID       string `json:"tier_id,omitempty"`    // Gemini Code Assist tier: LEGACY/PRO/ULTRA
+	AccessToken  string         `json:"access_token"`
+	RefreshToken string         `json:"refresh_token"`
+	ExpiresIn    int64          `json:"expires_in"`
+	ExpiresAt    int64          `json:"expires_at"`
+	TokenType    string         `json:"token_type"`
+	Scope        string         `json:"scope,omitempty"`
+	ProjectID    string         `json:"project_id,omitempty"`
+	OAuthType    string         `json:"oauth_type,omitempty"` // "code_assist" 或 "ai_studio"
+	TierID       string         `json:"tier_id,omitempty"`    // Gemini Code Assist tier: LEGACY/PRO/ULTRA
+	Extra        map[string]any `json:"extra,omitempty"`      // Drive metadata
 placeholder
 
 // validateTierID validates tier_id format and length
@@ -203,6 +214,60 @@ placeholder
 	placeholder
 placeholder
 	return tierID
+placeholder
+
+// inferGoogleOneTier infers Google One tier from Drive storage limit
+func inferGoogleOneTier(storageBytes int64) string {
+	if storageBytes <= 0 {
+		return TierGoogleOneUnknown
+placeholder
+
+	// Unlimited storage (G Suite legacy)
+	if storageBytes > 100*1024*1024*1024*1024 { // > 100TB
+		return TierGoogleOneUnlimited
+placeholder
+
+	// AI Premium (2TB+)
+	if storageBytes >= 2*1024*1024*1024*1024 { // >= 2TB
+		return TierAIPremium
+placeholder
+
+	// Google One Standard (200GB)
+	if storageBytes >= 200*1024*1024*1024 { // >= 200GB
+		return TierGoogleOneStandard
+placeholder
+
+	// Google One Basic (100GB)
+	if storageBytes >= 100*1024*1024*1024 { // >= 100GB
+		return TierGoogleOneBasic
+placeholder
+
+	// Free (15GB)
+	if storageBytes >= 15*1024*1024*1024 { // >= 15GB
+		return TierFree
+placeholder
+
+	return TierGoogleOneUnknown
+placeholder
+
+// fetchGoogleOneTier fetches Google One tier from Drive API
+func (s *GeminiOAuthService) FetchGoogleOneTier(ctx context.Context, accessToken, proxyURL string) (string, *geminicli.DriveStorageInfo, error) {
+	driveClient := geminicli.NewDriveClient()
+
+	storageInfo, err := driveClient.GetStorageQuota(ctx, accessToken, proxyURL)
+	if err != nil {
+		// Check if it's a 403 (scope not granted)
+		if strings.Contains(err.Error(), "status 403") {
+			fmt.Printf("[GeminiOAuth] Drive API scope not available: %v\n", err)
+			return TierGoogleOneUnknown, nil, err
+	placeholder
+		// Other errors
+		fmt.Printf("[GeminiOAuth] Failed to fetch Drive storage: %v\n", err)
+		return TierGoogleOneUnknown, nil, err
+placeholder
+
+	tierID := inferGoogleOneTier(storageInfo.Limit)
+	return tierID, storageInfo, nil
 placeholder
 
 func (s *GeminiOAuthService) ExchangeCode(ctx context.Context, input *GeminiExchangeCodeInput) (*GeminiTokenInfo, error) {
@@ -272,7 +337,8 @@ placeholder
 	projectID := sessionProjectID
 	var tierID string
 
-	// 对于 code_assist 模式，project_id 是必需的
+	// 对于 code_assist 模式，project_id 是必需的，需要调用 Code Assist API
+	// 对于 google_one 模式，使用个人 Google 账号，不需要 project_id，配额由 Google 网关自动识别
 	// 对于 ai_studio 模式，project_id 是可选的（不影响使用 AI Studio API）
 	if oauthType == "code_assist" {
 		if projectID == "" {
@@ -298,7 +364,37 @@ placeholder
 		if tierID == "" {
 			tierID = "LEGACY"
 	placeholder
+placeholder else if oauthType == "google_one" {
+		// Attempt to fetch Drive storage tier
+		tierID, storageInfo, err := s.FetchGoogleOneTier(ctx, tokenResp.AccessToken, proxyURL)
+		if err != nil {
+			// Log warning but don't block - use fallback
+			fmt.Printf("[GeminiOAuth] Warning: Failed to fetch Drive tier: %v\n", err)
+			tierID = TierGoogleOneUnknown
+	placeholder
+
+		// Store Drive info in extra field for caching
+		if storageInfo != nil {
+			tokenInfo := &GeminiTokenInfo{
+				AccessToken:  tokenResp.AccessToken,
+				RefreshToken: tokenResp.RefreshToken,
+				TokenType:    tokenResp.TokenType,
+				ExpiresIn:    tokenResp.ExpiresIn,
+				ExpiresAt:    expiresAt,
+				Scope:        tokenResp.Scope,
+				ProjectID:    projectID,
+				TierID:       tierID,
+				OAuthType:    oauthType,
+				Extra: map[string]any{
+					"drive_storage_limit":   storageInfo.Limit,
+					"drive_storage_usage":   storageInfo.Usage,
+					"drive_tier_updated_at": time.Now().Format(time.RFC3339),
+			placeholder,
+		placeholder
+			return tokenInfo, nil
+	placeholder
 placeholder
+	// ai_studio 模式不设置 tierID，保持为空
 
 	return &GeminiTokenInfo{
 		AccessToken:  tokenResp.AccessToken,
@@ -455,6 +551,41 @@ placeholder
 		if strings.TrimSpace(tokenInfo.ProjectID) == "" {
 			return nil, fmt.Errorf("failed to auto-detect project_id: empty result")
 	placeholder
+placeholder else if oauthType == "google_one" {
+		// Check if tier cache is stale (> 24 hours)
+		needsRefresh := true
+		if account.Extra != nil {
+			if updatedAtStr, ok := account.Extra["drive_tier_updated_at"].(string); ok {
+				if updatedAt, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
+					if time.Since(updatedAt) <= 24*time.Hour {
+						needsRefresh = false
+						// Use cached tier
+						if existingTierID != "" {
+							tokenInfo.TierID = existingTierID
+					placeholder
+				placeholder
+			placeholder
+		placeholder
+	placeholder
+
+		if needsRefresh {
+			tierID, storageInfo, err := s.FetchGoogleOneTier(ctx, tokenInfo.AccessToken, proxyURL)
+			if err == nil && storageInfo != nil {
+				tokenInfo.TierID = tierID
+				tokenInfo.Extra = map[string]any{
+					"drive_storage_limit":   storageInfo.Limit,
+					"drive_storage_usage":   storageInfo.Usage,
+					"drive_tier_updated_at": time.Now().Format(time.RFC3339),
+			placeholder
+		placeholder else {
+				// Fallback to cached or unknown
+				if existingTierID != "" {
+					tokenInfo.TierID = existingTierID
+			placeholder else {
+					tokenInfo.TierID = TierGoogleOneUnknown
+			placeholder
+		placeholder
+	placeholder
 placeholder
 
 	return tokenInfo, nil
@@ -486,6 +617,12 @@ placeholder
 placeholder
 	if tokenInfo.OAuthType != "" {
 		creds["oauth_type"] = tokenInfo.OAuthType
+placeholder
+	// Store extra metadata (Drive info) if present
+	if len(tokenInfo.Extra) > 0 {
+		for k, v := range tokenInfo.Extra {
+			creds[k] = v
+	placeholder
 placeholder
 	return creds
 placeholder
