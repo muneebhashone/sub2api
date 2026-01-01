@@ -96,7 +96,7 @@ placeholder{
 				{
 					Type: "custom",
 					Name: "mcp_tool",
-					Custom: &ClaudeCustomToolSpec{
+					Custom: &CustomToolSpec{
 						Description: "MCP tool description",
 						InputSchema: map[string]any{
 							"type": "object",
@@ -121,7 +121,7 @@ placeholder{
 				{
 					Type: "custom",
 					Name: "custom_tool",
-					Custom: &ClaudeCustomToolSpec{
+					Custom: &CustomToolSpec{
 						Description: "Custom tool",
 						InputSchema: map[string]any{"type": "object"placeholder,
 				placeholder,
@@ -148,7 +148,7 @@ placeholder{
 				{
 					Type: "custom",
 					Name: "invalid_custom",
-					Custom: &ClaudeCustomToolSpec{
+					Custom: &CustomToolSpec{
 						Description: "Invalid",
 						// InputSchema 为 nil
 				placeholder,
