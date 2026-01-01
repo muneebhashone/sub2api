@@ -25,6 +25,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
+	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
+	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 
 	stdsql "database/sql"
@@ -55,6 +57,10 @@ type Client struct {
 	User *UserClient
 	// UserAllowedGroup is the client for interacting with the UserAllowedGroup builders.
 	UserAllowedGroup *UserAllowedGroupClient
+	// UserAttributeDefinition is the client for interacting with the UserAttributeDefinition builders.
+	UserAttributeDefinition *UserAttributeDefinitionClient
+	// UserAttributeValue is the client for interacting with the UserAttributeValue builders.
+	UserAttributeValue *UserAttributeValueClient
 	// UserSubscription is the client for interacting with the UserSubscription builders.
 	UserSubscription *UserSubscriptionClient
 placeholder
@@ -78,6 +84,8 @@ func (c *Client) init() {
 	c.UsageLog = NewUsageLogClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.UserAllowedGroup = NewUserAllowedGroupClient(c.config)
+	c.UserAttributeDefinition = NewUserAttributeDefinitionClient(c.config)
+	c.UserAttributeValue = NewUserAttributeValueClient(c.config)
 	c.UserSubscription = NewUserSubscriptionClient(c.config)
 placeholder
 
@@ -169,19 +177,21 @@ placeholder
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:              ctx,
-		config:           cfg,
-		Account:          NewAccountClient(cfg),
-		AccountGroup:     NewAccountGroupClient(cfg),
-		ApiKey:           NewApiKeyClient(cfg),
-		Group:            NewGroupClient(cfg),
-		Proxy:            NewProxyClient(cfg),
-		RedeemCode:       NewRedeemCodeClient(cfg),
-		Setting:          NewSettingClient(cfg),
-		UsageLog:         NewUsageLogClient(cfg),
-		User:             NewUserClient(cfg),
-		UserAllowedGroup: NewUserAllowedGroupClient(cfg),
-		UserSubscription: NewUserSubscriptionClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		Account:                 NewAccountClient(cfg),
+		AccountGroup:            NewAccountGroupClient(cfg),
+		ApiKey:                  NewApiKeyClient(cfg),
+		Group:                   NewGroupClient(cfg),
+		Proxy:                   NewProxyClient(cfg),
+		RedeemCode:              NewRedeemCodeClient(cfg),
+		Setting:                 NewSettingClient(cfg),
+		UsageLog:                NewUsageLogClient(cfg),
+		User:                    NewUserClient(cfg),
+		UserAllowedGroup:        NewUserAllowedGroupClient(cfg),
+		UserAttributeDefinition: NewUserAttributeDefinitionClient(cfg),
+		UserAttributeValue:      NewUserAttributeValueClient(cfg),
+		UserSubscription:        NewUserSubscriptionClient(cfg),
 placeholder, nil
 placeholder
 
@@ -199,19 +209,21 @@ placeholder
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driverplaceholder
 	return &Tx{
-		ctx:              ctx,
-		config:           cfg,
-		Account:          NewAccountClient(cfg),
-		AccountGroup:     NewAccountGroupClient(cfg),
-		ApiKey:           NewApiKeyClient(cfg),
-		Group:            NewGroupClient(cfg),
-		Proxy:            NewProxyClient(cfg),
-		RedeemCode:       NewRedeemCodeClient(cfg),
-		Setting:          NewSettingClient(cfg),
-		UsageLog:         NewUsageLogClient(cfg),
-		User:             NewUserClient(cfg),
-		UserAllowedGroup: NewUserAllowedGroupClient(cfg),
-		UserSubscription: NewUserSubscriptionClient(cfg),
+		ctx:                     ctx,
+		config:                  cfg,
+		Account:                 NewAccountClient(cfg),
+		AccountGroup:            NewAccountGroupClient(cfg),
+		ApiKey:                  NewApiKeyClient(cfg),
+		Group:                   NewGroupClient(cfg),
+		Proxy:                   NewProxyClient(cfg),
+		RedeemCode:              NewRedeemCodeClient(cfg),
+		Setting:                 NewSettingClient(cfg),
+		UsageLog:                NewUsageLogClient(cfg),
+		User:                    NewUserClient(cfg),
+		UserAllowedGroup:        NewUserAllowedGroupClient(cfg),
+		UserAttributeDefinition: NewUserAttributeDefinitionClient(cfg),
+		UserAttributeValue:      NewUserAttributeValueClient(cfg),
+		UserSubscription:        NewUserSubscriptionClient(cfg),
 placeholder, nil
 placeholder
 
@@ -242,7 +254,8 @@ placeholder
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) placeholder{
 		c.Account, c.AccountGroup, c.ApiKey, c.Group, c.Proxy, c.RedeemCode, c.Setting,
-		c.UsageLog, c.User, c.UserAllowedGroup, c.UserSubscription,
+		c.UsageLog, c.User, c.UserAllowedGroup, c.UserAttributeDefinition,
+		c.UserAttributeValue, c.UserSubscription,
 placeholder {
 		n.Use(hooks...)
 placeholder
@@ -253,7 +266,8 @@ placeholder
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) placeholder{
 		c.Account, c.AccountGroup, c.ApiKey, c.Group, c.Proxy, c.RedeemCode, c.Setting,
-		c.UsageLog, c.User, c.UserAllowedGroup, c.UserSubscription,
+		c.UsageLog, c.User, c.UserAllowedGroup, c.UserAttributeDefinition,
+		c.UserAttributeValue, c.UserSubscription,
 placeholder {
 		n.Intercept(interceptors...)
 placeholder
@@ -282,6 +296,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.User.mutate(ctx, m)
 	case *UserAllowedGroupMutation:
 		return c.UserAllowedGroup.mutate(ctx, m)
+	case *UserAttributeDefinitionMutation:
+		return c.UserAttributeDefinition.mutate(ctx, m)
+	case *UserAttributeValueMutation:
+		return c.UserAttributeValue.mutate(ctx, m)
 	case *UserSubscriptionMutation:
 		return c.UserSubscription.mutate(ctx, m)
 	default:
@@ -1916,6 +1934,22 @@ placeholder
 	return query
 placeholder
 
+// QueryAttributeValues queries the attribute_values edge of a User.
+func (c *UserClient) QueryAttributeValues(_m *User) *UserAttributeValueQuery {
+	query := (&UserAttributeValueClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(userattributevalue.Table, userattributevalue.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AttributeValuesTable, user.AttributeValuesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
 // QueryUserAllowedGroups queries the user_allowed_groups edge of a User.
 func (c *UserClient) QueryUserAllowedGroups(_m *User) *UserAllowedGroupQuery {
 	query := (&UserAllowedGroupClient{config: c.configplaceholder).Query()
@@ -2072,6 +2106,322 @@ func (c *UserAllowedGroupClient) mutate(ctx context.Context, m *UserAllowedGroup
 		return (&UserAllowedGroupDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown UserAllowedGroup mutation op: %q", m.Op())
+placeholder
+placeholder
+
+// UserAttributeDefinitionClient is a client for the UserAttributeDefinition schema.
+type UserAttributeDefinitionClient struct {
+	config
+placeholder
+
+// NewUserAttributeDefinitionClient returns a client for the UserAttributeDefinition from the given config.
+func NewUserAttributeDefinitionClient(c config) *UserAttributeDefinitionClient {
+	return &UserAttributeDefinitionClient{config: cplaceholder
+placeholder
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userattributedefinition.Hooks(f(g(h())))`.
+func (c *UserAttributeDefinitionClient) Use(hooks ...Hook) {
+	c.hooks.UserAttributeDefinition = append(c.hooks.UserAttributeDefinition, hooks...)
+placeholder
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userattributedefinition.Intercept(f(g(h())))`.
+func (c *UserAttributeDefinitionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserAttributeDefinition = append(c.inters.UserAttributeDefinition, interceptors...)
+placeholder
+
+// Create returns a builder for creating a UserAttributeDefinition entity.
+func (c *UserAttributeDefinitionClient) Create() *UserAttributeDefinitionCreate {
+	mutation := newUserAttributeDefinitionMutation(c.config, OpCreate)
+	return &UserAttributeDefinitionCreate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// CreateBulk returns a builder for creating a bulk of UserAttributeDefinition entities.
+func (c *UserAttributeDefinitionClient) CreateBulk(builders ...*UserAttributeDefinitionCreate) *UserAttributeDefinitionCreateBulk {
+	return &UserAttributeDefinitionCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserAttributeDefinitionClient) MapCreateBulk(slice any, setFunc func(*UserAttributeDefinitionCreate, int)) *UserAttributeDefinitionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserAttributeDefinitionCreateBulk{err: fmt.Errorf("calling to UserAttributeDefinitionClient.MapCreateBulk with wrong type %T, need slice", slice)placeholder
+placeholder
+	builders := make([]*UserAttributeDefinitionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+placeholder
+	return &UserAttributeDefinitionCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// Update returns an update builder for UserAttributeDefinition.
+func (c *UserAttributeDefinitionClient) Update() *UserAttributeDefinitionUpdate {
+	mutation := newUserAttributeDefinitionMutation(c.config, OpUpdate)
+	return &UserAttributeDefinitionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserAttributeDefinitionClient) UpdateOne(_m *UserAttributeDefinition) *UserAttributeDefinitionUpdateOne {
+	mutation := newUserAttributeDefinitionMutation(c.config, OpUpdateOne, withUserAttributeDefinition(_m))
+	return &UserAttributeDefinitionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserAttributeDefinitionClient) UpdateOneID(id int64) *UserAttributeDefinitionUpdateOne {
+	mutation := newUserAttributeDefinitionMutation(c.config, OpUpdateOne, withUserAttributeDefinitionID(id))
+	return &UserAttributeDefinitionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// Delete returns a delete builder for UserAttributeDefinition.
+func (c *UserAttributeDefinitionClient) Delete() *UserAttributeDefinitionDelete {
+	mutation := newUserAttributeDefinitionMutation(c.config, OpDelete)
+	return &UserAttributeDefinitionDelete{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserAttributeDefinitionClient) DeleteOne(_m *UserAttributeDefinition) *UserAttributeDefinitionDeleteOne {
+	return c.DeleteOneID(_m.ID)
+placeholder
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserAttributeDefinitionClient) DeleteOneID(id int64) *UserAttributeDefinitionDeleteOne {
+	builder := c.Delete().Where(userattributedefinition.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserAttributeDefinitionDeleteOne{builderplaceholder
+placeholder
+
+// Query returns a query builder for UserAttributeDefinition.
+func (c *UserAttributeDefinitionClient) Query() *UserAttributeDefinitionQuery {
+	return &UserAttributeDefinitionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserAttributeDefinitionplaceholder,
+		inters: c.Interceptors(),
+placeholder
+placeholder
+
+// Get returns a UserAttributeDefinition entity by its id.
+func (c *UserAttributeDefinitionClient) Get(ctx context.Context, id int64) (*UserAttributeDefinition, error) {
+	return c.Query().Where(userattributedefinition.ID(id)).Only(ctx)
+placeholder
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserAttributeDefinitionClient) GetX(ctx context.Context, id int64) *UserAttributeDefinition {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+placeholder
+	return obj
+placeholder
+
+// QueryValues queries the values edge of a UserAttributeDefinition.
+func (c *UserAttributeDefinitionClient) QueryValues(_m *UserAttributeDefinition) *UserAttributeValueQuery {
+	query := (&UserAttributeValueClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userattributedefinition.Table, userattributedefinition.FieldID, id),
+			sqlgraph.To(userattributevalue.Table, userattributevalue.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, userattributedefinition.ValuesTable, userattributedefinition.ValuesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
+// Hooks returns the client hooks.
+func (c *UserAttributeDefinitionClient) Hooks() []Hook {
+	hooks := c.hooks.UserAttributeDefinition
+	return append(hooks[:len(hooks):len(hooks)], userattributedefinition.Hooks[:]...)
+placeholder
+
+// Interceptors returns the client interceptors.
+func (c *UserAttributeDefinitionClient) Interceptors() []Interceptor {
+	inters := c.inters.UserAttributeDefinition
+	return append(inters[:len(inters):len(inters)], userattributedefinition.Interceptors[:]...)
+placeholder
+
+func (c *UserAttributeDefinitionClient) mutate(ctx context.Context, m *UserAttributeDefinitionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserAttributeDefinitionCreate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdate:
+		return (&UserAttributeDefinitionUpdate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdateOne:
+		return (&UserAttributeDefinitionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserAttributeDefinitionDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserAttributeDefinition mutation op: %q", m.Op())
+placeholder
+placeholder
+
+// UserAttributeValueClient is a client for the UserAttributeValue schema.
+type UserAttributeValueClient struct {
+	config
+placeholder
+
+// NewUserAttributeValueClient returns a client for the UserAttributeValue from the given config.
+func NewUserAttributeValueClient(c config) *UserAttributeValueClient {
+	return &UserAttributeValueClient{config: cplaceholder
+placeholder
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userattributevalue.Hooks(f(g(h())))`.
+func (c *UserAttributeValueClient) Use(hooks ...Hook) {
+	c.hooks.UserAttributeValue = append(c.hooks.UserAttributeValue, hooks...)
+placeholder
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userattributevalue.Intercept(f(g(h())))`.
+func (c *UserAttributeValueClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserAttributeValue = append(c.inters.UserAttributeValue, interceptors...)
+placeholder
+
+// Create returns a builder for creating a UserAttributeValue entity.
+func (c *UserAttributeValueClient) Create() *UserAttributeValueCreate {
+	mutation := newUserAttributeValueMutation(c.config, OpCreate)
+	return &UserAttributeValueCreate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// CreateBulk returns a builder for creating a bulk of UserAttributeValue entities.
+func (c *UserAttributeValueClient) CreateBulk(builders ...*UserAttributeValueCreate) *UserAttributeValueCreateBulk {
+	return &UserAttributeValueCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserAttributeValueClient) MapCreateBulk(slice any, setFunc func(*UserAttributeValueCreate, int)) *UserAttributeValueCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserAttributeValueCreateBulk{err: fmt.Errorf("calling to UserAttributeValueClient.MapCreateBulk with wrong type %T, need slice", slice)placeholder
+placeholder
+	builders := make([]*UserAttributeValueCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+placeholder
+	return &UserAttributeValueCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// Update returns an update builder for UserAttributeValue.
+func (c *UserAttributeValueClient) Update() *UserAttributeValueUpdate {
+	mutation := newUserAttributeValueMutation(c.config, OpUpdate)
+	return &UserAttributeValueUpdate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserAttributeValueClient) UpdateOne(_m *UserAttributeValue) *UserAttributeValueUpdateOne {
+	mutation := newUserAttributeValueMutation(c.config, OpUpdateOne, withUserAttributeValue(_m))
+	return &UserAttributeValueUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserAttributeValueClient) UpdateOneID(id int64) *UserAttributeValueUpdateOne {
+	mutation := newUserAttributeValueMutation(c.config, OpUpdateOne, withUserAttributeValueID(id))
+	return &UserAttributeValueUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// Delete returns a delete builder for UserAttributeValue.
+func (c *UserAttributeValueClient) Delete() *UserAttributeValueDelete {
+	mutation := newUserAttributeValueMutation(c.config, OpDelete)
+	return &UserAttributeValueDelete{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserAttributeValueClient) DeleteOne(_m *UserAttributeValue) *UserAttributeValueDeleteOne {
+	return c.DeleteOneID(_m.ID)
+placeholder
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserAttributeValueClient) DeleteOneID(id int64) *UserAttributeValueDeleteOne {
+	builder := c.Delete().Where(userattributevalue.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserAttributeValueDeleteOne{builderplaceholder
+placeholder
+
+// Query returns a query builder for UserAttributeValue.
+func (c *UserAttributeValueClient) Query() *UserAttributeValueQuery {
+	return &UserAttributeValueQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserAttributeValueplaceholder,
+		inters: c.Interceptors(),
+placeholder
+placeholder
+
+// Get returns a UserAttributeValue entity by its id.
+func (c *UserAttributeValueClient) Get(ctx context.Context, id int64) (*UserAttributeValue, error) {
+	return c.Query().Where(userattributevalue.ID(id)).Only(ctx)
+placeholder
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserAttributeValueClient) GetX(ctx context.Context, id int64) *UserAttributeValue {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+placeholder
+	return obj
+placeholder
+
+// QueryUser queries the user edge of a UserAttributeValue.
+func (c *UserAttributeValueClient) QueryUser(_m *UserAttributeValue) *UserQuery {
+	query := (&UserClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userattributevalue.Table, userattributevalue.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userattributevalue.UserTable, userattributevalue.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
+// QueryDefinition queries the definition edge of a UserAttributeValue.
+func (c *UserAttributeValueClient) QueryDefinition(_m *UserAttributeValue) *UserAttributeDefinitionQuery {
+	query := (&UserAttributeDefinitionClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(userattributevalue.Table, userattributevalue.FieldID, id),
+			sqlgraph.To(userattributedefinition.Table, userattributedefinition.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, userattributevalue.DefinitionTable, userattributevalue.DefinitionColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
+// Hooks returns the client hooks.
+func (c *UserAttributeValueClient) Hooks() []Hook {
+	return c.hooks.UserAttributeValue
+placeholder
+
+// Interceptors returns the client interceptors.
+func (c *UserAttributeValueClient) Interceptors() []Interceptor {
+	return c.inters.UserAttributeValue
+placeholder
+
+func (c *UserAttributeValueClient) mutate(ctx context.Context, m *UserAttributeValueMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserAttributeValueCreate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdate:
+		return (&UserAttributeValueUpdate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdateOne:
+		return (&UserAttributeValueUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserAttributeValueDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserAttributeValue mutation op: %q", m.Op())
 placeholder
 placeholder
 
@@ -2278,11 +2628,13 @@ placeholder
 type (
 	hooks struct {
 		Account, AccountGroup, ApiKey, Group, Proxy, RedeemCode, Setting, UsageLog,
-		User, UserAllowedGroup, UserSubscription []ent.Hook
+		User, UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
+		UserSubscription []ent.Hook
 placeholder
 	inters struct {
 		Account, AccountGroup, ApiKey, Group, Proxy, RedeemCode, Setting, UsageLog,
-		User, UserAllowedGroup, UserSubscription []ent.Interceptor
+		User, UserAllowedGroup, UserAttributeDefinition, UserAttributeValue,
+		UserSubscription []ent.Interceptor
 placeholder
 )
 
