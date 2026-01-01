@@ -358,6 +358,15 @@ placeholder
 		return nil, fmt.Errorf("transform request: %w", err)
 placeholder
 
+	// 调试：记录转换后的请求体（仅记录前 2000 字符）
+	if bodyJSON, err := json.Marshal(geminiBody); err == nil {
+		truncated := string(bodyJSON)
+		if len(truncated) > 2000 {
+			truncated = truncated[:2000] + "..."
+	placeholder
+		log.Printf("[Debug] Transformed Gemini request: %s", truncated)
+placeholder
+
 	// 构建上游 action
 	action := "generateContent"
 	if claudeReq.Stream {
