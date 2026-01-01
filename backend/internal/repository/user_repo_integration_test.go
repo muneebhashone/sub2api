@@ -166,7 +166,7 @@ func (s *UserRepoSuite) TestListWithFilters_Status() {
 	s.mustCreateUser(&service.User{Email: "active@test.com", Status: service.StatusActiveplaceholder)
 	s.mustCreateUser(&service.User{Email: "disabled@test.com", Status: service.StatusDisabledplaceholder)
 
-	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.StatusActive, "", "")
+	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.UserListFilters{Status: service.StatusActiveplaceholder)
 	s.Require().NoError(err)
 	s.Require().Len(users, 1)
 	s.Require().Equal(service.StatusActive, users[0].Status)
@@ -176,7 +176,7 @@ func (s *UserRepoSuite) TestListWithFilters_Role() {
 	s.mustCreateUser(&service.User{Email: "user@test.com", Role: service.RoleUserplaceholder)
 	s.mustCreateUser(&service.User{Email: "admin@test.com", Role: service.RoleAdminplaceholder)
 
-	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", service.RoleAdmin, "")
+	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.UserListFilters{Role: service.RoleAdminplaceholder)
 	s.Require().NoError(err)
 	s.Require().Len(users, 1)
 	s.Require().Equal(service.RoleAdmin, users[0].Role)
@@ -186,7 +186,7 @@ func (s *UserRepoSuite) TestListWithFilters_Search() {
 	s.mustCreateUser(&service.User{Email: "alice@test.com", Username: "Alice"placeholder)
 	s.mustCreateUser(&service.User{Email: "bob@test.com", Username: "Bob"placeholder)
 
-	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", "", "alice")
+	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.UserListFilters{Search: "alice"placeholder)
 	s.Require().NoError(err)
 	s.Require().Len(users, 1)
 	s.Require().Contains(users[0].Email, "alice")
@@ -196,7 +196,7 @@ func (s *UserRepoSuite) TestListWithFilters_SearchByUsername() {
 	s.mustCreateUser(&service.User{Email: "u1@test.com", Username: "JohnDoe"placeholder)
 	s.mustCreateUser(&service.User{Email: "u2@test.com", Username: "JaneSmith"placeholder)
 
-	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", "", "john")
+	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.UserListFilters{Search: "john"placeholder)
 	s.Require().NoError(err)
 	s.Require().Len(users, 1)
 	s.Require().Equal("JohnDoe", users[0].Username)
@@ -216,7 +216,7 @@ placeholder)
 		c.SetExpiresAt(time.Now().Add(-1 * time.Hour))
 placeholder)
 
-	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", "", "sub@")
+	users, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.UserListFilters{Search: "sub@"placeholder)
 	s.Require().NoError(err, "ListWithFilters")
 	s.Require().Len(users, 1, "expected 1 user")
 	s.Require().Len(users[0].Subscriptions, 1, "expected 1 active subscription")
@@ -245,7 +245,7 @@ placeholder)
 		Status: service.StatusDisabled,
 placeholder)
 
-	users, page, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.StatusActive, service.RoleAdmin, "b@")
+	users, page, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, service.UserListFilters{Status: service.StatusActive, Role: service.RoleAdmin, Search: "b@"placeholder)
 	s.Require().NoError(err, "ListWithFilters")
 	s.Require().Equal(int64(1), page.Total, "ListWithFilters total mismatch")
 	s.Require().Len(users, 1, "ListWithFilters len mismatch")
@@ -487,7 +487,7 @@ placeholder)
 	s.Require().Equal(user1.Concurrency+3, got5.Concurrency)
 
 	params := pagination.PaginationParams{Page: 1, PageSize: 10placeholder
-	users, page, err := s.repo.ListWithFilters(s.ctx, params, service.StatusActive, service.RoleAdmin, "b@")
+	users, page, err := s.repo.ListWithFilters(s.ctx, params, service.UserListFilters{Status: service.StatusActive, Role: service.RoleAdmin, Search: "b@"placeholder)
 	s.Require().NoError(err, "ListWithFilters")
 	s.Require().Equal(int64(1), page.Total, "ListWithFilters total mismatch")
 	s.Require().Len(users, 1, "ListWithFilters len mismatch")
