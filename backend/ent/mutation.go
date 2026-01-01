@@ -19,6 +19,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
+	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
@@ -40,6 +41,7 @@ const (
 	TypeProxy            = "Proxy"
 	TypeRedeemCode       = "RedeemCode"
 	TypeSetting          = "Setting"
+	TypeUsageLog         = "UsageLog"
 	TypeUser             = "User"
 	TypeUserAllowedGroup = "UserAllowedGroup"
 	TypeUserSubscription = "UserSubscription"
@@ -59,8 +61,6 @@ type AccountMutation struct {
 	_type                 *string
 	credentials           *map[string]interface{placeholder
 	extra                 *map[string]interface{placeholder
-	proxy_id              *int64
-	addproxy_id           *int64
 	concurrency           *int
 	addconcurrency        *int
 	priority              *int
@@ -79,6 +79,11 @@ type AccountMutation struct {
 	groups                map[int64]struct{placeholder
 	removedgroups         map[int64]struct{placeholder
 	clearedgroups         bool
+	proxy                 *int64
+	clearedproxy          bool
+	usage_logs            map[int64]struct{placeholder
+	removedusage_logs     map[int64]struct{placeholder
+	clearedusage_logs     bool
 	done                  bool
 	oldValue              func(context.Context) (*Account, error)
 	predicates            []predicate.Account
@@ -485,13 +490,12 @@ placeholder
 
 // SetProxyID sets the "proxy_id" field.
 func (m *AccountMutation) SetProxyID(i int64) {
-	m.proxy_id = &i
-	m.addproxy_id = nil
+	m.proxy = &i
 placeholder
 
 // ProxyID returns the value of the "proxy_id" field in the mutation.
 func (m *AccountMutation) ProxyID() (r int64, exists bool) {
-	v := m.proxy_id
+	v := m.proxy
 	if v == nil {
 		return
 placeholder
@@ -515,28 +519,9 @@ placeholder
 	return oldValue.ProxyID, nil
 placeholder
 
-// AddProxyID adds i to the "proxy_id" field.
-func (m *AccountMutation) AddProxyID(i int64) {
-	if m.addproxy_id != nil {
-		*m.addproxy_id += i
-placeholder else {
-		m.addproxy_id = &i
-placeholder
-placeholder
-
-// AddedProxyID returns the value that was added to the "proxy_id" field in this mutation.
-func (m *AccountMutation) AddedProxyID() (r int64, exists bool) {
-	v := m.addproxy_id
-	if v == nil {
-		return
-placeholder
-	return *v, true
-placeholder
-
 // ClearProxyID clears the value of the "proxy_id" field.
 func (m *AccountMutation) ClearProxyID() {
-	m.proxy_id = nil
-	m.addproxy_id = nil
+	m.proxy = nil
 	m.clearedFields[account.FieldProxyID] = struct{placeholder{placeholder
 placeholder
 
@@ -548,8 +533,7 @@ placeholder
 
 // ResetProxyID resets all changes to the "proxy_id" field.
 func (m *AccountMutation) ResetProxyID() {
-	m.proxy_id = nil
-	m.addproxy_id = nil
+	m.proxy = nil
 	delete(m.clearedFields, account.FieldProxyID)
 placeholder
 
@@ -1183,6 +1167,87 @@ func (m *AccountMutation) ResetGroups() {
 	m.removedgroups = nil
 placeholder
 
+// ClearProxy clears the "proxy" edge to the Proxy entity.
+func (m *AccountMutation) ClearProxy() {
+	m.clearedproxy = true
+	m.clearedFields[account.FieldProxyID] = struct{placeholder{placeholder
+placeholder
+
+// ProxyCleared reports if the "proxy" edge to the Proxy entity was cleared.
+func (m *AccountMutation) ProxyCleared() bool {
+	return m.ProxyIDCleared() || m.clearedproxy
+placeholder
+
+// ProxyIDs returns the "proxy" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProxyID instead. It exists only for internal usage by the builders.
+func (m *AccountMutation) ProxyIDs() (ids []int64) {
+	if id := m.proxy; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetProxy resets all changes to the "proxy" edge.
+func (m *AccountMutation) ResetProxy() {
+	m.proxy = nil
+	m.clearedproxy = false
+placeholder
+
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *AccountMutation) AddUsageLogIDs(ids ...int64) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *AccountMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+placeholder
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *AccountMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *AccountMutation) RemoveUsageLogIDs(ids ...int64) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *AccountMutation) RemovedUsageLogsIDs() (ids []int64) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *AccountMutation) UsageLogsIDs() (ids []int64) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *AccountMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+placeholder
+
 // Where appends a list predicates to the AccountMutation builder.
 func (m *AccountMutation) Where(ps ...predicate.Account) {
 	m.predicates = append(m.predicates, ps...)
@@ -1242,7 +1307,7 @@ placeholder
 	if m.extra != nil {
 		fields = append(fields, account.FieldExtra)
 placeholder
-	if m.proxy_id != nil {
+	if m.proxy != nil {
 		fields = append(fields, account.FieldProxyID)
 placeholder
 	if m.concurrency != nil {
@@ -1546,9 +1611,6 @@ placeholder
 // this mutation.
 func (m *AccountMutation) AddedFields() []string {
 	var fields []string
-	if m.addproxy_id != nil {
-		fields = append(fields, account.FieldProxyID)
-placeholder
 	if m.addconcurrency != nil {
 		fields = append(fields, account.FieldConcurrency)
 placeholder
@@ -1563,8 +1625,6 @@ placeholder
 // was not set, or was not defined in the schema.
 func (m *AccountMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case account.FieldProxyID:
-		return m.AddedProxyID()
 	case account.FieldConcurrency:
 		return m.AddedConcurrency()
 	case account.FieldPriority:
@@ -1578,13 +1638,6 @@ placeholder
 // type.
 func (m *AccountMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case account.FieldProxyID:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-	placeholder
-		m.AddProxyID(v)
-		return nil
 	case account.FieldConcurrency:
 		v, ok := value.(int)
 		if !ok {
@@ -1758,9 +1811,15 @@ placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AccountMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.groups != nil {
 		edges = append(edges, account.EdgeGroups)
+placeholder
+	if m.proxy != nil {
+		edges = append(edges, account.EdgeProxy)
+placeholder
+	if m.usage_logs != nil {
+		edges = append(edges, account.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -1775,15 +1834,28 @@ func (m *AccountMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case account.EdgeProxy:
+		if id := m.proxy; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+	case account.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 placeholder
 	return nil
 placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AccountMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.removedgroups != nil {
 		edges = append(edges, account.EdgeGroups)
+placeholder
+	if m.removedusage_logs != nil {
+		edges = append(edges, account.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -1798,15 +1870,27 @@ func (m *AccountMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case account.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 placeholder
 	return nil
 placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AccountMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 3)
 	if m.clearedgroups {
 		edges = append(edges, account.EdgeGroups)
+placeholder
+	if m.clearedproxy {
+		edges = append(edges, account.EdgeProxy)
+placeholder
+	if m.clearedusage_logs {
+		edges = append(edges, account.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -1817,6 +1901,10 @@ func (m *AccountMutation) EdgeCleared(name string) bool {
 	switch name {
 	case account.EdgeGroups:
 		return m.clearedgroups
+	case account.EdgeProxy:
+		return m.clearedproxy
+	case account.EdgeUsageLogs:
+		return m.clearedusage_logs
 placeholder
 	return false
 placeholder
@@ -1825,6 +1913,9 @@ placeholder
 // if that edge is not defined in the schema.
 func (m *AccountMutation) ClearEdge(name string) error {
 	switch name {
+	case account.EdgeProxy:
+		m.ClearProxy()
+		return nil
 placeholder
 	return fmt.Errorf("unknown Account unique edge %s", name)
 placeholder
@@ -1835,6 +1926,12 @@ func (m *AccountMutation) ResetEdge(name string) error {
 	switch name {
 	case account.EdgeGroups:
 		m.ResetGroups()
+		return nil
+	case account.EdgeProxy:
+		m.ResetProxy()
+		return nil
+	case account.EdgeUsageLogs:
+		m.ResetUsageLogs()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Account edge %s", name)
@@ -2328,23 +2425,26 @@ placeholder
 // ApiKeyMutation represents an operation that mutates the ApiKey nodes in the graph.
 type ApiKeyMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int64
-	created_at    *time.Time
-	updated_at    *time.Time
-	deleted_at    *time.Time
-	key           *string
-	name          *string
-	status        *string
-	clearedFields map[string]struct{placeholder
-	user          *int64
-	cleareduser   bool
-	group         *int64
-	clearedgroup  bool
-	done          bool
-	oldValue      func(context.Context) (*ApiKey, error)
-	predicates    []predicate.ApiKey
+	op                Op
+	typ               string
+	id                *int64
+	created_at        *time.Time
+	updated_at        *time.Time
+	deleted_at        *time.Time
+	key               *string
+	name              *string
+	status            *string
+	clearedFields     map[string]struct{placeholder
+	user              *int64
+	cleareduser       bool
+	group             *int64
+	clearedgroup      bool
+	usage_logs        map[int64]struct{placeholder
+	removedusage_logs map[int64]struct{placeholder
+	clearedusage_logs bool
+	done              bool
+	oldValue          func(context.Context) (*ApiKey, error)
+	predicates        []predicate.ApiKey
 placeholder
 
 var _ ent.Mutation = (*ApiKeyMutation)(nil)
@@ -2813,6 +2913,60 @@ func (m *ApiKeyMutation) ResetGroup() {
 	m.clearedgroup = false
 placeholder
 
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *ApiKeyMutation) AddUsageLogIDs(ids ...int64) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *ApiKeyMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+placeholder
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *ApiKeyMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *ApiKeyMutation) RemoveUsageLogIDs(ids ...int64) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *ApiKeyMutation) RemovedUsageLogsIDs() (ids []int64) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *ApiKeyMutation) UsageLogsIDs() (ids []int64) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *ApiKeyMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+placeholder
+
 // Where appends a list predicates to the ApiKeyMutation builder.
 func (m *ApiKeyMutation) Where(ps ...predicate.ApiKey) {
 	m.predicates = append(m.predicates, ps...)
@@ -3083,12 +3237,15 @@ placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ApiKeyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.user != nil {
 		edges = append(edges, apikey.EdgeUser)
 placeholder
 	if m.group != nil {
 		edges = append(edges, apikey.EdgeGroup)
+placeholder
+	if m.usage_logs != nil {
+		edges = append(edges, apikey.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -3105,30 +3262,50 @@ func (m *ApiKeyMutation) AddedIDs(name string) []ent.Value {
 		if id := m.group; id != nil {
 			return []ent.Value{*idplaceholder
 	placeholder
+	case apikey.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 placeholder
 	return nil
 placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ApiKeyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedusage_logs != nil {
+		edges = append(edges, apikey.EdgeUsageLogs)
+placeholder
 	return edges
 placeholder
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ApiKeyMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case apikey.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
+placeholder
 	return nil
 placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ApiKeyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleareduser {
 		edges = append(edges, apikey.EdgeUser)
 placeholder
 	if m.clearedgroup {
 		edges = append(edges, apikey.EdgeGroup)
+placeholder
+	if m.clearedusage_logs {
+		edges = append(edges, apikey.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -3141,6 +3318,8 @@ func (m *ApiKeyMutation) EdgeCleared(name string) bool {
 		return m.cleareduser
 	case apikey.EdgeGroup:
 		return m.clearedgroup
+	case apikey.EdgeUsageLogs:
+		return m.clearedusage_logs
 placeholder
 	return false
 placeholder
@@ -3169,6 +3348,9 @@ func (m *ApiKeyMutation) ResetEdge(name string) error {
 	case apikey.EdgeGroup:
 		m.ResetGroup()
 		return nil
+	case apikey.EdgeUsageLogs:
+		m.ResetUsageLogs()
+		return nil
 placeholder
 	return fmt.Errorf("unknown ApiKey edge %s", name)
 placeholder
@@ -3176,45 +3358,50 @@ placeholder
 // GroupMutation represents an operation that mutates the Group nodes in the graph.
 type GroupMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *int64
-	created_at           *time.Time
-	updated_at           *time.Time
-	deleted_at           *time.Time
-	name                 *string
-	description          *string
-	rate_multiplier      *float64
-	addrate_multiplier   *float64
-	is_exclusive         *bool
-	status               *string
-	platform             *string
-	subscription_type    *string
-	daily_limit_usd      *float64
-	adddaily_limit_usd   *float64
-	weekly_limit_usd     *float64
-	addweekly_limit_usd  *float64
-	monthly_limit_usd    *float64
-	addmonthly_limit_usd *float64
-	clearedFields        map[string]struct{placeholder
-	api_keys             map[int64]struct{placeholder
-	removedapi_keys      map[int64]struct{placeholder
-	clearedapi_keys      bool
-	redeem_codes         map[int64]struct{placeholder
-	removedredeem_codes  map[int64]struct{placeholder
-	clearedredeem_codes  bool
-	subscriptions        map[int64]struct{placeholder
-	removedsubscriptions map[int64]struct{placeholder
-	clearedsubscriptions bool
-	accounts             map[int64]struct{placeholder
-	removedaccounts      map[int64]struct{placeholder
-	clearedaccounts      bool
-	allowed_users        map[int64]struct{placeholder
-	removedallowed_users map[int64]struct{placeholder
-	clearedallowed_users bool
-	done                 bool
-	oldValue             func(context.Context) (*Group, error)
-	predicates           []predicate.Group
+	op                       Op
+	typ                      string
+	id                       *int64
+	created_at               *time.Time
+	updated_at               *time.Time
+	deleted_at               *time.Time
+	name                     *string
+	description              *string
+	rate_multiplier          *float64
+	addrate_multiplier       *float64
+	is_exclusive             *bool
+	status                   *string
+	platform                 *string
+	subscription_type        *string
+	daily_limit_usd          *float64
+	adddaily_limit_usd       *float64
+	weekly_limit_usd         *float64
+	addweekly_limit_usd      *float64
+	monthly_limit_usd        *float64
+	addmonthly_limit_usd     *float64
+	default_validity_days    *int
+	adddefault_validity_days *int
+	clearedFields            map[string]struct{placeholder
+	api_keys                 map[int64]struct{placeholder
+	removedapi_keys          map[int64]struct{placeholder
+	clearedapi_keys          bool
+	redeem_codes             map[int64]struct{placeholder
+	removedredeem_codes      map[int64]struct{placeholder
+	clearedredeem_codes      bool
+	subscriptions            map[int64]struct{placeholder
+	removedsubscriptions     map[int64]struct{placeholder
+	clearedsubscriptions     bool
+	usage_logs               map[int64]struct{placeholder
+	removedusage_logs        map[int64]struct{placeholder
+	clearedusage_logs        bool
+	accounts                 map[int64]struct{placeholder
+	removedaccounts          map[int64]struct{placeholder
+	clearedaccounts          bool
+	allowed_users            map[int64]struct{placeholder
+	removedallowed_users     map[int64]struct{placeholder
+	clearedallowed_users     bool
+	done                     bool
+	oldValue                 func(context.Context) (*Group, error)
+	predicates               []predicate.Group
 placeholder
 
 var _ ent.Mutation = (*GroupMutation)(nil)
@@ -3931,6 +4118,62 @@ func (m *GroupMutation) ResetMonthlyLimitUsd() {
 	delete(m.clearedFields, group.FieldMonthlyLimitUsd)
 placeholder
 
+// SetDefaultValidityDays sets the "default_validity_days" field.
+func (m *GroupMutation) SetDefaultValidityDays(i int) {
+	m.default_validity_days = &i
+	m.adddefault_validity_days = nil
+placeholder
+
+// DefaultValidityDays returns the value of the "default_validity_days" field in the mutation.
+func (m *GroupMutation) DefaultValidityDays() (r int, exists bool) {
+	v := m.default_validity_days
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldDefaultValidityDays returns the old "default_validity_days" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldDefaultValidityDays(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDefaultValidityDays is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDefaultValidityDays requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDefaultValidityDays: %w", err)
+placeholder
+	return oldValue.DefaultValidityDays, nil
+placeholder
+
+// AddDefaultValidityDays adds i to the "default_validity_days" field.
+func (m *GroupMutation) AddDefaultValidityDays(i int) {
+	if m.adddefault_validity_days != nil {
+		*m.adddefault_validity_days += i
+placeholder else {
+		m.adddefault_validity_days = &i
+placeholder
+placeholder
+
+// AddedDefaultValidityDays returns the value that was added to the "default_validity_days" field in this mutation.
+func (m *GroupMutation) AddedDefaultValidityDays() (r int, exists bool) {
+	v := m.adddefault_validity_days
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetDefaultValidityDays resets all changes to the "default_validity_days" field.
+func (m *GroupMutation) ResetDefaultValidityDays() {
+	m.default_validity_days = nil
+	m.adddefault_validity_days = nil
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the ApiKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -4093,6 +4336,60 @@ func (m *GroupMutation) ResetSubscriptions() {
 	m.removedsubscriptions = nil
 placeholder
 
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *GroupMutation) AddUsageLogIDs(ids ...int64) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *GroupMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+placeholder
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *GroupMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *GroupMutation) RemoveUsageLogIDs(ids ...int64) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *GroupMutation) RemovedUsageLogsIDs() (ids []int64) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *GroupMutation) UsageLogsIDs() (ids []int64) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *GroupMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+placeholder
+
 // AddAccountIDs adds the "accounts" edge to the Account entity by ids.
 func (m *GroupMutation) AddAccountIDs(ids ...int64) {
 	if m.accounts == nil {
@@ -4235,7 +4532,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 placeholder
@@ -4275,6 +4572,9 @@ placeholder
 	if m.monthly_limit_usd != nil {
 		fields = append(fields, group.FieldMonthlyLimitUsd)
 placeholder
+	if m.default_validity_days != nil {
+		fields = append(fields, group.FieldDefaultValidityDays)
+placeholder
 	return fields
 placeholder
 
@@ -4309,6 +4609,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.WeeklyLimitUsd()
 	case group.FieldMonthlyLimitUsd:
 		return m.MonthlyLimitUsd()
+	case group.FieldDefaultValidityDays:
+		return m.DefaultValidityDays()
 placeholder
 	return nil, false
 placeholder
@@ -4344,6 +4646,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldWeeklyLimitUsd(ctx)
 	case group.FieldMonthlyLimitUsd:
 		return m.OldMonthlyLimitUsd(ctx)
+	case group.FieldDefaultValidityDays:
+		return m.OldDefaultValidityDays(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -4444,6 +4748,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetMonthlyLimitUsd(v)
 		return nil
+	case group.FieldDefaultValidityDays:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetDefaultValidityDays(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -4464,6 +4775,9 @@ placeholder
 	if m.addmonthly_limit_usd != nil {
 		fields = append(fields, group.FieldMonthlyLimitUsd)
 placeholder
+	if m.adddefault_validity_days != nil {
+		fields = append(fields, group.FieldDefaultValidityDays)
+placeholder
 	return fields
 placeholder
 
@@ -4480,6 +4794,8 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedWeeklyLimitUsd()
 	case group.FieldMonthlyLimitUsd:
 		return m.AddedMonthlyLimitUsd()
+	case group.FieldDefaultValidityDays:
+		return m.AddedDefaultValidityDays()
 placeholder
 	return nil, false
 placeholder
@@ -4516,6 +4832,13 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 	placeholder
 		m.AddMonthlyLimitUsd(v)
+		return nil
+	case group.FieldDefaultValidityDays:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddDefaultValidityDays(v)
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group numeric field %s", name)
@@ -4616,13 +4939,16 @@ func (m *GroupMutation) ResetField(name string) error {
 	case group.FieldMonthlyLimitUsd:
 		m.ResetMonthlyLimitUsd()
 		return nil
+	case group.FieldDefaultValidityDays:
+		m.ResetDefaultValidityDays()
+		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
 placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GroupMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.api_keys != nil {
 		edges = append(edges, group.EdgeAPIKeys)
 placeholder
@@ -4631,6 +4957,9 @@ placeholder
 placeholder
 	if m.subscriptions != nil {
 		edges = append(edges, group.EdgeSubscriptions)
+placeholder
+	if m.usage_logs != nil {
+		edges = append(edges, group.EdgeUsageLogs)
 placeholder
 	if m.accounts != nil {
 		edges = append(edges, group.EdgeAccounts)
@@ -4663,6 +4992,12 @@ func (m *GroupMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case group.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 	case group.EdgeAccounts:
 		ids := make([]ent.Value, 0, len(m.accounts))
 		for id := range m.accounts {
@@ -4681,7 +5016,7 @@ placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GroupMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedapi_keys != nil {
 		edges = append(edges, group.EdgeAPIKeys)
 placeholder
@@ -4690,6 +5025,9 @@ placeholder
 placeholder
 	if m.removedsubscriptions != nil {
 		edges = append(edges, group.EdgeSubscriptions)
+placeholder
+	if m.removedusage_logs != nil {
+		edges = append(edges, group.EdgeUsageLogs)
 placeholder
 	if m.removedaccounts != nil {
 		edges = append(edges, group.EdgeAccounts)
@@ -4722,6 +5060,12 @@ func (m *GroupMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case group.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 	case group.EdgeAccounts:
 		ids := make([]ent.Value, 0, len(m.removedaccounts))
 		for id := range m.removedaccounts {
@@ -4740,7 +5084,7 @@ placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GroupMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedapi_keys {
 		edges = append(edges, group.EdgeAPIKeys)
 placeholder
@@ -4749,6 +5093,9 @@ placeholder
 placeholder
 	if m.clearedsubscriptions {
 		edges = append(edges, group.EdgeSubscriptions)
+placeholder
+	if m.clearedusage_logs {
+		edges = append(edges, group.EdgeUsageLogs)
 placeholder
 	if m.clearedaccounts {
 		edges = append(edges, group.EdgeAccounts)
@@ -4769,6 +5116,8 @@ func (m *GroupMutation) EdgeCleared(name string) bool {
 		return m.clearedredeem_codes
 	case group.EdgeSubscriptions:
 		return m.clearedsubscriptions
+	case group.EdgeUsageLogs:
+		return m.clearedusage_logs
 	case group.EdgeAccounts:
 		return m.clearedaccounts
 	case group.EdgeAllowedUsers:
@@ -4798,6 +5147,9 @@ func (m *GroupMutation) ResetEdge(name string) error {
 	case group.EdgeSubscriptions:
 		m.ResetSubscriptions()
 		return nil
+	case group.EdgeUsageLogs:
+		m.ResetUsageLogs()
+		return nil
 	case group.EdgeAccounts:
 		m.ResetAccounts()
 		return nil
@@ -4811,24 +5163,27 @@ placeholder
 // ProxyMutation represents an operation that mutates the Proxy nodes in the graph.
 type ProxyMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int64
-	created_at    *time.Time
-	updated_at    *time.Time
-	deleted_at    *time.Time
-	name          *string
-	protocol      *string
-	host          *string
-	port          *int
-	addport       *int
-	username      *string
-	password      *string
-	status        *string
-	clearedFields map[string]struct{placeholder
-	done          bool
-	oldValue      func(context.Context) (*Proxy, error)
-	predicates    []predicate.Proxy
+	op              Op
+	typ             string
+	id              *int64
+	created_at      *time.Time
+	updated_at      *time.Time
+	deleted_at      *time.Time
+	name            *string
+	protocol        *string
+	host            *string
+	port            *int
+	addport         *int
+	username        *string
+	password        *string
+	status          *string
+	clearedFields   map[string]struct{placeholder
+	accounts        map[int64]struct{placeholder
+	removedaccounts map[int64]struct{placeholder
+	clearedaccounts bool
+	done            bool
+	oldValue        func(context.Context) (*Proxy, error)
+	predicates      []predicate.Proxy
 placeholder
 
 var _ ent.Mutation = (*ProxyMutation)(nil)
@@ -5348,6 +5703,60 @@ func (m *ProxyMutation) ResetStatus() {
 	m.status = nil
 placeholder
 
+// AddAccountIDs adds the "accounts" edge to the Account entity by ids.
+func (m *ProxyMutation) AddAccountIDs(ids ...int64) {
+	if m.accounts == nil {
+		m.accounts = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.accounts[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearAccounts clears the "accounts" edge to the Account entity.
+func (m *ProxyMutation) ClearAccounts() {
+	m.clearedaccounts = true
+placeholder
+
+// AccountsCleared reports if the "accounts" edge to the Account entity was cleared.
+func (m *ProxyMutation) AccountsCleared() bool {
+	return m.clearedaccounts
+placeholder
+
+// RemoveAccountIDs removes the "accounts" edge to the Account entity by IDs.
+func (m *ProxyMutation) RemoveAccountIDs(ids ...int64) {
+	if m.removedaccounts == nil {
+		m.removedaccounts = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.accounts, ids[i])
+		m.removedaccounts[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedAccounts returns the removed IDs of the "accounts" edge to the Account entity.
+func (m *ProxyMutation) RemovedAccountsIDs() (ids []int64) {
+	for id := range m.removedaccounts {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// AccountsIDs returns the "accounts" edge IDs in the mutation.
+func (m *ProxyMutation) AccountsIDs() (ids []int64) {
+	for id := range m.accounts {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetAccounts resets all changes to the "accounts" edge.
+func (m *ProxyMutation) ResetAccounts() {
+	m.accounts = nil
+	m.clearedaccounts = false
+	m.removedaccounts = nil
+placeholder
+
 // Where appends a list predicates to the ProxyMutation builder.
 func (m *ProxyMutation) Where(ps ...predicate.Proxy) {
 	m.predicates = append(m.predicates, ps...)
@@ -5670,49 +6079,85 @@ placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProxyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.accounts != nil {
+		edges = append(edges, proxy.EdgeAccounts)
+placeholder
 	return edges
 placeholder
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ProxyMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case proxy.EdgeAccounts:
+		ids := make([]ent.Value, 0, len(m.accounts))
+		for id := range m.accounts {
+			ids = append(ids, id)
+	placeholder
+		return ids
+placeholder
 	return nil
 placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProxyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedaccounts != nil {
+		edges = append(edges, proxy.EdgeAccounts)
+placeholder
 	return edges
 placeholder
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ProxyMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case proxy.EdgeAccounts:
+		ids := make([]ent.Value, 0, len(m.removedaccounts))
+		for id := range m.removedaccounts {
+			ids = append(ids, id)
+	placeholder
+		return ids
+placeholder
 	return nil
 placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProxyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedaccounts {
+		edges = append(edges, proxy.EdgeAccounts)
+placeholder
 	return edges
 placeholder
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ProxyMutation) EdgeCleared(name string) bool {
+	switch name {
+	case proxy.EdgeAccounts:
+		return m.clearedaccounts
+placeholder
 	return false
 placeholder
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ProxyMutation) ClearEdge(name string) error {
+	switch name {
+placeholder
 	return fmt.Errorf("unknown Proxy unique edge %s", name)
 placeholder
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ProxyMutation) ResetEdge(name string) error {
+	switch name {
+	case proxy.EdgeAccounts:
+		m.ResetAccounts()
+		return nil
+placeholder
 	return fmt.Errorf("unknown Proxy edge %s", name)
 placeholder
 
@@ -7223,6 +7668,2478 @@ func (m *SettingMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Setting edge %s", name)
 placeholder
 
+// UsageLogMutation represents an operation that mutates the UsageLog nodes in the graph.
+type UsageLogMutation struct {
+	config
+	op                          Op
+	typ                         string
+	id                          *int64
+	request_id                  *string
+	model                       *string
+	input_tokens                *int
+	addinput_tokens             *int
+	output_tokens               *int
+	addoutput_tokens            *int
+	cache_creation_tokens       *int
+	addcache_creation_tokens    *int
+	cache_read_tokens           *int
+	addcache_read_tokens        *int
+	cache_creation_5m_tokens    *int
+	addcache_creation_5m_tokens *int
+	cache_creation_1h_tokens    *int
+	addcache_creation_1h_tokens *int
+	input_cost                  *float64
+	addinput_cost               *float64
+	output_cost                 *float64
+	addoutput_cost              *float64
+	cache_creation_cost         *float64
+	addcache_creation_cost      *float64
+	cache_read_cost             *float64
+	addcache_read_cost          *float64
+	total_cost                  *float64
+	addtotal_cost               *float64
+	actual_cost                 *float64
+	addactual_cost              *float64
+	rate_multiplier             *float64
+	addrate_multiplier          *float64
+	billing_type                *int8
+	addbilling_type             *int8
+	stream                      *bool
+	duration_ms                 *int
+	addduration_ms              *int
+	first_token_ms              *int
+	addfirst_token_ms           *int
+	created_at                  *time.Time
+	clearedFields               map[string]struct{placeholder
+	user                        *int64
+	cleareduser                 bool
+	api_key                     *int64
+	clearedapi_key              bool
+	account                     *int64
+	clearedaccount              bool
+	group                       *int64
+	clearedgroup                bool
+	subscription                *int64
+	clearedsubscription         bool
+	done                        bool
+	oldValue                    func(context.Context) (*UsageLog, error)
+	predicates                  []predicate.UsageLog
+placeholder
+
+var _ ent.Mutation = (*UsageLogMutation)(nil)
+
+// usagelogOption allows management of the mutation configuration using functional options.
+type usagelogOption func(*UsageLogMutation)
+
+// newUsageLogMutation creates new mutation for the UsageLog entity.
+func newUsageLogMutation(c config, op Op, opts ...usagelogOption) *UsageLogMutation {
+	m := &UsageLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUsageLog,
+		clearedFields: make(map[string]struct{placeholder),
+placeholder
+	for _, opt := range opts {
+		opt(m)
+placeholder
+	return m
+placeholder
+
+// withUsageLogID sets the ID field of the mutation.
+func withUsageLogID(id int64) usagelogOption {
+	return func(m *UsageLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *UsageLog
+		)
+		m.oldValue = func(ctx context.Context) (*UsageLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+			placeholder else {
+					value, err = m.Client().UsageLog.Get(ctx, id)
+			placeholder
+		placeholder)
+			return value, err
+	placeholder
+		m.id = &id
+placeholder
+placeholder
+
+// withUsageLog sets the old UsageLog of the mutation.
+func withUsageLog(node *UsageLog) usagelogOption {
+	return func(m *UsageLogMutation) {
+		m.oldValue = func(context.Context) (*UsageLog, error) {
+			return node, nil
+	placeholder
+		m.id = &node.ID
+placeholder
+placeholder
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UsageLogMutation) Client() *Client {
+	client := &Client{config: m.configplaceholder
+	client.init()
+	return client
+placeholder
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UsageLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+placeholder
+	tx := &Tx{config: m.configplaceholder
+	tx.init()
+	return tx, nil
+placeholder
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *UsageLogMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+placeholder
+	return *m.id, true
+placeholder
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *UsageLogMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{idplaceholder, nil
+	placeholder
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().UsageLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+placeholder
+placeholder
+
+// SetUserID sets the "user_id" field.
+func (m *UsageLogMutation) SetUserID(i int64) {
+	m.user = &i
+placeholder
+
+// UserID returns the value of the "user_id" field in the mutation.
+func (m *UsageLogMutation) UserID() (r int64, exists bool) {
+	v := m.user
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldUserID returns the old "user_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldUserID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUserID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
+placeholder
+	return oldValue.UserID, nil
+placeholder
+
+// ResetUserID resets all changes to the "user_id" field.
+func (m *UsageLogMutation) ResetUserID() {
+	m.user = nil
+placeholder
+
+// SetAPIKeyID sets the "api_key_id" field.
+func (m *UsageLogMutation) SetAPIKeyID(i int64) {
+	m.api_key = &i
+placeholder
+
+// APIKeyID returns the value of the "api_key_id" field in the mutation.
+func (m *UsageLogMutation) APIKeyID() (r int64, exists bool) {
+	v := m.api_key
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldAPIKeyID returns the old "api_key_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldAPIKeyID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAPIKeyID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAPIKeyID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAPIKeyID: %w", err)
+placeholder
+	return oldValue.APIKeyID, nil
+placeholder
+
+// ResetAPIKeyID resets all changes to the "api_key_id" field.
+func (m *UsageLogMutation) ResetAPIKeyID() {
+	m.api_key = nil
+placeholder
+
+// SetAccountID sets the "account_id" field.
+func (m *UsageLogMutation) SetAccountID(i int64) {
+	m.account = &i
+placeholder
+
+// AccountID returns the value of the "account_id" field in the mutation.
+func (m *UsageLogMutation) AccountID() (r int64, exists bool) {
+	v := m.account
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldAccountID returns the old "account_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldAccountID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountID: %w", err)
+placeholder
+	return oldValue.AccountID, nil
+placeholder
+
+// ResetAccountID resets all changes to the "account_id" field.
+func (m *UsageLogMutation) ResetAccountID() {
+	m.account = nil
+placeholder
+
+// SetRequestID sets the "request_id" field.
+func (m *UsageLogMutation) SetRequestID(s string) {
+	m.request_id = &s
+placeholder
+
+// RequestID returns the value of the "request_id" field in the mutation.
+func (m *UsageLogMutation) RequestID() (r string, exists bool) {
+	v := m.request_id
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldRequestID returns the old "request_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldRequestID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequestID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequestID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequestID: %w", err)
+placeholder
+	return oldValue.RequestID, nil
+placeholder
+
+// ResetRequestID resets all changes to the "request_id" field.
+func (m *UsageLogMutation) ResetRequestID() {
+	m.request_id = nil
+placeholder
+
+// SetModel sets the "model" field.
+func (m *UsageLogMutation) SetModel(s string) {
+	m.model = &s
+placeholder
+
+// Model returns the value of the "model" field in the mutation.
+func (m *UsageLogMutation) Model() (r string, exists bool) {
+	v := m.model
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldModel returns the old "model" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldModel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModel is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModel requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModel: %w", err)
+placeholder
+	return oldValue.Model, nil
+placeholder
+
+// ResetModel resets all changes to the "model" field.
+func (m *UsageLogMutation) ResetModel() {
+	m.model = nil
+placeholder
+
+// SetGroupID sets the "group_id" field.
+func (m *UsageLogMutation) SetGroupID(i int64) {
+	m.group = &i
+placeholder
+
+// GroupID returns the value of the "group_id" field in the mutation.
+func (m *UsageLogMutation) GroupID() (r int64, exists bool) {
+	v := m.group
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldGroupID returns the old "group_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldGroupID(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGroupID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGroupID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGroupID: %w", err)
+placeholder
+	return oldValue.GroupID, nil
+placeholder
+
+// ClearGroupID clears the value of the "group_id" field.
+func (m *UsageLogMutation) ClearGroupID() {
+	m.group = nil
+	m.clearedFields[usagelog.FieldGroupID] = struct{placeholder{placeholder
+placeholder
+
+// GroupIDCleared returns if the "group_id" field was cleared in this mutation.
+func (m *UsageLogMutation) GroupIDCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldGroupID]
+	return ok
+placeholder
+
+// ResetGroupID resets all changes to the "group_id" field.
+func (m *UsageLogMutation) ResetGroupID() {
+	m.group = nil
+	delete(m.clearedFields, usagelog.FieldGroupID)
+placeholder
+
+// SetSubscriptionID sets the "subscription_id" field.
+func (m *UsageLogMutation) SetSubscriptionID(i int64) {
+	m.subscription = &i
+placeholder
+
+// SubscriptionID returns the value of the "subscription_id" field in the mutation.
+func (m *UsageLogMutation) SubscriptionID() (r int64, exists bool) {
+	v := m.subscription
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldSubscriptionID returns the old "subscription_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldSubscriptionID(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscriptionID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscriptionID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscriptionID: %w", err)
+placeholder
+	return oldValue.SubscriptionID, nil
+placeholder
+
+// ClearSubscriptionID clears the value of the "subscription_id" field.
+func (m *UsageLogMutation) ClearSubscriptionID() {
+	m.subscription = nil
+	m.clearedFields[usagelog.FieldSubscriptionID] = struct{placeholder{placeholder
+placeholder
+
+// SubscriptionIDCleared returns if the "subscription_id" field was cleared in this mutation.
+func (m *UsageLogMutation) SubscriptionIDCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldSubscriptionID]
+	return ok
+placeholder
+
+// ResetSubscriptionID resets all changes to the "subscription_id" field.
+func (m *UsageLogMutation) ResetSubscriptionID() {
+	m.subscription = nil
+	delete(m.clearedFields, usagelog.FieldSubscriptionID)
+placeholder
+
+// SetInputTokens sets the "input_tokens" field.
+func (m *UsageLogMutation) SetInputTokens(i int) {
+	m.input_tokens = &i
+	m.addinput_tokens = nil
+placeholder
+
+// InputTokens returns the value of the "input_tokens" field in the mutation.
+func (m *UsageLogMutation) InputTokens() (r int, exists bool) {
+	v := m.input_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldInputTokens returns the old "input_tokens" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldInputTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInputTokens is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInputTokens requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInputTokens: %w", err)
+placeholder
+	return oldValue.InputTokens, nil
+placeholder
+
+// AddInputTokens adds i to the "input_tokens" field.
+func (m *UsageLogMutation) AddInputTokens(i int) {
+	if m.addinput_tokens != nil {
+		*m.addinput_tokens += i
+placeholder else {
+		m.addinput_tokens = &i
+placeholder
+placeholder
+
+// AddedInputTokens returns the value that was added to the "input_tokens" field in this mutation.
+func (m *UsageLogMutation) AddedInputTokens() (r int, exists bool) {
+	v := m.addinput_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetInputTokens resets all changes to the "input_tokens" field.
+func (m *UsageLogMutation) ResetInputTokens() {
+	m.input_tokens = nil
+	m.addinput_tokens = nil
+placeholder
+
+// SetOutputTokens sets the "output_tokens" field.
+func (m *UsageLogMutation) SetOutputTokens(i int) {
+	m.output_tokens = &i
+	m.addoutput_tokens = nil
+placeholder
+
+// OutputTokens returns the value of the "output_tokens" field in the mutation.
+func (m *UsageLogMutation) OutputTokens() (r int, exists bool) {
+	v := m.output_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldOutputTokens returns the old "output_tokens" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldOutputTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutputTokens is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutputTokens requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputTokens: %w", err)
+placeholder
+	return oldValue.OutputTokens, nil
+placeholder
+
+// AddOutputTokens adds i to the "output_tokens" field.
+func (m *UsageLogMutation) AddOutputTokens(i int) {
+	if m.addoutput_tokens != nil {
+		*m.addoutput_tokens += i
+placeholder else {
+		m.addoutput_tokens = &i
+placeholder
+placeholder
+
+// AddedOutputTokens returns the value that was added to the "output_tokens" field in this mutation.
+func (m *UsageLogMutation) AddedOutputTokens() (r int, exists bool) {
+	v := m.addoutput_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetOutputTokens resets all changes to the "output_tokens" field.
+func (m *UsageLogMutation) ResetOutputTokens() {
+	m.output_tokens = nil
+	m.addoutput_tokens = nil
+placeholder
+
+// SetCacheCreationTokens sets the "cache_creation_tokens" field.
+func (m *UsageLogMutation) SetCacheCreationTokens(i int) {
+	m.cache_creation_tokens = &i
+	m.addcache_creation_tokens = nil
+placeholder
+
+// CacheCreationTokens returns the value of the "cache_creation_tokens" field in the mutation.
+func (m *UsageLogMutation) CacheCreationTokens() (r int, exists bool) {
+	v := m.cache_creation_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCacheCreationTokens returns the old "cache_creation_tokens" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCacheCreationTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheCreationTokens is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheCreationTokens requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheCreationTokens: %w", err)
+placeholder
+	return oldValue.CacheCreationTokens, nil
+placeholder
+
+// AddCacheCreationTokens adds i to the "cache_creation_tokens" field.
+func (m *UsageLogMutation) AddCacheCreationTokens(i int) {
+	if m.addcache_creation_tokens != nil {
+		*m.addcache_creation_tokens += i
+placeholder else {
+		m.addcache_creation_tokens = &i
+placeholder
+placeholder
+
+// AddedCacheCreationTokens returns the value that was added to the "cache_creation_tokens" field in this mutation.
+func (m *UsageLogMutation) AddedCacheCreationTokens() (r int, exists bool) {
+	v := m.addcache_creation_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCacheCreationTokens resets all changes to the "cache_creation_tokens" field.
+func (m *UsageLogMutation) ResetCacheCreationTokens() {
+	m.cache_creation_tokens = nil
+	m.addcache_creation_tokens = nil
+placeholder
+
+// SetCacheReadTokens sets the "cache_read_tokens" field.
+func (m *UsageLogMutation) SetCacheReadTokens(i int) {
+	m.cache_read_tokens = &i
+	m.addcache_read_tokens = nil
+placeholder
+
+// CacheReadTokens returns the value of the "cache_read_tokens" field in the mutation.
+func (m *UsageLogMutation) CacheReadTokens() (r int, exists bool) {
+	v := m.cache_read_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCacheReadTokens returns the old "cache_read_tokens" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCacheReadTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheReadTokens is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheReadTokens requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheReadTokens: %w", err)
+placeholder
+	return oldValue.CacheReadTokens, nil
+placeholder
+
+// AddCacheReadTokens adds i to the "cache_read_tokens" field.
+func (m *UsageLogMutation) AddCacheReadTokens(i int) {
+	if m.addcache_read_tokens != nil {
+		*m.addcache_read_tokens += i
+placeholder else {
+		m.addcache_read_tokens = &i
+placeholder
+placeholder
+
+// AddedCacheReadTokens returns the value that was added to the "cache_read_tokens" field in this mutation.
+func (m *UsageLogMutation) AddedCacheReadTokens() (r int, exists bool) {
+	v := m.addcache_read_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCacheReadTokens resets all changes to the "cache_read_tokens" field.
+func (m *UsageLogMutation) ResetCacheReadTokens() {
+	m.cache_read_tokens = nil
+	m.addcache_read_tokens = nil
+placeholder
+
+// SetCacheCreation5mTokens sets the "cache_creation_5m_tokens" field.
+func (m *UsageLogMutation) SetCacheCreation5mTokens(i int) {
+	m.cache_creation_5m_tokens = &i
+	m.addcache_creation_5m_tokens = nil
+placeholder
+
+// CacheCreation5mTokens returns the value of the "cache_creation_5m_tokens" field in the mutation.
+func (m *UsageLogMutation) CacheCreation5mTokens() (r int, exists bool) {
+	v := m.cache_creation_5m_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCacheCreation5mTokens returns the old "cache_creation_5m_tokens" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCacheCreation5mTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheCreation5mTokens is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheCreation5mTokens requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheCreation5mTokens: %w", err)
+placeholder
+	return oldValue.CacheCreation5mTokens, nil
+placeholder
+
+// AddCacheCreation5mTokens adds i to the "cache_creation_5m_tokens" field.
+func (m *UsageLogMutation) AddCacheCreation5mTokens(i int) {
+	if m.addcache_creation_5m_tokens != nil {
+		*m.addcache_creation_5m_tokens += i
+placeholder else {
+		m.addcache_creation_5m_tokens = &i
+placeholder
+placeholder
+
+// AddedCacheCreation5mTokens returns the value that was added to the "cache_creation_5m_tokens" field in this mutation.
+func (m *UsageLogMutation) AddedCacheCreation5mTokens() (r int, exists bool) {
+	v := m.addcache_creation_5m_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCacheCreation5mTokens resets all changes to the "cache_creation_5m_tokens" field.
+func (m *UsageLogMutation) ResetCacheCreation5mTokens() {
+	m.cache_creation_5m_tokens = nil
+	m.addcache_creation_5m_tokens = nil
+placeholder
+
+// SetCacheCreation1hTokens sets the "cache_creation_1h_tokens" field.
+func (m *UsageLogMutation) SetCacheCreation1hTokens(i int) {
+	m.cache_creation_1h_tokens = &i
+	m.addcache_creation_1h_tokens = nil
+placeholder
+
+// CacheCreation1hTokens returns the value of the "cache_creation_1h_tokens" field in the mutation.
+func (m *UsageLogMutation) CacheCreation1hTokens() (r int, exists bool) {
+	v := m.cache_creation_1h_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCacheCreation1hTokens returns the old "cache_creation_1h_tokens" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCacheCreation1hTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheCreation1hTokens is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheCreation1hTokens requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheCreation1hTokens: %w", err)
+placeholder
+	return oldValue.CacheCreation1hTokens, nil
+placeholder
+
+// AddCacheCreation1hTokens adds i to the "cache_creation_1h_tokens" field.
+func (m *UsageLogMutation) AddCacheCreation1hTokens(i int) {
+	if m.addcache_creation_1h_tokens != nil {
+		*m.addcache_creation_1h_tokens += i
+placeholder else {
+		m.addcache_creation_1h_tokens = &i
+placeholder
+placeholder
+
+// AddedCacheCreation1hTokens returns the value that was added to the "cache_creation_1h_tokens" field in this mutation.
+func (m *UsageLogMutation) AddedCacheCreation1hTokens() (r int, exists bool) {
+	v := m.addcache_creation_1h_tokens
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCacheCreation1hTokens resets all changes to the "cache_creation_1h_tokens" field.
+func (m *UsageLogMutation) ResetCacheCreation1hTokens() {
+	m.cache_creation_1h_tokens = nil
+	m.addcache_creation_1h_tokens = nil
+placeholder
+
+// SetInputCost sets the "input_cost" field.
+func (m *UsageLogMutation) SetInputCost(f float64) {
+	m.input_cost = &f
+	m.addinput_cost = nil
+placeholder
+
+// InputCost returns the value of the "input_cost" field in the mutation.
+func (m *UsageLogMutation) InputCost() (r float64, exists bool) {
+	v := m.input_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldInputCost returns the old "input_cost" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldInputCost(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInputCost is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInputCost requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInputCost: %w", err)
+placeholder
+	return oldValue.InputCost, nil
+placeholder
+
+// AddInputCost adds f to the "input_cost" field.
+func (m *UsageLogMutation) AddInputCost(f float64) {
+	if m.addinput_cost != nil {
+		*m.addinput_cost += f
+placeholder else {
+		m.addinput_cost = &f
+placeholder
+placeholder
+
+// AddedInputCost returns the value that was added to the "input_cost" field in this mutation.
+func (m *UsageLogMutation) AddedInputCost() (r float64, exists bool) {
+	v := m.addinput_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetInputCost resets all changes to the "input_cost" field.
+func (m *UsageLogMutation) ResetInputCost() {
+	m.input_cost = nil
+	m.addinput_cost = nil
+placeholder
+
+// SetOutputCost sets the "output_cost" field.
+func (m *UsageLogMutation) SetOutputCost(f float64) {
+	m.output_cost = &f
+	m.addoutput_cost = nil
+placeholder
+
+// OutputCost returns the value of the "output_cost" field in the mutation.
+func (m *UsageLogMutation) OutputCost() (r float64, exists bool) {
+	v := m.output_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldOutputCost returns the old "output_cost" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldOutputCost(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOutputCost is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOutputCost requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOutputCost: %w", err)
+placeholder
+	return oldValue.OutputCost, nil
+placeholder
+
+// AddOutputCost adds f to the "output_cost" field.
+func (m *UsageLogMutation) AddOutputCost(f float64) {
+	if m.addoutput_cost != nil {
+		*m.addoutput_cost += f
+placeholder else {
+		m.addoutput_cost = &f
+placeholder
+placeholder
+
+// AddedOutputCost returns the value that was added to the "output_cost" field in this mutation.
+func (m *UsageLogMutation) AddedOutputCost() (r float64, exists bool) {
+	v := m.addoutput_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetOutputCost resets all changes to the "output_cost" field.
+func (m *UsageLogMutation) ResetOutputCost() {
+	m.output_cost = nil
+	m.addoutput_cost = nil
+placeholder
+
+// SetCacheCreationCost sets the "cache_creation_cost" field.
+func (m *UsageLogMutation) SetCacheCreationCost(f float64) {
+	m.cache_creation_cost = &f
+	m.addcache_creation_cost = nil
+placeholder
+
+// CacheCreationCost returns the value of the "cache_creation_cost" field in the mutation.
+func (m *UsageLogMutation) CacheCreationCost() (r float64, exists bool) {
+	v := m.cache_creation_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCacheCreationCost returns the old "cache_creation_cost" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCacheCreationCost(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheCreationCost is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheCreationCost requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheCreationCost: %w", err)
+placeholder
+	return oldValue.CacheCreationCost, nil
+placeholder
+
+// AddCacheCreationCost adds f to the "cache_creation_cost" field.
+func (m *UsageLogMutation) AddCacheCreationCost(f float64) {
+	if m.addcache_creation_cost != nil {
+		*m.addcache_creation_cost += f
+placeholder else {
+		m.addcache_creation_cost = &f
+placeholder
+placeholder
+
+// AddedCacheCreationCost returns the value that was added to the "cache_creation_cost" field in this mutation.
+func (m *UsageLogMutation) AddedCacheCreationCost() (r float64, exists bool) {
+	v := m.addcache_creation_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCacheCreationCost resets all changes to the "cache_creation_cost" field.
+func (m *UsageLogMutation) ResetCacheCreationCost() {
+	m.cache_creation_cost = nil
+	m.addcache_creation_cost = nil
+placeholder
+
+// SetCacheReadCost sets the "cache_read_cost" field.
+func (m *UsageLogMutation) SetCacheReadCost(f float64) {
+	m.cache_read_cost = &f
+	m.addcache_read_cost = nil
+placeholder
+
+// CacheReadCost returns the value of the "cache_read_cost" field in the mutation.
+func (m *UsageLogMutation) CacheReadCost() (r float64, exists bool) {
+	v := m.cache_read_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCacheReadCost returns the old "cache_read_cost" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCacheReadCost(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCacheReadCost is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCacheReadCost requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCacheReadCost: %w", err)
+placeholder
+	return oldValue.CacheReadCost, nil
+placeholder
+
+// AddCacheReadCost adds f to the "cache_read_cost" field.
+func (m *UsageLogMutation) AddCacheReadCost(f float64) {
+	if m.addcache_read_cost != nil {
+		*m.addcache_read_cost += f
+placeholder else {
+		m.addcache_read_cost = &f
+placeholder
+placeholder
+
+// AddedCacheReadCost returns the value that was added to the "cache_read_cost" field in this mutation.
+func (m *UsageLogMutation) AddedCacheReadCost() (r float64, exists bool) {
+	v := m.addcache_read_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCacheReadCost resets all changes to the "cache_read_cost" field.
+func (m *UsageLogMutation) ResetCacheReadCost() {
+	m.cache_read_cost = nil
+	m.addcache_read_cost = nil
+placeholder
+
+// SetTotalCost sets the "total_cost" field.
+func (m *UsageLogMutation) SetTotalCost(f float64) {
+	m.total_cost = &f
+	m.addtotal_cost = nil
+placeholder
+
+// TotalCost returns the value of the "total_cost" field in the mutation.
+func (m *UsageLogMutation) TotalCost() (r float64, exists bool) {
+	v := m.total_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldTotalCost returns the old "total_cost" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldTotalCost(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTotalCost is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTotalCost requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTotalCost: %w", err)
+placeholder
+	return oldValue.TotalCost, nil
+placeholder
+
+// AddTotalCost adds f to the "total_cost" field.
+func (m *UsageLogMutation) AddTotalCost(f float64) {
+	if m.addtotal_cost != nil {
+		*m.addtotal_cost += f
+placeholder else {
+		m.addtotal_cost = &f
+placeholder
+placeholder
+
+// AddedTotalCost returns the value that was added to the "total_cost" field in this mutation.
+func (m *UsageLogMutation) AddedTotalCost() (r float64, exists bool) {
+	v := m.addtotal_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetTotalCost resets all changes to the "total_cost" field.
+func (m *UsageLogMutation) ResetTotalCost() {
+	m.total_cost = nil
+	m.addtotal_cost = nil
+placeholder
+
+// SetActualCost sets the "actual_cost" field.
+func (m *UsageLogMutation) SetActualCost(f float64) {
+	m.actual_cost = &f
+	m.addactual_cost = nil
+placeholder
+
+// ActualCost returns the value of the "actual_cost" field in the mutation.
+func (m *UsageLogMutation) ActualCost() (r float64, exists bool) {
+	v := m.actual_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldActualCost returns the old "actual_cost" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldActualCost(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActualCost is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActualCost requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActualCost: %w", err)
+placeholder
+	return oldValue.ActualCost, nil
+placeholder
+
+// AddActualCost adds f to the "actual_cost" field.
+func (m *UsageLogMutation) AddActualCost(f float64) {
+	if m.addactual_cost != nil {
+		*m.addactual_cost += f
+placeholder else {
+		m.addactual_cost = &f
+placeholder
+placeholder
+
+// AddedActualCost returns the value that was added to the "actual_cost" field in this mutation.
+func (m *UsageLogMutation) AddedActualCost() (r float64, exists bool) {
+	v := m.addactual_cost
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetActualCost resets all changes to the "actual_cost" field.
+func (m *UsageLogMutation) ResetActualCost() {
+	m.actual_cost = nil
+	m.addactual_cost = nil
+placeholder
+
+// SetRateMultiplier sets the "rate_multiplier" field.
+func (m *UsageLogMutation) SetRateMultiplier(f float64) {
+	m.rate_multiplier = &f
+	m.addrate_multiplier = nil
+placeholder
+
+// RateMultiplier returns the value of the "rate_multiplier" field in the mutation.
+func (m *UsageLogMutation) RateMultiplier() (r float64, exists bool) {
+	v := m.rate_multiplier
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldRateMultiplier returns the old "rate_multiplier" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldRateMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateMultiplier is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateMultiplier requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateMultiplier: %w", err)
+placeholder
+	return oldValue.RateMultiplier, nil
+placeholder
+
+// AddRateMultiplier adds f to the "rate_multiplier" field.
+func (m *UsageLogMutation) AddRateMultiplier(f float64) {
+	if m.addrate_multiplier != nil {
+		*m.addrate_multiplier += f
+placeholder else {
+		m.addrate_multiplier = &f
+placeholder
+placeholder
+
+// AddedRateMultiplier returns the value that was added to the "rate_multiplier" field in this mutation.
+func (m *UsageLogMutation) AddedRateMultiplier() (r float64, exists bool) {
+	v := m.addrate_multiplier
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetRateMultiplier resets all changes to the "rate_multiplier" field.
+func (m *UsageLogMutation) ResetRateMultiplier() {
+	m.rate_multiplier = nil
+	m.addrate_multiplier = nil
+placeholder
+
+// SetBillingType sets the "billing_type" field.
+func (m *UsageLogMutation) SetBillingType(i int8) {
+	m.billing_type = &i
+	m.addbilling_type = nil
+placeholder
+
+// BillingType returns the value of the "billing_type" field in the mutation.
+func (m *UsageLogMutation) BillingType() (r int8, exists bool) {
+	v := m.billing_type
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldBillingType returns the old "billing_type" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldBillingType(ctx context.Context) (v int8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillingType is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillingType requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillingType: %w", err)
+placeholder
+	return oldValue.BillingType, nil
+placeholder
+
+// AddBillingType adds i to the "billing_type" field.
+func (m *UsageLogMutation) AddBillingType(i int8) {
+	if m.addbilling_type != nil {
+		*m.addbilling_type += i
+placeholder else {
+		m.addbilling_type = &i
+placeholder
+placeholder
+
+// AddedBillingType returns the value that was added to the "billing_type" field in this mutation.
+func (m *UsageLogMutation) AddedBillingType() (r int8, exists bool) {
+	v := m.addbilling_type
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetBillingType resets all changes to the "billing_type" field.
+func (m *UsageLogMutation) ResetBillingType() {
+	m.billing_type = nil
+	m.addbilling_type = nil
+placeholder
+
+// SetStream sets the "stream" field.
+func (m *UsageLogMutation) SetStream(b bool) {
+	m.stream = &b
+placeholder
+
+// Stream returns the value of the "stream" field in the mutation.
+func (m *UsageLogMutation) Stream() (r bool, exists bool) {
+	v := m.stream
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldStream returns the old "stream" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldStream(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStream is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStream requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStream: %w", err)
+placeholder
+	return oldValue.Stream, nil
+placeholder
+
+// ResetStream resets all changes to the "stream" field.
+func (m *UsageLogMutation) ResetStream() {
+	m.stream = nil
+placeholder
+
+// SetDurationMs sets the "duration_ms" field.
+func (m *UsageLogMutation) SetDurationMs(i int) {
+	m.duration_ms = &i
+	m.addduration_ms = nil
+placeholder
+
+// DurationMs returns the value of the "duration_ms" field in the mutation.
+func (m *UsageLogMutation) DurationMs() (r int, exists bool) {
+	v := m.duration_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldDurationMs returns the old "duration_ms" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldDurationMs(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDurationMs is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDurationMs requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDurationMs: %w", err)
+placeholder
+	return oldValue.DurationMs, nil
+placeholder
+
+// AddDurationMs adds i to the "duration_ms" field.
+func (m *UsageLogMutation) AddDurationMs(i int) {
+	if m.addduration_ms != nil {
+		*m.addduration_ms += i
+placeholder else {
+		m.addduration_ms = &i
+placeholder
+placeholder
+
+// AddedDurationMs returns the value that was added to the "duration_ms" field in this mutation.
+func (m *UsageLogMutation) AddedDurationMs() (r int, exists bool) {
+	v := m.addduration_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearDurationMs clears the value of the "duration_ms" field.
+func (m *UsageLogMutation) ClearDurationMs() {
+	m.duration_ms = nil
+	m.addduration_ms = nil
+	m.clearedFields[usagelog.FieldDurationMs] = struct{placeholder{placeholder
+placeholder
+
+// DurationMsCleared returns if the "duration_ms" field was cleared in this mutation.
+func (m *UsageLogMutation) DurationMsCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldDurationMs]
+	return ok
+placeholder
+
+// ResetDurationMs resets all changes to the "duration_ms" field.
+func (m *UsageLogMutation) ResetDurationMs() {
+	m.duration_ms = nil
+	m.addduration_ms = nil
+	delete(m.clearedFields, usagelog.FieldDurationMs)
+placeholder
+
+// SetFirstTokenMs sets the "first_token_ms" field.
+func (m *UsageLogMutation) SetFirstTokenMs(i int) {
+	m.first_token_ms = &i
+	m.addfirst_token_ms = nil
+placeholder
+
+// FirstTokenMs returns the value of the "first_token_ms" field in the mutation.
+func (m *UsageLogMutation) FirstTokenMs() (r int, exists bool) {
+	v := m.first_token_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldFirstTokenMs returns the old "first_token_ms" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldFirstTokenMs(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFirstTokenMs is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFirstTokenMs requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFirstTokenMs: %w", err)
+placeholder
+	return oldValue.FirstTokenMs, nil
+placeholder
+
+// AddFirstTokenMs adds i to the "first_token_ms" field.
+func (m *UsageLogMutation) AddFirstTokenMs(i int) {
+	if m.addfirst_token_ms != nil {
+		*m.addfirst_token_ms += i
+placeholder else {
+		m.addfirst_token_ms = &i
+placeholder
+placeholder
+
+// AddedFirstTokenMs returns the value that was added to the "first_token_ms" field in this mutation.
+func (m *UsageLogMutation) AddedFirstTokenMs() (r int, exists bool) {
+	v := m.addfirst_token_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearFirstTokenMs clears the value of the "first_token_ms" field.
+func (m *UsageLogMutation) ClearFirstTokenMs() {
+	m.first_token_ms = nil
+	m.addfirst_token_ms = nil
+	m.clearedFields[usagelog.FieldFirstTokenMs] = struct{placeholder{placeholder
+placeholder
+
+// FirstTokenMsCleared returns if the "first_token_ms" field was cleared in this mutation.
+func (m *UsageLogMutation) FirstTokenMsCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldFirstTokenMs]
+	return ok
+placeholder
+
+// ResetFirstTokenMs resets all changes to the "first_token_ms" field.
+func (m *UsageLogMutation) ResetFirstTokenMs() {
+	m.first_token_ms = nil
+	m.addfirst_token_ms = nil
+	delete(m.clearedFields, usagelog.FieldFirstTokenMs)
+placeholder
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UsageLogMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+placeholder
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UsageLogMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCreatedAt returns the old "created_at" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+placeholder
+	return oldValue.CreatedAt, nil
+placeholder
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UsageLogMutation) ResetCreatedAt() {
+	m.created_at = nil
+placeholder
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *UsageLogMutation) ClearUser() {
+	m.cleareduser = true
+	m.clearedFields[usagelog.FieldUserID] = struct{placeholder{placeholder
+placeholder
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *UsageLogMutation) UserCleared() bool {
+	return m.cleareduser
+placeholder
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) UserIDs() (ids []int64) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetUser resets all changes to the "user" edge.
+func (m *UsageLogMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+placeholder
+
+// ClearAPIKey clears the "api_key" edge to the ApiKey entity.
+func (m *UsageLogMutation) ClearAPIKey() {
+	m.clearedapi_key = true
+	m.clearedFields[usagelog.FieldAPIKeyID] = struct{placeholder{placeholder
+placeholder
+
+// APIKeyCleared reports if the "api_key" edge to the ApiKey entity was cleared.
+func (m *UsageLogMutation) APIKeyCleared() bool {
+	return m.clearedapi_key
+placeholder
+
+// APIKeyIDs returns the "api_key" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// APIKeyID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) APIKeyIDs() (ids []int64) {
+	if id := m.api_key; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetAPIKey resets all changes to the "api_key" edge.
+func (m *UsageLogMutation) ResetAPIKey() {
+	m.api_key = nil
+	m.clearedapi_key = false
+placeholder
+
+// ClearAccount clears the "account" edge to the Account entity.
+func (m *UsageLogMutation) ClearAccount() {
+	m.clearedaccount = true
+	m.clearedFields[usagelog.FieldAccountID] = struct{placeholder{placeholder
+placeholder
+
+// AccountCleared reports if the "account" edge to the Account entity was cleared.
+func (m *UsageLogMutation) AccountCleared() bool {
+	return m.clearedaccount
+placeholder
+
+// AccountIDs returns the "account" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AccountID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) AccountIDs() (ids []int64) {
+	if id := m.account; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetAccount resets all changes to the "account" edge.
+func (m *UsageLogMutation) ResetAccount() {
+	m.account = nil
+	m.clearedaccount = false
+placeholder
+
+// ClearGroup clears the "group" edge to the Group entity.
+func (m *UsageLogMutation) ClearGroup() {
+	m.clearedgroup = true
+	m.clearedFields[usagelog.FieldGroupID] = struct{placeholder{placeholder
+placeholder
+
+// GroupCleared reports if the "group" edge to the Group entity was cleared.
+func (m *UsageLogMutation) GroupCleared() bool {
+	return m.GroupIDCleared() || m.clearedgroup
+placeholder
+
+// GroupIDs returns the "group" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GroupID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) GroupIDs() (ids []int64) {
+	if id := m.group; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetGroup resets all changes to the "group" edge.
+func (m *UsageLogMutation) ResetGroup() {
+	m.group = nil
+	m.clearedgroup = false
+placeholder
+
+// ClearSubscription clears the "subscription" edge to the UserSubscription entity.
+func (m *UsageLogMutation) ClearSubscription() {
+	m.clearedsubscription = true
+	m.clearedFields[usagelog.FieldSubscriptionID] = struct{placeholder{placeholder
+placeholder
+
+// SubscriptionCleared reports if the "subscription" edge to the UserSubscription entity was cleared.
+func (m *UsageLogMutation) SubscriptionCleared() bool {
+	return m.SubscriptionIDCleared() || m.clearedsubscription
+placeholder
+
+// SubscriptionIDs returns the "subscription" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SubscriptionID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) SubscriptionIDs() (ids []int64) {
+	if id := m.subscription; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetSubscription resets all changes to the "subscription" edge.
+func (m *UsageLogMutation) ResetSubscription() {
+	m.subscription = nil
+	m.clearedsubscription = false
+placeholder
+
+// Where appends a list predicates to the UsageLogMutation builder.
+func (m *UsageLogMutation) Where(ps ...predicate.UsageLog) {
+	m.predicates = append(m.predicates, ps...)
+placeholder
+
+// WhereP appends storage-level predicates to the UsageLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UsageLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.UsageLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+placeholder
+	m.Where(p...)
+placeholder
+
+// Op returns the operation name.
+func (m *UsageLogMutation) Op() Op {
+	return m.op
+placeholder
+
+// SetOp allows setting the mutation operation.
+func (m *UsageLogMutation) SetOp(op Op) {
+	m.op = op
+placeholder
+
+// Type returns the node type of this mutation (UsageLog).
+func (m *UsageLogMutation) Type() string {
+	return m.typ
+placeholder
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UsageLogMutation) Fields() []string {
+	fields := make([]string, 0, 25)
+	if m.user != nil {
+		fields = append(fields, usagelog.FieldUserID)
+placeholder
+	if m.api_key != nil {
+		fields = append(fields, usagelog.FieldAPIKeyID)
+placeholder
+	if m.account != nil {
+		fields = append(fields, usagelog.FieldAccountID)
+placeholder
+	if m.request_id != nil {
+		fields = append(fields, usagelog.FieldRequestID)
+placeholder
+	if m.model != nil {
+		fields = append(fields, usagelog.FieldModel)
+placeholder
+	if m.group != nil {
+		fields = append(fields, usagelog.FieldGroupID)
+placeholder
+	if m.subscription != nil {
+		fields = append(fields, usagelog.FieldSubscriptionID)
+placeholder
+	if m.input_tokens != nil {
+		fields = append(fields, usagelog.FieldInputTokens)
+placeholder
+	if m.output_tokens != nil {
+		fields = append(fields, usagelog.FieldOutputTokens)
+placeholder
+	if m.cache_creation_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheCreationTokens)
+placeholder
+	if m.cache_read_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheReadTokens)
+placeholder
+	if m.cache_creation_5m_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheCreation5mTokens)
+placeholder
+	if m.cache_creation_1h_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheCreation1hTokens)
+placeholder
+	if m.input_cost != nil {
+		fields = append(fields, usagelog.FieldInputCost)
+placeholder
+	if m.output_cost != nil {
+		fields = append(fields, usagelog.FieldOutputCost)
+placeholder
+	if m.cache_creation_cost != nil {
+		fields = append(fields, usagelog.FieldCacheCreationCost)
+placeholder
+	if m.cache_read_cost != nil {
+		fields = append(fields, usagelog.FieldCacheReadCost)
+placeholder
+	if m.total_cost != nil {
+		fields = append(fields, usagelog.FieldTotalCost)
+placeholder
+	if m.actual_cost != nil {
+		fields = append(fields, usagelog.FieldActualCost)
+placeholder
+	if m.rate_multiplier != nil {
+		fields = append(fields, usagelog.FieldRateMultiplier)
+placeholder
+	if m.billing_type != nil {
+		fields = append(fields, usagelog.FieldBillingType)
+placeholder
+	if m.stream != nil {
+		fields = append(fields, usagelog.FieldStream)
+placeholder
+	if m.duration_ms != nil {
+		fields = append(fields, usagelog.FieldDurationMs)
+placeholder
+	if m.first_token_ms != nil {
+		fields = append(fields, usagelog.FieldFirstTokenMs)
+placeholder
+	if m.created_at != nil {
+		fields = append(fields, usagelog.FieldCreatedAt)
+placeholder
+	return fields
+placeholder
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case usagelog.FieldUserID:
+		return m.UserID()
+	case usagelog.FieldAPIKeyID:
+		return m.APIKeyID()
+	case usagelog.FieldAccountID:
+		return m.AccountID()
+	case usagelog.FieldRequestID:
+		return m.RequestID()
+	case usagelog.FieldModel:
+		return m.Model()
+	case usagelog.FieldGroupID:
+		return m.GroupID()
+	case usagelog.FieldSubscriptionID:
+		return m.SubscriptionID()
+	case usagelog.FieldInputTokens:
+		return m.InputTokens()
+	case usagelog.FieldOutputTokens:
+		return m.OutputTokens()
+	case usagelog.FieldCacheCreationTokens:
+		return m.CacheCreationTokens()
+	case usagelog.FieldCacheReadTokens:
+		return m.CacheReadTokens()
+	case usagelog.FieldCacheCreation5mTokens:
+		return m.CacheCreation5mTokens()
+	case usagelog.FieldCacheCreation1hTokens:
+		return m.CacheCreation1hTokens()
+	case usagelog.FieldInputCost:
+		return m.InputCost()
+	case usagelog.FieldOutputCost:
+		return m.OutputCost()
+	case usagelog.FieldCacheCreationCost:
+		return m.CacheCreationCost()
+	case usagelog.FieldCacheReadCost:
+		return m.CacheReadCost()
+	case usagelog.FieldTotalCost:
+		return m.TotalCost()
+	case usagelog.FieldActualCost:
+		return m.ActualCost()
+	case usagelog.FieldRateMultiplier:
+		return m.RateMultiplier()
+	case usagelog.FieldBillingType:
+		return m.BillingType()
+	case usagelog.FieldStream:
+		return m.Stream()
+	case usagelog.FieldDurationMs:
+		return m.DurationMs()
+	case usagelog.FieldFirstTokenMs:
+		return m.FirstTokenMs()
+	case usagelog.FieldCreatedAt:
+		return m.CreatedAt()
+placeholder
+	return nil, false
+placeholder
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case usagelog.FieldUserID:
+		return m.OldUserID(ctx)
+	case usagelog.FieldAPIKeyID:
+		return m.OldAPIKeyID(ctx)
+	case usagelog.FieldAccountID:
+		return m.OldAccountID(ctx)
+	case usagelog.FieldRequestID:
+		return m.OldRequestID(ctx)
+	case usagelog.FieldModel:
+		return m.OldModel(ctx)
+	case usagelog.FieldGroupID:
+		return m.OldGroupID(ctx)
+	case usagelog.FieldSubscriptionID:
+		return m.OldSubscriptionID(ctx)
+	case usagelog.FieldInputTokens:
+		return m.OldInputTokens(ctx)
+	case usagelog.FieldOutputTokens:
+		return m.OldOutputTokens(ctx)
+	case usagelog.FieldCacheCreationTokens:
+		return m.OldCacheCreationTokens(ctx)
+	case usagelog.FieldCacheReadTokens:
+		return m.OldCacheReadTokens(ctx)
+	case usagelog.FieldCacheCreation5mTokens:
+		return m.OldCacheCreation5mTokens(ctx)
+	case usagelog.FieldCacheCreation1hTokens:
+		return m.OldCacheCreation1hTokens(ctx)
+	case usagelog.FieldInputCost:
+		return m.OldInputCost(ctx)
+	case usagelog.FieldOutputCost:
+		return m.OldOutputCost(ctx)
+	case usagelog.FieldCacheCreationCost:
+		return m.OldCacheCreationCost(ctx)
+	case usagelog.FieldCacheReadCost:
+		return m.OldCacheReadCost(ctx)
+	case usagelog.FieldTotalCost:
+		return m.OldTotalCost(ctx)
+	case usagelog.FieldActualCost:
+		return m.OldActualCost(ctx)
+	case usagelog.FieldRateMultiplier:
+		return m.OldRateMultiplier(ctx)
+	case usagelog.FieldBillingType:
+		return m.OldBillingType(ctx)
+	case usagelog.FieldStream:
+		return m.OldStream(ctx)
+	case usagelog.FieldDurationMs:
+		return m.OldDurationMs(ctx)
+	case usagelog.FieldFirstTokenMs:
+		return m.OldFirstTokenMs(ctx)
+	case usagelog.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+placeholder
+	return nil, fmt.Errorf("unknown UsageLog field %s", name)
+placeholder
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case usagelog.FieldUserID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetUserID(v)
+		return nil
+	case usagelog.FieldAPIKeyID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetAPIKeyID(v)
+		return nil
+	case usagelog.FieldAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetAccountID(v)
+		return nil
+	case usagelog.FieldRequestID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetRequestID(v)
+		return nil
+	case usagelog.FieldModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetModel(v)
+		return nil
+	case usagelog.FieldGroupID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetGroupID(v)
+		return nil
+	case usagelog.FieldSubscriptionID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetSubscriptionID(v)
+		return nil
+	case usagelog.FieldInputTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetInputTokens(v)
+		return nil
+	case usagelog.FieldOutputTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetOutputTokens(v)
+		return nil
+	case usagelog.FieldCacheCreationTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCacheCreationTokens(v)
+		return nil
+	case usagelog.FieldCacheReadTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCacheReadTokens(v)
+		return nil
+	case usagelog.FieldCacheCreation5mTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCacheCreation5mTokens(v)
+		return nil
+	case usagelog.FieldCacheCreation1hTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCacheCreation1hTokens(v)
+		return nil
+	case usagelog.FieldInputCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetInputCost(v)
+		return nil
+	case usagelog.FieldOutputCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetOutputCost(v)
+		return nil
+	case usagelog.FieldCacheCreationCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCacheCreationCost(v)
+		return nil
+	case usagelog.FieldCacheReadCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCacheReadCost(v)
+		return nil
+	case usagelog.FieldTotalCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetTotalCost(v)
+		return nil
+	case usagelog.FieldActualCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetActualCost(v)
+		return nil
+	case usagelog.FieldRateMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetRateMultiplier(v)
+		return nil
+	case usagelog.FieldBillingType:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetBillingType(v)
+		return nil
+	case usagelog.FieldStream:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetStream(v)
+		return nil
+	case usagelog.FieldDurationMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetDurationMs(v)
+		return nil
+	case usagelog.FieldFirstTokenMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetFirstTokenMs(v)
+		return nil
+	case usagelog.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCreatedAt(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown UsageLog field %s", name)
+placeholder
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UsageLogMutation) AddedFields() []string {
+	var fields []string
+	if m.addinput_tokens != nil {
+		fields = append(fields, usagelog.FieldInputTokens)
+placeholder
+	if m.addoutput_tokens != nil {
+		fields = append(fields, usagelog.FieldOutputTokens)
+placeholder
+	if m.addcache_creation_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheCreationTokens)
+placeholder
+	if m.addcache_read_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheReadTokens)
+placeholder
+	if m.addcache_creation_5m_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheCreation5mTokens)
+placeholder
+	if m.addcache_creation_1h_tokens != nil {
+		fields = append(fields, usagelog.FieldCacheCreation1hTokens)
+placeholder
+	if m.addinput_cost != nil {
+		fields = append(fields, usagelog.FieldInputCost)
+placeholder
+	if m.addoutput_cost != nil {
+		fields = append(fields, usagelog.FieldOutputCost)
+placeholder
+	if m.addcache_creation_cost != nil {
+		fields = append(fields, usagelog.FieldCacheCreationCost)
+placeholder
+	if m.addcache_read_cost != nil {
+		fields = append(fields, usagelog.FieldCacheReadCost)
+placeholder
+	if m.addtotal_cost != nil {
+		fields = append(fields, usagelog.FieldTotalCost)
+placeholder
+	if m.addactual_cost != nil {
+		fields = append(fields, usagelog.FieldActualCost)
+placeholder
+	if m.addrate_multiplier != nil {
+		fields = append(fields, usagelog.FieldRateMultiplier)
+placeholder
+	if m.addbilling_type != nil {
+		fields = append(fields, usagelog.FieldBillingType)
+placeholder
+	if m.addduration_ms != nil {
+		fields = append(fields, usagelog.FieldDurationMs)
+placeholder
+	if m.addfirst_token_ms != nil {
+		fields = append(fields, usagelog.FieldFirstTokenMs)
+placeholder
+	return fields
+placeholder
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UsageLogMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case usagelog.FieldInputTokens:
+		return m.AddedInputTokens()
+	case usagelog.FieldOutputTokens:
+		return m.AddedOutputTokens()
+	case usagelog.FieldCacheCreationTokens:
+		return m.AddedCacheCreationTokens()
+	case usagelog.FieldCacheReadTokens:
+		return m.AddedCacheReadTokens()
+	case usagelog.FieldCacheCreation5mTokens:
+		return m.AddedCacheCreation5mTokens()
+	case usagelog.FieldCacheCreation1hTokens:
+		return m.AddedCacheCreation1hTokens()
+	case usagelog.FieldInputCost:
+		return m.AddedInputCost()
+	case usagelog.FieldOutputCost:
+		return m.AddedOutputCost()
+	case usagelog.FieldCacheCreationCost:
+		return m.AddedCacheCreationCost()
+	case usagelog.FieldCacheReadCost:
+		return m.AddedCacheReadCost()
+	case usagelog.FieldTotalCost:
+		return m.AddedTotalCost()
+	case usagelog.FieldActualCost:
+		return m.AddedActualCost()
+	case usagelog.FieldRateMultiplier:
+		return m.AddedRateMultiplier()
+	case usagelog.FieldBillingType:
+		return m.AddedBillingType()
+	case usagelog.FieldDurationMs:
+		return m.AddedDurationMs()
+	case usagelog.FieldFirstTokenMs:
+		return m.AddedFirstTokenMs()
+placeholder
+	return nil, false
+placeholder
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UsageLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case usagelog.FieldInputTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddInputTokens(v)
+		return nil
+	case usagelog.FieldOutputTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddOutputTokens(v)
+		return nil
+	case usagelog.FieldCacheCreationTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCacheCreationTokens(v)
+		return nil
+	case usagelog.FieldCacheReadTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCacheReadTokens(v)
+		return nil
+	case usagelog.FieldCacheCreation5mTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCacheCreation5mTokens(v)
+		return nil
+	case usagelog.FieldCacheCreation1hTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCacheCreation1hTokens(v)
+		return nil
+	case usagelog.FieldInputCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddInputCost(v)
+		return nil
+	case usagelog.FieldOutputCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddOutputCost(v)
+		return nil
+	case usagelog.FieldCacheCreationCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCacheCreationCost(v)
+		return nil
+	case usagelog.FieldCacheReadCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCacheReadCost(v)
+		return nil
+	case usagelog.FieldTotalCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddTotalCost(v)
+		return nil
+	case usagelog.FieldActualCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddActualCost(v)
+		return nil
+	case usagelog.FieldRateMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddRateMultiplier(v)
+		return nil
+	case usagelog.FieldBillingType:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddBillingType(v)
+		return nil
+	case usagelog.FieldDurationMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddDurationMs(v)
+		return nil
+	case usagelog.FieldFirstTokenMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddFirstTokenMs(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown UsageLog numeric field %s", name)
+placeholder
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UsageLogMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(usagelog.FieldGroupID) {
+		fields = append(fields, usagelog.FieldGroupID)
+placeholder
+	if m.FieldCleared(usagelog.FieldSubscriptionID) {
+		fields = append(fields, usagelog.FieldSubscriptionID)
+placeholder
+	if m.FieldCleared(usagelog.FieldDurationMs) {
+		fields = append(fields, usagelog.FieldDurationMs)
+placeholder
+	if m.FieldCleared(usagelog.FieldFirstTokenMs) {
+		fields = append(fields, usagelog.FieldFirstTokenMs)
+placeholder
+	return fields
+placeholder
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UsageLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+placeholder
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UsageLogMutation) ClearField(name string) error {
+	switch name {
+	case usagelog.FieldGroupID:
+		m.ClearGroupID()
+		return nil
+	case usagelog.FieldSubscriptionID:
+		m.ClearSubscriptionID()
+		return nil
+	case usagelog.FieldDurationMs:
+		m.ClearDurationMs()
+		return nil
+	case usagelog.FieldFirstTokenMs:
+		m.ClearFirstTokenMs()
+		return nil
+placeholder
+	return fmt.Errorf("unknown UsageLog nullable field %s", name)
+placeholder
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UsageLogMutation) ResetField(name string) error {
+	switch name {
+	case usagelog.FieldUserID:
+		m.ResetUserID()
+		return nil
+	case usagelog.FieldAPIKeyID:
+		m.ResetAPIKeyID()
+		return nil
+	case usagelog.FieldAccountID:
+		m.ResetAccountID()
+		return nil
+	case usagelog.FieldRequestID:
+		m.ResetRequestID()
+		return nil
+	case usagelog.FieldModel:
+		m.ResetModel()
+		return nil
+	case usagelog.FieldGroupID:
+		m.ResetGroupID()
+		return nil
+	case usagelog.FieldSubscriptionID:
+		m.ResetSubscriptionID()
+		return nil
+	case usagelog.FieldInputTokens:
+		m.ResetInputTokens()
+		return nil
+	case usagelog.FieldOutputTokens:
+		m.ResetOutputTokens()
+		return nil
+	case usagelog.FieldCacheCreationTokens:
+		m.ResetCacheCreationTokens()
+		return nil
+	case usagelog.FieldCacheReadTokens:
+		m.ResetCacheReadTokens()
+		return nil
+	case usagelog.FieldCacheCreation5mTokens:
+		m.ResetCacheCreation5mTokens()
+		return nil
+	case usagelog.FieldCacheCreation1hTokens:
+		m.ResetCacheCreation1hTokens()
+		return nil
+	case usagelog.FieldInputCost:
+		m.ResetInputCost()
+		return nil
+	case usagelog.FieldOutputCost:
+		m.ResetOutputCost()
+		return nil
+	case usagelog.FieldCacheCreationCost:
+		m.ResetCacheCreationCost()
+		return nil
+	case usagelog.FieldCacheReadCost:
+		m.ResetCacheReadCost()
+		return nil
+	case usagelog.FieldTotalCost:
+		m.ResetTotalCost()
+		return nil
+	case usagelog.FieldActualCost:
+		m.ResetActualCost()
+		return nil
+	case usagelog.FieldRateMultiplier:
+		m.ResetRateMultiplier()
+		return nil
+	case usagelog.FieldBillingType:
+		m.ResetBillingType()
+		return nil
+	case usagelog.FieldStream:
+		m.ResetStream()
+		return nil
+	case usagelog.FieldDurationMs:
+		m.ResetDurationMs()
+		return nil
+	case usagelog.FieldFirstTokenMs:
+		m.ResetFirstTokenMs()
+		return nil
+	case usagelog.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+placeholder
+	return fmt.Errorf("unknown UsageLog field %s", name)
+placeholder
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UsageLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 5)
+	if m.user != nil {
+		edges = append(edges, usagelog.EdgeUser)
+placeholder
+	if m.api_key != nil {
+		edges = append(edges, usagelog.EdgeAPIKey)
+placeholder
+	if m.account != nil {
+		edges = append(edges, usagelog.EdgeAccount)
+placeholder
+	if m.group != nil {
+		edges = append(edges, usagelog.EdgeGroup)
+placeholder
+	if m.subscription != nil {
+		edges = append(edges, usagelog.EdgeSubscription)
+placeholder
+	return edges
+placeholder
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UsageLogMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case usagelog.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+	case usagelog.EdgeAPIKey:
+		if id := m.api_key; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+	case usagelog.EdgeAccount:
+		if id := m.account; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+	case usagelog.EdgeGroup:
+		if id := m.group; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+	case usagelog.EdgeSubscription:
+		if id := m.subscription; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+placeholder
+	return nil
+placeholder
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UsageLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 5)
+	return edges
+placeholder
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UsageLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+placeholder
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UsageLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 5)
+	if m.cleareduser {
+		edges = append(edges, usagelog.EdgeUser)
+placeholder
+	if m.clearedapi_key {
+		edges = append(edges, usagelog.EdgeAPIKey)
+placeholder
+	if m.clearedaccount {
+		edges = append(edges, usagelog.EdgeAccount)
+placeholder
+	if m.clearedgroup {
+		edges = append(edges, usagelog.EdgeGroup)
+placeholder
+	if m.clearedsubscription {
+		edges = append(edges, usagelog.EdgeSubscription)
+placeholder
+	return edges
+placeholder
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UsageLogMutation) EdgeCleared(name string) bool {
+	switch name {
+	case usagelog.EdgeUser:
+		return m.cleareduser
+	case usagelog.EdgeAPIKey:
+		return m.clearedapi_key
+	case usagelog.EdgeAccount:
+		return m.clearedaccount
+	case usagelog.EdgeGroup:
+		return m.clearedgroup
+	case usagelog.EdgeSubscription:
+		return m.clearedsubscription
+placeholder
+	return false
+placeholder
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UsageLogMutation) ClearEdge(name string) error {
+	switch name {
+	case usagelog.EdgeUser:
+		m.ClearUser()
+		return nil
+	case usagelog.EdgeAPIKey:
+		m.ClearAPIKey()
+		return nil
+	case usagelog.EdgeAccount:
+		m.ClearAccount()
+		return nil
+	case usagelog.EdgeGroup:
+		m.ClearGroup()
+		return nil
+	case usagelog.EdgeSubscription:
+		m.ClearSubscription()
+		return nil
+placeholder
+	return fmt.Errorf("unknown UsageLog unique edge %s", name)
+placeholder
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UsageLogMutation) ResetEdge(name string) error {
+	switch name {
+	case usagelog.EdgeUser:
+		m.ResetUser()
+		return nil
+	case usagelog.EdgeAPIKey:
+		m.ResetAPIKey()
+		return nil
+	case usagelog.EdgeAccount:
+		m.ResetAccount()
+		return nil
+	case usagelog.EdgeGroup:
+		m.ResetGroup()
+		return nil
+	case usagelog.EdgeSubscription:
+		m.ResetSubscription()
+		return nil
+placeholder
+	return fmt.Errorf("unknown UsageLog edge %s", name)
+placeholder
+
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
@@ -7259,6 +10176,9 @@ type UserMutation struct {
 	allowed_groups                map[int64]struct{placeholder
 	removedallowed_groups         map[int64]struct{placeholder
 	clearedallowed_groups         bool
+	usage_logs                    map[int64]struct{placeholder
+	removedusage_logs             map[int64]struct{placeholder
+	clearedusage_logs             bool
 	done                          bool
 	oldValue                      func(context.Context) (*User, error)
 	predicates                    []predicate.User
@@ -8117,6 +11037,60 @@ func (m *UserMutation) ResetAllowedGroups() {
 	m.removedallowed_groups = nil
 placeholder
 
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *UserMutation) AddUsageLogIDs(ids ...int64) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *UserMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+placeholder
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *UserMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *UserMutation) RemoveUsageLogIDs(ids ...int64) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *UserMutation) RemovedUsageLogsIDs() (ids []int64) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *UserMutation) UsageLogsIDs() (ids []int64) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *UserMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+placeholder
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -8473,7 +11447,7 @@ placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.api_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 placeholder
@@ -8488,6 +11462,9 @@ placeholder
 placeholder
 	if m.allowed_groups != nil {
 		edges = append(edges, user.EdgeAllowedGroups)
+placeholder
+	if m.usage_logs != nil {
+		edges = append(edges, user.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -8526,13 +11503,19 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case user.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 placeholder
 	return nil
 placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedapi_keys != nil {
 		edges = append(edges, user.EdgeAPIKeys)
 placeholder
@@ -8547,6 +11530,9 @@ placeholder
 placeholder
 	if m.removedallowed_groups != nil {
 		edges = append(edges, user.EdgeAllowedGroups)
+placeholder
+	if m.removedusage_logs != nil {
+		edges = append(edges, user.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -8585,13 +11571,19 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case user.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 placeholder
 	return nil
 placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedapi_keys {
 		edges = append(edges, user.EdgeAPIKeys)
 placeholder
@@ -8606,6 +11598,9 @@ placeholder
 placeholder
 	if m.clearedallowed_groups {
 		edges = append(edges, user.EdgeAllowedGroups)
+placeholder
+	if m.clearedusage_logs {
+		edges = append(edges, user.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -8624,6 +11619,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedassigned_subscriptions
 	case user.EdgeAllowedGroups:
 		return m.clearedallowed_groups
+	case user.EdgeUsageLogs:
+		return m.clearedusage_logs
 placeholder
 	return false
 placeholder
@@ -8654,6 +11651,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeAllowedGroups:
 		m.ResetAllowedGroups()
+		return nil
+	case user.EdgeUsageLogs:
+		m.ResetUsageLogs()
 		return nil
 placeholder
 	return fmt.Errorf("unknown User edge %s", name)
@@ -9084,6 +12084,7 @@ type UserSubscriptionMutation struct {
 	id                      *int64
 	created_at              *time.Time
 	updated_at              *time.Time
+	deleted_at              *time.Time
 	starts_at               *time.Time
 	expires_at              *time.Time
 	status                  *string
@@ -9105,6 +12106,9 @@ type UserSubscriptionMutation struct {
 	clearedgroup            bool
 	assigned_by_user        *int64
 	clearedassigned_by_user bool
+	usage_logs              map[int64]struct{placeholder
+	removedusage_logs       map[int64]struct{placeholder
+	clearedusage_logs       bool
 	done                    bool
 	oldValue                func(context.Context) (*UserSubscription, error)
 	predicates              []predicate.UserSubscription
@@ -9278,6 +12282,55 @@ placeholder
 // ResetUpdatedAt resets all changes to the "updated_at" field.
 func (m *UserSubscriptionMutation) ResetUpdatedAt() {
 	m.updated_at = nil
+placeholder
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *UserSubscriptionMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+placeholder
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *UserSubscriptionMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldDeletedAt returns the old "deleted_at" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+placeholder
+	return oldValue.DeletedAt, nil
+placeholder
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *UserSubscriptionMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[usersubscription.FieldDeletedAt] = struct{placeholder{placeholder
+placeholder
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *UserSubscriptionMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[usersubscription.FieldDeletedAt]
+	return ok
+placeholder
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *UserSubscriptionMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, usersubscription.FieldDeletedAt)
 placeholder
 
 // SetUserID sets the "user_id" field.
@@ -10003,6 +13056,60 @@ func (m *UserSubscriptionMutation) ResetAssignedByUser() {
 	m.clearedassigned_by_user = false
 placeholder
 
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *UserSubscriptionMutation) AddUsageLogIDs(ids ...int64) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *UserSubscriptionMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+placeholder
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *UserSubscriptionMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+placeholder
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *UserSubscriptionMutation) RemoveUsageLogIDs(ids ...int64) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *UserSubscriptionMutation) RemovedUsageLogsIDs() (ids []int64) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *UserSubscriptionMutation) UsageLogsIDs() (ids []int64) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *UserSubscriptionMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+placeholder
+
 // Where appends a list predicates to the UserSubscriptionMutation builder.
 func (m *UserSubscriptionMutation) Where(ps ...predicate.UserSubscription) {
 	m.predicates = append(m.predicates, ps...)
@@ -10037,12 +13144,15 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserSubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 17)
 	if m.created_at != nil {
 		fields = append(fields, usersubscription.FieldCreatedAt)
 placeholder
 	if m.updated_at != nil {
 		fields = append(fields, usersubscription.FieldUpdatedAt)
+placeholder
+	if m.deleted_at != nil {
+		fields = append(fields, usersubscription.FieldDeletedAt)
 placeholder
 	if m.user != nil {
 		fields = append(fields, usersubscription.FieldUserID)
@@ -10098,6 +13208,8 @@ func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case usersubscription.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case usersubscription.FieldDeletedAt:
+		return m.DeletedAt()
 	case usersubscription.FieldUserID:
 		return m.UserID()
 	case usersubscription.FieldGroupID:
@@ -10139,6 +13251,8 @@ func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldCreatedAt(ctx)
 	case usersubscription.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case usersubscription.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
 	case usersubscription.FieldUserID:
 		return m.OldUserID(ctx)
 	case usersubscription.FieldGroupID:
@@ -10189,6 +13303,13 @@ func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 	placeholder
 		m.SetUpdatedAt(v)
+		return nil
+	case usersubscription.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetDeletedAt(v)
 		return nil
 	case usersubscription.FieldUserID:
 		v, ok := value.(int64)
@@ -10357,6 +13478,9 @@ placeholder
 // mutation.
 func (m *UserSubscriptionMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(usersubscription.FieldDeletedAt) {
+		fields = append(fields, usersubscription.FieldDeletedAt)
+placeholder
 	if m.FieldCleared(usersubscription.FieldDailyWindowStart) {
 		fields = append(fields, usersubscription.FieldDailyWindowStart)
 placeholder
@@ -10386,6 +13510,9 @@ placeholder
 // error if the field is not defined in the schema.
 func (m *UserSubscriptionMutation) ClearField(name string) error {
 	switch name {
+	case usersubscription.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
 	case usersubscription.FieldDailyWindowStart:
 		m.ClearDailyWindowStart()
 		return nil
@@ -10414,6 +13541,9 @@ func (m *UserSubscriptionMutation) ResetField(name string) error {
 		return nil
 	case usersubscription.FieldUpdatedAt:
 		m.ResetUpdatedAt()
+		return nil
+	case usersubscription.FieldDeletedAt:
+		m.ResetDeletedAt()
 		return nil
 	case usersubscription.FieldUserID:
 		m.ResetUserID()
@@ -10463,7 +13593,7 @@ placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserSubscriptionMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.user != nil {
 		edges = append(edges, usersubscription.EdgeUser)
 placeholder
@@ -10472,6 +13602,9 @@ placeholder
 placeholder
 	if m.assigned_by_user != nil {
 		edges = append(edges, usersubscription.EdgeAssignedByUser)
+placeholder
+	if m.usage_logs != nil {
+		edges = append(edges, usersubscription.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -10492,25 +13625,42 @@ func (m *UserSubscriptionMutation) AddedIDs(name string) []ent.Value {
 		if id := m.assigned_by_user; id != nil {
 			return []ent.Value{*idplaceholder
 	placeholder
+	case usersubscription.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
 placeholder
 	return nil
 placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserSubscriptionMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
+	if m.removedusage_logs != nil {
+		edges = append(edges, usersubscription.EdgeUsageLogs)
+placeholder
 	return edges
 placeholder
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *UserSubscriptionMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case usersubscription.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+	placeholder
+		return ids
+placeholder
 	return nil
 placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserSubscriptionMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.cleareduser {
 		edges = append(edges, usersubscription.EdgeUser)
 placeholder
@@ -10519,6 +13669,9 @@ placeholder
 placeholder
 	if m.clearedassigned_by_user {
 		edges = append(edges, usersubscription.EdgeAssignedByUser)
+placeholder
+	if m.clearedusage_logs {
+		edges = append(edges, usersubscription.EdgeUsageLogs)
 placeholder
 	return edges
 placeholder
@@ -10533,6 +13686,8 @@ func (m *UserSubscriptionMutation) EdgeCleared(name string) bool {
 		return m.clearedgroup
 	case usersubscription.EdgeAssignedByUser:
 		return m.clearedassigned_by_user
+	case usersubscription.EdgeUsageLogs:
+		return m.clearedusage_logs
 placeholder
 	return false
 placeholder
@@ -10566,6 +13721,9 @@ func (m *UserSubscriptionMutation) ResetEdge(name string) error {
 		return nil
 	case usersubscription.EdgeAssignedByUser:
 		m.ResetAssignedByUser()
+		return nil
+	case usersubscription.EdgeUsageLogs:
+		m.ResetUsageLogs()
 		return nil
 placeholder
 	return fmt.Errorf("unknown UserSubscription edge %s", name)

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -14,18 +15,20 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
+	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 )
 
 // ApiKeyQuery is the builder for querying ApiKey entities.
 type ApiKeyQuery struct {
 	config
-	ctx        *QueryContext
-	order      []apikey.OrderOption
-	inters     []Interceptor
-	predicates []predicate.ApiKey
-	withUser   *UserQuery
-	withGroup  *GroupQuery
+	ctx           *QueryContext
+	order         []apikey.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.ApiKey
+	withUser      *UserQuery
+	withGroup     *GroupQuery
+	withUsageLogs *UsageLogQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -99,6 +102,28 @@ func (_q *ApiKeyQuery) QueryGroup() *GroupQuery {
 			sqlgraph.From(apikey.Table, apikey.FieldID, selector),
 			sqlgraph.To(group.Table, group.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, apikey.GroupTable, apikey.GroupColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+placeholder
+	return query
+placeholder
+
+// QueryUsageLogs chains the current query on the "usage_logs" edge.
+func (_q *ApiKeyQuery) QueryUsageLogs() *UsageLogQuery {
+	query := (&UsageLogClient{config: _q.configplaceholder).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+	placeholder
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+	placeholder
+		step := sqlgraph.NewStep(
+			sqlgraph.From(apikey.Table, apikey.FieldID, selector),
+			sqlgraph.To(usagelog.Table, usagelog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, apikey.UsageLogsTable, apikey.UsageLogsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -293,13 +318,14 @@ func (_q *ApiKeyQuery) Clone() *ApiKeyQuery {
 		return nil
 placeholder
 	return &ApiKeyQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]apikey.OrderOption{placeholder, _q.order...),
-		inters:     append([]Interceptor{placeholder, _q.inters...),
-		predicates: append([]predicate.ApiKey{placeholder, _q.predicates...),
-		withUser:   _q.withUser.Clone(),
-		withGroup:  _q.withGroup.Clone(),
+		config:        _q.config,
+		ctx:           _q.ctx.Clone(),
+		order:         append([]apikey.OrderOption{placeholder, _q.order...),
+		inters:        append([]Interceptor{placeholder, _q.inters...),
+		predicates:    append([]predicate.ApiKey{placeholder, _q.predicates...),
+		withUser:      _q.withUser.Clone(),
+		withGroup:     _q.withGroup.Clone(),
+		withUsageLogs: _q.withUsageLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -325,6 +351,17 @@ func (_q *ApiKeyQuery) WithGroup(opts ...func(*GroupQuery)) *ApiKeyQuery {
 		opt(query)
 placeholder
 	_q.withGroup = query
+	return _q
+placeholder
+
+// WithUsageLogs tells the query-builder to eager-load the nodes that are connected to
+// the "usage_logs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ApiKeyQuery) WithUsageLogs(opts ...func(*UsageLogQuery)) *ApiKeyQuery {
+	query := (&UsageLogClient{config: _q.configplaceholder).Query()
+	for _, opt := range opts {
+		opt(query)
+placeholder
+	_q.withUsageLogs = query
 	return _q
 placeholder
 
@@ -406,9 +443,10 @@ func (_q *ApiKeyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ApiKe
 	var (
 		nodes       = []*ApiKey{placeholder
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withUser != nil,
 			_q.withGroup != nil,
+			_q.withUsageLogs != nil,
 	placeholder
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -438,6 +476,13 @@ placeholder
 	if query := _q.withGroup; query != nil {
 		if err := _q.loadGroup(ctx, query, nodes, nil,
 			func(n *ApiKey, e *Group) { n.Edges.Group = e placeholder); err != nil {
+			return nil, err
+	placeholder
+placeholder
+	if query := _q.withUsageLogs; query != nil {
+		if err := _q.loadUsageLogs(ctx, query, nodes,
+			func(n *ApiKey) { n.Edges.UsageLogs = []*UsageLog{placeholder placeholder,
+			func(n *ApiKey, e *UsageLog) { n.Edges.UsageLogs = append(n.Edges.UsageLogs, e) placeholder); err != nil {
 			return nil, err
 	placeholder
 placeholder
@@ -502,6 +547,36 @@ placeholder
 		for i := range nodes {
 			assign(nodes[i], n)
 	placeholder
+placeholder
+	return nil
+placeholder
+func (_q *ApiKeyQuery) loadUsageLogs(ctx context.Context, query *UsageLogQuery, nodes []*ApiKey, init func(*ApiKey), assign func(*ApiKey, *UsageLog)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*ApiKey)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+	placeholder
+placeholder
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(usagelog.FieldAPIKeyID)
+placeholder
+	query.Where(predicate.UsageLog(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(apikey.UsageLogsColumn), fks...))
+placeholder))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+placeholder
+	for _, n := range neighbors {
+		fk := n.APIKeyID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "api_key_id" returned %v for node %v`, fk, n.ID)
+	placeholder
+		assign(node, n)
 placeholder
 	return nil
 placeholder

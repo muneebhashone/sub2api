@@ -67,6 +67,10 @@ placeholder
 	// 读取请求体
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		if maxErr, ok := extractMaxBytesError(err); ok {
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			return
+	placeholder
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
 		return
 placeholder
@@ -76,13 +80,17 @@ placeholder
 		return
 placeholder
 
-	// 解析请求获取模型名和stream
-	var req struct {
-		Model  string `json:"model"`
-		Stream bool   `json:"stream"`
-placeholder
-	if err := json.Unmarshal(body, &req); err != nil {
+	parsedReq, err := service.ParseGatewayRequest(body)
+	if err != nil {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
+		return
+placeholder
+	reqModel := parsedReq.Model
+	reqStream := parsedReq.Stream
+
+	// 验证 model 必填
+	if reqModel == "" {
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
 		return
 placeholder
 
@@ -106,7 +114,7 @@ placeholder
 	defer h.concurrencyHelper.DecrementWaitCount(c.Request.Context(), subject.UserID)
 
 	// 1. 首先获取用户并发槽位
-	userReleaseFunc, err := h.concurrencyHelper.AcquireUserSlotWithWait(c, subject.UserID, subject.Concurrency, req.Stream, &streamStarted)
+	userReleaseFunc, err := h.concurrencyHelper.AcquireUserSlotWithWait(c, subject.UserID, subject.Concurrency, reqStream, &streamStarted)
 	if err != nil {
 		log.Printf("User concurrency acquire failed: %v", err)
 		h.handleConcurrencyError(c, err, "user", streamStarted)
@@ -124,7 +132,7 @@ placeholder
 placeholder
 
 	// 计算粘性会话hash
-	sessionHash := h.gatewayService.GenerateSessionHash(body)
+	sessionHash := h.gatewayService.GenerateSessionHash(parsedReq)
 
 	// 获取平台：优先使用强制平台（/antigravity 路由，中间件已设置 request.Context），否则使用分组平台
 	platform := ""
@@ -132,6 +140,10 @@ placeholder
 		platform = forcePlatform
 placeholder else if apiKey.Group != nil {
 		platform = apiKey.Group.Platform
+placeholder
+	sessionKey := sessionHash
+	if platform == service.PlatformGemini && sessionHash != "" {
+		sessionKey = "gemini:" + sessionHash
 placeholder
 
 	if platform == service.PlatformGemini {
@@ -141,7 +153,7 @@ placeholder
 		lastFailoverStatus := 0
 
 		for {
-			account, err := h.geminiCompatService.SelectAccountForModelWithExclusions(c.Request.Context(), apiKey.GroupID, sessionHash, req.Model, failedAccountIDs)
+			selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs)
 			if err != nil {
 				if len(failedAccountIDs) == 0 {
 					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
@@ -150,34 +162,76 @@ placeholder
 				h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 				return
 		placeholder
+			account := selection.Account
 
 			// 检查预热请求拦截（在账号选择后、转发前检查）
 			if account.IsInterceptWarmupEnabled() && isWarmupRequest(body) {
-				if req.Stream {
-					sendMockWarmupStream(c, req.Model)
+				if selection.Acquired && selection.ReleaseFunc != nil {
+					selection.ReleaseFunc()
+			placeholder
+				if reqStream {
+					sendMockWarmupStream(c, reqModel)
 			placeholder else {
-					sendMockWarmupResponse(c, req.Model)
+					sendMockWarmupResponse(c, reqModel)
 			placeholder
 				return
 		placeholder
 
 			// 3. 获取账号并发槽位
-			accountReleaseFunc, err := h.concurrencyHelper.AcquireAccountSlotWithWait(c, account.ID, account.Concurrency, req.Stream, &streamStarted)
-			if err != nil {
-				log.Printf("Account concurrency acquire failed: %v", err)
-				h.handleConcurrencyError(c, err, "account", streamStarted)
-				return
+			accountReleaseFunc := selection.ReleaseFunc
+			var accountWaitRelease func()
+			if !selection.Acquired {
+				if selection.WaitPlan == nil {
+					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
+					return
+			placeholder
+				canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
+				if err != nil {
+					log.Printf("Increment account wait count failed: %v", err)
+			placeholder else if !canWait {
+					log.Printf("Account wait queue full: account=%d", account.ID)
+					h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
+					return
+			placeholder else {
+					// Only set release function if increment succeeded
+					accountWaitRelease = func() {
+						h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+				placeholder
+			placeholder
+
+				accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
+					c,
+					account.ID,
+					selection.WaitPlan.MaxConcurrency,
+					selection.WaitPlan.Timeout,
+					reqStream,
+					&streamStarted,
+				)
+				if err != nil {
+					if accountWaitRelease != nil {
+						accountWaitRelease()
+				placeholder
+					log.Printf("Account concurrency acquire failed: %v", err)
+					h.handleConcurrencyError(c, err, "account", streamStarted)
+					return
+			placeholder
+				if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
+					log.Printf("Bind sticky session failed: %v", err)
+			placeholder
 		placeholder
 
 			// 转发请求 - 根据账号平台分流
 			var result *service.ForwardResult
 			if account.Platform == service.PlatformAntigravity {
-				result, err = h.antigravityGatewayService.ForwardGemini(c.Request.Context(), c, account, req.Model, "generateContent", req.Stream, body)
+				result, err = h.antigravityGatewayService.ForwardGemini(c.Request.Context(), c, account, reqModel, "generateContent", reqStream, body)
 		placeholder else {
 				result, err = h.geminiCompatService.Forward(c.Request.Context(), c, account, body)
 		placeholder
 			if accountReleaseFunc != nil {
 				accountReleaseFunc()
+		placeholder
+			if accountWaitRelease != nil {
+				accountWaitRelease()
 		placeholder
 			if err != nil {
 				var failoverErr *service.UpstreamFailoverError
@@ -223,7 +277,7 @@ placeholder
 
 	for {
 		// 选择支持该模型的账号
-		account, err := h.gatewayService.SelectAccountForModelWithExclusions(c.Request.Context(), apiKey.GroupID, sessionHash, req.Model, failedAccountIDs)
+		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs)
 		if err != nil {
 			if len(failedAccountIDs) == 0 {
 				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
@@ -232,23 +286,62 @@ placeholder
 			h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 			return
 	placeholder
+		account := selection.Account
 
 		// 检查预热请求拦截（在账号选择后、转发前检查）
 		if account.IsInterceptWarmupEnabled() && isWarmupRequest(body) {
-			if req.Stream {
-				sendMockWarmupStream(c, req.Model)
+			if selection.Acquired && selection.ReleaseFunc != nil {
+				selection.ReleaseFunc()
+		placeholder
+			if reqStream {
+				sendMockWarmupStream(c, reqModel)
 		placeholder else {
-				sendMockWarmupResponse(c, req.Model)
+				sendMockWarmupResponse(c, reqModel)
 		placeholder
 			return
 	placeholder
 
 		// 3. 获取账号并发槽位
-		accountReleaseFunc, err := h.concurrencyHelper.AcquireAccountSlotWithWait(c, account.ID, account.Concurrency, req.Stream, &streamStarted)
-		if err != nil {
-			log.Printf("Account concurrency acquire failed: %v", err)
-			h.handleConcurrencyError(c, err, "account", streamStarted)
-			return
+		accountReleaseFunc := selection.ReleaseFunc
+		var accountWaitRelease func()
+		if !selection.Acquired {
+			if selection.WaitPlan == nil {
+				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
+				return
+		placeholder
+			canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
+			if err != nil {
+				log.Printf("Increment account wait count failed: %v", err)
+		placeholder else if !canWait {
+				log.Printf("Account wait queue full: account=%d", account.ID)
+				h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
+				return
+		placeholder else {
+				// Only set release function if increment succeeded
+				accountWaitRelease = func() {
+					h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+			placeholder
+		placeholder
+
+			accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
+				c,
+				account.ID,
+				selection.WaitPlan.MaxConcurrency,
+				selection.WaitPlan.Timeout,
+				reqStream,
+				&streamStarted,
+			)
+			if err != nil {
+				if accountWaitRelease != nil {
+					accountWaitRelease()
+			placeholder
+				log.Printf("Account concurrency acquire failed: %v", err)
+				h.handleConcurrencyError(c, err, "account", streamStarted)
+				return
+		placeholder
+			if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
+				log.Printf("Bind sticky session failed: %v", err)
+		placeholder
 	placeholder
 
 		// 转发请求 - 根据账号平台分流
@@ -256,10 +349,13 @@ placeholder
 		if account.Platform == service.PlatformAntigravity {
 			result, err = h.antigravityGatewayService.Forward(c.Request.Context(), c, account, body)
 	placeholder else {
-			result, err = h.gatewayService.Forward(c.Request.Context(), c, account, body)
+			result, err = h.gatewayService.Forward(c.Request.Context(), c, account, parsedReq)
 	placeholder
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
+	placeholder
+		if accountWaitRelease != nil {
+			accountWaitRelease()
 	placeholder
 		if err != nil {
 			var failoverErr *service.UpstreamFailoverError
@@ -525,6 +621,10 @@ placeholder
 	// 读取请求体
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		if maxErr, ok := extractMaxBytesError(err); ok {
+			h.errorResponse(c, http.StatusRequestEntityTooLarge, "invalid_request_error", buildBodyTooLargeMessage(maxErr.Limit))
+			return
+	placeholder
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
 		return
 placeholder
@@ -534,12 +634,15 @@ placeholder
 		return
 placeholder
 
-	// 解析请求获取模型名
-	var req struct {
-		Model string `json:"model"`
-placeholder
-	if err := json.Unmarshal(body, &req); err != nil {
+	parsedReq, err := service.ParseGatewayRequest(body)
+	if err != nil {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
+		return
+placeholder
+
+	// 验证 model 必填
+	if parsedReq.Model == "" {
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
 		return
 placeholder
 
@@ -554,17 +657,17 @@ placeholder
 placeholder
 
 	// 计算粘性会话 hash
-	sessionHash := h.gatewayService.GenerateSessionHash(body)
+	sessionHash := h.gatewayService.GenerateSessionHash(parsedReq)
 
 	// 选择支持该模型的账号
-	account, err := h.gatewayService.SelectAccountForModel(c.Request.Context(), apiKey.GroupID, sessionHash, req.Model)
+	account, err := h.gatewayService.SelectAccountForModel(c.Request.Context(), apiKey.GroupID, sessionHash, parsedReq.Model)
 	if err != nil {
 		h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error())
 		return
 placeholder
 
 	// 转发请求（不记录使用量）
-	if err := h.gatewayService.ForwardCountTokens(c.Request.Context(), c, account, body); err != nil {
+	if err := h.gatewayService.ForwardCountTokens(c.Request.Context(), c, account, parsedReq); err != nil {
 		log.Printf("Forward count_tokens request failed: %v", err)
 		// 错误响应已在 ForwardCountTokens 中处理
 		return

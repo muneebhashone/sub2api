@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
@@ -20,11 +21,15 @@ type turnstileVerifier struct {
 placeholder
 
 func NewTurnstileVerifier() service.TurnstileVerifier {
+	sharedClient, err := httpclient.GetClient(httpclient.Options{
+		Timeout: 10 * time.Second,
+placeholder)
+	if err != nil {
+		sharedClient = &http.Client{Timeout: 10 * time.Secondplaceholder
+placeholder
 	return &turnstileVerifier{
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-	placeholder,
-		verifyURL: turnstileVerifyURL,
+		httpClient: sharedClient,
+		verifyURL:  turnstileVerifyURL,
 placeholder
 placeholder
 
