@@ -202,20 +202,23 @@ placeholder
 
 func (s *AccountUsageService) getGeminiUsage(ctx context.Context, account *Account) (*UsageInfo, error) {
 	now := time.Now()
-	start := geminiDailyWindowStart(now)
-
-	stats, err := s.usageLogRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID)
-	if err != nil {
-		return nil, fmt.Errorf("get gemini usage stats failed: %w", err)
-placeholder
-
 	usage := &UsageInfo{
 		UpdatedAt: &now,
+placeholder
+
+	if s.geminiQuotaService == nil || s.usageLogRepo == nil {
+		return usage, nil
 placeholder
 
 	quota, ok := s.geminiQuotaService.QuotaForAccount(ctx, account)
 	if !ok {
 		return usage, nil
+placeholder
+
+	start := geminiDailyWindowStart(now)
+	stats, err := s.usageLogRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get gemini usage stats failed: %w", err)
 placeholder
 
 	totals := geminiAggregateUsage(stats)
