@@ -46,8 +46,8 @@ placeholder
 	if oauthType == "" {
 		oauthType = "code_assist"
 placeholder
-	if oauthType != "code_assist" && oauthType != "ai_studio" {
-		response.BadRequest(c, "Invalid oauth_type: must be 'code_assist' or 'ai_studio'")
+	if oauthType != "code_assist" && oauthType != "google_one" && oauthType != "ai_studio" {
+		response.BadRequest(c, "Invalid oauth_type: must be 'code_assist', 'google_one', or 'ai_studio'")
 		return
 placeholder
 
@@ -92,8 +92,8 @@ placeholder
 	if oauthType == "" {
 		oauthType = "code_assist"
 placeholder
-	if oauthType != "code_assist" && oauthType != "ai_studio" {
-		response.BadRequest(c, "Invalid oauth_type: must be 'code_assist' or 'ai_studio'")
+	if oauthType != "code_assist" && oauthType != "google_one" && oauthType != "ai_studio" {
+		response.BadRequest(c, "Invalid oauth_type: must be 'code_assist', 'google_one', or 'ai_studio'")
 		return
 placeholder
 
