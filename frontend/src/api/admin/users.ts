@@ -10,7 +10,7 @@ import type { User, UpdateUserRequest, PaginatedResponse placeholder from '@/typ
  * List all users with pagination
  * @param page - Page number (default: 1)
  * @param pageSize - Items per page (default: 20)
- * @param filters - Optional filters (status, role, search)
+ * @param filters - Optional filters (status, role, search, attributes)
  * @param options - Optional request options (signal)
  * @returns Paginated list of users
  */
@@ -21,17 +21,32 @@ export async function list(
     status?: 'active' | 'disabled'
     role?: 'admin' | 'user'
     search?: string
+    attributes?: Record<number, string>  // attributeId -> value
   placeholder,
   options?: {
     signal?: AbortSignal
   placeholder
 ): Promise<PaginatedResponse<User>> {
+  // Build params with attribute filters in attr[id]=value format
+  const params: Record<string, any> = {
+    page,
+    page_size: pageSize,
+    status: filters?.status,
+    role: filters?.role,
+    search: filters?.search
+  placeholder
+
+  // Add attribute filters as attr[id]=value
+  if (filters?.attributes) {
+    for (const [attrId, value] of Object.entries(filters.attributes)) {
+      if (value) {
+        params[`attr[${attrIdplaceholder]`] = value
+      placeholder
+    placeholder
+  placeholder
+
   const { data placeholder = await apiClient.get<PaginatedResponse<User>>('/admin/users', {
-    params: {
-      page,
-      page_size: pageSize,
-      ...filters
-    placeholder,
+    params,
     signal: options?.signal
   placeholder)
   return data
