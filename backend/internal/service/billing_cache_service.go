@@ -17,6 +17,7 @@ import (
 // 注：ErrDailyLimitExceeded/ErrWeeklyLimitExceeded/ErrMonthlyLimitExceeded在subscription_service.go中定义
 var (
 	ErrSubscriptionInvalid = infraerrors.Forbidden("SUBSCRIPTION_INVALID", "subscription is invalid or expired")
+	ErrBillingServiceUnavailable = infraerrors.ServiceUnavailable("BILLING_SERVICE_ERROR", "Billing service temporarily unavailable. Please retry later.")
 )
 
 // subscriptionCacheData 订阅缓存数据结构（内部使用）
@@ -76,6 +77,7 @@ type BillingCacheService struct {
 	userRepo UserRepository
 	subRepo  UserSubscriptionRepository
 	cfg      *config.Config
+	circuitBreaker *billingCircuitBreaker
 
 	cacheWriteChan     chan cacheWriteTask
 	cacheWriteWg       sync.WaitGroup
@@ -95,6 +97,7 @@ func NewBillingCacheService(cache BillingCache, userRepo UserRepository, subRepo
 		subRepo:  subRepo,
 		cfg:      cfg,
 placeholder
+	svc.circuitBreaker = newBillingCircuitBreaker(cfg.Billing.CircuitBreaker)
 	svc.startCacheWriteWorkers()
 	return svc
 placeholder
@@ -450,6 +453,9 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 	if s.cfg.RunMode == config.RunModeSimple {
 		return nil
 placeholder
+	if s.circuitBreaker != nil && !s.circuitBreaker.Allow() {
+		return ErrBillingServiceUnavailable
+placeholder
 
 	// 判断计费模式
 	isSubscriptionMode := group != nil && group.IsSubscriptionType() && subscription != nil
@@ -465,9 +471,14 @@ placeholder
 func (s *BillingCacheService) checkBalanceEligibility(ctx context.Context, userID int64) error {
 	balance, err := s.GetUserBalance(ctx, userID)
 	if err != nil {
-		// 缓存/数据库错误，允许通过（降级处理）
-		log.Printf("Warning: get user balance failed, allowing request: %v", err)
-		return nil
+		if s.circuitBreaker != nil {
+			s.circuitBreaker.OnFailure(err)
+	placeholder
+		log.Printf("ALERT: billing balance check failed for user %d: %v", userID, err)
+		return ErrBillingServiceUnavailable.WithCause(err)
+placeholder
+	if s.circuitBreaker != nil {
+		s.circuitBreaker.OnSuccess()
 placeholder
 
 	if balance <= 0 {
@@ -482,9 +493,14 @@ func (s *BillingCacheService) checkSubscriptionEligibility(ctx context.Context, 
 	// 获取订阅缓存数据
 	subData, err := s.GetSubscriptionStatus(ctx, userID, group.ID)
 	if err != nil {
-		// 缓存/数据库错误，降级使用传入的subscription进行检查
-		log.Printf("Warning: get subscription cache failed, using fallback: %v", err)
-		return s.checkSubscriptionLimitsFallback(subscription, group)
+		if s.circuitBreaker != nil {
+			s.circuitBreaker.OnFailure(err)
+	placeholder
+		log.Printf("ALERT: billing subscription check failed for user %d group %d: %v", userID, group.ID, err)
+		return ErrBillingServiceUnavailable.WithCause(err)
+placeholder
+	if s.circuitBreaker != nil {
+		s.circuitBreaker.OnSuccess()
 placeholder
 
 	// 检查订阅状态
@@ -511,6 +527,137 @@ placeholder
 placeholder
 
 	return nil
+placeholder
+
+type billingCircuitBreakerState int
+
+const (
+	billingCircuitClosed billingCircuitBreakerState = iota
+	billingCircuitOpen
+	billingCircuitHalfOpen
+)
+
+type billingCircuitBreaker struct {
+	mu                sync.Mutex
+	state             billingCircuitBreakerState
+	failures          int
+	openedAt          time.Time
+	failureThreshold  int
+	resetTimeout      time.Duration
+	halfOpenRequests  int
+	halfOpenRemaining int
+placeholder
+
+func newBillingCircuitBreaker(cfg config.CircuitBreakerConfig) *billingCircuitBreaker {
+	if !cfg.Enabled {
+		return nil
+placeholder
+	resetTimeout := time.Duration(cfg.ResetTimeoutSeconds) * time.Second
+	if resetTimeout <= 0 {
+		resetTimeout = 30 * time.Second
+placeholder
+	halfOpen := cfg.HalfOpenRequests
+	if halfOpen <= 0 {
+		halfOpen = 1
+placeholder
+	threshold := cfg.FailureThreshold
+	if threshold <= 0 {
+		threshold = 5
+placeholder
+	return &billingCircuitBreaker{
+		state:            billingCircuitClosed,
+		failureThreshold: threshold,
+		resetTimeout:     resetTimeout,
+		halfOpenRequests: halfOpen,
+placeholder
+placeholder
+
+func (b *billingCircuitBreaker) Allow() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	switch b.state {
+	case billingCircuitClosed:
+		return true
+	case billingCircuitOpen:
+		if time.Since(b.openedAt) < b.resetTimeout {
+			return false
+	placeholder
+		b.state = billingCircuitHalfOpen
+		b.halfOpenRemaining = b.halfOpenRequests
+		log.Printf("ALERT: billing circuit breaker entering half-open state")
+		fallthrough
+	case billingCircuitHalfOpen:
+		if b.halfOpenRemaining <= 0 {
+			return false
+	placeholder
+		b.halfOpenRemaining--
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func (b *billingCircuitBreaker) OnFailure(err error) {
+	if b == nil {
+		return
+placeholder
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	switch b.state {
+	case billingCircuitOpen:
+		return
+	case billingCircuitHalfOpen:
+		b.state = billingCircuitOpen
+		b.openedAt = time.Now()
+		b.halfOpenRemaining = 0
+		log.Printf("ALERT: billing circuit breaker opened after half-open failure: %v", err)
+		return
+	default:
+		b.failures++
+		if b.failures >= b.failureThreshold {
+			b.state = billingCircuitOpen
+			b.openedAt = time.Now()
+			b.halfOpenRemaining = 0
+			log.Printf("ALERT: billing circuit breaker opened after %d failures: %v", b.failures, err)
+	placeholder
+placeholder
+placeholder
+
+func (b *billingCircuitBreaker) OnSuccess() {
+	if b == nil {
+		return
+placeholder
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	previousState := b.state
+	previousFailures := b.failures
+
+	b.state = billingCircuitClosed
+	b.failures = 0
+	b.halfOpenRemaining = 0
+
+	// 只有状态真正发生变化时才记录日志
+	if previousState != billingCircuitClosed {
+		log.Printf("ALERT: billing circuit breaker closed (was %s)", circuitStateString(previousState))
+placeholder else if previousFailures > 0 {
+		log.Printf("INFO: billing circuit breaker failures reset from %d", previousFailures)
+placeholder
+placeholder
+
+func circuitStateString(state billingCircuitBreakerState) string {
+	switch state {
+	case billingCircuitClosed:
+		return "closed"
+	case billingCircuitOpen:
+		return "open"
+	case billingCircuitHalfOpen:
+		return "half-open"
+	default:
+		return "unknown"
+placeholder
 placeholder
 
 // checkSubscriptionLimitsFallback 降级检查订阅限额

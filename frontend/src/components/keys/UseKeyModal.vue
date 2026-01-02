@@ -85,7 +85,7 @@
                 </button>
               </div>
               <!-- Code Content -->
-              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto"><code v-html="file.highlighted"></code></pre>
+              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto"><code v-text="file.content"></code></pre>
             </div>
           </div>
         </div>
@@ -142,7 +142,6 @@ placeholder
 interface FileConfig {
   path: string
   content: string
-  highlighted: string
   hint?: string  // Optional hint message for this file
 placeholder
 
@@ -227,13 +226,6 @@ const platformNote = computed(() => {
 placeholder)
 
 // Syntax highlighting helpers
-const keyword = (text: string) => `<span class="text-purple-400">${textplaceholder</span>`
-const variable = (text: string) => `<span class="text-cyan-400">${textplaceholder</span>`
-const string = (text: string) => `<span class="text-green-400">${textplaceholder</span>`
-const operator = (text: string) => `<span class="text-yellow-400">${textplaceholder</span>`
-const comment = (text: string) => `<span class="text-gray-500">${textplaceholder</span>`
-const key = (text: string) => `<span class="text-blue-400">${textplaceholder</span>`
-
 // Generate file configs based on platform and active tab
 const currentFiles = computed((): FileConfig[] => {
   const baseUrl = props.baseUrl || window.location.origin
@@ -249,37 +241,29 @@ placeholder)
 function generateAnthropicFiles(baseUrl: string, apiKey: string): FileConfig[] {
   let path: string
   let content: string
-  let highlighted: string
 
   switch (activeTab.value) {
     case 'unix':
       path = 'Terminal'
       content = `export ANTHROPIC_BASE_URL="${baseUrlplaceholder"
 export ANTHROPIC_AUTH_TOKEN="${apiKeyplaceholder"`
-      highlighted = `${keyword('export')placeholder ${variable('ANTHROPIC_BASE_URL')placeholder${operator('=')placeholder${string(`"${baseUrlplaceholder"`)placeholder
-${keyword('export')placeholder ${variable('ANTHROPIC_AUTH_TOKEN')placeholder${operator('=')placeholder${string(`"${apiKeyplaceholder"`)placeholder`
       break
     case 'cmd':
       path = 'Command Prompt'
       content = `set ANTHROPIC_BASE_URL=${baseUrlplaceholder
 set ANTHROPIC_AUTH_TOKEN=${apiKeyplaceholder`
-      highlighted = `${keyword('set')placeholder ${variable('ANTHROPIC_BASE_URL')placeholder${operator('=')placeholder${baseUrlplaceholder
-${keyword('set')placeholder ${variable('ANTHROPIC_AUTH_TOKEN')placeholder${operator('=')placeholder${apiKeyplaceholder`
       break
     case 'powershell':
       path = 'PowerShell'
       content = `$env:ANTHROPIC_BASE_URL="${baseUrlplaceholder"
 $env:ANTHROPIC_AUTH_TOKEN="${apiKeyplaceholder"`
-      highlighted = `${keyword('$env:')placeholder${variable('ANTHROPIC_BASE_URL')placeholder${operator('=')placeholder${string(`"${baseUrlplaceholder"`)placeholder
-${keyword('$env:')placeholder${variable('ANTHROPIC_AUTH_TOKEN')placeholder${operator('=')placeholder${string(`"${apiKeyplaceholder"`)placeholder`
       break
     default:
       path = 'Terminal'
       content = ''
-      highlighted = ''
   placeholder
 
-  return [{ path, content, highlighted placeholder]
+  return [{ path, content placeholder]
 placeholder
 
 function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
@@ -301,40 +285,20 @@ base_url = "${baseUrlplaceholder"
 wire_api = "responses"
 requires_openai_auth = true`
 
-  const configHighlighted = `${key('model_provider')placeholder ${operator('=')placeholder ${string('"sub2api"')placeholder
-${key('model')placeholder ${operator('=')placeholder ${string('"gpt-5.2-codex"')placeholder
-${key('model_reasoning_effort')placeholder ${operator('=')placeholder ${string('"high"')placeholder
-${key('network_access')placeholder ${operator('=')placeholder ${string('"enabled"')placeholder
-${key('disable_response_storage')placeholder ${operator('=')placeholder ${keyword('true')placeholder
-${key('windows_wsl_setup_acknowledged')placeholder ${operator('=')placeholder ${keyword('true')placeholder
-${key('model_verbosity')placeholder ${operator('=')placeholder ${string('"high"')placeholder
-
-${comment('[model_providers.sub2api]')placeholder
-${key('name')placeholder ${operator('=')placeholder ${string('"sub2api"')placeholder
-${key('base_url')placeholder ${operator('=')placeholder ${string(`"${baseUrlplaceholder"`)placeholder
-${key('wire_api')placeholder ${operator('=')placeholder ${string('"responses"')placeholder
-${key('requires_openai_auth')placeholder ${operator('=')placeholder ${keyword('true')placeholder`
-
   // auth.json content
   const authContent = `{
   "OPENAI_API_KEY": "${apiKeyplaceholder"
-placeholder`
-
-  const authHighlighted = `{
-  ${key('"OPENAI_API_KEY"')placeholder: ${string(`"${apiKeyplaceholder"`)placeholder
 placeholder`
 
   return [
     {
       path: `${configDirplaceholder/config.toml`,
       content: configContent,
-      highlighted: configHighlighted,
       hint: t('keys.useKeyModal.openai.configTomlHint')
     placeholder,
     {
       path: `${configDirplaceholder/auth.json`,
-      content: authContent,
-      highlighted: authHighlighted
+      content: authContent
     placeholder
   ]
 placeholder

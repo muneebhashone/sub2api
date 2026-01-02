@@ -12,6 +12,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/Wei-Shaw/sub2api/internal/util/logredact"
 
 	"github.com/imroc/req/v3"
 )
@@ -54,7 +55,7 @@ placeholder
 		return "", fmt.Errorf("request failed: %w", err)
 placeholder
 
-	log.Printf("[OAuth] Step 1 Response - Status: %d, Body: %s", resp.StatusCode, resp.String())
+	log.Printf("[OAuth] Step 1 Response - Status: %d", resp.StatusCode)
 
 	if !resp.IsSuccessState() {
 		return "", fmt.Errorf("failed to get organizations: status %d, body: %s", resp.StatusCode, resp.String())
@@ -84,8 +85,8 @@ func (s *claudeOAuthService) GetAuthorizationCode(ctx context.Context, sessionKe
 		"code_challenge_method": "S256",
 placeholder
 
-	reqBodyJSON, _ := json.Marshal(reqBody)
 	log.Printf("[OAuth] Step 2: Getting authorization code from %s", authURL)
+	reqBodyJSON, _ := json.Marshal(logredact.RedactMap(reqBody))
 	log.Printf("[OAuth] Step 2 Request Body: %s", string(reqBodyJSON))
 
 	var result struct {
@@ -113,7 +114,7 @@ placeholder
 		return "", fmt.Errorf("request failed: %w", err)
 placeholder
 
-	log.Printf("[OAuth] Step 2 Response - Status: %d, Body: %s", resp.StatusCode, resp.String())
+	log.Printf("[OAuth] Step 2 Response - Status: %d, Body: %s", resp.StatusCode, logredact.RedactJSON(resp.Bytes()))
 
 	if !resp.IsSuccessState() {
 		return "", fmt.Errorf("failed to get authorization code: status %d, body: %s", resp.StatusCode, resp.String())
@@ -141,7 +142,7 @@ placeholder
 		fullCode = authCode + "#" + responseState
 placeholder
 
-	log.Printf("[OAuth] Step 2 SUCCESS - Got authorization code: %s...", prefix(authCode, 20))
+	log.Printf("[OAuth] Step 2 SUCCESS - Got authorization code")
 	return fullCode, nil
 placeholder
 
@@ -173,8 +174,8 @@ placeholder
 		reqBody["expires_in"] = 31536000 // 365 * 24 * 60 * 60 seconds
 placeholder
 
-	reqBodyJSON, _ := json.Marshal(reqBody)
 	log.Printf("[OAuth] Step 3: Exchanging code for token at %s", s.tokenURL)
+	reqBodyJSON, _ := json.Marshal(logredact.RedactMap(reqBody))
 	log.Printf("[OAuth] Step 3 Request Body: %s", string(reqBodyJSON))
 
 	var tokenResp oauth.TokenResponse
@@ -191,7 +192,7 @@ placeholder
 		return nil, fmt.Errorf("request failed: %w", err)
 placeholder
 
-	log.Printf("[OAuth] Step 3 Response - Status: %d, Body: %s", resp.StatusCode, resp.String())
+	log.Printf("[OAuth] Step 3 Response - Status: %d, Body: %s", resp.StatusCode, logredact.RedactJSON(resp.Bytes()))
 
 	if !resp.IsSuccessState() {
 		return nil, fmt.Errorf("token exchange failed: status %d, body: %s", resp.StatusCode, resp.String())

@@ -8,25 +8,38 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"log"
 )
 
-func NewProxyExitInfoProber() service.ProxyExitInfoProber {
-	return &proxyProbeService{ipInfoURL: defaultIPInfoURLplaceholder
+func NewProxyExitInfoProber(cfg *config.Config) service.ProxyExitInfoProber {
+	insecure := false
+	if cfg != nil {
+		insecure = cfg.Security.ProxyProbe.InsecureSkipVerify
+placeholder
+	if insecure {
+		log.Printf("[ProxyProbe] Warning: TLS verification is disabled for proxy probing.")
+placeholder
+	return &proxyProbeService{
+		ipInfoURL:          defaultIPInfoURL,
+		insecureSkipVerify: insecure,
+placeholder
 placeholder
 
 const defaultIPInfoURL = "https://ipinfo.io/json"
 
 type proxyProbeService struct {
-	ipInfoURL string
+	ipInfoURL          string
+	insecureSkipVerify bool
 placeholder
 
 func (s *proxyProbeService) ProbeProxy(ctx context.Context, proxyURL string) (*service.ProxyExitInfo, int64, error) {
 	client, err := httpclient.GetClient(httpclient.Options{
 		ProxyURL:           proxyURL,
 		Timeout:            15 * time.Second,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: s.insecureSkipVerify,
 		ProxyStrict:        true,
 placeholder)
 	if err != nil {

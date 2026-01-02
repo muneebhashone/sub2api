@@ -277,6 +277,14 @@ placeholder)
 // ==================== Lifecycle ====================
 
 onMounted(async () => {
+  const expiredFlag = sessionStorage.getItem('auth_expired')
+  if (expiredFlag) {
+    sessionStorage.removeItem('auth_expired')
+    const message = t('auth.reloginRequired')
+    errorMessage.value = message
+    appStore.showWarning(message)
+  placeholder
+
   try {
     const settings = await getPublicSettings()
     turnstileEnabled.value = settings.turnstile_enabled
