@@ -327,7 +327,7 @@ placeholder
 	return &claims, nil
 placeholder
 
-// ExtractUserInfo extracts user information from ID Token claims
+// UserInfo extracts user information from ID Token claims
 type UserInfo struct {
 	Email            string
 	ChatGPTAccountID string

@@ -79,7 +79,7 @@ type ReleaseInfo struct {
 	Name        string  `json:"name"`
 	Body        string  `json:"body"`
 	PublishedAt string  `json:"published_at"`
-	HtmlURL     string  `json:"html_url"`
+	HTMLURL     string  `json:"html_url"`
 	Assets      []Asset `json:"assets,omitempty"`
 placeholder
 
@@ -96,13 +96,13 @@ type GitHubRelease struct {
 	Name        string        `json:"name"`
 	Body        string        `json:"body"`
 	PublishedAt string        `json:"published_at"`
-	HtmlUrl     string        `json:"html_url"`
+	HTMLURL     string        `json:"html_url"`
 	Assets      []GitHubAsset `json:"assets"`
 placeholder
 
 type GitHubAsset struct {
 	Name               string `json:"name"`
-	BrowserDownloadUrl string `json:"browser_download_url"`
+	BrowserDownloadURL string `json:"browser_download_url"`
 	Size               int64  `json:"size"`
 placeholder
 
@@ -285,7 +285,7 @@ placeholder
 	for i, a := range release.Assets {
 		assets[i] = Asset{
 			Name:        a.Name,
-			DownloadURL: a.BrowserDownloadUrl,
+			DownloadURL: a.BrowserDownloadURL,
 			Size:        a.Size,
 	placeholder
 placeholder
@@ -298,7 +298,7 @@ placeholder
 			Name:        release.Name,
 			Body:        release.Body,
 			PublishedAt: release.PublishedAt,
-			HtmlURL:     release.HtmlUrl,
+			HTMLURL:     release.HTMLURL,
 			Assets:      assets,
 	placeholder,
 		Cached:    false,

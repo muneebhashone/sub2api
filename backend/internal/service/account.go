@@ -206,7 +206,7 @@ placeholder
 placeholder
 
 func (a *Account) GetBaseURL() string {
-	if a.Type != AccountTypeApiKey {
+	if a.Type != AccountTypeAPIKey {
 		return ""
 placeholder
 	baseURL := a.GetCredential("base_url")
@@ -229,7 +229,7 @@ placeholder
 placeholder
 
 func (a *Account) IsCustomErrorCodesEnabled() bool {
-	if a.Type != AccountTypeApiKey || a.Credentials == nil {
+	if a.Type != AccountTypeAPIKey || a.Credentials == nil {
 		return false
 placeholder
 	if v, ok := a.Credentials["custom_error_codes_enabled"]; ok {
@@ -300,15 +300,15 @@ func (a *Account) IsOpenAIOAuth() bool {
 	return a.IsOpenAI() && a.Type == AccountTypeOAuth
 placeholder
 
-func (a *Account) IsOpenAIApiKey() bool {
-	return a.IsOpenAI() && a.Type == AccountTypeApiKey
+func (a *Account) IsOpenAIAPIKey() bool {
+	return a.IsOpenAI() && a.Type == AccountTypeAPIKey
 placeholder
 
 func (a *Account) GetOpenAIBaseURL() string {
 	if !a.IsOpenAI() {
 		return ""
 placeholder
-	if a.Type == AccountTypeApiKey {
+	if a.Type == AccountTypeAPIKey {
 		baseURL := a.GetCredential("base_url")
 		if baseURL != "" {
 			return baseURL
@@ -338,8 +338,8 @@ placeholder
 	return a.GetCredential("id_token")
 placeholder
 
-func (a *Account) GetOpenAIApiKey() string {
-	if !a.IsOpenAIApiKey() {
+func (a *Account) GetOpenAIAPIKey() string {
+	if !a.IsOpenAIAPIKey() {
 		return ""
 placeholder
 	return a.GetCredential("api_key")

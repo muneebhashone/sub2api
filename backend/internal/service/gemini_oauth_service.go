@@ -251,7 +251,7 @@ placeholder
 	return TierGoogleOneUnknown
 placeholder
 
-// fetchGoogleOneTier fetches Google One tier from Drive API
+// FetchGoogleOneTier fetches Google One tier from Drive API
 func (s *GeminiOAuthService) FetchGoogleOneTier(ctx context.Context, accessToken, proxyURL string) (string, *geminicli.DriveStorageInfo, error) {
 	driveClient := geminicli.NewDriveClient()
 

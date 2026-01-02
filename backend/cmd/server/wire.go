@@ -71,7 +71,12 @@ func provideCleanup(
 	geminiOAuth *service.GeminiOAuthService,
 	antigravityOAuth *service.AntigravityOAuthService,
 	antigravityQuota *service.AntigravityQuotaRefresher,
+	opsMetricsCollector *service.OpsMetricsCollector,
+	opsAlertService *service.OpsAlertService,
 ) func() {
+	if opsAlertService != nil {
+		opsAlertService.Start()
+placeholder
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -81,6 +86,14 @@ func provideCleanup(
 			name string
 			fn   func() error
 	placeholder{
+			{"OpsMetricsCollector", func() error {
+				opsMetricsCollector.Stop()
+				return nil
+	placeholder
+			{"OpsAlertService", func() error {
+				opsAlertService.Stop()
+				return nil
+	placeholder
 			{"TokenRefreshService", func() error {
 				tokenRefresh.Stop()
 				return nil
