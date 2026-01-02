@@ -93,7 +93,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
+        if: ${{ env.DOCKERHUB_USERNAME != '' placeholderplaceholder
         uses: docker/login-action@v3
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
           password: ${{ secrets.DOCKERHUB_TOKEN placeholderplaceholder
@@ -144,11 +147,14 @@ jobs:
           GITHUB_REPO_OWNER: ${{ github.repository_owner placeholderplaceholder
           GITHUB_REPO_OWNER_LOWER: ${{ steps.lowercase.outputs.owner placeholderplaceholder
           GITHUB_REPO_NAME: ${{ github.event.repository.name placeholderplaceholder
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME || 'skip' placeholderplaceholder
 
       # Update DockerHub description
       - name: Update DockerHub description
+        if: ${{ env.DOCKERHUB_USERNAME != '' placeholderplaceholder
         uses: peter-evans/dockerhub-description@v4
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
           password: ${{ secrets.DOCKERHUB_TOKEN placeholderplaceholder
@@ -161,6 +167,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN placeholderplaceholder
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID placeholderplaceholder
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder
         continue-on-error: true
         run: |
           # 检查必要的环境变量
@@ -172,7 +179,6 @@ jobs:
           TAG_NAME=${GITHUB_REF#refs/tags/placeholder
           VERSION=${TAG_NAME#vplaceholder
           REPO="${{ github.repository placeholderplaceholder"
-          DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME placeholderplaceholder/sub2api"
           GHCR_IMAGE="ghcr.io/${REPO,,placeholder"  # ${,,placeholder converts to lowercase
 
           # 获取 tag message 内容
@@ -194,14 +200,20 @@ jobs:
 
           MESSAGE+="🐳 *Docker 部署:*"$'\n'
           MESSAGE+="\`\`\`bash"$'\n'
-          MESSAGE+="# Docker Hub"$'\n'
-          MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
-          MESSAGE+="# GitHub Container Registry"$'\n'
+          # 根据是否配置 DockerHub 动态生成
+          if [ -n "$DOCKERHUB_USERNAME" ]; then
+            DOCKER_IMAGE="${DOCKERHUB_USERNAMEplaceholder/sub2api"
+            MESSAGE+="# Docker Hub"$'\n'
+            MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
+            MESSAGE+="# GitHub Container Registry"$'\n'
+          fi
           MESSAGE+="docker pull ${GHCR_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
           MESSAGE+="\`\`\`"$'\n'$'\n'
           MESSAGE+="🔗 *相关链接:*"$'\n'
           MESSAGE+="• [GitHub Release](https://github.com/${REPOplaceholder/releases/tag/${TAG_NAMEplaceholder)"$'\n'
-          MESSAGE+="• [Docker Hub](https://hub.docker.com/r/${DOCKER_IMAGEplaceholder)"$'\n'
+          if [ -n "$DOCKERHUB_USERNAME" ]; then
+            MESSAGE+="• [Docker Hub](https://hub.docker.com/r/${DOCKER_IMAGEplaceholder)"$'\n'
+          fi
           MESSAGE+="• [GitHub Packages](https://github.com/${REPOplaceholder/pkgs/container/sub2api)"$'\n'$'\n'
           MESSAGE+="#Sub2API #Release #${TAG_NAME//./_placeholder"
 
