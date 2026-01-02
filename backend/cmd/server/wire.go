@@ -70,7 +70,6 @@ func provideCleanup(
 	openaiOAuth *service.OpenAIOAuthService,
 	geminiOAuth *service.GeminiOAuthService,
 	antigravityOAuth *service.AntigravityOAuthService,
-	antigravityQuota *service.AntigravityQuotaRefresher,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -111,10 +110,6 @@ func provideCleanup(
 	placeholder
 			{"AntigravityOAuthService", func() error {
 				antigravityOAuth.Stop()
-				return nil
-	placeholder
-			{"AntigravityQuotaRefresher", func() error {
-				antigravityQuota.Stop()
 				return nil
 	placeholder
 			{"Redis", func() error {
