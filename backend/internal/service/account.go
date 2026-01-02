@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -76,6 +77,36 @@ placeholder
 
 func (a *Account) IsGemini() bool {
 	return a.Platform == PlatformGemini
+placeholder
+
+func (a *Account) GeminiOAuthType() string {
+	if a.Platform != PlatformGemini || a.Type != AccountTypeOAuth {
+		return ""
+placeholder
+	oauthType := strings.TrimSpace(a.GetCredential("oauth_type"))
+	if oauthType == "" && strings.TrimSpace(a.GetCredential("project_id")) != "" {
+		return "code_assist"
+placeholder
+	return oauthType
+placeholder
+
+func (a *Account) GeminiTierID() string {
+	tierID := strings.TrimSpace(a.GetCredential("tier_id"))
+	if tierID == "" {
+		return ""
+placeholder
+	return strings.ToUpper(tierID)
+placeholder
+
+func (a *Account) IsGeminiCodeAssist() bool {
+	if a.Platform != PlatformGemini || a.Type != AccountTypeOAuth {
+		return false
+placeholder
+	oauthType := a.GeminiOAuthType()
+	if oauthType == "" {
+		return strings.TrimSpace(a.GetCredential("project_id")) != ""
+placeholder
+	return oauthType == "code_assist"
 placeholder
 
 func (a *Account) CanGetUsage() bool {

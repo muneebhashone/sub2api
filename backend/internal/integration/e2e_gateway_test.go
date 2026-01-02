@@ -57,6 +57,7 @@ var geminiModels = []string{
 	"gemini-2.5-flash-lite",
 	"gemini-3-flash",
 	"gemini-3-pro-low",
+	"gemini-3-pro-high",
 placeholder
 
 func TestMain(m *testing.M) {
@@ -641,6 +642,37 @@ placeholder
 	t.Logf("✅ thinking 模式工具调用测试通过, id=%v", result["id"])
 placeholder
 
+// TestClaudeMessagesWithGeminiModel 测试在 Claude 端点使用 Gemini 模型
+// 验证：通过 /v1/messages 端点传入 gemini 模型名的场景（含前缀映射）
+// 仅在 Antigravity 模式下运行（ENDPOINT_PREFIX="/antigravity"）
+func TestClaudeMessagesWithGeminiModel(t *testing.T) {
+	if endpointPrefix != "/antigravity" {
+		t.Skip("仅在 Antigravity 模式下运行")
+placeholder
+
+	// 测试通过 Claude 端点调用 Gemini 模型
+	geminiViaClaude := []string{
+		"gemini-3-flash",       // 直接支持
+		"gemini-3-pro-low",     // 直接支持
+		"gemini-3-pro-high",    // 直接支持
+		"gemini-3-pro",         // 前缀映射 -> gemini-3-pro-high
+		"gemini-3-pro-preview", // 前缀映射 -> gemini-3-pro-high
+placeholder
+
+	for i, model := range geminiViaClaude {
+		if i > 0 {
+			time.Sleep(testInterval)
+	placeholder
+		t.Run(model+"_通过Claude端点", func(t *testing.T) {
+			testClaudeMessage(t, model, false)
+	placeholder)
+		time.Sleep(testInterval)
+		t.Run(model+"_通过Claude端点_流式", func(t *testing.T) {
+			testClaudeMessage(t, model, true)
+	placeholder)
+placeholder
+placeholder
+
 // TestClaudeMessagesWithNoSignature 测试历史 thinking block 不带 signature 的场景
 // 验证：Gemini 模型接受没有 signature 的 thinking block
 func TestClaudeMessagesWithNoSignature(t *testing.T) {
@@ -737,4 +769,31 @@ placeholder
 		t.Errorf("期望 type=message, 得到 %v", result["type"])
 placeholder
 	t.Logf("✅ 无 signature thinking 处理测试通过, id=%v", result["id"])
+placeholder
+
+// TestGeminiEndpointWithClaudeModel 测试通过 Gemini 端点调用 Claude 模型
+// 仅在 Antigravity 模式下运行（ENDPOINT_PREFIX="/antigravity"）
+func TestGeminiEndpointWithClaudeModel(t *testing.T) {
+	if endpointPrefix != "/antigravity" {
+		t.Skip("仅在 Antigravity 模式下运行")
+placeholder
+
+	// 测试通过 Gemini 端点调用 Claude 模型
+	claudeViaGemini := []string{
+		"claude-sonnet-4-5",
+		"claude-opus-4-5-thinking",
+placeholder
+
+	for i, model := range claudeViaGemini {
+		if i > 0 {
+			time.Sleep(testInterval)
+	placeholder
+		t.Run(model+"_通过Gemini端点", func(t *testing.T) {
+			testGeminiGenerate(t, model, false)
+	placeholder)
+		time.Sleep(testInterval)
+		t.Run(model+"_通过Gemini端点_流式", func(t *testing.T) {
+			testGeminiGenerate(t, model, true)
+	placeholder)
+placeholder
 placeholder
