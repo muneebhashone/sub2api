@@ -1750,10 +1750,9 @@ placeholder
 	body := parsed.Body
 	reqModel := parsed.Model
 
-	// Antigravity 账户不支持 count_tokens 转发，返回估算值
-	// 参考 Antigravity-Manager 和 proxycast 实现
+	// Antigravity 账户不支持 count_tokens 转发，直接返回空值
 	if account.Platform == PlatformAntigravity {
-		c.JSON(http.StatusOK, gin.H{"input_tokens": 100placeholder)
+		c.JSON(http.StatusOK, gin.H{"input_tokens": 0placeholder)
 		return nil
 placeholder
 

@@ -467,8 +467,19 @@ placeholder
 placeholder
 
 	switch action {
-	case "generateContent", "streamGenerateContent", "countTokens":
+	case "generateContent", "streamGenerateContent":
 		// ok
+	case "countTokens":
+		// 直接返回空值，不透传上游
+		c.JSON(http.StatusOK, map[string]any{"totalTokens": 0placeholder)
+		return &ForwardResult{
+			RequestID:    "",
+			Usage:        ClaudeUsage{placeholder,
+			Model:        originalModel,
+			Stream:       false,
+			Duration:     time.Since(time.Now()),
+			FirstTokenMs: nil,
+	placeholder, nil
 	default:
 		return nil, s.writeGoogleError(c, http.StatusNotFound, "Unsupported action: "+action)
 placeholder
@@ -523,18 +534,6 @@ placeholder
 				sleepAntigravityBackoff(attempt)
 				continue
 		placeholder
-			if action == "countTokens" {
-				estimated := estimateGeminiCountTokens(body)
-				c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
-				return &ForwardResult{
-					RequestID:    "",
-					Usage:        ClaudeUsage{placeholder,
-					Model:        originalModel,
-					Stream:       false,
-					Duration:     time.Since(startTime),
-					FirstTokenMs: nil,
-			placeholder, nil
-		placeholder
 			return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries")
 	placeholder
 
@@ -550,18 +549,6 @@ placeholder
 			// 所有重试都失败，标记限流状态
 			if resp.StatusCode == 429 {
 				s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
-		placeholder
-			if action == "countTokens" {
-				estimated := estimateGeminiCountTokens(body)
-				c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
-				return &ForwardResult{
-					RequestID:    "",
-					Usage:        ClaudeUsage{placeholder,
-					Model:        originalModel,
-					Stream:       false,
-					Duration:     time.Since(startTime),
-					FirstTokenMs: nil,
-			placeholder, nil
 		placeholder
 			resp = &http.Response{
 				StatusCode: resp.StatusCode,
@@ -584,19 +571,6 @@ placeholder
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 		s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
-
-		if action == "countTokens" {
-			estimated := estimateGeminiCountTokens(body)
-			c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
-			return &ForwardResult{
-				RequestID:    requestID,
-				Usage:        ClaudeUsage{placeholder,
-				Model:        originalModel,
-				Stream:       false,
-				Duration:     time.Since(startTime),
-				FirstTokenMs: nil,
-		placeholder, nil
-	placeholder
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
