@@ -345,7 +345,7 @@ placeholder
 		Default struct {
 			UserConcurrency int     `yaml:"user_concurrency"`
 			UserBalance     float64 `yaml:"user_balance"`
-			APIKeyPrefix    string  `yaml:"api_key_prefix"`
+			ApiKeyPrefix    string  `yaml:"api_key_prefix"`
 			RateMultiplier  float64 `yaml:"rate_multiplier"`
 	placeholder `yaml:"default"`
 		RateLimit struct {
@@ -367,12 +367,12 @@ placeholder{
 		Default: struct {
 			UserConcurrency int     `yaml:"user_concurrency"`
 			UserBalance     float64 `yaml:"user_balance"`
-			APIKeyPrefix    string  `yaml:"api_key_prefix"`
+			ApiKeyPrefix    string  `yaml:"api_key_prefix"`
 			RateMultiplier  float64 `yaml:"rate_multiplier"`
 	placeholder{
 			UserConcurrency: 5,
 			UserBalance:     0,
-			APIKeyPrefix:    "sk-",
+			ApiKeyPrefix:    "sk-",
 			RateMultiplier:  1.0,
 	placeholder,
 		RateLimit: struct {

@@ -30,7 +30,7 @@ type UserQuery struct {
 	order                     []user.OrderOption
 	inters                    []Interceptor
 	predicates                []predicate.User
-	withAPIKeys               *APIKeyQuery
+	withAPIKeys               *ApiKeyQuery
 	withRedeemCodes           *RedeemCodeQuery
 	withSubscriptions         *UserSubscriptionQuery
 	withAssignedSubscriptions *UserSubscriptionQuery
@@ -75,8 +75,8 @@ func (_q *UserQuery) Order(o ...user.OrderOption) *UserQuery {
 placeholder
 
 // QueryAPIKeys chains the current query on the "api_keys" edge.
-func (_q *UserQuery) QueryAPIKeys() *APIKeyQuery {
-	query := (&APIKeyClient{config: _q.configplaceholder).Query()
+func (_q *UserQuery) QueryAPIKeys() *ApiKeyQuery {
+	query := (&ApiKeyClient{config: _q.configplaceholder).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -458,8 +458,8 @@ placeholder
 
 // WithAPIKeys tells the query-builder to eager-load the nodes that are connected to
 // the "api_keys" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *UserQuery) WithAPIKeys(opts ...func(*APIKeyQuery)) *UserQuery {
-	query := (&APIKeyClient{config: _q.configplaceholder).Query()
+func (_q *UserQuery) WithAPIKeys(opts ...func(*ApiKeyQuery)) *UserQuery {
+	query := (&ApiKeyClient{config: _q.configplaceholder).Query()
 	for _, opt := range opts {
 		opt(query)
 placeholder
@@ -653,8 +653,8 @@ placeholder
 placeholder
 	if query := _q.withAPIKeys; query != nil {
 		if err := _q.loadAPIKeys(ctx, query, nodes,
-			func(n *User) { n.Edges.APIKeys = []*APIKey{placeholder placeholder,
-			func(n *User, e *APIKey) { n.Edges.APIKeys = append(n.Edges.APIKeys, e) placeholder); err != nil {
+			func(n *User) { n.Edges.APIKeys = []*ApiKey{placeholder placeholder,
+			func(n *User, e *ApiKey) { n.Edges.APIKeys = append(n.Edges.APIKeys, e) placeholder); err != nil {
 			return nil, err
 	placeholder
 placeholder
@@ -712,7 +712,7 @@ placeholder
 	return nodes, nil
 placeholder
 
-func (_q *UserQuery) loadAPIKeys(ctx context.Context, query *APIKeyQuery, nodes []*User, init func(*User), assign func(*User, *APIKey)) error {
+func (_q *UserQuery) loadAPIKeys(ctx context.Context, query *ApiKeyQuery, nodes []*User, init func(*User), assign func(*User, *ApiKey)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int64]*User)
 	for i := range nodes {
@@ -725,7 +725,7 @@ placeholder
 	if len(query.ctx.Fields) > 0 {
 		query.ctx.AppendFieldOnce(apikey.FieldUserID)
 placeholder
-	query.Where(predicate.APIKey(func(s *sql.Selector) {
+	query.Where(predicate.ApiKey(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.APIKeysColumn), fks...))
 placeholder))
 	neighbors, err := query.All(ctx)

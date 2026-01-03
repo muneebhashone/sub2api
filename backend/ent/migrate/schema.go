@@ -9,60 +9,6 @@ import (
 )
 
 var (
-	// APIKeysColumns holds the columns for the "api_keys" table.
-	APIKeysColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
-		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
-		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
-		{Name: "key", Type: field.TypeString, Unique: true, Size: 128placeholder,
-		{Name: "name", Type: field.TypeString, Size: 100placeholder,
-		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
-		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
-		{Name: "user_id", Type: field.TypeInt64placeholder,
-placeholder
-	// APIKeysTable holds the schema information for the "api_keys" table.
-	APIKeysTable = &schema.Table{
-		Name:       "api_keys",
-		Columns:    APIKeysColumns,
-		PrimaryKey: []*schema.Column{APIKeysColumns[0]placeholder,
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "api_keys_groups_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[7]placeholder,
-				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
-				OnDelete:   schema.SetNull,
-		placeholder,
-			{
-				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[8]placeholder,
-				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
-				OnDelete:   schema.NoAction,
-		placeholder,
-	placeholder,
-		Indexes: []*schema.Index{
-			{
-				Name:    "apikey_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[8]placeholder,
-		placeholder,
-			{
-				Name:    "apikey_group_id",
-				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[7]placeholder,
-		placeholder,
-			{
-				Name:    "apikey_status",
-				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[6]placeholder,
-		placeholder,
-			{
-				Name:    "apikey_deleted_at",
-				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[3]placeholder,
-		placeholder,
-	placeholder,
-placeholder
 	// AccountsColumns holds the columns for the "accounts" table.
 	AccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -195,6 +141,60 @@ placeholder
 				Name:    "accountgroup_priority",
 				Unique:  false,
 				Columns: []*schema.Column{AccountGroupsColumns[0]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// APIKeysColumns holds the columns for the "api_keys" table.
+	APIKeysColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "key", Type: field.TypeString, Unique: true, Size: 128placeholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
+		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+placeholder
+	// APIKeysTable holds the schema information for the "api_keys" table.
+	APIKeysTable = &schema.Table{
+		Name:       "api_keys",
+		Columns:    APIKeysColumns,
+		PrimaryKey: []*schema.Column{APIKeysColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "api_keys_groups_api_keys",
+				Columns:    []*schema.Column{APIKeysColumns[7]placeholder,
+				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
+				OnDelete:   schema.SetNull,
+		placeholder,
+			{
+				Symbol:     "api_keys_users_api_keys",
+				Columns:    []*schema.Column{APIKeysColumns[8]placeholder,
+				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "apikey_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[8]placeholder,
+		placeholder,
+			{
+				Name:    "apikey_group_id",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[7]placeholder,
+		placeholder,
+			{
+				Name:    "apikey_status",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[6]placeholder,
+		placeholder,
+			{
+				Name:    "apikey_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[3]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -368,8 +368,8 @@ placeholder
 		{Name: "duration_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "first_token_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
-		{Name: "api_key_id", Type: field.TypeInt64placeholder,
 		{Name: "account_id", Type: field.TypeInt64placeholder,
+		{Name: "api_key_id", Type: field.TypeInt64placeholder,
 		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "user_id", Type: field.TypeInt64placeholder,
 		{Name: "subscription_id", Type: field.TypeInt64, Nullable: trueplaceholder,
@@ -381,15 +381,15 @@ placeholder
 		PrimaryKey: []*schema.Column{UsageLogsColumns[0]placeholder,
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "usage_logs_api_keys_usage_logs",
+				Symbol:     "usage_logs_accounts_usage_logs",
 				Columns:    []*schema.Column{UsageLogsColumns[21]placeholder,
-				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
+				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
-				Symbol:     "usage_logs_accounts_usage_logs",
+				Symbol:     "usage_logs_api_keys_usage_logs",
 				Columns:    []*schema.Column{UsageLogsColumns[22]placeholder,
-				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
+				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
@@ -420,12 +420,12 @@ placeholder
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[21]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[22]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[22]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[21]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
@@ -460,7 +460,7 @@ placeholder
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[21], UsageLogsColumns[20]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[22], UsageLogsColumns[20]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -702,9 +702,9 @@ placeholder
 placeholder
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		APIKeysTable,
 		AccountsTable,
 		AccountGroupsTable,
+		APIKeysTable,
 		GroupsTable,
 		ProxiesTable,
 		RedeemCodesTable,
@@ -719,11 +719,6 @@ placeholder
 )
 
 func init() {
-	APIKeysTable.ForeignKeys[0].RefTable = GroupsTable
-	APIKeysTable.ForeignKeys[1].RefTable = UsersTable
-	APIKeysTable.Annotation = &entsql.Annotation{
-		Table: "api_keys",
-placeholder
 	AccountsTable.ForeignKeys[0].RefTable = ProxiesTable
 	AccountsTable.Annotation = &entsql.Annotation{
 		Table: "accounts",
@@ -732,6 +727,11 @@ placeholder
 	AccountGroupsTable.ForeignKeys[1].RefTable = GroupsTable
 	AccountGroupsTable.Annotation = &entsql.Annotation{
 		Table: "account_groups",
+placeholder
+	APIKeysTable.ForeignKeys[0].RefTable = GroupsTable
+	APIKeysTable.ForeignKeys[1].RefTable = UsersTable
+	APIKeysTable.Annotation = &entsql.Annotation{
+		Table: "api_keys",
 placeholder
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",
@@ -747,8 +747,8 @@ placeholder
 	SettingsTable.Annotation = &entsql.Annotation{
 		Table: "settings",
 placeholder
-	UsageLogsTable.ForeignKeys[0].RefTable = APIKeysTable
-	UsageLogsTable.ForeignKeys[1].RefTable = AccountsTable
+	UsageLogsTable.ForeignKeys[0].RefTable = AccountsTable
+	UsageLogsTable.ForeignKeys[1].RefTable = APIKeysTable
 	UsageLogsTable.ForeignKeys[2].RefTable = GroupsTable
 	UsageLogsTable.ForeignKeys[3].RefTable = UsersTable
 	UsageLogsTable.ForeignKeys[4].RefTable = UserSubscriptionsTable

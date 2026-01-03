@@ -16,53 +16,53 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeAPIKeyRepo struct {
-	getByKey func(ctx context.Context, key string) (*service.APIKey, error)
+type fakeApiKeyRepo struct {
+	getByKey func(ctx context.Context, key string) (*service.ApiKey, error)
 placeholder
 
-func (f fakeAPIKeyRepo) Create(ctx context.Context, key *service.APIKey) error {
+func (f fakeApiKeyRepo) Create(ctx context.Context, key *service.ApiKey) error {
 	return errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) GetByID(ctx context.Context, id int64) (*service.APIKey, error) {
+func (f fakeApiKeyRepo) GetByID(ctx context.Context, id int64) (*service.ApiKey, error) {
 	return nil, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) GetOwnerID(ctx context.Context, id int64) (int64, error) {
+func (f fakeApiKeyRepo) GetOwnerID(ctx context.Context, id int64) (int64, error) {
 	return 0, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) GetByKey(ctx context.Context, key string) (*service.APIKey, error) {
+func (f fakeApiKeyRepo) GetByKey(ctx context.Context, key string) (*service.ApiKey, error) {
 	if f.getByKey == nil {
 		return nil, errors.New("unexpected call")
 placeholder
 	return f.getByKey(ctx, key)
 placeholder
-func (f fakeAPIKeyRepo) Update(ctx context.Context, key *service.APIKey) error {
+func (f fakeApiKeyRepo) Update(ctx context.Context, key *service.ApiKey) error {
 	return errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) Delete(ctx context.Context, id int64) error {
+func (f fakeApiKeyRepo) Delete(ctx context.Context, id int64) error {
 	return errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) ListByUserID(ctx context.Context, userID int64, params pagination.PaginationParams) ([]service.APIKey, *pagination.PaginationResult, error) {
+func (f fakeApiKeyRepo) ListByUserID(ctx context.Context, userID int64, params pagination.PaginationParams) ([]service.ApiKey, *pagination.PaginationResult, error) {
 	return nil, nil, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) VerifyOwnership(ctx context.Context, userID int64, apiKeyIDs []int64) ([]int64, error) {
+func (f fakeApiKeyRepo) VerifyOwnership(ctx context.Context, userID int64, apiKeyIDs []int64) ([]int64, error) {
 	return nil, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) CountByUserID(ctx context.Context, userID int64) (int64, error) {
+func (f fakeApiKeyRepo) CountByUserID(ctx context.Context, userID int64) (int64, error) {
 	return 0, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) ExistsByKey(ctx context.Context, key string) (bool, error) {
+func (f fakeApiKeyRepo) ExistsByKey(ctx context.Context, key string) (bool, error) {
 	return false, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) ListByGroupID(ctx context.Context, groupID int64, params pagination.PaginationParams) ([]service.APIKey, *pagination.PaginationResult, error) {
+func (f fakeApiKeyRepo) ListByGroupID(ctx context.Context, groupID int64, params pagination.PaginationParams) ([]service.ApiKey, *pagination.PaginationResult, error) {
 	return nil, nil, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) SearchAPIKeys(ctx context.Context, userID int64, keyword string, limit int) ([]service.APIKey, error) {
+func (f fakeApiKeyRepo) SearchApiKeys(ctx context.Context, userID int64, keyword string, limit int) ([]service.ApiKey, error) {
 	return nil, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) ClearGroupIDByGroupID(ctx context.Context, groupID int64) (int64, error) {
+func (f fakeApiKeyRepo) ClearGroupIDByGroupID(ctx context.Context, groupID int64) (int64, error) {
 	return 0, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) CountByGroupID(ctx context.Context, groupID int64) (int64, error) {
+func (f fakeApiKeyRepo) CountByGroupID(ctx context.Context, groupID int64) (int64, error) {
 	return 0, errors.New("not implemented")
 placeholder
 
@@ -74,8 +74,8 @@ type googleErrorResponse struct {
 placeholder `json:"error"`
 placeholder
 
-func newTestAPIKeyService(repo service.APIKeyRepository) *service.APIKeyService {
-	return service.NewAPIKeyService(
+func newTestApiKeyService(repo service.ApiKeyRepository) *service.ApiKeyService {
+	return service.NewApiKeyService(
 		repo,
 		nil, // userRepo (unused in GetByKey)
 		nil, // groupRepo
@@ -85,16 +85,16 @@ func newTestAPIKeyService(repo service.APIKeyRepository) *service.APIKeyService 
 	)
 placeholder
 
-func TestAPIKeyAuthWithSubscriptionGoogle_MissingKey(t *testing.T) {
+func TestApiKeyAuthWithSubscriptionGoogle_MissingKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	apiKeyService := newTestAPIKeyService(fakeAPIKeyRepo{
-		getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
+	apiKeyService := newTestApiKeyService(fakeApiKeyRepo{
+		getByKey: func(ctx context.Context, key string) (*service.ApiKey, error) {
 			return nil, errors.New("should not be called")
 	placeholder,
 placeholder)
-	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
+	r.Use(ApiKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
 	r.GET("/v1beta/test", func(c *gin.Context) { c.JSON(200, gin.H{"ok": trueplaceholder) placeholder)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1beta/test", nil)
@@ -109,16 +109,16 @@ placeholder)
 	require.Equal(t, "UNAUTHENTICATED", resp.Error.Status)
 placeholder
 
-func TestAPIKeyAuthWithSubscriptionGoogle_InvalidKey(t *testing.T) {
+func TestApiKeyAuthWithSubscriptionGoogle_InvalidKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	apiKeyService := newTestAPIKeyService(fakeAPIKeyRepo{
-		getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
-			return nil, service.ErrAPIKeyNotFound
+	apiKeyService := newTestApiKeyService(fakeApiKeyRepo{
+		getByKey: func(ctx context.Context, key string) (*service.ApiKey, error) {
+			return nil, service.ErrApiKeyNotFound
 	placeholder,
 placeholder)
-	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
+	r.Use(ApiKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
 	r.GET("/v1beta/test", func(c *gin.Context) { c.JSON(200, gin.H{"ok": trueplaceholder) placeholder)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1beta/test", nil)
@@ -134,16 +134,16 @@ placeholder)
 	require.Equal(t, "UNAUTHENTICATED", resp.Error.Status)
 placeholder
 
-func TestAPIKeyAuthWithSubscriptionGoogle_RepoError(t *testing.T) {
+func TestApiKeyAuthWithSubscriptionGoogle_RepoError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	apiKeyService := newTestAPIKeyService(fakeAPIKeyRepo{
-		getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
+	apiKeyService := newTestApiKeyService(fakeApiKeyRepo{
+		getByKey: func(ctx context.Context, key string) (*service.ApiKey, error) {
 			return nil, errors.New("db down")
 	placeholder,
 placeholder)
-	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
+	r.Use(ApiKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
 	r.GET("/v1beta/test", func(c *gin.Context) { c.JSON(200, gin.H{"ok": trueplaceholder) placeholder)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1beta/test", nil)
@@ -159,13 +159,13 @@ placeholder)
 	require.Equal(t, "INTERNAL", resp.Error.Status)
 placeholder
 
-func TestAPIKeyAuthWithSubscriptionGoogle_DisabledKey(t *testing.T) {
+func TestApiKeyAuthWithSubscriptionGoogle_DisabledKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	apiKeyService := newTestAPIKeyService(fakeAPIKeyRepo{
-		getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
-			return &service.APIKey{
+	apiKeyService := newTestApiKeyService(fakeApiKeyRepo{
+		getByKey: func(ctx context.Context, key string) (*service.ApiKey, error) {
+			return &service.ApiKey{
 				ID:     1,
 				Key:    key,
 				Status: service.StatusDisabled,
@@ -176,7 +176,7 @@ func TestAPIKeyAuthWithSubscriptionGoogle_DisabledKey(t *testing.T) {
 		placeholder, nil
 	placeholder,
 placeholder)
-	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
+	r.Use(ApiKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
 	r.GET("/v1beta/test", func(c *gin.Context) { c.JSON(200, gin.H{"ok": trueplaceholder) placeholder)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1beta/test", nil)
@@ -192,13 +192,13 @@ placeholder)
 	require.Equal(t, "UNAUTHENTICATED", resp.Error.Status)
 placeholder
 
-func TestAPIKeyAuthWithSubscriptionGoogle_InsufficientBalance(t *testing.T) {
+func TestApiKeyAuthWithSubscriptionGoogle_InsufficientBalance(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	apiKeyService := newTestAPIKeyService(fakeAPIKeyRepo{
-		getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
-			return &service.APIKey{
+	apiKeyService := newTestApiKeyService(fakeApiKeyRepo{
+		getByKey: func(ctx context.Context, key string) (*service.ApiKey, error) {
+			return &service.ApiKey{
 				ID:     1,
 				Key:    key,
 				Status: service.StatusActive,
@@ -210,7 +210,7 @@ func TestAPIKeyAuthWithSubscriptionGoogle_InsufficientBalance(t *testing.T) {
 		placeholder, nil
 	placeholder,
 placeholder)
-	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
+	r.Use(ApiKeyAuthWithSubscriptionGoogle(apiKeyService, nil, &config.Config{placeholder))
 	r.GET("/v1beta/test", func(c *gin.Context) { c.JSON(200, gin.H{"ok": trueplaceholder) placeholder)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1beta/test", nil)

@@ -487,8 +487,8 @@ func (s *OpenAIGatewayService) GetAccessToken(ctx context.Context, account *Acco
 			return "", "", errors.New("access_token not found in credentials")
 	placeholder
 		return accessToken, "oauth", nil
-	case AccountTypeAPIKey:
-		apiKey := account.GetOpenAIAPIKey()
+	case AccountTypeApiKey:
+		apiKey := account.GetOpenAIApiKey()
 		if apiKey == "" {
 			return "", "", errors.New("api_key not found in credentials")
 	placeholder
@@ -627,7 +627,7 @@ func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.
 	case AccountTypeOAuth:
 		// OAuth accounts use ChatGPT internal API
 		targetURL = chatgptCodexURL
-	case AccountTypeAPIKey:
+	case AccountTypeApiKey:
 		// API Key accounts use Platform API or custom base URL
 		baseURL := account.GetOpenAIBaseURL()
 		if baseURL != "" {
@@ -703,7 +703,13 @@ func (s *OpenAIGatewayService) handleErrorResponse(ctx context.Context, resp *ht
 placeholder
 
 	// Handle upstream error (mark account status)
-	s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
+	shouldDisable := false
+	if s.rateLimitService != nil {
+		shouldDisable = s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
+placeholder
+	if shouldDisable {
+		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+placeholder
 
 	// Return appropriate error response
 	var errType, errMsg string
@@ -940,7 +946,7 @@ placeholder
 // OpenAIRecordUsageInput input for recording usage
 type OpenAIRecordUsageInput struct {
 	Result       *OpenAIForwardResult
-	APIKey       *APIKey
+	ApiKey       *ApiKey
 	User         *User
 	Account      *Account
 	Subscription *UserSubscription
@@ -949,7 +955,7 @@ placeholder
 // RecordUsage records usage and deducts balance
 func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRecordUsageInput) error {
 	result := input.Result
-	apiKey := input.APIKey
+	apiKey := input.ApiKey
 	user := input.User
 	account := input.Account
 	subscription := input.Subscription
@@ -991,7 +997,7 @@ placeholder
 	durationMs := int(result.Duration.Milliseconds())
 	usageLog := &UsageLog{
 		UserID:              user.ID,
-		APIKeyID:            apiKey.ID,
+		ApiKeyID:            apiKey.ID,
 		AccountID:           account.ID,
 		RequestID:           result.RequestID,
 		Model:               result.Model,

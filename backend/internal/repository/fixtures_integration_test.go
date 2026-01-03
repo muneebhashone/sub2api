@@ -243,7 +243,7 @@ placeholder
 	return a
 placeholder
 
-func mustCreateAPIKey(t *testing.T, client *dbent.Client, k *service.APIKey) *service.APIKey {
+func mustCreateApiKey(t *testing.T, client *dbent.Client, k *service.ApiKey) *service.ApiKey {
 placeholder
 	ctx := context.Background()
 
@@ -257,7 +257,7 @@ placeholder
 		k.Name = "default"
 placeholder
 
-	create := client.APIKey.Create().
+	create := client.ApiKey.Create().
 		SetUserID(k.UserID).
 		SetKey(k.Key).
 		SetName(k.Name).

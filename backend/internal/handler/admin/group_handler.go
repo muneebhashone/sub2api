@@ -237,9 +237,9 @@ placeholder
 		return
 placeholder
 
-	outKeys := make([]dto.APIKey, 0, len(keys))
+	outKeys := make([]dto.ApiKey, 0, len(keys))
 	for i := range keys {
-		outKeys = append(outKeys, *dto.APIKeyFromService(&keys[i]))
+		outKeys = append(outKeys, *dto.ApiKeyFromService(&keys[i]))
 placeholder
 	response.Paginated(c, outKeys, total, page, pageSize)
 placeholder
