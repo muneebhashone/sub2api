@@ -13,7 +13,7 @@ import (
 // AdminService interface defines admin management operations
 type AdminService interface {
 	// User management
-	ListUsers(ctx context.Context, page, pageSize int, status, role, search string) ([]User, int64, error)
+	ListUsers(ctx context.Context, page, pageSize int, filters UserListFilters) ([]User, int64, error)
 	GetUser(ctx context.Context, id int64) (*User, error)
 	CreateUser(ctx context.Context, input *CreateUserInput) (*User, error)
 	UpdateUser(ctx context.Context, id int64, input *UpdateUserInput) (*User, error)
@@ -35,6 +35,7 @@ type AdminService interface {
 	// Account management
 	ListAccounts(ctx context.Context, page, pageSize int, platform, accountType, status, search string) ([]Account, int64, error)
 	GetAccount(ctx context.Context, id int64) (*Account, error)
+	GetAccountsByIDs(ctx context.Context, ids []int64) ([]*Account, error)
 	CreateAccount(ctx context.Context, input *CreateAccountInput) (*Account, error)
 	UpdateAccount(ctx context.Context, id int64, input *UpdateAccountInput) (*Account, error)
 	DeleteAccount(ctx context.Context, id int64) error
@@ -69,7 +70,6 @@ type CreateUserInput struct {
 	Email         string
 	Password      string
 	Username      string
-	Wechat        string
 	Notes         string
 	Balance       float64
 	Concurrency   int
@@ -80,7 +80,6 @@ type UpdateUserInput struct {
 	Email         string
 	Password      string
 	Username      *string
-	Wechat        *string
 	Notes         *string
 	Balance       *float64 // 使用指针区分"未提供"和"设置为0"
 	Concurrency   *int     // 使用指针区分"未提供"和"设置为0"
@@ -251,9 +250,9 @@ placeholder
 placeholder
 
 // User management implementations
-func (s *adminServiceImpl) ListUsers(ctx context.Context, page, pageSize int, status, role, search string) ([]User, int64, error) {
+func (s *adminServiceImpl) ListUsers(ctx context.Context, page, pageSize int, filters UserListFilters) ([]User, int64, error) {
 	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
-	users, result, err := s.userRepo.ListWithFilters(ctx, params, status, role, search)
+	users, result, err := s.userRepo.ListWithFilters(ctx, params, filters)
 	if err != nil {
 		return nil, 0, err
 placeholder
@@ -268,7 +267,6 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 	user := &User{
 		Email:         input.Email,
 		Username:      input.Username,
-		Wechat:        input.Wechat,
 		Notes:         input.Notes,
 		Role:          RoleUser, // Always create as regular user, never admin
 		Balance:       input.Balance,
@@ -309,9 +307,6 @@ placeholder
 
 	if input.Username != nil {
 		user.Username = *input.Username
-placeholder
-	if input.Wechat != nil {
-		user.Wechat = *input.Wechat
 placeholder
 	if input.Notes != nil {
 		user.Notes = *input.Notes
@@ -488,6 +483,11 @@ placeholder
 		subscriptionType = SubscriptionTypeStandard
 placeholder
 
+	// 限额字段：0 和 nil 都表示"无限制"
+	dailyLimit := normalizeLimit(input.DailyLimitUSD)
+	weeklyLimit := normalizeLimit(input.WeeklyLimitUSD)
+	monthlyLimit := normalizeLimit(input.MonthlyLimitUSD)
+
 	group := &Group{
 		Name:             input.Name,
 		Description:      input.Description,
@@ -496,14 +496,22 @@ placeholder
 		IsExclusive:      input.IsExclusive,
 		Status:           StatusActive,
 		SubscriptionType: subscriptionType,
-		DailyLimitUSD:    input.DailyLimitUSD,
-		WeeklyLimitUSD:   input.WeeklyLimitUSD,
-		MonthlyLimitUSD:  input.MonthlyLimitUSD,
+		DailyLimitUSD:    dailyLimit,
+		WeeklyLimitUSD:   weeklyLimit,
+		MonthlyLimitUSD:  monthlyLimit,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
 placeholder
 	return group, nil
+placeholder
+
+// normalizeLimit 将 0 或负数转换为 nil（表示无限制）
+func normalizeLimit(limit *float64) *float64 {
+	if limit == nil || *limit <= 0 {
+		return nil
+placeholder
+	return limit
 placeholder
 
 func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *UpdateGroupInput) (*Group, error) {
@@ -535,15 +543,15 @@ placeholder
 	if input.SubscriptionType != "" {
 		group.SubscriptionType = input.SubscriptionType
 placeholder
-	// 限额字段支持设置为nil（清除限额）或具体值
+	// 限额字段：0 和 nil 都表示"无限制"，正数表示具体限额
 	if input.DailyLimitUSD != nil {
-		group.DailyLimitUSD = input.DailyLimitUSD
+		group.DailyLimitUSD = normalizeLimit(input.DailyLimitUSD)
 placeholder
 	if input.WeeklyLimitUSD != nil {
-		group.WeeklyLimitUSD = input.WeeklyLimitUSD
+		group.WeeklyLimitUSD = normalizeLimit(input.WeeklyLimitUSD)
 placeholder
 	if input.MonthlyLimitUSD != nil {
-		group.MonthlyLimitUSD = input.MonthlyLimitUSD
+		group.MonthlyLimitUSD = normalizeLimit(input.MonthlyLimitUSD)
 placeholder
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
@@ -596,6 +604,19 @@ placeholder
 
 func (s *adminServiceImpl) GetAccount(ctx context.Context, id int64) (*Account, error) {
 	return s.accountRepo.GetByID(ctx, id)
+placeholder
+
+func (s *adminServiceImpl) GetAccountsByIDs(ctx context.Context, ids []int64) ([]*Account, error) {
+	if len(ids) == 0 {
+		return []*Account{placeholder, nil
+placeholder
+
+	accounts, err := s.accountRepo.GetByIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get accounts by IDs: %w", err)
+placeholder
+
+	return accounts, nil
 placeholder
 
 func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccountInput) (*Account, error) {

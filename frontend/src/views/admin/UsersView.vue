@@ -1,86 +1,289 @@
 <template>
   <AppLayout>
     <TablePageLayout>
-      <!-- Page Header Actions -->
-      <template #actions>
-        <div class="flex justify-end gap-3">
-        <button
-          @click="loadUsers"
-          :disabled="loading"
-          class="btn btn-secondary"
-          :title="t('common.refresh')"
-        >
-          <svg
-            :class="['h-5 w-5', loading ? 'animate-spin' : '']"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-            />
-          </svg>
-        </button>
-        <button @click="showCreateModal = true" class="btn btn-primary">
-          <svg
-            class="mr-2 h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          {{ t('admin.users.createUser') placeholderplaceholder
-        </button>
-      </div>
-      </template>
-
-      <!-- Search and Filters -->
+      <!-- Single Row: Search, Filters, and Actions -->
       <template #filters>
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div class="relative max-w-md flex-1">
-          <svg
-            class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-            />
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            :placeholder="t('admin.users.searchUsers')"
-            class="input pl-10"
-            @input="handleSearch"
-          />
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <!-- Left: Search + Active Filters -->
+          <div class="flex flex-1 flex-wrap items-center gap-3">
+            <!-- Search Box -->
+            <div class="relative w-64">
+              <svg
+                class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+              <input
+                v-model="searchQuery"
+                type="text"
+                :placeholder="t('admin.users.searchUsers')"
+                class="input pl-10"
+                @input="handleSearch"
+              />
+            </div>
+
+            <!-- Role Filter (visible when enabled) -->
+            <div v-if="visibleFilters.has('role')" class="relative">
+              <select
+                v-model="filters.role"
+                @change="applyFilter"
+                class="input w-32 cursor-pointer appearance-none pr-8"
+              >
+                <option value="">{{ t('admin.users.allRoles') placeholderplaceholder</option>
+                <option value="admin">{{ t('admin.users.admin') placeholderplaceholder</option>
+                <option value="user">{{ t('admin.users.user') placeholderplaceholder</option>
+              </select>
+              <svg
+                class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
+
+            <!-- Status Filter (visible when enabled) -->
+            <div v-if="visibleFilters.has('status')" class="relative">
+              <select
+                v-model="filters.status"
+                @change="applyFilter"
+                class="input w-32 cursor-pointer appearance-none pr-8"
+              >
+                <option value="">{{ t('admin.users.allStatus') placeholderplaceholder</option>
+                <option value="active">{{ t('common.active') placeholderplaceholder</option>
+                <option value="disabled">{{ t('admin.users.disabled') placeholderplaceholder</option>
+              </select>
+              <svg
+                class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
+
+            <!-- Dynamic Attribute Filters -->
+            <template v-for="(value, attrId) in activeAttributeFilters" :key="attrId">
+              <div v-if="visibleFilters.has(`attr_${attrIdplaceholder`)" class="relative">
+                <!-- Text/Email/URL/Textarea/Date type: styled input -->
+                <input
+                  v-if="['text', 'textarea', 'email', 'url', 'date'].includes(getAttributeDefinition(Number(attrId))?.type || 'text')"
+                  :value="value"
+                  @input="(e) => updateAttributeFilter(Number(attrId), (e.target as HTMLInputElement).value)"
+                  @keyup.enter="applyFilter"
+                  :placeholder="getAttributeDefinitionName(Number(attrId))"
+                  class="input w-36"
+                />
+                <!-- Number type: number input -->
+                <input
+                  v-else-if="getAttributeDefinition(Number(attrId))?.type === 'number'"
+                  :value="value"
+                  type="number"
+                  @input="(e) => updateAttributeFilter(Number(attrId), (e.target as HTMLInputElement).value)"
+                  @keyup.enter="applyFilter"
+                  :placeholder="getAttributeDefinitionName(Number(attrId))"
+                  class="input w-32"
+                />
+                <!-- Select/Multi-select type -->
+                <template v-else-if="['select', 'multi_select'].includes(getAttributeDefinition(Number(attrId))?.type || '')">
+                  <select
+                    :value="value"
+                    @change="(e) => { updateAttributeFilter(Number(attrId), (e.target as HTMLSelectElement).value); applyFilter() placeholder"
+                    class="input w-36 cursor-pointer appearance-none pr-8"
+                  >
+                    <option value="">{{ getAttributeDefinitionName(Number(attrId)) placeholderplaceholder</option>
+                    <option
+                      v-for="opt in getAttributeDefinition(Number(attrId))?.options || []"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label placeholderplaceholder
+                    </option>
+                  </select>
+                  <svg
+                    class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </template>
+                <!-- Fallback -->
+                <input
+                  v-else
+                  :value="value"
+                  @input="(e) => updateAttributeFilter(Number(attrId), (e.target as HTMLInputElement).value)"
+                  @keyup.enter="applyFilter"
+                  :placeholder="getAttributeDefinitionName(Number(attrId))"
+                  class="input w-36"
+                />
+              </div>
+            </template>
+          </div>
+
+          <!-- Right: Actions and Settings -->
+          <div class="flex items-center gap-3">
+            <!-- Refresh Button -->
+            <button
+              @click="loadUsers"
+              :disabled="loading"
+              class="btn btn-secondary"
+              :title="t('common.refresh')"
+            >
+              <svg
+                :class="['h-5 w-5', loading ? 'animate-spin' : '']"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                />
+              </svg>
+            </button>
+            <!-- Filter Settings Dropdown -->
+            <div class="relative" ref="filterDropdownRef">
+              <button
+                @click="showFilterDropdown = !showFilterDropdown"
+                class="btn btn-secondary"
+              >
+                <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                </svg>
+                {{ t('admin.users.filterSettings') placeholderplaceholder
+              </button>
+              <!-- Dropdown menu -->
+              <div
+                v-if="showFilterDropdown"
+                class="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-dark-600 dark:bg-dark-800"
+              >
+                <!-- Built-in filters -->
+                <button
+                  v-for="filter in builtInFilters"
+                  :key="filter.key"
+                  @click="toggleBuiltInFilter(filter.key)"
+                  class="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
+                >
+                  <span>{{ filter.name placeholderplaceholder</span>
+                  <svg
+                    v-if="visibleFilters.has(filter.key)"
+                    class="h-4 w-4 text-primary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <!-- Divider if custom attributes exist -->
+                <div
+                  v-if="filterableAttributes.length > 0"
+                  class="my-1 border-t border-gray-100 dark:border-dark-700"
+                ></div>
+                <!-- Custom attribute filters -->
+                <button
+                  v-for="attr in filterableAttributes"
+                  :key="attr.id"
+                  @click="toggleAttributeFilter(attr)"
+                  class="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
+                >
+                  <span>{{ attr.name placeholderplaceholder</span>
+                  <svg
+                    v-if="visibleFilters.has(`attr_${attr.idplaceholder`)"
+                    class="h-4 w-4 text-primary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <!-- Column Settings Dropdown -->
+            <div class="relative" ref="columnDropdownRef">
+              <button
+                @click="showColumnDropdown = !showColumnDropdown"
+                class="btn btn-secondary"
+              >
+                <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+                {{ t('admin.users.columnSettings') placeholderplaceholder
+              </button>
+              <!-- Dropdown menu -->
+              <div
+                v-if="showColumnDropdown"
+                class="absolute right-0 top-full z-50 mt-1 max-h-80 w-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-dark-600 dark:bg-dark-800"
+              >
+                <button
+                  v-for="col in toggleableColumns"
+                  :key="col.key"
+                  @click="toggleColumn(col.key)"
+                  class="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
+                >
+                  <span>{{ col.label placeholderplaceholder</span>
+                  <svg
+                    v-if="isColumnVisible(col.key)"
+                    class="h-4 w-4 text-primary-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <!-- Attributes Config Button -->
+            <button @click="showAttributesModal = true" class="btn btn-secondary">
+              <svg
+                class="mr-1.5 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {{ t('admin.users.attributes.configButton') placeholderplaceholder
+            </button>
+            <!-- Create User Button -->
+            <button @click="showCreateModal = true" class="btn btn-primary">
+              <svg
+                class="mr-2 h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              {{ t('admin.users.createUser') placeholderplaceholder
+            </button>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-3">
-          <Select
-            v-model="filters.role"
-            :options="roleOptions"
-            :placeholder="t('admin.users.allRoles')"
-            class="w-36"
-            @change="loadUsers"
-          />
-          <Select
-            v-model="filters.status"
-            :options="statusOptions"
-            :placeholder="t('admin.users.allStatus')"
-            class="w-36"
-            @change="loadUsers"
-          />
-        </div>
-      </div>
       </template>
 
       <!-- Users Table -->
@@ -103,10 +306,6 @@
             <span class="text-sm text-gray-700 dark:text-gray-300">{{ value || '-' placeholderplaceholder</span>
           </template>
 
-          <template #cell-wechat="{ value placeholder">
-            <span class="text-sm text-gray-700 dark:text-gray-300">{{ value || '-' placeholderplaceholder</span>
-          </template>
-
           <template #cell-notes="{ value placeholder">
             <div class="max-w-xs">
               <span
@@ -117,6 +316,22 @@
                 {{ value.length > 30 ? value.substring(0, 25) + '...' : value placeholderplaceholder
               </span>
               <span v-else class="text-sm text-gray-400">-</span>
+            </div>
+          </template>
+
+          <!-- Dynamic attribute columns -->
+          <template
+            v-for="def in attributeDefinitions.filter(d => d.enabled)"
+            :key="def.id"
+            #[`cell-attr_${def.idplaceholder`]="{ row placeholder"
+          >
+            <div class="max-w-xs">
+              <span
+                class="block truncate text-sm text-gray-700 dark:text-gray-300"
+                :title="getAttributeValue(row.id, def.id)"
+              >
+                {{ getAttributeValue(row.id, def.id) placeholderplaceholder
+              </span>
             </div>
           </template>
 
@@ -189,9 +404,17 @@
           </template>
 
           <template #cell-status="{ value placeholder">
-            <span :class="['badge', value === 'active' ? 'badge-success' : 'badge-danger']">
-              {{ value placeholderplaceholder
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span
+                :class="[
+                  'inline-block h-2 w-2 rounded-full',
+                  value === 'active' ? 'bg-green-500' : 'bg-red-500'
+                ]"
+              ></span>
+              <span class="text-sm text-gray-700 dark:text-gray-300">
+                {{ value === 'active' ? t('common.active') : t('admin.users.disabled') placeholderplaceholder
+              </span>
+            </div>
           </template>
 
           <template #cell-created_at="{ value placeholder">
@@ -472,15 +695,6 @@
           />
         </div>
         <div>
-          <label class="input-label">{{ t('admin.users.wechat') placeholderplaceholder</label>
-          <input
-            v-model="createForm.wechat"
-            type="text"
-            class="input"
-            :placeholder="t('admin.users.enterWechat')"
-          />
-        </div>
-        <div>
           <label class="input-label">{{ t('admin.users.notes') placeholderplaceholder</label>
           <textarea
             v-model="createForm.notes"
@@ -641,15 +855,6 @@
           />
         </div>
         <div>
-          <label class="input-label">{{ t('admin.users.wechat') placeholderplaceholder</label>
-          <input
-            v-model="editForm.wechat"
-            type="text"
-            class="input"
-            :placeholder="t('admin.users.enterWechat')"
-          />
-        </div>
-        <div>
           <label class="input-label">{{ t('admin.users.notes') placeholderplaceholder</label>
           <textarea
             v-model="editForm.notes"
@@ -663,6 +868,12 @@
           <label class="input-label">{{ t('admin.users.columns.concurrency') placeholderplaceholder</label>
           <input v-model.number="editForm.concurrency" type="number" class="input" />
         </div>
+
+        <!-- Custom Attributes -->
+        <UserAttributeForm
+          v-model="editForm.customAttributes"
+          :user-id="editingUser?.id"
+        />
 
       </form>
 
@@ -1179,6 +1390,12 @@
       @confirm="confirmDelete"
       @cancel="showDeleteDialog = false"
     />
+
+    <!-- User Attributes Config Modal -->
+    <UserAttributesConfigModal
+      :show="showAttributesModal"
+      @close="handleAttributesModalClose"
+    />
   </AppLayout>
 </template>
 
@@ -1191,7 +1408,7 @@ import { formatDateTime placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 import { adminAPI placeholder from '@/api/admin'
-import type { User, ApiKey, Group placeholder from '@/types'
+import type { User, ApiKey, Group, UserAttributeValuesMap, UserAttributeDefinition placeholder from '@/types'
 import type { BatchUserUsageStats placeholder from '@/api/admin/dashboard'
 import type { Column placeholder from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -1201,17 +1418,66 @@ import Pagination from '@/components/common/Pagination.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
+import UserAttributesConfigModal from '@/components/user/UserAttributesConfigModal.vue'
+import UserAttributeForm from '@/components/user/UserAttributeForm.vue'
 
 const appStore = useAppStore()
 const { copyToClipboard: clipboardCopy placeholder = useClipboard()
 
-const columns = computed<Column[]>(() => [
+// Generate dynamic attribute columns from enabled definitions
+const attributeColumns = computed<Column[]>(() =>
+  attributeDefinitions.value
+    .filter(def => def.enabled)
+    .map(def => ({
+      key: `attr_${def.idplaceholder`,
+      label: def.name,
+      sortable: false
+    placeholder))
+)
+
+// Get formatted attribute value for display in table
+const getAttributeValue = (userId: number, attrId: number): string => {
+  const userAttrs = userAttributeValues.value[userId]
+  if (!userAttrs) return '-'
+  const value = userAttrs[attrId]
+  if (!value) return '-'
+
+  // Find definition for this attribute
+  const def = attributeDefinitions.value.find(d => d.id === attrId)
+  if (!def) return value
+
+  // Format based on type
+  if (def.type === 'multi_select' && value) {
+    try {
+      const arr = JSON.parse(value)
+      if (Array.isArray(arr)) {
+        // Map values to labels
+        return arr.map(v => {
+          const opt = def.options?.find(o => o.value === v)
+          return opt?.label || v
+        placeholder).join(', ')
+      placeholder
+    placeholder catch {
+      return value
+    placeholder
+  placeholder
+
+  if (def.type === 'select' && value && def.options) {
+    const opt = def.options.find(o => o.value === value)
+    return opt?.label || value
+  placeholder
+
+  return value
+placeholder
+
+// All possible columns (for column settings)
+const allColumns = computed<Column[]>(() => [
   { key: 'email', label: t('admin.users.columns.user'), sortable: true placeholder,
   { key: 'username', label: t('admin.users.columns.username'), sortable: true placeholder,
-  { key: 'wechat', label: t('admin.users.columns.wechat'), sortable: false placeholder,
   { key: 'notes', label: t('admin.users.columns.notes'), sortable: false placeholder,
+  // Dynamic attribute columns
+  ...attributeColumns.value,
   { key: 'role', label: t('admin.users.columns.role'), sortable: true placeholder,
   { key: 'subscriptions', label: t('admin.users.columns.subscriptions'), sortable: false placeholder,
   { key: 'balance', label: t('admin.users.columns.balance'), sortable: true placeholder,
@@ -1222,27 +1488,154 @@ const columns = computed<Column[]>(() => [
   { key: 'actions', label: t('admin.users.columns.actions'), sortable: false placeholder
 ])
 
-// Filter options
-const roleOptions = computed(() => [
-  { value: '', label: t('admin.users.allRoles') placeholder,
-  { value: 'admin', label: t('admin.users.admin') placeholder,
-  { value: 'user', label: t('admin.users.user') placeholder
-])
+// Columns that can be toggled (exclude email and actions which are always visible)
+const toggleableColumns = computed(() =>
+  allColumns.value.filter(col => col.key !== 'email' && col.key !== 'actions')
+)
 
-const statusOptions = computed(() => [
-  { value: '', label: t('admin.users.allStatus') placeholder,
-  { value: 'active', label: t('common.active') placeholder,
-  { value: 'disabled', label: t('admin.users.disabled') placeholder
-])
+// Hidden columns (stored in Set - columns NOT in this set are visible)
+// This way, new columns are visible by default
+const hiddenColumns = reactive<Set<string>>(new Set())
+
+// Default hidden columns (columns hidden by default on first load)
+const DEFAULT_HIDDEN_COLUMNS = ['notes', 'subscriptions', 'usage', 'concurrency']
+
+// localStorage key for column settings
+const HIDDEN_COLUMNS_KEY = 'user-hidden-columns'
+
+// Load saved column settings
+const loadSavedColumns = () => {
+  try {
+    const saved = localStorage.getItem(HIDDEN_COLUMNS_KEY)
+    if (saved) {
+      const parsed = JSON.parse(saved) as string[]
+      parsed.forEach(key => hiddenColumns.add(key))
+    placeholder else {
+      // Use default hidden columns on first load
+      DEFAULT_HIDDEN_COLUMNS.forEach(key => hiddenColumns.add(key))
+    placeholder
+  placeholder catch (e) {
+    console.error('Failed to load saved columns:', e)
+    DEFAULT_HIDDEN_COLUMNS.forEach(key => hiddenColumns.add(key))
+  placeholder
+placeholder
+
+// Save column settings to localStorage
+const saveColumnsToStorage = () => {
+  try {
+    localStorage.setItem(HIDDEN_COLUMNS_KEY, JSON.stringify([...hiddenColumns]))
+  placeholder catch (e) {
+    console.error('Failed to save columns:', e)
+  placeholder
+placeholder
+
+// Toggle column visibility
+const toggleColumn = (key: string) => {
+  if (hiddenColumns.has(key)) {
+    hiddenColumns.delete(key)
+  placeholder else {
+    hiddenColumns.add(key)
+  placeholder
+  saveColumnsToStorage()
+placeholder
+
+// Check if column is visible (not in hidden set)
+const isColumnVisible = (key: string) => !hiddenColumns.has(key)
+
+// Filtered columns based on visibility
+const columns = computed<Column[]>(() =>
+  allColumns.value.filter(col =>
+    col.key === 'email' || col.key === 'actions' || !hiddenColumns.has(col.key)
+  )
+)
 
 const users = ref<User[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
+
+// Filter values (role, status, and custom attributes)
 const filters = reactive({
   role: '',
   status: ''
 placeholder)
+const activeAttributeFilters = reactive<Record<number, string>>({placeholder)
+
+// Visible filters tracking (which filters are shown in the UI)
+// Keys: 'role', 'status', 'attr_${idplaceholder'
+const visibleFilters = reactive<Set<string>>(new Set())
+
+// Dropdown states
+const showFilterDropdown = ref(false)
+const showColumnDropdown = ref(false)
+
+// Dropdown refs for click outside detection
+const filterDropdownRef = ref<HTMLElement | null>(null)
+const columnDropdownRef = ref<HTMLElement | null>(null)
+
+// localStorage keys
+const FILTER_VALUES_KEY = 'user-filter-values'
+const VISIBLE_FILTERS_KEY = 'user-visible-filters'
+
+// All filterable attribute definitions (enabled attributes)
+const filterableAttributes = computed(() =>
+  attributeDefinitions.value.filter(def => def.enabled)
+)
+
+// Built-in filter definitions
+const builtInFilters = computed(() => [
+  { key: 'role', name: t('admin.users.columns.role'), type: 'select' as const placeholder,
+  { key: 'status', name: t('admin.users.columns.status'), type: 'select' as const placeholder
+])
+
+// Load saved filters from localStorage
+const loadSavedFilters = () => {
+  try {
+    // Load visible filters
+    const savedVisible = localStorage.getItem(VISIBLE_FILTERS_KEY)
+    if (savedVisible) {
+      const parsed = JSON.parse(savedVisible) as string[]
+      parsed.forEach(key => visibleFilters.add(key))
+    placeholder
+    // Load filter values
+    const savedValues = localStorage.getItem(FILTER_VALUES_KEY)
+    if (savedValues) {
+      const parsed = JSON.parse(savedValues)
+      if (parsed.role) filters.role = parsed.role
+      if (parsed.status) filters.status = parsed.status
+      if (parsed.attributes) {
+        Object.assign(activeAttributeFilters, parsed.attributes)
+      placeholder
+    placeholder
+  placeholder catch (e) {
+    console.error('Failed to load saved filters:', e)
+  placeholder
+placeholder
+
+// Save filters to localStorage
+const saveFiltersToStorage = () => {
+  try {
+    // Save visible filters
+    localStorage.setItem(VISIBLE_FILTERS_KEY, JSON.stringify([...visibleFilters]))
+    // Save filter values
+    const values = {
+      role: filters.role,
+      status: filters.status,
+      attributes: activeAttributeFilters
+    placeholder
+    localStorage.setItem(FILTER_VALUES_KEY, JSON.stringify(values))
+  placeholder catch (e) {
+    console.error('Failed to save filters:', e)
+  placeholder
+placeholder
+
+// Get attribute definition by ID
+const getAttributeDefinition = (attrId: number): UserAttributeDefinition | undefined => {
+  return attributeDefinitions.value.find(d => d.id === attrId)
+placeholder
 const usageStats = ref<Record<string, BatchUserUsageStats>>({placeholder)
+// User attribute definitions and values
+const attributeDefinitions = ref<UserAttributeDefinition[]>([])
+const userAttributeValues = ref<Record<number, Record<number, string>>>({placeholder)
 const pagination = reactive({
   page: 1,
   page_size: 20,
@@ -1254,6 +1647,7 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showApiKeysModal = ref(false)
+const showAttributesModal = ref(false)
 const submitting = ref(false)
 const editingUser = ref<User | null>(null)
 const deletingUser = ref<User | null>(null)
@@ -1317,6 +1711,14 @@ const handleClickOutside = (event: MouseEvent) => {
   if (!target.closest('.action-menu-trigger') && !target.closest('.action-menu-content')) {
     closeActionMenu()
   placeholder
+  // Close filter dropdown when clicking outside
+  if (filterDropdownRef.value && !filterDropdownRef.value.contains(target)) {
+    showFilterDropdown.value = false
+  placeholder
+  // Close column dropdown when clicking outside
+  if (columnDropdownRef.value && !columnDropdownRef.value.contains(target)) {
+    showColumnDropdown.value = false
+  placeholder
 placeholder
 
 // Allowed groups modal state
@@ -1341,7 +1743,6 @@ const createForm = reactive({
   email: '',
   password: '',
   username: '',
-  wechat: '',
   notes: '',
   balance: 0,
   concurrency: 1
@@ -1351,9 +1752,9 @@ const editForm = reactive({
   email: '',
   password: '',
   username: '',
-  wechat: '',
   notes: '',
-  concurrency: 1
+  concurrency: 1,
+  customAttributes: {placeholder as UserAttributeValuesMap
 placeholder)
 const editPasswordCopied = ref(false)
 
@@ -1404,6 +1805,21 @@ const copyEditPassword = async () => {
   placeholder
 placeholder
 
+const loadAttributeDefinitions = async () => {
+  try {
+    attributeDefinitions.value = await adminAPI.userAttributes.listEnabledDefinitions()
+  placeholder catch (e) {
+    console.error('Failed to load attribute definitions:', e)
+  placeholder
+placeholder
+
+// Handle attributes modal close - reload definitions and users
+const handleAttributesModalClose = async () => {
+  showAttributesModal.value = false
+  await loadAttributeDefinitions()
+  loadUsers()
+placeholder
+
 const loadUsers = async () => {
   abortController?.abort()
   const currentAbortController = new AbortController()
@@ -1411,13 +1827,22 @@ const loadUsers = async () => {
   const { signal placeholder = currentAbortController
   loading.value = true
   try {
+    // Build attribute filters from active filters
+    const attrFilters: Record<number, string> = {placeholder
+    for (const [attrId, value] of Object.entries(activeAttributeFilters)) {
+      if (value) {
+        attrFilters[Number(attrId)] = value
+      placeholder
+    placeholder
+
     const response = await adminAPI.users.list(
       pagination.page,
       pagination.page_size,
       {
         role: filters.role as any,
         status: filters.status as any,
-        search: searchQuery.value || undefined
+        search: searchQuery.value || undefined,
+        attributes: Object.keys(attrFilters).length > 0 ? attrFilters : undefined
       placeholder,
       { signal placeholder
     )
@@ -1428,9 +1853,10 @@ const loadUsers = async () => {
     pagination.total = response.total
     pagination.pages = response.pages
 
-    // Load usage stats for all users in the list
+    // Load usage stats and attribute values for all users in the list
     if (response.items.length > 0) {
       const userIds = response.items.map((u) => u.id)
+      // Load usage stats
       try {
         const usageResponse = await adminAPI.dashboard.getBatchUsersUsage(userIds)
         if (signal.aborted) {
@@ -1442,6 +1868,21 @@ const loadUsers = async () => {
           return
         placeholder
         console.error('Failed to load usage stats:', e)
+      placeholder
+      // Load attribute values
+      if (attributeDefinitions.value.length > 0) {
+        try {
+          const attrResponse = await adminAPI.userAttributes.getBatchUserAttributes(userIds)
+          if (signal.aborted) {
+            return
+          placeholder
+          userAttributeValues.value = attrResponse.attributes
+        placeholder catch (e) {
+          if (signal.aborted) {
+            return
+          placeholder
+          console.error('Failed to load user attribute values:', e)
+        placeholder
       placeholder
     placeholder
   placeholder catch (error) {
@@ -1478,12 +1919,54 @@ const handlePageSizeChange = (pageSize: number) => {
   loadUsers()
 placeholder
 
+// Filter helpers
+const getAttributeDefinitionName = (attrId: number): string => {
+  const def = attributeDefinitions.value.find(d => d.id === attrId)
+  return def?.name || String(attrId)
+placeholder
+
+// Toggle a built-in filter (role/status)
+const toggleBuiltInFilter = (key: string) => {
+  if (visibleFilters.has(key)) {
+    visibleFilters.delete(key)
+    if (key === 'role') filters.role = ''
+    if (key === 'status') filters.status = ''
+  placeholder else {
+    visibleFilters.add(key)
+  placeholder
+  saveFiltersToStorage()
+  loadUsers()
+placeholder
+
+// Toggle a custom attribute filter
+const toggleAttributeFilter = (attr: UserAttributeDefinition) => {
+  const key = `attr_${attr.idplaceholder`
+  if (visibleFilters.has(key)) {
+    visibleFilters.delete(key)
+    delete activeAttributeFilters[attr.id]
+  placeholder else {
+    visibleFilters.add(key)
+    activeAttributeFilters[attr.id] = ''
+  placeholder
+  saveFiltersToStorage()
+  loadUsers()
+placeholder
+
+const updateAttributeFilter = (attrId: number, value: string) => {
+  activeAttributeFilters[attrId] = value
+placeholder
+
+// Apply filter and save to localStorage
+const applyFilter = () => {
+  saveFiltersToStorage()
+  loadUsers()
+placeholder
+
 const closeCreateModal = () => {
   showCreateModal.value = false
   createForm.email = ''
   createForm.password = ''
   createForm.username = ''
-  createForm.wechat = ''
   createForm.notes = ''
   createForm.balance = 0
   createForm.concurrency = 1
@@ -1514,9 +1997,9 @@ const handleEdit = (user: User) => {
   editForm.email = user.email
   editForm.password = ''
   editForm.username = user.username || ''
-  editForm.wechat = user.wechat || ''
   editForm.notes = user.notes || ''
   editForm.concurrency = user.concurrency
+  editForm.customAttributes = {placeholder
   editPasswordCopied.value = false
   showEditModal.value = true
 placeholder
@@ -1525,6 +2008,7 @@ const closeEditModal = () => {
   showEditModal.value = false
   editingUser.value = null
   editForm.password = ''
+  editForm.customAttributes = {placeholder
   editPasswordCopied.value = false
 placeholder
 
@@ -1536,7 +2020,6 @@ const handleUpdateUser = async () => {
     const updateData: Record<string, any> = {
       email: editForm.email,
       username: editForm.username,
-      wechat: editForm.wechat,
       notes: editForm.notes,
       concurrency: editForm.concurrency
     placeholder
@@ -1545,6 +2028,15 @@ const handleUpdateUser = async () => {
     placeholder
 
     await adminAPI.users.update(editingUser.value.id, updateData)
+
+    // Save custom attributes if any
+    if (Object.keys(editForm.customAttributes).length > 0) {
+      await adminAPI.userAttributes.updateUserAttributeValues(
+        editingUser.value.id,
+        editForm.customAttributes
+      )
+    placeholder
+
     appStore.showSuccess(t('admin.users.userUpdated'))
     closeEditModal()
     loadUsers()
@@ -1730,7 +2222,10 @@ const handleBalanceSubmit = async () => {
   placeholder
 placeholder
 
-onMounted(() => {
+onMounted(async () => {
+  await loadAttributeDefinitions()
+  loadSavedFilters()
+  loadSavedColumns()
   loadUsers()
   document.addEventListener('click', handleClickOutside)
 placeholder)

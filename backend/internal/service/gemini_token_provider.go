@@ -112,17 +112,21 @@ placeholder
 		placeholder
 	placeholder
 
-		detected, err := p.geminiOAuthService.fetchProjectID(ctx, accessToken, proxyURL)
+		detected, tierID, err := p.geminiOAuthService.fetchProjectID(ctx, accessToken, proxyURL)
 		if err != nil {
 			log.Printf("[GeminiTokenProvider] Auto-detect project_id failed: %v, fallback to AI Studio API mode", err)
 			return accessToken, nil
 	placeholder
 		detected = strings.TrimSpace(detected)
+		tierID = strings.TrimSpace(tierID)
 		if detected != "" {
 			if account.Credentials == nil {
 				account.Credentials = make(map[string]any)
 		placeholder
 			account.Credentials["project_id"] = detected
+			if tierID != "" {
+				account.Credentials["tier_id"] = tierID
+		placeholder
 			_ = p.accountRepo.Update(ctx, account)
 	placeholder
 placeholder

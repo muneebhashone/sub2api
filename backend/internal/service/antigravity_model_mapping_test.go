@@ -104,34 +104,34 @@ placeholder{
 			expected:       "claude-opus-4-5-thinking",
 	placeholder,
 		{
-			name:           "系统映射 - claude-haiku-4 → gemini-3-flash",
+			name:           "系统映射 - claude-haiku-4 → claude-sonnet-4-5",
 			requestedModel: "claude-haiku-4",
 			accountMapping: nil,
-			expected:       "gemini-3-flash",
+			expected:       "claude-sonnet-4-5",
 	placeholder,
 		{
-			name:           "系统映射 - claude-haiku-4-5 → gemini-3-flash",
+			name:           "系统映射 - claude-haiku-4-5 → claude-sonnet-4-5",
 			requestedModel: "claude-haiku-4-5",
 			accountMapping: nil,
-			expected:       "gemini-3-flash",
+			expected:       "claude-sonnet-4-5",
 	placeholder,
 		{
-			name:           "系统映射 - claude-3-haiku-20240307 → gemini-3-flash",
+			name:           "系统映射 - claude-3-haiku-20240307 → claude-sonnet-4-5",
 			requestedModel: "claude-3-haiku-20240307",
 			accountMapping: nil,
-			expected:       "gemini-3-flash",
+			expected:       "claude-sonnet-4-5",
 	placeholder,
 		{
-			name:           "系统映射 - placeholder → gemini-3-flash",
+			name:           "系统映射 - placeholder → claude-sonnet-4-5",
 			requestedModel: "placeholder",
 			accountMapping: nil,
-			expected:       "gemini-3-flash",
+			expected:       "claude-sonnet-4-5",
 	placeholder,
 		{
 			name:           "系统映射 - claude-sonnet-4-5-20250929",
 			requestedModel: "claude-sonnet-4-5-20250929",
 			accountMapping: nil,
-			expected:       "claude-sonnet-4-5-thinking",
+			expected:       "claude-sonnet-4-5",
 	placeholder,
 
 		// 3. Gemini 透传

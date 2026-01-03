@@ -11,7 +11,8 @@ import (
 	"strings"
 	"time"
 
-	infraerrors "github.com/Wei-Shaw/sub2api/internal/infrastructure/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
+	pkgerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -143,6 +144,10 @@ placeholder
 placeholder else if apiKey.Group != nil {
 		platform = apiKey.Group.Platform
 placeholder
+	sessionKey := sessionHash
+	if platform == service.PlatformGemini && sessionHash != "" {
+		sessionKey = "gemini:" + sessionHash
+placeholder
 
 	if platform == service.PlatformGemini {
 		const maxAccountSwitches = 3
@@ -151,7 +156,7 @@ placeholder
 		lastFailoverStatus := 0
 
 		for {
-			account, err := h.geminiCompatService.SelectAccountForModelWithExclusions(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel, failedAccountIDs)
+			selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs)
 			if err != nil {
 				if len(failedAccountIDs) == 0 {
 					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
@@ -160,9 +165,13 @@ placeholder
 				h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 				return
 		placeholder
+			account := selection.Account
 
 			// 检查预热请求拦截（在账号选择后、转发前检查）
 			if account.IsInterceptWarmupEnabled() && isWarmupRequest(body) {
+				if selection.Acquired && selection.ReleaseFunc != nil {
+					selection.ReleaseFunc()
+			placeholder
 				if reqStream {
 					sendMockWarmupStream(c, reqModel)
 			placeholder else {
@@ -172,11 +181,46 @@ placeholder
 		placeholder
 
 			// 3. 获取账号并发槽位
-			accountReleaseFunc, err := h.concurrencyHelper.AcquireAccountSlotWithWait(c, account.ID, account.Concurrency, reqStream, &streamStarted)
-			if err != nil {
-				log.Printf("Account concurrency acquire failed: %v", err)
-				h.handleConcurrencyError(c, err, "account", streamStarted)
-				return
+			accountReleaseFunc := selection.ReleaseFunc
+			var accountWaitRelease func()
+			if !selection.Acquired {
+				if selection.WaitPlan == nil {
+					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
+					return
+			placeholder
+				canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
+				if err != nil {
+					log.Printf("Increment account wait count failed: %v", err)
+			placeholder else if !canWait {
+					log.Printf("Account wait queue full: account=%d", account.ID)
+					h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
+					return
+			placeholder else {
+					// Only set release function if increment succeeded
+					accountWaitRelease = func() {
+						h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+				placeholder
+			placeholder
+
+				accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
+					c,
+					account.ID,
+					selection.WaitPlan.MaxConcurrency,
+					selection.WaitPlan.Timeout,
+					reqStream,
+					&streamStarted,
+				)
+				if err != nil {
+					if accountWaitRelease != nil {
+						accountWaitRelease()
+				placeholder
+					log.Printf("Account concurrency acquire failed: %v", err)
+					h.handleConcurrencyError(c, err, "account", streamStarted)
+					return
+			placeholder
+				if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
+					log.Printf("Bind sticky session failed: %v", err)
+			placeholder
 		placeholder
 
 			// 转发请求 - 根据账号平台分流
@@ -188,6 +232,9 @@ placeholder
 		placeholder
 			if accountReleaseFunc != nil {
 				accountReleaseFunc()
+		placeholder
+			if accountWaitRelease != nil {
+				accountWaitRelease()
 		placeholder
 			if err != nil {
 				var failoverErr *service.UpstreamFailoverError
@@ -233,7 +280,7 @@ placeholder
 
 	for {
 		// 选择支持该模型的账号
-		account, err := h.gatewayService.SelectAccountForModelWithExclusions(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel, failedAccountIDs)
+		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs)
 		if err != nil {
 			if len(failedAccountIDs) == 0 {
 				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
@@ -242,9 +289,13 @@ placeholder
 			h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 			return
 	placeholder
+		account := selection.Account
 
 		// 检查预热请求拦截（在账号选择后、转发前检查）
 		if account.IsInterceptWarmupEnabled() && isWarmupRequest(body) {
+			if selection.Acquired && selection.ReleaseFunc != nil {
+				selection.ReleaseFunc()
+		placeholder
 			if reqStream {
 				sendMockWarmupStream(c, reqModel)
 		placeholder else {
@@ -254,11 +305,46 @@ placeholder
 	placeholder
 
 		// 3. 获取账号并发槽位
-		accountReleaseFunc, err := h.concurrencyHelper.AcquireAccountSlotWithWait(c, account.ID, account.Concurrency, reqStream, &streamStarted)
-		if err != nil {
-			log.Printf("Account concurrency acquire failed: %v", err)
-			h.handleConcurrencyError(c, err, "account", streamStarted)
-			return
+		accountReleaseFunc := selection.ReleaseFunc
+		var accountWaitRelease func()
+		if !selection.Acquired {
+			if selection.WaitPlan == nil {
+				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
+				return
+		placeholder
+			canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
+			if err != nil {
+				log.Printf("Increment account wait count failed: %v", err)
+		placeholder else if !canWait {
+				log.Printf("Account wait queue full: account=%d", account.ID)
+				h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
+				return
+		placeholder else {
+				// Only set release function if increment succeeded
+				accountWaitRelease = func() {
+					h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+			placeholder
+		placeholder
+
+			accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
+				c,
+				account.ID,
+				selection.WaitPlan.MaxConcurrency,
+				selection.WaitPlan.Timeout,
+				reqStream,
+				&streamStarted,
+			)
+			if err != nil {
+				if accountWaitRelease != nil {
+					accountWaitRelease()
+			placeholder
+				log.Printf("Account concurrency acquire failed: %v", err)
+				h.handleConcurrencyError(c, err, "account", streamStarted)
+				return
+		placeholder
+			if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
+				log.Printf("Bind sticky session failed: %v", err)
+		placeholder
 	placeholder
 
 		// 转发请求 - 根据账号平台分流
@@ -270,6 +356,9 @@ placeholder
 	placeholder
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
+	placeholder
+		if accountWaitRelease != nil {
+			accountWaitRelease()
 	placeholder
 		if err != nil {
 			var failoverErr *service.UpstreamFailoverError
@@ -310,12 +399,42 @@ placeholder
 
 // Models handles listing available models
 // GET /v1/models
-// Returns different model lists based on the API key's group platform
+// Returns models based on account configurations (model_mapping whitelist)
+// Falls back to default models if no whitelist is configured
 func (h *GatewayHandler) Models(c *gin.Context) {
 	apiKey, _ := middleware2.GetApiKeyFromContext(c)
 
-	// Return OpenAI models for OpenAI platform groups
-	if apiKey != nil && apiKey.Group != nil && apiKey.Group.Platform == "openai" {
+	var groupID *int64
+	var platform string
+
+	if apiKey != nil && apiKey.Group != nil {
+		groupID = &apiKey.Group.ID
+		platform = apiKey.Group.Platform
+placeholder
+
+	// Get available models from account configurations (without platform filter)
+	availableModels := h.gatewayService.GetAvailableModels(c.Request.Context(), groupID, "")
+
+	if len(availableModels) > 0 {
+		// Build model list from whitelist
+		models := make([]claude.Model, 0, len(availableModels))
+		for _, modelID := range availableModels {
+			models = append(models, claude.Model{
+				ID:          modelID,
+				Type:        "model",
+				DisplayName: modelID,
+				CreatedAt:   "2024-01-01T00:00:00Z",
+		placeholder)
+	placeholder
+		c.JSON(http.StatusOK, gin.H{
+			"object": "list",
+			"data":   models,
+	placeholder)
+		return
+placeholder
+
+	// Fallback to default models
+	if platform == "openai" {
 		c.JSON(http.StatusOK, gin.H{
 			"object": "list",
 			"data":   openai.DefaultModels,
@@ -323,10 +442,18 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 		return
 placeholder
 
-	// Default: Claude models
 	c.JSON(http.StatusOK, gin.H{
 		"object": "list",
 		"data":   claude.DefaultModels,
+placeholder)
+placeholder
+
+// AntigravityModels 返回 Antigravity 支持的全部模型
+// GET /antigravity/models
+func (h *GatewayHandler) AntigravityModels(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"object": "list",
+		"data":   antigravity.DefaultModels(),
 placeholder)
 placeholder
 
@@ -648,13 +775,13 @@ placeholder
 
 func billingErrorDetails(err error) (status int, code, message string) {
 	if errors.Is(err, service.ErrBillingServiceUnavailable) {
-		msg := infraerrors.Message(err)
+		msg := pkgerrors.Message(err)
 		if msg == "" {
 			msg = "Billing service temporarily unavailable. Please retry later."
 	placeholder
 		return http.StatusServiceUnavailable, "billing_service_error", msg
 placeholder
-	msg := infraerrors.Message(err)
+	msg := pkgerrors.Message(err)
 	if msg == "" {
 		msg = err.Error()
 placeholder
