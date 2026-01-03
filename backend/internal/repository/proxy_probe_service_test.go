@@ -20,7 +20,10 @@ placeholder
 
 func (s *ProxyProbeServiceSuite) SetupTest() {
 	s.ctx = context.Background()
-	s.prober = &proxyProbeService{ipInfoURL: "http://ipinfo.test/json"placeholder
+	s.prober = &proxyProbeService{
+		ipInfoURL:         "http://ipinfo.test/json",
+		allowPrivateHosts: true,
+placeholder
 placeholder
 
 func (s *ProxyProbeServiceSuite) TearDownTest() {

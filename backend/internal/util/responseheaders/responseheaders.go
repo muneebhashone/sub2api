@@ -31,6 +31,7 @@ var defaultAllowed = map[string]struct{placeholder{
 	"x-ratelimit-reset-tokens":       {placeholder,
 	"retry-after":                    {placeholder,
 	"location":                       {placeholder,
+	"www-authenticate":               {placeholder,
 placeholder
 
 // hopByHopHeaders 是跳过的 hop-by-hop 头部，这些头部由 HTTP 库自动处理

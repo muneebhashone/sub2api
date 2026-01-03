@@ -23,7 +23,13 @@ placeholder
 // SetupTest 每个测试用例执行前的初始化
 // 创建空配置，各测试用例可按需覆盖
 func (s *HTTPUpstreamSuite) SetupTest() {
-	s.cfg = &config.Config{placeholder
+	s.cfg = &config.Config{
+		Security: config.SecurityConfig{
+			URLAllowlist: config.URLAllowlistConfig{
+				AllowPrivateHosts: true,
+		placeholder,
+	placeholder,
+placeholder
 placeholder
 
 // newService 创建测试用的 httpUpstreamService 实例
