@@ -322,9 +322,6 @@ placeholder
 
 	originalModel := claudeReq.Model
 	mappedModel := s.getMappedModel(account, claudeReq.Model)
-	if mappedModel != claudeReq.Model {
-		log.Printf("Antigravity model mapping: %s -> %s (account: %s)", claudeReq.Model, mappedModel, account.Name)
-placeholder
 
 	// 获取 access_token
 	if s.tokenProvider == nil {
