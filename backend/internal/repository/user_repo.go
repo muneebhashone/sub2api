@@ -301,7 +301,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	result := make([]int64, 0)
 	for rows.Next() {

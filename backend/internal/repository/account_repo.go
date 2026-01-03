@@ -975,7 +975,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	for rows.Next() {
 		var id int64
