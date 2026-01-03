@@ -251,8 +251,20 @@ placeholder
 	return TierGoogleOneUnknown
 placeholder
 
-// FetchGoogleOneTier fetches Google One tier from Drive API
+// fetchGoogleOneTier fetches Google One tier from Drive API or LoadCodeAssist API
 func (s *GeminiOAuthService) FetchGoogleOneTier(ctx context.Context, accessToken, proxyURL string) (string, *geminicli.DriveStorageInfo, error) {
+	// First try LoadCodeAssist API (works for accounts with GCP projects)
+	if s.codeAssist != nil {
+		loadResp, err := s.codeAssist.LoadCodeAssist(ctx, accessToken, proxyURL, nil)
+		if err == nil && loadResp != nil {
+			if tier := loadResp.GetTier(); tier != "" {
+				fmt.Printf("[GeminiOAuth] Got tier from LoadCodeAssist: %s\n", tier)
+				return tier, nil, nil
+		placeholder
+	placeholder
+placeholder
+
+	// Fallback to Drive API (requires drive.readonly scope)
 	driveClient := geminicli.NewDriveClient()
 
 	storageInfo, err := driveClient.GetStorageQuota(ctx, accessToken, proxyURL)
@@ -422,12 +434,15 @@ placeholder
 	placeholder
 	case "google_one":
 		// Attempt to fetch Drive storage tier
-		tierID, storageInfo, err := s.FetchGoogleOneTier(ctx, tokenResp.AccessToken, proxyURL)
+		var storageInfo *geminicli.DriveStorageInfo
+		var err error
+		tierID, storageInfo, err = s.FetchGoogleOneTier(ctx, tokenResp.AccessToken, proxyURL)
 		if err != nil {
 			// Log warning but don't block - use fallback
 			fmt.Printf("[GeminiOAuth] Warning: Failed to fetch Drive tier: %v\n", err)
 			tierID = TierGoogleOneUnknown
 	placeholder
+		fmt.Printf("[GeminiOAuth] Google One tierID after fetch: %s\n", tierID)
 
 		// Store Drive info in extra field for caching
 		if storageInfo != nil {
@@ -452,7 +467,7 @@ placeholder
 placeholder
 	// ai_studio 模式不设置 tierID，保持为空
 
-	return &GeminiTokenInfo{
+	result := &GeminiTokenInfo{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		TokenType:    tokenResp.TokenType,
@@ -462,7 +477,9 @@ placeholder
 		ProjectID:    projectID,
 		TierID:       tierID,
 		OAuthType:    oauthType,
-placeholder, nil
+placeholder
+	fmt.Printf("[GeminiOAuth] ExchangeCode returning tierID: %s\n", result.TierID)
+	return result, nil
 placeholder
 
 func (s *GeminiOAuthService) RefreshToken(ctx context.Context, oauthType, refreshToken, proxyURL string) (*GeminiTokenInfo, error) {
@@ -669,6 +686,9 @@ placeholder
 		// Validate tier_id before storing
 		if err := validateTierID(tokenInfo.TierID); err == nil {
 			creds["tier_id"] = tokenInfo.TierID
+			fmt.Printf("[GeminiOAuth] Storing tier_id: %s\n", tokenInfo.TierID)
+	placeholder else {
+			fmt.Printf("[GeminiOAuth] Invalid tier_id %s: %v\n", tokenInfo.TierID, err)
 	placeholder
 		// Silently skip invalid tier_id (don't block account creation)
 placeholder
@@ -698,7 +718,13 @@ placeholder
 	// Extract tierID from response (works whether CloudAICompanionProject is set or not)
 	tierID := "LEGACY"
 	if loadResp != nil {
-		tierID = extractTierIDFromAllowedTiers(loadResp.AllowedTiers)
+		// First try to get tier from currentTier/paidTier fields
+		if tier := loadResp.GetTier(); tier != "" {
+			tierID = tier
+	placeholder else {
+			// Fallback to extracting from allowedTiers
+			tierID = extractTierIDFromAllowedTiers(loadResp.AllowedTiers)
+	placeholder
 placeholder
 
 	// If LoadCodeAssist returned a project, use it
