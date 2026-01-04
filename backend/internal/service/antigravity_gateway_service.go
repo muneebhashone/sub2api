@@ -20,10 +20,26 @@ import (
 
 const (
 	antigravityStickySessionTTL = time.Hour
-	antigravityMaxRetries       = 5
+	antigravityMaxRetries       = 3
 	antigravityRetryBaseDelay   = 1 * time.Second
 	antigravityRetryMaxDelay    = 16 * time.Second
 )
+
+// getSessionID 从 gin.Context 获取 session_id（用于日志追踪）
+func getSessionID(c *gin.Context) string {
+	if c == nil {
+		return ""
+placeholder
+	return c.GetHeader("session_id")
+placeholder
+
+// logPrefix 生成统一的日志前缀
+func logPrefix(sessionID, accountName string) string {
+	if sessionID != "" {
+		return fmt.Sprintf("[antigravity-Forward] session=%s account=%s", sessionID, accountName)
+placeholder
+	return fmt.Sprintf("[antigravity-Forward] account=%s", accountName)
+placeholder
 
 // Antigravity 直接支持的模型（精确匹配透传）
 var antigravitySupportedModels = map[string]bool{
@@ -46,10 +62,11 @@ var antigravityPrefixMapping = []struct {
 	target string
 placeholder{
 	// 长前缀优先
-	{"gemini-3-pro-image", "gemini-3-pro-image"placeholder, // gemini-3-pro-image-preview 等
-	{"claude-3-5-sonnet", "claude-sonnet-4-5"placeholder,   // 旧版 claude-3-5-sonnet-xxx
-	{"claude-sonnet-4-5", "claude-sonnet-4-5"placeholder,   // claude-sonnet-4-5-xxx
-	{"claude-haiku-4-5", "claude-sonnet-4-5"placeholder,    // claude-haiku-4-5-xxx → sonnet
+	{"gemini-2.5-flash-image", "gemini-3-pro-image"placeholder, // gemini-2.5-flash-image → 3-pro-image
+	{"gemini-3-pro-image", "gemini-3-pro-image"placeholder,     // gemini-3-pro-image-preview 等
+	{"claude-3-5-sonnet", "claude-sonnet-4-5"placeholder,       // 旧版 claude-3-5-sonnet-xxx
+	{"claude-sonnet-4-5", "claude-sonnet-4-5"placeholder,       // claude-sonnet-4-5-xxx
+	{"claude-haiku-4-5", "claude-sonnet-4-5"placeholder,        // claude-haiku-4-5-xxx → sonnet
 	{"claude-opus-4-5", "claude-opus-4-5-thinking"placeholder,
 	{"claude-3-haiku", "claude-sonnet-4-5"placeholder, // 旧版 claude-3-haiku-xxx → sonnet
 	{"claude-sonnet-4", "claude-sonnet-4-5"placeholder,
@@ -310,6 +327,8 @@ placeholder
 // Forward 转发 Claude 协议请求（Claude → Gemini 转换）
 func (s *AntigravityGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*ForwardResult, error) {
 	startTime := time.Now()
+	sessionID := getSessionID(c)
+	prefix := logPrefix(sessionID, account.Name)
 
 	// 解析 Claude 请求
 	var claudeReq antigravity.ClaudeRequest
@@ -364,10 +383,11 @@ placeholder
 		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 		if err != nil {
 			if attempt < antigravityMaxRetries {
-				log.Printf("Antigravity account %d: upstream request failed, retry %d/%d: %v", account.ID, attempt, antigravityMaxRetries, err)
+				log.Printf("%s status=request_failed retry=%d/%d error=%v", prefix, attempt, antigravityMaxRetries, err)
 				sleepAntigravityBackoff(attempt)
 				continue
 		placeholder
+			log.Printf("%s status=request_failed retries_exhausted error=%v", prefix, err)
 			return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed after retries")
 	placeholder
 
@@ -376,13 +396,13 @@ placeholder
 			_ = resp.Body.Close()
 
 			if attempt < antigravityMaxRetries {
-				log.Printf("Antigravity account %d: upstream status %d, retry %d/%d", account.ID, resp.StatusCode, attempt, antigravityMaxRetries)
+				log.Printf("%s status=%d retry=%d/%d", prefix, resp.StatusCode, attempt, antigravityMaxRetries)
 				sleepAntigravityBackoff(attempt)
 				continue
 		placeholder
 			// 所有重试都失败，标记限流状态
 			if resp.StatusCode == 429 {
-				s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
 		placeholder
 			// 最后一次尝试也失败
 			resp = &http.Response{
@@ -400,7 +420,7 @@ placeholder
 	// 处理错误响应
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-		s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+		s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
@@ -419,6 +439,7 @@ placeholder
 	if claudeReq.Stream {
 		streamRes, err := s.handleClaudeStreamingResponse(c, resp, startTime, originalModel)
 		if err != nil {
+			log.Printf("%s status=stream_error error=%v", prefix, err)
 			return nil, err
 	placeholder
 		usage = streamRes.usage
@@ -443,6 +464,8 @@ placeholder
 // ForwardGemini 转发 Gemini 协议请求
 func (s *AntigravityGatewayService) ForwardGemini(ctx context.Context, c *gin.Context, account *Account, originalModel string, action string, stream bool, body []byte) (*ForwardResult, error) {
 	startTime := time.Now()
+	sessionID := getSessionID(c)
+	prefix := logPrefix(sessionID, account.Name)
 
 	if strings.TrimSpace(originalModel) == "" {
 		return nil, s.writeGoogleError(c, http.StatusBadRequest, "Missing model in URL")
@@ -518,10 +541,11 @@ placeholder
 		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 		if err != nil {
 			if attempt < antigravityMaxRetries {
-				log.Printf("Antigravity account %d: upstream request failed, retry %d/%d: %v", account.ID, attempt, antigravityMaxRetries, err)
+				log.Printf("%s status=request_failed retry=%d/%d error=%v", prefix, attempt, antigravityMaxRetries, err)
 				sleepAntigravityBackoff(attempt)
 				continue
 		placeholder
+			log.Printf("%s status=request_failed retries_exhausted error=%v", prefix, err)
 			return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries")
 	placeholder
 
@@ -530,13 +554,13 @@ placeholder
 			_ = resp.Body.Close()
 
 			if attempt < antigravityMaxRetries {
-				log.Printf("Antigravity account %d: upstream status %d, retry %d/%d", account.ID, resp.StatusCode, attempt, antigravityMaxRetries)
+				log.Printf("%s status=%d retry=%d/%d", prefix, resp.StatusCode, attempt, antigravityMaxRetries)
 				sleepAntigravityBackoff(attempt)
 				continue
 		placeholder
 			// 所有重试都失败，标记限流状态
 			if resp.StatusCode == 429 {
-				s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
 		placeholder
 			resp = &http.Response{
 				StatusCode: resp.StatusCode,
@@ -558,7 +582,7 @@ placeholder
 	// 处理错误响应
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-		s.handleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+		s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
@@ -580,6 +604,7 @@ placeholder
 	if stream || upstreamAction == "streamGenerateContent" {
 		streamRes, err := s.handleGeminiStreamingResponse(c, resp, startTime)
 		if err != nil {
+			log.Printf("%s status=stream_error error=%v", prefix, err)
 			return nil, err
 	placeholder
 		usage = streamRes.usage
@@ -628,7 +653,7 @@ func sleepAntigravityBackoff(attempt int) {
 	sleepGeminiBackoff(attempt) // 复用 Gemini 的退避逻辑
 placeholder
 
-func (s *AntigravityGatewayService) handleUpstreamError(ctx context.Context, account *Account, statusCode int, headers http.Header, body []byte) {
+func (s *AntigravityGatewayService) handleUpstreamError(ctx context.Context, prefix string, account *Account, statusCode int, headers http.Header, body []byte) {
 	// 429 使用 Gemini 格式解析（从 body 解析重置时间）
 	if statusCode == 429 {
 		resetAt := ParseGeminiRateLimitResetTime(body)
@@ -639,17 +664,23 @@ func (s *AntigravityGatewayService) handleUpstreamError(ctx context.Context, acc
 				defaultDur = 5 * time.Minute
 		placeholder
 			ra := time.Now().Add(defaultDur)
+			log.Printf("%s status=429 rate_limited reset_in=%v (fallback)", prefix, defaultDur)
 			_ = s.accountRepo.SetRateLimited(ctx, account.ID, ra)
 			return
 	placeholder
-		_ = s.accountRepo.SetRateLimited(ctx, account.ID, time.Unix(*resetAt, 0))
+		resetTime := time.Unix(*resetAt, 0)
+		log.Printf("%s status=429 rate_limited reset_at=%v reset_in=%v", prefix, resetTime.Format("15:04:05"), time.Until(resetTime).Truncate(time.Second))
+		_ = s.accountRepo.SetRateLimited(ctx, account.ID, resetTime)
 		return
 placeholder
 	// 其他错误码继续使用 rateLimitService
 	if s.rateLimitService == nil {
 		return
 placeholder
-	s.rateLimitService.HandleUpstreamError(ctx, account, statusCode, headers, body)
+	shouldDisable := s.rateLimitService.HandleUpstreamError(ctx, account, statusCode, headers, body)
+	if shouldDisable {
+		log.Printf("%s status=%d marked_error", prefix, statusCode)
+placeholder
 placeholder
 
 type antigravityStreamResult struct {
@@ -758,7 +789,7 @@ placeholder
 
 func (s *AntigravityGatewayService) writeMappedClaudeError(c *gin.Context, upstreamStatus int, body []byte) error {
 	// 记录上游错误详情便于调试
-	log.Printf("Antigravity upstream error %d: %s", upstreamStatus, string(body))
+	log.Printf("[antigravity-Forward] upstream_error status=%d body=%s", upstreamStatus, string(body))
 
 	var statusCode int
 	var errType, errMsg string
@@ -832,7 +863,7 @@ placeholder
 	// 转换 Gemini 响应为 Claude 格式
 	claudeResp, agUsage, err := antigravity.TransformGeminiToClaude(body, originalModel)
 	if err != nil {
-		log.Printf("Transform Gemini to Claude failed: %v, body: %s", err, string(body))
+		log.Printf("[antigravity-Forward] transform_error error=%v body=%s", err, string(body))
 		return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to parse upstream response")
 placeholder
 
