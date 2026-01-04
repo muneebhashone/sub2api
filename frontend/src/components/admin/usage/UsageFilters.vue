@@ -15,11 +15,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, reactive placeholder from 'vue'; import { useI18n placeholder from 'vue-i18n'; import { adminAPI placeholder from '@/api/admin'; import Select from '@/components/common/Select.vue'; import DateRangePicker from '@/components/common/DateRangePicker.vue'
+import { ref, onMounted placeholder from 'vue'; import { useI18n placeholder from 'vue-i18n'; import { adminAPI placeholder from '@/api/admin'; import Select from '@/components/common/Select.vue'; import DateRangePicker from '@/components/common/DateRangePicker.vue'
 const props = defineProps(['modelValue', 'exporting', 'startDate', 'endDate']); const emit = defineEmits(['update:modelValue', 'update:startDate', 'update:endDate', 'change', 'reset', 'export'])
 const { t placeholder = useI18n(); const filters = props.modelValue
 const userKW = ref(''); const results = ref<any[]>([]); const showDD = ref(false); let timeout: any = null
-const mOpts = ref([{ value: null, label: t('admin.usage.allModels') placeholder]); const gOpts = ref([{ value: null, label: t('admin.usage.allGroups') placeholder])
+const mOpts = ref<{value: string | null, label: stringplaceholder[]>([{ value: null, label: t('admin.usage.allModels') placeholder]); const gOpts = ref<any[]>([{ value: null, label: t('admin.usage.allGroups') placeholder])
 const emitChange = () => emit('change')
 const debounceSearch = () => { clearTimeout(timeout); timeout = setTimeout(async () => { if(!userKW.value) { results.value = []; return placeholder; try { results.value = await adminAPI.usage.searchUsers(userKW.value) placeholder catch {placeholder placeholder, 300) placeholder
 const selectUser = (u: any) => { userKW.value = u.email; showDD.value = false; filters.user_id = u.id; emitChange() placeholder
