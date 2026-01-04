@@ -37,7 +37,7 @@
     </TablePageLayout>
 
     <Teleport to="body">
-      <div v-if="activeMenuId !== null && menuPosition" class="action-menu-content fixed z-[9999] w-48 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5 dark:bg-dark-800" :style="{ top: menuPosition.top + 'px', left: menuPosition.left + 'px' placeholder">
+      <div v-if="activeMenuId !== null && menuPosition" ref="actionMenuEl" class="action-menu-content fixed z-[9999] w-48 max-h-[calc(100vh-16px)] overflow-auto rounded-xl bg-white shadow-lg ring-1 ring-black/5 dark:bg-dark-800" :style="{ top: menuPosition.top + 'px', left: menuPosition.left + 'px' placeholder">
         <div class="py-1">
           <template v-for="user in users" :key="user.id">
             <template v-if="user.id === activeMenuId">
@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted placeholder from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'; import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'; import { useTableLoader placeholder from '@/composables/useTableLoader'
 import type { User placeholder from '@/types'
@@ -83,6 +83,7 @@ const { items: users, loading, params, pagination, load, reload, handlePageChang
 const showCreateModal = ref(false); const showEditModal = ref(false); const showDeleteDialog = ref(false); const showApiKeysModal = ref(false)
 const editingUser = ref<User | null>(null); const deletingUser = ref<User | null>(null); const viewingUser = ref<User | null>(null)
 const activeMenuId = ref<number | null>(null); const menuPosition = ref<{ top: number; left: number placeholder | null>(null)
+const actionMenuEl = ref<HTMLElement | null>(null)
 const showAllowedGroupsModal = ref(false); const allowedGroupsUser = ref<User | null>(null); const showBalanceModal = ref(false); const balanceUser = ref<User | null>(null); const balanceOperation = ref<'add' | 'subtract'>('add')
 const columns = computed(() => [{ key: 'email', label: t('admin.users.columns.user'), sortable: true placeholder, { key: 'role', label: t('admin.users.columns.role'), sortable: true placeholder, { key: 'balance', label: t('admin.users.columns.balance'), sortable: true placeholder, { key: 'status', label: t('admin.users.columns.status'), sortable: true placeholder, { key: 'actions', label: t('admin.users.columns.actions') placeholder])
 
@@ -98,7 +99,47 @@ const handleDeposit = (u: User) => { balanceUser.value = u; balanceOperation.val
 const handleWithdraw = (u: User) => { balanceUser.value = u; balanceOperation.value = 'subtract'; showBalanceModal.value = true placeholder
 const closeBalanceModal = () => { showBalanceModal.value = false; balanceUser.value = null placeholder
 const handleToggleStatus = async (user: User) => { const next = user.status === 'active' ? 'disabled' : 'active'; try { await adminAPI.users.toggleStatus(user.id, next as any); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
-const openActionMenu = (u: User, e: MouseEvent) => { if (activeMenuId.value === u.id) { activeMenuId.value = null; menuPosition.value = null placeholder else { activeMenuId.value = u.id; menuPosition.value = { top: e.clientY, left: e.clientX - 150 placeholder placeholder placeholder
+const repositionActionMenu = (triggerRect?: DOMRect) => {
+  if (!menuPosition.value || !actionMenuEl.value) return
+  const rect = actionMenuEl.value.getBoundingClientRect()
+  const margin = 8
+  let top = menuPosition.value.top
+  let left = menuPosition.value.left
+
+  if (triggerRect) {
+    const spaceBelow = window.innerHeight - triggerRect.bottom
+    const spaceAbove = triggerRect.top
+    if (rect.height > spaceBelow && spaceAbove > spaceBelow) top = Math.max(margin, triggerRect.top - rect.height - 4)
+  placeholder
+
+  if (left + rect.width + margin > window.innerWidth) left = window.innerWidth - rect.width - margin
+  if (left < margin) left = margin
+  if (top + rect.height + margin > window.innerHeight) top = window.innerHeight - rect.height - margin
+  if (top < margin) top = margin
+
+  menuPosition.value = { top, left placeholder
+placeholder
+const openActionMenu = async (u: User, e: MouseEvent) => {
+  e.stopPropagation()
+  if (activeMenuId.value === u.id) { closeActionMenu(); return placeholder
+
+  const actionMenuWidthPx = 192 // w-48
+  const triggerEl = e.currentTarget as HTMLElement | null
+  const triggerRect = triggerEl?.getBoundingClientRect()
+
+  activeMenuId.value = u.id
+  if (triggerRect) menuPosition.value = { top: triggerRect.bottom + 4, left: triggerRect.right - actionMenuWidthPx placeholder
+  else menuPosition.value = { top: e.clientY, left: e.clientX - actionMenuWidthPx placeholder
+
+  await nextTick()
+  repositionActionMenu(triggerRect)
+placeholder
 const closeActionMenu = () => { activeMenuId.value = null; menuPosition.value = null placeholder
-onMounted(load)
+
+const handleDocumentClick = (evt: MouseEvent) => { if (activeMenuId.value === null) return; const target = evt.target as Node | null; if (target && actionMenuEl.value?.contains(target)) return; closeActionMenu() placeholder
+const handleWindowResize = () => repositionActionMenu()
+const handleAnyScroll = () => closeActionMenu()
+
+onMounted(() => { load(); document.addEventListener('click', handleDocumentClick); window.addEventListener('resize', handleWindowResize); window.addEventListener('scroll', handleAnyScroll, true) placeholder)
+onBeforeUnmount(() => { document.removeEventListener('click', handleDocumentClick); window.removeEventListener('resize', handleWindowResize); window.removeEventListener('scroll', handleAnyScroll, true) placeholder)
 </script>
