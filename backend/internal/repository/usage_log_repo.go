@@ -61,9 +61,16 @@ placeholder
 	return requestCount / 5, tokenCount / 5, nil
 placeholder
 
-func (r *usageLogRepository) Create(ctx context.Context, log *service.UsageLog) error {
+func (r *usageLogRepository) Create(ctx context.Context, log *service.UsageLog) (bool, error) {
 	if log == nil {
-		return nil
+		return false, nil
+placeholder
+
+	// 在事务上下文中，使用 tx 绑定的 ExecQuerier 执行原生 SQL，保证与其他更新同事务。
+	// 无事务时回退到默认的 *sql.DB 执行器。
+	sqlq := r.sql
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		sqlq = tx.Client()
 placeholder
 
 	createdAt := log.CreatedAt
@@ -152,18 +159,20 @@ placeholder
 		firstToken,
 		createdAt,
 placeholder
-	if err := scanSingleRow(ctx, r.sql, query, args, &log.ID, &log.CreatedAt); err != nil {
+	if err := scanSingleRow(ctx, sqlq, query, args, &log.ID, &log.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) && requestID != "" {
 			selectQuery := "SELECT id, created_at FROM usage_logs WHERE request_id = $1 AND api_key_id = $2"
-			if err := scanSingleRow(ctx, r.sql, selectQuery, []any{requestID, log.ApiKeyIDplaceholder, &log.ID, &log.CreatedAt); err != nil {
-				return err
+			if err := scanSingleRow(ctx, sqlq, selectQuery, []any{requestID, log.ApiKeyIDplaceholder, &log.ID, &log.CreatedAt); err != nil {
+				return false, err
 		placeholder
+			log.RateMultiplier = rateMultiplier
+			return false, nil
 	placeholder else {
-			return err
+			return false, err
 	placeholder
 placeholder
 	log.RateMultiplier = rateMultiplier
-	return nil
+	return true, nil
 placeholder
 
 func (r *usageLogRepository) GetByID(ctx context.Context, id int64) (log *service.UsageLog, err error) {
