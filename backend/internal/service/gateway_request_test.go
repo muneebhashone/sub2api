@@ -151,3 +151,125 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestFilterThinkingBlocksForRetry_DisablesThinkingAndPreservesAsText(t *testing.T) {
+	input := []byte(`{
+		"model":"claude-3-5-sonnet-20241022",
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"user","content":[{"type":"text","text":"Hi"placeholder]placeholder,
+			{"role":"assistant","content":[
+				{"type":"thinking","thinking":"Let me think...","signature":"bad_sig"placeholder,
+				{"type":"text","text":"Answer"placeholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+
+	msgs, ok := req["messages"].([]any)
+	require.True(t, ok)
+	require.Len(t, msgs, 2)
+
+	assistant := msgs[1].(map[string]any)
+	content := assistant["content"].([]any)
+	require.Len(t, content, 2)
+
+	first := content[0].(map[string]any)
+	require.Equal(t, "text", first["type"])
+	require.Equal(t, "Let me think...", first["text"])
+placeholder
+
+func TestFilterThinkingBlocksForRetry_DisablesThinkingEvenWithoutThinkingBlocks(t *testing.T) {
+	input := []byte(`{
+		"model":"claude-3-5-sonnet-20241022",
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"user","content":[{"type":"text","text":"Hi"placeholder]placeholder,
+			{"role":"assistant","content":[{"type":"text","text":"Prefill"placeholder]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+placeholder
+
+func TestFilterThinkingBlocksForRetry_RemovesRedactedThinkingAndKeepsValidContent(t *testing.T) {
+	input := []byte(`{
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"assistant","content":[
+				{"type":"redacted_thinking","data":"..."placeholder,
+				{"type":"text","text":"Visible"placeholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+
+	msgs := req["messages"].([]any)
+	content := msgs[0].(map[string]any)["content"].([]any)
+	require.Len(t, content, 1)
+	require.Equal(t, "text", content[0].(map[string]any)["type"])
+	require.Equal(t, "Visible", content[0].(map[string]any)["text"])
+placeholder
+
+func TestFilterThinkingBlocksForRetry_EmptyContentGetsPlaceholder(t *testing.T) {
+	input := []byte(`{
+		"thinking":{"type":"enabled"placeholder,
+		"messages":[
+			{"role":"assistant","content":[{"type":"redacted_thinking","data":"..."placeholder]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	msgs := req["messages"].([]any)
+	content := msgs[0].(map[string]any)["content"].([]any)
+	require.Len(t, content, 1)
+	require.Equal(t, "text", content[0].(map[string]any)["type"])
+	require.NotEmpty(t, content[0].(map[string]any)["text"])
+placeholder
+
+func TestFilterSignatureSensitiveBlocksForRetry_DowngradesTools(t *testing.T) {
+	input := []byte(`{
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"assistant","content":[
+				{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"placeholderplaceholder,
+				{"type":"tool_result","tool_use_id":"t1","content":"ok","is_error":falseplaceholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterSignatureSensitiveBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+
+	msgs := req["messages"].([]any)
+	content := msgs[0].(map[string]any)["content"].([]any)
+	require.Len(t, content, 2)
+	require.Equal(t, "text", content[0].(map[string]any)["type"])
+	require.Equal(t, "text", content[1].(map[string]any)["type"])
+	require.Contains(t, content[0].(map[string]any)["text"], "tool_use")
+	require.Contains(t, content[1].(map[string]any)["text"], "tool_result")
+placeholder
