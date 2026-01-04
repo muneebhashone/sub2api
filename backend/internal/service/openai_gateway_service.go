@@ -934,7 +934,6 @@ placeholder
 	placeholder
 placeholder
 
-	return &openaiStreamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
 placeholder
 
 func (s *OpenAIGatewayService) replaceModelInSSELine(line, fromModel, toModel string) string {

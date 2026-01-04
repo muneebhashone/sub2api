@@ -72,7 +72,7 @@ placeholder
 placeholder
 
 	go func() {
-		defer pw.Close()
+		defer func() { _ = pw.Close() placeholder()
 		// 写入超过 MaxLineSize 的单行数据，触发 ErrTooLong
 		payload := "data: " + strings.Repeat("a", 128*1024) + "\n"
 		_, _ = pw.Write([]byte(payload))

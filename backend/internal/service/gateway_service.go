@@ -1731,7 +1731,6 @@ placeholder
 	placeholder
 placeholder
 
-	return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
 placeholder
 
 // replaceModelInSSELine 替换SSE数据行中的model字段

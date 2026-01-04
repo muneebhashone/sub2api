@@ -246,13 +246,3 @@ placeholder
 
 	return client
 placeholder
-
-func prefix(s string, n int) string {
-	if n <= 0 {
-		return ""
-placeholder
-	if len(s) <= n {
-		return s
-placeholder
-	return s[:n]
-placeholder
