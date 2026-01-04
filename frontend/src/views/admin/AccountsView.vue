@@ -4,56 +4,186 @@
       <template #actions><AccountTableActions :loading="loading" @refresh="load" @sync="showSync = true" @create="showCreate = true" /></template>
       <template #filters><AccountTableFilters v-model:searchQuery="params.search" :filters="params" @change="reload" @update:searchQuery="debouncedReload" /></template>
       <template #table>
-        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @edit="showBulkEdit = true" />
+        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @edit="showBulkEdit = true" @clear="selIds = []" @select-page="selectPage" />
         <DataTable :columns="cols" :data="accounts" :loading="loading">
-          <template #cell-select="{ row placeholder"><input type="checkbox" :checked="selIds.includes(row.id)" @change="toggleSel(row.id)" /></template>
-          <template #cell-name="{ value placeholder"><span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span></template>
-          <template #cell-status="{ row placeholder"><AccountStatusIndicator :account="row" /></template>
-          <template #cell-actions="{ row placeholder"><div class="flex gap-2"><button @click="handleEdit(row)" class="btn btn-sm btn-secondary">{{ t('common.edit') placeholderplaceholder</button><button @click="openMenu(row, $event)" class="btn btn-sm btn-secondary">{{ t('common.more') placeholderplaceholder</button></div></template>
+          <template #cell-select="{ row placeholder">
+            <input type="checkbox" :checked="selIds.includes(row.id)" @change="toggleSel(row.id)" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+          </template>
+          <template #cell-name="{ value placeholder">
+            <span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span>
+          </template>
+          <template #cell-platform_type="{ row placeholder">
+            <PlatformTypeBadge :platform="row.platform" :type="row.type" />
+          </template>
+          <template #cell-concurrency="{ row placeholder">
+            <div class="flex items-center gap-1.5">
+              <span :class="['inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium', (row.current_concurrency || 0) >= row.concurrency ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : (row.current_concurrency || 0) > 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400']">
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+                <span class="font-mono">{{ row.current_concurrency || 0 placeholderplaceholder</span>
+                <span class="text-gray-400 dark:text-gray-500">/</span>
+                <span class="font-mono">{{ row.concurrency placeholderplaceholder</span>
+              </span>
+            </div>
+          </template>
+          <template #cell-status="{ row placeholder">
+            <AccountStatusIndicator :account="row" @show-temp-unsched="handleShowTempUnsched" />
+          </template>
+          <template #cell-schedulable="{ row placeholder">
+            <button @click="handleToggleSchedulable(row)" :disabled="togglingSchedulable === row.id" class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-dark-800" :class="[row.schedulable ? 'bg-primary-500 hover:bg-primary-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-dark-600 dark:hover:bg-dark-500']" :title="row.schedulable ? t('admin.accounts.schedulableEnabled') : t('admin.accounts.schedulableDisabled')">
+              <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="[row.schedulable ? 'translate-x-4' : 'translate-x-0']" />
+            </button>
+          </template>
+          <template #cell-today_stats="{ row placeholder">
+            <AccountTodayStatsCell :account="row" />
+          </template>
+          <template #cell-groups="{ row placeholder">
+            <div v-if="row.groups && row.groups.length > 0" class="flex flex-wrap gap-1.5">
+              <GroupBadge v-for="group in row.groups" :key="group.id" :name="group.name" :platform="group.platform" :subscription-type="group.subscription_type" :rate-multiplier="group.rate_multiplier" :show-rate="false" />
+            </div>
+            <span v-else class="text-sm text-gray-400 dark:text-dark-500">-</span>
+          </template>
+          <template #cell-usage="{ row placeholder">
+            <AccountUsageCell :account="row" />
+          </template>
+          <template #cell-priority="{ value placeholder">
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ value placeholderplaceholder</span>
+          </template>
+          <template #cell-last_used_at="{ value placeholder">
+            <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatRelativeTime(value) placeholderplaceholder</span>
+          </template>
+          <template #cell-actions="{ row placeholder">
+            <div class="flex items-center gap-1">
+              <button @click="handleEdit(row)" class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-dark-700 dark:hover:text-primary-400">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                <span class="text-xs">{{ t('common.edit') placeholderplaceholder</span>
+              </button>
+              <button @click="handleDelete(row)" class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                <span class="text-xs">{{ t('common.delete') placeholderplaceholder</span>
+              </button>
+              <button @click="openMenu(row, $event)" class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-dark-700 dark:hover:text-white">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" /></svg>
+                <span class="text-xs">{{ t('common.more') placeholderplaceholder</span>
+              </button>
+            </div>
+          </template>
         </DataTable>
       </template>
       <template #pagination><Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" /></template>
     </TablePageLayout>
     <CreateAccountModal :show="showCreate" :proxies="proxies" :groups="groups" @close="showCreate = false" @created="reload" />
     <EditAccountModal :show="showEdit" :account="edAcc" :proxies="proxies" :groups="groups" @close="showEdit = false" @updated="load" />
-    <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleStats" @reauth="handleReauth" @refresh-token="handleRefresh" />
+    <ReAuthAccountModal :show="showReAuth" :account="reAuthAcc" @close="closeReAuthModal" @reauthorized="load" />
+    <AccountTestModal :show="showTest" :account="testingAcc" @close="closeTestModal" />
+    <AccountStatsModal :show="showStats" :account="statsAcc" @close="closeStatsModal" />
+    <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleViewStats" @reauth="handleReAuth" @refresh-token="handleRefresh" @reset-status="handleResetStatus" @clear-rate-limit="handleClearRateLimit" />
     <SyncFromCrsModal :show="showSync" @close="showSync = false" @synced="reload" />
     <BulkEditAccountModal :show="showBulkEdit" :account-ids="selIds" :proxies="proxies" :groups="groups" @close="showBulkEdit = false" @updated="handleBulkUpdated" />
+    <TempUnschedStatusModal :show="showTempUnsched" :account="tempUnschedAcc" @close="showTempUnsched = false" @reset="handleTempUnschedReset" />
+    <ConfirmDialog :show="showDeleteDialog" :title="t('admin.accounts.deleteAccount')" :message="t('admin.accounts.deleteConfirm', { name: deletingAcc?.name placeholder)" :confirm-text="t('common.delete')" :cancel-text="t('common.cancel')" :danger="true" @confirm="confirmDelete" @cancel="showDeleteDialog = false" />
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted placeholder from 'vue'
-import { useI18n placeholder from 'vue-i18n'; import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'
+import { ref, reactive, computed, onMounted placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
+import { useAppStore placeholder from '@/stores/app'
+import { useAuthStore placeholder from '@/stores/auth'
+import { adminAPI placeholder from '@/api/admin'
 import { useTableLoader placeholder from '@/composables/useTableLoader'
-import AppLayout from '@/components/layout/AppLayout.vue'; import TablePageLayout from '@/components/layout/TablePageLayout.vue'; import DataTable from '@/components/common/DataTable.vue'; import Pagination from '@/components/common/Pagination.vue'
-import { CreateAccountModal, EditAccountModal, BulkEditAccountModal, SyncFromCrsModal placeholder from '@/components/account'
-import AccountTableActions from '@/components/admin/account/AccountTableActions.vue'; import AccountTableFilters from '@/components/admin/account/AccountTableFilters.vue'
-import AccountBulkActionsBar from '@/components/admin/account/AccountBulkActionsBar.vue'; import AccountActionMenu from '@/components/admin/account/AccountActionMenu.vue'
+import AppLayout from '@/components/layout/AppLayout.vue'
+import TablePageLayout from '@/components/layout/TablePageLayout.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import Pagination from '@/components/common/Pagination.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { CreateAccountModal, EditAccountModal, BulkEditAccountModal, SyncFromCrsModal, TempUnschedStatusModal placeholder from '@/components/account'
+import AccountTableActions from '@/components/admin/account/AccountTableActions.vue'
+import AccountTableFilters from '@/components/admin/account/AccountTableFilters.vue'
+import AccountBulkActionsBar from '@/components/admin/account/AccountBulkActionsBar.vue'
+import AccountActionMenu from '@/components/admin/account/AccountActionMenu.vue'
+import ReAuthAccountModal from '@/components/admin/account/ReAuthAccountModal.vue'
+import AccountTestModal from '@/components/admin/account/AccountTestModal.vue'
+import AccountStatsModal from '@/components/admin/account/AccountStatsModal.vue'
 import AccountStatusIndicator from '@/components/account/AccountStatusIndicator.vue'
+import AccountUsageCell from '@/components/account/AccountUsageCell.vue'
+import AccountTodayStatsCell from '@/components/account/AccountTodayStatsCell.vue'
+import GroupBadge from '@/components/common/GroupBadge.vue'
+import PlatformTypeBadge from '@/components/common/PlatformTypeBadge.vue'
+import { formatRelativeTime placeholder from '@/utils/format'
 import type { Account, Proxy, Group placeholder from '@/types'
 
-const { t placeholder = useI18n(); const appStore = useAppStore()
-const proxies = ref<Proxy[]>([]); const groups = ref<Group[]>([])
-const selIds = ref<number[]>([]); const showCreate = ref(false); const showEdit = ref(false); const showSync = ref(false); const showBulkEdit = ref(false)
-const edAcc = ref<Account | null>(null); const menu = reactive<{show:boolean, acc:Account|null, pos:{top:number, left:numberplaceholder|nullplaceholder>({ show: false, acc: null, pos: null placeholder)
+const { t placeholder = useI18n()
+const appStore = useAppStore()
+const authStore = useAuthStore()
+
+const proxies = ref<Proxy[]>([])
+const groups = ref<Group[]>([])
+const selIds = ref<number[]>([])
+const showCreate = ref(false)
+const showEdit = ref(false)
+const showSync = ref(false)
+const showBulkEdit = ref(false)
+const showTempUnsched = ref(false)
+const showDeleteDialog = ref(false)
+const showReAuth = ref(false)
+const showTest = ref(false)
+const showStats = ref(false)
+const edAcc = ref<Account | null>(null)
+const tempUnschedAcc = ref<Account | null>(null)
+const deletingAcc = ref<Account | null>(null)
+const reAuthAcc = ref<Account | null>(null)
+const testingAcc = ref<Account | null>(null)
+const statsAcc = ref<Account | null>(null)
+const togglingSchedulable = ref<number | null>(null)
+const menu = reactive<{show:boolean, acc:Account|null, pos:{top:number, left:numberplaceholder|nullplaceholder>({ show: false, acc: null, pos: null placeholder)
 
 const { items: accounts, loading, params, pagination, load, reload, debouncedReload, handlePageChange placeholder = useTableLoader<Account, any>({
   fetchFn: adminAPI.accounts.list,
-  initialParams: { platform: '', status: '', search: '' placeholder
+  initialParams: { platform: '', type: '', status: '', search: '' placeholder
 placeholder)
 
-const cols = [{ key: 'select', label: '' placeholder, { key: 'name', label: t('admin.accounts.columns.name'), sortable: true placeholder, { key: 'status', label: t('admin.accounts.columns.status') placeholder, { key: 'actions', label: t('admin.accounts.columns.actions') placeholder]
+const cols = computed(() => {
+  const c = [
+    { key: 'select', label: '', sortable: false placeholder,
+    { key: 'name', label: t('admin.accounts.columns.name'), sortable: true placeholder,
+    { key: 'platform_type', label: t('admin.accounts.columns.platformType'), sortable: false placeholder,
+    { key: 'concurrency', label: t('admin.accounts.columns.concurrencyStatus'), sortable: false placeholder,
+    { key: 'status', label: t('admin.accounts.columns.status'), sortable: true placeholder,
+    { key: 'schedulable', label: t('admin.accounts.columns.schedulable'), sortable: true placeholder,
+    { key: 'today_stats', label: t('admin.accounts.columns.todayStats'), sortable: false placeholder
+  ]
+  if (!authStore.isSimpleMode) {
+    c.push({ key: 'groups', label: t('admin.accounts.columns.groups'), sortable: false placeholder)
+  placeholder
+  c.push(
+    { key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false placeholder,
+    { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true placeholder,
+    { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true placeholder,
+    { key: 'actions', label: t('admin.accounts.columns.actions'), sortable: false placeholder
+  )
+  return c
+placeholder)
 
 const handleEdit = (a: Account) => { edAcc.value = a; showEdit.value = true placeholder
 const openMenu = (a: Account, e: MouseEvent) => { menu.acc = a; menu.pos = { top: e.clientY, left: e.clientX - 200 placeholder; menu.show = true placeholder
 const toggleSel = (id: number) => { const i = selIds.value.indexOf(id); if(i === -1) selIds.value.push(id); else selIds.value.splice(i, 1) placeholder
+const selectPage = () => { selIds.value = [...new Set([...selIds.value, ...accounts.value.map(a => a.id)])] placeholder
 const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; reload() placeholder catch {placeholder placeholder
 const handleBulkUpdated = () => { showBulkEdit.value = false; selIds.value = []; reload() placeholder
-const handleTest = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
-const handleStats = (a: Account) => appStore.showInfo('Stats for ' + a.name)
-const handleReauth = (a: Account) => appStore.showInfo('Reauth for ' + a.name)
+const closeTestModal = () => { showTest.value = false; testingAcc.value = null placeholder
+const closeStatsModal = () => { showStats.value = false; statsAcc.value = null placeholder
+const closeReAuthModal = () => { showReAuth.value = false; reAuthAcc.value = null placeholder
+const handleTest = (a: Account) => { testingAcc.value = a; showTest.value = true placeholder
+const handleViewStats = (a: Account) => { statsAcc.value = a; showStats.value = true placeholder
+const handleReAuth = (a: Account) => { reAuthAcc.value = a; showReAuth.value = true placeholder
 const handleRefresh = async (a: Account) => { try { await adminAPI.accounts.refreshCredentials(a.id); load() placeholder catch {placeholder placeholder
+const handleResetStatus = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
+const handleClearRateLimit = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
+const handleDelete = (a: Account) => { deletingAcc.value = a; showDeleteDialog.value = true placeholder
+const confirmDelete = async () => { if(!deletingAcc.value) return; try { await adminAPI.accounts.delete(deletingAcc.value.id); showDeleteDialog.value = false; deletingAcc.value = null; reload() placeholder catch {placeholder placeholder
+const handleToggleSchedulable = async (a: Account) => { togglingSchedulable.value = a.id; try { await adminAPI.accounts.update(a.id, { schedulable: !a.schedulable placeholder); load() placeholder finally { togglingSchedulable.value = null placeholder placeholder
+const handleShowTempUnsched = (a: Account) => { tempUnschedAcc.value = a; showTempUnsched.value = true placeholder
+const handleTempUnschedReset = async () => { if(!tempUnschedAcc.value) return; try { await adminAPI.accounts.clearError(tempUnschedAcc.value.id); showTempUnsched.value = false; tempUnschedAcc.value = null; load() placeholder catch {placeholder placeholder
 
 onMounted(async () => { load(); try { const [p, g] = await Promise.all([adminAPI.proxies.getAll(), adminAPI.groups.getAll()]); proxies.value = p; groups.value = g placeholder catch {placeholder placeholder)
 </script>
