@@ -107,7 +107,10 @@
                 </button>
               </div>
               <!-- Code Content -->
-              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto"><code v-text="file.content"></code></pre>
+              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto">
+                <code v-if="file.highlighted" v-html="file.highlighted"></code>
+                <code v-else v-text="file.content"></code>
+              </pre>
             </div>
           </div>
         </div>
@@ -165,6 +168,7 @@ interface FileConfig {
   path: string
   content: string
   hint?: string  // Optional hint message for this file
+  highlighted?: string
 placeholder
 
 const props = defineProps<Props>()
@@ -310,6 +314,22 @@ const platformNote = computed(() => {
   placeholder
 placeholder)
 
+const escapeHtml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const wrapToken = (className: string, value: string) =>
+  `<span class="${classNameplaceholder">${escapeHtml(value)placeholder</span>`
+
+const keyword = (value: string) => wrapToken('text-emerald-300', value)
+const variable = (value: string) => wrapToken('text-sky-200', value)
+const operator = (value: string) => wrapToken('text-slate-400', value)
+const string = (value: string) => wrapToken('text-amber-200', value)
+const comment = (value: string) => wrapToken('text-slate-500', value)
+
 // Syntax highlighting helpers
 // Generate file configs based on platform and active tab
 const currentFiles = computed((): FileConfig[] => {
@@ -382,9 +402,9 @@ ${keyword('export')placeholder ${variable('GEMINI_MODEL')placeholder${operator('
       content = `set GOOGLE_GEMINI_BASE_URL=${baseUrlplaceholder
 set GEMINI_API_KEY=${apiKeyplaceholder
 set GEMINI_MODEL=${modelplaceholder`
-      highlighted = `${keyword('set')placeholder ${variable('GOOGLE_GEMINI_BASE_URL')placeholder${operator('=')placeholder${baseUrlplaceholder
-${keyword('set')placeholder ${variable('GEMINI_API_KEY')placeholder${operator('=')placeholder${apiKeyplaceholder
-${keyword('set')placeholder ${variable('GEMINI_MODEL')placeholder${operator('=')placeholder${modelplaceholder
+      highlighted = `${keyword('set')placeholder ${variable('GOOGLE_GEMINI_BASE_URL')placeholder${operator('=')placeholder${string(baseUrl)placeholder
+${keyword('set')placeholder ${variable('GEMINI_API_KEY')placeholder${operator('=')placeholder${string(apiKey)placeholder
+${keyword('set')placeholder ${variable('GEMINI_MODEL')placeholder${operator('=')placeholder${string(model)placeholder
 ${comment(`REM ${modelCommentplaceholder`)placeholder`
       break
     case 'powershell':
