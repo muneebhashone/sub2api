@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -680,7 +681,11 @@ placeholder
 
 	// 使用 Scanner 并限制单行大小，避免 ReadString 无上限导致 OOM
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), defaultMaxLineSize)
+	maxLineSize := defaultMaxLineSize
+	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
+		maxLineSize = s.cfg.Gateway.MaxLineSize
+placeholder
+	scanner.Buffer(make([]byte, 64*1024), maxLineSize)
 	usage := &ClaudeUsage{placeholder
 	var firstTokenMs *int
 
@@ -689,7 +694,7 @@ placeholder
 		err  error
 placeholder
 	// 独立 goroutine 读取上游，避免读取阻塞影响超时处理
-	events := make(chan scanEvent, 1)
+	events := make(chan scanEvent, 16)
 	done := make(chan struct{placeholder)
 	sendEvent := func(ev scanEvent) bool {
 		select {
@@ -699,9 +704,12 @@ placeholder
 			return false
 	placeholder
 placeholder
+	var lastReadAt int64
+	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 	go func() {
 		defer close(events)
 		for scanner.Scan() {
+			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 			if !sendEvent(scanEvent{line: scanner.Text()placeholder) {
 				return
 		placeholder
@@ -717,26 +725,14 @@ placeholder()
 	if s.cfg != nil && s.cfg.Gateway.StreamDataIntervalTimeout > 0 {
 		streamInterval = time.Duration(s.cfg.Gateway.StreamDataIntervalTimeout) * time.Second
 placeholder
-	var intervalTimer *time.Timer
+	var intervalTicker *time.Ticker
 	if streamInterval > 0 {
-		intervalTimer = time.NewTimer(streamInterval)
-		defer intervalTimer.Stop()
+		intervalTicker = time.NewTicker(streamInterval)
+		defer intervalTicker.Stop()
 placeholder
 	var intervalCh <-chan time.Time
-	if intervalTimer != nil {
-		intervalCh = intervalTimer.C
-placeholder
-	resetInterval := func() {
-		if intervalTimer == nil {
-			return
-	placeholder
-		if !intervalTimer.Stop() {
-			select {
-			case <-intervalTimer.C:
-			default:
-		placeholder
-	placeholder
-		intervalTimer.Reset(streamInterval)
+	if intervalTicker != nil {
+		intervalCh = intervalTicker.C
 placeholder
 
 	// 仅发送一次错误事件，避免多次写入导致协议混乱
@@ -758,7 +754,7 @@ placeholder
 		placeholder
 			if ev.err != nil {
 				if errors.Is(ev.err, bufio.ErrTooLong) {
-					log.Printf("SSE line too long (antigravity): max_size=%d error=%v", defaultMaxLineSize, ev.err)
+					log.Printf("SSE line too long (antigravity): max_size=%d error=%v", maxLineSize, ev.err)
 					sendErrorEvent("response_too_large")
 					return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, ev.err
 			placeholder
@@ -766,7 +762,6 @@ placeholder
 				return nil, ev.err
 		placeholder
 
-			resetInterval()
 			line := ev.line
 			trimmed := strings.TrimRight(line, "\r\n")
 			if strings.HasPrefix(trimmed, "data:") {
@@ -814,6 +809,10 @@ placeholder
 			flusher.Flush()
 
 		case <-intervalCh:
+			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+			if time.Since(lastRead) < streamInterval {
+				continue
+		placeholder
 			log.Printf("Stream data interval timeout (antigravity)")
 			sendErrorEvent("stream_timeout")
 			return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")
@@ -959,7 +958,11 @@ placeholder
 	var firstTokenMs *int
 	// 使用 Scanner 并限制单行大小，避免 ReadString 无上限导致 OOM
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), defaultMaxLineSize)
+	maxLineSize := defaultMaxLineSize
+	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
+		maxLineSize = s.cfg.Gateway.MaxLineSize
+placeholder
+	scanner.Buffer(make([]byte, 64*1024), maxLineSize)
 
 	// 辅助函数：转换 antigravity.ClaudeUsage 到 service.ClaudeUsage
 	convertUsage := func(agUsage *antigravity.ClaudeUsage) *ClaudeUsage {
@@ -979,7 +982,7 @@ placeholder
 		err  error
 placeholder
 	// 独立 goroutine 读取上游，避免读取阻塞影响超时处理
-	events := make(chan scanEvent, 1)
+	events := make(chan scanEvent, 16)
 	done := make(chan struct{placeholder)
 	sendEvent := func(ev scanEvent) bool {
 		select {
@@ -989,9 +992,12 @@ placeholder
 			return false
 	placeholder
 placeholder
+	var lastReadAt int64
+	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 	go func() {
 		defer close(events)
 		for scanner.Scan() {
+			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 			if !sendEvent(scanEvent{line: scanner.Text()placeholder) {
 				return
 		placeholder
@@ -1006,26 +1012,14 @@ placeholder()
 	if s.cfg != nil && s.cfg.Gateway.StreamDataIntervalTimeout > 0 {
 		streamInterval = time.Duration(s.cfg.Gateway.StreamDataIntervalTimeout) * time.Second
 placeholder
-	var intervalTimer *time.Timer
+	var intervalTicker *time.Ticker
 	if streamInterval > 0 {
-		intervalTimer = time.NewTimer(streamInterval)
-		defer intervalTimer.Stop()
+		intervalTicker = time.NewTicker(streamInterval)
+		defer intervalTicker.Stop()
 placeholder
 	var intervalCh <-chan time.Time
-	if intervalTimer != nil {
-		intervalCh = intervalTimer.C
-placeholder
-	resetInterval := func() {
-		if intervalTimer == nil {
-			return
-	placeholder
-		if !intervalTimer.Stop() {
-			select {
-			case <-intervalTimer.C:
-			default:
-		placeholder
-	placeholder
-		intervalTimer.Reset(streamInterval)
+	if intervalTicker != nil {
+		intervalCh = intervalTicker.C
 placeholder
 
 	// 仅发送一次错误事件，避免多次写入导致协议混乱
@@ -1053,7 +1047,7 @@ placeholder
 		placeholder
 			if ev.err != nil {
 				if errors.Is(ev.err, bufio.ErrTooLong) {
-					log.Printf("SSE line too long (antigravity): max_size=%d error=%v", defaultMaxLineSize, ev.err)
+					log.Printf("SSE line too long (antigravity): max_size=%d error=%v", maxLineSize, ev.err)
 					sendErrorEvent("response_too_large")
 					return &antigravityStreamResult{usage: convertUsage(nil), firstTokenMs: firstTokenMsplaceholder, ev.err
 			placeholder
@@ -1061,7 +1055,6 @@ placeholder
 				return nil, fmt.Errorf("stream read error: %w", ev.err)
 		placeholder
 
-			resetInterval()
 			line := ev.line
 			// 处理 SSE 行，转换为 Claude 格式
 			claudeEvents := processor.ProcessLine(strings.TrimRight(line, "\r\n"))
@@ -1084,6 +1077,10 @@ placeholder
 		placeholder
 
 		case <-intervalCh:
+			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+			if time.Since(lastRead) < streamInterval {
+				continue
+		placeholder
 			log.Printf("Stream data interval timeout (antigravity)")
 			sendErrorEvent("stream_timeout")
 			return &antigravityStreamResult{usage: convertUsage(nil), firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")

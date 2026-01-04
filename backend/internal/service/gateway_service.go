@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -1460,7 +1461,7 @@ placeholder
 		err  error
 placeholder
 	// 独立 goroutine 读取上游，避免读取阻塞导致超时/keepalive无法处理
-	events := make(chan scanEvent, 1)
+	events := make(chan scanEvent, 16)
 	done := make(chan struct{placeholder)
 	sendEvent := func(ev scanEvent) bool {
 		select {
@@ -1470,9 +1471,12 @@ placeholder
 			return false
 	placeholder
 placeholder
+	var lastReadAt int64
+	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 	go func() {
 		defer close(events)
 		for scanner.Scan() {
+			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 			if !sendEvent(scanEvent{line: scanner.Text()placeholder) {
 				return
 		placeholder
@@ -1487,11 +1491,15 @@ placeholder()
 	if s.cfg != nil && s.cfg.Gateway.StreamDataIntervalTimeout > 0 {
 		streamInterval = time.Duration(s.cfg.Gateway.StreamDataIntervalTimeout) * time.Second
 placeholder
-	// 仅监控上游数据间隔超时，避免上游挂起占用资源
-	var intervalTimer *time.Timer
+	// 仅监控上游数据间隔超时，避免下游写入阻塞导致误判
+	var intervalTicker *time.Ticker
 	if streamInterval > 0 {
-		intervalTimer = time.NewTimer(streamInterval)
-		defer intervalTimer.Stop()
+		intervalTicker = time.NewTicker(streamInterval)
+		defer intervalTicker.Stop()
+placeholder
+	var intervalCh <-chan time.Time
+	if intervalTicker != nil {
+		intervalCh = intervalTicker.C
 placeholder
 
 	// 仅发送一次错误事件，避免多次写入导致协议混乱（写失败时尽力通知客户端）
@@ -1523,9 +1531,6 @@ placeholder
 				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream read error: %w", ev.err)
 		placeholder
 			line := ev.line
-			if intervalTimer != nil {
-				resetTimer(intervalTimer, streamInterval)
-		placeholder
 			if line == "event: error" {
 				return nil, errors.New("have error in stream")
 		placeholder
@@ -1561,12 +1566,11 @@ placeholder
 				flusher.Flush()
 		placeholder
 
-		case <-func() <-chan time.Time {
-			if intervalTimer != nil {
-				return intervalTimer.C
+		case <-intervalCh:
+			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+			if time.Since(lastRead) < streamInterval {
+				continue
 		placeholder
-			return nil
-	placeholder():
 			log.Printf("Stream data interval timeout: account=%d model=%s interval=%s", account.ID, originalModel, streamInterval)
 			sendErrorEvent("stream_timeout")
 			return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")
@@ -1574,16 +1578,6 @@ placeholder
 placeholder
 
 	return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
-placeholder
-
-func resetTimer(timer *time.Timer, interval time.Duration) {
-	if !timer.Stop() {
-		select {
-		case <-timer.C:
-		default:
-	placeholder
-placeholder
-	timer.Reset(interval)
 placeholder
 
 // replaceModelInSSELine 替换SSE数据行中的model字段
