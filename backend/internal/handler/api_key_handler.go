@@ -1,3 +1,4 @@
+// Package handler provides HTTP request handlers for the application.
 package handler
 
 import (
@@ -14,11 +15,11 @@ import (
 
 // APIKeyHandler handles API key-related requests
 type APIKeyHandler struct {
-	apiKeyService *service.ApiKeyService
+	apiKeyService *service.APIKeyService
 placeholder
 
 // NewAPIKeyHandler creates a new APIKeyHandler
-func NewAPIKeyHandler(apiKeyService *service.ApiKeyService) *APIKeyHandler {
+func NewAPIKeyHandler(apiKeyService *service.APIKeyService) *APIKeyHandler {
 	return &APIKeyHandler{
 		apiKeyService: apiKeyService,
 placeholder
@@ -56,9 +57,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.ApiKey, 0, len(keys))
+	out := make([]dto.APIKey, 0, len(keys))
 	for i := range keys {
-		out = append(out, *dto.ApiKeyFromService(&keys[i]))
+		out = append(out, *dto.APIKeyFromService(&keys[i]))
 placeholder
 	response.Paginated(c, out, result.Total, page, pageSize)
 placeholder
@@ -90,7 +91,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.ApiKeyFromService(key))
+	response.Success(c, dto.APIKeyFromService(key))
 placeholder
 
 // Create handles creating a new API key
@@ -108,7 +109,7 @@ placeholder
 		return
 placeholder
 
-	svcReq := service.CreateApiKeyRequest{
+	svcReq := service.CreateAPIKeyRequest{
 		Name:      req.Name,
 		GroupID:   req.GroupID,
 		CustomKey: req.CustomKey,
@@ -119,7 +120,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.ApiKeyFromService(key))
+	response.Success(c, dto.APIKeyFromService(key))
 placeholder
 
 // Update handles updating an API key
@@ -143,7 +144,7 @@ placeholder
 		return
 placeholder
 
-	svcReq := service.UpdateApiKeyRequest{placeholder
+	svcReq := service.UpdateAPIKeyRequest{placeholder
 	if req.Name != "" {
 		svcReq.Name = &req.Name
 placeholder
@@ -158,7 +159,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.ApiKeyFromService(key))
+	response.Success(c, dto.APIKeyFromService(key))
 placeholder
 
 // Delete handles deleting an API key
