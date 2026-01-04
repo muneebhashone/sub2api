@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
@@ -17,7 +19,7 @@ var (
 // CreateUsageLogRequest 创建使用日志请求
 type CreateUsageLogRequest struct {
 	UserID                int64   `json:"user_id"`
-	ApiKeyID              int64   `json:"api_key_id"`
+	APIKeyID              int64   `json:"api_key_id"`
 	AccountID             int64   `json:"account_id"`
 	RequestID             string  `json:"request_id"`
 	Model                 string  `json:"model"`
@@ -54,20 +56,34 @@ placeholder
 type UsageService struct {
 	usageRepo UsageLogRepository
 	userRepo  UserRepository
+	entClient *dbent.Client
 placeholder
 
 // NewUsageService 创建使用统计服务实例
-func NewUsageService(usageRepo UsageLogRepository, userRepo UserRepository) *UsageService {
+func NewUsageService(usageRepo UsageLogRepository, userRepo UserRepository, entClient *dbent.Client) *UsageService {
 	return &UsageService{
 		usageRepo: usageRepo,
 		userRepo:  userRepo,
+		entClient: entClient,
 placeholder
 placeholder
 
 // Create 创建使用日志
 func (s *UsageService) Create(ctx context.Context, req CreateUsageLogRequest) (*UsageLog, error) {
+	// 使用数据库事务保证「使用日志插入」与「扣费」的原子性，避免重复扣费或漏扣风险。
+	tx, err := s.entClient.Tx(ctx)
+	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+placeholder
+
+	txCtx := ctx
+	if err == nil {
+		defer func() { _ = tx.Rollback() placeholder()
+		txCtx = dbent.NewTxContext(ctx, tx)
+placeholder
+
 	// 验证用户存在
-	_, err := s.userRepo.GetByID(ctx, req.UserID)
+	_, err = s.userRepo.GetByID(txCtx, req.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 placeholder
@@ -75,7 +91,7 @@ placeholder
 	// 创建使用日志
 	usageLog := &UsageLog{
 		UserID:                req.UserID,
-		ApiKeyID:              req.ApiKeyID,
+		APIKeyID:              req.APIKeyID,
 		AccountID:             req.AccountID,
 		RequestID:             req.RequestID,
 		Model:                 req.Model,
@@ -96,14 +112,21 @@ placeholder
 		DurationMs:            req.DurationMs,
 placeholder
 
-	if err := s.usageRepo.Create(ctx, usageLog); err != nil {
+	inserted, err := s.usageRepo.Create(txCtx, usageLog)
+	if err != nil {
 		return nil, fmt.Errorf("create usage log: %w", err)
 placeholder
 
 	// 扣除用户余额
-	if req.ActualCost > 0 {
-		if err := s.userRepo.UpdateBalance(ctx, req.UserID, -req.ActualCost); err != nil {
+	if inserted && req.ActualCost > 0 {
+		if err := s.userRepo.UpdateBalance(txCtx, req.UserID, -req.ActualCost); err != nil {
 			return nil, fmt.Errorf("update user balance: %w", err)
+	placeholder
+placeholder
+
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			return nil, fmt.Errorf("commit transaction: %w", err)
 	placeholder
 placeholder
 
@@ -128,9 +151,9 @@ placeholder
 	return logs, pagination, nil
 placeholder
 
-// ListByApiKey 获取API Key的使用日志列表
-func (s *UsageService) ListByApiKey(ctx context.Context, apiKeyID int64, params pagination.PaginationParams) ([]UsageLog, *pagination.PaginationResult, error) {
-	logs, pagination, err := s.usageRepo.ListByApiKey(ctx, apiKeyID, params)
+// ListByAPIKey 获取API Key的使用日志列表
+func (s *UsageService) ListByAPIKey(ctx context.Context, apiKeyID int64, params pagination.PaginationParams) ([]UsageLog, *pagination.PaginationResult, error) {
+	logs, pagination, err := s.usageRepo.ListByAPIKey(ctx, apiKeyID, params)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list usage logs: %w", err)
 placeholder
@@ -165,9 +188,9 @@ placeholder
 placeholder, nil
 placeholder
 
-// GetStatsByApiKey 获取API Key的使用统计
-func (s *UsageService) GetStatsByApiKey(ctx context.Context, apiKeyID int64, startTime, endTime time.Time) (*UsageStats, error) {
-	stats, err := s.usageRepo.GetApiKeyStatsAggregated(ctx, apiKeyID, startTime, endTime)
+// GetStatsByAPIKey 获取API Key的使用统计
+func (s *UsageService) GetStatsByAPIKey(ctx context.Context, apiKeyID int64, startTime, endTime time.Time) (*UsageStats, error) {
+	stats, err := s.usageRepo.GetAPIKeyStatsAggregated(ctx, apiKeyID, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("get api key stats: %w", err)
 placeholder
@@ -270,9 +293,9 @@ placeholder
 	return stats, nil
 placeholder
 
-// GetBatchApiKeyUsageStats returns today/total actual_cost for given api keys.
-func (s *UsageService) GetBatchApiKeyUsageStats(ctx context.Context, apiKeyIDs []int64) (map[int64]*usagestats.BatchApiKeyUsageStats, error) {
-	stats, err := s.usageRepo.GetBatchApiKeyUsageStats(ctx, apiKeyIDs)
+// GetBatchAPIKeyUsageStats returns today/total actual_cost for given api keys.
+func (s *UsageService) GetBatchAPIKeyUsageStats(ctx context.Context, apiKeyIDs []int64) (map[int64]*usagestats.BatchAPIKeyUsageStats, error) {
+	stats, err := s.usageRepo.GetBatchAPIKeyUsageStats(ctx, apiKeyIDs)
 	if err != nil {
 		return nil, fmt.Errorf("get batch api key usage stats: %w", err)
 placeholder

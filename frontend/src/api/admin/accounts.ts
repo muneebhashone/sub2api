@@ -12,7 +12,8 @@ import type {
   AccountUsageInfo,
   WindowStats,
   ClaudeModel,
-  AccountUsageStatsResponse
+  AccountUsageStatsResponse,
+  TempUnschedulableStatus
 placeholder from '@/types'
 
 /**
@@ -166,6 +167,30 @@ placeholder
 export async function clearRateLimit(id: number): Promise<{ message: string placeholder> {
   const { data placeholder = await apiClient.post<{ message: string placeholder>(
     `/admin/accounts/${idplaceholder/clear-rate-limit`
+  )
+  return data
+placeholder
+
+/**
+ * Get temporary unschedulable status
+ * @param id - Account ID
+ * @returns Status with detail state if active
+ */
+export async function getTempUnschedulableStatus(id: number): Promise<TempUnschedulableStatus> {
+  const { data placeholder = await apiClient.get<TempUnschedulableStatus>(
+    `/admin/accounts/${idplaceholder/temp-unschedulable`
+  )
+  return data
+placeholder
+
+/**
+ * Reset temporary unschedulable status
+ * @param id - Account ID
+ * @returns Success confirmation
+ */
+export async function resetTempUnschedulable(id: number): Promise<{ message: string placeholder> {
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(
+    `/admin/accounts/${idplaceholder/temp-unschedulable`
   )
   return data
 placeholder
@@ -332,6 +357,8 @@ export const accountsAPI = {
   getUsage,
   getTodayStats,
   clearRateLimit,
+  getTempUnschedulableStatus,
+  resetTempUnschedulable,
   setSchedulable,
   getAvailableModels,
   generateAuthUrl,

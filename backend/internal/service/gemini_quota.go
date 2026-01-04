@@ -20,13 +20,24 @@ const (
 	geminiModelFlash geminiModelClass = "flash"
 )
 
-type GeminiDailyQuota struct {
-	ProRPD   int64
-	FlashRPD int64
+type GeminiQuota struct {
+	// SharedRPD is a shared requests-per-day pool across models.
+	// When SharedRPD > 0, callers should treat ProRPD/FlashRPD as not applicable for daily quota checks.
+	SharedRPD int64 `json:"shared_rpd,omitempty"`
+	// SharedRPM is a shared requests-per-minute pool across models.
+	// When SharedRPM > 0, callers should treat ProRPM/FlashRPM as not applicable for minute quota checks.
+	SharedRPM int64 `json:"shared_rpm,omitempty"`
+
+	// Per-model quotas (AI Studio / API key).
+	// A value of -1 means "unlimited" (pay-as-you-go).
+	ProRPD   int64 `json:"pro_rpd,omitempty"`
+	ProRPM   int64 `json:"pro_rpm,omitempty"`
+	FlashRPD int64 `json:"flash_rpd,omitempty"`
+	FlashRPM int64 `json:"flash_rpm,omitempty"`
 placeholder
 
 type GeminiTierPolicy struct {
-	Quota    GeminiDailyQuota
+	Quota    GeminiQuota
 	Cooldown time.Duration
 placeholder
 
@@ -45,8 +56,25 @@ placeholder
 
 const geminiQuotaCacheTTL = time.Minute
 
-type geminiQuotaOverrides struct {
+type geminiQuotaOverridesV1 struct {
 	Tiers map[string]config.GeminiTierQuotaConfig `json:"tiers"`
+placeholder
+
+type geminiQuotaOverridesV2 struct {
+	QuotaRules map[string]geminiQuotaRuleOverride `json:"quota_rules"`
+placeholder
+
+type geminiQuotaRuleOverride struct {
+	SharedRPD   *int64                    `json:"shared_rpd,omitempty"`
+	SharedRPM   *int64                    `json:"rpm,omitempty"`
+	GeminiPro   *geminiModelQuotaOverride `json:"gemini_pro,omitempty"`
+	GeminiFlash *geminiModelQuotaOverride `json:"gemini_flash,omitempty"`
+	Desc        *string                   `json:"desc,omitempty"`
+placeholder
+
+type geminiModelQuotaOverride struct {
+	RPD *int64 `json:"rpd,omitempty"`
+	RPM *int64 `json:"rpm,omitempty"`
 placeholder
 
 type GeminiQuotaService struct {
@@ -82,11 +110,17 @@ placeholder
 	if s.cfg != nil {
 		policy.ApplyOverrides(s.cfg.Gemini.Quota.Tiers)
 		if strings.TrimSpace(s.cfg.Gemini.Quota.Policy) != "" {
-			var overrides geminiQuotaOverrides
-			if err := json.Unmarshal([]byte(s.cfg.Gemini.Quota.Policy), &overrides); err != nil {
-				log.Printf("gemini quota: parse config policy failed: %v", err)
+			raw := []byte(s.cfg.Gemini.Quota.Policy)
+			var overridesV2 geminiQuotaOverridesV2
+			if err := json.Unmarshal(raw, &overridesV2); err == nil && len(overridesV2.QuotaRules) > 0 {
+				policy.ApplyQuotaRulesOverrides(overridesV2.QuotaRules)
 		placeholder else {
-				policy.ApplyOverrides(overrides.Tiers)
+				var overridesV1 geminiQuotaOverridesV1
+				if err := json.Unmarshal(raw, &overridesV1); err != nil {
+					log.Printf("gemini quota: parse config policy failed: %v", err)
+			placeholder else {
+					policy.ApplyOverrides(overridesV1.Tiers)
+			placeholder
 		placeholder
 	placeholder
 placeholder
@@ -96,11 +130,17 @@ placeholder
 		if err != nil && !errors.Is(err, ErrSettingNotFound) {
 			log.Printf("gemini quota: load setting failed: %v", err)
 	placeholder else if strings.TrimSpace(value) != "" {
-			var overrides geminiQuotaOverrides
-			if err := json.Unmarshal([]byte(value), &overrides); err != nil {
-				log.Printf("gemini quota: parse setting failed: %v", err)
+			raw := []byte(value)
+			var overridesV2 geminiQuotaOverridesV2
+			if err := json.Unmarshal(raw, &overridesV2); err == nil && len(overridesV2.QuotaRules) > 0 {
+				policy.ApplyQuotaRulesOverrides(overridesV2.QuotaRules)
 		placeholder else {
-				policy.ApplyOverrides(overrides.Tiers)
+				var overridesV1 geminiQuotaOverridesV1
+				if err := json.Unmarshal(raw, &overridesV1); err != nil {
+					log.Printf("gemini quota: parse setting failed: %v", err)
+			placeholder else {
+					policy.ApplyOverrides(overridesV1.Tiers)
+			placeholder
 		placeholder
 	placeholder
 placeholder
@@ -113,12 +153,20 @@ placeholder
 	return policy
 placeholder
 
-func (s *GeminiQuotaService) QuotaForAccount(ctx context.Context, account *Account) (GeminiDailyQuota, bool) {
-	if account == nil || !account.IsGeminiCodeAssist() {
-		return GeminiDailyQuota{placeholder, false
+func (s *GeminiQuotaService) QuotaForAccount(ctx context.Context, account *Account) (GeminiQuota, bool) {
+	if account == nil || account.Platform != PlatformGemini {
+		return GeminiQuota{placeholder, false
 placeholder
+
+	// Map (oauth_type + tier_id) to a canonical policy tier key.
+	// This keeps the policy table stable even if upstream tier_id strings vary.
+	tierKey := geminiQuotaTierKeyForAccount(account)
+	if tierKey == "" {
+		return GeminiQuota{placeholder, false
+placeholder
+
 	policy := s.Policy(ctx)
-	return policy.QuotaForTier(account.GeminiTierID())
+	return policy.QuotaForTier(tierKey)
 placeholder
 
 func (s *GeminiQuotaService) CooldownForTier(ctx context.Context, tierID string) time.Duration {
@@ -126,12 +174,36 @@ func (s *GeminiQuotaService) CooldownForTier(ctx context.Context, tierID string)
 	return policy.CooldownForTier(tierID)
 placeholder
 
+func (s *GeminiQuotaService) CooldownForAccount(ctx context.Context, account *Account) time.Duration {
+	if s == nil || account == nil || account.Platform != PlatformGemini {
+		return 5 * time.Minute
+placeholder
+	tierKey := geminiQuotaTierKeyForAccount(account)
+	if strings.TrimSpace(tierKey) == "" {
+		return 5 * time.Minute
+placeholder
+	return s.CooldownForTier(ctx, tierKey)
+placeholder
+
 func newGeminiQuotaPolicy() *GeminiQuotaPolicy {
 	return &GeminiQuotaPolicy{
 		tiers: map[string]GeminiTierPolicy{
-			"LEGACY": {Quota: GeminiDailyQuota{ProRPD: 50, FlashRPD: 1500placeholder, Cooldown: 30 * time.Minuteplaceholder,
-			"PRO":    {Quota: GeminiDailyQuota{ProRPD: 1500, FlashRPD: 4000placeholder, Cooldown: 5 * time.Minuteplaceholder,
-			"ULTRA":  {Quota: GeminiDailyQuota{ProRPD: 2000, FlashRPD: 0placeholder, Cooldown: 5 * time.Minuteplaceholder,
+			// --- AI Studio / API Key (per-model) ---
+			// aistudio_free:
+			//   - gemini_pro:   50 RPD / 2 RPM
+			//   - gemini_flash: 1500 RPD / 15 RPM
+			GeminiTierAIStudioFree: {Quota: GeminiQuota{ProRPD: 50, ProRPM: 2, FlashRPD: 1500, FlashRPM: 15placeholder, Cooldown: 30 * time.Minuteplaceholder,
+			// aistudio_paid: -1 means "unlimited/pay-as-you-go" for RPD.
+			GeminiTierAIStudioPaid: {Quota: GeminiQuota{ProRPD: -1, ProRPM: 1000, FlashRPD: -1, FlashRPM: 2000placeholder, Cooldown: 5 * time.Minuteplaceholder,
+
+			// --- Google One (shared pool) ---
+			GeminiTierGoogleOneFree: {Quota: GeminiQuota{SharedRPD: 1000, SharedRPM: 60placeholder, Cooldown: 30 * time.Minuteplaceholder,
+			GeminiTierGoogleAIPro:   {Quota: GeminiQuota{SharedRPD: 1500, SharedRPM: 120placeholder, Cooldown: 5 * time.Minuteplaceholder,
+			GeminiTierGoogleAIUltra: {Quota: GeminiQuota{SharedRPD: 2000, SharedRPM: 120placeholder, Cooldown: 5 * time.Minuteplaceholder,
+
+			// --- GCP Code Assist (shared pool) ---
+			GeminiTierGCPStandard:   {Quota: GeminiQuota{SharedRPD: 1500, SharedRPM: 120placeholder, Cooldown: 5 * time.Minuteplaceholder,
+			GeminiTierGCPEnterprise: {Quota: GeminiQuota{SharedRPD: 2000, SharedRPM: 120placeholder, Cooldown: 5 * time.Minuteplaceholder,
 	placeholder,
 placeholder
 placeholder
@@ -149,11 +221,22 @@ placeholder
 		if !ok {
 			policy = GeminiTierPolicy{Cooldown: 5 * time.Minuteplaceholder
 	placeholder
+		// Backward-compatible overrides:
+		// - If the tier uses shared quota, interpret pro_rpd as shared_rpd.
+		// - Otherwise apply per-model overrides.
 		if override.ProRPD != nil {
-			policy.Quota.ProRPD = clampGeminiQuotaInt64(*override.ProRPD)
+			if policy.Quota.SharedRPD > 0 {
+				policy.Quota.SharedRPD = clampGeminiQuotaInt64WithUnlimited(*override.ProRPD)
+		placeholder else {
+				policy.Quota.ProRPD = clampGeminiQuotaInt64WithUnlimited(*override.ProRPD)
+		placeholder
 	placeholder
 		if override.FlashRPD != nil {
-			policy.Quota.FlashRPD = clampGeminiQuotaInt64(*override.FlashRPD)
+			if policy.Quota.SharedRPD > 0 {
+				// No separate flash RPD for shared tiers.
+		placeholder else {
+				policy.Quota.FlashRPD = clampGeminiQuotaInt64WithUnlimited(*override.FlashRPD)
+		placeholder
 	placeholder
 		if override.CooldownMinutes != nil {
 			minutes := clampGeminiQuotaInt(*override.CooldownMinutes)
@@ -163,10 +246,51 @@ placeholder
 placeholder
 placeholder
 
-func (p *GeminiQuotaPolicy) QuotaForTier(tierID string) (GeminiDailyQuota, bool) {
+func (p *GeminiQuotaPolicy) ApplyQuotaRulesOverrides(rules map[string]geminiQuotaRuleOverride) {
+	if p == nil || len(rules) == 0 {
+		return
+placeholder
+	for rawID, override := range rules {
+		tierID := normalizeGeminiTierID(rawID)
+		if tierID == "" {
+			continue
+	placeholder
+		policy, ok := p.tiers[tierID]
+		if !ok {
+			policy = GeminiTierPolicy{Cooldown: 5 * time.Minuteplaceholder
+	placeholder
+
+		if override.SharedRPD != nil {
+			policy.Quota.SharedRPD = clampGeminiQuotaInt64WithUnlimited(*override.SharedRPD)
+	placeholder
+		if override.SharedRPM != nil {
+			policy.Quota.SharedRPM = clampGeminiQuotaRPM(*override.SharedRPM)
+	placeholder
+		if override.GeminiPro != nil {
+			if override.GeminiPro.RPD != nil {
+				policy.Quota.ProRPD = clampGeminiQuotaInt64WithUnlimited(*override.GeminiPro.RPD)
+		placeholder
+			if override.GeminiPro.RPM != nil {
+				policy.Quota.ProRPM = clampGeminiQuotaRPM(*override.GeminiPro.RPM)
+		placeholder
+	placeholder
+		if override.GeminiFlash != nil {
+			if override.GeminiFlash.RPD != nil {
+				policy.Quota.FlashRPD = clampGeminiQuotaInt64WithUnlimited(*override.GeminiFlash.RPD)
+		placeholder
+			if override.GeminiFlash.RPM != nil {
+				policy.Quota.FlashRPM = clampGeminiQuotaRPM(*override.GeminiFlash.RPM)
+		placeholder
+	placeholder
+
+		p.tiers[tierID] = policy
+placeholder
+placeholder
+
+func (p *GeminiQuotaPolicy) QuotaForTier(tierID string) (GeminiQuota, bool) {
 	policy, ok := p.policyForTier(tierID)
 	if !ok {
-		return GeminiDailyQuota{placeholder, false
+		return GeminiQuota{placeholder, false
 placeholder
 	return policy.Quota, true
 placeholder
@@ -184,22 +308,43 @@ func (p *GeminiQuotaPolicy) policyForTier(tierID string) (GeminiTierPolicy, bool
 		return GeminiTierPolicy{placeholder, false
 placeholder
 	normalized := normalizeGeminiTierID(tierID)
-	if normalized == "" {
-		normalized = "LEGACY"
-placeholder
 	if policy, ok := p.tiers[normalized]; ok {
 		return policy, true
 placeholder
-	policy, ok := p.tiers["LEGACY"]
-	return policy, ok
+	return GeminiTierPolicy{placeholder, false
 placeholder
 
 func normalizeGeminiTierID(tierID string) string {
-	return strings.ToUpper(strings.TrimSpace(tierID))
+	tierID = strings.TrimSpace(tierID)
+	if tierID == "" {
+		return ""
+placeholder
+	// Prefer canonical mapping (handles legacy tier strings).
+	if canonical := canonicalGeminiTierID(tierID); canonical != "" {
+		return canonical
+placeholder
+	// Accept older policy keys that used uppercase names.
+	switch strings.ToUpper(tierID) {
+	case "AISTUDIO_FREE":
+		return GeminiTierAIStudioFree
+	case "AISTUDIO_PAID":
+		return GeminiTierAIStudioPaid
+	case "GOOGLE_ONE_FREE":
+		return GeminiTierGoogleOneFree
+	case "GOOGLE_AI_PRO":
+		return GeminiTierGoogleAIPro
+	case "GOOGLE_AI_ULTRA":
+		return GeminiTierGoogleAIUltra
+	case "GCP_STANDARD":
+		return GeminiTierGCPStandard
+	case "GCP_ENTERPRISE":
+		return GeminiTierGCPEnterprise
+placeholder
+	return strings.ToLower(tierID)
 placeholder
 
-func clampGeminiQuotaInt64(value int64) int64 {
-	if value < 0 {
+func clampGeminiQuotaInt64WithUnlimited(value int64) int64 {
+	if value < -1 {
 		return 0
 placeholder
 	return value
@@ -212,9 +357,44 @@ placeholder
 	return value
 placeholder
 
+func clampGeminiQuotaRPM(value int64) int64 {
+	if value < 0 {
+		return 0
+placeholder
+	return value
+placeholder
+
 func geminiCooldownForTier(tierID string) time.Duration {
 	policy := newGeminiQuotaPolicy()
 	return policy.CooldownForTier(tierID)
+placeholder
+
+func geminiQuotaTierKeyForAccount(account *Account) string {
+	if account == nil || account.Platform != PlatformGemini {
+		return ""
+placeholder
+
+	// Note: GeminiOAuthType() already defaults legacy (project_id present) to code_assist.
+	oauthType := strings.ToLower(strings.TrimSpace(account.GeminiOAuthType()))
+	rawTier := strings.TrimSpace(account.GeminiTierID())
+
+	// Prefer the canonical tier stored in credentials.
+	if tierID := canonicalGeminiTierIDForOAuthType(oauthType, rawTier); tierID != "" && tierID != GeminiTierGoogleOneUnknown {
+		return tierID
+placeholder
+
+	// Fallback defaults when tier_id is missing or unknown.
+	switch oauthType {
+	case "google_one":
+		return GeminiTierGoogleOneFree
+	case "code_assist":
+		return GeminiTierGCPStandard
+	case "ai_studio":
+		return GeminiTierAIStudioFree
+	default:
+		// API Key accounts (type=apikey) have empty oauth_type and are treated as AI Studio.
+		return GeminiTierAIStudioFree
+placeholder
 placeholder
 
 func geminiModelClassFromName(model string) geminiModelClass {

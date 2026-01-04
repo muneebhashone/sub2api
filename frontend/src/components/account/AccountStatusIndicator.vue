@@ -1,7 +1,16 @@
 <template>
   <div class="flex items-center gap-2">
     <!-- Main Status Badge -->
-    <span :class="['badge text-xs', statusClass]">
+    <button
+      v-if="isTempUnschedulable"
+      type="button"
+      :class="['badge text-xs', statusClass, 'cursor-pointer']"
+      :title="t('admin.accounts.tempUnschedulable.viewDetails')"
+      @click="handleTempUnschedClick"
+    >
+      {{ statusText placeholderplaceholder
+    </button>
+    <span v-else :class="['badge text-xs', statusClass]">
       {{ statusText placeholderplaceholder
     </span>
 
@@ -83,24 +92,23 @@
         ></div>
       </div>
     </div>
-
-    <!-- Tier Indicator -->
-    <span
-      v-if="tierDisplay"
-      class="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-    >
-      {{ tierDisplay placeholderplaceholder
-    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import type { Account placeholder from '@/types'
 import { formatTime placeholder from '@/utils/format'
 
+const { t placeholder = useI18n()
+
 const props = defineProps<{
   account: Account
+placeholder>()
+
+const emit = defineEmits<{
+  (e: 'show-temp-unsched', account: Account): void
 placeholder>()
 
 // Computed: is rate limited (429)
@@ -115,6 +123,12 @@ const isOverloaded = computed(() => {
   return new Date(props.account.overload_until) > new Date()
 placeholder)
 
+// Computed: is temp unschedulable
+const isTempUnschedulable = computed(() => {
+  if (!props.account.temp_unschedulable_until) return false
+  return new Date(props.account.temp_unschedulable_until) > new Date()
+placeholder)
+
 // Computed: has error status
 const hasError = computed(() => {
   return props.account.status === 'error'
@@ -122,6 +136,12 @@ placeholder)
 
 // Computed: status badge class
 const statusClass = computed(() => {
+  if (hasError.value) {
+    return 'badge-danger'
+  placeholder
+  if (isTempUnschedulable.value) {
+    return 'badge-warning'
+  placeholder
   if (!props.account.schedulable || isRateLimited.value || isOverloaded.value) {
     return 'badge-gray'
   placeholder
@@ -139,32 +159,24 @@ placeholder)
 
 // Computed: status text
 const statusText = computed(() => {
+  if (hasError.value) {
+    return t('common.error')
+  placeholder
+  if (isTempUnschedulable.value) {
+    return t('admin.accounts.status.tempUnschedulable')
+  placeholder
   if (!props.account.schedulable) {
-    return 'Paused'
+    return t('admin.accounts.status.paused')
   placeholder
   if (isRateLimited.value || isOverloaded.value) {
-    return 'Limited'
+    return t('admin.accounts.status.limited')
   placeholder
-  return props.account.status
+  return t(`common.${props.account.statusplaceholder`)
 placeholder)
 
-// Computed: tier display
-const tierDisplay = computed(() => {
-  const credentials = props.account.credentials as Record<string, any> | undefined
-  const tierId = credentials?.tier_id
-  if (!tierId || tierId === 'unknown') return null
-
-  const tierMap: Record<string, string> = {
-    'free': 'Free',
-    'payg': 'Pay-as-you-go',
-    'pay-as-you-go': 'Pay-as-you-go',
-    'enterprise': 'Enterprise',
-    'LEGACY': 'Legacy',
-    'PRO': 'Pro',
-    'ULTRA': 'Ultra'
-  placeholder
-
-  return tierMap[tierId] || tierId
-placeholder)
+const handleTempUnschedClick = () => {
+  if (!isTempUnschedulable.value) return
+  emit('show-temp-unsched', props.account)
+placeholder
 
 </script>

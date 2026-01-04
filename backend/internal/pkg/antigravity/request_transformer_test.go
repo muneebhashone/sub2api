@@ -15,26 +15,26 @@ func TestBuildParts_ThinkingBlockWithoutSignature(t *testing.T) {
 		description       string
 placeholder{
 		{
-			name: "Claude model - skip thinking block without signature",
+			name: "Claude model - drop thinking without signature",
 			content: `[
 				{"type": "text", "text": "Hello"placeholder,
 				{"type": "thinking", "thinking": "Let me think...", "signature": ""placeholder,
 				{"type": "text", "text": "World"placeholder
 			]`,
 			allowDummyThought: false,
-			expectedParts:     2, // 只有两个text block
-			description:       "Claude模型应该跳过无signature的thinking block",
+			expectedParts:     2, // thinking 内容被丢弃
+			description:       "Claude模型应丢弃无signature的thinking block内容",
 	placeholder,
 		{
-			name: "Claude model - keep thinking block with signature",
+			name: "Claude model - preserve thinking block with signature",
 			content: `[
 				{"type": "text", "text": "Hello"placeholder,
-				{"type": "thinking", "thinking": "Let me think...", "signature": "valid_sig"placeholder,
+				{"type": "thinking", "thinking": "Let me think...", "signature": "sig_real_123"placeholder,
 				{"type": "text", "text": "World"placeholder
 			]`,
 			allowDummyThought: false,
-			expectedParts:     3, // 三个block都保留
-			description:       "Claude模型应该保留有signature的thinking block",
+			expectedParts:     3,
+			description:       "Claude模型应透传带 signature 的 thinking block（用于 Vertex 签名链路）",
 	placeholder,
 		{
 			name: "Gemini model - use dummy signature",
@@ -61,8 +61,62 @@ placeholder
 			if len(parts) != tt.expectedParts {
 				t.Errorf("%s: got %d parts, want %d parts", tt.description, len(parts), tt.expectedParts)
 		placeholder
+
+			switch tt.name {
+			case "Claude model - preserve thinking block with signature":
+				if len(parts) != 3 {
+					t.Fatalf("expected 3 parts, got %d", len(parts))
+			placeholder
+				if !parts[1].Thought || parts[1].ThoughtSignature != "sig_real_123" {
+					t.Fatalf("expected thought part with signature sig_real_123, got thought=%v signature=%q",
+						parts[1].Thought, parts[1].ThoughtSignature)
+			placeholder
+			case "Gemini model - use dummy signature":
+				if len(parts) != 3 {
+					t.Fatalf("expected 3 parts, got %d", len(parts))
+			placeholder
+				if !parts[1].Thought || parts[1].ThoughtSignature != dummyThoughtSignature {
+					t.Fatalf("expected dummy thought signature, got thought=%v signature=%q",
+						parts[1].Thought, parts[1].ThoughtSignature)
+			placeholder
+		placeholder
 	placeholder)
 placeholder
+placeholder
+
+func TestBuildParts_ToolUseSignatureHandling(t *testing.T) {
+	content := `[
+		{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "ls"placeholder, "signature": "sig_tool_abc"placeholder
+	]`
+
+	t.Run("Gemini uses dummy tool_use signature", func(t *testing.T) {
+		toolIDToName := make(map[string]string)
+		parts, err := buildParts(json.RawMessage(content), toolIDToName, true)
+		if err != nil {
+			t.Fatalf("buildParts() error = %v", err)
+	placeholder
+		if len(parts) != 1 || parts[0].FunctionCall == nil {
+			t.Fatalf("expected 1 functionCall part, got %+v", parts)
+	placeholder
+		if parts[0].ThoughtSignature != dummyThoughtSignature {
+			t.Fatalf("expected dummy tool signature %q, got %q", dummyThoughtSignature, parts[0].ThoughtSignature)
+	placeholder
+placeholder)
+
+	t.Run("Claude model - preserve valid signature for tool_use", func(t *testing.T) {
+		toolIDToName := make(map[string]string)
+		parts, err := buildParts(json.RawMessage(content), toolIDToName, false)
+		if err != nil {
+			t.Fatalf("buildParts() error = %v", err)
+	placeholder
+		if len(parts) != 1 || parts[0].FunctionCall == nil {
+			t.Fatalf("expected 1 functionCall part, got %+v", parts)
+	placeholder
+		// Claude 模型应透传有效的 signature（Vertex/Google 需要完整签名链路）
+		if parts[0].ThoughtSignature != "sig_tool_abc" {
+			t.Fatalf("expected preserved tool signature %q, got %q", "sig_tool_abc", parts[0].ThoughtSignature)
+	placeholder
+placeholder)
 placeholder
 
 // TestBuildTools_CustomTypeTools 测试custom类型工具转换

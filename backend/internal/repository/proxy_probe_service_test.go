@@ -34,7 +34,7 @@ placeholder
 placeholder
 
 func (s *ProxyProbeServiceSuite) setupProxyServer(handler http.HandlerFunc) {
-	s.proxySrv = httptest.NewServer(handler)
+	s.proxySrv = newLocalTestServer(s.T(), handler)
 placeholder
 
 func (s *ProxyProbeServiceSuite) TestProbeProxy_InvalidProxyURL() {
