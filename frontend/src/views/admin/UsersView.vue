@@ -381,7 +381,7 @@
                 ]"
               ></span>
               <span class="text-sm text-gray-700 dark:text-gray-300">
-                {{ value === 'active' ? t('common.active') : t('admin.users.disabled') placeholderplaceholder
+                {{ t('admin.accounts.status.' + (value === 'disabled' ? 'inactive' : value)) placeholderplaceholder
               </span>
             </div>
           </template>
