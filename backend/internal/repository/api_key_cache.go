@@ -24,7 +24,7 @@ type apiKeyCache struct {
 	rdb *redis.Client
 placeholder
 
-func NewApiKeyCache(rdb *redis.Client) service.ApiKeyCache {
+func NewAPIKeyCache(rdb *redis.Client) service.APIKeyCache {
 	return &apiKeyCache{rdb: rdbplaceholder
 placeholder
 
