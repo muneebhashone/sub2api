@@ -1347,6 +1347,7 @@ export default {
         placeholder,
         rateLimit: {
           ok: 'Not rate limited',
+          unlimited: 'Unlimited',
           limited: 'Rate limited {timeplaceholder',
           now: 'now'
         placeholder

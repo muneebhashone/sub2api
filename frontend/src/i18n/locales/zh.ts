@@ -1484,6 +1484,7 @@ export default {
         placeholder,
         rateLimit: {
           ok: '未限流',
+          unlimited: '无限流',
           limited: '限流 {timeplaceholder',
           now: '现在'
         placeholder
