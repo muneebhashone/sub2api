@@ -78,7 +78,7 @@ placeholder
 
 	txCtx := ctx
 	if err == nil {
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() placeholder()
 		txCtx = dbent.NewTxContext(ctx, tx)
 placeholder
 

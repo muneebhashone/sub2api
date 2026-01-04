@@ -441,13 +441,13 @@ placeholder
 								_ = resp.Body.Close()
 								resp = retryResp
 								respBody = nil
+						placeholder else {
+								// Retry still errored: replace error context with retry response.
+								retryBody, _ := io.ReadAll(io.LimitReader(retryResp.Body, 2<<20))
+								_ = retryResp.Body.Close()
+								respBody = retryBody
+								resp = retryResp
 						placeholder
-
-							// Retry still errored: replace error context with retry response.
-							retryBody, _ := io.ReadAll(io.LimitReader(retryResp.Body, 2<<20))
-							_ = retryResp.Body.Close()
-							respBody = retryBody
-							resp = retryResp
 					placeholder else {
 							log.Printf("Antigravity account %d: signature retry request failed: %v", account.ID, retryErr)
 					placeholder
