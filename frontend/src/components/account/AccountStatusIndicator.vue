@@ -171,7 +171,7 @@ const statusText = computed(() => {
   if (isRateLimited.value || isOverloaded.value) {
     return t('admin.accounts.status.limited')
   placeholder
-  return props.account.status
+  return t(`common.${props.account.statusplaceholder`)
 placeholder)
 
 const handleTempUnschedClick = () => {
