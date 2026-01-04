@@ -653,6 +653,41 @@
           </div>
         </div>
 
+        <!-- Tier selection (used as fallback when auto-detection is unavailable/fails) -->
+        <div class="mt-4">
+          <label class="input-label">{{ t('admin.accounts.gemini.tier.label') placeholderplaceholder</label>
+          <div class="mt-2">
+            <select
+              v-if="geminiOAuthType === 'google_one'"
+              v-model="geminiTierGoogleOne"
+              class="input"
+            >
+              <option value="google_one_free">{{ t('admin.accounts.gemini.tier.googleOne.free') placeholderplaceholder</option>
+              <option value="google_ai_pro">{{ t('admin.accounts.gemini.tier.googleOne.pro') placeholderplaceholder</option>
+              <option value="google_ai_ultra">{{ t('admin.accounts.gemini.tier.googleOne.ultra') placeholderplaceholder</option>
+            </select>
+
+            <select
+              v-else-if="geminiOAuthType === 'code_assist'"
+              v-model="geminiTierGcp"
+              class="input"
+            >
+              <option value="gcp_standard">{{ t('admin.accounts.gemini.tier.gcp.standard') placeholderplaceholder</option>
+              <option value="gcp_enterprise">{{ t('admin.accounts.gemini.tier.gcp.enterprise') placeholderplaceholder</option>
+            </select>
+
+            <select
+              v-else
+              v-model="geminiTierAIStudio"
+              class="input"
+            >
+              <option value="aistudio_free">{{ t('admin.accounts.gemini.tier.aiStudio.free') placeholderplaceholder</option>
+              <option value="aistudio_paid">{{ t('admin.accounts.gemini.tier.aiStudio.paid') placeholderplaceholder</option>
+            </select>
+          </div>
+          <p class="input-hint">{{ t('admin.accounts.gemini.tier.hint') placeholderplaceholder</p>
+        </div>
+
         <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900 dark:border-blue-800/40 dark:bg-blue-900/20 dark:text-blue-200">
           <div class="flex items-start gap-3">
             <svg
@@ -818,6 +853,16 @@
             "
           />
           <p class="input-hint">{{ apiKeyHint placeholderplaceholder</p>
+        </div>
+
+        <!-- Gemini API Key tier selection -->
+        <div v-if="form.platform === 'gemini'">
+          <label class="input-label">{{ t('admin.accounts.gemini.tier.label') placeholderplaceholder</label>
+          <select v-model="geminiTierAIStudio" class="input">
+            <option value="aistudio_free">{{ t('admin.accounts.gemini.tier.aiStudio.free') placeholderplaceholder</option>
+            <option value="aistudio_paid">{{ t('admin.accounts.gemini.tier.aiStudio.paid') placeholderplaceholder</option>
+          </select>
+          <p class="input-hint">{{ t('admin.accounts.gemini.tier.aiStudioHint') placeholderplaceholder</p>
         </div>
 
         <!-- Model Restriction Section (不适用于 Gemini) -->
@@ -1816,6 +1861,24 @@ const geminiOAuthType = ref<'code_assist' | 'google_one' | 'ai_studio'>('google_
 const geminiAIStudioOAuthEnabled = ref(false)
 const showAdvancedOAuth = ref(false)
 
+// Gemini tier selection (used as fallback when auto-detection is unavailable/fails)
+const geminiTierGoogleOne = ref<'google_one_free' | 'google_ai_pro' | 'google_ai_ultra'>('google_one_free')
+const geminiTierGcp = ref<'gcp_standard' | 'gcp_enterprise'>('gcp_standard')
+const geminiTierAIStudio = ref<'aistudio_free' | 'aistudio_paid'>('aistudio_free')
+
+const geminiSelectedTier = computed(() => {
+  if (form.platform !== 'gemini') return ''
+  if (accountCategory.value === 'apikey') return geminiTierAIStudio.value
+  switch (geminiOAuthType.value) {
+    case 'google_one':
+      return geminiTierGoogleOne.value
+    case 'code_assist':
+      return geminiTierGcp.value
+    default:
+      return geminiTierAIStudio.value
+  placeholder
+placeholder)
+
 const geminiQuotaDocs = {
   codeAssist: 'https://developers.google.com/gemini-code-assist/resources/quotas',
   aiStudio: 'https://ai.google.dev/pricing',
@@ -2143,6 +2206,9 @@ const resetForm = () => {
   tempUnschedEnabled.value = false
   tempUnschedRules.value = []
   geminiOAuthType.value = 'code_assist'
+  geminiTierGoogleOne.value = 'google_one_free'
+  geminiTierGcp.value = 'gcp_standard'
+  geminiTierAIStudio.value = 'aistudio_free'
   oauth.resetState()
   openaiOAuth.resetState()
   geminiOAuth.resetState()
@@ -2183,6 +2249,9 @@ const handleSubmit = async () => {
   const credentials: Record<string, unknown> = {
     base_url: apiKeyBaseUrl.value.trim() || defaultBaseUrl,
     api_key: apiKeyValue.value.trim()
+  placeholder
+  if (form.platform === 'gemini') {
+    credentials.tier_id = geminiTierAIStudio.value
   placeholder
 
   // Add model mapping if configured
@@ -2237,7 +2306,12 @@ const handleGenerateUrl = async () => {
   if (form.platform === 'openai') {
     await openaiOAuth.generateAuthUrl(form.proxy_id)
   placeholder else if (form.platform === 'gemini') {
-    await geminiOAuth.generateAuthUrl(form.proxy_id, oauthFlowRef.value?.projectId, geminiOAuthType.value)
+    await geminiOAuth.generateAuthUrl(
+      form.proxy_id,
+      oauthFlowRef.value?.projectId,
+      geminiOAuthType.value,
+      geminiSelectedTier.value
+    )
   placeholder else if (form.platform === 'antigravity') {
     await antigravityOAuth.generateAuthUrl(form.proxy_id)
   placeholder else {
@@ -2318,7 +2392,8 @@ const handleGeminiExchange = async (authCode: string) => {
       sessionId: geminiOAuth.sessionId.value,
       state: stateToUse,
       proxyId: form.proxy_id,
-      oauthType: geminiOAuthType.value
+      oauthType: geminiOAuthType.value,
+      tierId: geminiSelectedTier.value
     placeholder)
     if (!tokenInfo) return
 

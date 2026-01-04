@@ -105,10 +105,7 @@ placeholder
 
 func (a *Account) GeminiTierID() string {
 	tierID := strings.TrimSpace(a.GetCredential("tier_id"))
-	if tierID == "" {
-		return ""
-placeholder
-	return strings.ToUpper(tierID)
+	return tierID
 placeholder
 
 func (a *Account) IsGeminiCodeAssist() bool {
