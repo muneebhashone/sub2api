@@ -17,14 +17,14 @@ import (
 // UsageHandler handles admin usage-related requests
 type UsageHandler struct {
 	usageService  *service.UsageService
-	apiKeyService *service.ApiKeyService
+	apiKeyService *service.APIKeyService
 	adminService  service.AdminService
 placeholder
 
 // NewUsageHandler creates a new admin usage handler
 func NewUsageHandler(
 	usageService *service.UsageService,
-	apiKeyService *service.ApiKeyService,
+	apiKeyService *service.APIKeyService,
 	adminService service.AdminService,
 ) *UsageHandler {
 	return &UsageHandler{
@@ -125,7 +125,7 @@ placeholder
 	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
 	filters := usagestats.UsageLogFilters{
 		UserID:      userID,
-		ApiKeyID:    apiKeyID,
+		APIKeyID:    apiKeyID,
 		AccountID:   accountID,
 		GroupID:     groupID,
 		Model:       model,
@@ -207,7 +207,7 @@ placeholder else {
 placeholder
 
 	if apiKeyID > 0 {
-		stats, err := h.usageService.GetStatsByApiKey(c.Request.Context(), apiKeyID, startTime, endTime)
+		stats, err := h.usageService.GetStatsByAPIKey(c.Request.Context(), apiKeyID, startTime, endTime)
 		if err != nil {
 			response.ErrorFrom(c, err)
 			return
@@ -269,9 +269,9 @@ placeholder
 	response.Success(c, result)
 placeholder
 
-// SearchApiKeys handles searching API keys by user
+// SearchAPIKeys handles searching API keys by user
 // GET /api/v1/admin/usage/search-api-keys
-func (h *UsageHandler) SearchApiKeys(c *gin.Context) {
+func (h *UsageHandler) SearchAPIKeys(c *gin.Context) {
 	userIDStr := c.Query("user_id")
 	keyword := c.Query("q")
 
@@ -285,22 +285,22 @@ func (h *UsageHandler) SearchApiKeys(c *gin.Context) {
 		userID = id
 placeholder
 
-	keys, err := h.apiKeyService.SearchApiKeys(c.Request.Context(), userID, keyword, 30)
+	keys, err := h.apiKeyService.SearchAPIKeys(c.Request.Context(), userID, keyword, 30)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
 
 	// Return simplified API key list (only id and name)
-	type SimpleApiKey struct {
+	type SimpleAPIKey struct {
 		ID     int64  `json:"id"`
 		Name   string `json:"name"`
 		UserID int64  `json:"user_id"`
 placeholder
 
-	result := make([]SimpleApiKey, len(keys))
+	result := make([]SimpleAPIKey, len(keys))
 	for i, k := range keys {
-		result[i] = SimpleApiKey{
+		result[i] = SimpleAPIKey{
 			ID:     k.ID,
 			Name:   k.Name,
 			UserID: k.UserID,

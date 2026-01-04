@@ -103,7 +103,7 @@
 
           <template #cell-status="{ value placeholder">
             <span :class="['badge', value === 'active' ? 'badge-success' : 'badge-danger']">
-              {{ t('admin.proxies.statuses.' + value) placeholderplaceholder
+              {{ t('admin.accounts.status.' + value) placeholderplaceholder
             </span>
           </template>
 
@@ -634,8 +634,8 @@ const protocolOptions = computed(() => [
 
 const statusOptions = computed(() => [
   { value: '', label: t('admin.proxies.allStatus') placeholder,
-  { value: 'active', label: t('common.active') placeholder,
-  { value: 'inactive', label: t('common.inactive') placeholder
+  { value: 'active', label: t('admin.accounts.status.active') placeholder,
+  { value: 'inactive', label: t('admin.accounts.status.inactive') placeholder
 ])
 
 // Form options
@@ -647,8 +647,8 @@ const protocolSelectOptions = computed(() => [
 ])
 
 const editStatusOptions = computed(() => [
-  { value: 'active', label: t('admin.proxies.statuses.active') placeholder,
-  { value: 'inactive', label: t('admin.proxies.statuses.inactive') placeholder
+  { value: 'active', label: t('admin.accounts.status.active') placeholder,
+  { value: 'inactive', label: t('admin.accounts.status.inactive') placeholder
 ])
 
 const proxies = ref<Proxy[]>([])

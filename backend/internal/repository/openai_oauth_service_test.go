@@ -34,7 +34,7 @@ placeholder
 placeholder
 
 func (s *OpenAIOAuthServiceSuite) setupServer(handler http.HandlerFunc) {
-	s.srv = httptest.NewServer(handler)
+	s.srv = newLocalTestServer(s.T(), handler)
 	s.svc = &openaiOAuthService{tokenURL: s.srv.URLplaceholder
 placeholder
 

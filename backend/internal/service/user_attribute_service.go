@@ -56,6 +56,10 @@ placeholder
 		Enabled:     input.Enabled,
 placeholder
 
+	if err := validateDefinitionPattern(def); err != nil {
+		return nil, err
+placeholder
+
 	if err := s.defRepo.Create(ctx, def); err != nil {
 		return nil, fmt.Errorf("create definition: %w", err)
 placeholder
@@ -106,6 +110,10 @@ placeholder
 placeholder
 	if input.Enabled != nil {
 		def.Enabled = *input.Enabled
+placeholder
+
+	if err := validateDefinitionPattern(def); err != nil {
+		return nil, err
 placeholder
 
 	if err := s.defRepo.Update(ctx, def); err != nil {
@@ -231,7 +239,10 @@ placeholder
 	// Pattern validation
 	if v.Pattern != nil && *v.Pattern != "" && value != "" {
 		re, err := regexp.Compile(*v.Pattern)
-		if err == nil && !re.MatchString(value) {
+		if err != nil {
+			return validationError(def.Name + " has an invalid pattern")
+	placeholder
+		if !re.MatchString(value) {
 			msg := def.Name + " format is invalid"
 			if v.Message != nil && *v.Message != "" {
 				msg = *v.Message
@@ -292,4 +303,21 @@ func isValidAttributeType(t UserAttributeType) bool {
 		return true
 placeholder
 	return false
+placeholder
+
+func validateDefinitionPattern(def *UserAttributeDefinition) error {
+	if def == nil {
+		return nil
+placeholder
+	if def.Validation.Pattern == nil {
+		return nil
+placeholder
+	pattern := strings.TrimSpace(*def.Validation.Pattern)
+	if pattern == "" {
+		return nil
+placeholder
+	if _, err := regexp.Compile(pattern); err != nil {
+		return infraerrors.BadRequest("INVALID_ATTRIBUTE_PATTERN", fmt.Sprintf("invalid pattern for %s: %v", def.Name, err))
+placeholder
+	return nil
 placeholder
