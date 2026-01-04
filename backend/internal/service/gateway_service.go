@@ -15,11 +15,14 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
+	"github.com/Wei-Shaw/sub2api/internal/util/responseheaders"
+	"github.com/Wei-Shaw/sub2api/internal/util/urlvalidator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 
@@ -30,6 +33,7 @@ const (
 	claudeAPIURL            = "https://api.anthropic.com/v1/messages?beta=true"
 	claudeAPICountTokensURL = "https://api.anthropic.com/v1/messages/count_tokens?beta=true"
 	stickySessionTTL        = time.Hour // 粘性会话TTL
+	defaultMaxLineSize      = 10 * 1024 * 1024
 	claudeCodeSystemPrompt  = "You are Claude Code, Anthropic's official CLI for Claude."
 )
 
@@ -1225,7 +1229,13 @@ func (s *GatewayService) buildUpstreamRequest(ctx context.Context, c *gin.Contex
 	targetURL := claudeAPIURL
 	if account.Type == AccountTypeAPIKey {
 		baseURL := account.GetBaseURL()
-		targetURL = baseURL + "/v1/messages"
+		if baseURL != "" {
+			validatedURL, err := s.validateUpstreamBaseURL(baseURL)
+			if err != nil {
+				return nil, err
+		placeholder
+			targetURL = validatedURL + "/v1/messages"
+	placeholder
 placeholder
 
 	// OAuth账号：应用统一指纹
@@ -1594,51 +1604,133 @@ placeholder
 	var firstTokenMs *int
 	scanner := bufio.NewScanner(resp.Body)
 	// 设置更大的buffer以处理长行
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	maxLineSize := defaultMaxLineSize
+	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
+		maxLineSize = s.cfg.Gateway.MaxLineSize
+placeholder
+	scanner.Buffer(make([]byte, 64*1024), maxLineSize)
+
+	type scanEvent struct {
+		line string
+		err  error
+placeholder
+	// 独立 goroutine 读取上游，避免读取阻塞导致超时/keepalive无法处理
+	events := make(chan scanEvent, 16)
+	done := make(chan struct{placeholder)
+	sendEvent := func(ev scanEvent) bool {
+		select {
+		case events <- ev:
+			return true
+		case <-done:
+			return false
+	placeholder
+placeholder
+	var lastReadAt int64
+	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
+	go func() {
+		defer close(events)
+		for scanner.Scan() {
+			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
+			if !sendEvent(scanEvent{line: scanner.Text()placeholder) {
+				return
+		placeholder
+	placeholder
+		if err := scanner.Err(); err != nil {
+			_ = sendEvent(scanEvent{err: errplaceholder)
+	placeholder
+placeholder()
+	defer close(done)
+
+	streamInterval := time.Duration(0)
+	if s.cfg != nil && s.cfg.Gateway.StreamDataIntervalTimeout > 0 {
+		streamInterval = time.Duration(s.cfg.Gateway.StreamDataIntervalTimeout) * time.Second
+placeholder
+	// 仅监控上游数据间隔超时，避免下游写入阻塞导致误判
+	var intervalTicker *time.Ticker
+	if streamInterval > 0 {
+		intervalTicker = time.NewTicker(streamInterval)
+		defer intervalTicker.Stop()
+placeholder
+	var intervalCh <-chan time.Time
+	if intervalTicker != nil {
+		intervalCh = intervalTicker.C
+placeholder
+
+	// 仅发送一次错误事件，避免多次写入导致协议混乱（写失败时尽力通知客户端）
+	errorEventSent := false
+	sendErrorEvent := func(reason string) {
+		if errorEventSent {
+			return
+	placeholder
+		errorEventSent = true
+		_, _ = fmt.Fprintf(w, "event: error\ndata: {\"error\":\"%s\"placeholder\n\n", reason)
+		flusher.Flush()
+placeholder
 
 	needModelReplace := originalModel != mappedModel
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "event: error" {
-			return nil, errors.New("have error in stream")
-	placeholder
-
-		// Extract data from SSE line (supports both "data: " and "data:" formats)
-		if sseDataRe.MatchString(line) {
-			data := sseDataRe.ReplaceAllString(line, "")
-
-			// 如果有模型映射，替换响应中的model字段
-			if needModelReplace {
-				line = s.replaceModelInSSELine(line, mappedModel, originalModel)
+	for {
+		select {
+		case ev, ok := <-events:
+			if !ok {
+				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
+		placeholder
+			if ev.err != nil {
+				if errors.Is(ev.err, bufio.ErrTooLong) {
+					log.Printf("SSE line too long: account=%d max_size=%d error=%v", account.ID, maxLineSize, ev.err)
+					sendErrorEvent("response_too_large")
+					return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, ev.err
+			placeholder
+				sendErrorEvent("stream_read_error")
+				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream read error: %w", ev.err)
+		placeholder
+			line := ev.line
+			if line == "event: error" {
+				return nil, errors.New("have error in stream")
 		placeholder
 
-			// 转发行
-			if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
-				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
-		placeholder
-			flusher.Flush()
+			// Extract data from SSE line (supports both "data: " and "data:" formats)
+			if sseDataRe.MatchString(line) {
+				data := sseDataRe.ReplaceAllString(line, "")
 
-			// 记录首字时间：第一个有效的 content_block_delta 或 message_start
-			if firstTokenMs == nil && data != "" && data != "[DONE]" {
-				ms := int(time.Since(startTime).Milliseconds())
-				firstTokenMs = &ms
+				// 如果有模型映射，替换响应中的model字段
+				if needModelReplace {
+					line = s.replaceModelInSSELine(line, mappedModel, originalModel)
+			placeholder
+
+				// 转发行
+				if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
+					sendErrorEvent("write_failed")
+					return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+			placeholder
+				flusher.Flush()
+
+				// 记录首字时间：第一个有效的 content_block_delta 或 message_start
+				if firstTokenMs == nil && data != "" && data != "[DONE]" {
+					ms := int(time.Since(startTime).Milliseconds())
+					firstTokenMs = &ms
+			placeholder
+				s.parseSSEUsage(data, usage)
+		placeholder else {
+				// 非 data 行直接转发
+				if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
+					sendErrorEvent("write_failed")
+					return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+			placeholder
+				flusher.Flush()
 		placeholder
-			s.parseSSEUsage(data, usage)
-	placeholder else {
-			// 非 data 行直接转发
-			if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
-				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+
+		case <-intervalCh:
+			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+			if time.Since(lastRead) < streamInterval {
+				continue
 		placeholder
-			flusher.Flush()
+			log.Printf("Stream data interval timeout: account=%d model=%s interval=%s", account.ID, originalModel, streamInterval)
+			sendErrorEvent("stream_timeout")
+			return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")
 	placeholder
 placeholder
 
-	if err := scanner.Err(); err != nil {
-		return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream read error: %w", err)
-placeholder
-
-	return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
 placeholder
 
 // replaceModelInSSELine 替换SSE数据行中的model字段
@@ -1743,12 +1835,7 @@ placeholder
 		body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
 placeholder
 
-	// 透传响应头
-	for key, values := range resp.Header {
-		for _, value := range values {
-			c.Header(key, value)
-	placeholder
-placeholder
+	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.cfg.Security.ResponseHeaders)
 
 	// 写入响应
 	c.Data(resp.StatusCode, "application/json", body)
@@ -2020,7 +2107,13 @@ func (s *GatewayService) buildCountTokensRequest(ctx context.Context, c *gin.Con
 	targetURL := claudeAPICountTokensURL
 	if account.Type == AccountTypeAPIKey {
 		baseURL := account.GetBaseURL()
-		targetURL = baseURL + "/v1/messages/count_tokens"
+		if baseURL != "" {
+			validatedURL, err := s.validateUpstreamBaseURL(baseURL)
+			if err != nil {
+				return nil, err
+		placeholder
+			targetURL = validatedURL + "/v1/messages/count_tokens"
+	placeholder
 placeholder
 
 	// OAuth 账号：应用统一指纹和重写 userID
@@ -2098,6 +2191,18 @@ func (s *GatewayService) countTokensError(c *gin.Context, status int, errType, m
 			"message": message,
 	placeholder,
 placeholder)
+placeholder
+
+func (s *GatewayService) validateUpstreamBaseURL(raw string) (string, error) {
+	normalized, err := urlvalidator.ValidateHTTPSURL(raw, urlvalidator.ValidationOptions{
+		AllowedHosts:     s.cfg.Security.URLAllowlist.UpstreamHosts,
+		RequireAllowlist: true,
+		AllowPrivate:     s.cfg.Security.URLAllowlist.AllowPrivateHosts,
+placeholder)
+	if err != nil {
+		return "", fmt.Errorf("invalid base_url: %w", err)
+placeholder
+	return normalized, nil
 placeholder
 
 // GetAvailableModels returns the list of models available for a group
