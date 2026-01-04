@@ -234,11 +234,17 @@ placeholder
 placeholder
 
 func createReqClient(proxyURL string) *req.Client {
-	return getSharedReqClient(reqClientOptions{
-		ProxyURL:    proxyURL,
-		Timeout:     60 * time.Second,
-		Impersonate: true,
-placeholder)
+	// 禁用 CookieJar，确保每次授权都是干净的会话
+	client := req.C().
+		SetTimeout(60 * time.Second).
+		ImpersonateChrome().
+		SetCookieJar(nil) // 禁用 CookieJar
+
+	if strings.TrimSpace(proxyURL) != "" {
+		client.SetProxyURL(strings.TrimSpace(proxyURL))
+placeholder
+
+	return client
 placeholder
 
 func prefix(s string, n int) string {
