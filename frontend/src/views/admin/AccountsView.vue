@@ -2,7 +2,7 @@
   <AppLayout>
     <TablePageLayout>
       <template #actions><AccountTableActions :loading="loading" @refresh="load" @sync="showSync = true" @create="showCreate = true" /></template>
-      <template #filters><AccountTableFilters v-model:searchQuery="query" :filters="filters" @change="load" @update:searchQuery="handleSearch" /></template>
+      <template #filters><AccountTableFilters v-model:searchQuery="params.search" :filters="params" @change="reload" @update:searchQuery="debouncedReload" /></template>
       <template #table>
         <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @edit="showBulkEdit = true" />
         <DataTable :columns="cols" :data="accounts" :loading="loading">
@@ -12,12 +12,12 @@
           <template #cell-actions="{ row placeholder"><div class="flex gap-2"><button @click="handleEdit(row)" class="btn btn-sm btn-secondary">{{ t('common.edit') placeholderplaceholder</button><button @click="openMenu(row, $event)" class="btn btn-sm btn-secondary">{{ t('common.more') placeholderplaceholder</button></div></template>
         </DataTable>
       </template>
-      <template #pagination><Pagination v-if="page.total > 0" :page="page.page" :total="page.total" :page-size="page.size" @update:page="handlePage" /></template>
+      <template #pagination><Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" /></template>
     </TablePageLayout>
-    <CreateAccountModal :show="showCreate" :proxies="proxies" :groups="groups" @close="showCreate = false" @created="load" />
+    <CreateAccountModal :show="showCreate" :proxies="proxies" :groups="groups" @close="showCreate = false" @created="reload" />
     <EditAccountModal :show="showEdit" :account="edAcc" :proxies="proxies" :groups="groups" @close="showEdit = false" @updated="load" />
     <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleStats" @reauth="handleReauth" @refresh-token="handleRefresh" />
-    <SyncFromCrsModal :show="showSync" @close="showSync = false" @synced="load" />
+    <SyncFromCrsModal :show="showSync" @close="showSync = false" @synced="reload" />
     <BulkEditAccountModal :show="showBulkEdit" :account-ids="selIds" :proxies="proxies" :groups="groups" @close="showBulkEdit = false" @updated="handleBulkUpdated" />
   </AppLayout>
 </template>
@@ -25,6 +25,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'; import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'
+import { useTableLoader placeholder from '@/composables/useTableLoader'
 import AppLayout from '@/components/layout/AppLayout.vue'; import TablePageLayout from '@/components/layout/TablePageLayout.vue'; import DataTable from '@/components/common/DataTable.vue'; import Pagination from '@/components/common/Pagination.vue'
 import { CreateAccountModal, EditAccountModal, BulkEditAccountModal, SyncFromCrsModal placeholder from '@/components/account'
 import AccountTableActions from '@/components/admin/account/AccountTableActions.vue'; import AccountTableFilters from '@/components/admin/account/AccountTableFilters.vue'
@@ -33,28 +34,22 @@ import AccountStatusIndicator from '@/components/account/AccountStatusIndicator.
 import type { Account, Proxy, Group placeholder from '@/types'
 
 const { t placeholder = useI18n(); const appStore = useAppStore()
-const accounts = ref<Account[]>([]); const proxies = ref<Proxy[]>([]); const groups = ref<Group[]>([]); const loading = ref(false); const query = ref('')
-const filters = reactive({ platform: '', status: '' placeholder); const page = reactive({ page: 1, size: 20, total: 0 placeholder)
+const proxies = ref<Proxy[]>([]); const groups = ref<Group[]>([])
 const selIds = ref<number[]>([]); const showCreate = ref(false); const showEdit = ref(false); const showSync = ref(false); const showBulkEdit = ref(false)
 const edAcc = ref<Account | null>(null); const menu = reactive<{show:boolean, acc:Account|null, pos:{top:number, left:numberplaceholder|nullplaceholder>({ show: false, acc: null, pos: null placeholder)
-let abort: any = null
+
+const { items: accounts, loading, params, pagination, load, reload, debouncedReload, handlePageChange placeholder = useTableLoader<Account, any>({
+  fetchFn: adminAPI.accounts.list,
+  initialParams: { platform: '', status: '', search: '' placeholder
+placeholder)
 
 const cols = [{ key: 'select', label: '' placeholder, { key: 'name', label: t('admin.accounts.columns.name'), sortable: true placeholder, { key: 'status', label: t('admin.accounts.columns.status') placeholder, { key: 'actions', label: t('admin.accounts.columns.actions') placeholder]
 
-const load = async () => {
-  abort?.abort(); abort = new AbortController(); loading.value = true
-  try {
-    const res = await adminAPI.accounts.list(page.page, page.size, { platform: filters.platform || undefined, status: filters.status || undefined, search: query.value || undefined placeholder, { signal: abort.signal placeholder)
-    if(!abort.signal.aborted) { accounts.value = res.items; page.total = res.total placeholder
-  placeholder catch {placeholder finally { loading.value = false placeholder
-placeholder
-const handleSearch = (v: string) => { query.value = v; page.page = 1; load() placeholder
-const handlePage = (p: number) => { page.page = p; load() placeholder
 const handleEdit = (a: Account) => { edAcc.value = a; showEdit.value = true placeholder
 const openMenu = (a: Account, e: MouseEvent) => { menu.acc = a; menu.pos = { top: e.clientY, left: e.clientX - 200 placeholder; menu.show = true placeholder
 const toggleSel = (id: number) => { const i = selIds.value.indexOf(id); if(i === -1) selIds.value.push(id); else selIds.value.splice(i, 1) placeholder
-const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; load() placeholder catch {placeholder placeholder
-const handleBulkUpdated = () => { showBulkEdit.value = false; selIds.value = []; load() placeholder
+const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; reload() placeholder catch {placeholder placeholder
+const handleBulkUpdated = () => { showBulkEdit.value = false; selIds.value = []; reload() placeholder
 const handleTest = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
 const handleStats = (a: Account) => appStore.showInfo('Stats for ' + a.name)
 const handleReauth = (a: Account) => appStore.showInfo('Reauth for ' + a.name)

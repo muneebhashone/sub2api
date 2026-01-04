@@ -93,12 +93,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted placeholder from 'vue'
-import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import type { UserAttributeDefinition, UserAttributeValuesMap placeholder from '@/types'
 import Select from '@/components/common/Select.vue'
-
-const { t placeholder = useI18n()
 
 interface Props {
   userId?: number
