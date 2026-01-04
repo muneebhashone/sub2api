@@ -504,7 +504,7 @@ const userTrendChartData = computed(() => {
     if (email && email.includes('@')) {
       return email.split('@')[0]
     placeholder
-    return `User #${userIdplaceholder`
+    return t('admin.redeem.userPrefix', { id: userId placeholder)
   placeholder
 
   // Group by user
