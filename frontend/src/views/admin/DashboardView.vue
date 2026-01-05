@@ -504,7 +504,7 @@ const userTrendChartData = computed(() => {
     if (email && email.includes('@')) {
       return email.split('@')[0]
     placeholder
-    return `User #${userIdplaceholder`
+    return t('admin.redeem.userPrefix', { id: userId placeholder)
   placeholder
 
   // Group by user
@@ -652,16 +652,4 @@ placeholder)
 </script>
 
 <style scoped>
-/* Compact Select styling for dashboard */
-:deep(.select-trigger) {
-  @apply rounded-lg px-3 py-1.5 text-sm;
-placeholder
-
-:deep(.select-dropdown) {
-  @apply rounded-lg;
-placeholder
-
-:deep(.select-option) {
-  @apply px-3 py-2 text-sm;
-placeholder
 </style>

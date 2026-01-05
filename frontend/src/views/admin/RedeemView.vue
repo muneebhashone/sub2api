@@ -112,7 +112,7 @@
                     : 'badge-primary'
               ]"
             >
-              {{ value placeholderplaceholder
+              {{ t('admin.redeem.types.' + value) placeholderplaceholder
             </span>
           </template>
 
@@ -120,7 +120,7 @@
             <span class="text-sm font-medium text-gray-900 dark:text-white">
               <template v-if="row.type === 'balance'">${{ value.toFixed(2) placeholderplaceholder</template>
               <template v-else-if="row.type === 'subscription'">
-                {{ row.validity_days || 30 placeholderplaceholder{{ t('admin.redeem.days') placeholderplaceholder
+                {{ row.validity_days || 30 placeholderplaceholder {{ t('admin.redeem.days') placeholderplaceholder
                 <span v-if="row.group" class="ml-1 text-xs text-gray-500 dark:text-gray-400"
                   >({{ row.group.name placeholderplaceholder)</span
                 >
@@ -140,7 +140,7 @@
                     : 'badge-danger'
               ]"
             >
-              {{ value placeholderplaceholder
+              {{ t('admin.redeem.status.' + value) placeholderplaceholder
             </span>
           </template>
 
