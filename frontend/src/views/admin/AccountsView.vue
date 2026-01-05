@@ -196,7 +196,7 @@ const handleViewStats = (a: Account) => { statsAcc.value = a; showStats.value = 
 const handleReAuth = (a: Account) => { reAuthAcc.value = a; showReAuth.value = true placeholder
 const handleRefresh = async (a: Account) => { try { await adminAPI.accounts.refreshCredentials(a.id); load() placeholder catch {placeholder placeholder
 const handleResetStatus = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
-const handleClearRateLimit = async (a: Account) => { try { await adminAPI.accounts.clearError(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
+const handleClearRateLimit = async (a: Account) => { try { await adminAPI.accounts.clearRateLimit(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
 const handleDelete = (a: Account) => { deletingAcc.value = a; showDeleteDialog.value = true placeholder
 const confirmDelete = async () => { if(!deletingAcc.value) return; try { await adminAPI.accounts.delete(deletingAcc.value.id); showDeleteDialog.value = false; deletingAcc.value = null; reload() placeholder catch {placeholder placeholder
 const handleToggleSchedulable = async (a: Account) => { togglingSchedulable.value = a.id; try { await adminAPI.accounts.update(a.id, { schedulable: !a.schedulable placeholder); load() placeholder finally { togglingSchedulable.value = null placeholder placeholder
