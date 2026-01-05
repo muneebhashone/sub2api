@@ -42,6 +42,9 @@ var hopByHopHeaders = map[string]struct{placeholder{
 placeholder
 
 func FilterHeaders(src http.Header, cfg config.ResponseHeaderConfig) http.Header {
+	if !cfg.Enabled {
+		return passThroughHeaders(src)
+placeholder
 	allowed := make(map[string]struct{placeholder, len(defaultAllowed)+len(cfg.AdditionalAllowed))
 	for key := range defaultAllowed {
 		allowed[key] = struct{placeholder{placeholder
@@ -90,4 +93,18 @@ func WriteFilteredHeaders(dst http.Header, src http.Header, cfg config.ResponseH
 			dst.Add(key, value)
 	placeholder
 placeholder
+placeholder
+
+func passThroughHeaders(src http.Header) http.Header {
+	filtered := make(http.Header, len(src))
+	for key, values := range src {
+		lower := strings.ToLower(key)
+		if _, isHopByHop := hopByHopHeaders[lower]; isHopByHop {
+			continue
+	placeholder
+		for _, value := range values {
+			filtered.Add(key, value)
+	placeholder
+placeholder
+	return filtered
 placeholder

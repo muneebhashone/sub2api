@@ -106,7 +106,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.user.run_mode) {
         runMode.value = response.user.run_mode
       placeholder
-      const { run_mode, ...userData placeholder = response.user
+      const { run_mode: _run_mode, ...userData placeholder = response.user
       user.value = userData
 
       // Persist to localStorage
@@ -141,7 +141,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.user.run_mode) {
         runMode.value = response.user.run_mode
       placeholder
-      const { run_mode, ...userDataWithoutRunMode placeholder = response.user
+      const { run_mode: _run_mode, ...userDataWithoutRunMode placeholder = response.user
       user.value = userDataWithoutRunMode
 
       // Persist to localStorage
@@ -187,7 +187,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.data.run_mode) {
         runMode.value = response.data.run_mode
       placeholder
-      const { run_mode, ...userData placeholder = response.data
+      const { run_mode: _run_mode, ...userData placeholder = response.data
       user.value = userData
 
       // Update localStorage
