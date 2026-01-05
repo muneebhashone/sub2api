@@ -871,6 +871,10 @@ const closeCreateModal = () => {
 placeholder
 
 const handleCreateGroup = async () => {
+  if (!createForm.name.trim()) {
+    appStore.showError(t('admin.groups.nameRequired'))
+    return
+  placeholder
   submitting.value = true
   try {
     await adminAPI.groups.create(createForm)
@@ -912,6 +916,10 @@ placeholder
 
 const handleUpdateGroup = async () => {
   if (!editingGroup.value) return
+  if (!editForm.name.trim()) {
+    appStore.showError(t('admin.groups.nameRequired'))
+    return
+  placeholder
 
   submitting.value = true
   try {
