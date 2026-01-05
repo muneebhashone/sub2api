@@ -30,6 +30,10 @@
           <template #cell-name="{ value placeholder">
             <span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span>
           </template>
+          <template #cell-notes="{ value placeholder">
+            <span v-if="value" :title="value" class="block max-w-xs truncate text-sm text-gray-600 dark:text-gray-300">{{ value placeholderplaceholder</span>
+            <span v-else class="text-sm text-gray-400 dark:text-dark-500">-</span>
+          </template>
           <template #cell-platform_type="{ row placeholder">
             <PlatformTypeBadge :platform="row.platform" :type="row.type" />
           </template>
@@ -177,6 +181,7 @@ const cols = computed(() => {
     { key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false placeholder,
     { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true placeholder,
     { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true placeholder,
+    { key: 'notes', label: t('admin.accounts.columns.notes'), sortable: false placeholder,
     { key: 'actions', label: t('admin.accounts.columns.actions'), sortable: false placeholder
   )
   return c
