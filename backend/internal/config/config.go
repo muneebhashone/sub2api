@@ -131,6 +131,8 @@ type URLAllowlistConfig struct {
 	PricingHosts      []string `mapstructure:"pricing_hosts"`
 	CRSHosts          []string `mapstructure:"crs_hosts"`
 	AllowPrivateHosts bool     `mapstructure:"allow_private_hosts"`
+	// 关闭 URL 白名单校验时，是否允许 http URL（默认只允许 https）
+	AllowInsecureHTTP bool     `mapstructure:"allow_insecure_http"`
 placeholder
 
 type ResponseHeaderConfig struct {
@@ -384,10 +386,10 @@ placeholder
 placeholder
 
 	if !cfg.Security.URLAllowlist.Enabled {
-		log.Println("Warning: security.url_allowlist.enabled=false; URL validation is disabled.")
+		log.Println("Warning: security.url_allowlist.enabled=false; allowlist/SSRF checks disabled (minimal format validation only).")
 placeholder
 	if !cfg.Security.ResponseHeaders.Enabled {
-		log.Println("Warning: security.response_headers.enabled=false; response header filtering is disabled.")
+		log.Println("Warning: security.response_headers.enabled=false; configurable header filtering disabled (default allowlist only).")
 placeholder
 
 	if cfg.Server.Mode != "release" && cfg.JWT.Secret != "" && isWeakJWTSecret(cfg.JWT.Secret) {
@@ -435,6 +437,7 @@ placeholder)
 placeholder)
 	viper.SetDefault("security.url_allowlist.crs_hosts", []string{placeholder)
 	viper.SetDefault("security.url_allowlist.allow_private_hosts", false)
+	viper.SetDefault("security.url_allowlist.allow_insecure_http", false)
 	viper.SetDefault("security.response_headers.enabled", false)
 	viper.SetDefault("security.response_headers.additional_allowed", []string{placeholder)
 	viper.SetDefault("security.response_headers.force_remove", []string{placeholder)

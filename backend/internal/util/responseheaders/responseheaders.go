@@ -42,28 +42,31 @@ var hopByHopHeaders = map[string]struct{placeholder{
 placeholder
 
 func FilterHeaders(src http.Header, cfg config.ResponseHeaderConfig) http.Header {
-	if !cfg.Enabled {
-		return passThroughHeaders(src)
-placeholder
 	allowed := make(map[string]struct{placeholder, len(defaultAllowed)+len(cfg.AdditionalAllowed))
 	for key := range defaultAllowed {
 		allowed[key] = struct{placeholder{placeholder
 placeholder
-	for _, key := range cfg.AdditionalAllowed {
-		normalized := strings.ToLower(strings.TrimSpace(key))
-		if normalized == "" {
-			continue
+	// 关闭时只使用默认白名单，additional/force_remove 不生效
+	if cfg.Enabled {
+		for _, key := range cfg.AdditionalAllowed {
+			normalized := strings.ToLower(strings.TrimSpace(key))
+			if normalized == "" {
+				continue
+		placeholder
+			allowed[normalized] = struct{placeholder{placeholder
 	placeholder
-		allowed[normalized] = struct{placeholder{placeholder
 placeholder
 
-	forceRemove := make(map[string]struct{placeholder, len(cfg.ForceRemove))
-	for _, key := range cfg.ForceRemove {
-		normalized := strings.ToLower(strings.TrimSpace(key))
-		if normalized == "" {
-			continue
+	forceRemove := map[string]struct{placeholder{placeholder
+	if cfg.Enabled {
+		forceRemove = make(map[string]struct{placeholder, len(cfg.ForceRemove))
+		for _, key := range cfg.ForceRemove {
+			normalized := strings.ToLower(strings.TrimSpace(key))
+			if normalized == "" {
+				continue
+		placeholder
+			forceRemove[normalized] = struct{placeholder{placeholder
 	placeholder
-		forceRemove[normalized] = struct{placeholder{placeholder
 placeholder
 
 	filtered := make(http.Header, len(src))
@@ -93,18 +96,4 @@ func WriteFilteredHeaders(dst http.Header, src http.Header, cfg config.ResponseH
 			dst.Add(key, value)
 	placeholder
 placeholder
-placeholder
-
-func passThroughHeaders(src http.Header) http.Header {
-	filtered := make(http.Header, len(src))
-	for key, values := range src {
-		lower := strings.ToLower(key)
-		if _, isHopByHop := hopByHopHeaders[lower]; isHopByHop {
-			continue
-	placeholder
-		for _, value := range values {
-			filtered.Add(key, value)
-	placeholder
-placeholder
-	return filtered
 placeholder

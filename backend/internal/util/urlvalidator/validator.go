@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -14,6 +15,38 @@ type ValidationOptions struct {
 	AllowedHosts     []string
 	RequireAllowlist bool
 	AllowPrivate     bool
+placeholder
+
+func ValidateURLFormat(raw string, allowInsecureHTTP bool) (string, error) {
+	// 最小格式校验：仅保证 URL 可解析且 scheme 合规，不做白名单/私网/SSRF 校验
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", errors.New("url is required")
+placeholder
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("invalid url: %s", trimmed)
+placeholder
+
+	scheme := strings.ToLower(parsed.Scheme)
+	if scheme != "https" && (!allowInsecureHTTP || scheme != "http") {
+		return "", fmt.Errorf("invalid url scheme: %s", parsed.Scheme)
+placeholder
+
+	host := strings.TrimSpace(parsed.Hostname())
+	if host == "" {
+		return "", errors.New("invalid host")
+placeholder
+
+	if port := parsed.Port(); port != "" {
+		num, err := strconv.Atoi(port)
+		if err != nil || num <= 0 || num > 65535 {
+			return "", fmt.Errorf("invalid port: %s", port)
+	placeholder
+placeholder
+
+	return trimmed, nil
 placeholder
 
 func ValidateHTTPSURL(raw string, opts ValidationOptions) (string, error) {

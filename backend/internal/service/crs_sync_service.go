@@ -201,6 +201,12 @@ placeholder
 			return nil, err
 	placeholder
 		baseURL = normalized
+placeholder else {
+		normalized, err := urlvalidator.ValidateURLFormat(baseURL, s.cfg.Security.URLAllowlist.AllowInsecureHTTP)
+		if err != nil {
+			return nil, fmt.Errorf("invalid base_url: %w", err)
+	placeholder
+		baseURL = normalized
 placeholder
 	if strings.TrimSpace(input.Username) == "" || strings.TrimSpace(input.Password) == "" {
 		return nil, errors.New("username and password are required")
