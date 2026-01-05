@@ -142,11 +142,10 @@
       <!-- Type -->
       <div>
         <label class="input-label">{{ t('admin.users.attributes.type') placeholderplaceholder</label>
-        <select v-model="form.type" class="input" required>
-          <option v-for="type in attributeTypes" :key="type" :value="type">
-            {{ t(`admin.users.attributes.types.${typeplaceholder`) placeholderplaceholder
-          </option>
-        </select>
+        <Select
+          v-model="form.type"
+          :options="attributeTypes.map(type => ({ value: type, label: t(`admin.users.attributes.types.${typeplaceholder`) placeholder))"
+        />
       </div>
 
       <!-- Options (for select/multi_select) -->
@@ -257,6 +256,7 @@ import { adminAPI placeholder from '@/api/admin'
 import type { UserAttributeDefinition, UserAttributeType, UserAttributeOption placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import Select from '@/components/common/Select.vue'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
