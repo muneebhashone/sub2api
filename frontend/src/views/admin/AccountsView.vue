@@ -195,7 +195,7 @@ const handleResetStatus = async (a: Account) => { try { await adminAPI.accounts.
 const handleClearRateLimit = async (a: Account) => { try { await adminAPI.accounts.clearRateLimit(a.id); appStore.showSuccess(t('common.success')); load() placeholder catch {placeholder placeholder
 const handleDelete = (a: Account) => { deletingAcc.value = a; showDeleteDialog.value = true placeholder
 const confirmDelete = async () => { if(!deletingAcc.value) return; try { await adminAPI.accounts.delete(deletingAcc.value.id); showDeleteDialog.value = false; deletingAcc.value = null; reload() placeholder catch {placeholder placeholder
-const handleToggleSchedulable = async (a: Account) => { togglingSchedulable.value = a.id; try { await adminAPI.accounts.update(a.id, { schedulable: !a.schedulable placeholder); load() placeholder finally { togglingSchedulable.value = null placeholder placeholder
+const handleToggleSchedulable = async (a: Account) => { togglingSchedulable.value = a.id; try { await adminAPI.accounts.setSchedulable(a.id, !a.schedulable); load() placeholder finally { togglingSchedulable.value = null placeholder placeholder
 const handleShowTempUnsched = (a: Account) => { tempUnschedAcc.value = a; showTempUnsched.value = true placeholder
 const handleTempUnschedReset = async () => { if(!tempUnschedAcc.value) return; try { await adminAPI.accounts.clearError(tempUnschedAcc.value.id); showTempUnsched.value = false; tempUnschedAcc.value = null; load() placeholder catch {placeholder placeholder
 
