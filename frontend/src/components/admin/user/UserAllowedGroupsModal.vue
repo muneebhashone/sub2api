@@ -52,7 +52,7 @@ const load = async () => { loading.value = true; try { const res = await adminAP
 const handleSave = async () => {
   if (!props.user) return; submitting.value = true
   try {
-    await adminAPI.users.update(props.user.id, { allowed_groups: selectedIds.value.length > 0 ? selectedIds.value : null placeholder)
+    await adminAPI.users.update(props.user.id, { allowed_groups: selectedIds.value placeholder)
     appStore.showSuccess(t('admin.users.allowedGroupsUpdated')); emit('success'); emit('close')
   placeholder catch {placeholder finally { submitting.value = false placeholder
 placeholder
