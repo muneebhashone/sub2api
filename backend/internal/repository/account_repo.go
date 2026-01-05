@@ -67,6 +67,7 @@ placeholder
 
 	builder := r.client.Account.Create().
 		SetName(account.Name).
+		SetNillableNotes(account.Notes).
 		SetPlatform(account.Platform).
 		SetType(account.Type).
 		SetCredentials(normalizeJSONMap(account.Credentials)).
@@ -270,6 +271,7 @@ placeholder
 
 	builder := r.client.Account.UpdateOneID(account.ID).
 		SetName(account.Name).
+		SetNillableNotes(account.Notes).
 		SetPlatform(account.Platform).
 		SetType(account.Type).
 		SetCredentials(normalizeJSONMap(account.Credentials)).
@@ -319,6 +321,9 @@ placeholder
 		builder.SetSessionWindowStatus(account.SessionWindowStatus)
 placeholder else {
 		builder.ClearSessionWindowStatus()
+placeholder
+	if account.Notes == nil {
+		builder.ClearNotes()
 placeholder
 
 	updated, err := builder.Save(ctx)
@@ -1065,6 +1070,7 @@ placeholder
 	return &service.Account{
 		ID:                  m.ID,
 		Name:                m.Name,
+		Notes:               m.Notes,
 		Platform:            m.Platform,
 		Type:                m.Type,
 		Credentials:         copyJSONMap(m.Credentials),
