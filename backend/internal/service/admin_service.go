@@ -98,6 +98,10 @@ type CreateGroupInput struct {
 	DailyLimitUSD    *float64 // 日限额 (USD)
 	WeeklyLimitUSD   *float64 // 周限额 (USD)
 	MonthlyLimitUSD  *float64 // 月限额 (USD)
+	// 图片生成计费配置（仅 antigravity 平台使用）
+	ImagePrice1K *float64
+	ImagePrice2K *float64
+	ImagePrice4K *float64
 placeholder
 
 type UpdateGroupInput struct {
@@ -111,6 +115,10 @@ type UpdateGroupInput struct {
 	DailyLimitUSD    *float64 // 日限额 (USD)
 	WeeklyLimitUSD   *float64 // 周限额 (USD)
 	MonthlyLimitUSD  *float64 // 月限额 (USD)
+	// 图片生成计费配置（仅 antigravity 平台使用）
+	ImagePrice1K *float64
+	ImagePrice2K *float64
+	ImagePrice4K *float64
 placeholder
 
 type CreateAccountInput struct {
@@ -507,6 +515,9 @@ placeholder
 		DailyLimitUSD:    dailyLimit,
 		WeeklyLimitUSD:   weeklyLimit,
 		MonthlyLimitUSD:  monthlyLimit,
+		ImagePrice1K:     input.ImagePrice1K,
+		ImagePrice2K:     input.ImagePrice2K,
+		ImagePrice4K:     input.ImagePrice4K,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
@@ -560,6 +571,16 @@ placeholder
 placeholder
 	if input.MonthlyLimitUSD != nil {
 		group.MonthlyLimitUSD = normalizeLimit(input.MonthlyLimitUSD)
+placeholder
+	// 图片生成计费配置
+	if input.ImagePrice1K != nil {
+		group.ImagePrice1K = input.ImagePrice1K
+placeholder
+	if input.ImagePrice2K != nil {
+		group.ImagePrice2K = input.ImagePrice2K
+placeholder
+	if input.ImagePrice4K != nil {
+		group.ImagePrice4K = input.ImagePrice4K
 placeholder
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
