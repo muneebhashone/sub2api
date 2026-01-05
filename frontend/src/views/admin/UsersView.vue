@@ -1474,6 +1474,7 @@ placeholder
 // All possible columns (for column settings)
 const allColumns = computed<Column[]>(() => [
   { key: 'email', label: t('admin.users.columns.user'), sortable: true placeholder,
+  { key: 'id', label: 'ID', sortable: true placeholder,
   { key: 'username', label: t('admin.users.columns.username'), sortable: true placeholder,
   { key: 'notes', label: t('admin.users.columns.notes'), sortable: false placeholder,
   // Dynamic attribute columns
