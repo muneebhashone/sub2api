@@ -35,9 +35,9 @@ const loadLogs = async () => {
   try {
     const res = await adminAPI.usage.list({ page: pagination.page, page_size: pagination.page_size, ...filters.value placeholder, { signal: c.signal placeholder)
     if(!c.signal.aborted) { usageLogs.value = res.items; pagination.total = res.total placeholder
-  placeholder catch {placeholder finally { if(abortController === c) loading.value = false placeholder
+  placeholder catch (error: any) { if(error?.name !== 'AbortError') console.error('Failed to load usage logs:', error) placeholder finally { if(abortController === c) loading.value = false placeholder
 placeholder
-const loadStats = async () => { try { const s = await adminAPI.usage.getStats(filters.value); usageStats.value = s placeholder catch {placeholder placeholder
+const loadStats = async () => { try { const s = await adminAPI.usage.getStats(filters.value); usageStats.value = s placeholder catch (error) { console.error('Failed to load usage stats:', error) placeholder placeholder
 const applyFilters = () => { pagination.page = 1; loadLogs(); loadStats() placeholder
 const resetFilters = () => { startDate.value = formatLD(weekAgo); endDate.value = formatLD(now); filters.value = { start_date: startDate.value, end_date: endDate.value placeholder; applyFilters() placeholder
 const handlePageChange = (p: number) => { pagination.page = p; loadLogs() placeholder

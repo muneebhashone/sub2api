@@ -35,6 +35,6 @@ const WalletIcon = { render: () => h('svg', { fill: 'none', viewBox: '0 0 24 24'
 const BoltIcon = { render: () => h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' placeholder, [h('path', { d: 'm3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z' placeholder)]) placeholder
 const CalendarIcon = { render: () => h('svg', { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' placeholder, [h('path', { d: 'M6.75 3v2.25M17.25 3v2.25' placeholder)]) placeholder
 
-onMounted(async () => { try { const s = await authAPI.getPublicSettings(); contactInfo.value = s.contact_info || '' placeholder catch {placeholder placeholder)
+onMounted(async () => { try { const s = await authAPI.getPublicSettings(); contactInfo.value = s.contact_info || '' placeholder catch (error) { console.error('Failed to load contact info:', error) placeholder placeholder)
 const formatCurrency = (v: number) => `$${v.toFixed(2)placeholder`
 </script>
