@@ -3457,6 +3457,12 @@ type GroupMutation struct {
 	addmonthly_limit_usd     *float64
 	default_validity_days    *int
 	adddefault_validity_days *int
+	image_price_1k           *float64
+	addimage_price_1k        *float64
+	image_price_2k           *float64
+	addimage_price_2k        *float64
+	image_price_4k           *float64
+	addimage_price_4k        *float64
 	clearedFields            map[string]struct{placeholder
 	api_keys                 map[int64]struct{placeholder
 	removedapi_keys          map[int64]struct{placeholder
@@ -4251,6 +4257,216 @@ func (m *GroupMutation) ResetDefaultValidityDays() {
 	m.adddefault_validity_days = nil
 placeholder
 
+// SetImagePrice1k sets the "image_price_1k" field.
+func (m *GroupMutation) SetImagePrice1k(f float64) {
+	m.image_price_1k = &f
+	m.addimage_price_1k = nil
+placeholder
+
+// ImagePrice1k returns the value of the "image_price_1k" field in the mutation.
+func (m *GroupMutation) ImagePrice1k() (r float64, exists bool) {
+	v := m.image_price_1k
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldImagePrice1k returns the old "image_price_1k" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldImagePrice1k(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImagePrice1k is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImagePrice1k requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImagePrice1k: %w", err)
+placeholder
+	return oldValue.ImagePrice1k, nil
+placeholder
+
+// AddImagePrice1k adds f to the "image_price_1k" field.
+func (m *GroupMutation) AddImagePrice1k(f float64) {
+	if m.addimage_price_1k != nil {
+		*m.addimage_price_1k += f
+placeholder else {
+		m.addimage_price_1k = &f
+placeholder
+placeholder
+
+// AddedImagePrice1k returns the value that was added to the "image_price_1k" field in this mutation.
+func (m *GroupMutation) AddedImagePrice1k() (r float64, exists bool) {
+	v := m.addimage_price_1k
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearImagePrice1k clears the value of the "image_price_1k" field.
+func (m *GroupMutation) ClearImagePrice1k() {
+	m.image_price_1k = nil
+	m.addimage_price_1k = nil
+	m.clearedFields[group.FieldImagePrice1k] = struct{placeholder{placeholder
+placeholder
+
+// ImagePrice1kCleared returns if the "image_price_1k" field was cleared in this mutation.
+func (m *GroupMutation) ImagePrice1kCleared() bool {
+	_, ok := m.clearedFields[group.FieldImagePrice1k]
+	return ok
+placeholder
+
+// ResetImagePrice1k resets all changes to the "image_price_1k" field.
+func (m *GroupMutation) ResetImagePrice1k() {
+	m.image_price_1k = nil
+	m.addimage_price_1k = nil
+	delete(m.clearedFields, group.FieldImagePrice1k)
+placeholder
+
+// SetImagePrice2k sets the "image_price_2k" field.
+func (m *GroupMutation) SetImagePrice2k(f float64) {
+	m.image_price_2k = &f
+	m.addimage_price_2k = nil
+placeholder
+
+// ImagePrice2k returns the value of the "image_price_2k" field in the mutation.
+func (m *GroupMutation) ImagePrice2k() (r float64, exists bool) {
+	v := m.image_price_2k
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldImagePrice2k returns the old "image_price_2k" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldImagePrice2k(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImagePrice2k is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImagePrice2k requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImagePrice2k: %w", err)
+placeholder
+	return oldValue.ImagePrice2k, nil
+placeholder
+
+// AddImagePrice2k adds f to the "image_price_2k" field.
+func (m *GroupMutation) AddImagePrice2k(f float64) {
+	if m.addimage_price_2k != nil {
+		*m.addimage_price_2k += f
+placeholder else {
+		m.addimage_price_2k = &f
+placeholder
+placeholder
+
+// AddedImagePrice2k returns the value that was added to the "image_price_2k" field in this mutation.
+func (m *GroupMutation) AddedImagePrice2k() (r float64, exists bool) {
+	v := m.addimage_price_2k
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearImagePrice2k clears the value of the "image_price_2k" field.
+func (m *GroupMutation) ClearImagePrice2k() {
+	m.image_price_2k = nil
+	m.addimage_price_2k = nil
+	m.clearedFields[group.FieldImagePrice2k] = struct{placeholder{placeholder
+placeholder
+
+// ImagePrice2kCleared returns if the "image_price_2k" field was cleared in this mutation.
+func (m *GroupMutation) ImagePrice2kCleared() bool {
+	_, ok := m.clearedFields[group.FieldImagePrice2k]
+	return ok
+placeholder
+
+// ResetImagePrice2k resets all changes to the "image_price_2k" field.
+func (m *GroupMutation) ResetImagePrice2k() {
+	m.image_price_2k = nil
+	m.addimage_price_2k = nil
+	delete(m.clearedFields, group.FieldImagePrice2k)
+placeholder
+
+// SetImagePrice4k sets the "image_price_4k" field.
+func (m *GroupMutation) SetImagePrice4k(f float64) {
+	m.image_price_4k = &f
+	m.addimage_price_4k = nil
+placeholder
+
+// ImagePrice4k returns the value of the "image_price_4k" field in the mutation.
+func (m *GroupMutation) ImagePrice4k() (r float64, exists bool) {
+	v := m.image_price_4k
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldImagePrice4k returns the old "image_price_4k" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldImagePrice4k(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImagePrice4k is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImagePrice4k requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImagePrice4k: %w", err)
+placeholder
+	return oldValue.ImagePrice4k, nil
+placeholder
+
+// AddImagePrice4k adds f to the "image_price_4k" field.
+func (m *GroupMutation) AddImagePrice4k(f float64) {
+	if m.addimage_price_4k != nil {
+		*m.addimage_price_4k += f
+placeholder else {
+		m.addimage_price_4k = &f
+placeholder
+placeholder
+
+// AddedImagePrice4k returns the value that was added to the "image_price_4k" field in this mutation.
+func (m *GroupMutation) AddedImagePrice4k() (r float64, exists bool) {
+	v := m.addimage_price_4k
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearImagePrice4k clears the value of the "image_price_4k" field.
+func (m *GroupMutation) ClearImagePrice4k() {
+	m.image_price_4k = nil
+	m.addimage_price_4k = nil
+	m.clearedFields[group.FieldImagePrice4k] = struct{placeholder{placeholder
+placeholder
+
+// ImagePrice4kCleared returns if the "image_price_4k" field was cleared in this mutation.
+func (m *GroupMutation) ImagePrice4kCleared() bool {
+	_, ok := m.clearedFields[group.FieldImagePrice4k]
+	return ok
+placeholder
+
+// ResetImagePrice4k resets all changes to the "image_price_4k" field.
+func (m *GroupMutation) ResetImagePrice4k() {
+	m.image_price_4k = nil
+	m.addimage_price_4k = nil
+	delete(m.clearedFields, group.FieldImagePrice4k)
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -4609,7 +4825,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 17)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 placeholder
@@ -4652,6 +4868,15 @@ placeholder
 	if m.default_validity_days != nil {
 		fields = append(fields, group.FieldDefaultValidityDays)
 placeholder
+	if m.image_price_1k != nil {
+		fields = append(fields, group.FieldImagePrice1k)
+placeholder
+	if m.image_price_2k != nil {
+		fields = append(fields, group.FieldImagePrice2k)
+placeholder
+	if m.image_price_4k != nil {
+		fields = append(fields, group.FieldImagePrice4k)
+placeholder
 	return fields
 placeholder
 
@@ -4688,6 +4913,12 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.MonthlyLimitUsd()
 	case group.FieldDefaultValidityDays:
 		return m.DefaultValidityDays()
+	case group.FieldImagePrice1k:
+		return m.ImagePrice1k()
+	case group.FieldImagePrice2k:
+		return m.ImagePrice2k()
+	case group.FieldImagePrice4k:
+		return m.ImagePrice4k()
 placeholder
 	return nil, false
 placeholder
@@ -4725,6 +4956,12 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMonthlyLimitUsd(ctx)
 	case group.FieldDefaultValidityDays:
 		return m.OldDefaultValidityDays(ctx)
+	case group.FieldImagePrice1k:
+		return m.OldImagePrice1k(ctx)
+	case group.FieldImagePrice2k:
+		return m.OldImagePrice2k(ctx)
+	case group.FieldImagePrice4k:
+		return m.OldImagePrice4k(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -4832,6 +5069,27 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetDefaultValidityDays(v)
 		return nil
+	case group.FieldImagePrice1k:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetImagePrice1k(v)
+		return nil
+	case group.FieldImagePrice2k:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetImagePrice2k(v)
+		return nil
+	case group.FieldImagePrice4k:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetImagePrice4k(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -4855,6 +5113,15 @@ placeholder
 	if m.adddefault_validity_days != nil {
 		fields = append(fields, group.FieldDefaultValidityDays)
 placeholder
+	if m.addimage_price_1k != nil {
+		fields = append(fields, group.FieldImagePrice1k)
+placeholder
+	if m.addimage_price_2k != nil {
+		fields = append(fields, group.FieldImagePrice2k)
+placeholder
+	if m.addimage_price_4k != nil {
+		fields = append(fields, group.FieldImagePrice4k)
+placeholder
 	return fields
 placeholder
 
@@ -4873,6 +5140,12 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMonthlyLimitUsd()
 	case group.FieldDefaultValidityDays:
 		return m.AddedDefaultValidityDays()
+	case group.FieldImagePrice1k:
+		return m.AddedImagePrice1k()
+	case group.FieldImagePrice2k:
+		return m.AddedImagePrice2k()
+	case group.FieldImagePrice4k:
+		return m.AddedImagePrice4k()
 placeholder
 	return nil, false
 placeholder
@@ -4917,6 +5190,27 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 	placeholder
 		m.AddDefaultValidityDays(v)
 		return nil
+	case group.FieldImagePrice1k:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddImagePrice1k(v)
+		return nil
+	case group.FieldImagePrice2k:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddImagePrice2k(v)
+		return nil
+	case group.FieldImagePrice4k:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddImagePrice4k(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown Group numeric field %s", name)
 placeholder
@@ -4939,6 +5233,15 @@ placeholder
 placeholder
 	if m.FieldCleared(group.FieldMonthlyLimitUsd) {
 		fields = append(fields, group.FieldMonthlyLimitUsd)
+placeholder
+	if m.FieldCleared(group.FieldImagePrice1k) {
+		fields = append(fields, group.FieldImagePrice1k)
+placeholder
+	if m.FieldCleared(group.FieldImagePrice2k) {
+		fields = append(fields, group.FieldImagePrice2k)
+placeholder
+	if m.FieldCleared(group.FieldImagePrice4k) {
+		fields = append(fields, group.FieldImagePrice4k)
 placeholder
 	return fields
 placeholder
@@ -4968,6 +5271,15 @@ func (m *GroupMutation) ClearField(name string) error {
 		return nil
 	case group.FieldMonthlyLimitUsd:
 		m.ClearMonthlyLimitUsd()
+		return nil
+	case group.FieldImagePrice1k:
+		m.ClearImagePrice1k()
+		return nil
+	case group.FieldImagePrice2k:
+		m.ClearImagePrice2k()
+		return nil
+	case group.FieldImagePrice4k:
+		m.ClearImagePrice4k()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group nullable field %s", name)
@@ -5018,6 +5330,15 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldDefaultValidityDays:
 		m.ResetDefaultValidityDays()
+		return nil
+	case group.FieldImagePrice1k:
+		m.ResetImagePrice1k()
+		return nil
+	case group.FieldImagePrice2k:
+		m.ResetImagePrice2k()
+		return nil
+	case group.FieldImagePrice4k:
+		m.ResetImagePrice4k()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
@@ -7786,6 +8107,9 @@ type UsageLogMutation struct {
 	addduration_ms              *int
 	first_token_ms              *int
 	addfirst_token_ms           *int
+	image_count                 *int
+	addimage_count              *int
+	image_size                  *string
 	created_at                  *time.Time
 	clearedFields               map[string]struct{placeholder
 	user                        *int64
@@ -9139,6 +9463,111 @@ func (m *UsageLogMutation) ResetFirstTokenMs() {
 	delete(m.clearedFields, usagelog.FieldFirstTokenMs)
 placeholder
 
+// SetImageCount sets the "image_count" field.
+func (m *UsageLogMutation) SetImageCount(i int) {
+	m.image_count = &i
+	m.addimage_count = nil
+placeholder
+
+// ImageCount returns the value of the "image_count" field in the mutation.
+func (m *UsageLogMutation) ImageCount() (r int, exists bool) {
+	v := m.image_count
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldImageCount returns the old "image_count" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldImageCount(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImageCount is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImageCount requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImageCount: %w", err)
+placeholder
+	return oldValue.ImageCount, nil
+placeholder
+
+// AddImageCount adds i to the "image_count" field.
+func (m *UsageLogMutation) AddImageCount(i int) {
+	if m.addimage_count != nil {
+		*m.addimage_count += i
+placeholder else {
+		m.addimage_count = &i
+placeholder
+placeholder
+
+// AddedImageCount returns the value that was added to the "image_count" field in this mutation.
+func (m *UsageLogMutation) AddedImageCount() (r int, exists bool) {
+	v := m.addimage_count
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetImageCount resets all changes to the "image_count" field.
+func (m *UsageLogMutation) ResetImageCount() {
+	m.image_count = nil
+	m.addimage_count = nil
+placeholder
+
+// SetImageSize sets the "image_size" field.
+func (m *UsageLogMutation) SetImageSize(s string) {
+	m.image_size = &s
+placeholder
+
+// ImageSize returns the value of the "image_size" field in the mutation.
+func (m *UsageLogMutation) ImageSize() (r string, exists bool) {
+	v := m.image_size
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldImageSize returns the old "image_size" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldImageSize(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldImageSize is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldImageSize requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldImageSize: %w", err)
+placeholder
+	return oldValue.ImageSize, nil
+placeholder
+
+// ClearImageSize clears the value of the "image_size" field.
+func (m *UsageLogMutation) ClearImageSize() {
+	m.image_size = nil
+	m.clearedFields[usagelog.FieldImageSize] = struct{placeholder{placeholder
+placeholder
+
+// ImageSizeCleared returns if the "image_size" field was cleared in this mutation.
+func (m *UsageLogMutation) ImageSizeCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldImageSize]
+	return ok
+placeholder
+
+// ResetImageSize resets all changes to the "image_size" field.
+func (m *UsageLogMutation) ResetImageSize() {
+	m.image_size = nil
+	delete(m.clearedFields, usagelog.FieldImageSize)
+placeholder
+
 // SetCreatedAt sets the "created_at" field.
 func (m *UsageLogMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -9344,7 +9773,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 27)
 	if m.user != nil {
 		fields = append(fields, usagelog.FieldUserID)
 placeholder
@@ -9417,6 +9846,12 @@ placeholder
 	if m.first_token_ms != nil {
 		fields = append(fields, usagelog.FieldFirstTokenMs)
 placeholder
+	if m.image_count != nil {
+		fields = append(fields, usagelog.FieldImageCount)
+placeholder
+	if m.image_size != nil {
+		fields = append(fields, usagelog.FieldImageSize)
+placeholder
 	if m.created_at != nil {
 		fields = append(fields, usagelog.FieldCreatedAt)
 placeholder
@@ -9476,6 +9911,10 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.DurationMs()
 	case usagelog.FieldFirstTokenMs:
 		return m.FirstTokenMs()
+	case usagelog.FieldImageCount:
+		return m.ImageCount()
+	case usagelog.FieldImageSize:
+		return m.ImageSize()
 	case usagelog.FieldCreatedAt:
 		return m.CreatedAt()
 placeholder
@@ -9535,6 +9974,10 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldDurationMs(ctx)
 	case usagelog.FieldFirstTokenMs:
 		return m.OldFirstTokenMs(ctx)
+	case usagelog.FieldImageCount:
+		return m.OldImageCount(ctx)
+	case usagelog.FieldImageSize:
+		return m.OldImageSize(ctx)
 	case usagelog.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 placeholder
@@ -9714,6 +10157,20 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetFirstTokenMs(v)
 		return nil
+	case usagelog.FieldImageCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetImageCount(v)
+		return nil
+	case usagelog.FieldImageSize:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetImageSize(v)
+		return nil
 	case usagelog.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -9777,6 +10234,9 @@ placeholder
 	if m.addfirst_token_ms != nil {
 		fields = append(fields, usagelog.FieldFirstTokenMs)
 placeholder
+	if m.addimage_count != nil {
+		fields = append(fields, usagelog.FieldImageCount)
+placeholder
 	return fields
 placeholder
 
@@ -9817,6 +10277,8 @@ func (m *UsageLogMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedDurationMs()
 	case usagelog.FieldFirstTokenMs:
 		return m.AddedFirstTokenMs()
+	case usagelog.FieldImageCount:
+		return m.AddedImageCount()
 placeholder
 	return nil, false
 placeholder
@@ -9938,6 +10400,13 @@ func (m *UsageLogMutation) AddField(name string, value ent.Value) error {
 	placeholder
 		m.AddFirstTokenMs(v)
 		return nil
+	case usagelog.FieldImageCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddImageCount(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown UsageLog numeric field %s", name)
 placeholder
@@ -9957,6 +10426,9 @@ placeholder
 placeholder
 	if m.FieldCleared(usagelog.FieldFirstTokenMs) {
 		fields = append(fields, usagelog.FieldFirstTokenMs)
+placeholder
+	if m.FieldCleared(usagelog.FieldImageSize) {
+		fields = append(fields, usagelog.FieldImageSize)
 placeholder
 	return fields
 placeholder
@@ -9983,6 +10455,9 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldFirstTokenMs:
 		m.ClearFirstTokenMs()
+		return nil
+	case usagelog.FieldImageSize:
+		m.ClearImageSize()
 		return nil
 placeholder
 	return fmt.Errorf("unknown UsageLog nullable field %s", name)
@@ -10063,6 +10538,12 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldFirstTokenMs:
 		m.ResetFirstTokenMs()
+		return nil
+	case usagelog.FieldImageCount:
+		m.ResetImageCount()
+		return nil
+	case usagelog.FieldImageSize:
+		m.ResetImageSize()
 		return nil
 	case usagelog.FieldCreatedAt:
 		m.ResetCreatedAt()

@@ -2,6 +2,21 @@
   <AppLayout>
     <div class="space-y-6">
       <UsageStatsCards :stats="usageStats" />
+      <!-- Charts Section -->
+      <div class="space-y-4">
+        <div class="card p-4">
+          <div class="flex items-center gap-4">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.dashboard.granularity') placeholderplaceholder:</span>
+            <div class="w-28">
+              <Select v-model="granularity" :options="granularityOptions" @change="loadChartData" />
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ModelDistributionChart :model-stats="modelStats" :loading="chartsLoading" />
+          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" />
+        </div>
+      </div>
       <UsageFilters v-model="filters" v-model:startDate="startDate" v-model:endDate="endDate" :exporting="exporting" @change="applyFilters" @reset="resetFilters" @export="exportToExcel" />
       <UsageTable :data="usageLogs" :loading="loading" />
       <Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" @update:pageSize="handlePageSizeChange" />
@@ -11,19 +26,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted placeholder from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import { saveAs placeholder from 'file-saver'
 import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'; import { adminUsageAPI placeholder from '@/api/admin/usage'
-import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination from '@/components/common/Pagination.vue'
+import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination from '@/components/common/Pagination.vue'; import Select from '@/components/common/Select.vue'
 import UsageStatsCards from '@/components/admin/usage/UsageStatsCards.vue'; import UsageFilters from '@/components/admin/usage/UsageFilters.vue'
 import UsageTable from '@/components/admin/usage/UsageTable.vue'; import UsageExportProgress from '@/components/admin/usage/UsageExportProgress.vue'
-import type { UsageLog placeholder from '@/types'; import type { AdminUsageStatsResponse, AdminUsageQueryParams placeholder from '@/api/admin/usage'
+import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'; import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
+import type { UsageLog, TrendDataPoint, ModelStat placeholder from '@/types'; import type { AdminUsageStatsResponse, AdminUsageQueryParams placeholder from '@/api/admin/usage'
 
+const { t placeholder = useI18n()
 const appStore = useAppStore()
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<UsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
+const trendData = ref<TrendDataPoint[]>([]); const modelStats = ref<ModelStat[]>([]); const chartsLoading = ref(false); const granularity = ref<'day' | 'hour'>('day')
 let abortController: AbortController | null = null; let exportAbortController: AbortController | null = null
 const exportProgress = reactive({ show: false, progress: 0, current: 0, total: 0, estimatedTime: '' placeholder)
 
+const granularityOptions = computed(() => [{ value: 'day', label: t('admin.dashboard.day') placeholder, { value: 'hour', label: t('admin.dashboard.hour') placeholder])
 const formatLD = (d: Date) => d.toISOString().split('T')[0]
 const now = new Date(); const weekAgo = new Date(Date.now() - 6 * 86400000)
 const startDate = ref(formatLD(weekAgo)); const endDate = ref(formatLD(now))
@@ -38,8 +58,16 @@ const loadLogs = async () => {
   placeholder catch (error: any) { if(error?.name !== 'AbortError') console.error('Failed to load usage logs:', error) placeholder finally { if(abortController === c) loading.value = false placeholder
 placeholder
 const loadStats = async () => { try { const s = await adminAPI.usage.getStats(filters.value); usageStats.value = s placeholder catch (error) { console.error('Failed to load usage stats:', error) placeholder placeholder
-const applyFilters = () => { pagination.page = 1; loadLogs(); loadStats() placeholder
-const resetFilters = () => { startDate.value = formatLD(weekAgo); endDate.value = formatLD(now); filters.value = { start_date: startDate.value, end_date: endDate.value placeholder; applyFilters() placeholder
+const loadChartData = async () => {
+  chartsLoading.value = true
+  try {
+    const params = { start_date: filters.value.start_date || startDate.value, end_date: filters.value.end_date || endDate.value, granularity: granularity.value, user_id: filters.value.user_id placeholder
+    const [trendRes, modelRes] = await Promise.all([adminAPI.dashboard.getUsageTrend(params), adminAPI.dashboard.getModelStats({ start_date: params.start_date, end_date: params.end_date, user_id: params.user_id placeholder)])
+    trendData.value = trendRes.trend || []; modelStats.value = modelRes.models || []
+  placeholder catch (error) { console.error('Failed to load chart data:', error) placeholder finally { chartsLoading.value = false placeholder
+placeholder
+const applyFilters = () => { pagination.page = 1; loadLogs(); loadStats(); loadChartData() placeholder
+const resetFilters = () => { startDate.value = formatLD(weekAgo); endDate.value = formatLD(now); filters.value = { start_date: startDate.value, end_date: endDate.value placeholder; granularity.value = 'day'; applyFilters() placeholder
 const handlePageChange = (p: number) => { pagination.page = p; loadLogs() placeholder
 const handlePageSizeChange = (s: number) => { pagination.page_size = s; pagination.page = 1; loadLogs() placeholder
 const cancelExport = () => exportAbortController?.abort()
@@ -63,10 +91,10 @@ const exportToExcel = async () => {
       saveAs(new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' placeholder)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' placeholder), `usage_${Date.now()placeholder.xlsx`)
       appStore.showSuccess('Export Success')
     placeholder
-  placeholder catch { appStore.showError('Export Failed') placeholder
+  placeholder catch (error) { console.error('Failed to export:', error); appStore.showError('Export Failed') placeholder
   finally { if(exportAbortController === c) { exportAbortController = null; exporting.value = false; exportProgress.show = false placeholder placeholder
 placeholder
 
-onMounted(() => { loadLogs(); loadStats() placeholder)
+onMounted(() => { loadLogs(); loadStats(); loadChartData() placeholder)
 onUnmounted(() => { abortController?.abort(); exportAbortController?.abort() placeholder)
 </script>
