@@ -52,18 +52,12 @@
       />
 
       <!-- Select -->
-      <select
+      <Select
         v-else-if="attr.type === 'select'"
         v-model="localValues[attr.id]"
-        :required="attr.required"
-        class="input"
+        :options="attr.options || []"
         @change="emitChange"
-      >
-        <option value="">{{ t('common.selectOption') placeholderplaceholder</option>
-        <option v-for="opt in attr.options" :key="opt.value" :value="opt.value">
-          {{ opt.label placeholderplaceholder
-        </option>
-      </select>
+      />
 
       <!-- Multi-Select (Checkboxes) -->
       <div v-else-if="attr.type === 'multi_select'" class="space-y-2">
@@ -99,11 +93,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted placeholder from 'vue'
-import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import type { UserAttributeDefinition, UserAttributeValuesMap placeholder from '@/types'
-
-const { t placeholder = useI18n()
+import Select from '@/components/common/Select.vue'
 
 interface Props {
   userId?: number

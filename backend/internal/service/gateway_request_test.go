@@ -151,3 +151,148 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestFilterThinkingBlocksForRetry_DisablesThinkingAndPreservesAsText(t *testing.T) {
+	input := []byte(`{
+		"model":"claude-3-5-sonnet-20241022",
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"user","content":[{"type":"text","text":"Hi"placeholder]placeholder,
+			{"role":"assistant","content":[
+				{"type":"thinking","thinking":"Let me think...","signature":"bad_sig"placeholder,
+				{"type":"text","text":"Answer"placeholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+
+	msgs, ok := req["messages"].([]any)
+	require.True(t, ok)
+	require.Len(t, msgs, 2)
+
+	assistant, ok := msgs[1].(map[string]any)
+	require.True(t, ok)
+	content, ok := assistant["content"].([]any)
+	require.True(t, ok)
+	require.Len(t, content, 2)
+
+	first, ok := content[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "text", first["type"])
+	require.Equal(t, "Let me think...", first["text"])
+placeholder
+
+func TestFilterThinkingBlocksForRetry_DisablesThinkingEvenWithoutThinkingBlocks(t *testing.T) {
+	input := []byte(`{
+		"model":"claude-3-5-sonnet-20241022",
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"user","content":[{"type":"text","text":"Hi"placeholder]placeholder,
+			{"role":"assistant","content":[{"type":"text","text":"Prefill"placeholder]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+placeholder
+
+func TestFilterThinkingBlocksForRetry_RemovesRedactedThinkingAndKeepsValidContent(t *testing.T) {
+	input := []byte(`{
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"assistant","content":[
+				{"type":"redacted_thinking","data":"..."placeholder,
+				{"type":"text","text":"Visible"placeholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+
+	msgs, ok := req["messages"].([]any)
+	require.True(t, ok)
+	msg0, ok := msgs[0].(map[string]any)
+	require.True(t, ok)
+	content, ok := msg0["content"].([]any)
+	require.True(t, ok)
+	require.Len(t, content, 1)
+	content0, ok := content[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "text", content0["type"])
+	require.Equal(t, "Visible", content0["text"])
+placeholder
+
+func TestFilterThinkingBlocksForRetry_EmptyContentGetsPlaceholder(t *testing.T) {
+	input := []byte(`{
+		"thinking":{"type":"enabled"placeholder,
+		"messages":[
+			{"role":"assistant","content":[{"type":"redacted_thinking","data":"..."placeholder]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	msgs, ok := req["messages"].([]any)
+	require.True(t, ok)
+	msg0, ok := msgs[0].(map[string]any)
+	require.True(t, ok)
+	content, ok := msg0["content"].([]any)
+	require.True(t, ok)
+	require.Len(t, content, 1)
+	content0, ok := content[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "text", content0["type"])
+	require.NotEmpty(t, content0["text"])
+placeholder
+
+func TestFilterSignatureSensitiveBlocksForRetry_DowngradesTools(t *testing.T) {
+	input := []byte(`{
+		"thinking":{"type":"enabled","budget_tokens":placeholder,
+		"messages":[
+			{"role":"assistant","content":[
+				{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"placeholderplaceholder,
+				{"type":"tool_result","tool_use_id":"t1","content":"ok","is_error":falseplaceholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterSignatureSensitiveBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	_, hasThinking := req["thinking"]
+	require.False(t, hasThinking)
+
+	msgs, ok := req["messages"].([]any)
+	require.True(t, ok)
+	msg0, ok := msgs[0].(map[string]any)
+	require.True(t, ok)
+	content, ok := msg0["content"].([]any)
+	require.True(t, ok)
+	require.Len(t, content, 2)
+	content0, ok := content[0].(map[string]any)
+	require.True(t, ok)
+	content1, ok := content[1].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "text", content0["type"])
+	require.Equal(t, "text", content1["type"])
+	require.Contains(t, content0["text"], "tool_use")
+	require.Contains(t, content1["text"], "tool_result")
+placeholder

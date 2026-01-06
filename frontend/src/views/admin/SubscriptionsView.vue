@@ -1,62 +1,104 @@
 <template>
   <AppLayout>
     <TablePageLayout>
-      <!-- Page Header Actions -->
-      <template #actions>
-      <div class="flex justify-end gap-3">
-        <button
-          @click="loadSubscriptions"
-          :disabled="loading"
-          class="btn btn-secondary"
-          :title="t('common.refresh')"
-        >
-          <svg
-            :class="['h-5 w-5', loading ? 'animate-spin' : '']"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-            />
-          </svg>
-        </button>
-        <button @click="showAssignModal = true" class="btn btn-primary">
-          <svg
-            class="mr-2 h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          {{ t('admin.subscriptions.assignSubscription') placeholderplaceholder
-        </button>
-      </div>
-      </template>
-
-      <!-- Filters -->
       <template #filters>
-      <div class="flex flex-wrap gap-3">
-        <Select
-          v-model="filters.status"
-          :options="statusOptions"
-          :placeholder="t('admin.subscriptions.allStatus')"
-          class="w-40"
-          @change="loadSubscriptions"
-        />
-        <Select
-          v-model="filters.group_id"
-          :options="groupOptions"
-          :placeholder="t('admin.subscriptions.allGroups')"
-          class="w-48"
-          @change="loadSubscriptions"
-        />
-      </div>
+        <!-- Top Toolbar: Left (search + filters) / Right (actions) -->
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <!-- Left: Fuzzy user search + filters (wrap to multiple lines) -->
+          <div class="flex flex-1 flex-wrap items-center gap-3">
+            <!-- User Search -->
+            <div
+              class="relative w-full sm:w-64"
+              data-filter-user-search
+            >
+              <Icon
+                name="search"
+                size="md"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                v-model="filterUserKeyword"
+                type="text"
+                :placeholder="t('admin.users.searchUsers')"
+                class="input pl-10 pr-8"
+                @input="debounceSearchFilterUsers"
+                @focus="showFilterUserDropdown = true"
+              />
+              <button
+                v-if="selectedFilterUser"
+                @click="clearFilterUser"
+                type="button"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                :title="t('common.clear')"
+              >
+                <Icon name="x" size="sm" :stroke-width="2" />
+              </button>
+
+              <!-- User Dropdown -->
+              <div
+                v-if="showFilterUserDropdown && (filterUserResults.length > 0 || filterUserKeyword)"
+                class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              >
+                <div
+                  v-if="filterUserLoading"
+                  class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"
+                >
+                  {{ t('common.loading') placeholderplaceholder
+                </div>
+                <div
+                  v-else-if="filterUserResults.length === 0 && filterUserKeyword"
+                  class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"
+                >
+                  {{ t('common.noOptionsFound') placeholderplaceholder
+                </div>
+                <button
+                  v-for="user in filterUserResults"
+                  :key="user.id"
+                  type="button"
+                  @click="selectFilterUser(user)"
+                  class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <span class="font-medium text-gray-900 dark:text-white">{{ user.email placeholderplaceholder</span>
+                  <span class="ml-2 text-gray-500 dark:text-gray-400">#{{ user.id placeholderplaceholder</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="w-full sm:w-40">
+              <Select
+                v-model="filters.status"
+                :options="statusOptions"
+                :placeholder="t('admin.subscriptions.allStatus')"
+                @change="applyFilters"
+              />
+            </div>
+            <div class="w-full sm:w-48">
+              <Select
+                v-model="filters.group_id"
+                :options="groupOptions"
+                :placeholder="t('admin.subscriptions.allGroups')"
+                @change="applyFilters"
+              />
+            </div>
+          </div>
+
+          <!-- Right: Actions -->
+          <div class="ml-auto flex flex-wrap items-center justify-end gap-3">
+            <button
+              @click="loadSubscriptions"
+              :disabled="loading"
+              class="btn btn-secondary"
+              :title="t('common.refresh')"
+            >
+              <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
+            </button>
+            <button @click="showAssignModal = true" class="btn btn-primary">
+              <Icon name="plus" size="md" class="mr-2" />
+              {{ t('admin.subscriptions.assignSubscription') placeholderplaceholder
+            </button>
+          </div>
+        </div>
       </template>
 
       <!-- Subscriptions Table -->
@@ -72,7 +114,7 @@
                 </span>
               </div>
               <span class="font-medium text-gray-900 dark:text-white">{{
-                row.user?.email || `User #${row.user_idplaceholder`
+                row.user?.email || t('admin.redeem.userPrefix', { id: row.user_id placeholder)
               placeholderplaceholder</span>
             </div>
           </template>
@@ -262,19 +304,7 @@
                 @click="handleExtend(row)"
                 class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400"
               >
-                <svg
-                  class="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                <Icon name="clock" size="sm" />
                 <span class="text-xs">{{ t('admin.subscriptions.extend') placeholderplaceholder</span>
               </button>
               <button
@@ -282,19 +312,7 @@
                 @click="handleRevoke(row)"
                 class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
               >
-                <svg
-                  class="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
+                <Icon name="ban" size="sm" />
                 <span class="text-xs">{{ t('admin.subscriptions.revoke') placeholderplaceholder</span>
               </button>
             </div>
@@ -338,7 +356,7 @@
       >
         <div>
           <label class="input-label">{{ t('admin.subscriptions.form.user') placeholderplaceholder</label>
-          <div class="relative">
+          <div class="relative" data-assign-user-search>
             <input
               v-model="userSearchKeyword"
               type="text"
@@ -353,14 +371,7 @@
               type="button"
               class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <Icon name="x" size="sm" :stroke-width="2" />
             </button>
             <!-- User Dropdown -->
             <div
@@ -529,6 +540,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
+import Icon from '@/components/icons/Icon.vue'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -555,6 +567,14 @@ const groups = ref<Group[]>([])
 const loading = ref(false)
 let abortController: AbortController | null = null
 
+// Toolbar user filter (fuzzy search -> select user_id)
+const filterUserKeyword = ref('')
+const filterUserResults = ref<SimpleUser[]>([])
+const filterUserLoading = ref(false)
+const showFilterUserDropdown = ref(false)
+const selectedFilterUser = ref<SimpleUser | null>(null)
+let filterUserSearchTimeout: ReturnType<typeof setTimeout> | null = null
+
 // User search state
 const userSearchKeyword = ref('')
 const userSearchResults = ref<SimpleUser[]>([])
@@ -565,7 +585,8 @@ let userSearchTimeout: ReturnType<typeof setTimeout> | null = null
 
 const filters = reactive({
   status: '',
-  group_id: ''
+  group_id: '',
+  user_id: null as number | null
 placeholder)
 const pagination = reactive({
   page: 1,
@@ -604,6 +625,11 @@ const subscriptionGroupOptions = computed(() =>
     .map((g) => ({ value: g.id, label: g.name placeholder))
 )
 
+const applyFilters = () => {
+  pagination.page = 1
+  loadSubscriptions()
+placeholder
+
 const loadSubscriptions = async () => {
   if (abortController) {
     abortController.abort()
@@ -614,12 +640,18 @@ const loadSubscriptions = async () => {
 
   loading.value = true
   try {
-    const response = await adminAPI.subscriptions.list(pagination.page, pagination.page_size, {
-      status: (filters.status as any) || undefined,
-      group_id: filters.group_id ? parseInt(filters.group_id) : undefined
-    placeholder, {
-      signal
-    placeholder)
+    const response = await adminAPI.subscriptions.list(
+      pagination.page,
+      pagination.page_size,
+      {
+        status: (filters.status as any) || undefined,
+        group_id: filters.group_id ? parseInt(filters.group_id) : undefined,
+        user_id: filters.user_id || undefined
+      placeholder,
+      {
+        signal
+      placeholder
+    )
     if (signal.aborted || abortController !== requestController) return
     subscriptions.value = response.items
     pagination.total = response.total
@@ -644,6 +676,57 @@ const loadGroups = async () => {
   placeholder catch (error) {
     console.error('Error loading groups:', error)
   placeholder
+placeholder
+
+// Toolbar user filter search with debounce
+const debounceSearchFilterUsers = () => {
+  if (filterUserSearchTimeout) {
+    clearTimeout(filterUserSearchTimeout)
+  placeholder
+  filterUserSearchTimeout = setTimeout(searchFilterUsers, 300)
+placeholder
+
+const searchFilterUsers = async () => {
+  const keyword = filterUserKeyword.value.trim()
+
+  // Clear active user filter if user modified the search keyword
+  if (selectedFilterUser.value && keyword !== selectedFilterUser.value.email) {
+    selectedFilterUser.value = null
+    filters.user_id = null
+    applyFilters()
+  placeholder
+
+  if (!keyword) {
+    filterUserResults.value = []
+    return
+  placeholder
+
+  filterUserLoading.value = true
+  try {
+    filterUserResults.value = await adminAPI.usage.searchUsers(keyword)
+  placeholder catch (error) {
+    console.error('Failed to search users:', error)
+    filterUserResults.value = []
+  placeholder finally {
+    filterUserLoading.value = false
+  placeholder
+placeholder
+
+const selectFilterUser = (user: SimpleUser) => {
+  selectedFilterUser.value = user
+  filterUserKeyword.value = user.email
+  showFilterUserDropdown.value = false
+  filters.user_id = user.id
+  applyFilters()
+placeholder
+
+const clearFilterUser = () => {
+  selectedFilterUser.value = null
+  filterUserKeyword.value = ''
+  filterUserResults.value = []
+  showFilterUserDropdown.value = false
+  filters.user_id = null
+  applyFilters()
 placeholder
 
 // User search with debounce
@@ -717,7 +800,18 @@ const closeAssignModal = () => {
 placeholder
 
 const handleAssignSubscription = async () => {
-  if (!assignForm.user_id || !assignForm.group_id) return
+  if (!assignForm.user_id) {
+    appStore.showError(t('admin.subscriptions.pleaseSelectUser'))
+    return
+  placeholder
+  if (!assignForm.group_id) {
+    appStore.showError(t('admin.subscriptions.pleaseSelectGroup'))
+    return
+  placeholder
+  if (!assignForm.validity_days || assignForm.validity_days < 1) {
+    appStore.showError(t('admin.subscriptions.validityDaysRequired'))
+    return
+  placeholder
 
   submitting.value = true
   try {
@@ -801,15 +895,17 @@ const isExpiringSoon = (expiresAt: string): boolean => {
   return days !== null && days <= 7
 placeholder
 
-const getProgressWidth = (used: number, limit: number | null): string => {
+const getProgressWidth = (used: number | null | undefined, limit: number | null): string => {
   if (!limit || limit === 0) return '0%'
-  const percentage = Math.min((used / limit) * 100, 100)
+  const usedValue = used ?? 0
+  const percentage = Math.min((usedValue / limit) * 100, 100)
   return `${percentageplaceholder%`
 placeholder
 
-const getProgressClass = (used: number, limit: number | null): string => {
+const getProgressClass = (used: number | null | undefined, limit: number | null): string => {
   if (!limit || limit === 0) return 'bg-gray-400'
-  const percentage = (used / limit) * 100
+  const usedValue = used ?? 0
+  const percentage = (usedValue / limit) * 100
   if (percentage >= 90) return 'bg-red-500'
   if (percentage >= 70) return 'bg-orange-500'
   return 'bg-green-500'
@@ -856,9 +952,8 @@ placeholder
 // Handle click outside to close user dropdown
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  if (!target.closest('.relative')) {
-    showUserDropdown.value = false
-  placeholder
+  if (!target.closest('[data-assign-user-search]')) showUserDropdown.value = false
+  if (!target.closest('[data-filter-user-search]')) showFilterUserDropdown.value = false
 placeholder
 
 onMounted(() => {
@@ -869,6 +964,9 @@ placeholder)
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  if (filterUserSearchTimeout) {
+    clearTimeout(filterUserSearchTimeout)
+  placeholder
   if (userSearchTimeout) {
     clearTimeout(userSearchTimeout)
   placeholder

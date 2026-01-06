@@ -67,6 +67,7 @@ placeholder
 
 	builder := r.client.Account.Create().
 		SetName(account.Name).
+		SetNillableNotes(account.Notes).
 		SetPlatform(account.Platform).
 		SetType(account.Type).
 		SetCredentials(normalizeJSONMap(account.Credentials)).
@@ -270,6 +271,7 @@ placeholder
 
 	builder := r.client.Account.UpdateOneID(account.ID).
 		SetName(account.Name).
+		SetNillableNotes(account.Notes).
 		SetPlatform(account.Platform).
 		SetType(account.Type).
 		SetCredentials(normalizeJSONMap(account.Credentials)).
@@ -319,6 +321,9 @@ placeholder
 		builder.SetSessionWindowStatus(account.SessionWindowStatus)
 placeholder else {
 		builder.ClearSessionWindowStatus()
+placeholder
+	if account.Notes == nil {
+		builder.ClearNotes()
 placeholder
 
 	updated, err := builder.Save(ctx)
@@ -768,9 +773,14 @@ placeholder
 		idx++
 placeholder
 	if updates.ProxyID != nil {
-		setClauses = append(setClauses, "proxy_id = $"+itoa(idx))
-		args = append(args, *updates.ProxyID)
-		idx++
+		// 0 表示清除代理（前端发送 0 而不是 null 来表达清除意图）
+		if *updates.ProxyID == 0 {
+			setClauses = append(setClauses, "proxy_id = NULL")
+	placeholder else {
+			setClauses = append(setClauses, "proxy_id = $"+itoa(idx))
+			args = append(args, *updates.ProxyID)
+			idx++
+	placeholder
 placeholder
 	if updates.Concurrency != nil {
 		setClauses = append(setClauses, "concurrency = $"+itoa(idx))
@@ -1065,6 +1075,7 @@ placeholder
 	return &service.Account{
 		ID:                  m.ID,
 		Name:                m.Name,
+		Notes:               m.Notes,
 		Platform:            m.Platform,
 		Type:                m.Type,
 		Credentials:         copyJSONMap(m.Credentials),

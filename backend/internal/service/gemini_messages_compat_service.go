@@ -18,9 +18,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/googleapi"
+	"github.com/Wei-Shaw/sub2api/internal/util/responseheaders"
+	"github.com/Wei-Shaw/sub2api/internal/util/urlvalidator"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,6 +44,7 @@ type GeminiMessagesCompatService struct {
 	rateLimitService          *RateLimitService
 	httpUpstream              HTTPUpstream
 	antigravityGatewayService *AntigravityGatewayService
+	cfg                       *config.Config
 placeholder
 
 func NewGeminiMessagesCompatService(
@@ -51,6 +55,7 @@ func NewGeminiMessagesCompatService(
 	rateLimitService *RateLimitService,
 	httpUpstream HTTPUpstream,
 	antigravityGatewayService *AntigravityGatewayService,
+	cfg *config.Config,
 ) *GeminiMessagesCompatService {
 	return &GeminiMessagesCompatService{
 		accountRepo:               accountRepo,
@@ -60,6 +65,7 @@ func NewGeminiMessagesCompatService(
 		rateLimitService:          rateLimitService,
 		httpUpstream:              httpUpstream,
 		antigravityGatewayService: antigravityGatewayService,
+		cfg:                       cfg,
 placeholder
 placeholder
 
@@ -230,6 +236,25 @@ func (s *GeminiMessagesCompatService) GetAntigravityGatewayService() *Antigravit
 	return s.antigravityGatewayService
 placeholder
 
+func (s *GeminiMessagesCompatService) validateUpstreamBaseURL(raw string) (string, error) {
+	if s.cfg != nil && !s.cfg.Security.URLAllowlist.Enabled {
+		normalized, err := urlvalidator.ValidateURLFormat(raw, s.cfg.Security.URLAllowlist.AllowInsecureHTTP)
+		if err != nil {
+			return "", fmt.Errorf("invalid base_url: %w", err)
+	placeholder
+		return normalized, nil
+placeholder
+	normalized, err := urlvalidator.ValidateHTTPSURL(raw, urlvalidator.ValidationOptions{
+		AllowedHosts:     s.cfg.Security.URLAllowlist.UpstreamHosts,
+		RequireAllowlist: true,
+		AllowPrivate:     s.cfg.Security.URLAllowlist.AllowPrivateHosts,
+placeholder)
+	if err != nil {
+		return "", fmt.Errorf("invalid base_url: %w", err)
+placeholder
+	return normalized, nil
+placeholder
+
 // HasAntigravityAccounts 检查是否有可用的 antigravity 账户
 func (s *GeminiMessagesCompatService) HasAntigravityAccounts(ctx context.Context, groupID *int64) (bool, error) {
 	var accounts []Account
@@ -359,6 +384,7 @@ placeholder
 	if err != nil {
 		return nil, s.writeClaudeError(c, http.StatusBadRequest, "invalid_request_error", err.Error())
 placeholder
+	originalClaudeBody := body
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -381,16 +407,20 @@ placeholder
 				return nil, "", errors.New("gemini api_key not configured")
 		placeholder
 
-			baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+			baseURL := strings.TrimSpace(account.GetCredential("base_url"))
 			if baseURL == "" {
 				baseURL = geminicli.AIStudioBaseURL
+		placeholder
+			normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+			if err != nil {
+				return nil, "", err
 		placeholder
 
 			action := "generateContent"
 			if req.Stream {
 				action = "streamGenerateContent"
 		placeholder
-			fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(baseURL, "/"), mappedModel, action)
+			fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(normalizedBaseURL, "/"), mappedModel, action)
 			if req.Stream {
 				fullURL += "?alt=sse"
 		placeholder
@@ -427,7 +457,11 @@ placeholder
 			// 2. Without project_id -> AI Studio API (direct OAuth, like API key but with Bearer token)
 			if projectID != "" {
 				// Mode 1: Code Assist API
-				fullURL := fmt.Sprintf("%s/v1internal:%s", geminicli.GeminiCliBaseURL, action)
+				baseURL, err := s.validateUpstreamBaseURL(geminicli.GeminiCliBaseURL)
+				if err != nil {
+					return nil, "", err
+			placeholder
+				fullURL := fmt.Sprintf("%s/v1internal:%s", strings.TrimRight(baseURL, "/"), action)
 				if useUpstreamStream {
 					fullURL += "?alt=sse"
 			placeholder
@@ -453,12 +487,16 @@ placeholder
 				return upstreamReq, "x-request-id", nil
 		placeholder else {
 				// Mode 2: AI Studio API with OAuth (like API key mode, but using Bearer token)
-				baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+				baseURL := strings.TrimSpace(account.GetCredential("base_url"))
 				if baseURL == "" {
 					baseURL = geminicli.AIStudioBaseURL
 			placeholder
+				normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+				if err != nil {
+					return nil, "", err
+			placeholder
 
-				fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", baseURL, mappedModel, action)
+				fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(normalizedBaseURL, "/"), mappedModel, action)
 				if useUpstreamStream {
 					fullURL += "?alt=sse"
 			placeholder
@@ -479,6 +517,7 @@ placeholder
 placeholder
 
 	var resp *http.Response
+	signatureRetryStage := 0
 	for attempt := 1; attempt <= geminiMaxRetries; attempt++ {
 		upstreamReq, idHeader, err := buildReq(ctx)
 		if err != nil {
@@ -501,6 +540,46 @@ placeholder
 				continue
 		placeholder
 			return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed after retries: "+sanitizeUpstreamErrorMessage(err.Error()))
+	placeholder
+
+		// Special-case: signature/thought_signature validation errors are not transient, but may be fixed by
+		// downgrading Claude thinking/tool history to plain text (conservative two-stage retry).
+		if resp.StatusCode == http.StatusBadRequest && signatureRetryStage < 2 {
+			respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+			_ = resp.Body.Close()
+
+			if isGeminiSignatureRelatedError(respBody) {
+				var strippedClaudeBody []byte
+				stageName := ""
+				switch signatureRetryStage {
+				case 0:
+					// Stage 1: disable thinking + thinking->text
+					strippedClaudeBody = FilterThinkingBlocksForRetry(originalClaudeBody)
+					stageName = "thinking-only"
+					signatureRetryStage = 1
+				default:
+					// Stage 2: additionally downgrade tool_use/tool_result blocks to text
+					strippedClaudeBody = FilterSignatureSensitiveBlocksForRetry(originalClaudeBody)
+					stageName = "thinking+tools"
+					signatureRetryStage = 2
+			placeholder
+				retryGeminiReq, txErr := convertClaudeMessagesToGeminiGenerateContent(strippedClaudeBody)
+				if txErr == nil {
+					log.Printf("Gemini account %d: detected signature-related 400, retrying with downgraded Claude blocks (%s)", account.ID, stageName)
+					geminiReq = retryGeminiReq
+					// Consume one retry budget attempt and continue with the updated request payload.
+					sleepGeminiBackoff(1)
+					continue
+			placeholder
+		placeholder
+
+			// Restore body for downstream error handling.
+			resp = &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Header:     resp.Header.Clone(),
+				Body:       io.NopCloser(bytes.NewReader(respBody)),
+		placeholder
+			break
 	placeholder
 
 		if resp.StatusCode >= 400 && s.shouldRetryGeminiUpstreamError(account, resp.StatusCode) {
@@ -600,6 +679,14 @@ placeholder
 placeholder, nil
 placeholder
 
+func isGeminiSignatureRelatedError(respBody []byte) bool {
+	msg := strings.ToLower(strings.TrimSpace(extractAntigravityErrorMessage(respBody)))
+	if msg == "" {
+		msg = strings.ToLower(string(respBody))
+placeholder
+	return strings.Contains(msg, "thought_signature") || strings.Contains(msg, "signature")
+placeholder
+
 func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.Context, account *Account, originalModel string, action string, stream bool, body []byte) (*ForwardResult, error) {
 	startTime := time.Now()
 
@@ -650,12 +737,16 @@ placeholder
 				return nil, "", errors.New("gemini api_key not configured")
 		placeholder
 
-			baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+			baseURL := strings.TrimSpace(account.GetCredential("base_url"))
 			if baseURL == "" {
 				baseURL = geminicli.AIStudioBaseURL
 		placeholder
+			normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+			if err != nil {
+				return nil, "", err
+		placeholder
 
-			fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(baseURL, "/"), mappedModel, upstreamAction)
+			fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(normalizedBaseURL, "/"), mappedModel, upstreamAction)
 			if useUpstreamStream {
 				fullURL += "?alt=sse"
 		placeholder
@@ -687,7 +778,11 @@ placeholder
 			// 2. Without project_id -> AI Studio API (direct OAuth, like API key but with Bearer token)
 			if projectID != "" && !forceAIStudio {
 				// Mode 1: Code Assist API
-				fullURL := fmt.Sprintf("%s/v1internal:%s", geminicli.GeminiCliBaseURL, upstreamAction)
+				baseURL, err := s.validateUpstreamBaseURL(geminicli.GeminiCliBaseURL)
+				if err != nil {
+					return nil, "", err
+			placeholder
+				fullURL := fmt.Sprintf("%s/v1internal:%s", strings.TrimRight(baseURL, "/"), upstreamAction)
 				if useUpstreamStream {
 					fullURL += "?alt=sse"
 			placeholder
@@ -713,12 +808,16 @@ placeholder
 				return upstreamReq, "x-request-id", nil
 		placeholder else {
 				// Mode 2: AI Studio API with OAuth (like API key mode, but using Bearer token)
-				baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+				baseURL := strings.TrimSpace(account.GetCredential("base_url"))
 				if baseURL == "" {
 					baseURL = geminicli.AIStudioBaseURL
 			placeholder
+				normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+				if err != nil {
+					return nil, "", err
+			placeholder
 
-				fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", baseURL, mappedModel, upstreamAction)
+				fullURL := fmt.Sprintf("%s/v1beta/models/%s:%s", strings.TrimRight(normalizedBaseURL, "/"), mappedModel, upstreamAction)
 				if useUpstreamStream {
 					fullURL += "?alt=sse"
 			placeholder
@@ -1652,6 +1751,8 @@ placeholder else {
 		_ = json.Unmarshal(respBody, &parsed)
 placeholder
 
+	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.cfg.Security.ResponseHeaders)
+
 	contentType := resp.Header.Get("Content-Type")
 	if contentType == "" {
 		contentType = "application/json"
@@ -1675,6 +1776,10 @@ func (s *GeminiMessagesCompatService) handleNativeStreamingResponse(c *gin.Conte
 	placeholder
 placeholder
 	log.Printf("[GeminiAPI] ====================================================")
+
+	if s.cfg != nil {
+		responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.cfg.Security.ResponseHeaders)
+placeholder
 
 	c.Status(resp.StatusCode)
 	c.Header("Cache-Control", "no-cache")
@@ -1773,11 +1878,15 @@ placeholder
 		return nil, errors.New("invalid path")
 placeholder
 
-	baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+	baseURL := strings.TrimSpace(account.GetCredential("base_url"))
 	if baseURL == "" {
 		baseURL = geminicli.AIStudioBaseURL
 placeholder
-	fullURL := strings.TrimRight(baseURL, "/") + path
+	normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+	if err != nil {
+		return nil, err
+placeholder
+	fullURL := strings.TrimRight(normalizedBaseURL, "/") + path
 
 	var proxyURL string
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -1816,9 +1925,14 @@ placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	wwwAuthenticate := resp.Header.Get("Www-Authenticate")
+	filteredHeaders := responseheaders.FilterHeaders(resp.Header, s.cfg.Security.ResponseHeaders)
+	if wwwAuthenticate != "" {
+		filteredHeaders.Set("Www-Authenticate", wwwAuthenticate)
+placeholder
 	return &UpstreamHTTPResult{
 		StatusCode: resp.StatusCode,
-		Headers:    resp.Header.Clone(),
+		Headers:    filteredHeaders,
 		Body:       body,
 placeholder, nil
 placeholder

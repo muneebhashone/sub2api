@@ -81,9 +81,7 @@
           >
             <!-- File Hint (if exists) -->
             <p v-if="file.hint" class="text-xs text-amber-600 dark:text-amber-400 mb-1.5 flex items-center gap-1">
-              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-              </svg>
+              <Icon name="exclamationCircle" size="sm" class="flex-shrink-0" />
               {{ file.hint placeholderplaceholder
             </p>
             <div class="bg-gray-900 dark:bg-dark-900 rounded-xl overflow-hidden">
@@ -107,16 +105,17 @@
                 </button>
               </div>
               <!-- Code Content -->
-              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto"><code v-html="file.highlighted"></code></pre>
+              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto">
+                <code v-if="file.highlighted" v-html="file.highlighted"></code>
+                <code v-else v-text="file.content"></code>
+              </pre>
             </div>
           </div>
         </div>
 
         <!-- Usage Note -->
         <div class="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-          <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-          </svg>
+          <Icon name="infoCircle" size="md" class="text-blue-500 flex-shrink-0 mt-0.5" />
           <p class="text-sm text-blue-700 dark:text-blue-300">
             {{ platformNote placeholderplaceholder
           </p>
@@ -141,6 +140,7 @@
 import { ref, computed, h, watch, type Component placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import Icon from '@/components/icons/Icon.vue'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import type { GroupPlatform placeholder from '@/types'
 
@@ -164,8 +164,8 @@ placeholder
 interface FileConfig {
   path: string
   content: string
-  highlighted: string
   hint?: string  // Optional hint message for this file
+  highlighted?: string
 placeholder
 
 const props = defineProps<Props>()
@@ -311,14 +311,23 @@ const platformNote = computed(() => {
   placeholder
 placeholder)
 
-// Syntax highlighting helpers
-const keyword = (text: string) => `<span class="text-purple-400">${textplaceholder</span>`
-const variable = (text: string) => `<span class="text-cyan-400">${textplaceholder</span>`
-const string = (text: string) => `<span class="text-green-400">${textplaceholder</span>`
-const operator = (text: string) => `<span class="text-yellow-400">${textplaceholder</span>`
-const comment = (text: string) => `<span class="text-gray-500">${textplaceholder</span>`
-const key = (text: string) => `<span class="text-blue-400">${textplaceholder</span>`
+const escapeHtml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
 
+const wrapToken = (className: string, value: string) =>
+  `<span class="${classNameplaceholder">${escapeHtml(value)placeholder</span>`
+
+const keyword = (value: string) => wrapToken('text-emerald-300', value)
+const variable = (value: string) => wrapToken('text-sky-200', value)
+const operator = (value: string) => wrapToken('text-slate-400', value)
+const string = (value: string) => wrapToken('text-amber-200', value)
+const comment = (value: string) => wrapToken('text-slate-500', value)
+
+// Syntax highlighting helpers
 // Generate file configs based on platform and active tab
 const currentFiles = computed((): FileConfig[] => {
   const baseUrl = props.baseUrl || window.location.origin
@@ -343,37 +352,29 @@ placeholder)
 function generateAnthropicFiles(baseUrl: string, apiKey: string): FileConfig[] {
   let path: string
   let content: string
-  let highlighted: string
 
   switch (activeTab.value) {
     case 'unix':
       path = 'Terminal'
       content = `export ANTHROPIC_BASE_URL="${baseUrlplaceholder"
 export ANTHROPIC_AUTH_TOKEN="${apiKeyplaceholder"`
-      highlighted = `${keyword('export')placeholder ${variable('ANTHROPIC_BASE_URL')placeholder${operator('=')placeholder${string(`"${baseUrlplaceholder"`)placeholder
-${keyword('export')placeholder ${variable('ANTHROPIC_AUTH_TOKEN')placeholder${operator('=')placeholder${string(`"${apiKeyplaceholder"`)placeholder`
       break
     case 'cmd':
       path = 'Command Prompt'
       content = `set ANTHROPIC_BASE_URL=${baseUrlplaceholder
 set ANTHROPIC_AUTH_TOKEN=${apiKeyplaceholder`
-      highlighted = `${keyword('set')placeholder ${variable('ANTHROPIC_BASE_URL')placeholder${operator('=')placeholder${baseUrlplaceholder
-${keyword('set')placeholder ${variable('ANTHROPIC_AUTH_TOKEN')placeholder${operator('=')placeholder${apiKeyplaceholder`
       break
     case 'powershell':
       path = 'PowerShell'
       content = `$env:ANTHROPIC_BASE_URL="${baseUrlplaceholder"
 $env:ANTHROPIC_AUTH_TOKEN="${apiKeyplaceholder"`
-      highlighted = `${keyword('$env:')placeholder${variable('ANTHROPIC_BASE_URL')placeholder${operator('=')placeholder${string(`"${baseUrlplaceholder"`)placeholder
-${keyword('$env:')placeholder${variable('ANTHROPIC_AUTH_TOKEN')placeholder${operator('=')placeholder${string(`"${apiKeyplaceholder"`)placeholder`
       break
     default:
       path = 'Terminal'
       content = ''
-      highlighted = ''
   placeholder
 
-  return [{ path, content, highlighted placeholder]
+  return [{ path, content placeholder]
 placeholder
 
 function generateGeminiCliContent(baseUrl: string, apiKey: string): FileConfig {
@@ -398,9 +399,9 @@ ${keyword('export')placeholder ${variable('GEMINI_MODEL')placeholder${operator('
       content = `set GOOGLE_GEMINI_BASE_URL=${baseUrlplaceholder
 set GEMINI_API_KEY=${apiKeyplaceholder
 set GEMINI_MODEL=${modelplaceholder`
-      highlighted = `${keyword('set')placeholder ${variable('GOOGLE_GEMINI_BASE_URL')placeholder${operator('=')placeholder${baseUrlplaceholder
-${keyword('set')placeholder ${variable('GEMINI_API_KEY')placeholder${operator('=')placeholder${apiKeyplaceholder
-${keyword('set')placeholder ${variable('GEMINI_MODEL')placeholder${operator('=')placeholder${modelplaceholder
+      highlighted = `${keyword('set')placeholder ${variable('GOOGLE_GEMINI_BASE_URL')placeholder${operator('=')placeholder${string(baseUrl)placeholder
+${keyword('set')placeholder ${variable('GEMINI_API_KEY')placeholder${operator('=')placeholder${string(apiKey)placeholder
+${keyword('set')placeholder ${variable('GEMINI_MODEL')placeholder${operator('=')placeholder${string(model)placeholder
 ${comment(`REM ${modelCommentplaceholder`)placeholder`
       break
     case 'powershell':
@@ -440,40 +441,20 @@ base_url = "${baseUrlplaceholder"
 wire_api = "responses"
 requires_openai_auth = true`
 
-  const configHighlighted = `${key('model_provider')placeholder ${operator('=')placeholder ${string('"sub2api"')placeholder
-${key('model')placeholder ${operator('=')placeholder ${string('"gpt-5.2-codex"')placeholder
-${key('model_reasoning_effort')placeholder ${operator('=')placeholder ${string('"high"')placeholder
-${key('network_access')placeholder ${operator('=')placeholder ${string('"enabled"')placeholder
-${key('disable_response_storage')placeholder ${operator('=')placeholder ${keyword('true')placeholder
-${key('windows_wsl_setup_acknowledged')placeholder ${operator('=')placeholder ${keyword('true')placeholder
-${key('model_verbosity')placeholder ${operator('=')placeholder ${string('"high"')placeholder
-
-${comment('[model_providers.sub2api]')placeholder
-${key('name')placeholder ${operator('=')placeholder ${string('"sub2api"')placeholder
-${key('base_url')placeholder ${operator('=')placeholder ${string(`"${baseUrlplaceholder"`)placeholder
-${key('wire_api')placeholder ${operator('=')placeholder ${string('"responses"')placeholder
-${key('requires_openai_auth')placeholder ${operator('=')placeholder ${keyword('true')placeholder`
-
   // auth.json content
   const authContent = `{
   "OPENAI_API_KEY": "${apiKeyplaceholder"
-placeholder`
-
-  const authHighlighted = `{
-  ${key('"OPENAI_API_KEY"')placeholder: ${string(`"${apiKeyplaceholder"`)placeholder
 placeholder`
 
   return [
     {
       path: `${configDirplaceholder/config.toml`,
       content: configContent,
-      highlighted: configHighlighted,
       hint: t('keys.useKeyModal.openai.configTomlHint')
     placeholder,
     {
       path: `${configDirplaceholder/auth.json`,
-      content: authContent,
-      highlighted: authHighlighted
+      content: authContent
     placeholder
   ]
 placeholder

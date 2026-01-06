@@ -45,7 +45,10 @@ func (s *ClaudeUsageServiceSuite) TestFetchUsage_Success() {
 placeholder`)
 placeholder))
 
-	s.fetcher = &claudeUsageService{usageURL: s.srv.URLplaceholder
+	s.fetcher = &claudeUsageService{
+		usageURL:          s.srv.URL,
+		allowPrivateHosts: true,
+placeholder
 
 	resp, err := s.fetcher.FetchUsage(context.Background(), "at", "://bad-proxy-url")
 	require.NoError(s.T(), err, "FetchUsage")
@@ -64,7 +67,10 @@ func (s *ClaudeUsageServiceSuite) TestFetchUsage_NonOK() {
 		_, _ = io.WriteString(w, "nope")
 placeholder))
 
-	s.fetcher = &claudeUsageService{usageURL: s.srv.URLplaceholder
+	s.fetcher = &claudeUsageService{
+		usageURL:          s.srv.URL,
+		allowPrivateHosts: true,
+placeholder
 
 	_, err := s.fetcher.FetchUsage(context.Background(), "at", "")
 	require.Error(s.T(), err)
@@ -78,7 +84,10 @@ func (s *ClaudeUsageServiceSuite) TestFetchUsage_BadJSON() {
 		_, _ = io.WriteString(w, "not-json")
 placeholder))
 
-	s.fetcher = &claudeUsageService{usageURL: s.srv.URLplaceholder
+	s.fetcher = &claudeUsageService{
+		usageURL:          s.srv.URL,
+		allowPrivateHosts: true,
+placeholder
 
 	_, err := s.fetcher.FetchUsage(context.Background(), "at", "")
 	require.Error(s.T(), err)
@@ -91,7 +100,10 @@ func (s *ClaudeUsageServiceSuite) TestFetchUsage_ContextCancel() {
 		<-r.Context().Done()
 placeholder))
 
-	s.fetcher = &claudeUsageService{usageURL: s.srv.URLplaceholder
+	s.fetcher = &claudeUsageService{
+		usageURL:          s.srv.URL,
+		allowPrivateHosts: true,
+placeholder
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately

@@ -70,6 +70,7 @@ placeholder
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "platform", Type: field.TypeString, Size: 50placeholder,
 		{Name: "type", Type: field.TypeString, Size: 20placeholder,
 		{Name: "credentials", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
@@ -96,7 +97,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[21]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[22]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -105,52 +106,52 @@ placeholder
 			{
 				Name:    "account_platform",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[5]placeholder,
+				Columns: []*schema.Column{AccountsColumns[6]placeholder,
 		placeholder,
 			{
 				Name:    "account_type",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[6]placeholder,
+				Columns: []*schema.Column{AccountsColumns[7]placeholder,
 		placeholder,
 			{
 				Name:    "account_status",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[11]placeholder,
+				Columns: []*schema.Column{AccountsColumns[12]placeholder,
 		placeholder,
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[21]placeholder,
+				Columns: []*schema.Column{AccountsColumns[22]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[10]placeholder,
+				Columns: []*schema.Column{AccountsColumns[11]placeholder,
 		placeholder,
 			{
 				Name:    "account_last_used_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[13]placeholder,
+				Columns: []*schema.Column{AccountsColumns[14]placeholder,
 		placeholder,
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[14]placeholder,
+				Columns: []*schema.Column{AccountsColumns[15]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[15]placeholder,
+				Columns: []*schema.Column{AccountsColumns[16]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[16]placeholder,
+				Columns: []*schema.Column{AccountsColumns[17]placeholder,
 		placeholder,
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[17]placeholder,
+				Columns: []*schema.Column{AccountsColumns[18]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
