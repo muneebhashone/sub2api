@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted placeholder from 'vue'
-import * as XLSX from 'xlsx'; import { saveAs placeholder from 'file-saver'
+import { saveAs placeholder from 'file-saver'
 import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'; import { adminUsageAPI placeholder from '@/api/admin/usage'
 import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination from '@/components/common/Pagination.vue'
 import UsageStatsCards from '@/components/admin/usage/UsageStatsCards.vue'; import UsageFilters from '@/components/admin/usage/UsageFilters.vue'
@@ -57,6 +57,8 @@ const exportToExcel = async () => {
       if (all.length >= total || res.items.length < 100) break; p++
     placeholder
     if(!c.signal.aborted) {
+      // 动态加载 xlsx，降低首屏包体并减少高危依赖的常驻暴露面。
+      const XLSX = await import('xlsx')
       const ws = XLSX.utils.json_to_sheet(all); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Usage')
       saveAs(new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' placeholder)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' placeholder), `usage_${Date.now()placeholder.xlsx`)
       appStore.showSuccess('Export Success')
