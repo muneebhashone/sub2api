@@ -39,8 +39,8 @@ placeholder
 
 func newTestGitHubReleaseClient() *githubReleaseClient {
 	return &githubReleaseClient{
-		httpClient:        &http.Client{placeholder,
-		allowPrivateHosts: true,
+		httpClient:         &http.Client{placeholder,
+		downloadHTTPClient: &http.Client{placeholder,
 placeholder
 placeholder
 
@@ -234,7 +234,7 @@ placeholder))
 		httpClient: &http.Client{
 			Transport: &testTransport{testServerURL: s.srv.URLplaceholder,
 	placeholder,
-		allowPrivateHosts: true,
+		downloadHTTPClient: &http.Client{placeholder,
 placeholder
 
 	release, err := s.client.FetchLatestRelease(context.Background(), "test/repo")
@@ -254,7 +254,7 @@ placeholder))
 		httpClient: &http.Client{
 			Transport: &testTransport{testServerURL: s.srv.URLplaceholder,
 	placeholder,
-		allowPrivateHosts: true,
+		downloadHTTPClient: &http.Client{placeholder,
 placeholder
 
 	_, err := s.client.FetchLatestRelease(context.Background(), "test/repo")
@@ -272,7 +272,7 @@ placeholder))
 		httpClient: &http.Client{
 			Transport: &testTransport{testServerURL: s.srv.URLplaceholder,
 	placeholder,
-		allowPrivateHosts: true,
+		downloadHTTPClient: &http.Client{placeholder,
 placeholder
 
 	_, err := s.client.FetchLatestRelease(context.Background(), "test/repo")
@@ -288,7 +288,7 @@ placeholder))
 		httpClient: &http.Client{
 			Transport: &testTransport{testServerURL: s.srv.URLplaceholder,
 	placeholder,
-		allowPrivateHosts: true,
+		downloadHTTPClient: &http.Client{placeholder,
 placeholder
 
 	ctx, cancel := context.WithCancel(context.Background())
