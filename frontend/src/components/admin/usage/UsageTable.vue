@@ -143,8 +143,8 @@
     >
       <div class="whitespace-nowrap rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
         <div class="space-y-1.5">
-          <div class="mb-2 border-b border-gray-700 pb-1.5">
-            <div class="text-xs font-semibold text-gray-300 mb-1">Token {{ t('usage.details') placeholderplaceholder</div>
+          <div>
+            <div class="text-xs font-semibold text-gray-300 mb-1">{{ t('usage.tokenDetails') placeholderplaceholder</div>
             <div v-if="tokenTooltipData && tokenTooltipData.input_tokens > 0" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('admin.usage.inputTokens') placeholderplaceholder</span>
               <span class="font-medium text-white">{{ tokenTooltipData.input_tokens.toLocaleString() placeholderplaceholder</span>
@@ -184,6 +184,27 @@
     >
       <div class="whitespace-nowrap rounded-lg border border-gray-700 bg-gray-900 px-3 py-2.5 text-xs text-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
         <div class="space-y-1.5">
+          <!-- Cost Breakdown -->
+          <div class="mb-2 border-b border-gray-700 pb-1.5">
+            <div class="text-xs font-semibold text-gray-300 mb-1">{{ t('usage.costDetails') placeholderplaceholder</div>
+            <div v-if="tooltipData && tooltipData.input_cost > 0" class="flex items-center justify-between gap-4">
+              <span class="text-gray-400">{{ t('admin.usage.inputCost') placeholderplaceholder</span>
+              <span class="font-medium text-white">${{ tooltipData.input_cost.toFixed(6) placeholderplaceholder</span>
+            </div>
+            <div v-if="tooltipData && tooltipData.output_cost > 0" class="flex items-center justify-between gap-4">
+              <span class="text-gray-400">{{ t('admin.usage.outputCost') placeholderplaceholder</span>
+              <span class="font-medium text-white">${{ tooltipData.output_cost.toFixed(6) placeholderplaceholder</span>
+            </div>
+            <div v-if="tooltipData && tooltipData.cache_creation_cost > 0" class="flex items-center justify-between gap-4">
+              <span class="text-gray-400">{{ t('admin.usage.cacheCreationCost') placeholderplaceholder</span>
+              <span class="font-medium text-white">${{ tooltipData.cache_creation_cost.toFixed(6) placeholderplaceholder</span>
+            </div>
+            <div v-if="tooltipData && tooltipData.cache_read_cost > 0" class="flex items-center justify-between gap-4">
+              <span class="text-gray-400">{{ t('admin.usage.cacheReadCost') placeholderplaceholder</span>
+              <span class="font-medium text-white">${{ tooltipData.cache_read_cost.toFixed(6) placeholderplaceholder</span>
+            </div>
+          </div>
+          <!-- Rate and Summary -->
           <div class="flex items-center justify-between gap-6">
             <span class="text-gray-400">{{ t('usage.rate') placeholderplaceholder</span>
             <span class="font-semibold text-blue-400">{{ (tooltipData?.rate_multiplier || 1).toFixed(2) placeholderplaceholderx</span>
