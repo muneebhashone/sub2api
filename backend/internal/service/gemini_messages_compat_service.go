@@ -109,7 +109,7 @@ placeholder
 	cacheKey := "gemini:" + sessionHash
 
 	if sessionHash != "" {
-		accountID, err := s.cache.GetSessionAccountID(ctx, cacheKey)
+		accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), cacheKey)
 		if err == nil && accountID > 0 {
 			if _, excluded := excludedIDs[accountID]; !excluded {
 				account, err := s.accountRepo.GetByID(ctx, accountID)
@@ -133,7 +133,7 @@ placeholder
 						placeholder
 					placeholder
 						if usable {
-							_ = s.cache.RefreshSessionTTL(ctx, cacheKey, geminiStickySessionTTL)
+							_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), cacheKey, geminiStickySessionTTL)
 							return account, nil
 					placeholder
 				placeholder
@@ -217,7 +217,7 @@ placeholder
 placeholder
 
 	if sessionHash != "" {
-		_ = s.cache.SetSessionAccountID(ctx, cacheKey, selected.ID, geminiStickySessionTTL)
+		_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), cacheKey, selected.ID, geminiStickySessionTTL)
 placeholder
 
 	return selected, nil

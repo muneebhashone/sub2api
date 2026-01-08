@@ -325,6 +325,8 @@ placeholder
 		ImagePrice2K:        g.ImagePrice2k,
 		ImagePrice4K:        g.ImagePrice4k,
 		DefaultValidityDays: g.DefaultValidityDays,
+		ClaudeCodeOnly:      g.ClaudeCodeOnly,
+		FallbackGroupID:     g.FallbackGroupID,
 		CreatedAt:           g.CreatedAt,
 		UpdatedAt:           g.UpdatedAt,
 placeholder

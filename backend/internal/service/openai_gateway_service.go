@@ -134,11 +134,11 @@ placeholder
 placeholder
 
 // BindStickySession sets session -> account binding with standard TTL.
-func (s *OpenAIGatewayService) BindStickySession(ctx context.Context, sessionHash string, accountID int64) error {
+func (s *OpenAIGatewayService) BindStickySession(ctx context.Context, groupID *int64, sessionHash string, accountID int64) error {
 	if sessionHash == "" || accountID <= 0 {
 		return nil
 placeholder
-	return s.cache.SetSessionAccountID(ctx, "openai:"+sessionHash, accountID, openaiStickySessionTTL)
+	return s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash, accountID, openaiStickySessionTTL)
 placeholder
 
 // SelectAccount selects an OpenAI account with sticky session support
@@ -155,13 +155,13 @@ placeholder
 func (s *OpenAIGatewayService) SelectAccountForModelWithExclusions(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{placeholder) (*Account, error) {
 	// 1. Check sticky session
 	if sessionHash != "" {
-		accountID, err := s.cache.GetSessionAccountID(ctx, "openai:"+sessionHash)
+		accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash)
 		if err == nil && accountID > 0 {
 			if _, excluded := excludedIDs[accountID]; !excluded {
 				account, err := s.accountRepo.GetByID(ctx, accountID)
 				if err == nil && account.IsSchedulable() && account.IsOpenAI() && (requestedModel == "" || account.IsModelSupported(requestedModel)) {
 					// Refresh sticky session TTL
-					_ = s.cache.RefreshSessionTTL(ctx, "openai:"+sessionHash, openaiStickySessionTTL)
+					_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), "openai:"+sessionHash, openaiStickySessionTTL)
 					return account, nil
 			placeholder
 		placeholder
@@ -227,7 +227,7 @@ placeholder
 
 	// 4. Set sticky session
 	if sessionHash != "" {
-		_ = s.cache.SetSessionAccountID(ctx, "openai:"+sessionHash, selected.ID, openaiStickySessionTTL)
+		_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash, selected.ID, openaiStickySessionTTL)
 placeholder
 
 	return selected, nil
@@ -238,7 +238,7 @@ func (s *OpenAIGatewayService) SelectAccountWithLoadAwareness(ctx context.Contex
 	cfg := s.schedulingConfig()
 	var stickyAccountID int64
 	if sessionHash != "" && s.cache != nil {
-		if accountID, err := s.cache.GetSessionAccountID(ctx, "openai:"+sessionHash); err == nil {
+		if accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash); err == nil {
 			stickyAccountID = accountID
 	placeholder
 placeholder
@@ -298,14 +298,14 @@ placeholder
 
 	// ============ Layer 1: Sticky session ============
 	if sessionHash != "" {
-		accountID, err := s.cache.GetSessionAccountID(ctx, "openai:"+sessionHash)
+		accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash)
 		if err == nil && accountID > 0 && !isExcluded(accountID) {
 			account, err := s.accountRepo.GetByID(ctx, accountID)
 			if err == nil && account.IsSchedulable() && account.IsOpenAI() &&
 				(requestedModel == "" || account.IsModelSupported(requestedModel)) {
 				result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
 				if err == nil && result.Acquired {
-					_ = s.cache.RefreshSessionTTL(ctx, "openai:"+sessionHash, openaiStickySessionTTL)
+					_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), "openai:"+sessionHash, openaiStickySessionTTL)
 					return &AccountSelectionResult{
 						Account:     account,
 						Acquired:    true,
@@ -362,7 +362,7 @@ placeholder
 			result, err := s.tryAcquireAccountSlot(ctx, acc.ID, acc.Concurrency)
 			if err == nil && result.Acquired {
 				if sessionHash != "" {
-					_ = s.cache.SetSessionAccountID(ctx, "openai:"+sessionHash, acc.ID, openaiStickySessionTTL)
+					_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash, acc.ID, openaiStickySessionTTL)
 			placeholder
 				return &AccountSelectionResult{
 					Account:     acc,
@@ -415,7 +415,7 @@ placeholder else {
 				result, err := s.tryAcquireAccountSlot(ctx, item.account.ID, item.account.Concurrency)
 				if err == nil && result.Acquired {
 					if sessionHash != "" {
-						_ = s.cache.SetSessionAccountID(ctx, "openai:"+sessionHash, item.account.ID, openaiStickySessionTTL)
+						_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash, item.account.ID, openaiStickySessionTTL)
 				placeholder
 					return &AccountSelectionResult{
 						Account:     item.account,

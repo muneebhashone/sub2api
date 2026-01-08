@@ -96,6 +96,9 @@ placeholder
 	reqModel := parsedReq.Model
 	reqStream := parsedReq.Stream
 
+	// 设置 Claude Code 客户端标识到 context（用于分组限制检查）
+	SetClaudeCodeClientContext(c, body)
+
 	// 验证 model 必填
 	if reqModel == "" {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
@@ -229,7 +232,7 @@ placeholder
 					h.handleConcurrencyError(c, err, "account", streamStarted)
 					return
 			placeholder
-				if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
+				if err := h.gatewayService.BindStickySession(c.Request.Context(), apiKey.GroupID, sessionKey, account.ID); err != nil {
 					log.Printf("Bind sticky session failed: %v", err)
 			placeholder
 		placeholder
@@ -357,7 +360,7 @@ placeholder
 				h.handleConcurrencyError(c, err, "account", streamStarted)
 				return
 		placeholder
-			if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
+			if err := h.gatewayService.BindStickySession(c.Request.Context(), apiKey.GroupID, sessionKey, account.ID); err != nil {
 				log.Printf("Bind sticky session failed: %v", err)
 		placeholder
 	placeholder
@@ -682,6 +685,9 @@ placeholder
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 placeholder
+
+	// 设置 Claude Code 客户端标识到 context（用于分组限制检查）
+	SetClaudeCodeClientContext(c, body)
 
 	// 验证 model 必填
 	if parsedReq.Model == "" {
