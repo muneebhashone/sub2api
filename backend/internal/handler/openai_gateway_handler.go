@@ -242,7 +242,7 @@ placeholder
 	placeholder
 
 		// Async record usage
-		go func(result *service.OpenAIForwardResult, usedAccount *service.Account) {
+		go func(result *service.OpenAIForwardResult, usedAccount *service.Account, ua string) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{
@@ -251,10 +251,11 @@ placeholder
 				User:         apiKey.User,
 				Account:      usedAccount,
 				Subscription: subscription,
+				UserAgent:    ua,
 		placeholder); err != nil {
 				log.Printf("Record usage failed: %v", err)
 		placeholder
-	placeholder(result, account)
+	placeholder(result, account, userAgent)
 		return
 placeholder
 placeholder
