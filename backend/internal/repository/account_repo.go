@@ -76,13 +76,17 @@ placeholder
 		SetPriority(account.Priority).
 		SetStatus(account.Status).
 		SetErrorMessage(account.ErrorMessage).
-		SetSchedulable(account.Schedulable)
+		SetSchedulable(account.Schedulable).
+		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
 
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
 placeholder
 	if account.LastUsedAt != nil {
 		builder.SetLastUsedAt(*account.LastUsedAt)
+placeholder
+	if account.ExpiresAt != nil {
+		builder.SetExpiresAt(*account.ExpiresAt)
 placeholder
 	if account.RateLimitedAt != nil {
 		builder.SetRateLimitedAt(*account.RateLimitedAt)
@@ -280,7 +284,8 @@ placeholder
 		SetPriority(account.Priority).
 		SetStatus(account.Status).
 		SetErrorMessage(account.ErrorMessage).
-		SetSchedulable(account.Schedulable)
+		SetSchedulable(account.Schedulable).
+		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
 
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
@@ -291,6 +296,11 @@ placeholder
 		builder.SetLastUsedAt(*account.LastUsedAt)
 placeholder else {
 		builder.ClearLastUsedAt()
+placeholder
+	if account.ExpiresAt != nil {
+		builder.SetExpiresAt(*account.ExpiresAt)
+placeholder else {
+		builder.ClearExpiresAt()
 placeholder
 	if account.RateLimitedAt != nil {
 		builder.SetRateLimitedAt(*account.RateLimitedAt)
@@ -570,6 +580,7 @@ func (r *accountRepository) ListSchedulable(ctx context.Context) ([]service.Acco
 			dbaccount.StatusEQ(service.StatusActive),
 			dbaccount.SchedulableEQ(true),
 			tempUnschedulablePredicate(),
+			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
 			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
 		).
@@ -596,6 +607,7 @@ func (r *accountRepository) ListSchedulableByPlatform(ctx context.Context, platf
 			dbaccount.StatusEQ(service.StatusActive),
 			dbaccount.SchedulableEQ(true),
 			tempUnschedulablePredicate(),
+			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
 			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
 		).
@@ -629,6 +641,7 @@ placeholder
 			dbaccount.StatusEQ(service.StatusActive),
 			dbaccount.SchedulableEQ(true),
 			tempUnschedulablePredicate(),
+			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
 			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
 		).
@@ -725,6 +738,27 @@ func (r *accountRepository) SetSchedulable(ctx context.Context, id int64, schedu
 		SetSchedulable(schedulable).
 		Save(ctx)
 	return err
+placeholder
+
+func (r *accountRepository) AutoPauseExpiredAccounts(ctx context.Context, now time.Time) (int64, error) {
+	result, err := r.sql.ExecContext(ctx, `
+		UPDATE accounts
+		SET schedulable = FALSE,
+			updated_at = NOW()
+		WHERE deleted_at IS NULL
+			AND schedulable = TRUE
+			AND auto_pause_on_expired = TRUE
+			AND expires_at IS NOT NULL
+			AND expires_at <= $1
+	`, now)
+	if err != nil {
+		return 0, err
+placeholder
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+placeholder
+	return rows, nil
 placeholder
 
 func (r *accountRepository) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
@@ -861,6 +895,7 @@ placeholder
 		preds = append(preds,
 			dbaccount.SchedulableEQ(true),
 			tempUnschedulablePredicate(),
+			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
 			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
 		)
@@ -969,6 +1004,14 @@ func tempUnschedulablePredicate() dbpredicate.Account {
 			entsql.LTE(col, entsql.Expr("NOW()")),
 		))
 placeholder)
+placeholder
+
+func notExpiredPredicate(now time.Time) dbpredicate.Account {
+	return dbaccount.Or(
+		dbaccount.ExpiresAtIsNil(),
+		dbaccount.ExpiresAtGT(now),
+		dbaccount.AutoPauseOnExpiredEQ(false),
+	)
 placeholder
 
 func (r *accountRepository) loadTempUnschedStates(ctx context.Context, accountIDs []int64) (map[int64]tempUnschedSnapshot, error) {
@@ -1086,6 +1129,8 @@ placeholder
 		Status:              m.Status,
 		ErrorMessage:        derefString(m.ErrorMessage),
 		LastUsedAt:          m.LastUsedAt,
+		ExpiresAt:           m.ExpiresAt,
+		AutoPauseOnExpired:  m.AutoPauseOnExpired,
 		CreatedAt:           m.CreatedAt,
 		UpdatedAt:           m.UpdatedAt,
 		Schedulable:         m.Schedulable,

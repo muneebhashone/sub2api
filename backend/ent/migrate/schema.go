@@ -80,6 +80,8 @@ placeholder
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "auto_pause_on_expired", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "schedulable", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "rate_limited_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "rate_limit_reset_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -97,7 +99,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[22]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[24]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -121,7 +123,7 @@ placeholder
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[22]placeholder,
+				Columns: []*schema.Column{AccountsColumns[24]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
@@ -136,22 +138,22 @@ placeholder
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[15]placeholder,
+				Columns: []*schema.Column{AccountsColumns[17]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[16]placeholder,
+				Columns: []*schema.Column{AccountsColumns[18]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[17]placeholder,
+				Columns: []*schema.Column{AccountsColumns[19]placeholder,
 		placeholder,
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[18]placeholder,
+				Columns: []*schema.Column{AccountsColumns[20]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
