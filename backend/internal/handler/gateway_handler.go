@@ -108,6 +108,9 @@ placeholder
 	// 获取订阅信息（可能为nil）- 提前获取用于后续检查
 	subscription, _ := middleware2.GetSubscriptionFromContext(c)
 
+	// 获取 User-Agent
+	userAgent := c.Request.UserAgent()
+
 	// 0. 检查wait队列是否已满
 	maxWait := service.CalculateMaxWait(subject.Concurrency)
 	canWait, err := h.concurrencyHelper.IncrementWaitCount(c.Request.Context(), subject.UserID, maxWait)
@@ -267,7 +270,7 @@ placeholder
 		placeholder
 
 			// 异步记录使用量（subscription已在函数开头获取）
-			go func(result *service.ForwardResult, usedAccount *service.Account) {
+			go func(result *service.ForwardResult, usedAccount *service.Account, ua string) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
@@ -276,10 +279,11 @@ placeholder
 					User:         apiKey.User,
 					Account:      usedAccount,
 					Subscription: subscription,
+					UserAgent:    ua,
 			placeholder); err != nil {
 					log.Printf("Record usage failed: %v", err)
 			placeholder
-		placeholder(result, account)
+		placeholder(result, account, userAgent)
 			return
 	placeholder
 placeholder
@@ -394,7 +398,7 @@ placeholder
 	placeholder
 
 		// 异步记录使用量（subscription已在函数开头获取）
-		go func(result *service.ForwardResult, usedAccount *service.Account) {
+		go func(result *service.ForwardResult, usedAccount *service.Account, ua string) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
@@ -403,10 +407,11 @@ placeholder
 				User:         apiKey.User,
 				Account:      usedAccount,
 				Subscription: subscription,
+				UserAgent:    ua,
 		placeholder); err != nil {
 				log.Printf("Record usage failed: %v", err)
 		placeholder
-	placeholder(result, account)
+	placeholder(result, account, userAgent)
 		return
 placeholder
 placeholder

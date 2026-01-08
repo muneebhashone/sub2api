@@ -28,9 +28,9 @@ const trendData = ref<TrendDataPoint[]>([]); const modelStats = ref<ModelStat[]>
 const formatLD = (d: Date) => d.toISOString().split('T')[0]
 const startDate = ref(formatLD(new Date(Date.now() - 6 * 86400000))); const endDate = ref(formatLD(new Date())); const granularity = ref('day')
 
-const loadStats = async () => { loading.value = true; try { await authStore.refreshUser(); stats.value = await usageAPI.getDashboardStats() placeholder catch {placeholder finally { loading.value = false placeholder placeholder
-const loadCharts = async () => { loadingCharts.value = true; try { const res = await Promise.all([usageAPI.getDashboardTrend({ start_date: startDate.value, end_date: endDate.value, granularity: granularity.value as any placeholder), usageAPI.getDashboardModels({ start_date: startDate.value, end_date: endDate.value placeholder)]); trendData.value = res[0].trend || []; modelStats.value = res[1].models || [] placeholder catch {placeholder finally { loadingCharts.value = false placeholder placeholder
-const loadRecent = async () => { loadingUsage.value = true; try { const res = await usageAPI.getByDateRange(startDate.value, endDate.value); recentUsage.value = res.items.slice(0, 5) placeholder catch {placeholder finally { loadingUsage.value = false placeholder placeholder
+const loadStats = async () => { loading.value = true; try { await authStore.refreshUser(); stats.value = await usageAPI.getDashboardStats() placeholder catch (error) { console.error('Failed to load dashboard stats:', error) placeholder finally { loading.value = false placeholder placeholder
+const loadCharts = async () => { loadingCharts.value = true; try { const res = await Promise.all([usageAPI.getDashboardTrend({ start_date: startDate.value, end_date: endDate.value, granularity: granularity.value as any placeholder), usageAPI.getDashboardModels({ start_date: startDate.value, end_date: endDate.value placeholder)]); trendData.value = res[0].trend || []; modelStats.value = res[1].models || [] placeholder catch (error) { console.error('Failed to load charts:', error) placeholder finally { loadingCharts.value = false placeholder placeholder
+const loadRecent = async () => { loadingUsage.value = true; try { const res = await usageAPI.getByDateRange(startDate.value, endDate.value); recentUsage.value = res.items.slice(0, 5) placeholder catch (error) { console.error('Failed to load recent usage:', error) placeholder finally { loadingUsage.value = false placeholder placeholder
 
 onMounted(() => { loadStats(); loadCharts(); loadRecent() placeholder)
 </script>

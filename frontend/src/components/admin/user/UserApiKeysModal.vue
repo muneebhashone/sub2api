@@ -42,6 +42,6 @@ const apiKeys = ref<ApiKey[]>([]); const loading = ref(false)
 watch(() => props.show, (v) => { if (v && props.user) load() placeholder)
 const load = async () => {
   if (!props.user) return; loading.value = true
-  try { const res = await adminAPI.users.getUserApiKeys(props.user.id); apiKeys.value = res.items || [] placeholder catch {placeholder finally { loading.value = false placeholder
+  try { const res = await adminAPI.users.getUserApiKeys(props.user.id); apiKeys.value = res.items || [] placeholder catch (error) { console.error('Failed to load API keys:', error) placeholder finally { loading.value = false placeholder
 placeholder
 </script>

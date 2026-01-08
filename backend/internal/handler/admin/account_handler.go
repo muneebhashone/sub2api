@@ -85,6 +85,8 @@ type CreateAccountRequest struct {
 	Concurrency             int            `json:"concurrency"`
 	Priority                int            `json:"priority"`
 	GroupIDs                []int64        `json:"group_ids"`
+	ExpiresAt               *int64         `json:"expires_at"`
+	AutoPauseOnExpired      *bool          `json:"auto_pause_on_expired"`
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
 placeholder
 
@@ -101,6 +103,8 @@ type UpdateAccountRequest struct {
 	Priority                *int           `json:"priority"`
 	Status                  string         `json:"status" binding:"omitempty,oneof=active inactive"`
 	GroupIDs                *[]int64       `json:"group_ids"`
+	ExpiresAt               *int64         `json:"expires_at"`
+	AutoPauseOnExpired      *bool          `json:"auto_pause_on_expired"`
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
 placeholder
 
@@ -204,6 +208,8 @@ placeholder
 		Concurrency:           req.Concurrency,
 		Priority:              req.Priority,
 		GroupIDs:              req.GroupIDs,
+		ExpiresAt:             req.ExpiresAt,
+		AutoPauseOnExpired:    req.AutoPauseOnExpired,
 		SkipMixedChannelCheck: skipCheck,
 placeholder)
 	if err != nil {
@@ -261,6 +267,8 @@ placeholder
 		Priority:              req.Priority,    // 指针类型，nil 表示未提供
 		Status:                req.Status,
 		GroupIDs:              req.GroupIDs,
+		ExpiresAt:             req.ExpiresAt,
+		AutoPauseOnExpired:    req.AutoPauseOnExpired,
 		SkipMixedChannelCheck: skipCheck,
 placeholder)
 	if err != nil {

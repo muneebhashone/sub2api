@@ -319,3 +319,12 @@ func (s *UsageService) GetGlobalStats(ctx context.Context, startTime, endTime ti
 placeholder
 	return stats, nil
 placeholder
+
+// GetStatsWithFilters returns usage stats with optional filters.
+func (s *UsageService) GetStatsWithFilters(ctx context.Context, filters usagestats.UsageLogFilters) (*usagestats.UsageStats, error) {
+	stats, err := s.usageRepo.GetStatsWithFilters(ctx, filters)
+	if err != nil {
+		return nil, fmt.Errorf("get usage stats with filters: %w", err)
+placeholder
+	return stats, nil
+placeholder

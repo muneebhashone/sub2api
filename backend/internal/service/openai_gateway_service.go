@@ -1092,6 +1092,7 @@ type OpenAIRecordUsageInput struct {
 	User         *User
 	Account      *Account
 	Subscription *UserSubscription
+	UserAgent    string // 请求的 User-Agent
 placeholder
 
 // RecordUsage records usage and deducts balance
@@ -1159,6 +1160,11 @@ placeholder
 		DurationMs:          &durationMs,
 		FirstTokenMs:        result.FirstTokenMs,
 		CreatedAt:           time.Now(),
+placeholder
+
+	// 添加 UserAgent
+	if input.UserAgent != "" {
+		usageLog.UserAgent = &input.UserAgent
 placeholder
 
 	if apiKey.GroupID != nil {

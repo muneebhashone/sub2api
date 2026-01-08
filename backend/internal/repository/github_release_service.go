@@ -14,23 +14,33 @@ import (
 )
 
 type githubReleaseClient struct {
-	httpClient        *http.Client
-	allowPrivateHosts bool
+	httpClient         *http.Client
+	downloadHTTPClient *http.Client
 placeholder
 
-func NewGitHubReleaseClient() service.GitHubReleaseClient {
-	allowPrivate := false
+// NewGitHubReleaseClient 创建 GitHub Release 客户端
+// proxyURL 为空时直连 GitHub，支持 http/https/socks5/socks5h 协议
+func NewGitHubReleaseClient(proxyURL string) service.GitHubReleaseClient {
 	sharedClient, err := httpclient.GetClient(httpclient.Options{
-		Timeout:            30 * time.Second,
-		ValidateResolvedIP: true,
-		AllowPrivateHosts:  allowPrivate,
+		Timeout:  30 * time.Second,
+		ProxyURL: proxyURL,
 placeholder)
 	if err != nil {
 		sharedClient = &http.Client{Timeout: 30 * time.Secondplaceholder
 placeholder
+
+	// 下载客户端需要更长的超时时间
+	downloadClient, err := httpclient.GetClient(httpclient.Options{
+		Timeout:  10 * time.Minute,
+		ProxyURL: proxyURL,
+placeholder)
+	if err != nil {
+		downloadClient = &http.Client{Timeout: 10 * time.Minuteplaceholder
+placeholder
+
 	return &githubReleaseClient{
-		httpClient:        sharedClient,
-		allowPrivateHosts: allowPrivate,
+		httpClient:         sharedClient,
+		downloadHTTPClient: downloadClient,
 placeholder
 placeholder
 
@@ -68,15 +78,8 @@ func (c *githubReleaseClient) DownloadFile(ctx context.Context, url, dest string
 		return err
 placeholder
 
-	downloadClient, err := httpclient.GetClient(httpclient.Options{
-		Timeout:            10 * time.Minute,
-		ValidateResolvedIP: true,
-		AllowPrivateHosts:  c.allowPrivateHosts,
-placeholder)
-	if err != nil {
-		downloadClient = &http.Client{Timeout: 10 * time.Minuteplaceholder
-placeholder
-	resp, err := downloadClient.Do(req)
+	// 使用预配置的下载客户端（已包含代理配置）
+	resp, err := c.downloadHTTPClient.Do(req)
 	if err != nil {
 		return err
 placeholder
