@@ -85,6 +85,14 @@
             </span>
           </template>
 
+          <template #cell-account_count="{ value placeholder">
+            <span
+              class="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-dark-600 dark:text-gray-300"
+            >
+              {{ t('admin.groups.accountsCount', { count: value || 0 placeholder) placeholderplaceholder
+            </span>
+          </template>
+
           <template #cell-actions="{ row placeholder">
             <div class="flex items-center gap-1">
               <button
@@ -534,6 +542,7 @@ const columns = computed<Column[]>(() => [
   { key: 'name', label: t('admin.proxies.columns.name'), sortable: true placeholder,
   { key: 'protocol', label: t('admin.proxies.columns.protocol'), sortable: true placeholder,
   { key: 'address', label: t('admin.proxies.columns.address'), sortable: false placeholder,
+  { key: 'account_count', label: t('admin.proxies.columns.accounts'), sortable: true placeholder,
   { key: 'status', label: t('admin.proxies.columns.status'), sortable: true placeholder,
   { key: 'actions', label: t('admin.proxies.columns.actions'), sortable: false placeholder
 ])
