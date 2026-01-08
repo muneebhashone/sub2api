@@ -149,6 +149,11 @@ func defaultIdentityPatch(_ string) string {
 	return antigravityIdentity
 placeholder
 
+// GetDefaultIdentityPatch 返回默认的 Antigravity 身份提示词
+func GetDefaultIdentityPatch() string {
+	return antigravityIdentity
+placeholder
+
 // buildSystemInstruction 构建 systemInstruction
 func buildSystemInstruction(system json.RawMessage, modelName string, opts TransformOptions) *GeminiContent {
 	var parts []GeminiPart
