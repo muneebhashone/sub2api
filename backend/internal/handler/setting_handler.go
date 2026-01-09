@@ -42,6 +42,7 @@ placeholder
 		APIBaseURL:          settings.APIBaseURL,
 		ContactInfo:         settings.ContactInfo,
 		DocURL:              settings.DocURL,
+		LinuxDoOAuthEnabled: settings.LinuxDoOAuthEnabled,
 		Version:             h.version,
 placeholder)
 placeholder
