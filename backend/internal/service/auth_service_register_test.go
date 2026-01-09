@@ -184,7 +184,9 @@ placeholder
 
 func TestAuthService_Register_ReservedEmail(t *testing.T) {
 	repo := &userRepoStub{placeholder
-	service := newAuthService(repo, nil, nil)
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+placeholder, nil)
 
 	_, _, err := service.Register(context.Background(), "linuxdo-123@linuxdo-connect.invalid", "password")
 	require.ErrorIs(t, err, ErrEmailReserved)
