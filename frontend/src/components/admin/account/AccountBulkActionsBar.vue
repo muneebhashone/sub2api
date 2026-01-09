@@ -20,6 +20,8 @@
     </div>
     <div class="flex gap-2">
       <button @click="$emit('delete')" class="btn btn-danger btn-sm">{{ t('admin.accounts.bulkActions.delete') placeholderplaceholder</button>
+      <button @click="$emit('toggle-schedulable', true)" class="btn btn-success btn-sm">{{ t('admin.accounts.bulkActions.enableScheduling') placeholderplaceholder</button>
+      <button @click="$emit('toggle-schedulable', false)" class="btn btn-warning btn-sm">{{ t('admin.accounts.bulkActions.disableScheduling') placeholderplaceholder</button>
       <button @click="$emit('edit')" class="btn btn-primary btn-sm">{{ t('admin.accounts.bulkActions.edit') placeholderplaceholder</button>
     </div>
   </div>
@@ -27,5 +29,5 @@
 
 <script setup lang="ts">
 import { useI18n placeholder from 'vue-i18n'
-defineProps(['selectedIds']); defineEmits(['delete', 'edit', 'clear', 'select-page']); const { t placeholder = useI18n()
+defineProps(['selectedIds']); defineEmits(['delete', 'edit', 'clear', 'select-page', 'toggle-schedulable']); const { t placeholder = useI18n()
 </script>
