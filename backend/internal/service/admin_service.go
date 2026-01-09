@@ -575,18 +575,33 @@ func (s *adminServiceImpl) validateFallbackGroup(ctx context.Context, currentGro
 		return fmt.Errorf("cannot set self as fallback group")
 placeholder
 
-	// 检查降级分组是否存在
-	fallbackGroup, err := s.groupRepo.GetByID(ctx, fallbackGroupID)
-	if err != nil {
-		return fmt.Errorf("fallback group not found: %w", err)
-placeholder
+	visited := map[int64]struct{placeholder{placeholder
+	nextID := fallbackGroupID
+	for {
+		if _, seen := visited[nextID]; seen {
+			return fmt.Errorf("fallback group cycle detected")
+	placeholder
+		visited[nextID] = struct{placeholder{placeholder
+		if currentGroupID > 0 && nextID == currentGroupID {
+			return fmt.Errorf("fallback group cycle detected")
+	placeholder
 
-	// 降级分组不能启用 claude_code_only，否则会造成死循环
-	if fallbackGroup.ClaudeCodeOnly {
-		return fmt.Errorf("fallback group cannot have claude_code_only enabled")
-placeholder
+		// 检查降级分组是否存在
+		fallbackGroup, err := s.groupRepo.GetByIDLite(ctx, nextID)
+		if err != nil {
+			return fmt.Errorf("fallback group not found: %w", err)
+	placeholder
 
-	return nil
+		// 降级分组不能启用 claude_code_only，否则会造成死循环
+		if nextID == fallbackGroupID && fallbackGroup.ClaudeCodeOnly {
+			return fmt.Errorf("fallback group cannot have claude_code_only enabled")
+	placeholder
+
+		if fallbackGroup.FallbackGroupID == nil {
+			return nil
+	placeholder
+		nextID = *fallbackGroup.FallbackGroupID
+placeholder
 placeholder
 
 func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *UpdateGroupInput) (*Group, error) {

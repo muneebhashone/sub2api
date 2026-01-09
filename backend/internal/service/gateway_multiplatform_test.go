@@ -1102,6 +1102,47 @@ placeholder
 	require.Equal(t, 0, groupRepo.getByIDLiteCalls)
 placeholder
 
+func TestGatewayService_GroupResolution_IgnoresInvalidContextGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(42)
+	ctxGroup := &Group{
+		ID:     groupID,
+		Status: StatusActive,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, ctxGroup)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	group := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{groupID: groupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
+placeholder
+
 func TestGatewayService_GroupResolution_FallbackUsesLiteOnce(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(10)
@@ -1145,4 +1186,42 @@ placeholder
 	require.NotNil(t, account)
 	require.Equal(t, 0, groupRepo.getByIDCalls)
 	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_ResolveGatewayGroup_DetectsFallbackCycle(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10)
+	fallbackID := int64(11)
+
+	group := &Group{
+		ID:              groupID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &fallbackID,
+placeholder
+	fallbackGroup := &Group{
+		ID:              fallbackID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &groupID,
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{
+			groupID:    group,
+			fallbackID: fallbackGroup,
+	placeholder,
+placeholder
+
+	svc := &GatewayService{
+		groupRepo: groupRepo,
+placeholder
+
+	gotGroup, gotID, err := svc.resolveGatewayGroup(ctx, &groupID)
+placeholder
+	require.Nil(t, gotGroup)
+	require.Nil(t, gotID)
+	require.Contains(t, err.Error(), "fallback group cycle")
 placeholder

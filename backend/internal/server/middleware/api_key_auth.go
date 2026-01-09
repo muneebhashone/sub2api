@@ -179,7 +179,7 @@ placeholder
 placeholder
 
 func setGroupContext(c *gin.Context, group *service.Group) {
-	if group == nil {
+	if !service.IsGroupContextValid(group) {
 		return
 placeholder
 	if existing, ok := c.Request.Context().Value(ctxkey.Group).(*service.Group); ok && existing != nil && existing.ID == group.ID {
