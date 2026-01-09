@@ -675,6 +675,40 @@ func (r *accountRepository) SetRateLimited(ctx context.Context, id int64, resetA
 	return err
 placeholder
 
+func (r *accountRepository) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope service.AntigravityQuotaScope, resetAt time.Time) error {
+	now := time.Now().UTC()
+	payload := map[string]string{
+		"rate_limited_at":     now.Format(time.RFC3339),
+		"rate_limit_reset_at": resetAt.UTC().Format(time.RFC3339),
+placeholder
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+placeholder
+
+	path := "{antigravity_quota_scopes," + string(scope) + "placeholder"
+	client := clientFromContext(ctx, r.client)
+	result, err := client.ExecContext(
+		ctx,
+		"UPDATE accounts SET extra = jsonb_set(COALESCE(extra, '{placeholder'::jsonb), $1::text[], $2::jsonb, true), updated_at = NOW() WHERE id = $3 AND deleted_at IS NULL",
+		path,
+		raw,
+		id,
+	)
+	if err != nil {
+		return err
+placeholder
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+placeholder
+	if affected == 0 {
+		return service.ErrAccountNotFound
+placeholder
+	return nil
+placeholder
+
 func (r *accountRepository) SetOverloaded(ctx context.Context, id int64, until time.Time) error {
 	_, err := r.client.Account.Update().
 		Where(dbaccount.IDEQ(id)).
@@ -716,6 +750,27 @@ func (r *accountRepository) ClearRateLimit(ctx context.Context, id int64) error 
 		ClearOverloadUntil().
 		Save(ctx)
 	return err
+placeholder
+
+func (r *accountRepository) ClearAntigravityQuotaScopes(ctx context.Context, id int64) error {
+	client := clientFromContext(ctx, r.client)
+	result, err := client.ExecContext(
+		ctx,
+		"UPDATE accounts SET extra = COALESCE(extra, '{placeholder'::jsonb) - 'antigravity_quota_scopes', updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL",
+		id,
+	)
+	if err != nil {
+		return err
+placeholder
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+placeholder
+	if affected == 0 {
+		return service.ErrAccountNotFound
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) UpdateSessionWindow(ctx context.Context, id int64, start, end *time.Time, status string) error {
