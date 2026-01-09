@@ -135,7 +135,7 @@ placeholder
 placeholder
 placeholder
 
-func applyCodexOAuthTransform(reqBody map[string]any, codexMode bool) codexTransformResult {
+func applyCodexOAuthTransform(reqBody map[string]any) codexTransformResult {
 	result := codexTransformResult{placeholder
 
 	model := ""
@@ -151,16 +151,13 @@ placeholder
 		result.NormalizedModel = normalizedModel
 placeholder
 
-	reqBody["store"] = false
-	reqBody["stream"] = true
-	result.Modified = true
-
-	instructions := getCodexInstructions(normalizedModel)
-	if instructions != "" {
-		if existing, ok := reqBody["instructions"].(string); !ok || existing != instructions {
-			reqBody["instructions"] = instructions
-			result.Modified = true
-	placeholder
+	if v, ok := reqBody["store"].(bool); !ok || v {
+		reqBody["store"] = false
+		result.Modified = true
+placeholder
+	if v, ok := reqBody["stream"].(bool); !ok || !v {
+		reqBody["stream"] = true
+		result.Modified = true
 placeholder
 
 	if _, ok := reqBody["max_output_tokens"]; ok {
@@ -180,46 +177,27 @@ placeholder
 		result.PromptCacheKey = strings.TrimSpace(v)
 placeholder
 
+	instructions := strings.TrimSpace(getCodexInstructions(normalizedModel))
+	existingInstructions, _ := reqBody["instructions"].(string)
+	existingInstructions = strings.TrimSpace(existingInstructions)
+
+	if instructions != "" {
+		if existingInstructions != "" && existingInstructions != instructions {
+			if input, ok := reqBody["input"].([]any); ok {
+				reqBody["input"] = prependSystemInstruction(input, existingInstructions)
+				result.Modified = true
+		placeholder
+	placeholder
+		if existingInstructions != instructions {
+			reqBody["instructions"] = instructions
+			result.Modified = true
+	placeholder
+placeholder
+
 	if input, ok := reqBody["input"].([]any); ok {
 		input = filterCodexInput(input)
-		if codexMode {
-			cachedPrompt := getOpenCodeCodexPrompt()
-			input = filterOpenCodeSystemPromptsWithCachedPrompt(input, cachedPrompt)
-			if hasTools(reqBody) {
-				input = addCodexBridgeMessage(input)
-		placeholder
-	placeholder else if hasTools(reqBody) {
-			input = addToolRemapMessage(input)
-	placeholder
 		input = normalizeOrphanedToolOutputs(input)
 		reqBody["input"] = input
-		result.Modified = true
-placeholder
-
-	effort, summary := resolveCodexReasoning(reqBody, normalizedModel)
-	if effort != "" || summary != "" {
-		reasoning := ensureMap(reqBody["reasoning"])
-		if effort != "" {
-			reasoning["effort"] = effort
-	placeholder
-		if summary != "" {
-			reasoning["summary"] = summary
-	placeholder
-		reqBody["reasoning"] = reasoning
-		result.Modified = true
-placeholder
-
-	textVerbosity := resolveTextVerbosity(reqBody)
-	if textVerbosity != "" {
-		text := ensureMap(reqBody["text"])
-		text["verbosity"] = textVerbosity
-		reqBody["text"] = text
-		result.Modified = true
-placeholder
-
-	include := resolveInclude(reqBody)
-	if include != nil {
-		reqBody["include"] = include
 		result.Modified = true
 placeholder
 
@@ -485,6 +463,19 @@ func filterCodexInput(input []any) []any {
 		filtered = append(filtered, m)
 placeholder
 	return filtered
+placeholder
+
+func prependSystemInstruction(input []any, instructions string) []any {
+	message := map[string]any{
+		"role": "system",
+		"content": []any{
+			map[string]any{
+				"type": "input_text",
+				"text": instructions,
+		placeholder,
+	placeholder,
+placeholder
+	return append([]any{messageplaceholder, input...)
 placeholder
 
 func filterOpenCodeSystemPromptsWithCachedPrompt(input []any, cachedPrompt string) []any {
