@@ -5,6 +5,7 @@
 
 export { useAuthStore placeholder from './auth'
 export { useAppStore placeholder from './app'
+export { useAdminSettingsStore placeholder from './adminSettings'
 export { useSubscriptionStore placeholder from './subscriptions'
 export { useOnboardingStore placeholder from './onboarding'
 
