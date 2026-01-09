@@ -943,6 +943,7 @@ const toggleBuiltInFilter = (key: string) => {
     visibleFilters.add(key)
   placeholder
   saveFiltersToStorage()
+  pagination.page = 1
   loadUsers()
 placeholder
 
@@ -957,6 +958,7 @@ const toggleAttributeFilter = (attr: UserAttributeDefinition) => {
     activeAttributeFilters[attr.id] = ''
   placeholder
   saveFiltersToStorage()
+  pagination.page = 1
   loadUsers()
 placeholder
 
@@ -1059,5 +1061,7 @@ placeholder)
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  clearTimeout(searchTimeout)
+  abortController?.abort()
 placeholder)
 </script>
