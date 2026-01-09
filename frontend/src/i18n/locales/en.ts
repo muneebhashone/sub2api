@@ -1486,6 +1486,7 @@ export default {
       testing: 'Testing...',
       retry: 'Retry',
       copyOutput: 'Copy output',
+      outputCopied: 'Output copied',
       startingTestForAccount: 'Starting test for account: {nameplaceholder',
       testAccountTypeLabel: 'Account type: {typeplaceholder',
       selectTestModel: 'Select Test Model',
