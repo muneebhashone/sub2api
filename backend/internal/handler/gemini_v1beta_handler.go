@@ -161,6 +161,8 @@ placeholder
 		return
 placeholder
 
+	setOpsRequestContext(c, modelName, stream, body)
+
 	// Get subscription (may be nil)
 	subscription, _ := middleware.GetSubscriptionFromContext(c)
 
@@ -170,13 +172,21 @@ placeholder
 	// 0) wait queue check
 	maxWait := service.CalculateMaxWait(authSubject.Concurrency)
 	canWait, err := geminiConcurrency.IncrementWaitCount(c.Request.Context(), authSubject.UserID, maxWait)
+	waitCounted := false
 	if err != nil {
 		log.Printf("Increment wait count failed: %v", err)
 placeholder else if !canWait {
 		googleError(c, http.StatusTooManyRequests, "Too many pending requests, please retry later")
 		return
 placeholder
-	defer geminiConcurrency.DecrementWaitCount(c.Request.Context(), authSubject.UserID)
+	if err == nil && canWait {
+		waitCounted = true
+placeholder
+	defer func() {
+		if waitCounted {
+			geminiConcurrency.DecrementWaitCount(c.Request.Context(), authSubject.UserID)
+	placeholder
+placeholder()
 
 	// 1) user concurrency slot
 	streamStarted := false
@@ -184,6 +194,10 @@ placeholder
 	if err != nil {
 		googleError(c, http.StatusTooManyRequests, err.Error())
 		return
+placeholder
+	if waitCounted {
+		geminiConcurrency.DecrementWaitCount(c.Request.Context(), authSubject.UserID)
+		waitCounted = false
 placeholder
 	// 确保请求取消时也会释放槽位，避免长连接被动中断造成泄漏
 	userReleaseFunc = wrapReleaseOnDone(c.Request.Context(), userReleaseFunc)
@@ -221,15 +235,16 @@ placeholder
 			return
 	placeholder
 		account := selection.Account
+		setOpsSelectedAccount(c, account.ID)
 
 		// 4) account concurrency slot
 		accountReleaseFunc := selection.ReleaseFunc
-		var accountWaitRelease func()
 		if !selection.Acquired {
 			if selection.WaitPlan == nil {
 				googleError(c, http.StatusServiceUnavailable, "No available Gemini accounts")
 				return
 		placeholder
+			accountWaitCounted := false
 			canWait, err := geminiConcurrency.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
 			if err != nil {
 				log.Printf("Increment account wait count failed: %v", err)
@@ -237,12 +252,15 @@ placeholder
 				log.Printf("Account wait queue full: account=%d", account.ID)
 				googleError(c, http.StatusTooManyRequests, "Too many pending requests, please retry later")
 				return
-		placeholder else {
-				// Only set release function if increment succeeded
-				accountWaitRelease = func() {
+		placeholder
+			if err == nil && canWait {
+				accountWaitCounted = true
+		placeholder
+			defer func() {
+				if accountWaitCounted {
 					geminiConcurrency.DecrementAccountWaitCount(c.Request.Context(), account.ID)
 			placeholder
-		placeholder
+		placeholder()
 
 			accountReleaseFunc, err = geminiConcurrency.AcquireAccountSlotWithWaitTimeout(
 				c,
@@ -253,11 +271,12 @@ placeholder
 				&streamStarted,
 			)
 			if err != nil {
-				if accountWaitRelease != nil {
-					accountWaitRelease()
-			placeholder
 				googleError(c, http.StatusTooManyRequests, err.Error())
 				return
+		placeholder
+			if accountWaitCounted {
+				geminiConcurrency.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+				accountWaitCounted = false
 		placeholder
 			if err := h.gatewayService.BindStickySession(c.Request.Context(), sessionKey, account.ID); err != nil {
 				log.Printf("Bind sticky session failed: %v", err)
@@ -265,7 +284,6 @@ placeholder
 	placeholder
 		// 账号槽位/等待计数需要在超时或断开时安全回收
 		accountReleaseFunc = wrapReleaseOnDone(c.Request.Context(), accountReleaseFunc)
-		accountWaitRelease = wrapReleaseOnDone(c.Request.Context(), accountWaitRelease)
 
 		// 5) forward (根据平台分流)
 		var result *service.ForwardResult
@@ -276,9 +294,6 @@ placeholder
 	placeholder
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
-	placeholder
-		if accountWaitRelease != nil {
-			accountWaitRelease()
 	placeholder
 		if err != nil {
 			var failoverErr *service.UpstreamFailoverError
