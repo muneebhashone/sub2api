@@ -4,6 +4,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"testing"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -17,6 +19,20 @@ type GroupRepoSuite struct {
 	ctx  context.Context
 	tx   *dbent.Tx
 	repo *groupRepository
+placeholder
+
+type forbidSQLExecutor struct {
+	called bool
+placeholder
+
+func (s *forbidSQLExecutor) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	s.called = true
+	return nil, errors.New("unexpected sql exec")
+placeholder
+
+func (s *forbidSQLExecutor) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	s.called = true
+	return nil, errors.New("unexpected sql query")
 placeholder
 
 func (s *GroupRepoSuite) SetupTest() {
@@ -55,6 +71,26 @@ func (s *GroupRepoSuite) TestGetByID_NotFound() {
 	_, err := s.repo.GetByID(s.ctx, 999999)
 	s.Require().Error(err, "expected error for non-existent ID")
 	s.Require().ErrorIs(err, service.ErrGroupNotFound)
+placeholder
+
+func (s *GroupRepoSuite) TestGetByIDLite_DoesNotUseAccountCount() {
+	group := &service.Group{
+		Name:             "lite-group",
+		Platform:         service.PlatformAnthropic,
+		RateMultiplier:   1.0,
+		IsExclusive:      false,
+		Status:           service.StatusActive,
+		SubscriptionType: service.SubscriptionTypeStandard,
+placeholder
+	s.Require().NoError(s.repo.Create(s.ctx, group))
+
+	spy := &forbidSQLExecutor{placeholder
+	repo := newGroupRepositoryWithSQL(s.tx.Client(), spy)
+
+	got, err := repo.GetByIDLite(s.ctx, group.ID)
+	s.Require().NoError(err)
+	s.Require().Equal(group.ID, got.ID)
+	s.Require().False(spy.called, "expected no direct sql executor usage")
 placeholder
 
 func (s *GroupRepoSuite) TestUpdate() {

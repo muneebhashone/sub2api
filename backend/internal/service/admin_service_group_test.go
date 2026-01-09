@@ -35,6 +35,13 @@ placeholder
 	return s.getByID, nil
 placeholder
 
+func (s *groupRepoStubForAdmin) GetByIDLite(_ context.Context, _ int64) (*Group, error) {
+	if s.getErr != nil {
+		return nil, s.getErr
+placeholder
+	return s.getByID, nil
+placeholder
+
 func (s *groupRepoStubForAdmin) Delete(_ context.Context, _ int64) error {
 	panic("unexpected Delete call")
 placeholder
