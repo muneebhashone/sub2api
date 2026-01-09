@@ -42,12 +42,16 @@ placeholder
  * @param name - Key name
  * @param groupId - Optional group ID
  * @param customKey - Optional custom key value
+ * @param ipWhitelist - Optional IP whitelist
+ * @param ipBlacklist - Optional IP blacklist
  * @returns Created API key
  */
 export async function create(
   name: string,
   groupId?: number | null,
-  customKey?: string
+  customKey?: string,
+  ipWhitelist?: string[],
+  ipBlacklist?: string[]
 ): Promise<ApiKey> {
   const payload: CreateApiKeyRequest = { name placeholder
   if (groupId !== undefined) {
@@ -55,6 +59,12 @@ export async function create(
   placeholder
   if (customKey) {
     payload.custom_key = customKey
+  placeholder
+  if (ipWhitelist && ipWhitelist.length > 0) {
+    payload.ip_whitelist = ipWhitelist
+  placeholder
+  if (ipBlacklist && ipBlacklist.length > 0) {
+    payload.ip_blacklist = ipBlacklist
   placeholder
 
   const { data placeholder = await apiClient.post<ApiKey>('/keys', payload)
