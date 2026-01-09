@@ -893,12 +893,13 @@ const loadUsers = async () => {
         placeholder
       placeholder
     placeholder
-  placeholder catch (error) {
+  placeholder catch (error: any) {
     const errorInfo = error as { name?: string; code?: string placeholder
     if (errorInfo?.name === 'AbortError' || errorInfo?.name === 'CanceledError' || errorInfo?.code === 'ERR_CANCELED') {
       return
     placeholder
-    appStore.showError(t('admin.users.failedToLoad'))
+    const message = error.response?.data?.detail || error.message || t('admin.users.failedToLoad')
+    appStore.showError(message)
     console.error('Error loading users:', error)
   placeholder finally {
     if (abortController === currentAbortController) {
@@ -917,7 +918,9 @@ const handleSearch = () => {
 placeholder
 
 const handlePageChange = (page: number) => {
-  pagination.page = page
+  // 确保页码在有效范围内
+  const validPage = Math.max(1, Math.min(page, pagination.pages || 1))
+  pagination.page = validPage
   loadUsers()
 placeholder
 
