@@ -82,14 +82,18 @@ placeholder
 
 	// 检查是否需要邮件验证
 	if s.settingService != nil && s.settingService.IsEmailVerifyEnabled(ctx) {
+		// 如果邮件验证已开启但邮件服务未配置，拒绝注册
+		// 这是一个配置错误，不应该允许绕过验证
+		if s.emailService == nil {
+			log.Println("[Auth] Email verification enabled but email service not configured, rejecting registration")
+			return "", nil, ErrServiceUnavailable
+	placeholder
 		if verifyCode == "" {
 			return "", nil, ErrEmailVerifyRequired
 	placeholder
 		// 验证邮箱验证码
-		if s.emailService != nil {
-			if err := s.emailService.VerifyCode(ctx, email, verifyCode); err != nil {
-				return "", nil, fmt.Errorf("verify code: %w", err)
-		placeholder
+		if err := s.emailService.VerifyCode(ctx, email, verifyCode); err != nil {
+			return "", nil, fmt.Errorf("verify code: %w", err)
 	placeholder
 placeholder
 
