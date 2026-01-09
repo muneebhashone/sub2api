@@ -33,190 +33,6 @@
         @open-error-details="openErrorDetails"
       />
 
-      <!-- Overview -->
-      <div
-        v-if="opsEnabled && !(loading && !hasLoadedOnce)"
-        class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-gray-900/5 dark:bg-dark-800 dark:ring-dark-700"
-      >
-        <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
-          <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.systemHealth') placeholderplaceholder</h3>
-        </div>
-        <div class="p-6">
-          <div v-if="loadingOverview" class="flex items-center justify-center py-10">
-            <div class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"></div>
-          </div>
-
-          <div v-else-if="!overview?.system_metrics" class="py-6 text-sm text-gray-500 dark:text-gray-400">
-            {{ t('admin.ops.noSystemMetrics') placeholderplaceholder
-          </div>
-
-          <div v-else class="space-y-6">
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              {{ t('admin.ops.collectedAt') placeholderplaceholder {{ formatDateTime(overview.system_metrics.created_at) placeholderplaceholder ({{ t('admin.ops.window') placeholderplaceholder
-              {{ overview.system_metrics.window_minutes placeholderplaceholderm)
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-5">
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.cpu') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-                  {{ formatPercent0to100(overview.system_metrics.cpu_usage_percent) placeholderplaceholder
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.memory') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-                  {{ formatPercent0to100(overview.system_metrics.memory_usage_percent) placeholderplaceholder
-                </div>
-                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {{ formatMBPair(overview.system_metrics.memory_used_mb, overview.system_metrics.memory_total_mb) placeholderplaceholder
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.db') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold" :class="boolOkClass(overview.system_metrics.db_ok)">
-                  {{ boolOkLabel(overview.system_metrics.db_ok) placeholderplaceholder
-                </div>
-                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {{ t('admin.ops.active') placeholderplaceholder: {{ overview.system_metrics.db_conn_active ?? '-' placeholderplaceholder, {{ t('admin.ops.idle') placeholderplaceholder:
-                  {{ overview.system_metrics.db_conn_idle ?? '-' placeholderplaceholder
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.redis') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold" :class="boolOkClass(overview.system_metrics.redis_ok)">
-                  {{ boolOkLabel(overview.system_metrics.redis_ok) placeholderplaceholder
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.goroutines') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-                  {{ overview.system_metrics.goroutine_count ?? '-' placeholderplaceholder
-                </div>
-              </div>
-            </div>
-
-            <div v-if="overview?.job_heartbeats?.length" class="rounded-xl border border-gray-100 dark:border-dark-700">
-              <div class="border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-900 dark:border-dark-700 dark:text-white">
-                {{ t('admin.ops.jobs') placeholderplaceholder
-              </div>
-              <div class="divide-y divide-gray-100 dark:divide-dark-700">
-                <div
-                  v-for="job in overview.job_heartbeats"
-                  :key="job.job_name"
-                  class="flex flex-col gap-1 px-4 py-3 md:flex-row md:items-center md:justify-between"
-                >
-                  <div class="text-sm font-medium text-gray-900 dark:text-white">
-                    {{ job.job_name placeholderplaceholder
-                  </div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ t('admin.ops.lastRun') placeholderplaceholder: {{ job.last_run_at ? formatDateTime(job.last_run_at) : '-' placeholderplaceholder · {{ t('admin.ops.lastSuccess') placeholderplaceholder:
-                    {{ job.last_success_at ? formatDateTime(job.last_success_at) : '-' placeholderplaceholder ·
-                    <span v-if="job.last_error" class="text-rose-600 dark:text-rose-400">
-                      {{ t('admin.ops.lastError') placeholderplaceholder: {{ job.last_error placeholderplaceholder
-                    </span>
-                    <span v-else class="text-emerald-600 dark:text-emerald-400">{{ t('admin.ops.ok') placeholderplaceholder</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="opsEnabled && !(loading && !hasLoadedOnce)" class="card">
-        <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
-          <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.overview') placeholderplaceholder</h3>
-        </div>
-        <div class="p-6">
-          <div v-if="loadingOverview" class="flex items-center justify-center py-10">
-            <div class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"></div>
-          </div>
-
-          <div v-else-if="!overview" class="py-6 text-sm text-gray-500 dark:text-gray-400">
-            {{ t('admin.ops.noData') placeholderplaceholder
-          </div>
-
-          <div v-else class="space-y-6">
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.requestsTotal') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-                  {{ formatInt(overview.request_count_total) placeholderplaceholder
-                </div>
-                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {{ t('admin.ops.slaScope') placeholderplaceholder {{ formatInt(overview.request_count_sla) placeholderplaceholder
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.tokens') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-                  {{ formatInt(overview.token_consumed) placeholderplaceholder
-                </div>
-                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {{ t('admin.ops.tps') placeholderplaceholder {{ overview.tps.current placeholderplaceholder ({{ t('admin.ops.peak') placeholderplaceholder {{ overview.tps.peak placeholderplaceholder)
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.sla') placeholderplaceholder</div>
-                <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-                  {{ formatPercent(overview.sla) placeholderplaceholder
-                </div>
-                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {{ t('admin.ops.businessLimited') placeholderplaceholder: {{ formatInt(overview.business_limited_count) placeholderplaceholder
-                </div>
-              </div>
-
-              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-800/50">
-                <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.errors') placeholderplaceholder</div>
-                <div class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                  {{ t('admin.ops.errorRate') placeholderplaceholder: <span class="font-semibold">{{ formatPercent(overview.error_rate) placeholderplaceholder</span>
-                </div>
-                <div class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                  {{ t('admin.ops.upstreamRate') placeholderplaceholder: <span class="font-semibold">{{ formatPercent(overview.upstream_error_rate) placeholderplaceholder</span>
-                </div>
-                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  429: {{ formatInt(overview.upstream_429_count) placeholderplaceholder · 529:
-                  {{ formatInt(overview.upstream_529_count) placeholderplaceholder
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900">
-                <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.latencyDuration') placeholderplaceholder</div>
-                <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300 md:grid-cols-3">
-                  <div>{{ t('admin.ops.p50') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.duration.p50_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.p90') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.duration.p90_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.p95') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.duration.p95_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.p99') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.duration.p99_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.avg') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.duration.avg_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.max') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.duration.max_ms) placeholderplaceholder</span></div>
-                </div>
-              </div>
-
-              <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900">
-                <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('admin.ops.ttftLabel') placeholderplaceholder</div>
-                <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300 md:grid-cols-3">
-                  <div>{{ t('admin.ops.p50') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.ttft.p50_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.p90') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.ttft.p90_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.p95') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.ttft.p95_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.p99') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.ttft.p99_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.avg') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.ttft.avg_ms) placeholderplaceholder</span></div>
-                  <div>{{ t('admin.ops.max') placeholderplaceholder: <span class="font-mono">{{ formatMs(overview.ttft.max_ms) placeholderplaceholder</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Row: Concurrency + Throughput -->
       <div v-if="opsEnabled && !(loading && !hasLoadedOnce)" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="lg:col-span-1 min-h-[360px]">
@@ -308,7 +124,6 @@ import OpsLatencyChart from './components/OpsLatencyChart.vue'
 import OpsThroughputTrendChart from './components/OpsThroughputTrendChart.vue'
 import OpsAlertEventsCard from './components/OpsAlertEventsCard.vue'
 import OpsRequestDetailsModal, { type OpsRequestDetailsPreset placeholder from './components/OpsRequestDetailsModal.vue'
-import { formatDateTime, formatNumberLocaleString placeholder from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -486,7 +301,6 @@ const syncQueryToRoute = useDebounceFn(async () => {
 placeholder, 250)
 
 const overview = ref<OpsDashboardOverview | null>(null)
-const loadingOverview = ref(false)
 
 const throughputTrend = ref<OpsThroughputTrendResponse | null>(null)
 const loadingTrend = ref(false)
@@ -523,12 +337,15 @@ function handleThroughputSelectGroup(nextGroupId: number) {
   groupId.value = id
 placeholder
 
-function handleOpenRequestDetails() {
-  requestDetailsPreset.value = {
+function handleOpenRequestDetails(preset?: OpsRequestDetailsPreset) {
+  const basePreset: OpsRequestDetailsPreset = {
     title: t('admin.ops.requestDetails.title'),
     kind: 'all',
     sort: 'created_at_desc'
   placeholder
+
+  requestDetailsPreset.value = { ...basePreset, ...(preset ?? {placeholder) placeholder
+  if (!requestDetailsPreset.value.title) requestDetailsPreset.value.title = basePreset.title
   showRequestDetails.value = true
 placeholder
 
@@ -573,46 +390,8 @@ function openError(id: number) {
   showErrorModal.value = true
 placeholder
 
-function formatInt(v: number | null | undefined): string {
-  if (typeof v !== 'number') return '0'
-  return formatNumberLocaleString(v)
-placeholder
-
-function formatPercent(v: number | null | undefined): string {
-  if (typeof v !== 'number') return '-'
-  return `${(v * 100).toFixed(2)placeholder%`
-placeholder
-
-function formatPercent0to100(v: number | null | undefined): string {
-  if (typeof v !== 'number') return '-'
-  return `${v.toFixed(1)placeholder%`
-placeholder
-
-function formatMBPair(used: number | null | undefined, total: number | null | undefined): string {
-  if (typeof used !== 'number' || typeof total !== 'number') return '-'
-  return `${formatNumberLocaleString(used)placeholder / ${formatNumberLocaleString(total)placeholder MB`
-placeholder
-
-function boolOkLabel(v: boolean | null | undefined): string {
-  if (v === true) return 'OK'
-  if (v === false) return 'FAIL'
-  return '-'
-placeholder
-
-function boolOkClass(v: boolean | null | undefined): string {
-  if (v === true) return 'text-emerald-600 dark:text-emerald-400'
-  if (v === false) return 'text-rose-600 dark:text-rose-400'
-  return 'text-gray-900 dark:text-white'
-placeholder
-
-function formatMs(v: number | null | undefined): string {
-  if (v == null) return '-'
-  return `${vplaceholderms`
-placeholder
-
 async function refreshOverviewWithCancel(fetchSeq: number, signal: AbortSignal) {
   if (!opsEnabled.value) return
-  loadingOverview.value = true
   try {
     const data = await opsAPI.getDashboardOverview(
       {
@@ -628,11 +407,7 @@ async function refreshOverviewWithCancel(fetchSeq: number, signal: AbortSignal) 
   placeholder catch (err: any) {
     if (fetchSeq !== dashboardFetchSeq || isCanceledRequest(err)) return
     overview.value = null
-    appStore.showError(err?.message || 'Failed to load overview')
-  placeholder finally {
-    if (fetchSeq === dashboardFetchSeq) {
-      loadingOverview.value = false
-    placeholder
+    appStore.showError(err?.message || t('admin.ops.failedToLoadOverview'))
   placeholder
 placeholder
 
@@ -654,7 +429,7 @@ async function refreshThroughputTrendWithCancel(fetchSeq: number, signal: AbortS
   placeholder catch (err: any) {
     if (fetchSeq !== dashboardFetchSeq || isCanceledRequest(err)) return
     throughputTrend.value = null
-    appStore.showError(err?.message || 'Failed to load throughput trend')
+    appStore.showError(err?.message || t('admin.ops.failedToLoadThroughputTrend'))
   placeholder finally {
     if (fetchSeq === dashboardFetchSeq) {
       loadingTrend.value = false
@@ -680,7 +455,7 @@ async function refreshLatencyHistogramWithCancel(fetchSeq: number, signal: Abort
   placeholder catch (err: any) {
     if (fetchSeq !== dashboardFetchSeq || isCanceledRequest(err)) return
     latencyHistogram.value = null
-    appStore.showError(err?.message || 'Failed to load latency histogram')
+    appStore.showError(err?.message || t('admin.ops.failedToLoadLatencyHistogram'))
   placeholder finally {
     if (fetchSeq === dashboardFetchSeq) {
       loadingLatency.value = false
@@ -706,7 +481,7 @@ async function refreshErrorTrendWithCancel(fetchSeq: number, signal: AbortSignal
   placeholder catch (err: any) {
     if (fetchSeq !== dashboardFetchSeq || isCanceledRequest(err)) return
     errorTrend.value = null
-    appStore.showError(err?.message || 'Failed to load error trend')
+    appStore.showError(err?.message || t('admin.ops.failedToLoadErrorTrend'))
   placeholder finally {
     if (fetchSeq === dashboardFetchSeq) {
       loadingErrorTrend.value = false
@@ -732,7 +507,7 @@ async function refreshErrorDistributionWithCancel(fetchSeq: number, signal: Abor
   placeholder catch (err: any) {
     if (fetchSeq !== dashboardFetchSeq || isCanceledRequest(err)) return
     errorDistribution.value = null
-    appStore.showError(err?.message || 'Failed to load error distribution')
+    appStore.showError(err?.message || t('admin.ops.failedToLoadErrorDistribution'))
   placeholder finally {
     if (fetchSeq === dashboardFetchSeq) {
       loadingErrorDistribution.value = false

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"log"
 	"math"
 	"os"
@@ -262,6 +261,7 @@ placeholder
 	dbOK := c.checkDB(ctx)
 	redisOK := c.checkRedis(ctx)
 	active, idle := c.dbPoolStats()
+	redisTotal, redisIdle, redisStatsOK := c.redisPoolStats()
 
 	successCount, tokenConsumed, err := c.queryUsageCounts(ctx, windowStart, windowEnd)
 	if err != nil {
@@ -326,6 +326,19 @@ placeholder
 
 		DBOK:    boolPtr(dbOK),
 		RedisOK: boolPtr(redisOK),
+
+		RedisConnTotal: func() *int {
+			if !redisStatsOK {
+				return nil
+		placeholder
+			return intPtr(redisTotal)
+	placeholder(),
+		RedisConnIdle: func() *int {
+			if !redisStatsOK {
+				return nil
+		placeholder
+			return intPtr(redisIdle)
+	placeholder(),
 
 		DBConnActive:   intPtr(active),
 		DBConnIdle:     intPtr(idle),
@@ -722,6 +735,17 @@ placeholder
 	return c.redisClient.Ping(ctx).Err() == nil
 placeholder
 
+func (c *OpsMetricsCollector) redisPoolStats() (total int, idle int, ok bool) {
+	if c == nil || c.redisClient == nil {
+		return 0, 0, false
+placeholder
+	stats := c.redisClient.PoolStats()
+	if stats == nil {
+		return 0, 0, false
+placeholder
+	return int(stats.TotalConns), int(stats.IdleConns), true
+placeholder
+
 func (c *OpsMetricsCollector) dbPoolStats() (active int, idle int) {
 	if c == nil || c.db == nil {
 		return 0, 0
@@ -749,7 +773,7 @@ placeholder
 	if err != nil {
 		// Prefer fail-closed to avoid stampeding the database when Redis is flaky.
 		// Fallback to a DB advisory lock when Redis is present but unavailable.
-		release, ok := c.tryAcquireDBAdvisoryLock(ctx)
+		release, ok := tryAcquireDBAdvisoryLock(ctx, c.db, opsMetricsCollectorAdvisoryLockID)
 		if !ok {
 			c.maybeLogSkip()
 			return nil, false
@@ -765,38 +789,6 @@ placeholder
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		_, _ = opsMetricsCollectorReleaseScript.Run(ctx, c.redisClient, []string{opsMetricsCollectorLeaderLockKeyplaceholder, c.instanceID).Result()
-placeholder
-	return release, true
-placeholder
-
-func (c *OpsMetricsCollector) tryAcquireDBAdvisoryLock(ctx context.Context) (func(), bool) {
-	if c == nil || c.db == nil {
-		return nil, false
-placeholder
-	if ctx == nil {
-		ctx = context.Background()
-placeholder
-
-	conn, err := c.db.Conn(ctx)
-	if err != nil {
-		return nil, false
-placeholder
-
-	acquired := false
-	if err := conn.QueryRowContext(ctx, "SELECT pg_try_advisory_lock($1)", opsMetricsCollectorAdvisoryLockID).Scan(&acquired); err != nil {
-		_ = conn.Close()
-		return nil, false
-placeholder
-	if !acquired {
-		_ = conn.Close()
-		return nil, false
-placeholder
-
-	release := func() {
-		unlockCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		_, _ = conn.ExecContext(unlockCtx, "SELECT pg_advisory_unlock($1)", opsMetricsCollectorAdvisoryLockID)
-		_ = conn.Close()
 placeholder
 	return release, true
 placeholder
@@ -852,10 +844,4 @@ placeholder
 func float64Ptr(v float64) *float64 {
 	out := v
 	return &out
-placeholder
-
-func hashAdvisoryLockID(s string) int64 {
-	h := fnv.New64a()
-	_, _ = h.Write([]byte(s))
-	return int64(h.Sum64())
 placeholder

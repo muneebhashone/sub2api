@@ -68,6 +68,7 @@ placeholder
 		OpsMonitoringEnabled:         settings.OpsMonitoringEnabled,
 		OpsRealtimeMonitoringEnabled: settings.OpsRealtimeMonitoringEnabled,
 		OpsQueryModeDefault:          settings.OpsQueryModeDefault,
+		OpsMetricsIntervalSeconds:    settings.OpsMetricsIntervalSeconds,
 placeholder)
 placeholder
 
@@ -115,9 +116,10 @@ type UpdateSettingsRequest struct {
 	IdentityPatchPrompt string `json:"identity_patch_prompt"`
 
 	// Ops monitoring (vNext)
-	OpsMonitoringEnabled         *bool `json:"ops_monitoring_enabled"`
-	OpsRealtimeMonitoringEnabled *bool `json:"ops_realtime_monitoring_enabled"`
+	OpsMonitoringEnabled         *bool   `json:"ops_monitoring_enabled"`
+	OpsRealtimeMonitoringEnabled *bool   `json:"ops_realtime_monitoring_enabled"`
 	OpsQueryModeDefault          *string `json:"ops_query_mode_default"`
+	OpsMetricsIntervalSeconds    *int    `json:"ops_metrics_interval_seconds"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -173,6 +175,18 @@ placeholder
 	placeholder
 placeholder
 
+	// Ops metrics collector interval validation (seconds).
+	if req.OpsMetricsIntervalSeconds != nil {
+		v := *req.OpsMetricsIntervalSeconds
+		if v < 60 {
+			v = 60
+	placeholder
+		if v > 3600 {
+			v = 3600
+	placeholder
+		req.OpsMetricsIntervalSeconds = &v
+placeholder
+
 	settings := &service.SystemSettings{
 		RegistrationEnabled:      req.RegistrationEnabled,
 		EmailVerifyEnabled:       req.EmailVerifyEnabled,
@@ -218,6 +232,12 @@ placeholder
 				return *req.OpsQueryModeDefault
 		placeholder
 			return previousSettings.OpsQueryModeDefault
+	placeholder(),
+		OpsMetricsIntervalSeconds: func() int {
+			if req.OpsMetricsIntervalSeconds != nil {
+				return *req.OpsMetricsIntervalSeconds
+		placeholder
+			return previousSettings.OpsMetricsIntervalSeconds
 	placeholder(),
 placeholder
 
@@ -266,6 +286,7 @@ placeholder
 		OpsMonitoringEnabled:         updatedSettings.OpsMonitoringEnabled,
 		OpsRealtimeMonitoringEnabled: updatedSettings.OpsRealtimeMonitoringEnabled,
 		OpsQueryModeDefault:          updatedSettings.OpsQueryModeDefault,
+		OpsMetricsIntervalSeconds:    updatedSettings.OpsMetricsIntervalSeconds,
 placeholder)
 placeholder
 
@@ -374,6 +395,9 @@ placeholder
 placeholder
 	if before.OpsQueryModeDefault != after.OpsQueryModeDefault {
 		changed = append(changed, "ops_query_mode_default")
+placeholder
+	if before.OpsMetricsIntervalSeconds != after.OpsMetricsIntervalSeconds {
+		changed = append(changed, "ops_metrics_interval_seconds")
 placeholder
 	return changed
 placeholder

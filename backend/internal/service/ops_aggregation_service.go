@@ -376,27 +376,36 @@ return 0
 `)
 
 func (s *OpsAggregationService) tryAcquireLeaderLock(ctx context.Context, key string, ttl time.Duration, logPrefix string) (func(), bool) {
-	if s == nil || s.redisClient == nil {
-		return nil, true
+	if s == nil {
+		return nil, false
 placeholder
 	if ctx == nil {
 		ctx = context.Background()
 placeholder
 
-	ok, err := s.redisClient.SetNX(ctx, key, s.instanceID, ttl).Result()
-	if err != nil {
-		// Fail-open: do not block single-instance deployments.
-		return nil, true
+	// Prefer Redis leader lock when available (multi-instance), but avoid stampeding
+	// the DB when Redis is flaky by falling back to a DB advisory lock.
+	if s.redisClient != nil {
+		ok, err := s.redisClient.SetNX(ctx, key, s.instanceID, ttl).Result()
+		if err == nil {
+			if !ok {
+				s.maybeLogSkip(logPrefix)
+				return nil, false
+		placeholder
+			release := func() {
+				ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+				_, _ = opsAggReleaseScript.Run(ctx2, s.redisClient, []string{keyplaceholder, s.instanceID).Result()
+		placeholder
+			return release, true
+	placeholder
+		// Redis error: fall through to DB advisory lock.
 placeholder
+
+	release, ok := tryAcquireDBAdvisoryLock(ctx, s.db, hashAdvisoryLockID(key))
 	if !ok {
 		s.maybeLogSkip(logPrefix)
 		return nil, false
-placeholder
-
-	release := func() {
-		ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		_, _ = opsAggReleaseScript.Run(ctx2, s.redisClient, []string{keyplaceholder, s.instanceID).Result()
 placeholder
 	return release, true
 placeholder
