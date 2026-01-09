@@ -451,6 +451,7 @@ placeholder
 
 	originalModel := claudeReq.Model
 	mappedModel := s.getMappedModel(account, claudeReq.Model)
+	quotaScope, _ := resolveAntigravityQuotaScope(originalModel)
 
 	// 获取 access_token
 	if s.tokenProvider == nil {
@@ -529,7 +530,7 @@ placeholder
 		placeholder
 			// 所有重试都失败，标记限流状态
 			if resp.StatusCode == 429 {
-				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
+				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
 		placeholder
 			// 最后一次尝试也失败
 			resp = &http.Response{
@@ -621,7 +622,7 @@ placeholder
 
 		// 处理错误响应（重试后仍失败或不触发重试）
 		if resp.StatusCode >= 400 {
-			s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
+			s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
 
 			if s.shouldFailoverUpstreamError(resp.StatusCode) {
 				return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
@@ -946,6 +947,7 @@ placeholder
 	if len(body) == 0 {
 		return nil, s.writeGoogleError(c, http.StatusBadRequest, "Request body is empty")
 placeholder
+	quotaScope, _ := resolveAntigravityQuotaScope(originalModel)
 
 	// 解析请求以获取 image_size（用于图片计费）
 	imageSize := s.extractImageSize(body)
@@ -1048,7 +1050,7 @@ placeholder
 		placeholder
 			// 所有重试都失败，标记限流状态
 			if resp.StatusCode == 429 {
-				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
+				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
 		placeholder
 			resp = &http.Response{
 				StatusCode: resp.StatusCode,
@@ -1101,7 +1103,7 @@ placeholder()
 			goto handleSuccess
 	placeholder
 
-		s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody)
+		s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
@@ -1215,7 +1217,7 @@ placeholder
 placeholder
 placeholder
 
-func (s *AntigravityGatewayService) handleUpstreamError(ctx context.Context, prefix string, account *Account, statusCode int, headers http.Header, body []byte) {
+func (s *AntigravityGatewayService) handleUpstreamError(ctx context.Context, prefix string, account *Account, statusCode int, headers http.Header, body []byte, quotaScope AntigravityQuotaScope) {
 	// 429 使用 Gemini 格式解析（从 body 解析重置时间）
 	if statusCode == 429 {
 		resetAt := ParseGeminiRateLimitResetTime(body)
@@ -1226,13 +1228,23 @@ func (s *AntigravityGatewayService) handleUpstreamError(ctx context.Context, pre
 				defaultDur = 5 * time.Minute
 		placeholder
 			ra := time.Now().Add(defaultDur)
-			log.Printf("%s status=429 rate_limited reset_in=%v (fallback)", prefix, defaultDur)
-			_ = s.accountRepo.SetRateLimited(ctx, account.ID, ra)
+			log.Printf("%s status=429 rate_limited scope=%s reset_in=%v (fallback)", prefix, quotaScope, defaultDur)
+			if quotaScope == "" {
+				return
+		placeholder
+			if err := s.accountRepo.SetAntigravityQuotaScopeLimit(ctx, account.ID, quotaScope, ra); err != nil {
+				log.Printf("%s status=429 rate_limit_set_failed scope=%s error=%v", prefix, quotaScope, err)
+		placeholder
 			return
 	placeholder
 		resetTime := time.Unix(*resetAt, 0)
-		log.Printf("%s status=429 rate_limited reset_at=%v reset_in=%v", prefix, resetTime.Format("15:04:05"), time.Until(resetTime).Truncate(time.Second))
-		_ = s.accountRepo.SetRateLimited(ctx, account.ID, resetTime)
+		log.Printf("%s status=429 rate_limited scope=%s reset_at=%v reset_in=%v", prefix, quotaScope, resetTime.Format("15:04:05"), time.Until(resetTime).Truncate(time.Second))
+		if quotaScope == "" {
+			return
+	placeholder
+		if err := s.accountRepo.SetAntigravityQuotaScopeLimit(ctx, account.ID, quotaScope, resetTime); err != nil {
+			log.Printf("%s status=429 rate_limit_set_failed scope=%s error=%v", prefix, quotaScope, err)
+	placeholder
 		return
 placeholder
 	// 其他错误码继续使用 rateLimitService
