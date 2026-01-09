@@ -2,10 +2,10 @@ package admin
 
 import (
 	"log"
-	"net/url"
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -94,7 +94,7 @@ type UpdateSettingsRequest struct {
 	TurnstileSiteKey   string `json:"turnstile_site_key"`
 	TurnstileSecretKey string `json:"turnstile_secret_key"`
 
-	// LinuxDo Connect OAuth login (end-user SSO)
+	// LinuxDo Connect OAuth 登录（终端用户 SSO）
 	LinuxDoConnectEnabled      bool   `json:"linuxdo_connect_enabled"`
 	LinuxDoConnectClientID     string `json:"linuxdo_connect_client_id"`
 	LinuxDoConnectClientSecret string `json:"linuxdo_connect_client_secret"`
@@ -191,12 +191,12 @@ placeholder
 			response.BadRequest(c, "LinuxDo Redirect URL is required when enabled")
 			return
 	placeholder
-		if !isAbsoluteHTTPURL(req.LinuxDoConnectRedirectURL) {
+		if err := config.ValidateAbsoluteHTTPURL(req.LinuxDoConnectRedirectURL); err != nil {
 			response.BadRequest(c, "LinuxDo Redirect URL must be an absolute http(s) URL")
 			return
 	placeholder
 
-		// If client_secret not provided, keep existing value (if any).
+		// 如果未提供 client_secret，则保留现有值（如有）。
 		if req.LinuxDoConnectClientSecret == "" {
 			if previousSettings.LinuxDoConnectClientSecret == "" {
 				response.BadRequest(c, "LinuxDo Client Secret is required when enabled")
@@ -405,33 +405,6 @@ placeholder
 		changed = append(changed, "identity_patch_prompt")
 placeholder
 	return changed
-placeholder
-
-func isAbsoluteHTTPURL(raw string) bool {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return false
-placeholder
-	if strings.HasPrefix(raw, "//") {
-		return false
-placeholder
-	u, err := url.Parse(raw)
-	if err != nil {
-		return false
-placeholder
-	if !u.IsAbs() {
-		return false
-placeholder
-	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
-		return false
-placeholder
-	if strings.TrimSpace(u.Host) == "" {
-		return false
-placeholder
-	if u.Fragment != "" {
-		return false
-placeholder
-	return true
 placeholder
 
 // TestSMTPRequest 测试SMTP连接请求
