@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/group"
@@ -130,6 +131,42 @@ func (_u *APIKeyUpdate) SetNillableStatus(v *string) *APIKeyUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 placeholder
+	return _u
+placeholder
+
+// SetIPWhitelist sets the "ip_whitelist" field.
+func (_u *APIKeyUpdate) SetIPWhitelist(v []string) *APIKeyUpdate {
+	_u.mutation.SetIPWhitelist(v)
+	return _u
+placeholder
+
+// AppendIPWhitelist appends value to the "ip_whitelist" field.
+func (_u *APIKeyUpdate) AppendIPWhitelist(v []string) *APIKeyUpdate {
+	_u.mutation.AppendIPWhitelist(v)
+	return _u
+placeholder
+
+// ClearIPWhitelist clears the value of the "ip_whitelist" field.
+func (_u *APIKeyUpdate) ClearIPWhitelist() *APIKeyUpdate {
+	_u.mutation.ClearIPWhitelist()
+	return _u
+placeholder
+
+// SetIPBlacklist sets the "ip_blacklist" field.
+func (_u *APIKeyUpdate) SetIPBlacklist(v []string) *APIKeyUpdate {
+	_u.mutation.SetIPBlacklist(v)
+	return _u
+placeholder
+
+// AppendIPBlacklist appends value to the "ip_blacklist" field.
+func (_u *APIKeyUpdate) AppendIPBlacklist(v []string) *APIKeyUpdate {
+	_u.mutation.AppendIPBlacklist(v)
+	return _u
+placeholder
+
+// ClearIPBlacklist clears the value of the "ip_blacklist" field.
+func (_u *APIKeyUpdate) ClearIPBlacklist() *APIKeyUpdate {
+	_u.mutation.ClearIPBlacklist()
 	return _u
 placeholder
 
@@ -290,6 +327,28 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(apikey.FieldStatus, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.IPWhitelist(); ok {
+		_spec.SetField(apikey.FieldIPWhitelist, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.AppendedIPWhitelist(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, apikey.FieldIPWhitelist, value)
+	placeholder)
+placeholder
+	if _u.mutation.IPWhitelistCleared() {
+		_spec.ClearField(apikey.FieldIPWhitelist, field.TypeJSON)
+placeholder
+	if value, ok := _u.mutation.IPBlacklist(); ok {
+		_spec.SetField(apikey.FieldIPBlacklist, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.AppendedIPBlacklist(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, apikey.FieldIPBlacklist, value)
+	placeholder)
+placeholder
+	if _u.mutation.IPBlacklistCleared() {
+		_spec.ClearField(apikey.FieldIPBlacklist, field.TypeJSON)
 placeholder
 	if _u.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -516,6 +575,42 @@ placeholder
 	return _u
 placeholder
 
+// SetIPWhitelist sets the "ip_whitelist" field.
+func (_u *APIKeyUpdateOne) SetIPWhitelist(v []string) *APIKeyUpdateOne {
+	_u.mutation.SetIPWhitelist(v)
+	return _u
+placeholder
+
+// AppendIPWhitelist appends value to the "ip_whitelist" field.
+func (_u *APIKeyUpdateOne) AppendIPWhitelist(v []string) *APIKeyUpdateOne {
+	_u.mutation.AppendIPWhitelist(v)
+	return _u
+placeholder
+
+// ClearIPWhitelist clears the value of the "ip_whitelist" field.
+func (_u *APIKeyUpdateOne) ClearIPWhitelist() *APIKeyUpdateOne {
+	_u.mutation.ClearIPWhitelist()
+	return _u
+placeholder
+
+// SetIPBlacklist sets the "ip_blacklist" field.
+func (_u *APIKeyUpdateOne) SetIPBlacklist(v []string) *APIKeyUpdateOne {
+	_u.mutation.SetIPBlacklist(v)
+	return _u
+placeholder
+
+// AppendIPBlacklist appends value to the "ip_blacklist" field.
+func (_u *APIKeyUpdateOne) AppendIPBlacklist(v []string) *APIKeyUpdateOne {
+	_u.mutation.AppendIPBlacklist(v)
+	return _u
+placeholder
+
+// ClearIPBlacklist clears the value of the "ip_blacklist" field.
+func (_u *APIKeyUpdateOne) ClearIPBlacklist() *APIKeyUpdateOne {
+	_u.mutation.ClearIPBlacklist()
+	return _u
+placeholder
+
 // SetUser sets the "user" edge to the User entity.
 func (_u *APIKeyUpdateOne) SetUser(v *User) *APIKeyUpdateOne {
 	return _u.SetUserID(v.ID)
@@ -703,6 +798,28 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(apikey.FieldStatus, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.IPWhitelist(); ok {
+		_spec.SetField(apikey.FieldIPWhitelist, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.AppendedIPWhitelist(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, apikey.FieldIPWhitelist, value)
+	placeholder)
+placeholder
+	if _u.mutation.IPWhitelistCleared() {
+		_spec.ClearField(apikey.FieldIPWhitelist, field.TypeJSON)
+placeholder
+	if value, ok := _u.mutation.IPBlacklist(); ok {
+		_spec.SetField(apikey.FieldIPBlacklist, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.AppendedIPBlacklist(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, apikey.FieldIPBlacklist, value)
+	placeholder)
+placeholder
+	if _u.mutation.IPBlacklistCleared() {
+		_spec.ClearField(apikey.FieldIPBlacklist, field.TypeJSON)
 placeholder
 	if _u.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{

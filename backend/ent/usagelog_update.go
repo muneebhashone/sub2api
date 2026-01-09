@@ -524,6 +524,26 @@ func (_u *UsageLogUpdate) ClearUserAgent() *UsageLogUpdate {
 	return _u
 placeholder
 
+// SetIPAddress sets the "ip_address" field.
+func (_u *UsageLogUpdate) SetIPAddress(v string) *UsageLogUpdate {
+	_u.mutation.SetIPAddress(v)
+	return _u
+placeholder
+
+// SetNillableIPAddress sets the "ip_address" field if the given value is not nil.
+func (_u *UsageLogUpdate) SetNillableIPAddress(v *string) *UsageLogUpdate {
+	if v != nil {
+		_u.SetIPAddress(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearIPAddress clears the value of the "ip_address" field.
+func (_u *UsageLogUpdate) ClearIPAddress() *UsageLogUpdate {
+	_u.mutation.ClearIPAddress()
+	return _u
+placeholder
+
 // SetImageCount sets the "image_count" field.
 func (_u *UsageLogUpdate) SetImageCount(v int) *UsageLogUpdate {
 	_u.mutation.ResetImageCount()
@@ -667,6 +687,11 @@ placeholder
 	if v, ok := _u.mutation.UserAgent(); ok {
 		if err := usagelog.UserAgentValidator(v); err != nil {
 			return &ValidationError{Name: "user_agent", err: fmt.Errorf(`ent: validator failed for field "UsageLog.user_agent": %w`, err)placeholder
+	placeholder
+placeholder
+	if v, ok := _u.mutation.IPAddress(); ok {
+		if err := usagelog.IPAddressValidator(v); err != nil {
+			return &ValidationError{Name: "ip_address", err: fmt.Errorf(`ent: validator failed for field "UsageLog.ip_address": %w`, err)placeholder
 	placeholder
 placeholder
 	if v, ok := _u.mutation.ImageSize(); ok {
@@ -814,6 +839,12 @@ placeholder
 placeholder
 	if _u.mutation.UserAgentCleared() {
 		_spec.ClearField(usagelog.FieldUserAgent, field.TypeString)
+placeholder
+	if value, ok := _u.mutation.IPAddress(); ok {
+		_spec.SetField(usagelog.FieldIPAddress, field.TypeString, value)
+placeholder
+	if _u.mutation.IPAddressCleared() {
+		_spec.ClearField(usagelog.FieldIPAddress, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.ImageCount(); ok {
 		_spec.SetField(usagelog.FieldImageCount, field.TypeInt, value)
@@ -1484,6 +1515,26 @@ func (_u *UsageLogUpdateOne) ClearUserAgent() *UsageLogUpdateOne {
 	return _u
 placeholder
 
+// SetIPAddress sets the "ip_address" field.
+func (_u *UsageLogUpdateOne) SetIPAddress(v string) *UsageLogUpdateOne {
+	_u.mutation.SetIPAddress(v)
+	return _u
+placeholder
+
+// SetNillableIPAddress sets the "ip_address" field if the given value is not nil.
+func (_u *UsageLogUpdateOne) SetNillableIPAddress(v *string) *UsageLogUpdateOne {
+	if v != nil {
+		_u.SetIPAddress(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearIPAddress clears the value of the "ip_address" field.
+func (_u *UsageLogUpdateOne) ClearIPAddress() *UsageLogUpdateOne {
+	_u.mutation.ClearIPAddress()
+	return _u
+placeholder
+
 // SetImageCount sets the "image_count" field.
 func (_u *UsageLogUpdateOne) SetImageCount(v int) *UsageLogUpdateOne {
 	_u.mutation.ResetImageCount()
@@ -1640,6 +1691,11 @@ placeholder
 	if v, ok := _u.mutation.UserAgent(); ok {
 		if err := usagelog.UserAgentValidator(v); err != nil {
 			return &ValidationError{Name: "user_agent", err: fmt.Errorf(`ent: validator failed for field "UsageLog.user_agent": %w`, err)placeholder
+	placeholder
+placeholder
+	if v, ok := _u.mutation.IPAddress(); ok {
+		if err := usagelog.IPAddressValidator(v); err != nil {
+			return &ValidationError{Name: "ip_address", err: fmt.Errorf(`ent: validator failed for field "UsageLog.ip_address": %w`, err)placeholder
 	placeholder
 placeholder
 	if v, ok := _u.mutation.ImageSize(); ok {
@@ -1804,6 +1860,12 @@ placeholder
 placeholder
 	if _u.mutation.UserAgentCleared() {
 		_spec.ClearField(usagelog.FieldUserAgent, field.TypeString)
+placeholder
+	if value, ok := _u.mutation.IPAddress(); ok {
+		_spec.SetField(usagelog.FieldIPAddress, field.TypeString, value)
+placeholder
+	if _u.mutation.IPAddressCleared() {
+		_spec.ClearField(usagelog.FieldIPAddress, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.ImageCount(); ok {
 		_spec.SetField(usagelog.FieldImageCount, field.TypeInt, value)
