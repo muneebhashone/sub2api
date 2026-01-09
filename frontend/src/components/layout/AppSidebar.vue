@@ -144,10 +144,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, ref placeholder from 'vue'
+import { computed, h, onMounted, ref, watch placeholder from 'vue'
 import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
-import { useAppStore, useAuthStore, useOnboardingStore placeholder from '@/stores'
+import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore placeholder from '@/stores'
 import VersionBadge from '@/components/common/VersionBadge.vue'
 
 const { t placeholder = useI18n()
@@ -156,6 +156,7 @@ const route = useRoute()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const onboardingStore = useOnboardingStore()
+const adminSettingsStore = useAdminSettingsStore()
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
@@ -442,6 +443,9 @@ placeholder)
 const adminNavItems = computed(() => {
   const baseItems = [
     { path: '/admin/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
+    ...(adminSettingsStore.opsMonitoringEnabled
+      ? [{ path: '/admin/ops', label: t('nav.ops'), icon: ChartIcon placeholder]
+      : []),
     { path: '/admin/users', label: t('nav.users'), icon: UsersIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
@@ -510,6 +514,23 @@ if (
   isDark.value = true
   document.documentElement.classList.add('dark')
 placeholder
+
+// Fetch admin settings (for feature-gated nav items like Ops).
+watch(
+  isAdmin,
+  (v) => {
+    if (v) {
+      adminSettingsStore.fetch()
+    placeholder
+  placeholder,
+  { immediate: true placeholder
+)
+
+onMounted(() => {
+  if (isAdmin.value) {
+    adminSettingsStore.fetch()
+  placeholder
+placeholder)
 </script>
 
 <style scoped>
