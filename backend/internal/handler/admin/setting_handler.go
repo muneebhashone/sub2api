@@ -65,6 +65,9 @@ placeholder
 		FallbackModelAntigravity:     settings.FallbackModelAntigravity,
 		EnableIdentityPatch:          settings.EnableIdentityPatch,
 		IdentityPatchPrompt:          settings.IdentityPatchPrompt,
+		OpsMonitoringEnabled:         settings.OpsMonitoringEnabled,
+		OpsRealtimeMonitoringEnabled: settings.OpsRealtimeMonitoringEnabled,
+		OpsQueryModeDefault:          settings.OpsQueryModeDefault,
 placeholder)
 placeholder
 
@@ -110,6 +113,11 @@ type UpdateSettingsRequest struct {
 	// Identity patch configuration (Claude -> Gemini)
 	EnableIdentityPatch bool   `json:"enable_identity_patch"`
 	IdentityPatchPrompt string `json:"identity_patch_prompt"`
+
+	// Ops monitoring (vNext)
+	OpsMonitoringEnabled         *bool `json:"ops_monitoring_enabled"`
+	OpsRealtimeMonitoringEnabled *bool `json:"ops_realtime_monitoring_enabled"`
+	OpsQueryModeDefault          *string `json:"ops_query_mode_default"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -193,6 +201,24 @@ placeholder
 		FallbackModelAntigravity: req.FallbackModelAntigravity,
 		EnableIdentityPatch:      req.EnableIdentityPatch,
 		IdentityPatchPrompt:      req.IdentityPatchPrompt,
+		OpsMonitoringEnabled: func() bool {
+			if req.OpsMonitoringEnabled != nil {
+				return *req.OpsMonitoringEnabled
+		placeholder
+			return previousSettings.OpsMonitoringEnabled
+	placeholder(),
+		OpsRealtimeMonitoringEnabled: func() bool {
+			if req.OpsRealtimeMonitoringEnabled != nil {
+				return *req.OpsRealtimeMonitoringEnabled
+		placeholder
+			return previousSettings.OpsRealtimeMonitoringEnabled
+	placeholder(),
+		OpsQueryModeDefault: func() string {
+			if req.OpsQueryModeDefault != nil {
+				return *req.OpsQueryModeDefault
+		placeholder
+			return previousSettings.OpsQueryModeDefault
+	placeholder(),
 placeholder
 
 	if err := h.settingService.UpdateSettings(c.Request.Context(), settings); err != nil {
@@ -237,6 +263,9 @@ placeholder
 		FallbackModelAntigravity:     updatedSettings.FallbackModelAntigravity,
 		EnableIdentityPatch:          updatedSettings.EnableIdentityPatch,
 		IdentityPatchPrompt:          updatedSettings.IdentityPatchPrompt,
+		OpsMonitoringEnabled:         updatedSettings.OpsMonitoringEnabled,
+		OpsRealtimeMonitoringEnabled: updatedSettings.OpsRealtimeMonitoringEnabled,
+		OpsQueryModeDefault:          updatedSettings.OpsQueryModeDefault,
 placeholder)
 placeholder
 
@@ -336,6 +365,15 @@ placeholder
 placeholder
 	if before.FallbackModelAntigravity != after.FallbackModelAntigravity {
 		changed = append(changed, "fallback_model_antigravity")
+placeholder
+	if before.OpsMonitoringEnabled != after.OpsMonitoringEnabled {
+		changed = append(changed, "ops_monitoring_enabled")
+placeholder
+	if before.OpsRealtimeMonitoringEnabled != after.OpsRealtimeMonitoringEnabled {
+		changed = append(changed, "ops_realtime_monitoring_enabled")
+placeholder
+	if before.OpsQueryModeDefault != after.OpsQueryModeDefault {
+		changed = append(changed, "ops_query_mode_default")
 placeholder
 	return changed
 placeholder
