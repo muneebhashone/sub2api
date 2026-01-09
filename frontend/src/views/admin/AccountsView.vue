@@ -7,7 +7,7 @@
             v-model:searchQuery="params.search"
             :filters="params"
             @update:filters="(newFilters) => Object.assign(params, newFilters)"
-            @change="reload"
+            @change="debouncedReload"
             @update:searchQuery="debouncedReload"
           />
           <AccountTableActions
@@ -19,7 +19,7 @@
         </div>
       </template>
       <template #table>
-        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @edit="showBulkEdit = true" @clear="selIds = []" @select-page="selectPage" />
+        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @edit="showBulkEdit = true" @clear="selIds = []" @select-page="selectPage" @toggle-schedulable="handleBulkToggleSchedulable" />
         <DataTable :columns="cols" :data="accounts" :loading="loading">
           <template #cell-select="{ row placeholder">
             <input type="checkbox" :checked="selIds.includes(row.id)" @change="toggleSel(row.id)" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
@@ -107,7 +107,7 @@
           </template>
         </DataTable>
       </template>
-      <template #pagination><Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" /></template>
+      <template #pagination><Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" @update:pageSize="handlePageSizeChange" /></template>
     </TablePageLayout>
     <CreateAccountModal :show="showCreate" :proxies="proxies" :groups="groups" @close="showCreate = false" @created="reload" />
     <EditAccountModal :show="showEdit" :account="edAcc" :proxies="proxies" :groups="groups" @close="showEdit = false" @updated="load" />
@@ -175,7 +175,7 @@ const statsAcc = ref<Account | null>(null)
 const togglingSchedulable = ref<number | null>(null)
 const menu = reactive<{show:boolean, acc:Account|null, pos:{top:number, left:numberplaceholder|nullplaceholder>({ show: false, acc: null, pos: null placeholder)
 
-const { items: accounts, loading, params, pagination, load, reload, debouncedReload, handlePageChange placeholder = useTableLoader<Account, any>({
+const { items: accounts, loading, params, pagination, load, reload, debouncedReload, handlePageChange, handlePageSizeChange placeholder = useTableLoader<Account, any>({
   fetchFn: adminAPI.accounts.list,
   initialParams: { platform: '', type: '', status: '', search: '' placeholder
 placeholder)
@@ -209,6 +209,21 @@ const openMenu = (a: Account, e: MouseEvent) => { menu.acc = a; menu.pos = { top
 const toggleSel = (id: number) => { const i = selIds.value.indexOf(id); if(i === -1) selIds.value.push(id); else selIds.value.splice(i, 1) placeholder
 const selectPage = () => { selIds.value = [...new Set([...selIds.value, ...accounts.value.map(a => a.id)])] placeholder
 const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; reload() placeholder catch (error) { console.error('Failed to bulk delete accounts:', error) placeholder placeholder
+const handleBulkToggleSchedulable = async (schedulable: boolean) => {
+  const count = selIds.value.length
+  try {
+    const result = await adminAPI.accounts.bulkUpdate(selIds.value, { schedulable placeholder);
+    const message = schedulable
+      ? t('admin.accounts.bulkSchedulableEnabled', { count: result.success || count placeholder)
+      : t('admin.accounts.bulkSchedulableDisabled', { count: result.success || count placeholder);
+    appStore.showSuccess(message);
+    selIds.value = [];
+    reload()
+  placeholder catch (error) {
+    console.error('Failed to bulk toggle schedulable:', error);
+    appStore.showError(t('common.error'))
+  placeholder
+placeholder
 const handleBulkUpdated = () => { showBulkEdit.value = false; selIds.value = []; reload() placeholder
 const closeTestModal = () => { showTest.value = false; testingAcc.value = null placeholder
 const closeStatsModal = () => { showStats.value = false; statsAcc.value = null placeholder
