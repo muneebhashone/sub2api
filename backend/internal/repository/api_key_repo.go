@@ -317,6 +317,7 @@ placeholder
 		RateMultiplier:      g.RateMultiplier,
 		IsExclusive:         g.IsExclusive,
 		Status:              g.Status,
+		Hydrated:            true,
 		SubscriptionType:    g.SubscriptionType,
 		DailyLimitUSD:       g.DailyLimitUsd,
 		WeeklyLimitUSD:      g.WeeklyLimitUsd,

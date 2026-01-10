@@ -643,7 +643,7 @@ func (s *GatewayService) withGroupContext(ctx context.Context, group *Group) con
 	if !IsGroupContextValid(group) {
 		return ctx
 placeholder
-	if existing, ok := ctx.Value(ctxkey.Group).(*Group); ok && existing != nil && existing.ID == group.ID {
+	if existing, ok := ctx.Value(ctxkey.Group).(*Group); ok && existing != nil && existing.ID == group.ID && IsGroupContextValid(existing) {
 		return ctx
 placeholder
 	return context.WithValue(ctx, ctxkey.Group, group)
