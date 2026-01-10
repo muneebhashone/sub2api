@@ -26,13 +26,21 @@ func (r *apiKeyRepository) activeQuery() *dbent.APIKeyQuery {
 placeholder
 
 func (r *apiKeyRepository) Create(ctx context.Context, key *service.APIKey) error {
-	created, err := r.client.APIKey.Create().
+	builder := r.client.APIKey.Create().
 		SetUserID(key.UserID).
 		SetKey(key.Key).
 		SetName(key.Name).
 		SetStatus(key.Status).
-		SetNillableGroupID(key.GroupID).
-		Save(ctx)
+		SetNillableGroupID(key.GroupID)
+
+	if len(key.IPWhitelist) > 0 {
+		builder.SetIPWhitelist(key.IPWhitelist)
+placeholder
+	if len(key.IPBlacklist) > 0 {
+		builder.SetIPBlacklist(key.IPBlacklist)
+placeholder
+
+	created, err := builder.Save(ctx)
 	if err == nil {
 		key.ID = created.ID
 		key.CreatedAt = created.CreatedAt
@@ -106,6 +114,18 @@ func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey) erro
 		builder.SetGroupID(*key.GroupID)
 placeholder else {
 		builder.ClearGroupID()
+placeholder
+
+	// IP 限制字段
+	if len(key.IPWhitelist) > 0 {
+		builder.SetIPWhitelist(key.IPWhitelist)
+placeholder else {
+		builder.ClearIPWhitelist()
+placeholder
+	if len(key.IPBlacklist) > 0 {
+		builder.SetIPBlacklist(key.IPBlacklist)
+placeholder else {
+		builder.ClearIPBlacklist()
 placeholder
 
 	affected, err := builder.Save(ctx)
@@ -268,14 +288,16 @@ func apiKeyEntityToService(m *dbent.APIKey) *service.APIKey {
 		return nil
 placeholder
 	out := &service.APIKey{
-		ID:        m.ID,
-		UserID:    m.UserID,
-		Key:       m.Key,
-		Name:      m.Name,
-		Status:    m.Status,
-		CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
-		GroupID:   m.GroupID,
+		ID:          m.ID,
+		UserID:      m.UserID,
+		Key:         m.Key,
+		Name:        m.Name,
+		Status:      m.Status,
+		IPWhitelist: m.IPWhitelist,
+		IPBlacklist: m.IPBlacklist,
+		CreatedAt:   m.CreatedAt,
+		UpdatedAt:   m.UpdatedAt,
+		GroupID:     m.GroupID,
 placeholder
 	if m.Edges.User != nil {
 		out.User = userEntityToService(m.Edges.User)
@@ -325,6 +347,8 @@ placeholder
 		ImagePrice2K:        g.ImagePrice2k,
 		ImagePrice4K:        g.ImagePrice4k,
 		DefaultValidityDays: g.DefaultValidityDays,
+		ClaudeCodeOnly:      g.ClaudeCodeOnly,
+		FallbackGroupID:     g.FallbackGroupID,
 		CreatedAt:           g.CreatedAt,
 		UpdatedAt:           g.UpdatedAt,
 placeholder

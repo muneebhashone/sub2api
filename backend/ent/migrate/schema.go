@@ -18,6 +18,8 @@ var (
 		{Name: "key", Type: field.TypeString, Unique: true, Size: 128placeholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
+		{Name: "ip_whitelist", Type: field.TypeJSON, Nullable: trueplaceholder,
+		{Name: "ip_blacklist", Type: field.TypeJSON, Nullable: trueplaceholder,
 		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "user_id", Type: field.TypeInt64placeholder,
 placeholder
@@ -29,13 +31,13 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "api_keys_groups_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[7]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[9]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[8]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[10]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
@@ -44,12 +46,12 @@ placeholder
 			{
 				Name:    "apikey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[8]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[10]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[7]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[9]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_status",
@@ -80,6 +82,8 @@ placeholder
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "auto_pause_on_expired", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "schedulable", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "rate_limited_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "rate_limit_reset_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -97,7 +101,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[22]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[24]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -121,7 +125,7 @@ placeholder
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[22]placeholder,
+				Columns: []*schema.Column{AccountsColumns[24]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
@@ -136,22 +140,22 @@ placeholder
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[15]placeholder,
+				Columns: []*schema.Column{AccountsColumns[17]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[16]placeholder,
+				Columns: []*schema.Column{AccountsColumns[18]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[17]placeholder,
+				Columns: []*schema.Column{AccountsColumns[19]placeholder,
 		placeholder,
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[18]placeholder,
+				Columns: []*schema.Column{AccountsColumns[20]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
@@ -219,6 +223,8 @@ placeholder
 		{Name: "image_price_1k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "image_price_2k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "image_price_4k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
@@ -371,6 +377,8 @@ placeholder
 		{Name: "stream", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "duration_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "first_token_ms", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "user_agent", Type: field.TypeString, Nullable: true, Size: 512placeholder,
+		{Name: "ip_address", Type: field.TypeString, Nullable: true, Size: 45placeholder,
 		{Name: "image_count", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "image_size", Type: field.TypeString, Nullable: true, Size: 10placeholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -388,31 +396,31 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[23]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[25]placeholder,
 				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[24]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[26]placeholder,
 				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[25]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[27]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[26]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[28]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[27]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[29]placeholder,
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -421,32 +429,32 @@ placeholder
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[28]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[23]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[25]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[24]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[26]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[25]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[27]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[27]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[29]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[22]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[24]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_model",
@@ -461,12 +469,12 @@ placeholder
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[22]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[28], UsageLogsColumns[24]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[23], UsageLogsColumns[22]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[25], UsageLogsColumns[24]placeholder,
 		placeholder,
 	placeholder,
 placeholder

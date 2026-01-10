@@ -40,7 +40,7 @@ placeholder
 			wantProjectID: "",
 	placeholder,
 		{
-			name: "google_one uses custom client when configured and redirects to localhost",
+			name: "google_one always forces built-in client even when custom client configured",
 			cfg: &config.Config{
 				Gemini: config.GeminiConfig{
 					OAuth: config.GeminiOAuthConfig{
@@ -50,9 +50,9 @@ placeholder
 			placeholder,
 		placeholder,
 			oauthType:     "google_one",
-			wantClientID:  "custom-client-id",
-			wantRedirect:  geminicli.AIStudioOAuthRedirectURI,
-			wantScope:     geminicli.DefaultGoogleOneScopes,
+			wantClientID:  geminicli.GeminiCLIOAuthClientID,
+			wantRedirect:  geminicli.GeminiCLIRedirectURI,
+			wantScope:     geminicli.DefaultCodeAssistScopes,
 			wantProjectID: "",
 	placeholder,
 		{

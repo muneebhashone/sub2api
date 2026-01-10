@@ -16,6 +16,16 @@ type groupRepoStubForAdmin struct {
 	updated *Group // 记录 Update 调用的参数
 	getByID *Group // GetByID 返回值
 	getErr  error  // GetByID 返回的错误
+
+	listWithFiltersCalls       int
+	listWithFiltersParams      pagination.PaginationParams
+	listWithFiltersPlatform    string
+	listWithFiltersStatus      string
+	listWithFiltersSearch      string
+	listWithFiltersIsExclusive *bool
+	listWithFiltersGroups      []Group
+	listWithFiltersResult      *pagination.PaginationResult
+	listWithFiltersErr         error
 placeholder
 
 func (s *groupRepoStubForAdmin) Create(_ context.Context, g *Group) error {
@@ -47,8 +57,28 @@ func (s *groupRepoStubForAdmin) List(_ context.Context, _ pagination.PaginationP
 	panic("unexpected List call")
 placeholder
 
-func (s *groupRepoStubForAdmin) ListWithFilters(_ context.Context, _ pagination.PaginationParams, _, _ string, _ *bool) ([]Group, *pagination.PaginationResult, error) {
-	panic("unexpected ListWithFilters call")
+func (s *groupRepoStubForAdmin) ListWithFilters(_ context.Context, params pagination.PaginationParams, platform, status, search string, isExclusive *bool) ([]Group, *pagination.PaginationResult, error) {
+	s.listWithFiltersCalls++
+	s.listWithFiltersParams = params
+	s.listWithFiltersPlatform = platform
+	s.listWithFiltersStatus = status
+	s.listWithFiltersSearch = search
+	s.listWithFiltersIsExclusive = isExclusive
+
+	if s.listWithFiltersErr != nil {
+		return nil, nil, s.listWithFiltersErr
+placeholder
+
+	result := s.listWithFiltersResult
+	if result == nil {
+		result = &pagination.PaginationResult{
+			Total:    int64(len(s.listWithFiltersGroups)),
+			Page:     params.Page,
+			PageSize: params.PageSize,
+	placeholder
+placeholder
+
+	return s.listWithFiltersGroups, result, nil
 placeholder
 
 func (s *groupRepoStubForAdmin) ListActive(_ context.Context) ([]Group, error) {
@@ -194,4 +224,69 @@ placeholder
 	require.NotNil(t, repo.updated.ImagePrice2K)
 	require.InDelta(t, 0.15, *repo.updated.ImagePrice2K, 0.0001) // 原值保持
 	require.Nil(t, repo.updated.ImagePrice4K)
+placeholder
+
+func TestAdminService_ListGroups_WithSearch(t *testing.T) {
+	// 测试：
+	// 1. search 参数正常传递到 repository 层
+	// 2. search 为空字符串时的行为
+	// 3. search 与其他过滤条件组合使用
+
+	t.Run("search 参数正常传递到 repository 层", func(t *testing.T) {
+		repo := &groupRepoStubForAdmin{
+			listWithFiltersGroups: []Group{{ID: 1, Name: "alpha"placeholderplaceholder,
+			listWithFiltersResult: &pagination.PaginationResult{Total: 1placeholder,
+	placeholder
+		svc := &adminServiceImpl{groupRepo: repoplaceholder
+
+		groups, total, err := svc.ListGroups(context.Background(), 1, 20, "", "", "alpha", nil)
+	placeholder
+		require.Equal(t, int64(1), total)
+		require.Equal(t, []Group{{ID: 1, Name: "alpha"placeholderplaceholder, groups)
+
+		require.Equal(t, 1, repo.listWithFiltersCalls)
+		require.Equal(t, pagination.PaginationParams{Page: 1, PageSize: 20placeholder, repo.listWithFiltersParams)
+		require.Equal(t, "alpha", repo.listWithFiltersSearch)
+		require.Nil(t, repo.listWithFiltersIsExclusive)
+placeholder)
+
+	t.Run("search 为空字符串时传递空字符串", func(t *testing.T) {
+		repo := &groupRepoStubForAdmin{
+			listWithFiltersGroups: []Group{placeholder,
+			listWithFiltersResult: &pagination.PaginationResult{Total: 0placeholder,
+	placeholder
+		svc := &adminServiceImpl{groupRepo: repoplaceholder
+
+		groups, total, err := svc.ListGroups(context.Background(), 2, 10, "", "", "", nil)
+	placeholder
+		require.Empty(t, groups)
+		require.Equal(t, int64(0), total)
+
+		require.Equal(t, 1, repo.listWithFiltersCalls)
+		require.Equal(t, pagination.PaginationParams{Page: 2, PageSize: 10placeholder, repo.listWithFiltersParams)
+		require.Equal(t, "", repo.listWithFiltersSearch)
+		require.Nil(t, repo.listWithFiltersIsExclusive)
+placeholder)
+
+	t.Run("search 与其他过滤条件组合使用", func(t *testing.T) {
+		isExclusive := true
+		repo := &groupRepoStubForAdmin{
+			listWithFiltersGroups: []Group{{ID: 2, Name: "beta"placeholderplaceholder,
+			listWithFiltersResult: &pagination.PaginationResult{Total: 42placeholder,
+	placeholder
+		svc := &adminServiceImpl{groupRepo: repoplaceholder
+
+		groups, total, err := svc.ListGroups(context.Background(), 3, 50, PlatformAntigravity, StatusActive, "beta", &isExclusive)
+	placeholder
+		require.Equal(t, int64(42), total)
+		require.Equal(t, []Group{{ID: 2, Name: "beta"placeholderplaceholder, groups)
+
+		require.Equal(t, 1, repo.listWithFiltersCalls)
+		require.Equal(t, pagination.PaginationParams{Page: 3, PageSize: 50placeholder, repo.listWithFiltersParams)
+		require.Equal(t, PlatformAntigravity, repo.listWithFiltersPlatform)
+		require.Equal(t, StatusActive, repo.listWithFiltersStatus)
+		require.Equal(t, "beta", repo.listWithFiltersSearch)
+		require.NotNil(t, repo.listWithFiltersIsExclusive)
+		require.True(t, *repo.listWithFiltersIsExclusive)
+placeholder)
 placeholder

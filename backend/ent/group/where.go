@@ -140,6 +140,16 @@ func ImagePrice4k(v float64) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldImagePrice4k, v))
 placeholder
 
+// ClaudeCodeOnly applies equality check predicate on the "claude_code_only" field. It's identical to ClaudeCodeOnlyEQ.
+func ClaudeCodeOnly(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldClaudeCodeOnly, v))
+placeholder
+
+// FallbackGroupID applies equality check predicate on the "fallback_group_id" field. It's identical to FallbackGroupIDEQ.
+func FallbackGroupID(v int64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldFallbackGroupID, v))
+placeholder
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -993,6 +1003,66 @@ placeholder
 // ImagePrice4kNotNil applies the NotNil predicate on the "image_price_4k" field.
 func ImagePrice4kNotNil() predicate.Group {
 	return predicate.Group(sql.FieldNotNull(FieldImagePrice4k))
+placeholder
+
+// ClaudeCodeOnlyEQ applies the EQ predicate on the "claude_code_only" field.
+func ClaudeCodeOnlyEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldClaudeCodeOnly, v))
+placeholder
+
+// ClaudeCodeOnlyNEQ applies the NEQ predicate on the "claude_code_only" field.
+func ClaudeCodeOnlyNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldClaudeCodeOnly, v))
+placeholder
+
+// FallbackGroupIDEQ applies the EQ predicate on the "fallback_group_id" field.
+func FallbackGroupIDEQ(v int64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldFallbackGroupID, v))
+placeholder
+
+// FallbackGroupIDNEQ applies the NEQ predicate on the "fallback_group_id" field.
+func FallbackGroupIDNEQ(v int64) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldFallbackGroupID, v))
+placeholder
+
+// FallbackGroupIDIn applies the In predicate on the "fallback_group_id" field.
+func FallbackGroupIDIn(vs ...int64) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldFallbackGroupID, vs...))
+placeholder
+
+// FallbackGroupIDNotIn applies the NotIn predicate on the "fallback_group_id" field.
+func FallbackGroupIDNotIn(vs ...int64) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldFallbackGroupID, vs...))
+placeholder
+
+// FallbackGroupIDGT applies the GT predicate on the "fallback_group_id" field.
+func FallbackGroupIDGT(v int64) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldFallbackGroupID, v))
+placeholder
+
+// FallbackGroupIDGTE applies the GTE predicate on the "fallback_group_id" field.
+func FallbackGroupIDGTE(v int64) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldFallbackGroupID, v))
+placeholder
+
+// FallbackGroupIDLT applies the LT predicate on the "fallback_group_id" field.
+func FallbackGroupIDLT(v int64) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldFallbackGroupID, v))
+placeholder
+
+// FallbackGroupIDLTE applies the LTE predicate on the "fallback_group_id" field.
+func FallbackGroupIDLTE(v int64) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldFallbackGroupID, v))
+placeholder
+
+// FallbackGroupIDIsNil applies the IsNil predicate on the "fallback_group_id" field.
+func FallbackGroupIDIsNil() predicate.Group {
+	return predicate.Group(sql.FieldIsNull(FieldFallbackGroupID))
+placeholder
+
+// FallbackGroupIDNotNil applies the NotNil predicate on the "fallback_group_id" field.
+func FallbackGroupIDNotNil() predicate.Group {
+	return predicate.Group(sql.FieldNotNull(FieldFallbackGroupID))
 placeholder
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.
