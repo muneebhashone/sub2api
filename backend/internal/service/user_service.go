@@ -213,11 +213,11 @@ placeholder
 
 // Delete 删除用户（管理员功能）
 func (s *UserService) Delete(ctx context.Context, userID int64) error {
-	if err := s.userRepo.Delete(ctx, userID); err != nil {
-		return fmt.Errorf("delete user: %w", err)
-placeholder
 	if s.authCacheInvalidator != nil {
 		s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
+placeholder
+	if err := s.userRepo.Delete(ctx, userID); err != nil {
+		return fmt.Errorf("delete user: %w", err)
 placeholder
 	return nil
 placeholder
