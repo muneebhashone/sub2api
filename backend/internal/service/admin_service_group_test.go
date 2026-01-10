@@ -45,6 +45,13 @@ placeholder
 	return s.getByID, nil
 placeholder
 
+func (s *groupRepoStubForAdmin) GetByIDLite(_ context.Context, _ int64) (*Group, error) {
+	if s.getErr != nil {
+		return nil, s.getErr
+placeholder
+	return s.getByID, nil
+placeholder
+
 func (s *groupRepoStubForAdmin) Delete(_ context.Context, _ int64) error {
 	panic("unexpected Delete call")
 placeholder
@@ -289,4 +296,85 @@ placeholder)
 		require.NotNil(t, repo.listWithFiltersIsExclusive)
 		require.True(t, *repo.listWithFiltersIsExclusive)
 placeholder)
+placeholder
+
+func TestAdminService_ValidateFallbackGroup_DetectsCycle(t *testing.T) {
+	groupID := int64(1)
+	fallbackID := int64(2)
+	repo := &groupRepoStubForFallbackCycle{
+		groups: map[int64]*Group{
+			groupID: {
+				ID:              groupID,
+				FallbackGroupID: &fallbackID,
+		placeholder,
+			fallbackID: {
+				ID:              fallbackID,
+				FallbackGroupID: &groupID,
+		placeholder,
+	placeholder,
+placeholder
+	svc := &adminServiceImpl{groupRepo: repoplaceholder
+
+	err := svc.validateFallbackGroup(context.Background(), groupID, fallbackID)
+placeholder
+	require.Contains(t, err.Error(), "fallback group cycle")
+placeholder
+
+type groupRepoStubForFallbackCycle struct {
+	groups map[int64]*Group
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) Create(_ context.Context, _ *Group) error {
+	panic("unexpected Create call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) Update(_ context.Context, _ *Group) error {
+	panic("unexpected Update call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) GetByID(ctx context.Context, id int64) (*Group, error) {
+	return s.GetByIDLite(ctx, id)
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) GetByIDLite(_ context.Context, id int64) (*Group, error) {
+	if g, ok := s.groups[id]; ok {
+		return g, nil
+placeholder
+	return nil, ErrGroupNotFound
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) Delete(_ context.Context, _ int64) error {
+	panic("unexpected Delete call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) DeleteCascade(_ context.Context, _ int64) ([]int64, error) {
+	panic("unexpected DeleteCascade call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) List(_ context.Context, _ pagination.PaginationParams) ([]Group, *pagination.PaginationResult, error) {
+	panic("unexpected List call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) ListWithFilters(_ context.Context, _ pagination.PaginationParams, _, _ string, _ *bool) ([]Group, *pagination.PaginationResult, error) {
+	panic("unexpected ListWithFilters call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) ListActive(_ context.Context) ([]Group, error) {
+	panic("unexpected ListActive call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) ListActiveByPlatform(_ context.Context, _ string) ([]Group, error) {
+	panic("unexpected ListActiveByPlatform call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) ExistsByName(_ context.Context, _ string) (bool, error) {
+	panic("unexpected ExistsByName call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) GetAccountCount(_ context.Context, _ int64) (int64, error) {
+	panic("unexpected GetAccountCount call")
+placeholder
+
+func (s *groupRepoStubForFallbackCycle) DeleteAccountGroupsByGroupID(_ context.Context, _ int64) (int64, error) {
+	panic("unexpected DeleteAccountGroupsByGroupID call")
 placeholder
