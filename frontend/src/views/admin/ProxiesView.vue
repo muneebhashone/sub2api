@@ -519,7 +519,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted placeholder from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
@@ -941,5 +941,10 @@ placeholder
 
 onMounted(() => {
   loadProxies()
+placeholder)
+
+onUnmounted(() => {
+  clearTimeout(searchTimeout)
+  abortController?.abort()
 placeholder)
 </script>

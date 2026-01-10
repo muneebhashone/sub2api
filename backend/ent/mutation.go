@@ -54,26 +54,30 @@ const (
 // APIKeyMutation represents an operation that mutates the APIKey nodes in the graph.
 type APIKeyMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *int64
-	created_at        *time.Time
-	updated_at        *time.Time
-	deleted_at        *time.Time
-	key               *string
-	name              *string
-	status            *string
-	clearedFields     map[string]struct{placeholder
-	user              *int64
-	cleareduser       bool
-	group             *int64
-	clearedgroup      bool
-	usage_logs        map[int64]struct{placeholder
-	removedusage_logs map[int64]struct{placeholder
-	clearedusage_logs bool
-	done              bool
-	oldValue          func(context.Context) (*APIKey, error)
-	predicates        []predicate.APIKey
+	op                 Op
+	typ                string
+	id                 *int64
+	created_at         *time.Time
+	updated_at         *time.Time
+	deleted_at         *time.Time
+	key                *string
+	name               *string
+	status             *string
+	ip_whitelist       *[]string
+	appendip_whitelist []string
+	ip_blacklist       *[]string
+	appendip_blacklist []string
+	clearedFields      map[string]struct{placeholder
+	user               *int64
+	cleareduser        bool
+	group              *int64
+	clearedgroup       bool
+	usage_logs         map[int64]struct{placeholder
+	removedusage_logs  map[int64]struct{placeholder
+	clearedusage_logs  bool
+	done               bool
+	oldValue           func(context.Context) (*APIKey, error)
+	predicates         []predicate.APIKey
 placeholder
 
 var _ ent.Mutation = (*APIKeyMutation)(nil)
@@ -488,6 +492,136 @@ func (m *APIKeyMutation) ResetStatus() {
 	m.status = nil
 placeholder
 
+// SetIPWhitelist sets the "ip_whitelist" field.
+func (m *APIKeyMutation) SetIPWhitelist(s []string) {
+	m.ip_whitelist = &s
+	m.appendip_whitelist = nil
+placeholder
+
+// IPWhitelist returns the value of the "ip_whitelist" field in the mutation.
+func (m *APIKeyMutation) IPWhitelist() (r []string, exists bool) {
+	v := m.ip_whitelist
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldIPWhitelist returns the old "ip_whitelist" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldIPWhitelist(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIPWhitelist is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIPWhitelist requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIPWhitelist: %w", err)
+placeholder
+	return oldValue.IPWhitelist, nil
+placeholder
+
+// AppendIPWhitelist adds s to the "ip_whitelist" field.
+func (m *APIKeyMutation) AppendIPWhitelist(s []string) {
+	m.appendip_whitelist = append(m.appendip_whitelist, s...)
+placeholder
+
+// AppendedIPWhitelist returns the list of values that were appended to the "ip_whitelist" field in this mutation.
+func (m *APIKeyMutation) AppendedIPWhitelist() ([]string, bool) {
+	if len(m.appendip_whitelist) == 0 {
+		return nil, false
+placeholder
+	return m.appendip_whitelist, true
+placeholder
+
+// ClearIPWhitelist clears the value of the "ip_whitelist" field.
+func (m *APIKeyMutation) ClearIPWhitelist() {
+	m.ip_whitelist = nil
+	m.appendip_whitelist = nil
+	m.clearedFields[apikey.FieldIPWhitelist] = struct{placeholder{placeholder
+placeholder
+
+// IPWhitelistCleared returns if the "ip_whitelist" field was cleared in this mutation.
+func (m *APIKeyMutation) IPWhitelistCleared() bool {
+	_, ok := m.clearedFields[apikey.FieldIPWhitelist]
+	return ok
+placeholder
+
+// ResetIPWhitelist resets all changes to the "ip_whitelist" field.
+func (m *APIKeyMutation) ResetIPWhitelist() {
+	m.ip_whitelist = nil
+	m.appendip_whitelist = nil
+	delete(m.clearedFields, apikey.FieldIPWhitelist)
+placeholder
+
+// SetIPBlacklist sets the "ip_blacklist" field.
+func (m *APIKeyMutation) SetIPBlacklist(s []string) {
+	m.ip_blacklist = &s
+	m.appendip_blacklist = nil
+placeholder
+
+// IPBlacklist returns the value of the "ip_blacklist" field in the mutation.
+func (m *APIKeyMutation) IPBlacklist() (r []string, exists bool) {
+	v := m.ip_blacklist
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldIPBlacklist returns the old "ip_blacklist" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldIPBlacklist(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIPBlacklist is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIPBlacklist requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIPBlacklist: %w", err)
+placeholder
+	return oldValue.IPBlacklist, nil
+placeholder
+
+// AppendIPBlacklist adds s to the "ip_blacklist" field.
+func (m *APIKeyMutation) AppendIPBlacklist(s []string) {
+	m.appendip_blacklist = append(m.appendip_blacklist, s...)
+placeholder
+
+// AppendedIPBlacklist returns the list of values that were appended to the "ip_blacklist" field in this mutation.
+func (m *APIKeyMutation) AppendedIPBlacklist() ([]string, bool) {
+	if len(m.appendip_blacklist) == 0 {
+		return nil, false
+placeholder
+	return m.appendip_blacklist, true
+placeholder
+
+// ClearIPBlacklist clears the value of the "ip_blacklist" field.
+func (m *APIKeyMutation) ClearIPBlacklist() {
+	m.ip_blacklist = nil
+	m.appendip_blacklist = nil
+	m.clearedFields[apikey.FieldIPBlacklist] = struct{placeholder{placeholder
+placeholder
+
+// IPBlacklistCleared returns if the "ip_blacklist" field was cleared in this mutation.
+func (m *APIKeyMutation) IPBlacklistCleared() bool {
+	_, ok := m.clearedFields[apikey.FieldIPBlacklist]
+	return ok
+placeholder
+
+// ResetIPBlacklist resets all changes to the "ip_blacklist" field.
+func (m *APIKeyMutation) ResetIPBlacklist() {
+	m.ip_blacklist = nil
+	m.appendip_blacklist = nil
+	delete(m.clearedFields, apikey.FieldIPBlacklist)
+placeholder
+
 // ClearUser clears the "user" edge to the User entity.
 func (m *APIKeyMutation) ClearUser() {
 	m.cleareduser = true
@@ -630,7 +764,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *APIKeyMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, apikey.FieldCreatedAt)
 placeholder
@@ -654,6 +788,12 @@ placeholder
 placeholder
 	if m.status != nil {
 		fields = append(fields, apikey.FieldStatus)
+placeholder
+	if m.ip_whitelist != nil {
+		fields = append(fields, apikey.FieldIPWhitelist)
+placeholder
+	if m.ip_blacklist != nil {
+		fields = append(fields, apikey.FieldIPBlacklist)
 placeholder
 	return fields
 placeholder
@@ -679,6 +819,10 @@ func (m *APIKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.GroupID()
 	case apikey.FieldStatus:
 		return m.Status()
+	case apikey.FieldIPWhitelist:
+		return m.IPWhitelist()
+	case apikey.FieldIPBlacklist:
+		return m.IPBlacklist()
 placeholder
 	return nil, false
 placeholder
@@ -704,6 +848,10 @@ func (m *APIKeyMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldGroupID(ctx)
 	case apikey.FieldStatus:
 		return m.OldStatus(ctx)
+	case apikey.FieldIPWhitelist:
+		return m.OldIPWhitelist(ctx)
+	case apikey.FieldIPBlacklist:
+		return m.OldIPBlacklist(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown APIKey field %s", name)
 placeholder
@@ -769,6 +917,20 @@ func (m *APIKeyMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetStatus(v)
 		return nil
+	case apikey.FieldIPWhitelist:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetIPWhitelist(v)
+		return nil
+	case apikey.FieldIPBlacklist:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetIPBlacklist(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown APIKey field %s", name)
 placeholder
@@ -808,6 +970,12 @@ placeholder
 	if m.FieldCleared(apikey.FieldGroupID) {
 		fields = append(fields, apikey.FieldGroupID)
 placeholder
+	if m.FieldCleared(apikey.FieldIPWhitelist) {
+		fields = append(fields, apikey.FieldIPWhitelist)
+placeholder
+	if m.FieldCleared(apikey.FieldIPBlacklist) {
+		fields = append(fields, apikey.FieldIPBlacklist)
+placeholder
 	return fields
 placeholder
 
@@ -827,6 +995,12 @@ func (m *APIKeyMutation) ClearField(name string) error {
 		return nil
 	case apikey.FieldGroupID:
 		m.ClearGroupID()
+		return nil
+	case apikey.FieldIPWhitelist:
+		m.ClearIPWhitelist()
+		return nil
+	case apikey.FieldIPBlacklist:
+		m.ClearIPBlacklist()
 		return nil
 placeholder
 	return fmt.Errorf("unknown APIKey nullable field %s", name)
@@ -859,6 +1033,12 @@ func (m *APIKeyMutation) ResetField(name string) error {
 		return nil
 	case apikey.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case apikey.FieldIPWhitelist:
+		m.ResetIPWhitelist()
+		return nil
+	case apikey.FieldIPBlacklist:
+		m.ResetIPBlacklist()
 		return nil
 placeholder
 	return fmt.Errorf("unknown APIKey field %s", name)
@@ -8396,6 +8576,7 @@ type UsageLogMutation struct {
 	first_token_ms              *int
 	addfirst_token_ms           *int
 	user_agent                  *string
+	ip_address                  *string
 	image_count                 *int
 	addimage_count              *int
 	image_size                  *string
@@ -9801,6 +9982,55 @@ func (m *UsageLogMutation) ResetUserAgent() {
 	delete(m.clearedFields, usagelog.FieldUserAgent)
 placeholder
 
+// SetIPAddress sets the "ip_address" field.
+func (m *UsageLogMutation) SetIPAddress(s string) {
+	m.ip_address = &s
+placeholder
+
+// IPAddress returns the value of the "ip_address" field in the mutation.
+func (m *UsageLogMutation) IPAddress() (r string, exists bool) {
+	v := m.ip_address
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldIPAddress returns the old "ip_address" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldIPAddress(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIPAddress is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIPAddress requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIPAddress: %w", err)
+placeholder
+	return oldValue.IPAddress, nil
+placeholder
+
+// ClearIPAddress clears the value of the "ip_address" field.
+func (m *UsageLogMutation) ClearIPAddress() {
+	m.ip_address = nil
+	m.clearedFields[usagelog.FieldIPAddress] = struct{placeholder{placeholder
+placeholder
+
+// IPAddressCleared returns if the "ip_address" field was cleared in this mutation.
+func (m *UsageLogMutation) IPAddressCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldIPAddress]
+	return ok
+placeholder
+
+// ResetIPAddress resets all changes to the "ip_address" field.
+func (m *UsageLogMutation) ResetIPAddress() {
+	m.ip_address = nil
+	delete(m.clearedFields, usagelog.FieldIPAddress)
+placeholder
+
 // SetImageCount sets the "image_count" field.
 func (m *UsageLogMutation) SetImageCount(i int) {
 	m.image_count = &i
@@ -10111,7 +10341,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 29)
 	if m.user != nil {
 		fields = append(fields, usagelog.FieldUserID)
 placeholder
@@ -10187,6 +10417,9 @@ placeholder
 	if m.user_agent != nil {
 		fields = append(fields, usagelog.FieldUserAgent)
 placeholder
+	if m.ip_address != nil {
+		fields = append(fields, usagelog.FieldIPAddress)
+placeholder
 	if m.image_count != nil {
 		fields = append(fields, usagelog.FieldImageCount)
 placeholder
@@ -10254,6 +10487,8 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.FirstTokenMs()
 	case usagelog.FieldUserAgent:
 		return m.UserAgent()
+	case usagelog.FieldIPAddress:
+		return m.IPAddress()
 	case usagelog.FieldImageCount:
 		return m.ImageCount()
 	case usagelog.FieldImageSize:
@@ -10319,6 +10554,8 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldFirstTokenMs(ctx)
 	case usagelog.FieldUserAgent:
 		return m.OldUserAgent(ctx)
+	case usagelog.FieldIPAddress:
+		return m.OldIPAddress(ctx)
 	case usagelog.FieldImageCount:
 		return m.OldImageCount(ctx)
 	case usagelog.FieldImageSize:
@@ -10508,6 +10745,13 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 	placeholder
 		m.SetUserAgent(v)
+		return nil
+	case usagelog.FieldIPAddress:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetIPAddress(v)
 		return nil
 	case usagelog.FieldImageCount:
 		v, ok := value.(int)
@@ -10782,6 +11026,9 @@ placeholder
 	if m.FieldCleared(usagelog.FieldUserAgent) {
 		fields = append(fields, usagelog.FieldUserAgent)
 placeholder
+	if m.FieldCleared(usagelog.FieldIPAddress) {
+		fields = append(fields, usagelog.FieldIPAddress)
+placeholder
 	if m.FieldCleared(usagelog.FieldImageSize) {
 		fields = append(fields, usagelog.FieldImageSize)
 placeholder
@@ -10813,6 +11060,9 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldUserAgent:
 		m.ClearUserAgent()
+		return nil
+	case usagelog.FieldIPAddress:
+		m.ClearIPAddress()
 		return nil
 	case usagelog.FieldImageSize:
 		m.ClearImageSize()
@@ -10899,6 +11149,9 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldUserAgent:
 		m.ResetUserAgent()
+		return nil
+	case usagelog.FieldIPAddress:
+		m.ResetIPAddress()
 		return nil
 	case usagelog.FieldImageCount:
 		m.ResetImageCount()
