@@ -390,7 +390,7 @@ placeholder
 		RunMode: config.RunModeStandard,
 placeholder
 
-	userService := service.NewUserService(userRepo)
+	userService := service.NewUserService(userRepo, nil)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, userRepo, groupRepo, userSubRepo, apiKeyCache, cfg)
 
 	usageRepo := newStubUsageLogRepo()
@@ -566,6 +566,18 @@ func (stubApiKeyCache) SetDailyUsageExpiry(ctx context.Context, apiKey string, t
 	return nil
 placeholder
 
+func (stubApiKeyCache) GetAuthCache(ctx context.Context, key string) (*service.APIKeyAuthCacheEntry, error) {
+	return nil, nil
+placeholder
+
+func (stubApiKeyCache) SetAuthCache(ctx context.Context, key string, entry *service.APIKeyAuthCacheEntry, ttl time.Duration) error {
+	return nil
+placeholder
+
+func (stubApiKeyCache) DeleteAuthCache(ctx context.Context, key string) error {
+	return nil
+placeholder
+
 type stubGroupRepo struct{placeholder
 
 func (stubGroupRepo) Create(ctx context.Context, group *service.Group) error {
@@ -738,12 +750,12 @@ placeholder
 	return &clone, nil
 placeholder
 
-func (r *stubApiKeyRepo) GetOwnerID(ctx context.Context, id int64) (int64, error) {
+func (r *stubApiKeyRepo) GetKeyAndOwnerID(ctx context.Context, id int64) (string, int64, error) {
 	key, ok := r.byID[id]
 	if !ok {
-		return 0, service.ErrAPIKeyNotFound
+		return "", 0, service.ErrAPIKeyNotFound
 placeholder
-	return key.UserID, nil
+	return key.Key, key.UserID, nil
 placeholder
 
 func (r *stubApiKeyRepo) GetByKey(ctx context.Context, key string) (*service.APIKey, error) {
@@ -753,6 +765,10 @@ func (r *stubApiKeyRepo) GetByKey(ctx context.Context, key string) (*service.API
 placeholder
 	clone := *found
 	return &clone, nil
+placeholder
+
+func (r *stubApiKeyRepo) GetByKeyForAuth(ctx context.Context, key string) (*service.APIKey, error) {
+	return r.GetByKey(ctx, key)
 placeholder
 
 func (r *stubApiKeyRepo) Update(ctx context.Context, key *service.APIKey) error {
@@ -867,6 +883,14 @@ placeholder
 
 func (r *stubApiKeyRepo) CountByGroupID(ctx context.Context, groupID int64) (int64, error) {
 	return 0, errors.New("not implemented")
+placeholder
+
+func (r *stubApiKeyRepo) ListKeysByUserID(ctx context.Context, userID int64) ([]string, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (r *stubApiKeyRepo) ListKeysByGroupID(ctx context.Context, groupID int64) ([]string, error) {
+	return nil, errors.New("not implemented")
 placeholder
 
 type stubUsageLogRepo struct {
