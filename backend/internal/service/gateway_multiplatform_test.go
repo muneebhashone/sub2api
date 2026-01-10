@@ -1145,6 +1145,29 @@ placeholder
 	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
 placeholder
 
+func TestGatewayService_GroupContext_OverwritesInvalidContextGroup(t *testing.T) {
+	groupID := int64(42)
+	invalidGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	hydratedGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+
+	ctx := context.WithValue(context.Background(), ctxkey.Group, invalidGroup)
+	svc := &GatewayService{placeholder
+	ctx = svc.withGroupContext(ctx, hydratedGroup)
+
+	got, ok := ctx.Value(ctxkey.Group).(*Group)
+	require.True(t, ok)
+	require.Same(t, hydratedGroup, got)
+placeholder
+
 func TestGatewayService_GroupResolution_FallbackUsesLiteOnce(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(10)
