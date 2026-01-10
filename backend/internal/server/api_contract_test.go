@@ -398,7 +398,7 @@ placeholder
 	settingRepo := newStubSettingRepo()
 	settingService := service.NewSettingService(settingRepo, cfg)
 
-	authHandler := handler.NewAuthHandler(cfg, nil, userService, settingService)
+	authHandler := handler.NewAuthHandler(cfg, nil, userService, settingService, nil)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	usageHandler := handler.NewUsageHandler(usageService, apiKeyService)
 	adminSettingHandler := adminhandler.NewSettingHandler(settingService, nil, nil)
@@ -572,6 +572,10 @@ func (stubGroupRepo) Create(ctx context.Context, group *service.Group) error {
 placeholder
 
 func (stubGroupRepo) GetByID(ctx context.Context, id int64) (*service.Group, error) {
+	return nil, service.ErrGroupNotFound
+placeholder
+
+func (stubGroupRepo) GetByIDLite(ctx context.Context, id int64) (*service.Group, error) {
 	return nil, service.ErrGroupNotFound
 placeholder
 
