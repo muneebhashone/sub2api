@@ -5,6 +5,7 @@
 
 import { createRouter, createWebHistory, type RouteRecordRaw placeholder from 'vue-router'
 import { useAuthStore placeholder from '@/stores/auth'
+import { useAppStore placeholder from '@/stores/app'
 
 /**
  * Route definitions with lazy loading
@@ -311,10 +312,12 @@ router.beforeEach((to, _from, next) => {
   placeholder
 
   // Set page title
+  const appStore = useAppStore()
+  const siteName = appStore.siteName || 'Sub2API'
   if (to.meta.title) {
-    document.title = `${to.meta.titleplaceholder - Sub2API`
+    document.title = `${to.meta.titleplaceholder - ${siteNameplaceholder`
   placeholder else {
-    document.title = 'Sub2API'
+    document.title = siteName
   placeholder
 
   // Check if route requires authentication
