@@ -21,7 +21,7 @@ var frontendFS embed.FS
 
 // PublicSettingsProvider is an interface to fetch public settings
 type PublicSettingsProvider interface {
-	GetPublicSettingsForInjection(ctx context.Context) (interface{placeholder, error)
+	GetPublicSettingsForInjection(ctx context.Context) (any, error)
 placeholder
 
 // FrontendServer serves the embedded frontend with settings injection
