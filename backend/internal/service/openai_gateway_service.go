@@ -580,7 +580,7 @@ placeholder
 placeholder
 
 	// Build upstream request
-	upstreamReq, err := s.buildUpstreamRequest(ctx, c, account, body, token, reqStream, promptCacheKey)
+	upstreamReq, err := s.buildUpstreamRequest(ctx, c, account, body, token, reqStream, promptCacheKey, isCodexCLI)
 	if err != nil {
 		return nil, err
 placeholder
@@ -641,7 +641,7 @@ placeholder
 placeholder, nil
 placeholder
 
-func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.Context, account *Account, body []byte, token string, isStream bool, promptCacheKey string) (*http.Request, error) {
+func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.Context, account *Account, body []byte, token string, isStream bool, promptCacheKey string, isCodexCLI bool) (*http.Request, error) {
 	// Determine target URL based on account type
 	var targetURL string
 	switch account.Type {
@@ -694,7 +694,11 @@ placeholder
 placeholder
 	if account.Type == AccountTypeOAuth {
 		req.Header.Set("OpenAI-Beta", "responses=experimental")
-		req.Header.Set("originator", "codex_cli_rs")
+		if isCodexCLI {
+			req.Header.Set("originator", "codex_cli_rs")
+	placeholder else {
+			req.Header.Set("originator", "opencode")
+	placeholder
 		req.Header.Set("accept", "text/event-stream")
 		if promptCacheKey != "" {
 			req.Header.Set("conversation_id", promptCacheKey)
