@@ -453,11 +453,6 @@ placeholder
 		return nil, errors.New("no available accounts")
 placeholder
 
-	accountByID := make(map[int64]*Account, len(accounts))
-	for i := range accounts {
-		accountByID[accounts[i].ID] = &accounts[i]
-placeholder
-
 	isExcluded := func(accountID int64) bool {
 		if excludedIDs == nil {
 			return false
@@ -470,6 +465,11 @@ placeholder
 	if sessionHash != "" && s.cache != nil {
 		accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 		if err == nil && accountID > 0 && !isExcluded(accountID) {
+			// 粘性命中仅在当前可调度候选集中生效。
+			accountByID := make(map[int64]*Account, len(accounts))
+			for i := range accounts {
+				accountByID[accounts[i].ID] = &accounts[i]
+		placeholder
 			account, ok := accountByID[accountID]
 			if ok && s.isAccountInGroup(account, groupID) &&
 				s.isAccountAllowedForPlatform(account, platform, useMixed) &&
