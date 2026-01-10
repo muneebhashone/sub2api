@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
@@ -189,6 +190,56 @@ placeholder
 
 func (m *mockGatewayCacheForPlatform) RefreshSessionTTL(ctx context.Context, groupID int64, sessionHash string, ttl time.Duration) error {
 	return nil
+placeholder
+
+type mockGroupRepoForGateway struct {
+	groups           map[int64]*Group
+	getByIDCalls     int
+	getByIDLiteCalls int
+placeholder
+
+func (m *mockGroupRepoForGateway) GetByID(ctx context.Context, id int64) (*Group, error) {
+	m.getByIDCalls++
+	if g, ok := m.groups[id]; ok {
+		return g, nil
+placeholder
+	return nil, ErrGroupNotFound
+placeholder
+
+func (m *mockGroupRepoForGateway) GetByIDLite(ctx context.Context, id int64) (*Group, error) {
+	m.getByIDLiteCalls++
+	if g, ok := m.groups[id]; ok {
+		return g, nil
+placeholder
+	return nil, ErrGroupNotFound
+placeholder
+
+func (m *mockGroupRepoForGateway) Create(ctx context.Context, group *Group) error { return nil placeholder
+func (m *mockGroupRepoForGateway) Update(ctx context.Context, group *Group) error { return nil placeholder
+func (m *mockGroupRepoForGateway) Delete(ctx context.Context, id int64) error     { return nil placeholder
+func (m *mockGroupRepoForGateway) DeleteCascade(ctx context.Context, id int64) ([]int64, error) {
+	return nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) List(ctx context.Context, params pagination.PaginationParams) ([]Group, *pagination.PaginationResult, error) {
+	return nil, nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, status, search string, isExclusive *bool) ([]Group, *pagination.PaginationResult, error) {
+	return nil, nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ListActive(ctx context.Context) ([]Group, error) {
+	return nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ListActiveByPlatform(ctx context.Context, platform string) ([]Group, error) {
+	return nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ExistsByName(ctx context.Context, name string) (bool, error) {
+	return false, nil
+placeholder
+func (m *mockGroupRepoForGateway) GetAccountCount(ctx context.Context, groupID int64) (int64, error) {
+	return 0, nil
+placeholder
+func (m *mockGroupRepoForGateway) DeleteAccountGroupsByGroupID(ctx context.Context, groupID int64) (int64, error) {
+	return 0, nil
 placeholder
 
 func ptr[T any](v T) *T {
@@ -1018,4 +1069,191 @@ placeholder)
 		require.Nil(t, result)
 		require.Contains(t, err.Error(), "no available accounts")
 placeholder)
+placeholder
+
+func TestGatewayService_GroupResolution_ReusesContextGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(42)
+	group := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, group)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{groupID: groupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 0, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_GroupResolution_IgnoresInvalidContextGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(42)
+	ctxGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, ctxGroup)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	group := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{groupID: groupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_GroupContext_OverwritesInvalidContextGroup(t *testing.T) {
+	groupID := int64(42)
+	invalidGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	hydratedGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+
+	ctx := context.WithValue(context.Background(), ctxkey.Group, invalidGroup)
+	svc := &GatewayService{placeholder
+	ctx = svc.withGroupContext(ctx, hydratedGroup)
+
+	got, ok := ctx.Value(ctxkey.Group).(*Group)
+	require.True(t, ok)
+	require.Same(t, hydratedGroup, got)
+placeholder
+
+func TestGatewayService_GroupResolution_FallbackUsesLiteOnce(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10)
+	fallbackID := int64(11)
+	group := &Group{
+		ID:              groupID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &fallbackID,
+		Hydrated:        true,
+placeholder
+	fallbackGroup := &Group{
+		ID:       fallbackID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, group)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{fallbackID: fallbackGroupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_ResolveGatewayGroup_DetectsFallbackCycle(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10)
+	fallbackID := int64(11)
+
+	group := &Group{
+		ID:              groupID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &fallbackID,
+placeholder
+	fallbackGroup := &Group{
+		ID:              fallbackID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &groupID,
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{
+			groupID:    group,
+			fallbackID: fallbackGroup,
+	placeholder,
+placeholder
+
+	svc := &GatewayService{
+		groupRepo: groupRepo,
+placeholder
+
+	gotGroup, gotID, err := svc.resolveGatewayGroup(ctx, &groupID)
+placeholder
+	require.Nil(t, gotGroup)
+	require.Nil(t, gotID)
+	require.Contains(t, err.Error(), "fallback group cycle")
 placeholder
