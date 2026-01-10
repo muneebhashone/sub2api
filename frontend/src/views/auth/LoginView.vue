@@ -11,6 +11,9 @@
         </p>
       </div>
 
+      <!-- LinuxDo Connect OAuth 登录 -->
+      <LinuxDoOAuthSection v-if="linuxdoOAuthEnabled" :disabled="isLoading" />
+
       <!-- Login Form -->
       <form @submit.prevent="handleLogin" class="space-y-5">
         <!-- Email Input -->
@@ -157,6 +160,7 @@ import { ref, reactive, onMounted placeholder from 'vue'
 import { useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { AuthLayout placeholder from '@/components/layout'
+import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore placeholder from '@/stores'
@@ -179,6 +183,7 @@ const showPassword = ref<boolean>(false)
 // Public settings
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
+const linuxdoOAuthEnabled = ref<boolean>(false)
 
 // Turnstile
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -210,6 +215,7 @@ onMounted(async () => {
     const settings = await getPublicSettings()
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
+    linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
   placeholder catch (error) {
     console.error('Failed to load public settings:', error)
   placeholder

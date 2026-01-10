@@ -27,16 +27,20 @@ placeholder
 
 // CreateAPIKeyRequest represents the create API key request payload
 type CreateAPIKeyRequest struct {
-	Name      string  `json:"name" binding:"required"`
-	GroupID   *int64  `json:"group_id"`   // nullable
-	CustomKey *string `json:"custom_key"` // 可选的自定义key
+	Name        string   `json:"name" binding:"required"`
+	GroupID     *int64   `json:"group_id"`     // nullable
+	CustomKey   *string  `json:"custom_key"`   // 可选的自定义key
+	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单
+	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单
 placeholder
 
 // UpdateAPIKeyRequest represents the update API key request payload
 type UpdateAPIKeyRequest struct {
-	Name    string `json:"name"`
-	GroupID *int64 `json:"group_id"`
-	Status  string `json:"status" binding:"omitempty,oneof=active inactive"`
+	Name        string   `json:"name"`
+	GroupID     *int64   `json:"group_id"`
+	Status      string   `json:"status" binding:"omitempty,oneof=active inactive"`
+	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单
+	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单
 placeholder
 
 // List handles listing user's API keys with pagination
@@ -110,9 +114,11 @@ placeholder
 placeholder
 
 	svcReq := service.CreateAPIKeyRequest{
-		Name:      req.Name,
-		GroupID:   req.GroupID,
-		CustomKey: req.CustomKey,
+		Name:        req.Name,
+		GroupID:     req.GroupID,
+		CustomKey:   req.CustomKey,
+		IPWhitelist: req.IPWhitelist,
+		IPBlacklist: req.IPBlacklist,
 placeholder
 	key, err := h.apiKeyService.Create(c.Request.Context(), subject.UserID, svcReq)
 	if err != nil {
@@ -144,7 +150,10 @@ placeholder
 		return
 placeholder
 
-	svcReq := service.UpdateAPIKeyRequest{placeholder
+	svcReq := service.UpdateAPIKeyRequest{
+		IPWhitelist: req.IPWhitelist,
+		IPBlacklist: req.IPBlacklist,
+placeholder
 	if req.Name != "" {
 		svcReq.Name = &req.Name
 placeholder

@@ -107,6 +107,10 @@ func (s *groupRepoStub) GetByID(ctx context.Context, id int64) (*Group, error) {
 	panic("unexpected GetByID call")
 placeholder
 
+func (s *groupRepoStub) GetByIDLite(ctx context.Context, id int64) (*Group, error) {
+	panic("unexpected GetByIDLite call")
+placeholder
+
 func (s *groupRepoStub) Update(ctx context.Context, group *Group) error {
 	panic("unexpected Update call")
 placeholder
@@ -124,7 +128,7 @@ func (s *groupRepoStub) List(ctx context.Context, params pagination.PaginationPa
 	panic("unexpected List call")
 placeholder
 
-func (s *groupRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, status string, isExclusive *bool) ([]Group, *pagination.PaginationResult, error) {
+func (s *groupRepoStub) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, status, search string, isExclusive *bool) ([]Group, *pagination.PaginationResult, error) {
 	panic("unexpected ListWithFilters call")
 placeholder
 
