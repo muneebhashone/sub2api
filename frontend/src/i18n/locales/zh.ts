@@ -1241,6 +1241,8 @@ export default {
       accountDeletedSuccess: '账号删除成功',
       bulkSchedulableEnabled: '成功启用 {countplaceholder 个账号的调度',
       bulkSchedulableDisabled: '成功停止 {countplaceholder 个账号的调度',
+      bulkSchedulablePartial: '部分调度更新成功：成功 {successplaceholder 个，失败 {failedplaceholder 个',
+      bulkSchedulableResultUnknown: '批量调度结果不完整，请稍后重试或刷新列表',
       bulkActions: {
         selected: '已选择 {countplaceholder 个账号',
         selectCurrentPage: '本页全选',

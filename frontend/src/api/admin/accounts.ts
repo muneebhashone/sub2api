@@ -275,11 +275,15 @@ export async function bulkUpdate(
 ): Promise<{
   success: number
   failed: number
+  success_ids?: number[]
+  failed_ids?: number[]
   results: Array<{ account_id: number; success: boolean; error?: string placeholder>
-placeholder> {
+  placeholder> {
   const { data placeholder = await apiClient.post<{
     success: number
     failed: number
+    success_ids?: number[]
+    failed_ids?: number[]
     results: Array<{ account_id: number; success: boolean; error?: string placeholder>
   placeholder>('/admin/accounts/bulk-update', {
     account_ids: accountIds,

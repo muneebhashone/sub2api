@@ -1105,6 +1105,8 @@ export default {
       rateLimitCleared: 'Rate limit cleared successfully',
       bulkSchedulableEnabled: 'Successfully enabled scheduling for {countplaceholder account(s)',
       bulkSchedulableDisabled: 'Successfully disabled scheduling for {countplaceholder account(s)',
+      bulkSchedulablePartial: 'Scheduling updated partially: {successplaceholder succeeded, {failedplaceholder failed',
+      bulkSchedulableResultUnknown: 'Bulk scheduling result incomplete. Please retry or refresh.',
       bulkActions: {
         selected: '{countplaceholder account(s) selected',
         selectCurrentPage: 'Select this page',
