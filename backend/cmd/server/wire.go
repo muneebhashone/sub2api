@@ -66,6 +66,7 @@ func provideCleanup(
 	opsAggregation *service.OpsAggregationService,
 	opsAlertEvaluator *service.OpsAlertEvaluatorService,
 	opsCleanup *service.OpsCleanupService,
+	opsScheduledReport *service.OpsScheduledReportService,
 	tokenRefresh *service.TokenRefreshService,
 	accountExpiry *service.AccountExpiryService,
 	pricing *service.PricingService,
@@ -85,6 +86,12 @@ func provideCleanup(
 			name string
 			fn   func() error
 	placeholder{
+			{"OpsScheduledReportService", func() error {
+				if opsScheduledReport != nil {
+					opsScheduledReport.Stop()
+			placeholder
+				return nil
+	placeholder
 			{"OpsCleanupService", func() error {
 				if opsCleanup != nil {
 					opsCleanup.Stop()
