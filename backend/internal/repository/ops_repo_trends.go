@@ -77,7 +77,7 @@ ORDER BY bucket ASC`
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	points := make([]*service.OpsThroughputTrendPoint, 0, 256)
 	for rows.Next() {
@@ -189,7 +189,7 @@ ORDER BY request_count DESC`
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	items := make([]*service.OpsThroughputPlatformBreakdownItem, 0, 8)
 	for rows.Next() {

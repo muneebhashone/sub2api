@@ -94,18 +94,18 @@ placeholder
 			if parsed, err := time.LoadLocation(strings.TrimSpace(s.cfg.Timezone)); err == nil && parsed != nil {
 				loc = parsed
 		placeholder
-		placeholder
-	
-			c := cron.New(cron.WithParser(opsCleanupCronParser), cron.WithLocation(loc))
-			_, err := c.AddFunc(schedule, func() { s.runScheduled() placeholder)
-			if err != nil {
-				log.Printf("[OpsCleanup] not started (invalid schedule=%q): %v", schedule, err)
-				return
-		placeholder
-			s.cron = c
-			s.cron.Start()
-			log.Printf("[OpsCleanup] started (schedule=%q tz=%s)", schedule, loc.String())
-	placeholder)
+	placeholder
+
+		c := cron.New(cron.WithParser(opsCleanupCronParser), cron.WithLocation(loc))
+		_, err := c.AddFunc(schedule, func() { s.runScheduled() placeholder)
+		if err != nil {
+			log.Printf("[OpsCleanup] not started (invalid schedule=%q): %v", schedule, err)
+			return
+	placeholder
+		s.cron = c
+		s.cron.Start()
+		log.Printf("[OpsCleanup] started (schedule=%q tz=%s)", schedule, loc.String())
+placeholder)
 placeholder
 
 func (s *OpsCleanupService) Stop() {
