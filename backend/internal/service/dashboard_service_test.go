@@ -16,10 +16,15 @@ import (
 
 type usageRepoStub struct {
 	UsageLogRepository
-	stats  *usagestats.DashboardStats
-	err    error
-	calls  int32
-	onCall chan struct{placeholder
+	stats      *usagestats.DashboardStats
+	rangeStats *usagestats.DashboardStats
+	err        error
+	rangeErr   error
+	calls      int32
+	rangeCalls int32
+	rangeStart time.Time
+	rangeEnd   time.Time
+	onCall     chan struct{placeholder
 placeholder
 
 func (s *usageRepoStub) GetDashboardStats(ctx context.Context) (*usagestats.DashboardStats, error) {
@@ -32,6 +37,19 @@ func (s *usageRepoStub) GetDashboardStats(ctx context.Context) (*usagestats.Dash
 placeholder
 	if s.err != nil {
 		return nil, s.err
+placeholder
+	return s.stats, nil
+placeholder
+
+func (s *usageRepoStub) GetDashboardStatsWithRange(ctx context.Context, start, end time.Time) (*usagestats.DashboardStats, error) {
+	atomic.AddInt32(&s.rangeCalls, 1)
+	s.rangeStart = start
+	s.rangeEnd = end
+	if s.rangeErr != nil {
+		return nil, s.rangeErr
+placeholder
+	if s.rangeStats != nil {
+		return s.rangeStats, nil
 placeholder
 	return s.stats, nil
 placeholder
@@ -140,7 +158,12 @@ placeholder
 		stats: &usagestats.DashboardStats{TotalUsers: 99placeholder,
 placeholder
 	aggRepo := &dashboardAggregationRepoStub{watermark: time.Unix(0, 0).UTC()placeholder
-	cfg := &config.Config{Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholderplaceholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: true,
+	placeholder,
+placeholder
 	svc := NewDashboardService(repo, aggRepo, cache, cfg)
 
 	got, err := svc.GetDashboardStats(context.Background())
@@ -164,7 +187,12 @@ placeholder
 placeholder
 	repo := &usageRepoStub{stats: statsplaceholder
 	aggRepo := &dashboardAggregationRepoStub{watermark: time.Unix(0, 0).UTC()placeholder
-	cfg := &config.Config{Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholderplaceholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: true,
+	placeholder,
+placeholder
 	svc := NewDashboardService(repo, aggRepo, cache, cfg)
 
 	got, err := svc.GetDashboardStats(context.Background())
@@ -191,7 +219,12 @@ placeholder
 placeholder
 	repo := &usageRepoStub{stats: statsplaceholder
 	aggRepo := &dashboardAggregationRepoStub{watermark: time.Unix(0, 0).UTC()placeholder
-	cfg := &config.Config{Dashboard: config.DashboardCacheConfig{Enabled: falseplaceholderplaceholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: falseplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: true,
+	placeholder,
+placeholder
 	svc := NewDashboardService(repo, aggRepo, cache, cfg)
 
 	got, err := svc.GetDashboardStats(context.Background())
@@ -226,7 +259,12 @@ placeholder
 		onCall: refreshCh,
 placeholder
 	aggRepo := &dashboardAggregationRepoStub{watermark: time.Unix(0, 0).UTC()placeholder
-	cfg := &config.Config{Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholderplaceholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: true,
+	placeholder,
+placeholder
 	svc := NewDashboardService(repo, aggRepo, cache, cfg)
 
 	got, err := svc.GetDashboardStats(context.Background())
@@ -252,7 +290,12 @@ placeholder
 	stats := &usagestats.DashboardStats{TotalUsers: 9placeholder
 	repo := &usageRepoStub{stats: statsplaceholder
 	aggRepo := &dashboardAggregationRepoStub{watermark: time.Unix(0, 0).UTC()placeholder
-	cfg := &config.Config{Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholderplaceholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: true,
+	placeholder,
+placeholder
 	svc := NewDashboardService(repo, aggRepo, cache, cfg)
 
 	got, err := svc.GetDashboardStats(context.Background())
@@ -270,7 +313,12 @@ func TestDashboardService_CacheParseError_RepoFailure(t *testing.T) {
 placeholder
 	repo := &usageRepoStub{err: errors.New("db down")placeholder
 	aggRepo := &dashboardAggregationRepoStub{watermark: time.Unix(0, 0).UTC()placeholder
-	cfg := &config.Config{Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholderplaceholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: trueplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: true,
+	placeholder,
+placeholder
 	svc := NewDashboardService(repo, aggRepo, cache, cfg)
 
 	_, err := svc.GetDashboardStats(context.Background())
@@ -310,4 +358,30 @@ placeholder
 placeholder
 	require.Equal(t, aggNow.Format(time.RFC3339), got.StatsUpdatedAt)
 	require.False(t, got.StatsStale)
+placeholder
+
+func TestDashboardService_AggDisabled_UsesUsageLogsFallback(t *testing.T) {
+	expected := &usagestats.DashboardStats{TotalUsers: 42placeholder
+	repo := &usageRepoStub{
+		rangeStats: expected,
+		err:        errors.New("should not call aggregated stats"),
+placeholder
+	cfg := &config.Config{
+		Dashboard: config.DashboardCacheConfig{Enabled: falseplaceholder,
+		DashboardAgg: config.DashboardAggregationConfig{
+			Enabled: false,
+			Retention: config.DashboardAggregationRetentionConfig{
+				UsageLogsDays: 7,
+		placeholder,
+	placeholder,
+placeholder
+	svc := NewDashboardService(repo, nil, nil, cfg)
+
+	got, err := svc.GetDashboardStats(context.Background())
+placeholder
+	require.Equal(t, int64(42), got.TotalUsers)
+	require.Equal(t, int32(0), atomic.LoadInt32(&repo.calls))
+	require.Equal(t, int32(1), atomic.LoadInt32(&repo.rangeCalls))
+	require.False(t, repo.rangeEnd.IsZero())
+	require.Equal(t, truncateToDayUTC(repo.rangeEnd.AddDate(0, 0, -7)), repo.rangeStart)
 placeholder

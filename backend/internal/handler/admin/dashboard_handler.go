@@ -159,6 +159,10 @@ placeholder
 			response.Forbidden(c, "Backfill is disabled")
 			return
 	placeholder
+		if errors.Is(err, service.ErrDashboardBackfillTooLarge) {
+			response.BadRequest(c, "Backfill range too large")
+			return
+	placeholder
 		response.InternalError(c, "Failed to trigger backfill")
 		return
 placeholder

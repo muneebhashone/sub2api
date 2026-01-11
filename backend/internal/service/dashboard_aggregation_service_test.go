@@ -47,7 +47,7 @@ func (s *dashboardAggregationRepoTestStub) EnsureUsageLogsPartitions(ctx context
 	return nil
 placeholder
 
-func TestDashboardAggregationService_RunScheduledAggregation_EpochUsesDayStart(t *testing.T) {
+func TestDashboardAggregationService_RunScheduledAggregation_EpochUsesRetentionStart(t *testing.T) {
 	repo := &dashboardAggregationRepoTestStub{watermark: time.Unix(0, 0).UTC()placeholder
 	svc := &DashboardAggregationService{
 		repo: repo,
@@ -67,7 +67,7 @@ placeholder
 
 	require.Equal(t, 1, repo.aggregateCalls)
 	require.False(t, repo.lastEnd.IsZero())
-	require.Equal(t, truncateToDayUTC(repo.lastEnd), repo.lastStart)
+	require.Equal(t, truncateToDayUTC(repo.lastEnd.AddDate(0, 0, -1)), repo.lastStart)
 placeholder
 
 func TestDashboardAggregationService_CleanupRetentionFailure_DoesNotRecord(t *testing.T) {
@@ -86,4 +86,21 @@ placeholder
 	svc.maybeCleanupRetention(context.Background(), time.Now().UTC())
 
 	require.Nil(t, svc.lastRetentionCleanup.Load())
+placeholder
+
+func TestDashboardAggregationService_TriggerBackfill_TooLarge(t *testing.T) {
+	repo := &dashboardAggregationRepoTestStub{placeholder
+	svc := &DashboardAggregationService{
+		repo: repo,
+		cfg: config.DashboardAggregationConfig{
+			BackfillEnabled: true,
+			BackfillMaxDays: 1,
+	placeholder,
+placeholder
+
+	start := time.Now().AddDate(0, 0, -3)
+	end := time.Now()
+	err := svc.TriggerBackfill(start, end)
+	require.ErrorIs(t, err, ErrDashboardBackfillTooLarge)
+	require.Equal(t, 0, repo.aggregateCalls)
 placeholder
