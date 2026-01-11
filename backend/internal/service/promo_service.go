@@ -24,10 +24,11 @@ var (
 
 // PromoService 优惠码服务
 type PromoService struct {
-	promoRepo           PromoCodeRepository
-	userRepo            UserRepository
-	billingCacheService *BillingCacheService
-	entClient           *dbent.Client
+	promoRepo            PromoCodeRepository
+	userRepo             UserRepository
+	billingCacheService  *BillingCacheService
+	entClient            *dbent.Client
+	authCacheInvalidator APIKeyAuthCacheInvalidator
 placeholder
 
 // NewPromoService 创建优惠码服务实例
@@ -36,12 +37,14 @@ func NewPromoService(
 	userRepo UserRepository,
 	billingCacheService *BillingCacheService,
 	entClient *dbent.Client,
+	authCacheInvalidator APIKeyAuthCacheInvalidator,
 ) *PromoService {
 	return &PromoService{
-		promoRepo:           promoRepo,
-		userRepo:            userRepo,
-		billingCacheService: billingCacheService,
-		entClient:           entClient,
+		promoRepo:            promoRepo,
+		userRepo:             userRepo,
+		billingCacheService:  billingCacheService,
+		entClient:            entClient,
+		authCacheInvalidator: authCacheInvalidator,
 placeholder
 placeholder
 
@@ -145,6 +148,8 @@ placeholder
 		return fmt.Errorf("commit transaction: %w", err)
 placeholder
 
+	s.invalidatePromoCaches(ctx, userID, promoCode.BonusAmount)
+
 	// 失效余额缓存
 	if s.billingCacheService != nil {
 		go func() {
@@ -155,6 +160,13 @@ placeholder
 placeholder
 
 	return nil
+placeholder
+
+func (s *PromoService) invalidatePromoCaches(ctx context.Context, userID int64, bonusAmount float64) {
+	if bonusAmount == 0 || s.authCacheInvalidator == nil {
+		return
+placeholder
+	s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
 placeholder
 
 // GenerateRandomCode 生成随机优惠码

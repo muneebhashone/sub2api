@@ -49,6 +49,13 @@ func ProvideTokenRefreshService(
 	return svc
 placeholder
 
+// ProvideDashboardAggregationService 创建并启动仪表盘聚合服务
+func ProvideDashboardAggregationService(repo DashboardAggregationRepository, timingWheel *TimingWheelService, cfg *config.Config) *DashboardAggregationService {
+	svc := NewDashboardAggregationService(repo, timingWheel, cfg)
+	svc.Start()
+	return svc
+placeholder
+
 // ProvideAccountExpiryService creates and starts AccountExpiryService.
 func ProvideAccountExpiryService(accountRepo AccountRepository) *AccountExpiryService {
 	svc := NewAccountExpiryService(accountRepo, time.Minute)
@@ -145,12 +152,18 @@ func ProvideOpsScheduledReportService(
 	return svc
 placeholder
 
+// ProvideAPIKeyAuthCacheInvalidator 提供 API Key 认证缓存失效能力
+func ProvideAPIKeyAuthCacheInvalidator(apiKeyService *APIKeyService) APIKeyAuthCacheInvalidator {
+	return apiKeyService
+placeholder
+
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
 	// Core services
 	NewAuthService,
 	NewUserService,
 	NewAPIKeyService,
+	ProvideAPIKeyAuthCacheInvalidator,
 	NewGroupService,
 	NewAccountService,
 	NewProxyService,
@@ -194,6 +207,7 @@ var ProviderSet = wire.NewSet(
 	ProvideTokenRefreshService,
 	ProvideAccountExpiryService,
 	ProvideTimingWheelService,
+	ProvideDashboardAggregationService,
 	ProvideDeferredService,
 	NewAntigravityQuotaFetcher,
 	NewUserAttributeService,
