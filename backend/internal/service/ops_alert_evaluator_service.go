@@ -423,6 +423,55 @@ placeholder
 			return float64(*systemMetrics.ConcurrencyQueueDepth), true
 	placeholder
 		return 0, false
+	case "group_available_accounts":
+		if groupID == nil || *groupID <= 0 {
+			return 0, false
+	placeholder
+		if s == nil || s.opsService == nil {
+			return 0, false
+	placeholder
+		availability, err := s.opsService.GetAccountAvailability(ctx, platform, groupID)
+		if err != nil || availability == nil {
+			return 0, false
+	placeholder
+		if availability.Group == nil {
+			return 0, true
+	placeholder
+		return float64(availability.Group.AvailableCount), true
+	case "group_available_ratio":
+		if groupID == nil || *groupID <= 0 {
+			return 0, false
+	placeholder
+		if s == nil || s.opsService == nil {
+			return 0, false
+	placeholder
+		availability, err := s.opsService.GetAccountAvailability(ctx, platform, groupID)
+		if err != nil || availability == nil {
+			return 0, false
+	placeholder
+		return computeGroupAvailableRatio(availability.Group), true
+	case "account_rate_limited_count":
+		if s == nil || s.opsService == nil {
+			return 0, false
+	placeholder
+		availability, err := s.opsService.GetAccountAvailability(ctx, platform, groupID)
+		if err != nil || availability == nil {
+			return 0, false
+	placeholder
+		return float64(countAccountsByCondition(availability.Accounts, func(acc *AccountAvailability) bool {
+			return acc.IsRateLimited
+	placeholder)), true
+	case "account_error_count":
+		if s == nil || s.opsService == nil {
+			return 0, false
+	placeholder
+		availability, err := s.opsService.GetAccountAvailability(ctx, platform, groupID)
+		if err != nil || availability == nil {
+			return 0, false
+	placeholder
+		return float64(countAccountsByCondition(availability.Accounts, func(acc *AccountAvailability) bool {
+			return acc.HasError && acc.TempUnschedulableUntil == nil
+	placeholder)), true
 placeholder
 
 	overview, err := s.opsRepo.GetDashboardOverview(ctx, &OpsDashboardFilter{
@@ -849,18 +898,7 @@ placeholder
 	return (float64(group.AvailableCount) / float64(group.TotalAccounts)) * 100
 placeholder
 
-// computeGroupRateLimitRatio returns the rate-limited percentage for a group.
-// Formula: (RateLimitCount / TotalAccounts) * 100.
-// Returns 0 when TotalAccounts is 0.
-func computeGroupRateLimitRatio(group *GroupAvailability) float64 {
-	if group == nil || group.TotalAccounts <= 0 {
-		return 0
-placeholder
-	return (float64(group.RateLimitCount) / float64(group.TotalAccounts)) * 100
-placeholder
-
 // countAccountsByCondition counts accounts that satisfy the given condition.
-// It iterates over accounts and applies the predicate to each entry.
 func countAccountsByCondition(accounts map[int64]*AccountAvailability, condition func(*AccountAvailability) bool) int64 {
 	if len(accounts) == 0 || condition == nil {
 		return 0
