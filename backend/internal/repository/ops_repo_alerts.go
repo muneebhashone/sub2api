@@ -41,7 +41,7 @@ ORDER BY id DESC`
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	out := []*service.OpsAlertRule{placeholder
 	for rows.Next() {
@@ -361,7 +361,7 @@ LIMIT ` + limitArg
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	out := []*service.OpsAlertEvent{placeholder
 	for rows.Next() {

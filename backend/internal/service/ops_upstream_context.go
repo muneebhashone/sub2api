@@ -80,18 +80,6 @@ placeholder
 	c.Set(OpsUpstreamErrorsKey, existing)
 placeholder
 
-func getOpsUpstreamErrors(c *gin.Context) []*OpsUpstreamErrorEvent {
-	if c == nil {
-		return nil
-placeholder
-	if v, ok := c.Get(OpsUpstreamErrorsKey); ok {
-		if arr, ok := v.([]*OpsUpstreamErrorEvent); ok {
-			return arr
-	placeholder
-placeholder
-	return nil
-placeholder
-
 func marshalOpsUpstreamErrors(events []*OpsUpstreamErrorEvent) *string {
 	if len(events) == 0 {
 		return nil
