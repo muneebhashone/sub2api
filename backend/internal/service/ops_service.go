@@ -163,6 +163,61 @@ placeholder
 	placeholder
 placeholder
 
+	// Sanitize + serialize upstream error events list.
+	if len(entry.UpstreamErrors) > 0 {
+		const maxEvents = 32
+		events := entry.UpstreamErrors
+		if len(events) > maxEvents {
+			events = events[len(events)-maxEvents:]
+	placeholder
+
+		sanitized := make([]*OpsUpstreamErrorEvent, 0, len(events))
+		for _, ev := range events {
+			if ev == nil {
+				continue
+		placeholder
+			out := *ev
+
+			out.Platform = strings.TrimSpace(out.Platform)
+			out.UpstreamRequestID = truncateString(strings.TrimSpace(out.UpstreamRequestID), 128)
+			out.Kind = truncateString(strings.TrimSpace(out.Kind), 64)
+
+			if out.AccountID < 0 {
+				out.AccountID = 0
+		placeholder
+			if out.UpstreamStatusCode < 0 {
+				out.UpstreamStatusCode = 0
+		placeholder
+			if out.AtUnixMs < 0 {
+				out.AtUnixMs = 0
+		placeholder
+
+			msg := sanitizeUpstreamErrorMessage(strings.TrimSpace(out.Message))
+			msg = truncateString(msg, 2048)
+			out.Message = msg
+
+			detail := strings.TrimSpace(out.Detail)
+			if detail != "" {
+				// Keep upstream detail small; request bodies are not stored here, only upstream error payloads.
+				sanitizedDetail, _ := sanitizeErrorBodyForStorage(detail, opsMaxStoredErrorBodyBytes)
+				out.Detail = sanitizedDetail
+		placeholder else {
+				out.Detail = ""
+		placeholder
+
+			// Drop fully-empty events (can happen if only status code was known).
+			if out.UpstreamStatusCode == 0 && out.Message == "" && out.Detail == "" {
+				continue
+		placeholder
+
+			evCopy := out
+			sanitized = append(sanitized, &evCopy)
+	placeholder
+
+		entry.UpstreamErrorsJSON = marshalOpsUpstreamErrors(sanitized)
+		entry.UpstreamErrors = nil
+placeholder
+
 	if _, err := s.opsRepo.InsertErrorLog(ctx, entry); err != nil {
 		// Never bubble up to gateway; best-effort logging.
 		log.Printf("[Ops] RecordError failed: %v", err)

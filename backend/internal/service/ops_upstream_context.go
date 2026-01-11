@@ -1,7 +1,9 @@
 package service
 
 import (
+	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,6 +14,7 @@ const (
 	OpsUpstreamStatusCodeKey   = "ops_upstream_status_code"
 	OpsUpstreamErrorMessageKey = "ops_upstream_error_message"
 	OpsUpstreamErrorDetailKey  = "ops_upstream_error_detail"
+	OpsUpstreamErrorsKey       = "ops_upstream_errors"
 )
 
 func setOpsUpstreamError(c *gin.Context, upstreamStatusCode int, upstreamMessage, upstreamDetail string) {
@@ -29,3 +32,75 @@ placeholder
 placeholder
 placeholder
 
+// OpsUpstreamErrorEvent describes one upstream error attempt during a single gateway request.
+// It is stored in ops_error_logs.upstream_errors as a JSON array.
+type OpsUpstreamErrorEvent struct {
+	AtUnixMs int64 `json:"at_unix_ms,omitempty"`
+
+	// Context
+	Platform  string `json:"platform,omitempty"`
+	AccountID int64  `json:"account_id,omitempty"`
+
+	// Outcome
+	UpstreamStatusCode int    `json:"upstream_status_code,omitempty"`
+	UpstreamRequestID  string `json:"upstream_request_id,omitempty"`
+
+	// Kind: http_error | request_error | retry_exhausted | failover
+	Kind string `json:"kind,omitempty"`
+
+	Message string `json:"message,omitempty"`
+	Detail  string `json:"detail,omitempty"`
+placeholder
+
+func appendOpsUpstreamError(c *gin.Context, ev OpsUpstreamErrorEvent) {
+	if c == nil {
+		return
+placeholder
+	if ev.AtUnixMs <= 0 {
+		ev.AtUnixMs = time.Now().UnixMilli()
+placeholder
+	ev.Platform = strings.TrimSpace(ev.Platform)
+	ev.UpstreamRequestID = strings.TrimSpace(ev.UpstreamRequestID)
+	ev.Kind = strings.TrimSpace(ev.Kind)
+	ev.Message = strings.TrimSpace(ev.Message)
+	ev.Detail = strings.TrimSpace(ev.Detail)
+	if ev.Message != "" {
+		ev.Message = sanitizeUpstreamErrorMessage(ev.Message)
+placeholder
+
+	var existing []*OpsUpstreamErrorEvent
+	if v, ok := c.Get(OpsUpstreamErrorsKey); ok {
+		if arr, ok := v.([]*OpsUpstreamErrorEvent); ok {
+			existing = arr
+	placeholder
+placeholder
+
+	evCopy := ev
+	existing = append(existing, &evCopy)
+	c.Set(OpsUpstreamErrorsKey, existing)
+placeholder
+
+func getOpsUpstreamErrors(c *gin.Context) []*OpsUpstreamErrorEvent {
+	if c == nil {
+		return nil
+placeholder
+	if v, ok := c.Get(OpsUpstreamErrorsKey); ok {
+		if arr, ok := v.([]*OpsUpstreamErrorEvent); ok {
+			return arr
+	placeholder
+placeholder
+	return nil
+placeholder
+
+func marshalOpsUpstreamErrors(events []*OpsUpstreamErrorEvent) *string {
+	if len(events) == 0 {
+		return nil
+placeholder
+	// Ensure we always store a valid JSON value.
+	raw, err := json.Marshal(events)
+	if err != nil || len(raw) == 0 {
+		return nil
+placeholder
+	s := string(raw)
+	return &s
+placeholder
