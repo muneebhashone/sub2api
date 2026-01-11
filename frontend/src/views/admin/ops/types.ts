@@ -13,5 +13,8 @@ export type {
   Operator,
   EmailNotificationConfig,
   OpsDistributedLockSettings,
-  OpsAlertRuntimeSettings
+  OpsAlertRuntimeSettings,
+  OpsAdvancedSettings,
+  OpsDataRetentionSettings,
+  OpsAggregationSettings
 placeholder from '@/api/admin/ops'
