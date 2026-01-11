@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -154,4 +155,40 @@ placeholder
 placeholder
 
 	return platform, group, account, &collectedAt, nil
+placeholder
+
+type OpsAccountAvailability struct {
+	Group       *GroupAvailability
+	Accounts    map[int64]*AccountAvailability
+	CollectedAt *time.Time
+placeholder
+
+func (s *OpsService) GetAccountAvailability(ctx context.Context, platformFilter string, groupIDFilter *int64) (*OpsAccountAvailability, error) {
+	if s == nil {
+		return nil, errors.New("ops service is nil")
+placeholder
+
+	if s.getAccountAvailability != nil {
+		return s.getAccountAvailability(ctx, platformFilter, groupIDFilter)
+placeholder
+
+	_, groupStats, accountStats, collectedAt, err := s.GetAccountAvailabilityStats(ctx, platformFilter, groupIDFilter)
+	if err != nil {
+		return nil, err
+placeholder
+
+	var group *GroupAvailability
+	if groupIDFilter != nil && *groupIDFilter > 0 {
+		group = groupStats[*groupIDFilter]
+placeholder
+
+	if accountStats == nil {
+		accountStats = map[int64]*AccountAvailability{placeholder
+placeholder
+
+	return &OpsAccountAvailability{
+		Group:       group,
+		Accounts:    accountStats,
+		CollectedAt: collectedAt,
+placeholder, nil
 placeholder
