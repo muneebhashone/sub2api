@@ -452,6 +452,7 @@ const adminNavItems = computed(() => {
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon placeholder,
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon placeholder,
     { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true placeholder,
+    { path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon placeholder,
   ]
 
