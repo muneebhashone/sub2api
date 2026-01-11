@@ -239,47 +239,6 @@ const ttftP50Ms = computed(() => overview.value?.ttft?.p50_ms ?? null)
 const ttftAvgMs = computed(() => overview.value?.ttft?.avg_ms ?? null)
 const ttftMaxMs = computed(() => overview.value?.ttft?.max_ms ?? null)
 
-// --- WebSocket status ---
-
-const wsStatusLabel = computed(() => {
-  switch (props.wsStatus) {
-    case 'connected':
-      return t('admin.ops.realtime.connected')
-    case 'connecting':
-      return t('admin.ops.realtime.connecting')
-    case 'reconnecting':
-      return t('admin.ops.realtime.reconnecting')
-    case 'offline':
-      return t('admin.ops.realtime.offline')
-    case 'closed':
-    default:
-      return t('admin.ops.realtime.closed')
-  placeholder
-placeholder)
-
-const wsStatusDotClass = computed(() => {
-  switch (props.wsStatus) {
-    case 'connected':
-      return 'bg-green-500'
-    case 'reconnecting':
-    case 'connecting':
-      return 'bg-yellow-500'
-    case 'offline':
-      return 'bg-orange-500'
-    case 'closed':
-    default:
-      return 'bg-gray-400'
-  placeholder
-placeholder)
-
-const wsReconnectHint = computed(() => {
-  if (props.wsStatus !== 'reconnecting') return ''
-  const delayMs = props.wsReconnectInMs ?? null
-  if (typeof delayMs !== 'number' || !Number.isFinite(delayMs) || delayMs <= 0) return ''
-  const sec = Math.max(1, Math.ceil(delayMs / 1000))
-  return t('admin.ops.realtime.reconnectIn', { seconds: sec placeholder)
-placeholder)
-
 // --- Health Score & Diagnosis (primary) ---
 
 const isSystemIdle = computed(() => {
@@ -662,19 +621,14 @@ placeholder
 
           <span>·</span>
           <span>{{ t('common.refresh') placeholderplaceholder: {{ updatedAtLabel placeholderplaceholder</span>
-          <span>·</span>
 
-          <span class="flex items-center gap-1.5">
-            <span class="relative flex h-2 w-2">
-              <span
-                v-if="wsStatus === 'connected'"
-                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-              ></span>
-              <span class="relative inline-flex h-2 w-2 rounded-full" :class="wsStatusDotClass"></span>
+          <template v-if="systemMetrics">
+            <span>·</span>
+            <span>
+              {{ t('admin.ops.collectedAt') placeholderplaceholder {{ formatTimeShort(systemMetrics.created_at) placeholderplaceholder
+              ({{ t('admin.ops.window') placeholderplaceholder {{ systemMetrics.window_minutes placeholderplaceholderm)
             </span>
-            <span>{{ wsStatusLabel placeholderplaceholder</span>
-            <span v-if="wsReconnectHint" class="text-[11px] text-gray-400">({{ wsReconnectHint placeholderplaceholder)</span>
-          </span>
+          </template>
         </div>
       </div>
 
@@ -1189,14 +1143,6 @@ placeholder
 
     <!-- Integrated: System health (cards) -->
     <div v-if="overview" class="mt-2 border-t border-gray-100 pt-4 dark:border-dark-700">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span v-if="systemMetrics">
-          {{ t('admin.ops.collectedAt') placeholderplaceholder {{ formatTimeShort(systemMetrics.created_at) placeholderplaceholder
-          ({{ t('admin.ops.window') placeholderplaceholder {{ systemMetrics.window_minutes placeholderplaceholderm)
-        </span>
-        <span v-else>{{ t('admin.ops.noSystemMetrics') placeholderplaceholder</span>
-      </div>
-
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <!-- CPU -->
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">

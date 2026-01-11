@@ -5,6 +5,7 @@ import { useAppStore placeholder from '@/stores/app'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select, { type SelectOption placeholder from '@/components/common/Select.vue'
+import { adminAPI placeholder from '@/api'
 import { opsAPI placeholder from '@/api/admin/ops'
 import type { AlertRule, MetricType, Operator placeholder from '../types'
 import type { OpsSeverity placeholder from '@/api/admin/ops'
@@ -31,6 +32,7 @@ placeholder
 
 onMounted(() => {
   load()
+  loadGroups()
 placeholder)
 
 const sortedRules = computed(() => {
@@ -44,29 +46,214 @@ const draft = ref<AlertRule | null>(null)
 
 type MetricGroup = 'system' | 'group' | 'account'
 
+interface MetricDefinition {
+  type: MetricType
+  group: MetricGroup
+  label: string
+  description: string
+  recommendedOperator: Operator
+  recommendedThreshold: number
+  unit?: string
+placeholder
+
+const groupMetricTypes = new Set<MetricType>([
+  'group_available_accounts',
+  'group_available_ratio',
+  'group_rate_limit_ratio'
+])
+
+function parsePositiveInt(value: unknown): number | null {
+  if (value == null) return null
+  if (typeof value === 'boolean') return null
+  const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
+  return Number.isFinite(n) && n > 0 ? n : null
+placeholder
+
+const groupOptionsBase = ref<SelectOption[]>([])
+
+async function loadGroups() {
+  try {
+    const list = await adminAPI.groups.getAll()
+    groupOptionsBase.value = list.map((g) => ({ value: g.id, label: g.name placeholder))
+  placeholder catch (err) {
+    console.error('[OpsAlertRulesCard] Failed to load groups', err)
+    groupOptionsBase.value = []
+  placeholder
+placeholder
+
+const isGroupMetricSelected = computed(() => {
+  const metricType = draft.value?.metric_type
+  return metricType ? groupMetricTypes.has(metricType) : false
+placeholder)
+
+const draftGroupId = computed<number | null>({
+  get() {
+    return parsePositiveInt(draft.value?.filters?.group_id)
+  placeholder,
+  set(value) {
+    if (!draft.value) return
+    if (value == null) {
+      if (!draft.value.filters) return
+      delete draft.value.filters.group_id
+      if (Object.keys(draft.value.filters).length === 0) {
+        delete draft.value.filters
+      placeholder
+      return
+    placeholder
+    if (!draft.value.filters) draft.value.filters = {placeholder
+    draft.value.filters.group_id = value
+  placeholder
+placeholder)
+
+const groupOptions = computed<SelectOption[]>(() => {
+  if (isGroupMetricSelected.value) return groupOptionsBase.value
+  return [{ value: null, label: t('admin.ops.alertRules.form.allGroups') placeholder, ...groupOptionsBase.value]
+placeholder)
+
 const metricDefinitions = computed(() => {
   return [
     // System-level metrics
-    { type: 'success_rate' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.successRate') placeholder,
-    { type: 'error_rate' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.errorRate') placeholder,
-    { type: 'upstream_error_rate' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.upstreamErrorRate') placeholder,
-    { type: 'p95_latency_ms' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.p95') placeholder,
-    { type: 'p99_latency_ms' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.p99') placeholder,
-    { type: 'cpu_usage_percent' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.cpu') placeholder,
-    { type: 'memory_usage_percent' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.memory') placeholder,
-    { type: 'concurrency_queue_depth' as MetricType, group: 'system' as const, label: t('admin.ops.alertRules.metrics.queueDepth') placeholder,
+    {
+      type: 'success_rate',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.successRate'),
+      description: t('admin.ops.alertRules.metricDescriptions.successRate'),
+      recommendedOperator: '<',
+      recommendedThreshold: 99,
+      unit: '%'
+    placeholder,
+    {
+      type: 'error_rate',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.errorRate'),
+      description: t('admin.ops.alertRules.metricDescriptions.errorRate'),
+      recommendedOperator: '>',
+      recommendedThreshold: 1,
+      unit: '%'
+    placeholder,
+    {
+      type: 'upstream_error_rate',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.upstreamErrorRate'),
+      description: t('admin.ops.alertRules.metricDescriptions.upstreamErrorRate'),
+      recommendedOperator: '>',
+      recommendedThreshold: 1,
+      unit: '%'
+    placeholder,
+    {
+      type: 'p95_latency_ms',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.p95'),
+      description: t('admin.ops.alertRules.metricDescriptions.p95'),
+      recommendedOperator: '>',
+      recommendedThreshold: 1000,
+      unit: 'ms'
+    placeholder,
+    {
+      type: 'p99_latency_ms',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.p99'),
+      description: t('admin.ops.alertRules.metricDescriptions.p99'),
+      recommendedOperator: '>',
+      recommendedThreshold: 2000,
+      unit: 'ms'
+    placeholder,
+    {
+      type: 'cpu_usage_percent',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.cpu'),
+      description: t('admin.ops.alertRules.metricDescriptions.cpu'),
+      recommendedOperator: '>',
+      recommendedThreshold: 80,
+      unit: '%'
+    placeholder,
+    {
+      type: 'memory_usage_percent',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.memory'),
+      description: t('admin.ops.alertRules.metricDescriptions.memory'),
+      recommendedOperator: '>',
+      recommendedThreshold: 80,
+      unit: '%'
+    placeholder,
+    {
+      type: 'concurrency_queue_depth',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.queueDepth'),
+      description: t('admin.ops.alertRules.metricDescriptions.queueDepth'),
+      recommendedOperator: '>',
+      recommendedThreshold: 10
+    placeholder,
 
     // Group-level metrics (requires group_id filter)
-    { type: 'group_available_accounts' as MetricType, group: 'group' as const, label: t('admin.ops.alertRules.metrics.groupAvailableAccounts') placeholder,
-    { type: 'group_available_ratio' as MetricType, group: 'group' as const, label: t('admin.ops.alertRules.metrics.groupAvailableRatio') placeholder,
-    { type: 'group_rate_limit_ratio' as MetricType, group: 'group' as const, label: t('admin.ops.alertRules.metrics.groupRateLimitRatio') placeholder,
+    {
+      type: 'group_available_accounts',
+      group: 'group',
+      label: t('admin.ops.alertRules.metrics.groupAvailableAccounts'),
+      description: t('admin.ops.alertRules.metricDescriptions.groupAvailableAccounts'),
+      recommendedOperator: '<',
+      recommendedThreshold: 1
+    placeholder,
+    {
+      type: 'group_available_ratio',
+      group: 'group',
+      label: t('admin.ops.alertRules.metrics.groupAvailableRatio'),
+      description: t('admin.ops.alertRules.metricDescriptions.groupAvailableRatio'),
+      recommendedOperator: '<',
+      recommendedThreshold: 50,
+      unit: '%'
+    placeholder,
+    {
+      type: 'group_rate_limit_ratio',
+      group: 'group',
+      label: t('admin.ops.alertRules.metrics.groupRateLimitRatio'),
+      description: t('admin.ops.alertRules.metricDescriptions.groupRateLimitRatio'),
+      recommendedOperator: '>',
+      recommendedThreshold: 10,
+      unit: '%'
+    placeholder,
 
     // Account-level metrics
-    { type: 'account_rate_limited_count' as MetricType, group: 'account' as const, label: t('admin.ops.alertRules.metrics.accountRateLimitedCount') placeholder,
-    { type: 'account_error_count' as MetricType, group: 'account' as const, label: t('admin.ops.alertRules.metrics.accountErrorCount') placeholder,
-    { type: 'account_error_ratio' as MetricType, group: 'account' as const, label: t('admin.ops.alertRules.metrics.accountErrorRatio') placeholder,
-    { type: 'overload_account_count' as MetricType, group: 'account' as const, label: t('admin.ops.alertRules.metrics.overloadAccountCount') placeholder
-  ] satisfies Array<{ type: MetricType; group: MetricGroup; label: string placeholder>
+    {
+      type: 'account_rate_limited_count',
+      group: 'account',
+      label: t('admin.ops.alertRules.metrics.accountRateLimitedCount'),
+      description: t('admin.ops.alertRules.metricDescriptions.accountRateLimitedCount'),
+      recommendedOperator: '>',
+      recommendedThreshold: 0
+    placeholder,
+    {
+      type: 'account_error_count',
+      group: 'account',
+      label: t('admin.ops.alertRules.metrics.accountErrorCount'),
+      description: t('admin.ops.alertRules.metricDescriptions.accountErrorCount'),
+      recommendedOperator: '>',
+      recommendedThreshold: 0
+    placeholder,
+    {
+      type: 'account_error_ratio',
+      group: 'account',
+      label: t('admin.ops.alertRules.metrics.accountErrorRatio'),
+      description: t('admin.ops.alertRules.metricDescriptions.accountErrorRatio'),
+      recommendedOperator: '>',
+      recommendedThreshold: 5,
+      unit: '%'
+    placeholder,
+    {
+      type: 'overload_account_count',
+      group: 'account',
+      label: t('admin.ops.alertRules.metrics.overloadAccountCount'),
+      description: t('admin.ops.alertRules.metricDescriptions.overloadAccountCount'),
+      recommendedOperator: '>',
+      recommendedThreshold: 0
+    placeholder
+  ] satisfies MetricDefinition[]
+placeholder)
+
+const selectedMetricDefinition = computed(() => {
+  const metricType = draft.value?.metric_type
+  if (!metricType) return null
+  return metricDefinitions.value.find((m) => m.type === metricType) ?? null
 placeholder)
 
 const metricOptions = computed(() => {
@@ -137,6 +324,9 @@ const editorValidation = computed(() => {
   if (!r) return { valid: true, errors placeholder
   if (!r.name || !r.name.trim()) errors.push(t('admin.ops.alertRules.validation.nameRequired'))
   if (!r.metric_type) errors.push(t('admin.ops.alertRules.validation.metricRequired'))
+  if (groupMetricTypes.has(r.metric_type) && !parsePositiveInt(r.filters?.group_id)) {
+    errors.push(t('admin.ops.alertRules.validation.groupIdRequired'))
+  placeholder
   if (!r.operator) errors.push(t('admin.ops.alertRules.validation.operatorRequired'))
   if (!(typeof r.threshold === 'number' && Number.isFinite(r.threshold)))
     errors.push(t('admin.ops.alertRules.validation.thresholdRequired'))
@@ -321,11 +511,40 @@ placeholder
           <div>
             <label class="input-label">{{ t('admin.ops.alertRules.form.metric') placeholderplaceholder</label>
             <Select v-model="draft!.metric_type" :options="metricOptions" />
+            <div v-if="selectedMetricDefinition" class="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+              <p>{{ selectedMetricDefinition.description placeholderplaceholder</p>
+              <p>
+                {{
+                  t('admin.ops.alertRules.hints.recommended', {
+                    operator: selectedMetricDefinition.recommendedOperator,
+                    threshold: selectedMetricDefinition.recommendedThreshold,
+                    unit: selectedMetricDefinition.unit || ''
+                  placeholder)
+                placeholderplaceholder
+              </p>
+            </div>
           </div>
 
           <div>
             <label class="input-label">{{ t('admin.ops.alertRules.form.operator') placeholderplaceholder</label>
             <Select v-model="draft!.operator" :options="operatorOptions" />
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="input-label">
+              {{ t('admin.ops.alertRules.form.groupId') placeholderplaceholder
+              <span v-if="isGroupMetricSelected" class="ml-1 text-red-500">*</span>
+            </label>
+            <Select
+              v-model="draftGroupId"
+              :options="groupOptions"
+              searchable
+              :placeholder="t('admin.ops.alertRules.form.groupPlaceholder')"
+              :error="isGroupMetricSelected && !draftGroupId"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ isGroupMetricSelected ? t('admin.ops.alertRules.hints.groupRequired') : t('admin.ops.alertRules.hints.groupOptional') placeholderplaceholder
+            </p>
           </div>
 
           <div>
