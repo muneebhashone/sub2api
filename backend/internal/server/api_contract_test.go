@@ -331,6 +331,30 @@ placeholder{
 			placeholder
 		placeholder`,
 	placeholder,
+		{
+			name:   "POST /api/v1/admin/accounts/bulk-update",
+			method: http.MethodPost,
+			path:   "/api/v1/admin/accounts/bulk-update",
+			body:   `{"account_ids":[101,102],"schedulable":falseplaceholder`,
+			headers: map[string]string{
+				"Content-Type": "application/json",
+		placeholder,
+			wantStatus: http.StatusOK,
+			wantJSON: `{
+				"code": 0,
+				"message": "success",
+				"data": {
+					"success": 2,
+					"failed": 0,
+					"success_ids": [101, 102],
+					"failed_ids": [],
+					"results": [
+						{"account_id": 101, "success": trueplaceholder,
+						{"account_id": 102, "success": trueplaceholder
+					]
+			placeholder
+		placeholder`,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -382,6 +406,9 @@ placeholder
 	apiKeyCache := stubApiKeyCache{placeholder
 	groupRepo := stubGroupRepo{placeholder
 	userSubRepo := stubUserSubscriptionRepo{placeholder
+	accountRepo := stubAccountRepo{placeholder
+	proxyRepo := stubProxyRepo{placeholder
+	redeemRepo := stubRedeemCodeRepo{placeholder
 
 	cfg := &config.Config{
 		Default: config.DefaultConfig{
@@ -399,10 +426,12 @@ placeholder
 	settingRepo := newStubSettingRepo()
 	settingService := service.NewSettingService(settingRepo, cfg)
 
+	adminService := service.NewAdminService(userRepo, groupRepo, &accountRepo, proxyRepo, apiKeyRepo, redeemRepo, nil, nil, nil)
 	authHandler := handler.NewAuthHandler(cfg, nil, userService, settingService, nil)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	usageHandler := handler.NewUsageHandler(usageService, apiKeyService)
 	adminSettingHandler := adminhandler.NewSettingHandler(settingService, nil, nil)
+	adminAccountHandler := adminhandler.NewAccountHandler(adminService, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	jwtAuth := func(c *gin.Context) {
 		c.Set(string(middleware.ContextKeyUser), middleware.AuthSubject{
@@ -442,6 +471,7 @@ placeholder
 	v1Admin := v1.Group("/admin")
 	v1Admin.Use(adminAuth)
 	v1Admin.GET("/settings", adminSettingHandler.GetSettings)
+	v1Admin.POST("/accounts/bulk-update", adminAccountHandler.BulkUpdate)
 
 	return &contractDeps{
 		now:         now,
@@ -630,6 +660,235 @@ placeholder
 
 func (stubGroupRepo) DeleteAccountGroupsByGroupID(ctx context.Context, groupID int64) (int64, error) {
 	return 0, errors.New("not implemented")
+placeholder
+
+type stubAccountRepo struct {
+	bulkUpdateIDs []int64
+placeholder
+
+func (s *stubAccountRepo) Create(ctx context.Context, account *service.Account) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) GetByID(ctx context.Context, id int64) (*service.Account, error) {
+	return nil, service.ErrAccountNotFound
+placeholder
+
+func (s *stubAccountRepo) GetByIDs(ctx context.Context, ids []int64) ([]*service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ExistsByID(ctx context.Context, id int64) (bool, error) {
+	return false, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) Update(ctx context.Context, account *service.Account) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) Delete(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) List(ctx context.Context, params pagination.PaginationParams) ([]service.Account, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, accountType, status, search string) ([]service.Account, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListByGroup(ctx context.Context, groupID int64) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListActive(ctx context.Context) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListByPlatform(ctx context.Context, platform string) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) UpdateLastUsed(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) BatchUpdateLastUsed(ctx context.Context, updates map[int64]time.Time) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) SetError(ctx context.Context, id int64, errorMsg string) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) AutoPauseExpiredAccounts(ctx context.Context, now time.Time) (int64, error) {
+	return 0, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) BindGroups(ctx context.Context, accountID int64, groupIDs []int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListSchedulable(ctx context.Context) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListSchedulableByGroupID(ctx context.Context, groupID int64) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListSchedulableByPlatform(ctx context.Context, platform string) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListSchedulableByPlatforms(ctx context.Context, platforms []string) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListSchedulableByGroupIDAndPlatforms(ctx context.Context, groupID int64, platforms []string) ([]service.Account, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope service.AntigravityQuotaScope, resetAt time.Time) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) SetOverloaded(ctx context.Context, id int64, until time.Time) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ClearTempUnschedulable(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ClearRateLimit(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ClearAntigravityQuotaScopes(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) UpdateSessionWindow(ctx context.Context, id int64, start, end *time.Time, status string) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) BulkUpdate(ctx context.Context, ids []int64, updates service.AccountBulkUpdate) (int64, error) {
+	s.bulkUpdateIDs = append([]int64{placeholder, ids...)
+	return int64(len(ids)), nil
+placeholder
+
+type stubProxyRepo struct{placeholder
+
+func (stubProxyRepo) Create(ctx context.Context, proxy *service.Proxy) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) GetByID(ctx context.Context, id int64) (*service.Proxy, error) {
+	return nil, service.ErrProxyNotFound
+placeholder
+
+func (stubProxyRepo) Update(ctx context.Context, proxy *service.Proxy) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) Delete(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) List(ctx context.Context, params pagination.PaginationParams) ([]service.Proxy, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) ListWithFilters(ctx context.Context, params pagination.PaginationParams, protocol, status, search string) ([]service.Proxy, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) ListWithFiltersAndAccountCount(ctx context.Context, params pagination.PaginationParams, protocol, status, search string) ([]service.ProxyWithAccountCount, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) ListActive(ctx context.Context) ([]service.Proxy, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) ListActiveWithAccountCount(ctx context.Context) ([]service.ProxyWithAccountCount, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) ExistsByHostPortAuth(ctx context.Context, host string, port int, username, password string) (bool, error) {
+	return false, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) CountAccountsByProxyID(ctx context.Context, proxyID int64) (int64, error) {
+	return 0, errors.New("not implemented")
+placeholder
+
+type stubRedeemCodeRepo struct{placeholder
+
+func (stubRedeemCodeRepo) Create(ctx context.Context, code *service.RedeemCode) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) CreateBatch(ctx context.Context, codes []service.RedeemCode) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) GetByID(ctx context.Context, id int64) (*service.RedeemCode, error) {
+	return nil, service.ErrRedeemCodeNotFound
+placeholder
+
+func (stubRedeemCodeRepo) GetByCode(ctx context.Context, code string) (*service.RedeemCode, error) {
+	return nil, service.ErrRedeemCodeNotFound
+placeholder
+
+func (stubRedeemCodeRepo) Update(ctx context.Context, code *service.RedeemCode) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) Delete(ctx context.Context, id int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) Use(ctx context.Context, id, userID int64) error {
+	return errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) List(ctx context.Context, params pagination.PaginationParams) ([]service.RedeemCode, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) ListWithFilters(ctx context.Context, params pagination.PaginationParams, codeType, status, search string) ([]service.RedeemCode, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) ListByUser(ctx context.Context, userID int64, limit int) ([]service.RedeemCode, error) {
+	return nil, errors.New("not implemented")
 placeholder
 
 type stubUserSubscriptionRepo struct{placeholder
