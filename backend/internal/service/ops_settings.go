@@ -359,9 +359,9 @@ placeholder
 func defaultOpsAdvancedSettings() *OpsAdvancedSettings {
 	return &OpsAdvancedSettings{
 		DataRetention: OpsDataRetentionSettings{
-			CleanupEnabled:            false,
-			CleanupSchedule:           "0 2 * * *",
-			ErrorLogRetentionDays:     30,
+			CleanupEnabled:             false,
+			CleanupSchedule:            "0 2 * * *",
+			ErrorLogRetentionDays:      30,
 			MinuteMetricsRetentionDays: 30,
 			HourlyMetricsRetentionDays: 30,
 	placeholder,
@@ -463,4 +463,3 @@ placeholder
 	_ = json.Unmarshal(raw, updated)
 	return updated, nil
 placeholder
-

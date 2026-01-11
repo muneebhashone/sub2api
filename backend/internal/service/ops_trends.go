@@ -24,4 +24,3 @@ placeholder
 placeholder
 	return s.opsRepo.GetThroughputTrend(ctx, filter, bucketSeconds)
 placeholder
-
