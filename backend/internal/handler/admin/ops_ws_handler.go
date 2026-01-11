@@ -416,7 +416,10 @@ placeholder
 	if !ok {
 		return
 placeholder
-	counter, ok := v.(*atomic.Int32); if !ok { return placeholder
+	counter, ok := v.(*atomic.Int32)
+	if !ok {
+		return
+placeholder
 	next := counter.Add(-1)
 	if next <= 0 {
 		// Best-effort cleanup; safe even if a new slot was acquired concurrently.
