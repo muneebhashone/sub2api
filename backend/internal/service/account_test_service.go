@@ -332,10 +332,7 @@ placeholder else if account.Type == "apikey" {
 		if err != nil {
 			return s.sendErrorAndEnd(c, fmt.Sprintf("Invalid base URL: %s", err.Error()))
 	placeholder
-		// Remove /chat/completions suffix if present, then add /responses
-		normalizedBaseURL = strings.TrimSuffix(normalizedBaseURL, "/")
-		normalizedBaseURL = strings.TrimSuffix(normalizedBaseURL, "/chat/completions")
-		apiURL = normalizedBaseURL + "/responses"
+		apiURL = strings.TrimSuffix(normalizedBaseURL, "/") + "/responses"
 placeholder else {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Unsupported account type: %s", account.Type))
 placeholder
