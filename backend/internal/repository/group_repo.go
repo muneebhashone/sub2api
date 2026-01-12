@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
@@ -55,6 +56,9 @@ func (r *groupRepository) Create(ctx context.Context, groupIn *service.Group) er
 		groupIn.ID = created.ID
 		groupIn.CreatedAt = created.CreatedAt
 		groupIn.UpdatedAt = created.UpdatedAt
+		if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventGroupChanged, nil, &groupIn.ID, nil); err != nil {
+			log.Printf("[SchedulerOutbox] enqueue group create failed: group=%d err=%v", groupIn.ID, err)
+	placeholder
 placeholder
 	return translatePersistenceError(err, nil, service.ErrGroupExists)
 placeholder
@@ -111,12 +115,21 @@ placeholder
 		return translatePersistenceError(err, service.ErrGroupNotFound, service.ErrGroupExists)
 placeholder
 	groupIn.UpdatedAt = updated.UpdatedAt
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventGroupChanged, nil, &groupIn.ID, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue group update failed: group=%d err=%v", groupIn.ID, err)
+placeholder
 	return nil
 placeholder
 
 func (r *groupRepository) Delete(ctx context.Context, id int64) error {
 	_, err := r.client.Group.Delete().Where(group.IDEQ(id)).Exec(ctx)
-	return translatePersistenceError(err, service.ErrGroupNotFound, nil)
+	if err != nil {
+		return translatePersistenceError(err, service.ErrGroupNotFound, nil)
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventGroupChanged, nil, &id, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue group delete failed: group=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *groupRepository) List(ctx context.Context, params pagination.PaginationParams) ([]service.Group, *pagination.PaginationResult, error) {
@@ -246,6 +259,9 @@ func (r *groupRepository) DeleteAccountGroupsByGroupID(ctx context.Context, grou
 		return 0, err
 placeholder
 	affected, _ := res.RowsAffected()
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventGroupChanged, nil, &groupID, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue group account clear failed: group=%d err=%v", groupID, err)
+placeholder
 	return affected, nil
 placeholder
 
@@ -352,6 +368,9 @@ placeholder
 		if err := tx.Commit(); err != nil {
 			return nil, err
 	placeholder
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventGroupChanged, nil, &id, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue group cascade delete failed: group=%d err=%v", id, err)
 placeholder
 
 	return affectedUserIDs, nil

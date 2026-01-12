@@ -40,6 +40,7 @@ type GeminiMessagesCompatService struct {
 	accountRepo               AccountRepository
 	groupRepo                 GroupRepository
 	cache                     GatewayCache
+	schedulerSnapshot         *SchedulerSnapshotService
 	tokenProvider             *GeminiTokenProvider
 	rateLimitService          *RateLimitService
 	httpUpstream              HTTPUpstream
@@ -51,6 +52,7 @@ func NewGeminiMessagesCompatService(
 	accountRepo AccountRepository,
 	groupRepo GroupRepository,
 	cache GatewayCache,
+	schedulerSnapshot *SchedulerSnapshotService,
 	tokenProvider *GeminiTokenProvider,
 	rateLimitService *RateLimitService,
 	httpUpstream HTTPUpstream,
@@ -61,6 +63,7 @@ func NewGeminiMessagesCompatService(
 		accountRepo:               accountRepo,
 		groupRepo:                 groupRepo,
 		cache:                     cache,
+		schedulerSnapshot:         schedulerSnapshot,
 		tokenProvider:             tokenProvider,
 		rateLimitService:          rateLimitService,
 		httpUpstream:              httpUpstream,
@@ -105,12 +108,6 @@ placeholder
 	// gemini 分组支持混合调度（包含启用了 mixed_scheduling 的 antigravity 账户）
 	// 注意：强制平台模式不走混合调度
 	useMixedScheduling := platform == PlatformGemini && !hasForcePlatform
-	var queryPlatforms []string
-	if useMixedScheduling {
-		queryPlatforms = []string{PlatformGemini, PlatformAntigravityplaceholder
-placeholder else {
-		queryPlatforms = []string{platformplaceholder
-placeholder
 
 	cacheKey := "gemini:" + sessionHash
 
@@ -118,7 +115,7 @@ placeholder
 		accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), cacheKey)
 		if err == nil && accountID > 0 {
 			if _, excluded := excludedIDs[accountID]; !excluded {
-				account, err := s.accountRepo.GetByID(ctx, accountID)
+				account, err := s.getSchedulableAccount(ctx, accountID)
 				// 检查账号是否有效：原生平台直接匹配，antigravity 需要启用混合调度
 				if err == nil && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
 					valid := false
@@ -149,22 +146,16 @@ placeholder
 placeholder
 
 	// 查询可调度账户（强制平台模式：优先按分组查找，找不到再查全部）
-	var accounts []Account
-	var err error
-	if groupID != nil {
-		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, queryPlatforms)
+	accounts, err := s.listSchedulableAccountsOnce(ctx, groupID, platform, hasForcePlatform)
+	if err != nil {
+		return nil, fmt.Errorf("query accounts failed: %w", err)
+placeholder
+	// 强制平台模式下，分组中找不到账户时回退查询全部
+	if len(accounts) == 0 && groupID != nil && hasForcePlatform {
+		accounts, err = s.listSchedulableAccountsOnce(ctx, nil, platform, hasForcePlatform)
 		if err != nil {
 			return nil, fmt.Errorf("query accounts failed: %w", err)
 	placeholder
-		// 强制平台模式下，分组中找不到账户时回退查询全部
-		if len(accounts) == 0 && hasForcePlatform {
-			accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
-	placeholder
-placeholder else {
-		accounts, err = s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
-placeholder
-	if err != nil {
-		return nil, fmt.Errorf("query accounts failed: %w", err)
 placeholder
 
 	var selected *Account
@@ -245,6 +236,31 @@ func (s *GeminiMessagesCompatService) GetAntigravityGatewayService() *Antigravit
 	return s.antigravityGatewayService
 placeholder
 
+func (s *GeminiMessagesCompatService) getSchedulableAccount(ctx context.Context, accountID int64) (*Account, error) {
+	if s.schedulerSnapshot != nil {
+		return s.schedulerSnapshot.GetAccount(ctx, accountID)
+placeholder
+	return s.accountRepo.GetByID(ctx, accountID)
+placeholder
+
+func (s *GeminiMessagesCompatService) listSchedulableAccountsOnce(ctx context.Context, groupID *int64, platform string, hasForcePlatform bool) ([]Account, error) {
+	if s.schedulerSnapshot != nil {
+		accounts, _, err := s.schedulerSnapshot.ListSchedulableAccounts(ctx, groupID, platform, hasForcePlatform)
+		return accounts, err
+placeholder
+
+	useMixedScheduling := platform == PlatformGemini && !hasForcePlatform
+	queryPlatforms := []string{platformplaceholder
+	if useMixedScheduling {
+		queryPlatforms = []string{platform, PlatformAntigravityplaceholder
+placeholder
+
+	if groupID != nil {
+		return s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, queryPlatforms)
+placeholder
+	return s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
+placeholder
+
 func (s *GeminiMessagesCompatService) validateUpstreamBaseURL(raw string) (string, error) {
 	if s.cfg != nil && !s.cfg.Security.URLAllowlist.Enabled {
 		normalized, err := urlvalidator.ValidateURLFormat(raw, s.cfg.Security.URLAllowlist.AllowInsecureHTTP)
@@ -266,13 +282,7 @@ placeholder
 
 // HasAntigravityAccounts 检查是否有可用的 antigravity 账户
 func (s *GeminiMessagesCompatService) HasAntigravityAccounts(ctx context.Context, groupID *int64) (bool, error) {
-	var accounts []Account
-	var err error
-	if groupID != nil {
-		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, PlatformAntigravity)
-placeholder else {
-		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, PlatformAntigravity)
-placeholder
+	accounts, err := s.listSchedulableAccountsOnce(ctx, groupID, PlatformAntigravity, false)
 	if err != nil {
 		return false, err
 placeholder
@@ -288,13 +298,7 @@ placeholder
 // 3) OAuth accounts explicitly marked as ai_studio
 // 4) Any remaining Gemini accounts (fallback)
 func (s *GeminiMessagesCompatService) SelectAccountForAIStudioEndpoints(ctx context.Context, groupID *int64) (*Account, error) {
-	var accounts []Account
-	var err error
-	if groupID != nil {
-		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, PlatformGemini)
-placeholder else {
-		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, PlatformGemini)
-placeholder
+	accounts, err := s.listSchedulableAccountsOnce(ctx, groupID, PlatformGemini, true)
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
 placeholder
