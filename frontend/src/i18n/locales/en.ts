@@ -1943,6 +1943,9 @@ export default {
         '6h': 'Last 6 hours',
         '24h': 'Last 24 hours'
       placeholder,
+      fullscreen: {
+        enter: 'Enter Fullscreen'
+      placeholder,
       diagnosis: {
         title: 'Smart Diagnosis',
         footer: 'Automated diagnostic suggestions based on current metrics',
