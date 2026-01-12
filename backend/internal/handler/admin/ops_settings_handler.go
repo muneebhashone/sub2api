@@ -146,3 +146,50 @@ placeholder
 placeholder
 	response.Success(c, updated)
 placeholder
+
+// GetMetricThresholds returns Ops metric thresholds (DB-backed).
+// GET /api/v1/admin/ops/settings/metric-thresholds
+func (h *OpsHandler) GetMetricThresholds(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	cfg, err := h.opsService.GetMetricThresholds(c.Request.Context())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to get metric thresholds")
+		return
+placeholder
+	response.Success(c, cfg)
+placeholder
+
+// UpdateMetricThresholds updates Ops metric thresholds (DB-backed).
+// PUT /api/v1/admin/ops/settings/metric-thresholds
+func (h *OpsHandler) UpdateMetricThresholds(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	var req service.OpsMetricThresholds
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+placeholder
+
+	updated, err := h.opsService.UpdateMetricThresholds(c.Request.Context(), &req)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+placeholder
+	response.Success(c, updated)
+placeholder
+
