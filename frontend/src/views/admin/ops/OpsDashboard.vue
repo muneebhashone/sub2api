@@ -20,6 +20,8 @@
         :loading="loading"
         :last-updated="lastUpdated"
         :thresholds="metricThresholds"
+        :auto-refresh-enabled="autoRefreshEnabled"
+        :auto-refresh-countdown="autoRefreshCountdown"
         @update:time-range="onTimeRangeChange"
         @update:platform="onPlatformChange"
         @update:group="onGroupChange"
@@ -104,7 +106,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch placeholder from 'vue'
-import { useDebounceFn placeholder from '@vueuse/core'
+import { useDebounceFn, useIntervalFn placeholder from '@vueuse/core'
 import { useI18n placeholder from 'vue-i18n'
 import { useRoute, useRouter placeholder from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -286,6 +288,45 @@ placeholder)
 
 const showSettingsDialog = ref(false)
 const showAlertRulesCard = ref(false)
+
+// Auto refresh settings
+const autoRefreshEnabled = ref(false)
+const autoRefreshIntervalMs = ref(30000) // default 30 seconds
+const autoRefreshCountdown = ref(0)
+
+// Auto refresh timer
+const { pause: pauseAutoRefresh, resume: resumeAutoRefresh, isActive: isAutoRefreshActive placeholder = useIntervalFn(
+  () => {
+    if (autoRefreshEnabled.value && opsEnabled.value && !loading.value) {
+      fetchData()
+    placeholder
+  placeholder,
+  autoRefreshIntervalMs,
+  { immediate: false placeholder
+)
+
+// Countdown timer (updates every second)
+const { pause: pauseCountdown, resume: resumeCountdown placeholder = useIntervalFn(
+  () => {
+    if (autoRefreshEnabled.value && autoRefreshCountdown.value > 0) {
+      autoRefreshCountdown.value--
+    placeholder
+  placeholder,
+  1000,
+  { immediate: false placeholder
+)
+
+// Load auto refresh settings from backend
+async function loadAutoRefreshSettings() {
+  try {
+    const settings = await opsAPI.getAdvancedSettings()
+    autoRefreshEnabled.value = settings.auto_refresh_enabled
+    autoRefreshIntervalMs.value = settings.auto_refresh_interval_seconds * 1000
+    autoRefreshCountdown.value = settings.auto_refresh_interval_seconds
+  placeholder catch (err) {
+    console.error('[OpsDashboard] Failed to load auto refresh settings', err)
+  placeholder
+placeholder
 
 function handleThroughputSelectPlatform(nextPlatform: string) {
   platform.value = nextPlatform || ''
@@ -510,6 +551,10 @@ async function fetchData() {
     ])
     if (fetchSeq !== dashboardFetchSeq) return
     lastUpdated.value = new Date()
+    // Reset auto refresh countdown after successful fetch
+    if (autoRefreshEnabled.value) {
+      autoRefreshCountdown.value = Math.floor(autoRefreshIntervalMs.value / 1000)
+    placeholder
   placeholder catch (err) {
     if (!isOpsDisabledError(err)) {
       console.error('[ops] failed to fetch dashboard data', err)
@@ -567,8 +612,17 @@ onMounted(async () => {
   // Load thresholds configuration
   loadThresholds()
 
+  // Load auto refresh settings
+  await loadAutoRefreshSettings()
+
   if (opsEnabled.value) {
     await fetchData()
+  placeholder
+
+  // Start auto refresh if enabled
+  if (autoRefreshEnabled.value) {
+    resumeAutoRefresh()
+    resumeCountdown()
   placeholder
 placeholder)
 
@@ -584,5 +638,27 @@ placeholder
 
 onUnmounted(() => {
   abortDashboardFetch()
+  pauseAutoRefresh()
+  pauseCountdown()
+placeholder)
+
+// Watch auto refresh settings changes
+watch(autoRefreshEnabled, (enabled) => {
+  if (enabled) {
+    autoRefreshCountdown.value = Math.floor(autoRefreshIntervalMs.value / 1000)
+    resumeAutoRefresh()
+    resumeCountdown()
+  placeholder else {
+    pauseAutoRefresh()
+    pauseCountdown()
+    autoRefreshCountdown.value = 0
+  placeholder
+placeholder)
+
+// Reload auto refresh settings after settings dialog is closed
+watch(showSettingsDialog, async (show) => {
+  if (!show) {
+    await loadAutoRefreshSettings()
+  placeholder
 placeholder)
 </script>
