@@ -62,6 +62,11 @@ placeholder
 func provideCleanup(
 	entClient *ent.Client,
 	rdb *redis.Client,
+	opsMetricsCollector *service.OpsMetricsCollector,
+	opsAggregation *service.OpsAggregationService,
+	opsAlertEvaluator *service.OpsAlertEvaluatorService,
+	opsCleanup *service.OpsCleanupService,
+	opsScheduledReport *service.OpsScheduledReportService,
 	tokenRefresh *service.TokenRefreshService,
 	accountExpiry *service.AccountExpiryService,
 	pricing *service.PricingService,
@@ -81,6 +86,36 @@ func provideCleanup(
 			name string
 			fn   func() error
 	placeholder{
+			{"OpsScheduledReportService", func() error {
+				if opsScheduledReport != nil {
+					opsScheduledReport.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"OpsCleanupService", func() error {
+				if opsCleanup != nil {
+					opsCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"OpsAlertEvaluatorService", func() error {
+				if opsAlertEvaluator != nil {
+					opsAlertEvaluator.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"OpsAggregationService", func() error {
+				if opsAggregation != nil {
+					opsAggregation.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"OpsMetricsCollector", func() error {
+				if opsMetricsCollector != nil {
+					opsMetricsCollector.Stop()
+			placeholder
+				return nil
+	placeholder
 			{"TokenRefreshService", func() error {
 				tokenRefresh.Stop()
 				return nil

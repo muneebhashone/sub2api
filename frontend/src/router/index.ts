@@ -174,6 +174,18 @@ const routes: RouteRecordRaw[] = [
     placeholder
   placeholder,
   {
+    path: '/admin/ops',
+    name: 'AdminOps',
+    component: () => import('@/views/admin/ops/OpsDashboard.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Ops Monitoring',
+      titleKey: 'admin.ops.title',
+      descriptionKey: 'admin.ops.description'
+    placeholder
+  placeholder,
+  {
     path: '/admin/users',
     name: 'AdminUsers',
     component: () => import('@/views/admin/UsersView.vue'),

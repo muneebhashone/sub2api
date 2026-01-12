@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -513,7 +512,7 @@ placeholder
 placeholder
 
 func (s *OpenAIGatewayService) handleFailoverSideEffects(ctx context.Context, resp *http.Response, account *Account) {
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
 placeholder
 
@@ -594,13 +593,53 @@ placeholder
 	// Send request
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
-		return nil, fmt.Errorf("upstream request failed: %w", err)
+		// Ensure the client receives an error response (handlers assume Forward writes on non-failover errors).
+		safeErr := sanitizeUpstreamErrorMessage(err.Error())
+		setOpsUpstreamError(c, 0, safeErr, "")
+		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+			Platform:           account.Platform,
+			AccountID:          account.ID,
+			UpstreamStatusCode: 0,
+			Kind:               "request_error",
+			Message:            safeErr,
+	placeholder)
+		c.JSON(http.StatusBadGateway, gin.H{
+			"error": gin.H{
+				"type":    "upstream_error",
+				"message": "Upstream request failed",
+		placeholder,
+	placeholder)
+		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
 	// Handle error response
 	if resp.StatusCode >= 400 {
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
+			respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+			_ = resp.Body.Close()
+			resp.Body = io.NopCloser(bytes.NewReader(respBody))
+
+			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+			upstreamDetail := ""
+			if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+				maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+				if maxBytes <= 0 {
+					maxBytes = 2048
+			placeholder
+				upstreamDetail = truncateString(string(respBody), maxBytes)
+		placeholder
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  resp.Header.Get("x-request-id"),
+				Kind:               "failover",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
+
 			s.handleFailoverSideEffects(ctx, resp, account)
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
 	placeholder
@@ -724,18 +763,52 @@ placeholder
 placeholder
 
 func (s *OpenAIGatewayService) handleErrorResponse(ctx context.Context, resp *http.Response, c *gin.Context, account *Account) (*OpenAIForwardResult, error) {
-	body, _ := io.ReadAll(resp.Body)
-	logUpstreamErrorBody(account.ID, resp.StatusCode, body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+
+	upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(body))
+	upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+	upstreamDetail := ""
+	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+		maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+		if maxBytes <= 0 {
+			maxBytes = 2048
+	placeholder
+		upstreamDetail = truncateString(string(body), maxBytes)
+placeholder
+	setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
+
+	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+		log.Printf(
+			"OpenAI upstream error %d (account=%d platform=%s type=%s): %s",
+			resp.StatusCode,
+			account.ID,
+			account.Platform,
+			account.Type,
+			truncateForLog(body, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes),
+		)
+placeholder
 
 	// Check custom error codes
 	if !account.ShouldHandleErrorCode(resp.StatusCode) {
+		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+			Platform:           account.Platform,
+			AccountID:          account.ID,
+			UpstreamStatusCode: resp.StatusCode,
+			UpstreamRequestID:  resp.Header.Get("x-request-id"),
+			Kind:               "http_error",
+			Message:            upstreamMsg,
+			Detail:             upstreamDetail,
+	placeholder)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
 				"type":    "upstream_error",
 				"message": "Upstream gateway error",
 		placeholder,
 	placeholder)
-		return nil, fmt.Errorf("upstream error: %d (not in custom error codes)", resp.StatusCode)
+		if upstreamMsg == "" {
+			return nil, fmt.Errorf("upstream error: %d (not in custom error codes)", resp.StatusCode)
+	placeholder
+		return nil, fmt.Errorf("upstream error: %d (not in custom error codes) message=%s", resp.StatusCode, upstreamMsg)
 placeholder
 
 	// Handle upstream error (mark account status)
@@ -743,6 +816,19 @@ placeholder
 	if s.rateLimitService != nil {
 		shouldDisable = s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
 placeholder
+	kind := "http_error"
+	if shouldDisable {
+		kind = "failover"
+placeholder
+	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+		Platform:           account.Platform,
+		AccountID:          account.ID,
+		UpstreamStatusCode: resp.StatusCode,
+		UpstreamRequestID:  resp.Header.Get("x-request-id"),
+		Kind:               kind,
+		Message:            upstreamMsg,
+		Detail:             upstreamDetail,
+placeholder)
 	if shouldDisable {
 		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
 placeholder
@@ -781,25 +867,10 @@ placeholder
 	placeholder,
 placeholder)
 
-	return nil, fmt.Errorf("upstream error: %d", resp.StatusCode)
+	if upstreamMsg == "" {
+		return nil, fmt.Errorf("upstream error: %d", resp.StatusCode)
 placeholder
-
-func logUpstreamErrorBody(accountID int64, statusCode int, body []byte) {
-	if strings.ToLower(strings.TrimSpace(os.Getenv("GATEWAY_LOG_UPSTREAM_ERROR_BODY"))) != "true" {
-		return
-placeholder
-
-	maxBytes := 2048
-	if rawMax := strings.TrimSpace(os.Getenv("GATEWAY_LOG_UPSTREAM_ERROR_BODY_MAX_BYTES")); rawMax != "" {
-		if parsed, err := strconv.Atoi(rawMax); err == nil && parsed > 0 {
-			maxBytes = parsed
-	placeholder
-placeholder
-	if len(body) > maxBytes {
-		body = body[:maxBytes]
-placeholder
-
-	log.Printf("Upstream error body: account=%d status=%d body=%q", accountID, statusCode, string(body))
+	return nil, fmt.Errorf("upstream error: %d message=%s", resp.StatusCode, upstreamMsg)
 placeholder
 
 // openaiStreamingResult streaming response result
