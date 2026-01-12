@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -77,6 +76,8 @@ placeholder
 		return
 placeholder
 
+	setOpsRequestContext(c, "", false, body)
+
 	// Parse request body to map for potential modification
 	var reqBody map[string]any
 	if err := json.Unmarshal(body, &reqBody); err != nil {
@@ -95,10 +96,6 @@ placeholder
 placeholder
 
 	userAgent := c.GetHeader("User-Agent")
-
-	// 获取客户端 IP
-	clientIP := ip.GetClientIP(c)
-
 	if !openai.IsCodexCLIRequest(userAgent) {
 		existingInstructions, _ := reqBody["instructions"].(string)
 		if strings.TrimSpace(existingInstructions) == "" {
@@ -114,6 +111,8 @@ placeholder
 	placeholder
 placeholder
 
+	setOpsRequestContext(c, reqModel, reqStream, body)
+
 	// Track if we've started streaming (for error handling)
 	streamStarted := false
 
@@ -123,6 +122,7 @@ placeholder
 	// 0. Check if wait queue is full
 	maxWait := service.CalculateMaxWait(subject.Concurrency)
 	canWait, err := h.concurrencyHelper.IncrementWaitCount(c.Request.Context(), subject.UserID, maxWait)
+	waitCounted := false
 	if err != nil {
 		log.Printf("Increment wait count failed: %v", err)
 		// On error, allow request to proceed
@@ -130,8 +130,14 @@ placeholder else if !canWait {
 		h.errorResponse(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later")
 		return
 placeholder
-	// Ensure wait count is decremented when function exits
-	defer h.concurrencyHelper.DecrementWaitCount(c.Request.Context(), subject.UserID)
+	if err == nil && canWait {
+		waitCounted = true
+placeholder
+	defer func() {
+		if waitCounted {
+			h.concurrencyHelper.DecrementWaitCount(c.Request.Context(), subject.UserID)
+	placeholder
+placeholder()
 
 	// 1. First acquire user concurrency slot
 	userReleaseFunc, err := h.concurrencyHelper.AcquireUserSlotWithWait(c, subject.UserID, subject.Concurrency, reqStream, &streamStarted)
@@ -139,6 +145,11 @@ placeholder
 		log.Printf("User concurrency acquire failed: %v", err)
 		h.handleConcurrencyError(c, err, "user", streamStarted)
 		return
+placeholder
+	// User slot acquired: no longer waiting.
+	if waitCounted {
+		h.concurrencyHelper.DecrementWaitCount(c.Request.Context(), subject.UserID)
+		waitCounted = false
 placeholder
 	// 确保请求取消时也会释放槽位，避免长连接被动中断造成泄漏
 	userReleaseFunc = wrapReleaseOnDone(c.Request.Context(), userReleaseFunc)
@@ -177,15 +188,16 @@ placeholder
 	placeholder
 		account := selection.Account
 		log.Printf("[OpenAI Handler] Selected account: id=%d name=%s", account.ID, account.Name)
+		setOpsSelectedAccount(c, account.ID)
 
 		// 3. Acquire account concurrency slot
 		accountReleaseFunc := selection.ReleaseFunc
-		var accountWaitRelease func()
 		if !selection.Acquired {
 			if selection.WaitPlan == nil {
 				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts", streamStarted)
 				return
 		placeholder
+			accountWaitCounted := false
 			canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
 			if err != nil {
 				log.Printf("Increment account wait count failed: %v", err)
@@ -193,12 +205,15 @@ placeholder
 				log.Printf("Account wait queue full: account=%d", account.ID)
 				h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
 				return
-		placeholder else {
-				// Only set release function if increment succeeded
-				accountWaitRelease = func() {
+		placeholder
+			if err == nil && canWait {
+				accountWaitCounted = true
+		placeholder
+			defer func() {
+				if accountWaitCounted {
 					h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
 			placeholder
-		placeholder
+		placeholder()
 
 			accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
 				c,
@@ -209,12 +224,13 @@ placeholder
 				&streamStarted,
 			)
 			if err != nil {
-				if accountWaitRelease != nil {
-					accountWaitRelease()
-			placeholder
 				log.Printf("Account concurrency acquire failed: %v", err)
 				h.handleConcurrencyError(c, err, "account", streamStarted)
 				return
+		placeholder
+			if accountWaitCounted {
+				h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+				accountWaitCounted = false
 		placeholder
 			if err := h.gatewayService.BindStickySession(c.Request.Context(), apiKey.GroupID, sessionHash, account.ID); err != nil {
 				log.Printf("Bind sticky session failed: %v", err)
@@ -222,15 +238,11 @@ placeholder
 	placeholder
 		// 账号槽位/等待计数需要在超时或断开时安全回收
 		accountReleaseFunc = wrapReleaseOnDone(c.Request.Context(), accountReleaseFunc)
-		accountWaitRelease = wrapReleaseOnDone(c.Request.Context(), accountWaitRelease)
 
 		// Forward request
 		result, err := h.gatewayService.Forward(c.Request.Context(), c, account, body)
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
-	placeholder
-		if accountWaitRelease != nil {
-			accountWaitRelease()
 	placeholder
 		if err != nil {
 			var failoverErr *service.UpstreamFailoverError
@@ -252,7 +264,7 @@ placeholder
 	placeholder
 
 		// Async record usage
-		go func(result *service.OpenAIForwardResult, usedAccount *service.Account, ua string, cip string) {
+		go func(result *service.OpenAIForwardResult, usedAccount *service.Account) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := h.gatewayService.RecordUsage(ctx, &service.OpenAIRecordUsageInput{
@@ -261,12 +273,10 @@ placeholder
 				User:         apiKey.User,
 				Account:      usedAccount,
 				Subscription: subscription,
-				UserAgent:    ua,
-				IPAddress:    cip,
 		placeholder); err != nil {
 				log.Printf("Record usage failed: %v", err)
 		placeholder
-	placeholder(result, account, userAgent, clientIP)
+	placeholder(result, account)
 		return
 placeholder
 placeholder

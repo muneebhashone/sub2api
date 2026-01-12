@@ -115,12 +115,6 @@ placeholder
 	existingInstructions = strings.TrimSpace(existingInstructions)
 
 	if instructions != "" {
-		if existingInstructions != "" && existingInstructions != instructions {
-			if input, ok := reqBody["input"].([]any); ok {
-				reqBody["input"] = prependSystemInstruction(input, existingInstructions)
-				result.Modified = true
-		placeholder
-	placeholder
 		if existingInstructions != instructions {
 			reqBody["instructions"] = instructions
 			result.Modified = true
@@ -129,7 +123,6 @@ placeholder
 
 	if input, ok := reqBody["input"].([]any); ok {
 		input = filterCodexInput(input)
-		input = normalizeOrphanedToolOutputs(input)
 		reqBody["input"] = input
 		result.Modified = true
 placeholder
@@ -266,19 +259,6 @@ placeholder
 	return filtered
 placeholder
 
-func prependSystemInstruction(input []any, instructions string) []any {
-	message := map[string]any{
-		"role": "system",
-		"content": []any{
-			map[string]any{
-				"type": "input_text",
-				"text": instructions,
-		placeholder,
-	placeholder,
-placeholder
-	return append([]any{messageplaceholder, input...)
-placeholder
-
 func normalizeCodexTools(reqBody map[string]any) bool {
 	rawTools, ok := reqBody["tools"]
 	if !ok || rawTools == nil {
@@ -339,110 +319,6 @@ placeholder
 placeholder
 
 	return modified
-placeholder
-
-func normalizeOrphanedToolOutputs(input []any) []any {
-	functionCallIDs := map[string]bool{placeholder
-	localShellCallIDs := map[string]bool{placeholder
-	customToolCallIDs := map[string]bool{placeholder
-
-	for _, item := range input {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-	placeholder
-		callID := getCallID(m)
-		if callID == "" {
-			continue
-	placeholder
-		switch m["type"] {
-		case "function_call":
-			functionCallIDs[callID] = true
-		case "local_shell_call":
-			localShellCallIDs[callID] = true
-		case "custom_tool_call":
-			customToolCallIDs[callID] = true
-	placeholder
-placeholder
-
-	output := make([]any, 0, len(input))
-	for _, item := range input {
-		m, ok := item.(map[string]any)
-		if !ok {
-			output = append(output, item)
-			continue
-	placeholder
-		switch m["type"] {
-		case "function_call_output":
-			callID := getCallID(m)
-			if callID == "" || (!functionCallIDs[callID] && !localShellCallIDs[callID]) {
-				output = append(output, convertOrphanedOutputToMessage(m, callID))
-				continue
-		placeholder
-		case "custom_tool_call_output":
-			callID := getCallID(m)
-			if callID == "" || !customToolCallIDs[callID] {
-				output = append(output, convertOrphanedOutputToMessage(m, callID))
-				continue
-		placeholder
-		case "local_shell_call_output":
-			callID := getCallID(m)
-			if callID == "" || !localShellCallIDs[callID] {
-				output = append(output, convertOrphanedOutputToMessage(m, callID))
-				continue
-		placeholder
-	placeholder
-		output = append(output, m)
-placeholder
-	return output
-placeholder
-
-func getCallID(item map[string]any) string {
-	raw, ok := item["call_id"]
-	if !ok {
-		return ""
-placeholder
-	callID, ok := raw.(string)
-	if !ok {
-		return ""
-placeholder
-	callID = strings.TrimSpace(callID)
-	if callID == "" {
-		return ""
-placeholder
-	return callID
-placeholder
-
-func convertOrphanedOutputToMessage(item map[string]any, callID string) map[string]any {
-	toolName := "tool"
-	if name, ok := item["name"].(string); ok && name != "" {
-		toolName = name
-placeholder
-	labelID := callID
-	if labelID == "" {
-		labelID = "unknown"
-placeholder
-	text := stringifyOutput(item["output"])
-	if len(text) > 16000 {
-		text = text[:16000] + "\n...[truncated]"
-placeholder
-	return map[string]any{
-		"type":    "message",
-		"role":    "assistant",
-		"content": fmt.Sprintf("[Previous %s result; call_id=%s]: %s", toolName, labelID, text),
-placeholder
-placeholder
-
-func stringifyOutput(output any) string {
-	switch v := output.(type) {
-	case string:
-		return v
-	default:
-		if data, err := json.Marshal(v); err == nil {
-			return string(data)
-	placeholder
-		return fmt.Sprintf("%v", v)
-placeholder
 placeholder
 
 func codexCachePath(filename string) string {

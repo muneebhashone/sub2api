@@ -543,12 +543,21 @@ placeholder
 
 		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 		if err != nil {
+			safeErr := sanitizeUpstreamErrorMessage(err.Error())
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: 0,
+				Kind:               "request_error",
+				Message:            safeErr,
+		placeholder)
 			if attempt < geminiMaxRetries {
 				log.Printf("Gemini account %d: upstream request failed, retry %d/%d: %v", account.ID, attempt, geminiMaxRetries, err)
 				sleepGeminiBackoff(attempt)
 				continue
 		placeholder
-			return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed after retries: "+sanitizeUpstreamErrorMessage(err.Error()))
+			setOpsUpstreamError(c, 0, safeErr, "")
+			return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed after retries: "+safeErr)
 	placeholder
 
 		// Special-case: signature/thought_signature validation errors are not transient, but may be fixed by
@@ -558,6 +567,30 @@ placeholder
 			_ = resp.Body.Close()
 
 			if isGeminiSignatureRelatedError(respBody) {
+				upstreamReqID := resp.Header.Get(requestIDHeader)
+				if upstreamReqID == "" {
+					upstreamReqID = resp.Header.Get("x-goog-request-id")
+			placeholder
+				upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+				upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+				upstreamDetail := ""
+				if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+					maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+					if maxBytes <= 0 {
+						maxBytes = 2048
+				placeholder
+					upstreamDetail = truncateString(string(respBody), maxBytes)
+			placeholder
+				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					Platform:           account.Platform,
+					AccountID:          account.ID,
+					UpstreamStatusCode: resp.StatusCode,
+					UpstreamRequestID:  upstreamReqID,
+					Kind:               "signature_error",
+					Message:            upstreamMsg,
+					Detail:             upstreamDetail,
+			placeholder)
+
 				var strippedClaudeBody []byte
 				stageName := ""
 				switch signatureRetryStage {
@@ -608,6 +641,30 @@ placeholder
 				s.handleGeminiUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
 		placeholder
 			if attempt < geminiMaxRetries {
+				upstreamReqID := resp.Header.Get(requestIDHeader)
+				if upstreamReqID == "" {
+					upstreamReqID = resp.Header.Get("x-goog-request-id")
+			placeholder
+				upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+				upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+				upstreamDetail := ""
+				if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+					maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+					if maxBytes <= 0 {
+						maxBytes = 2048
+				placeholder
+					upstreamDetail = truncateString(string(respBody), maxBytes)
+			placeholder
+				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					Platform:           account.Platform,
+					AccountID:          account.ID,
+					UpstreamStatusCode: resp.StatusCode,
+					UpstreamRequestID:  upstreamReqID,
+					Kind:               "retry",
+					Message:            upstreamMsg,
+					Detail:             upstreamDetail,
+			placeholder)
+
 				log.Printf("Gemini account %d: upstream status %d, retry %d/%d", account.ID, resp.StatusCode, attempt, geminiMaxRetries)
 				sleepGeminiBackoff(attempt)
 				continue
@@ -633,12 +690,62 @@ placeholder
 	placeholder
 		s.handleGeminiUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
 		if tempMatched {
+			upstreamReqID := resp.Header.Get(requestIDHeader)
+			if upstreamReqID == "" {
+				upstreamReqID = resp.Header.Get("x-goog-request-id")
+		placeholder
+			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+			upstreamDetail := ""
+			if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+				maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+				if maxBytes <= 0 {
+					maxBytes = 2048
+			placeholder
+				upstreamDetail = truncateString(string(respBody), maxBytes)
+		placeholder
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  upstreamReqID,
+				Kind:               "failover",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
 	placeholder
 		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
+			upstreamReqID := resp.Header.Get(requestIDHeader)
+			if upstreamReqID == "" {
+				upstreamReqID = resp.Header.Get("x-goog-request-id")
+		placeholder
+			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+			upstreamDetail := ""
+			if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+				maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+				if maxBytes <= 0 {
+					maxBytes = 2048
+			placeholder
+				upstreamDetail = truncateString(string(respBody), maxBytes)
+		placeholder
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  upstreamReqID,
+				Kind:               "failover",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
 	placeholder
-		return nil, s.writeGeminiMappedError(c, resp.StatusCode, respBody)
+		upstreamReqID := resp.Header.Get(requestIDHeader)
+		if upstreamReqID == "" {
+			upstreamReqID = resp.Header.Get("x-goog-request-id")
+	placeholder
+		return nil, s.writeGeminiMappedError(c, account, resp.StatusCode, upstreamReqID, respBody)
 placeholder
 
 	requestID := resp.Header.Get(requestIDHeader)
@@ -863,6 +970,14 @@ placeholder
 
 		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 		if err != nil {
+			safeErr := sanitizeUpstreamErrorMessage(err.Error())
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: 0,
+				Kind:               "request_error",
+				Message:            safeErr,
+		placeholder)
 			if attempt < geminiMaxRetries {
 				log.Printf("Gemini account %d: upstream request failed, retry %d/%d: %v", account.ID, attempt, geminiMaxRetries, err)
 				sleepGeminiBackoff(attempt)
@@ -880,7 +995,8 @@ placeholder
 					FirstTokenMs: nil,
 			placeholder, nil
 		placeholder
-			return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries: "+sanitizeUpstreamErrorMessage(err.Error()))
+			setOpsUpstreamError(c, 0, safeErr, "")
+			return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries: "+safeErr)
 	placeholder
 
 		if resp.StatusCode >= 400 && s.shouldRetryGeminiUpstreamError(account, resp.StatusCode) {
@@ -899,6 +1015,30 @@ placeholder
 				s.handleGeminiUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
 		placeholder
 			if attempt < geminiMaxRetries {
+				upstreamReqID := resp.Header.Get(requestIDHeader)
+				if upstreamReqID == "" {
+					upstreamReqID = resp.Header.Get("x-goog-request-id")
+			placeholder
+				upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+				upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+				upstreamDetail := ""
+				if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+					maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+					if maxBytes <= 0 {
+						maxBytes = 2048
+				placeholder
+					upstreamDetail = truncateString(string(respBody), maxBytes)
+			placeholder
+				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					Platform:           account.Platform,
+					AccountID:          account.ID,
+					UpstreamStatusCode: resp.StatusCode,
+					UpstreamRequestID:  upstreamReqID,
+					Kind:               "retry",
+					Message:            upstreamMsg,
+					Detail:             upstreamDetail,
+			placeholder)
+
 				log.Printf("Gemini account %d: upstream status %d, retry %d/%d", account.ID, resp.StatusCode, attempt, geminiMaxRetries)
 				sleepGeminiBackoff(attempt)
 				continue
@@ -962,19 +1102,84 @@ placeholder
 	placeholder
 
 		if tempMatched {
+			evBody := unwrapIfNeeded(isOAuth, respBody)
+			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(evBody))
+			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+			upstreamDetail := ""
+			if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+				maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+				if maxBytes <= 0 {
+					maxBytes = 2048
+			placeholder
+				upstreamDetail = truncateString(string(evBody), maxBytes)
+		placeholder
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  requestID,
+				Kind:               "failover",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
 	placeholder
 		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
+			evBody := unwrapIfNeeded(isOAuth, respBody)
+			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(evBody))
+			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+			upstreamDetail := ""
+			if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+				maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+				if maxBytes <= 0 {
+					maxBytes = 2048
+			placeholder
+				upstreamDetail = truncateString(string(evBody), maxBytes)
+		placeholder
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  requestID,
+				Kind:               "failover",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
 	placeholder
 
 		respBody = unwrapIfNeeded(isOAuth, respBody)
+		upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
+		upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+		upstreamDetail := ""
+		if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+			maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+			if maxBytes <= 0 {
+				maxBytes = 2048
+		placeholder
+			upstreamDetail = truncateString(string(respBody), maxBytes)
+			log.Printf("[Gemini] native upstream error %d: %s", resp.StatusCode, truncateForLog(respBody, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes))
+	placeholder
+		setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
+		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+			Platform:           account.Platform,
+			AccountID:          account.ID,
+			UpstreamStatusCode: resp.StatusCode,
+			UpstreamRequestID:  requestID,
+			Kind:               "http_error",
+			Message:            upstreamMsg,
+			Detail:             upstreamDetail,
+	placeholder)
+
 		contentType := resp.Header.Get("Content-Type")
 		if contentType == "" {
 			contentType = "application/json"
 	placeholder
 		c.Data(resp.StatusCode, contentType, respBody)
-		return nil, fmt.Errorf("gemini upstream error: %d", resp.StatusCode)
+		if upstreamMsg == "" {
+			return nil, fmt.Errorf("gemini upstream error: %d", resp.StatusCode)
+	placeholder
+		return nil, fmt.Errorf("gemini upstream error: %d message=%s", resp.StatusCode, upstreamMsg)
 placeholder
 
 	var usage *ClaudeUsage
@@ -1076,7 +1281,32 @@ placeholder
 	return sensitiveQueryParamRegex.ReplaceAllString(msg, `$1***`)
 placeholder
 
-func (s *GeminiMessagesCompatService) writeGeminiMappedError(c *gin.Context, upstreamStatus int, body []byte) error {
+func (s *GeminiMessagesCompatService) writeGeminiMappedError(c *gin.Context, account *Account, upstreamStatus int, upstreamRequestID string, body []byte) error {
+	upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(body))
+	upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+	upstreamDetail := ""
+	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+		maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+		if maxBytes <= 0 {
+			maxBytes = 2048
+	placeholder
+		upstreamDetail = truncateString(string(body), maxBytes)
+placeholder
+	setOpsUpstreamError(c, upstreamStatus, upstreamMsg, upstreamDetail)
+	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+		Platform:           account.Platform,
+		AccountID:          account.ID,
+		UpstreamStatusCode: upstreamStatus,
+		UpstreamRequestID:  upstreamRequestID,
+		Kind:               "http_error",
+		Message:            upstreamMsg,
+		Detail:             upstreamDetail,
+placeholder)
+
+	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+		log.Printf("[Gemini] upstream error %d: %s", upstreamStatus, truncateForLog(body, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes))
+placeholder
+
 	var statusCode int
 	var errType, errMsg string
 
@@ -1184,7 +1414,10 @@ placeholder
 		"type":  "error",
 		"error": gin.H{"type": errType, "message": errMsgplaceholder,
 placeholder)
-	return fmt.Errorf("upstream error: %d", upstreamStatus)
+	if upstreamMsg == "" {
+		return fmt.Errorf("upstream error: %d", upstreamStatus)
+placeholder
+	return fmt.Errorf("upstream error: %d message=%s", upstreamStatus, upstreamMsg)
 placeholder
 
 type claudeErrorMapping struct {
