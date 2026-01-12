@@ -368,9 +368,9 @@ func defaultOpsAdvancedSettings() *OpsAdvancedSettings {
 		Aggregation: OpsAggregationSettings{
 			AggregationEnabled: false,
 	placeholder,
-		IgnoreCountTokensErrors:  false,
-		AutoRefreshEnabled:       false,
-		AutoRefreshIntervalSec:   30,
+		IgnoreCountTokensErrors: false,
+		AutoRefreshEnabled:      false,
+		AutoRefreshIntervalSec:  30,
 placeholder
 placeholder
 
