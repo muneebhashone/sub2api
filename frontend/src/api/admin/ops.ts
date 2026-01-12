@@ -362,6 +362,45 @@ export async function getAccountAvailabilityStats(platform?: string, groupId?: n
   return data
 placeholder
 
+export interface OpsRateSummary {
+  current: number
+  peak: number
+  avg: number
+placeholder
+
+export interface OpsRealtimeTrafficSummary {
+  window: string
+  start_time: string
+  end_time: string
+  platform: string
+  group_id?: number | null
+  qps: OpsRateSummary
+  tps: OpsRateSummary
+placeholder
+
+export interface OpsRealtimeTrafficSummaryResponse {
+  enabled: boolean
+  summary: OpsRealtimeTrafficSummary | null
+  timestamp?: string
+placeholder
+
+export async function getRealtimeTrafficSummary(
+  window: string,
+  platform?: string,
+  groupId?: number | null
+): Promise<OpsRealtimeTrafficSummaryResponse> {
+  const params: Record<string, any> = { window placeholder
+  if (platform) {
+    params.platform = platform
+  placeholder
+  if (typeof groupId === 'number' && groupId > 0) {
+    params.group_id = groupId
+  placeholder
+
+  const { data placeholder = await apiClient.get<OpsRealtimeTrafficSummaryResponse>('/admin/ops/realtime-traffic', { params placeholder)
+  return data
+placeholder
+
 /**
  * Subscribe to realtime QPS updates via WebSocket.
  *
@@ -957,6 +996,7 @@ export const opsAPI = {
   getErrorDistribution,
   getConcurrencyStats,
   getAccountAvailabilityStats,
+  getRealtimeTrafficSummary,
   subscribeQPS,
   listErrorLogs,
   getErrorLogDetail,

@@ -13,11 +13,6 @@
       <OpsDashboardHeader
         v-else-if="opsEnabled"
         :overview="overview"
-        :ws-status="wsStatus"
-        :ws-reconnect-in-ms="wsReconnectInMs"
-        :ws-has-data="wsHasData"
-        :real-time-qps="realTimeQPS"
-        :real-time-tps="realTimeTPS"
         :platform="platform"
         :group-id="groupId"
         :time-range="timeRange"
@@ -116,8 +111,6 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import {
   opsAPI,
-  OPS_WS_CLOSE_CODES,
-  type OpsWSStatus,
   type OpsDashboardOverview,
   type OpsErrorDistributionResponse,
   type OpsErrorTrendResponse,
@@ -174,14 +167,6 @@ placeholder as const
 const isApplyingRouteQuery = ref(false)
 const isSyncingRouteQuery = ref(false)
 
-// WebSocket for realtime QPS/TPS
-const realTimeQPS = ref(0)
-const realTimeTPS = ref(0)
-const wsStatus = ref<OpsWSStatus>('closed')
-const wsReconnectInMs = ref<number | null>(null)
-const wsHasData = ref(false)
-let unsubscribeQPS: (() => void) | null = null
-
 let dashboardFetchController: AbortController | null = null
 let dashboardFetchSeq = 0
 
@@ -199,50 +184,6 @@ function abortDashboardFetch() {
     dashboardFetchController.abort()
     dashboardFetchController = null
   placeholder
-placeholder
-
-function stopQPSSubscription(options?: { resetMetrics?: boolean placeholder) {
-  wsStatus.value = 'closed'
-  wsReconnectInMs.value = null
-  if (unsubscribeQPS) unsubscribeQPS()
-  unsubscribeQPS = null
-
-  if (options?.resetMetrics) {
-    realTimeQPS.value = 0
-    realTimeTPS.value = 0
-    wsHasData.value = false
-  placeholder
-placeholder
-
-function startQPSSubscription() {
-  stopQPSSubscription()
-  unsubscribeQPS = opsAPI.subscribeQPS(
-    (payload) => {
-      if (payload && typeof payload === 'object' && payload.type === 'qps_update' && payload.data) {
-        realTimeQPS.value = payload.data.qps || 0
-        realTimeTPS.value = payload.data.tps || 0
-        wsHasData.value = true
-      placeholder
-    placeholder,
-    {
-      onStatusChange: (status) => {
-        wsStatus.value = status
-        if (status === 'connected') wsReconnectInMs.value = null
-      placeholder,
-      onReconnectScheduled: ({ delayMs placeholder) => {
-        wsReconnectInMs.value = delayMs
-      placeholder,
-      onFatalClose: (event) => {
-        // Server-side feature flag says realtime is disabled; keep UI consistent and avoid reconnect loops.
-        if (event && event.code === OPS_WS_CLOSE_CODES.REALTIME_DISABLED) {
-          adminSettingsStore.setOpsRealtimeMonitoringEnabledLocal(false)
-          stopQPSSubscription({ resetMetrics: true placeholder)
-        placeholder
-      placeholder,
-      // QPS updates may be sparse in idle periods; keep the timeout conservative.
-      staleTimeoutMs: 180_000
-    placeholder
-  )
 placeholder
 
 const readQueryString = (key: string): string => {
@@ -626,12 +567,6 @@ onMounted(async () => {
   // Load thresholds configuration
   loadThresholds()
 
-  if (adminSettingsStore.opsRealtimeMonitoringEnabled) {
-    startQPSSubscription()
-  placeholder else {
-    stopQPSSubscription({ resetMetrics: true placeholder)
-  placeholder
-
   if (opsEnabled.value) {
     await fetchData()
   placeholder
@@ -648,19 +583,6 @@ async function loadThresholds() {
 placeholder
 
 onUnmounted(() => {
-  stopQPSSubscription()
   abortDashboardFetch()
 placeholder)
-
-watch(
-  () => adminSettingsStore.opsRealtimeMonitoringEnabled,
-  (enabled) => {
-    if (!opsEnabled.value) return
-    if (enabled) {
-      startQPSSubscription()
-    placeholder else {
-      stopQPSSubscription({ resetMetrics: true placeholder)
-    placeholder
-  placeholder
-)
 </script>
