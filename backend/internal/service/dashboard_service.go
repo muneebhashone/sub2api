@@ -85,6 +85,9 @@ func NewDashboardService(usageRepo UsageLogRepository, aggRepo DashboardAggregat
 			aggUsageDays = cfg.DashboardAgg.Retention.UsageLogsDays
 	placeholder
 placeholder
+	if aggRepo == nil {
+		aggEnabled = false
+placeholder
 	return &DashboardService{
 		usageRepo:      usageRepo,
 		aggRepo:        aggRepo,
