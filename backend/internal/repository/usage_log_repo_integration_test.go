@@ -413,9 +413,17 @@ placeholder
 
 func (s *UsageLogRepoSuite) TestDashboardAggregationConsistency() {
 	now := time.Now().UTC().Truncate(time.Second)
-	hour1 := now.Add(-90 * time.Minute).Truncate(time.Hour)
-	hour2 := now.Add(-30 * time.Minute).Truncate(time.Hour)
+	// 使用固定的时间偏移确保 hour1 和 hour2 在同一天且都在过去
+	// 选择当天 02:00 和 03:00 作为测试时间点（基于 now 的日期）
 	dayStart := truncateToDayUTC(now)
+	hour1 := dayStart.Add(2 * time.Hour)  // 当天 02:00
+	hour2 := dayStart.Add(3 * time.Hour)  // 当天 03:00
+	// 如果当前时间早于 hour2，则使用昨天的时间
+	if now.Before(hour2.Add(time.Hour)) {
+		dayStart = dayStart.Add(-24 * time.Hour)
+		hour1 = dayStart.Add(2 * time.Hour)
+		hour2 = dayStart.Add(3 * time.Hour)
+placeholder
 
 	user1 := mustCreateUser(s.T(), s.client, &service.User{Email: "agg-u1@test.com"placeholder)
 	user2 := mustCreateUser(s.T(), s.client, &service.User{Email: "agg-u2@test.com"placeholder)
@@ -473,7 +481,7 @@ placeholder
 
 	aggRepo := newDashboardAggregationRepositoryWithSQL(s.tx)
 	aggStart := hour1.Add(-5 * time.Minute)
-	aggEnd := now.Add(5 * time.Minute)
+	aggEnd := hour2.Add(time.Hour) // 确保覆盖 hour2 的所有数据
 	s.Require().NoError(aggRepo.AggregateRange(s.ctx, aggStart, aggEnd))
 
 	type hourlyRow struct {
