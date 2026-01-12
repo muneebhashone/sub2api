@@ -936,6 +936,16 @@ placeholder
 const toggleErrorCode = (code: number) => {
   const index = selectedErrorCodes.value.indexOf(code)
   if (index === -1) {
+    // Adding code - check for 429/529 warning
+    if (code === 429) {
+      if (!confirm(t('admin.accounts.customErrorCodes429Warning'))) {
+        return
+      placeholder
+    placeholder else if (code === 529) {
+      if (!confirm(t('admin.accounts.customErrorCodes529Warning'))) {
+        return
+      placeholder
+    placeholder
     selectedErrorCodes.value.push(code)
   placeholder else {
     selectedErrorCodes.value.splice(index, 1)
@@ -952,6 +962,16 @@ const addCustomErrorCode = () => {
   if (selectedErrorCodes.value.includes(code)) {
     appStore.showInfo(t('admin.accounts.errorCodeExists'))
     return
+  placeholder
+  // Check for 429/529 warning
+  if (code === 429) {
+    if (!confirm(t('admin.accounts.customErrorCodes429Warning'))) {
+      return
+    placeholder
+  placeholder else if (code === 529) {
+    if (!confirm(t('admin.accounts.customErrorCodes529Warning'))) {
+      return
+    placeholder
   placeholder
   selectedErrorCodes.value.push(code)
   customErrorCodeInput.value = null
