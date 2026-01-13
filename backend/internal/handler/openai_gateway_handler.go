@@ -96,8 +96,6 @@ placeholder
 		return
 placeholder
 
-	seedOpenAISessionHeaders(c, reqBody)
-
 	userAgent := c.GetHeader("User-Agent")
 	if !openai.IsCodexCLIRequest(userAgent) {
 		existingInstructions, _ := reqBody["instructions"].(string)
@@ -299,37 +297,6 @@ placeholder
 func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, streamStarted bool) {
 	status, errType, errMsg := h.mapUpstreamError(statusCode)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
-placeholder
-
-func seedOpenAISessionHeaders(c *gin.Context, reqBody map[string]any) {
-	if c.GetHeader("session_id") == "" {
-		if v := firstNonEmptyString(
-			reqBody["prompt_cache_key"],
-			reqBody["session_id"],
-			reqBody["conversation_id"],
-			reqBody["previous_response_id"],
-		); v != "" {
-			c.Request.Header.Set("session_id", v)
-	placeholder
-placeholder
-	if c.GetHeader("conversation_id") == "" {
-		if v := firstNonEmptyString(reqBody["prompt_cache_key"], reqBody["conversation_id"]); v != "" {
-			c.Request.Header.Set("conversation_id", v)
-	placeholder
-placeholder
-placeholder
-
-func firstNonEmptyString(values ...any) string {
-	for _, value := range values {
-		s, ok := value.(string)
-		if ok {
-			s = strings.TrimSpace(s)
-			if s != "" {
-				return s
-		placeholder
-	placeholder
-placeholder
-	return ""
 placeholder
 
 func (h *OpenAIGatewayHandler) mapUpstreamError(statusCode int) (int, string, string) {
