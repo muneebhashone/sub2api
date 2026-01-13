@@ -275,12 +275,11 @@ placeholder
 				var failoverErr *service.UpstreamFailoverError
 				if errors.As(err, &failoverErr) {
 					failedAccountIDs[account.ID] = struct{placeholder{placeholder
+					lastFailoverStatus = failoverErr.StatusCode
 					if switchCount >= maxAccountSwitches {
-						lastFailoverStatus = failoverErr.StatusCode
 						h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 						return
 				placeholder
-					lastFailoverStatus = failoverErr.StatusCode
 					switchCount++
 					log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
 					continue
@@ -409,12 +408,11 @@ placeholder
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
 				failedAccountIDs[account.ID] = struct{placeholder{placeholder
+				lastFailoverStatus = failoverErr.StatusCode
 				if switchCount >= maxAccountSwitches {
-					lastFailoverStatus = failoverErr.StatusCode
 					h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
 					return
 			placeholder
-				lastFailoverStatus = failoverErr.StatusCode
 				switchCount++
 				log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
 				continue
