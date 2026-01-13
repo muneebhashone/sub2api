@@ -525,14 +525,16 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     [platform]: {
       options: {
         baseURL: baseUrl,
-        apiKey,
-        ...(platform === 'openai' ? { store: false placeholder : {placeholder)
+        apiKey
       placeholder
     placeholder
   placeholder
   const openaiModels = {
     'gpt-5.2-codex': {
       name: 'GPT-5.2 Codex',
+      options: {
+        store: false
+      placeholder,
       variants: {
         low: {placeholder,
         medium: {placeholder,
@@ -574,9 +576,26 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     provider[platform].models = openaiModels
   placeholder
 
+  const agent =
+    platform === 'openai'
+      ? {
+          build: {
+            options: {
+              store: false
+            placeholder
+          placeholder,
+          plan: {
+            options: {
+              store: false
+            placeholder
+          placeholder
+        placeholder
+      : undefined
+
   const content = JSON.stringify(
     {
       provider,
+      ...(agent ? { agent placeholder : {placeholder),
       $schema: 'https://opencode.ai/config.json'
     placeholder,
     null,
