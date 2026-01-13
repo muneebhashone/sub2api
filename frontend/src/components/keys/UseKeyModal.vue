@@ -376,6 +376,10 @@ const currentFiles = computed((): FileConfig[] => {
     const trimmed = `${baseRootplaceholder/antigravity`.replace(/\/+$/, '')
     return trimmed.endsWith('/v1beta') ? trimmed : `${trimmedplaceholder/v1beta`
   placeholder)()
+  const geminiBase = (() => {
+    const trimmed = baseRoot.replace(/\/+$/, '')
+    return trimmed.endsWith('/v1beta') ? trimmed : `${trimmedplaceholder/v1beta`
+  placeholder)()
 
   if (activeClientTab.value === 'opencode') {
     switch (props.platform) {
@@ -384,7 +388,7 @@ const currentFiles = computed((): FileConfig[] => {
       case 'openai':
         return [generateOpenCodeConfig('openai', apiBase, apiKey)]
       case 'gemini':
-        return [generateOpenCodeConfig('gemini', apiBase, apiKey)]
+        return [generateOpenCodeConfig('gemini', geminiBase, apiKey)]
       case 'antigravity':
         return [
           generateOpenCodeConfig('antigravity-claude', antigravityBase, apiKey, 'opencode.json (Claude)'),
@@ -525,14 +529,16 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     [platform]: {
       options: {
         baseURL: baseUrl,
-        apiKey,
-        ...(platform === 'openai' ? { store: false placeholder : {placeholder)
+        apiKey
       placeholder
     placeholder
   placeholder
   const openaiModels = {
     'gpt-5.2-codex': {
       name: 'GPT-5.2 Codex',
+      options: {
+        store: false
+      placeholder,
       variants: {
         low: {placeholder,
         medium: {placeholder,
@@ -574,9 +580,26 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     provider[platform].models = openaiModels
   placeholder
 
+  const agent =
+    platform === 'openai'
+      ? {
+          build: {
+            options: {
+              store: false
+            placeholder
+          placeholder,
+          plan: {
+            options: {
+              store: false
+            placeholder
+          placeholder
+        placeholder
+      : undefined
+
   const content = JSON.stringify(
     {
       provider,
+      ...(agent ? { agent placeholder : {placeholder),
       $schema: 'https://opencode.ai/config.json'
     placeholder,
     null,

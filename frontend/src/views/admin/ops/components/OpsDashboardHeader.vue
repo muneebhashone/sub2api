@@ -1,29 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch placeholder from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch placeholder from 'vue'
+import { useIntervalFn placeholder from '@vueuse/core'
 import { useI18n placeholder from 'vue-i18n'
 import Select from '@/components/common/Select.vue'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import Icon from '@/components/icons/Icon.vue'
 import { adminAPI placeholder from '@/api'
-import type { OpsDashboardOverview, OpsWSStatus placeholder from '@/api/admin/ops'
+import { opsAPI, type OpsDashboardOverview, type OpsMetricThresholds, type OpsRealtimeTrafficSummary placeholder from '@/api/admin/ops'
 import type { OpsRequestDetailsPreset placeholder from './OpsRequestDetailsModal.vue'
+import { useAdminSettingsStore placeholder from '@/stores'
 import { formatNumber placeholder from '@/utils/format'
 
 type RealtimeWindow = '1min' | '5min' | '30min' | '1h'
 
 interface Props {
   overview?: OpsDashboardOverview | null
-  wsStatus: OpsWSStatus
-  wsReconnectInMs?: number | null
-  wsHasData?: boolean
-  realTimeQps: number
-  realTimeTps: number
   platform: string
   groupId: number | null
   timeRange: string
   queryMode: string
   loading: boolean
   lastUpdated: Date | null
+  thresholds?: OpsMetricThresholds | null // 阈值配置
+  autoRefreshEnabled?: boolean
+  autoRefreshCountdown?: number
+  fullscreen?: boolean
 placeholder
 
 interface Emits {
@@ -36,17 +38,50 @@ interface Emits {
   (e: 'openErrorDetails', kind: 'request' | 'upstream'): void
   (e: 'openSettings'): void
   (e: 'openAlertRules'): void
+  (e: 'enterFullscreen'): void
+  (e: 'exitFullscreen'): void
 placeholder
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const { t placeholder = useI18n()
+const adminSettingsStore = useAdminSettingsStore()
 
 const realtimeWindow = ref<RealtimeWindow>('1min')
 
 const overview = computed(() => props.overview ?? null)
 const systemMetrics = computed(() => overview.value?.system_metrics ?? null)
+
+const REALTIME_WINDOW_MINUTES: Record<RealtimeWindow, number> = {
+  '1min': 1,
+  '5min': 5,
+  '30min': 30,
+  '1h': 60
+placeholder
+
+const TOOLBAR_RANGE_MINUTES: Record<string, number> = {
+  '5m': 5,
+  '30m': 30,
+  '1h': 60,
+  '6h': 6 * 60,
+  '24h': 24 * 60
+placeholder
+
+const availableRealtimeWindows = computed(() => {
+  const toolbarMinutes = TOOLBAR_RANGE_MINUTES[props.timeRange] ?? 60
+  return (['1min', '5min', '30min', '1h'] as const).filter((w) => REALTIME_WINDOW_MINUTES[w] <= toolbarMinutes)
+placeholder)
+
+watch(
+  () => props.timeRange,
+  () => {
+    // The realtime window must be inside the toolbar window; reset to keep UX predictable.
+    realtimeWindow.value = '1min'
+    // Keep realtime traffic consistent with toolbar changes even when the window is already 1min.
+    loadRealtimeTrafficSummary()
+  placeholder
+)
 
 // --- Filters ---
 
@@ -143,56 +178,143 @@ function getLatencyColor(ms: number | null | undefined): string {
   return 'text-red-600 dark:text-red-400'
 placeholder
 
+// --- Threshold checking helpers ---
+function isSLABelowThreshold(slaPercent: number | null): boolean {
+  if (slaPercent == null) return false
+  const threshold = props.thresholds?.sla_percent_min
+  if (threshold == null) return false
+  return slaPercent < threshold
+placeholder
+
+function isLatencyAboveThreshold(latencyP99Ms: number | null): boolean {
+  if (latencyP99Ms == null) return false
+  const threshold = props.thresholds?.latency_p99_ms_max
+  if (threshold == null) return false
+  return latencyP99Ms > threshold
+placeholder
+
+function isTTFTAboveThreshold(ttftP99Ms: number | null): boolean {
+  if (ttftP99Ms == null) return false
+  const threshold = props.thresholds?.ttft_p99_ms_max
+  if (threshold == null) return false
+  return ttftP99Ms > threshold
+placeholder
+
+function isRequestErrorRateAboveThreshold(errorRatePercent: number | null): boolean {
+  if (errorRatePercent == null) return false
+  const threshold = props.thresholds?.request_error_rate_percent_max
+  if (threshold == null) return false
+  return errorRatePercent > threshold
+placeholder
+
+function isUpstreamErrorRateAboveThreshold(upstreamErrorRatePercent: number | null): boolean {
+  if (upstreamErrorRatePercent == null) return false
+  const threshold = props.thresholds?.upstream_error_rate_percent_max
+  if (threshold == null) return false
+  return upstreamErrorRatePercent > threshold
+placeholder
+
 // --- Realtime / Overview labels ---
 
 const totalRequestsLabel = computed(() => formatNumber(overview.value?.request_count_total ?? 0))
 const totalTokensLabel = computed(() => formatNumber(overview.value?.token_consumed ?? 0))
 
+const realtimeTrafficSummary = ref<OpsRealtimeTrafficSummary | null>(null)
+const realtimeTrafficLoading = ref(false)
+
+function makeZeroRealtimeTrafficSummary(): OpsRealtimeTrafficSummary {
+  const now = new Date().toISOString()
+  return {
+    window: realtimeWindow.value,
+    start_time: now,
+    end_time: now,
+    platform: props.platform,
+    group_id: props.groupId,
+    qps: { current: 0, peak: 0, avg: 0 placeholder,
+    tps: { current: 0, peak: 0, avg: 0 placeholder
+  placeholder
+placeholder
+
+async function loadRealtimeTrafficSummary() {
+  if (realtimeTrafficLoading.value) return
+  if (!adminSettingsStore.opsRealtimeMonitoringEnabled) {
+    realtimeTrafficSummary.value = makeZeroRealtimeTrafficSummary()
+    return
+  placeholder
+  realtimeTrafficLoading.value = true
+  try {
+    const res = await opsAPI.getRealtimeTrafficSummary(realtimeWindow.value, props.platform, props.groupId)
+    if (res && res.enabled === false) {
+      adminSettingsStore.setOpsRealtimeMonitoringEnabledLocal(false)
+    placeholder
+    realtimeTrafficSummary.value = res?.summary ?? null
+  placeholder catch (err) {
+    console.error('[OpsDashboardHeader] Failed to load realtime traffic summary', err)
+    realtimeTrafficSummary.value = null
+  placeholder finally {
+    realtimeTrafficLoading.value = false
+  placeholder
+placeholder
+
+watch(
+  () => [realtimeWindow.value, props.platform, props.groupId] as const,
+  () => {
+    loadRealtimeTrafficSummary()
+  placeholder,
+  { immediate: true placeholder
+)
+
+const { pause: pauseRealtimeTrafficRefresh, resume: resumeRealtimeTrafficRefresh placeholder = useIntervalFn(
+  () => {
+    loadRealtimeTrafficSummary()
+  placeholder,
+  5000,
+  { immediate: false placeholder
+)
+
+watch(
+  () => adminSettingsStore.opsRealtimeMonitoringEnabled,
+  (enabled) => {
+    if (enabled) {
+      resumeRealtimeTrafficRefresh()
+    placeholder else {
+      pauseRealtimeTrafficRefresh()
+      // Keep UI stable when realtime monitoring is turned off.
+      realtimeTrafficSummary.value = makeZeroRealtimeTrafficSummary()
+    placeholder
+  placeholder,
+  { immediate: true placeholder
+)
+
+onUnmounted(() => {
+  pauseRealtimeTrafficRefresh()
+placeholder)
+
 const displayRealTimeQps = computed(() => {
-  const ov = overview.value
-  if (!ov) return 0
-  const useRealtime = props.wsStatus === 'connected' && !!props.wsHasData
-  const v = useRealtime ? props.realTimeQps : ov.qps?.current
+  const v = realtimeTrafficSummary.value?.qps?.current
   return typeof v === 'number' && Number.isFinite(v) ? v : 0
 placeholder)
 
 const displayRealTimeTps = computed(() => {
-  const ov = overview.value
-  if (!ov) return 0
-  const useRealtime = props.wsStatus === 'connected' && !!props.wsHasData
-  const v = useRealtime ? props.realTimeTps : ov.tps?.current
+  const v = realtimeTrafficSummary.value?.tps?.current
   return typeof v === 'number' && Number.isFinite(v) ? v : 0
 placeholder)
 
-// Sparkline history (keep last 60 data points)
-const qpsHistory = ref<number[]>([])
-const tpsHistory = ref<number[]>([])
-const MAX_HISTORY_POINTS = 60
-
-watch([displayRealTimeQps, displayRealTimeTps], ([newQps, newTps]) => {
-  // Add new data points
-  qpsHistory.value.push(newQps)
-  tpsHistory.value.push(newTps)
-
-  // Keep only last N points
-  if (qpsHistory.value.length > MAX_HISTORY_POINTS) {
-    qpsHistory.value.shift()
-  placeholder
-  if (tpsHistory.value.length > MAX_HISTORY_POINTS) {
-    tpsHistory.value.shift()
-  placeholder
+const realtimeQpsPeakLabel = computed(() => {
+  const v = realtimeTrafficSummary.value?.qps?.peak
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(1) : '-'
 placeholder)
-
-const qpsPeakLabel = computed(() => {
-  const v = overview.value?.qps?.peak
-  if (typeof v !== 'number') return '-'
-  return v.toFixed(1)
+const realtimeTpsPeakLabel = computed(() => {
+  const v = realtimeTrafficSummary.value?.tps?.peak
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(1) : '-'
 placeholder)
-
-const tpsPeakLabel = computed(() => {
-  const v = overview.value?.tps?.peak
-  if (typeof v !== 'number') return '-'
-  return v.toFixed(1)
+const realtimeQpsAvgLabel = computed(() => {
+  const v = realtimeTrafficSummary.value?.qps?.avg
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(1) : '-'
+placeholder)
+const realtimeTpsAvgLabel = computed(() => {
+  const v = realtimeTrafficSummary.value?.tps?.avg
+  return typeof v === 'number' && Number.isFinite(v) ? v.toFixed(1) : '-'
 placeholder)
 
 const qpsAvgLabel = computed(() => {
@@ -244,7 +366,7 @@ const ttftMaxMs = computed(() => overview.value?.ttft?.max_ms ?? null)
 const isSystemIdle = computed(() => {
   const ov = overview.value
   if (!ov) return true
-  const qps = props.wsStatus === 'connected' && props.wsHasData ? props.realTimeQps : ov.qps?.current
+  const qps = ov.qps?.current
   const errorRate = ov.error_rate ?? 0
   return (qps ?? 0) === 0 && errorRate === 0
 placeholder)
@@ -272,15 +394,15 @@ const healthScoreClass = computed(() => {
   return 'text-red-500'
 placeholder)
 
-const circleSize = 100
-const strokeWidth = 8
-const radius = (circleSize - strokeWidth) / 2
-const circumference = 2 * Math.PI * radius
+const circleSize = computed(() => props.fullscreen ? 140 : 100)
+const strokeWidth = computed(() => props.fullscreen ? 10 : 8)
+const radius = computed(() => (circleSize.value - strokeWidth.value) / 2)
+const circumference = computed(() => 2 * Math.PI * radius.value)
 const dashOffset = computed(() => {
   if (isSystemIdle.value) return 0
   if (healthScoreValue.value == null) return 0
   const score = Math.max(0, Math.min(100, healthScoreValue.value))
-  return circumference - (score / 100) * circumference
+  return circumference.value - (score / 100) * circumference.value
 placeholder)
 
 interface DiagnosisItem {
@@ -687,10 +809,15 @@ const showJobsDetails = ref(false)
 function openJobsDetails() {
   showJobsDetails.value = true
 placeholder
+
+function handleToolbarRefresh() {
+  loadRealtimeTrafficSummary()
+  emit('refresh')
+placeholder
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 dark:bg-dark-800 dark:ring-dark-700">
+  <div :class="['flex flex-col gap-4 rounded-3xl bg-white shadow-sm ring-1 ring-gray-900/5 dark:bg-dark-800 dark:ring-dark-700', props.fullscreen ? 'p-8' : 'p-6']">
     <!-- Top Toolbar -->
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4 dark:border-dark-700">
       <div>
@@ -706,7 +833,7 @@ placeholder
           {{ t('admin.ops.title') placeholderplaceholder
         </h1>
 
-        <div class="mt-1 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <div v-if="!props.fullscreen" class="mt-1 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
           <span class="flex items-center gap-1.5" :title="props.loading ? t('admin.ops.loadingText') : t('admin.ops.ready')">
             <span class="relative flex h-2 w-2">
               <span class="relative inline-flex h-2 w-2 rounded-full" :class="props.loading ? 'bg-gray-400' : 'bg-green-500'"></span>
@@ -716,6 +843,17 @@ placeholder
 
           <span>·</span>
           <span>{{ t('common.refresh') placeholderplaceholder: {{ updatedAtLabel placeholderplaceholder</span>
+
+          <template v-if="props.autoRefreshEnabled && props.autoRefreshCountdown !== undefined">
+            <span>·</span>
+            <span class="flex items-center gap-1">
+              <svg class="h-3 w-3 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>自动刷新: {{ props.autoRefreshCountdown placeholderplaceholders</span>
+            </span>
+          </template>
 
           <template v-if="systemMetrics">
             <span>·</span>
@@ -728,28 +866,30 @@ placeholder
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
-        <Select
-          :model-value="platform"
-          :options="platformOptions"
-          class="w-full sm:w-[140px]"
-          @update:model-value="handlePlatformChange"
-        />
+        <template v-if="!props.fullscreen">
+          <Select
+            :model-value="platform"
+            :options="platformOptions"
+            class="w-full sm:w-[140px]"
+            @update:model-value="handlePlatformChange"
+          />
 
-        <Select
-          :model-value="groupId"
-          :options="groupOptions"
-          class="w-full sm:w-[160px]"
-          @update:model-value="handleGroupChange"
-        />
+          <Select
+            :model-value="groupId"
+            :options="groupOptions"
+            class="w-full sm:w-[160px]"
+            @update:model-value="handleGroupChange"
+          />
 
-        <div class="mx-1 hidden h-4 w-[1px] bg-gray-200 dark:bg-dark-700 sm:block"></div>
+          <div class="mx-1 hidden h-4 w-[1px] bg-gray-200 dark:bg-dark-700 sm:block"></div>
 
-        <Select
-          :model-value="timeRange"
-          :options="timeRangeOptions"
-          class="relative w-full sm:w-[150px]"
-          @update:model-value="handleTimeRangeChange"
-        />
+          <Select
+            :model-value="timeRange"
+            :options="timeRangeOptions"
+            class="relative w-full sm:w-[150px]"
+            @update:model-value="handleTimeRangeChange"
+          />
+        </template>
 
         <Select
           v-if="false"
@@ -760,11 +900,12 @@ placeholder
         />
 
         <button
+          v-if="!props.fullscreen"
           type="button"
           class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 dark:bg-dark-700 dark:text-gray-400 dark:hover:bg-dark-600"
           :disabled="loading"
           :title="t('common.refresh')"
-          @click="emit('refresh')"
+          @click="handleToolbarRefresh"
         >
           <svg class="h-4 w-4" :class="{ 'animate-spin': loading placeholder" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path
@@ -776,9 +917,11 @@ placeholder
           </svg>
         </button>
 
-        <div class="mx-1 hidden h-4 w-[1px] bg-gray-200 dark:bg-dark-700 sm:block"></div>
+        <div v-if="!props.fullscreen" class="mx-1 hidden h-4 w-[1px] bg-gray-200 dark:bg-dark-700 sm:block"></div>
 
+        <!-- Alert Rules Button (hidden in fullscreen) -->
         <button
+          v-if="!props.fullscreen"
           type="button"
           class="flex h-8 items-center gap-1.5 rounded-lg bg-blue-100 px-3 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
           :title="t('admin.ops.alertRules.title')"
@@ -790,7 +933,9 @@ placeholder
           <span class="hidden sm:inline">{{ t('admin.ops.alertRules.manage') placeholderplaceholder</span>
         </button>
 
+        <!-- Settings Button (hidden in fullscreen) -->
         <button
+          v-if="!props.fullscreen"
           type="button"
           class="flex h-8 items-center gap-1.5 rounded-lg bg-gray-100 px-3 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:hover:bg-dark-600"
           :title="t('admin.ops.settings.title')"
@@ -802,13 +947,26 @@ placeholder
           </svg>
           <span class="hidden sm:inline">{{ t('common.settings') placeholderplaceholder</span>
         </button>
+
+        <!-- Enter Fullscreen Button (hidden in fullscreen mode) -->
+        <button
+          v-if="!props.fullscreen"
+          type="button"
+          class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:hover:bg-dark-600"
+          :title="t('admin.ops.fullscreen.enter')"
+          @click="emit('enterFullscreen')"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
       </div>
     </div>
 
     <div v-if="overview" class="grid grid-cols-1 gap-6 lg:grid-cols-12">
       <!-- Left: Health + Realtime -->
-      <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900 lg:col-span-5">
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-[200px_1fr] md:items-center">
+      <div :class="['rounded-2xl bg-gray-50 dark:bg-dark-900 lg:col-span-5', props.fullscreen ? 'p-6' : 'p-4']">
+        <div class="grid h-full grid-cols-1 gap-6 md:grid-cols-[200px_1fr] md:items-center">
           <!-- 1) Health Score -->
           <div
             class="group relative flex cursor-pointer flex-col items-center justify-center rounded-xl py-2 transition-all hover:bg-white/60 dark:hover:bg-dark-800/60 md:border-r md:border-gray-200 md:pr-6 dark:md:border-dark-700"
@@ -818,8 +976,9 @@ placeholder
               class="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2 opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100 md:left-full md:top-0 md:ml-2 md:mt-0 md:translate-x-0"
             >
               <div class="rounded-xl bg-white p-4 shadow-xl ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
-                <h4 class="mb-3 border-b border-gray-100 pb-2 text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-white">
-                  🧠 {{ t('admin.ops.diagnosis.title') placeholderplaceholder
+                <h4 class="mb-3 border-b border-gray-100 pb-2 text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-white flex items-center gap-2">
+                  <Icon name="brain" size="sm" class="text-blue-500" />
+                  {{ t('admin.ops.diagnosis.title') placeholderplaceholder
                 </h4>
 
                 <div class="space-y-3">
@@ -850,8 +1009,9 @@ placeholder
                     <div class="flex-1">
                       <div class="text-xs font-semibold text-gray-900 dark:text-white">{{ item.message placeholderplaceholder</div>
                       <div class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{{ item.impact placeholderplaceholder</div>
-                      <div v-if="item.action" class="mt-1 text-[11px] text-blue-600 dark:text-blue-400">
-                        💡 {{ item.action placeholderplaceholder
+                      <div v-if="item.action" class="mt-1 text-[11px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <Icon name="lightbulb" size="xs" />
+                        {{ item.action placeholderplaceholder
                       </div>
                     </div>
                   </div>
@@ -889,14 +1049,14 @@ placeholder
               </svg>
 
               <div class="absolute flex flex-col items-center">
-                <span class="text-3xl font-black" :class="healthScoreClass">
+                <span :class="[props.fullscreen ? 'text-5xl' : 'text-3xl', 'font-black', healthScoreClass]">
                   {{ isSystemIdle ? t('admin.ops.idleStatus') : (overview.health_score ?? '--') placeholderplaceholder
                 </span>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.health') placeholderplaceholder</span>
+                <span :class="[props.fullscreen ? 'text-xs' : 'text-[10px]', 'font-bold uppercase tracking-wider text-gray-400']">{{ t('admin.ops.health') placeholderplaceholder</span>
               </div>
             </div>
 
-            <div class="mt-4 text-center">
+            <div class="mt-4 text-center" v-if="!props.fullscreen">
               <div class="flex items-center justify-center gap-1 text-xs font-medium text-gray-500">
                 {{ t('admin.ops.healthCondition') placeholderplaceholder
                 <HelpTooltip :content="t('admin.ops.healthHelp')" />
@@ -914,7 +1074,7 @@ placeholder
           </div>
 
           <!-- 2) Realtime Traffic -->
-          <div class="flex flex-col justify-center py-2">
+          <div class="flex h-full flex-col justify-center py-2">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
                 <div class="relative flex h-3 w-3 shrink-0">
@@ -922,13 +1082,13 @@ placeholder
                   <span class="relative inline-flex h-3 w-3 rounded-full bg-blue-500"></span>
                 </div>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.realtime.title') placeholderplaceholder</h3>
-                <HelpTooltip :content="t('admin.ops.tooltips.qps')" />
+                <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.qps')" />
               </div>
 
               <!-- Time Window Selector -->
               <div class="flex flex-wrap gap-1">
                 <button
-                  v-for="window in (['1min', '5min', '30min', '1h'] as RealtimeWindow[])"
+                  v-for="window in availableRealtimeWindows"
                   :key="window"
                   type="button"
                   class="rounded px-1.5 py-0.5 text-[9px] font-bold transition-colors sm:px-2 sm:text-[10px]"
@@ -942,18 +1102,18 @@ placeholder
               </div>
             </div>
 
-            <div class="space-y-3">
+            <div :class="props.fullscreen ? 'space-y-4' : 'space-y-3'">
               <!-- Row 1: Current -->
               <div>
-                <div class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.current') placeholderplaceholder</div>
+                <div :class="[props.fullscreen ? 'text-xs' : 'text-[10px]', 'font-bold uppercase text-gray-400']">{{ t('admin.ops.current') placeholderplaceholder</div>
                 <div class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-2">
                   <div class="flex items-baseline gap-1.5">
-                    <span class="text-xl font-black text-gray-900 dark:text-white sm:text-2xl">{{ displayRealTimeQps.toFixed(1) placeholderplaceholder</span>
-                    <span class="text-xs font-bold text-gray-500">QPS</span>
+                    <span :class="[props.fullscreen ? 'text-4xl' : 'text-xl sm:text-2xl', 'font-black text-gray-900 dark:text-white']">{{ displayRealTimeQps.toFixed(1) placeholderplaceholder</span>
+                    <span :class="[props.fullscreen ? 'text-sm' : 'text-xs', 'font-bold text-gray-500']">QPS</span>
                   </div>
                   <div class="flex items-baseline gap-1.5">
-                    <span class="text-xl font-black text-gray-900 dark:text-white sm:text-2xl">{{ displayRealTimeTps.toFixed(1) placeholderplaceholder</span>
-                    <span class="text-xs font-bold text-gray-500">TPS</span>
+                    <span :class="[props.fullscreen ? 'text-4xl' : 'text-xl sm:text-2xl', 'font-black text-gray-900 dark:text-white']">{{ displayRealTimeTps.toFixed(1) placeholderplaceholder</span>
+                    <span :class="[props.fullscreen ? 'text-sm' : 'text-xs', 'font-bold text-gray-500']">TPS</span>
                   </div>
                 </div>
               </div>
@@ -962,14 +1122,14 @@ placeholder
               <div class="grid grid-cols-2 gap-3">
                 <!-- Peak -->
                 <div>
-                  <div class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.peak') placeholderplaceholder</div>
-                  <div class="mt-1 space-y-0.5 text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <div :class="[props.fullscreen ? 'text-xs' : 'text-[10px]', 'font-bold uppercase text-gray-400']">{{ t('admin.ops.peak') placeholderplaceholder</div>
+                  <div :class="[props.fullscreen ? 'text-base' : 'text-sm', 'mt-1 space-y-0.5 font-medium text-gray-600 dark:text-gray-400']">
                     <div class="flex items-baseline gap-1.5">
-                      <span class="font-black text-gray-900 dark:text-white">{{ qpsPeakLabel placeholderplaceholder</span>
+                      <span class="font-black text-gray-900 dark:text-white">{{ realtimeQpsPeakLabel placeholderplaceholder</span>
                       <span class="text-xs">QPS</span>
                     </div>
                     <div class="flex items-baseline gap-1.5">
-                      <span class="font-black text-gray-900 dark:text-white">{{ tpsPeakLabel placeholderplaceholder</span>
+                      <span class="font-black text-gray-900 dark:text-white">{{ realtimeTpsPeakLabel placeholderplaceholder</span>
                       <span class="text-xs">TPS</span>
                     </div>
                   </div>
@@ -977,14 +1137,14 @@ placeholder
 
                 <!-- Average -->
                 <div>
-                  <div class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.average') placeholderplaceholder</div>
-                  <div class="mt-1 space-y-0.5 text-sm font-medium text-gray-600 dark:text-gray-400">
+                  <div :class="[props.fullscreen ? 'text-xs' : 'text-[10px]', 'font-bold uppercase text-gray-400']">{{ t('admin.ops.average') placeholderplaceholder</div>
+                  <div :class="[props.fullscreen ? 'text-base' : 'text-sm', 'mt-1 space-y-0.5 font-medium text-gray-600 dark:text-gray-400']">
                     <div class="flex items-baseline gap-1.5">
-                      <span class="font-black text-gray-900 dark:text-white">{{ qpsAvgLabel placeholderplaceholder</span>
+                      <span class="font-black text-gray-900 dark:text-white">{{ realtimeQpsAvgLabel placeholderplaceholder</span>
                       <span class="text-xs">QPS</span>
                     </div>
                     <div class="flex items-baseline gap-1.5">
-                      <span class="font-black text-gray-900 dark:text-white">{{ tpsAvgLabel placeholderplaceholder</span>
+                      <span class="font-black text-gray-900 dark:text-white">{{ realtimeTpsAvgLabel placeholderplaceholder</span>
                       <span class="text-xs">TPS</span>
                     </div>
                   </div>
@@ -1019,15 +1179,16 @@ placeholder
       </div>
 
       <!-- Right: 6 cards (3 cols x 2 rows) -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-3">
+      <div class="grid h-full grid-cols-1 content-center gap-4 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-3">
         <!-- Card 1: Requests -->
         <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
-              <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.requests') placeholderplaceholder</span>
-              <HelpTooltip :content="t('admin.ops.tooltips.totalRequests')" />
+              <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.requestsTitle') placeholderplaceholder</span>
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.totalRequests')" />
             </div>
             <button
+              v-if="!props.fullscreen"
               class="text-[10px] font-bold text-blue-500 hover:underline"
               type="button"
               @click="openDetails({ title: t('admin.ops.requestDetails.title') placeholder)"
@@ -1060,22 +1221,23 @@ placeholder
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-[10px] font-bold uppercase text-gray-400">SLA</span>
-              <HelpTooltip :content="t('admin.ops.tooltips.sla')" />
-              <span class="h-1.5 w-1.5 rounded-full" :class="(slaPercent ?? 0) >= 99.5 ? 'bg-green-500' : 'bg-yellow-500'"></span>
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.sla')" />
+              <span class="h-1.5 w-1.5 rounded-full" :class="isSLABelowThreshold(slaPercent) ? 'bg-red-500' : (slaPercent ?? 0) >= 99.5 ? 'bg-green-500' : 'bg-yellow-500'"></span>
             </div>
             <button
+              v-if="!props.fullscreen"
               class="text-[10px] font-bold text-blue-500 hover:underline"
               type="button"
-              @click="openDetails({ title: t('admin.ops.requestDetails.title') placeholder)"
+              @click="openDetails({ title: t('admin.ops.requestDetails.title'), kind: 'error' placeholder)"
             >
               {{ t('admin.ops.requestDetails.details') placeholderplaceholder
             </button>
           </div>
-          <div class="mt-2 text-3xl font-black text-gray-900 dark:text-white">
+          <div class="mt-2 text-3xl font-black" :class="isSLABelowThreshold(slaPercent) ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'">
             {{ slaPercent == null ? '-' : `${slaPercent.toFixed(3)placeholder%` placeholderplaceholder
           </div>
           <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-dark-700">
-            <div class="h-full bg-green-500 transition-all" :style="{ width: `${Math.max((slaPercent ?? 0) - 90, 0) * 10placeholder%` placeholder"></div>
+            <div class="h-full transition-all" :class="isSLABelowThreshold(slaPercent) ? 'bg-red-500' : 'bg-green-500'" :style="{ width: `${Math.max((slaPercent ?? 0) - 90, 0) * 10placeholder%` placeholder"></div>
           </div>
           <div class="mt-3 text-xs">
             <div class="flex justify-between">
@@ -1090,9 +1252,10 @@ placeholder
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.latencyDuration') placeholderplaceholder</span>
-              <HelpTooltip :content="t('admin.ops.tooltips.latency')" />
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.latency')" />
             </div>
             <button
+              v-if="!props.fullscreen"
               class="text-[10px] font-bold text-blue-500 hover:underline"
               type="button"
               @click="openDetails({ title: t('admin.ops.latencyDuration'), sort: 'duration_desc', min_duration_ms: Math.max(Number(durationP99Ms ?? 0), 0) placeholder)"
@@ -1101,7 +1264,7 @@ placeholder
             </button>
           </div>
           <div class="mt-2 flex items-baseline gap-2">
-            <div class="text-3xl font-black" :class="getLatencyColor(durationP99Ms)">
+            <div class="text-3xl font-black" :class="isLatencyAboveThreshold(durationP99Ms) ? 'text-red-600 dark:text-red-400' : getLatencyColor(durationP99Ms)">
               {{ durationP99Ms ?? '-' placeholderplaceholder
             </div>
             <span class="text-xs font-bold text-gray-400">ms (P99)</span>
@@ -1140,18 +1303,19 @@ placeholder
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">TTFT</span>
-              <HelpTooltip :content="t('admin.ops.tooltips.ttft')" />
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.ttft')" />
             </div>
             <button
+              v-if="!props.fullscreen"
               class="text-[10px] font-bold text-blue-500 hover:underline"
               type="button"
-              @click="openDetails({ title: 'TTFT' placeholder)"
+              @click="openDetails({ title: 'TTFT', sort: 'duration_desc' placeholder)"
             >
               {{ t('admin.ops.requestDetails.details') placeholderplaceholder
             </button>
           </div>
           <div class="mt-2 flex items-baseline gap-2">
-            <div class="text-3xl font-black" :class="getLatencyColor(ttftP99Ms)">
+            <div class="text-3xl font-black" :class="isTTFTAboveThreshold(ttftP99Ms) ? 'text-red-600 dark:text-red-400' : getLatencyColor(ttftP99Ms)">
               {{ ttftP99Ms ?? '-' placeholderplaceholder
             </div>
             <span class="text-xs font-bold text-gray-400">ms (P99)</span>
@@ -1190,13 +1354,13 @@ placeholder
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.requestErrors') placeholderplaceholder</span>
-              <HelpTooltip :content="t('admin.ops.tooltips.errors')" />
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.errors')" />
             </div>
-            <button class="text-[10px] font-bold text-blue-500 hover:underline" type="button" @click="openErrorDetails('request')">
+            <button v-if="!props.fullscreen" class="text-[10px] font-bold text-blue-500 hover:underline" type="button" @click="openErrorDetails('request')">
               {{ t('admin.ops.requestDetails.details') placeholderplaceholder
             </button>
           </div>
-          <div class="mt-2 text-3xl font-black" :class="(errorRatePercent ?? 0) > 5 ? 'text-red-500' : 'text-gray-900 dark:text-white'">
+          <div class="mt-2 text-3xl font-black" :class="isRequestErrorRateAboveThreshold(errorRatePercent) ? 'text-red-600 dark:text-red-400' : (errorRatePercent ?? 0) > 5 ? 'text-red-500' : 'text-gray-900 dark:text-white'">
             {{ errorRatePercent == null ? '-' : `${errorRatePercent.toFixed(2)placeholder%` placeholderplaceholder
           </div>
           <div class="mt-3 space-y-1 text-xs">
@@ -1216,13 +1380,13 @@ placeholder
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.upstreamErrors') placeholderplaceholder</span>
-              <HelpTooltip :content="t('admin.ops.tooltips.upstreamErrors')" />
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.upstreamErrors')" />
             </div>
-            <button class="text-[10px] font-bold text-blue-500 hover:underline" type="button" @click="openErrorDetails('upstream')">
+            <button v-if="!props.fullscreen" class="text-[10px] font-bold text-blue-500 hover:underline" type="button" @click="openErrorDetails('upstream')">
               {{ t('admin.ops.requestDetails.details') placeholderplaceholder
             </button>
           </div>
-          <div class="mt-2 text-3xl font-black" :class="(upstreamErrorRatePercent ?? 0) > 5 ? 'text-red-500' : 'text-gray-900 dark:text-white'">
+          <div class="mt-2 text-3xl font-black" :class="isUpstreamErrorRateAboveThreshold(upstreamErrorRatePercent) ? 'text-red-600 dark:text-red-400' : (upstreamErrorRatePercent ?? 0) > 5 ? 'text-red-500' : 'text-gray-900 dark:text-white'">
             {{ upstreamErrorRatePercent == null ? '-' : `${upstreamErrorRatePercent.toFixed(2)placeholder%` placeholderplaceholder
           </div>
           <div class="mt-3 space-y-1 text-xs">
@@ -1246,12 +1410,12 @@ placeholder
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">CPU</div>
-            <HelpTooltip :content="t('admin.ops.tooltips.cpu')" />
+            <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.cpu')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="cpuPercentClass">
             {{ cpuPercentValue == null ? '-' : `${cpuPercentValue.toFixed(1)placeholder%` placeholderplaceholder
           </div>
-          <div class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div v-if="!props.fullscreen" class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {{ t('common.warning') placeholderplaceholder 80% · {{ t('common.critical') placeholderplaceholder 95%
           </div>
         </div>
@@ -1260,12 +1424,12 @@ placeholder
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">MEM</div>
-            <HelpTooltip :content="t('admin.ops.tooltips.memory')" />
+            <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.memory')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="memPercentClass">
             {{ memPercentValue == null ? '-' : `${memPercentValue.toFixed(1)placeholder%` placeholderplaceholder
           </div>
-          <div class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div v-if="!props.fullscreen" class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {{
               systemMetrics?.memory_used_mb == null || systemMetrics?.memory_total_mb == null
                 ? '-'
@@ -1278,12 +1442,12 @@ placeholder
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">DB</div>
-            <HelpTooltip :content="t('admin.ops.tooltips.db')" />
+            <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.db')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="dbMiddleClass">
             {{ dbMiddleLabel placeholderplaceholder
           </div>
-          <div class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div v-if="!props.fullscreen" class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {{ t('admin.ops.conns') placeholderplaceholder {{ dbConnOpenValue ?? '-' placeholderplaceholder / {{ dbMaxOpenConnsValue ?? '-' placeholderplaceholder
             · {{ t('admin.ops.active') placeholderplaceholder {{ dbConnActiveValue ?? '-' placeholderplaceholder
             · {{ t('admin.ops.idle') placeholderplaceholder {{ dbConnIdleValue ?? '-' placeholderplaceholder
@@ -1295,12 +1459,12 @@ placeholder
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Redis</div>
-            <HelpTooltip :content="t('admin.ops.tooltips.redis')" />
+            <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.redis')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="redisMiddleClass">
             {{ redisMiddleLabel placeholderplaceholder
           </div>
-          <div class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div v-if="!props.fullscreen" class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {{ t('admin.ops.conns') placeholderplaceholder {{ redisConnTotalValue ?? '-' placeholderplaceholder / {{ redisPoolSizeValue ?? '-' placeholderplaceholder
             <span v-if="redisConnActiveValue != null"> · {{ t('admin.ops.active') placeholderplaceholder {{ redisConnActiveValue placeholderplaceholder </span>
             <span v-if="redisConnIdleValue != null"> · {{ t('admin.ops.idle') placeholderplaceholder {{ redisConnIdleValue placeholderplaceholder </span>
@@ -1311,12 +1475,12 @@ placeholder
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
             <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.goroutines') placeholderplaceholder</div>
-            <HelpTooltip :content="t('admin.ops.tooltips.goroutines')" />
+            <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.goroutines')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="goroutineStatusClass">
             {{ goroutineStatusLabel placeholderplaceholder
           </div>
-          <div class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div v-if="!props.fullscreen" class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {{ t('admin.ops.current') placeholderplaceholder <span class="font-mono">{{ goroutineCountValue ?? '-' placeholderplaceholder</span>
             · {{ t('common.warning') placeholderplaceholder <span class="font-mono">{{ goroutinesWarnThreshold placeholderplaceholder</span>
             · {{ t('common.critical') placeholderplaceholder <span class="font-mono">{{ goroutinesCriticalThreshold placeholderplaceholder</span>
@@ -1331,9 +1495,9 @@ placeholder
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-1">
               <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.jobs') placeholderplaceholder</div>
-              <HelpTooltip :content="t('admin.ops.tooltips.jobs')" />
+              <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.jobs')" />
             </div>
-            <button class="text-[10px] font-bold text-blue-500 hover:underline" type="button" @click="openJobsDetails">
+            <button v-if="!props.fullscreen" class="text-[10px] font-bold text-blue-500 hover:underline" type="button" @click="openJobsDetails">
               {{ t('admin.ops.requestDetails.details') placeholderplaceholder
             </button>
           </div>
@@ -1342,7 +1506,7 @@ placeholder
             {{ jobsStatusLabel placeholderplaceholder
           </div>
 
-          <div class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <div v-if="!props.fullscreen" class="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {{ t('common.total') placeholderplaceholder <span class="font-mono">{{ jobHeartbeats.length placeholderplaceholder</span>
             · {{ t('common.warning') placeholderplaceholder <span class="font-mono">{{ jobsWarnCount placeholderplaceholder</span>
           </div>

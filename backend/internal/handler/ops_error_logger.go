@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -489,6 +490,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 				Severity:          classifyOpsSeverity("upstream_error", effectiveUpstreamStatus),
 				StatusCode:        status,
 				IsBusinessLimited: false,
+				IsCountTokens:     isCountTokensRequest(c),
 
 				ErrorMessage: recoveredMsg,
 				ErrorBody:    "",
@@ -521,7 +523,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 		placeholder
 
 			var clientIP string
-			if ip := strings.TrimSpace(c.ClientIP()); ip != "" {
+			if ip := strings.TrimSpace(ip.GetClientIP(c)); ip != "" {
 				clientIP = ip
 				entry.ClientIP = &clientIP
 		placeholder
@@ -598,6 +600,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 			Severity:          classifyOpsSeverity(parsed.ErrorType, status),
 			StatusCode:        status,
 			IsBusinessLimited: isBusinessLimited,
+			IsCountTokens:     isCountTokensRequest(c),
 
 			ErrorMessage: parsed.Message,
 			// Keep the full captured error body (capture is already capped at 64KB) so the
@@ -680,7 +683,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 	placeholder
 
 		var clientIP string
-		if ip := strings.TrimSpace(c.ClientIP()); ip != "" {
+		if ip := strings.TrimSpace(ip.GetClientIP(c)); ip != "" {
 			clientIP = ip
 			entry.ClientIP = &clientIP
 	placeholder
@@ -702,6 +705,14 @@ placeholder
 var opsRetryRequestHeaderAllowlist = []string{
 	"anthropic-beta",
 	"anthropic-version",
+placeholder
+
+// isCountTokensRequest checks if the request is a count_tokens request
+func isCountTokensRequest(c *gin.Context) bool {
+	if c == nil || c.Request == nil || c.Request.URL == nil {
+		return false
+placeholder
+	return strings.Contains(c.Request.URL.Path, "/count_tokens")
 placeholder
 
 func extractOpsRetryRequestHeaders(c *gin.Context) *string {
