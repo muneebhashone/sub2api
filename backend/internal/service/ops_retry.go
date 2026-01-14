@@ -231,16 +231,36 @@ placeholder
 		finalStatus = opsRetryStatusFailed
 placeholder
 
+	success := strings.EqualFold(finalStatus, opsRetryStatusSucceeded)
+	httpStatus := result.HTTPStatusCode
+	upstreamReqID := result.UpstreamRequestID
+	usedAccountID := result.UsedAccountID
+	preview := result.ResponsePreview
+	truncated := result.ResponseTruncated
+
 	if err := s.opsRepo.UpdateRetryAttempt(updateCtx, &OpsUpdateRetryAttemptInput{
-		ID:              attemptID,
-		Status:          finalStatus,
-		FinishedAt:      finishedAt,
-		DurationMs:      result.DurationMs,
-		ResultRequestID: resultRequestID,
-		ErrorMessage:    updateErrMsg,
+		ID:                attemptID,
+		Status:            finalStatus,
+		FinishedAt:        finishedAt,
+		DurationMs:        result.DurationMs,
+		Success:           &success,
+		HTTPStatusCode:    &httpStatus,
+		UpstreamRequestID: &upstreamReqID,
+		UsedAccountID:     usedAccountID,
+		ResponsePreview:   &preview,
+		ResponseTruncated: &truncated,
+		ResultRequestID:   resultRequestID,
+		ErrorMessage:      updateErrMsg,
 placeholder); err != nil {
 		// Best-effort: retry itself already executed; do not fail the API response.
 		log.Printf("[Ops] UpdateRetryAttempt failed: %v", err)
+placeholder else {
+		// Auto-resolve the source error when a manual retry succeeds.
+		if success {
+			if err := s.opsRepo.UpdateErrorResolution(updateCtx, errorID, true, &requestedByUserID, &attemptID, &finishedAt); err != nil {
+				log.Printf("[Ops] UpdateErrorResolution failed: %v", err)
+		placeholder
+	placeholder
 placeholder
 
 	return result, nil
