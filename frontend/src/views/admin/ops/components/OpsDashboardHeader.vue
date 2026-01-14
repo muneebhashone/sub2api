@@ -826,7 +826,7 @@ placeholder
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span>自动刷新: {{ props.autoRefreshCountdown placeholderplaceholders</span>
+              <span>{{ t('admin.ops.settings.autoRefreshCountdown', { seconds: props.autoRefreshCountdown placeholder) placeholderplaceholder</span>
             </span>
           </template>
 
@@ -1084,11 +1084,11 @@ placeholder
                 <div class="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-2">
                   <div class="flex items-baseline gap-1.5">
                     <span :class="[props.fullscreen ? 'text-4xl' : 'text-xl sm:text-2xl', 'font-black text-gray-900 dark:text-white']">{{ displayRealTimeQps.toFixed(1) placeholderplaceholder</span>
-                    <span :class="[props.fullscreen ? 'text-sm' : 'text-xs', 'font-bold text-gray-500']">QPS</span>
+                    <span :class="[props.fullscreen ? 'text-sm' : 'text-xs', 'font-bold text-gray-500']">{{ t('admin.ops.qps') placeholderplaceholder</span>
                   </div>
                   <div class="flex items-baseline gap-1.5">
                     <span :class="[props.fullscreen ? 'text-4xl' : 'text-xl sm:text-2xl', 'font-black text-gray-900 dark:text-white']">{{ displayRealTimeTps.toFixed(1) placeholderplaceholder</span>
-                    <span :class="[props.fullscreen ? 'text-sm' : 'text-xs', 'font-bold text-gray-500']">TPS</span>
+                    <span :class="[props.fullscreen ? 'text-sm' : 'text-xs', 'font-bold text-gray-500']">{{ t('admin.ops.tps') placeholderplaceholder</span>
                   </div>
                 </div>
               </div>
@@ -1101,11 +1101,11 @@ placeholder
                   <div :class="[props.fullscreen ? 'text-base' : 'text-sm', 'mt-1 space-y-0.5 font-medium text-gray-600 dark:text-gray-400']">
                     <div class="flex items-baseline gap-1.5">
                       <span class="font-black text-gray-900 dark:text-white">{{ realtimeQpsPeakLabel placeholderplaceholder</span>
-                      <span class="text-xs">QPS</span>
+                      <span class="text-xs">{{ t('admin.ops.qps') placeholderplaceholder</span>
                     </div>
                     <div class="flex items-baseline gap-1.5">
                       <span class="font-black text-gray-900 dark:text-white">{{ realtimeTpsPeakLabel placeholderplaceholder</span>
-                      <span class="text-xs">TPS</span>
+                      <span class="text-xs">{{ t('admin.ops.tps') placeholderplaceholder</span>
                     </div>
                   </div>
                 </div>
@@ -1116,11 +1116,11 @@ placeholder
                   <div :class="[props.fullscreen ? 'text-base' : 'text-sm', 'mt-1 space-y-0.5 font-medium text-gray-600 dark:text-gray-400']">
                     <div class="flex items-baseline gap-1.5">
                       <span class="font-black text-gray-900 dark:text-white">{{ realtimeQpsAvgLabel placeholderplaceholder</span>
-                      <span class="text-xs">QPS</span>
+                      <span class="text-xs">{{ t('admin.ops.qps') placeholderplaceholder</span>
                     </div>
                     <div class="flex items-baseline gap-1.5">
                       <span class="font-black text-gray-900 dark:text-white">{{ realtimeTpsAvgLabel placeholderplaceholder</span>
-                      <span class="text-xs">TPS</span>
+                      <span class="text-xs">{{ t('admin.ops.tps') placeholderplaceholder</span>
                     </div>
                   </div>
                 </div>
@@ -1195,7 +1195,7 @@ placeholder
         <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 2;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-[10px] font-bold uppercase text-gray-400">SLA</span>
+              <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.sla') placeholderplaceholder</span>
               <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.sla')" />
               <span class="h-1.5 w-1.5 rounded-full" :class="isSLABelowThreshold(slaPercent) ? 'bg-red-500' : (slaPercent ?? 0) >= 99.5 ? 'bg-green-500' : 'bg-yellow-500'"></span>
             </div>
@@ -1242,33 +1242,33 @@ placeholder
             <div class="text-3xl font-black text-gray-900 dark:text-white">
               {{ durationP99Ms ?? '-' placeholderplaceholder
             </div>
-            <span class="text-xs font-bold text-gray-400">ms (P99)</span>
+            <span class="text-xs font-bold text-gray-400">{{ t('admin.ops.msP99') placeholderplaceholder</span>
           </div>
           <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
-              <span class="text-gray-500">P95:</span>
+              <span class="text-gray-500">{{ t('admin.ops.p95') placeholderplaceholder</span>
               <span class="font-bold text-gray-900 dark:text-white">{{ durationP95Ms ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
-              <span class="text-gray-500">P90:</span>
+              <span class="text-gray-500">{{ t('admin.ops.p90') placeholderplaceholder</span>
               <span class="font-bold text-gray-900 dark:text-white">{{ durationP90Ms ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
-              <span class="text-gray-500">P50:</span>
+              <span class="text-gray-500">{{ t('admin.ops.p50') placeholderplaceholder</span>
               <span class="font-bold text-gray-900 dark:text-white">{{ durationP50Ms ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Avg:</span>
               <span class="font-bold text-gray-900 dark:text-white">{{ durationAvgMs ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Max:</span>
               <span class="font-bold text-gray-900 dark:text-white">{{ durationMaxMs ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
           </div>
         </div>
@@ -1277,14 +1277,14 @@ placeholder
         <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 5;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
-              <span class="text-[10px] font-bold uppercase text-gray-400">TTFT</span>
+              <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.ttft') placeholderplaceholder</span>
               <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.ttft')" />
             </div>
             <button
               v-if="!props.fullscreen"
               class="text-[10px] font-bold text-blue-500 hover:underline"
               type="button"
-              @click="openDetails({ title: 'TTFT', sort: 'duration_desc' placeholder)"
+              @click="openDetails({ title: t('admin.ops.ttftLabel'), sort: 'duration_desc' placeholder)"
             >
               {{ t('admin.ops.requestDetails.details') placeholderplaceholder
             </button>
@@ -1293,33 +1293,33 @@ placeholder
             <div class="text-3xl font-black" :class="isTTFTAboveThreshold(ttftP99Ms) ? 'text-red-600 dark:text-red-400' : getTTFTColor(ttftP99Ms)">
               {{ ttftP99Ms ?? '-' placeholderplaceholder
             </div>
-            <span class="text-xs font-bold text-gray-400">ms (P99)</span>
+            <span class="text-xs font-bold text-gray-400">{{ t('admin.ops.msP99') placeholderplaceholder</span>
           </div>
           <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
-              <span class="text-gray-500">P95:</span>
+              <span class="text-gray-500">{{ t('admin.ops.p95') placeholderplaceholder</span>
               <span class="font-bold" :class="getTTFTColor(ttftP95Ms)">{{ ttftP95Ms ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
-              <span class="text-gray-500">P90:</span>
+              <span class="text-gray-500">{{ t('admin.ops.p90') placeholderplaceholder</span>
               <span class="font-bold" :class="getTTFTColor(ttftP90Ms)">{{ ttftP90Ms ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
-              <span class="text-gray-500">P50:</span>
+              <span class="text-gray-500">{{ t('admin.ops.p50') placeholderplaceholder</span>
               <span class="font-bold" :class="getTTFTColor(ttftP50Ms)">{{ ttftP50Ms ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Avg:</span>
               <span class="font-bold" :class="getTTFTColor(ttftAvgMs)">{{ ttftAvgMs ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Max:</span>
               <span class="font-bold" :class="getTTFTColor(ttftMaxMs)">{{ ttftMaxMs ?? '-' placeholderplaceholder</span>
-              <span class="text-gray-400">ms</span>
+              <span class="text-gray-400">{{ t('admin.ops.ms') placeholderplaceholder</span>
             </div>
           </div>
         </div>
@@ -1384,7 +1384,7 @@ placeholder
         <!-- CPU -->
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">CPU</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.cpu') placeholderplaceholder</div>
             <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.cpu')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="cpuPercentClass">
@@ -1398,7 +1398,7 @@ placeholder
         <!-- MEM -->
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">MEM</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.mem') placeholderplaceholder</div>
             <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.memory')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="memPercentClass">
@@ -1416,7 +1416,7 @@ placeholder
         <!-- DB -->
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">DB</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.db') placeholderplaceholder</div>
             <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.db')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="dbMiddleClass">
@@ -1433,7 +1433,7 @@ placeholder
         <!-- Redis -->
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Redis</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.redis') placeholderplaceholder</div>
             <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.redis')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="redisMiddleClass">
