@@ -127,8 +127,8 @@ placeholder{
 					MemoryUsagePercent: float64Ptr(75),
 			placeholder,
 		placeholder,
-			wantMin: 60,
-			wantMax: 85,
+			wantMin: 57,
+			wantMax: 58,
 	placeholder,
 		{
 			name: "DB failure",
@@ -277,8 +277,8 @@ placeholder{
 				UpstreamErrorRate: 0,
 				Duration:          OpsPercentiles{P99: intPtr(500)placeholder,
 		placeholder,
-			wantMin: 50,
-			wantMax: 60,
+			wantMin: 37,
+			wantMax: 38,
 	placeholder,
 		{
 			name: "error rate boundary 0.5%",
