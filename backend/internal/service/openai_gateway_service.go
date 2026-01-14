@@ -186,6 +186,11 @@ placeholder
 		if _, excluded := excludedIDs[acc.ID]; excluded {
 			continue
 	placeholder
+		// Scheduler snapshots can be temporarily stale; re-check schedulability here to
+		// avoid selecting accounts that were recently rate-limited/overloaded.
+		if !acc.IsSchedulable() {
+			continue
+	placeholder
 		// Check model support
 		if requestedModel != "" && !acc.IsModelSupported(requestedModel) {
 			continue
@@ -330,6 +335,12 @@ placeholder
 	for i := range accounts {
 		acc := &accounts[i]
 		if isExcluded(acc.ID) {
+			continue
+	placeholder
+		// Scheduler snapshots can be temporarily stale (bucket rebuild is throttled);
+		// re-check schedulability here so recently rate-limited/overloaded accounts
+		// are not selected again before the bucket is rebuilt.
+		if !acc.IsSchedulable() {
 			continue
 	placeholder
 		if requestedModel != "" && !acc.IsModelSupported(requestedModel) {
