@@ -220,11 +220,8 @@ placeholder
 		msg := result.ErrorMessage
 		updateErrMsg = &msg
 placeholder
+	// Keep legacy result_request_id empty; use upstream_request_id instead.
 	var resultRequestID *string
-	if strings.TrimSpace(result.UpstreamRequestID) != "" {
-		v := result.UpstreamRequestID
-		resultRequestID = &v
-placeholder
 
 	finalStatus := result.Status
 	if strings.TrimSpace(finalStatus) == "" {

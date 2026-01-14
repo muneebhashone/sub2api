@@ -925,9 +925,13 @@ placeholder
 	// ops_error_logs stores client-visible error requests (status>=400),
 	// but we also persist "recovered" upstream errors (status<400) for upstream health visibility.
 	// By default, keep list endpoints scoped to unresolved records if the caller didn't specify.
-	if filter != nil && filter.Resolved == nil {
+	resolvedFilter := (*bool)(nil)
+	if filter != nil {
+		resolvedFilter = filter.Resolved
+placeholder
+	if resolvedFilter == nil {
 		f := false
-		filter.Resolved = &f
+		resolvedFilter = &f
 placeholder
 	// Keep list endpoints scoped to client errors unless explicitly filtering upstream phase.
 	if phaseFilter != "upstream" {
@@ -967,8 +971,8 @@ placeholder
 		args = append(args, source)
 		clauses = append(clauses, "LOWER(COALESCE(error_source,'')) = $"+itoa(len(args)))
 placeholder
-	if filter.Resolved != nil {
-		args = append(args, *filter.Resolved)
+	if resolvedFilter != nil {
+		args = append(args, *resolvedFilter)
 		clauses = append(clauses, "COALESCE(resolved,false) = $"+itoa(len(args)))
 placeholder
 	if len(filter.StatusCodes) > 0 {

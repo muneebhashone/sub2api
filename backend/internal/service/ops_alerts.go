@@ -208,7 +208,11 @@ placeholder
 	if eventID <= 0 {
 		return infraerrors.BadRequest("INVALID_EVENT_ID", "invalid event id")
 placeholder
-	if strings.TrimSpace(status) == "" {
+	status = strings.TrimSpace(status)
+	if status == "" {
+		return infraerrors.BadRequest("INVALID_STATUS", "invalid status")
+placeholder
+	if status != OpsAlertStatusResolved && status != OpsAlertStatusManualResolved {
 		return infraerrors.BadRequest("INVALID_STATUS", "invalid status")
 placeholder
 	return s.opsRepo.UpdateAlertEventStatus(ctx, eventID, status, resolvedAt)
