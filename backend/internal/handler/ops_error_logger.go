@@ -544,6 +544,11 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 		body := w.buf.Bytes()
 		parsed := parseOpsErrorResponse(body)
 
+		// Skip logging if the error should be filtered based on settings
+		if shouldSkipOpsErrorLog(c.Request.Context(), ops, parsed.Message, string(body), c.Request.URL.Path) {
+			return
+	placeholder
+
 		apiKey, _ := middleware2.GetAPIKeyFromContext(c)
 
 		clientRequestID, _ := c.Request.Context().Value(ctxkey.ClientRequestID).(string)
@@ -969,3 +974,43 @@ placeholder
 func strconvItoa(v int) string {
 	return strconv.Itoa(v)
 placeholder
+
+// shouldSkipOpsErrorLog determines if an error should be skipped from logging based on settings.
+// Returns true for errors that should be filtered according to OpsAdvancedSettings.
+func shouldSkipOpsErrorLog(ctx context.Context, ops *service.OpsService, message, body, requestPath string) bool {
+	if ops == nil {
+		return false
+placeholder
+
+	// Get advanced settings to check filter configuration
+	settings, err := ops.GetOpsAdvancedSettings(ctx)
+	if err != nil || settings == nil {
+		// If we can't get settings, don't skip (fail open)
+		return false
+placeholder
+
+	msgLower := strings.ToLower(message)
+	bodyLower := strings.ToLower(body)
+
+	// Check if count_tokens errors should be ignored
+	if settings.IgnoreCountTokensErrors && strings.Contains(requestPath, "/count_tokens") {
+		return true
+placeholder
+
+	// Check if context canceled errors should be ignored (client disconnects)
+	if settings.IgnoreContextCanceled {
+		if strings.Contains(msgLower, "context canceled") || strings.Contains(bodyLower, "context canceled") {
+			return true
+	placeholder
+placeholder
+
+	// Check if "no available accounts" errors should be ignored
+	if settings.IgnoreNoAvailableAccounts {
+		if strings.Contains(msgLower, "no available accounts") || strings.Contains(bodyLower, "no available accounts") {
+			return true
+	placeholder
+placeholder
+
+	return false
+placeholder
+
