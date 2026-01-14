@@ -292,17 +292,6 @@ placeholder{
 			wantMax: 100,
 	placeholder,
 		{
-			name: "latency boundary 1000ms",
-			overview: &OpsDashboardOverview{
-				SLA:               0.995,
-				ErrorRate:         0,
-				UpstreamErrorRate: 0,
-				Duration:          OpsPercentiles{P99: intPtr(1000)placeholder,
-		placeholder,
-			wantMin: 95,
-			wantMax: 100,
-	placeholder,
-		{
 			name: "upstream error dominates",
 			overview: &OpsDashboardOverview{
 				SLA:               0.995,

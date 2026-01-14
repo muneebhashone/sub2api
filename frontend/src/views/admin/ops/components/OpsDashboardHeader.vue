@@ -169,8 +169,8 @@ const updatedAtLabel = computed(() => {
   return props.lastUpdated.toLocaleTimeString()
 placeholder)
 
-// --- Color coding for latency/TTFT ---
-function getLatencyColor(ms: number | null | undefined): string {
+// --- Color coding for TTFT ---
+function getTTFTColor(ms: number | null | undefined): string {
   if (ms == null) return 'text-gray-900 dark:text-white'
   if (ms < 500) return 'text-green-600 dark:text-green-400'
   if (ms < 1000) return 'text-yellow-600 dark:text-yellow-400'
@@ -184,13 +184,6 @@ function isSLABelowThreshold(slaPercent: number | null): boolean {
   const threshold = props.thresholds?.sla_percent_min
   if (threshold == null) return false
   return slaPercent < threshold
-placeholder
-
-function isLatencyAboveThreshold(latencyP99Ms: number | null): boolean {
-  if (latencyP99Ms == null) return false
-  const threshold = props.thresholds?.latency_p99_ms_max
-  if (threshold == null) return false
-  return latencyP99Ms > threshold
 placeholder
 
 function isTTFTAboveThreshold(ttftP99Ms: number | null): boolean {
@@ -480,24 +473,6 @@ const diagnosisReport = computed<DiagnosisItem[]>(() => {
         action: t('admin.ops.diagnosis.memoryHighAction')
       placeholder)
     placeholder
-  placeholder
-
-  // Latency diagnostics
-  const durationP99 = ov.duration?.p99_ms ?? 0
-  if (durationP99 > 2000) {
-    report.push({
-      type: 'critical',
-      message: t('admin.ops.diagnosis.latencyCritical', { latency: durationP99.toFixed(0) placeholder),
-      impact: t('admin.ops.diagnosis.latencyCriticalImpact'),
-      action: t('admin.ops.diagnosis.latencyCriticalAction')
-    placeholder)
-  placeholder else if (durationP99 > 1000) {
-    report.push({
-      type: 'warning',
-      message: t('admin.ops.diagnosis.latencyHigh', { latency: durationP99.toFixed(0) placeholder),
-      impact: t('admin.ops.diagnosis.latencyHighImpact'),
-      action: t('admin.ops.diagnosis.latencyHighAction')
-    placeholder)
   placeholder
 
   const ttftP99 = ov.ttft?.p99_ms ?? 0
@@ -1181,7 +1156,7 @@ placeholder
       <!-- Right: 6 cards (3 cols x 2 rows) -->
       <div class="grid h-full grid-cols-1 content-center gap-4 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-3">
         <!-- Card 1: Requests -->
-        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
+        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 1;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.requestsTitle') placeholderplaceholder</span>
@@ -1217,7 +1192,7 @@ placeholder
         </div>
 
         <!-- Card 2: SLA -->
-        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
+        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 2;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-[10px] font-bold uppercase text-gray-400">SLA</span>
@@ -1247,8 +1222,8 @@ placeholder
           </div>
         </div>
 
-        <!-- Card 3: Latency (Duration) -->
-        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
+        <!-- Card 4: Request Duration -->
+        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 4;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.latencyDuration') placeholderplaceholder</span>
@@ -1264,7 +1239,7 @@ placeholder
             </button>
           </div>
           <div class="mt-2 flex items-baseline gap-2">
-            <div class="text-3xl font-black" :class="isLatencyAboveThreshold(durationP99Ms) ? 'text-red-600 dark:text-red-400' : getLatencyColor(durationP99Ms)">
+            <div class="text-3xl font-black text-gray-900 dark:text-white">
               {{ durationP99Ms ?? '-' placeholderplaceholder
             </div>
             <span class="text-xs font-bold text-gray-400">ms (P99)</span>
@@ -1272,34 +1247,34 @@ placeholder
           <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P95:</span>
-              <span class="font-bold" :class="getLatencyColor(durationP95Ms)">{{ durationP95Ms ?? '-' placeholderplaceholder</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ durationP95Ms ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P90:</span>
-              <span class="font-bold" :class="getLatencyColor(durationP90Ms)">{{ durationP90Ms ?? '-' placeholderplaceholder</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ durationP90Ms ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P50:</span>
-              <span class="font-bold" :class="getLatencyColor(durationP50Ms)">{{ durationP50Ms ?? '-' placeholderplaceholder</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ durationP50Ms ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Avg:</span>
-              <span class="font-bold" :class="getLatencyColor(durationAvgMs)">{{ durationAvgMs ?? '-' placeholderplaceholder</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ durationAvgMs ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Max:</span>
-              <span class="font-bold" :class="getLatencyColor(durationMaxMs)">{{ durationMaxMs ?? '-' placeholderplaceholder</span>
+              <span class="font-bold text-gray-900 dark:text-white">{{ durationMaxMs ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
           </div>
         </div>
 
-        <!-- Card 4: TTFT -->
-        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
+        <!-- Card 5: TTFT -->
+        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 5;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">TTFT</span>
@@ -1315,7 +1290,7 @@ placeholder
             </button>
           </div>
           <div class="mt-2 flex items-baseline gap-2">
-            <div class="text-3xl font-black" :class="isTTFTAboveThreshold(ttftP99Ms) ? 'text-red-600 dark:text-red-400' : getLatencyColor(ttftP99Ms)">
+            <div class="text-3xl font-black" :class="isTTFTAboveThreshold(ttftP99Ms) ? 'text-red-600 dark:text-red-400' : getTTFTColor(ttftP99Ms)">
               {{ ttftP99Ms ?? '-' placeholderplaceholder
             </div>
             <span class="text-xs font-bold text-gray-400">ms (P99)</span>
@@ -1323,34 +1298,34 @@ placeholder
           <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P95:</span>
-              <span class="font-bold" :class="getLatencyColor(ttftP95Ms)">{{ ttftP95Ms ?? '-' placeholderplaceholder</span>
+              <span class="font-bold" :class="getTTFTColor(ttftP95Ms)">{{ ttftP95Ms ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P90:</span>
-              <span class="font-bold" :class="getLatencyColor(ttftP90Ms)">{{ ttftP90Ms ?? '-' placeholderplaceholder</span>
+              <span class="font-bold" :class="getTTFTColor(ttftP90Ms)">{{ ttftP90Ms ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P50:</span>
-              <span class="font-bold" :class="getLatencyColor(ttftP50Ms)">{{ ttftP50Ms ?? '-' placeholderplaceholder</span>
+              <span class="font-bold" :class="getTTFTColor(ttftP50Ms)">{{ ttftP50Ms ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Avg:</span>
-              <span class="font-bold" :class="getLatencyColor(ttftAvgMs)">{{ ttftAvgMs ?? '-' placeholderplaceholder</span>
+              <span class="font-bold" :class="getTTFTColor(ttftAvgMs)">{{ ttftAvgMs ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
             <div class="flex min-w-[60px] items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">Max:</span>
-              <span class="font-bold" :class="getLatencyColor(ttftMaxMs)">{{ ttftMaxMs ?? '-' placeholderplaceholder</span>
+              <span class="font-bold" :class="getTTFTColor(ttftMaxMs)">{{ ttftMaxMs ?? '-' placeholderplaceholder</span>
               <span class="text-gray-400">ms</span>
             </div>
           </div>
         </div>
 
-        <!-- Card 5: Request Errors -->
-        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
+        <!-- Card 3: Request Errors -->
+        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 3;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.requestErrors') placeholderplaceholder</span>
@@ -1376,7 +1351,7 @@ placeholder
         </div>
 
         <!-- Card 6: Upstream Errors -->
-        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900">
+        <div class="rounded-2xl bg-gray-50 p-4 dark:bg-dark-900" style="order: 6;">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-bold uppercase text-gray-400">{{ t('admin.ops.upstreamErrors') placeholderplaceholder</span>
