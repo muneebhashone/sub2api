@@ -967,13 +967,15 @@ placeholder
 		args = append(args, phase)
 		clauses = append(clauses, "error_phase = $"+itoa(len(args)))
 placeholder
-	if owner := strings.TrimSpace(strings.ToLower(filter.Owner)); owner != "" {
-		args = append(args, owner)
-		clauses = append(clauses, "LOWER(COALESCE(error_owner,'')) = $"+itoa(len(args)))
-placeholder
-	if source := strings.TrimSpace(strings.ToLower(filter.Source)); source != "" {
-		args = append(args, source)
-		clauses = append(clauses, "LOWER(COALESCE(error_source,'')) = $"+itoa(len(args)))
+	if filter != nil {
+		if owner := strings.TrimSpace(strings.ToLower(filter.Owner)); owner != "" {
+			args = append(args, owner)
+			clauses = append(clauses, "LOWER(COALESCE(error_owner,'')) = $"+itoa(len(args)))
+	placeholder
+		if source := strings.TrimSpace(strings.ToLower(filter.Source)); source != "" {
+			args = append(args, source)
+			clauses = append(clauses, "LOWER(COALESCE(error_source,'')) = $"+itoa(len(args)))
+	placeholder
 placeholder
 	if resolvedFilter != nil {
 		args = append(args, *resolvedFilter)

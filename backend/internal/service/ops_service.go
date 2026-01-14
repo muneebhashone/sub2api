@@ -612,11 +612,3 @@ placeholder
 	return raw, false
 placeholder
 
-func extractString(v any, key string) string {
-	root, ok := v.(map[string]any)
-	if !ok {
-		return ""
-placeholder
-	s, _ := root[key].(string)
-	return strings.TrimSpace(s)
-placeholder
