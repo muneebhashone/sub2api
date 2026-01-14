@@ -1400,8 +1400,8 @@ placeholder
 	return result, nil
 placeholder
 
-// GetUsageTrendWithFilters returns usage trend data with optional user/api_key filters
-func (r *usageLogRepository) GetUsageTrendWithFilters(ctx context.Context, startTime, endTime time.Time, granularity string, userID, apiKeyID int64) (results []TrendDataPoint, err error) {
+// GetUsageTrendWithFilters returns usage trend data with optional filters
+func (r *usageLogRepository) GetUsageTrendWithFilters(ctx context.Context, startTime, endTime time.Time, granularity string, userID, apiKeyID, accountID, groupID int64, model string, stream *bool) (results []TrendDataPoint, err error) {
 	dateFormat := "YYYY-MM-DD"
 	if granularity == "hour" {
 		dateFormat = "YYYY-MM-DD HH24:00"
@@ -1430,6 +1430,22 @@ placeholder
 		query += fmt.Sprintf(" AND api_key_id = $%d", len(args)+1)
 		args = append(args, apiKeyID)
 placeholder
+	if accountID > 0 {
+		query += fmt.Sprintf(" AND account_id = $%d", len(args)+1)
+		args = append(args, accountID)
+placeholder
+	if groupID > 0 {
+		query += fmt.Sprintf(" AND group_id = $%d", len(args)+1)
+		args = append(args, groupID)
+placeholder
+	if model != "" {
+		query += fmt.Sprintf(" AND model = $%d", len(args)+1)
+		args = append(args, model)
+placeholder
+	if stream != nil {
+		query += fmt.Sprintf(" AND stream = $%d", len(args)+1)
+		args = append(args, *stream)
+placeholder
 	query += " GROUP BY date ORDER BY date ASC"
 
 	rows, err := r.sql.QueryContext(ctx, query, args...)
@@ -1452,8 +1468,8 @@ placeholder
 	return results, nil
 placeholder
 
-// GetModelStatsWithFilters returns model statistics with optional user/api_key filters
-func (r *usageLogRepository) GetModelStatsWithFilters(ctx context.Context, startTime, endTime time.Time, userID, apiKeyID, accountID int64) (results []ModelStat, err error) {
+// GetModelStatsWithFilters returns model statistics with optional filters
+func (r *usageLogRepository) GetModelStatsWithFilters(ctx context.Context, startTime, endTime time.Time, userID, apiKeyID, accountID, groupID int64, stream *bool) (results []ModelStat, err error) {
 	query := `
 		SELECT
 			model,
@@ -1479,6 +1495,14 @@ placeholder
 	if accountID > 0 {
 		query += fmt.Sprintf(" AND account_id = $%d", len(args)+1)
 		args = append(args, accountID)
+placeholder
+	if groupID > 0 {
+		query += fmt.Sprintf(" AND group_id = $%d", len(args)+1)
+		args = append(args, groupID)
+placeholder
+	if stream != nil {
+		query += fmt.Sprintf(" AND stream = $%d", len(args)+1)
+		args = append(args, *stream)
 placeholder
 	query += " GROUP BY model ORDER BY total_tokens DESC"
 
@@ -1767,7 +1791,7 @@ placeholder
 	placeholder
 placeholder
 
-	models, err := r.GetModelStatsWithFilters(ctx, startTime, endTime, 0, 0, accountID)
+	models, err := r.GetModelStatsWithFilters(ctx, startTime, endTime, 0, 0, accountID, 0, nil)
 	if err != nil {
 		models = []ModelStat{placeholder
 placeholder
