@@ -8,7 +8,7 @@
         {{ errorMessage placeholderplaceholder
       </div>
 
-      <OpsDashboardSkeleton v-if="loading && !hasLoadedOnce" />
+      <OpsDashboardSkeleton v-if="loading && !hasLoadedOnce" :fullscreen="isFullscreen" />
 
       <OpsDashboardHeader
         v-else-if="opsEnabled"
