@@ -80,6 +80,25 @@ placeholder
 	if phase := strings.TrimSpace(c.Query("phase")); phase != "" {
 		filter.Phase = phase
 placeholder
+	if owner := strings.TrimSpace(c.Query("error_owner")); owner != "" {
+		filter.Owner = owner
+placeholder
+	if source := strings.TrimSpace(c.Query("error_source")); source != "" {
+		filter.Source = source
+placeholder
+	if v := strings.TrimSpace(c.Query("resolved")); v != "" {
+		switch strings.ToLower(v) {
+		case "1", "true", "yes":
+			b := true
+			filter.Resolved = &b
+		case "0", "false", "no":
+			b := false
+			filter.Resolved = &b
+		default:
+			response.BadRequest(c, "Invalid resolved")
+			return
+	placeholder
+placeholder
 	if q := strings.TrimSpace(c.Query("q")); q != "" {
 		filter.Query = q
 placeholder
@@ -242,6 +261,11 @@ placeholder
 type opsRetryRequest struct {
 	Mode            string `json:"mode"`
 	PinnedAccountID *int64 `json:"pinned_account_id"`
+	Force           bool   `json:"force"`
+placeholder
+
+type opsResolveRequest struct {
+	Resolved bool `json:"resolved"`
 placeholder
 
 // RetryErrorRequest retries a failed request using stored request_body.
@@ -278,6 +302,8 @@ placeholder
 		req.Mode = service.OpsRetryModeClient
 placeholder
 
+	// Force flag is currently a UI-level acknowledgement. Server may still enforce safety constraints.
+	_ = req.Force
 	result, err := h.opsService.RetryError(c.Request.Context(), subject.UserID, id, req.Mode, req.PinnedAccountID)
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -285,6 +311,81 @@ placeholder
 placeholder
 
 	response.Success(c, result)
+placeholder
+
+// ListRetryAttempts lists retry attempts for an error log.
+// GET /api/v1/admin/ops/errors/:id/retries
+func (h *OpsHandler) ListRetryAttempts(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	idStr := strings.TrimSpace(c.Param("id"))
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid error id")
+		return
+placeholder
+
+	limit := 50
+	if v := strings.TrimSpace(c.Query("limit")); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			response.BadRequest(c, "Invalid limit")
+			return
+	placeholder
+		limit = n
+placeholder
+
+	items, err := h.opsService.ListRetryAttemptsByErrorID(c.Request.Context(), id, limit)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, items)
+placeholder
+
+// UpdateErrorResolution allows manual resolve/unresolve.
+// PUT /api/v1/admin/ops/errors/:id/resolve
+func (h *OpsHandler) UpdateErrorResolution(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	subject, ok := middleware.GetAuthSubjectFromContext(c)
+	if !ok || subject.UserID <= 0 {
+		response.Error(c, http.StatusUnauthorized, "Unauthorized")
+		return
+placeholder
+
+	idStr := strings.TrimSpace(c.Param("id"))
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid error id")
+		return
+placeholder
+
+	var req opsResolveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	uid := subject.UserID
+	if err := h.opsService.UpdateErrorResolution(c.Request.Context(), id, req.Resolved, &uid, nil); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, gin.H{"ok": trueplaceholder)
 placeholder
 
 func parseOpsTimeRange(c *gin.Context, defaultRange string) (time.Time, time.Time, error) {
@@ -358,6 +459,10 @@ func parseOpsDuration(v string) (time.Duration, bool) {
 		return 6 * time.Hour, true
 	case "24h":
 		return 24 * time.Hour, true
+	case "7d":
+		return 7 * 24 * time.Hour, true
+	case "30d":
+		return 30 * 24 * time.Hour, true
 	default:
 		return 0, false
 placeholder
