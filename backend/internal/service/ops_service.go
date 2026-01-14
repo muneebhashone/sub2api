@@ -236,7 +236,68 @@ placeholder
 	if s.opsRepo == nil {
 		return &OpsErrorLogList{Errors: []*OpsErrorLog{placeholder, Total: 0, Page: 1, PageSize: 20placeholder, nil
 placeholder
-	return s.opsRepo.ListErrorLogs(ctx, filter)
+	result, err := s.opsRepo.ListErrorLogs(ctx, filter)
+	if err != nil {
+		log.Printf("[Ops] GetErrorLogs failed: %v", err)
+		return nil, err
+placeholder
+
+	// Apply error filtering based on settings (for historical data)
+	result = s.filterErrorLogsBySettings(ctx, result)
+	return result, nil
+placeholder
+
+// filterErrorLogsBySettings filters error logs based on advanced settings.
+// This ensures that historical errors are also filtered when viewing the dashboard.
+func (s *OpsService) filterErrorLogsBySettings(ctx context.Context, result *OpsErrorLogList) *OpsErrorLogList {
+	if result == nil || len(result.Errors) == 0 {
+		return result
+placeholder
+
+	settings, err := s.GetOpsAdvancedSettings(ctx)
+	if err != nil || settings == nil {
+		// If we can't get settings, return unfiltered (fail open)
+		return result
+placeholder
+
+	filtered := make([]*OpsErrorLog, 0, len(result.Errors))
+	for _, errLog := range result.Errors {
+		if shouldFilterErrorLog(settings, errLog) {
+			continue // Skip this error
+	placeholder
+		filtered = append(filtered, errLog)
+placeholder
+
+	// Update total count to reflect filtered results
+	result.Errors = filtered
+	result.Total = len(filtered)
+	return result
+placeholder
+
+// shouldFilterErrorLog determines if an error log should be filtered based on settings.
+func shouldFilterErrorLog(settings *OpsAdvancedSettings, errLog *OpsErrorLog) bool {
+	if settings == nil || errLog == nil {
+		return false
+placeholder
+
+	msgLower := strings.ToLower(errLog.Message)
+
+	// Check if count_tokens errors should be ignored
+	if settings.IgnoreCountTokensErrors && strings.Contains(errLog.RequestPath, "/count_tokens") {
+		return true
+placeholder
+
+	// Check if context canceled errors should be ignored
+	if settings.IgnoreContextCanceled && strings.Contains(msgLower, "context canceled") {
+		return true
+placeholder
+
+	// Check if "no available accounts" errors should be ignored
+	if settings.IgnoreNoAvailableAccounts && strings.Contains(msgLower, "no available accounts") {
+		return true
+placeholder
+
+	return false
 placeholder
 
 func (s *OpsService) GetErrorLogByID(ctx context.Context, id int64) (*OpsErrorLogDetail, error) {
