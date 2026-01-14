@@ -2080,6 +2080,9 @@ export default {
           resolvedRetryId: 'Resolved Retry',
           retryCount: 'Retry Count'
         placeholder,
+        source: {
+          upstream_http: 'Upstream HTTP'
+        placeholder,
         upstreamKeys: {
           status: 'Status',
           message: 'Message',
