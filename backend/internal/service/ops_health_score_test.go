@@ -127,8 +127,8 @@ placeholder{
 					MemoryUsagePercent: float64Ptr(75),
 			placeholder,
 		placeholder,
-			wantMin: 61,
-			wantMax: 62,
+			wantMin: 96,
+			wantMax: 97,
 	placeholder,
 		{
 			name: "DB failure",
@@ -203,8 +203,8 @@ placeholder{
 					MemoryUsagePercent: float64Ptr(30),
 			placeholder,
 		placeholder,
-			wantMin: 25,
-			wantMax: 50,
+			wantMin: 84,
+			wantMax: 85,
 	placeholder,
 		{
 			name: "combined failures - business healthy + infra degraded",
@@ -303,15 +303,15 @@ placeholder{
 			wantMax: 78,
 	placeholder,
 		{
-			name: "latency boundary 2s",
+			name: "TTFT boundary 2s",
 			overview: &OpsDashboardOverview{
 				SLA:               0.99,
 				ErrorRate:         0,
 				UpstreamErrorRate: 0,
-				Duration:          OpsPercentiles{P99: intPtr(2000)placeholder,
+				TTFT:              OpsPercentiles{P99: intPtr(2000)placeholder,
 		placeholder,
-			wantMin: 50,
-			wantMax: 50,
+			wantMin: 75,
+			wantMax: 75,
 	placeholder,
 		{
 			name: "upstream error dominates",
