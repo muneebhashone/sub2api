@@ -12,8 +12,46 @@
     </div>
 
     <div v-else class="space-y-6 p-6">
-      <!-- Top Summary -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <!-- Header actions -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="font-semibold text-gray-600 dark:text-gray-300">Resolved:</span>
+          <span :class="(detail as any).resolved ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-300'">
+            {{ (detail as any).resolved ? 'true' : 'false' placeholderplaceholder
+          </span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-if="!(detail as any).resolved"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="loading"
+            @click="markResolved(true)"
+          >
+            {{ t('admin.ops.errorDetail.markResolved') || 'Mark resolved' placeholderplaceholder
+          </button>
+          <button
+            v-else
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="loading"
+            @click="markResolved(false)"
+          >
+            {{ t('admin.ops.errorDetail.markUnresolved') || 'Mark unresolved' placeholderplaceholder
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex flex-wrap gap-2 border-b border-gray-200 pb-3 dark:border-dark-700">
+        <button type="button" class="btn btn-secondary btn-sm" :class="activeTab==='overview' ? 'opacity-100' : 'opacity-70'" @click="activeTab='overview'">{{ t('admin.ops.errorDetail.tabOverview') || 'Overview' placeholderplaceholder</button>
+        <button type="button" class="btn btn-secondary btn-sm" :class="activeTab==='retries' ? 'opacity-100' : 'opacity-70'" @click="activeTab='retries'">{{ t('admin.ops.errorDetail.tabRetries') || 'Retries' placeholderplaceholder</button>
+        <button type="button" class="btn btn-secondary btn-sm" :class="activeTab==='request' ? 'opacity-100' : 'opacity-70'" @click="activeTab='request'">{{ t('admin.ops.errorDetail.tabRequest') || 'Request' placeholderplaceholder</button>
+        <button type="button" class="btn btn-secondary btn-sm" :class="activeTab==='response' ? 'opacity-100' : 'opacity-70'" @click="activeTab='response'">{{ t('admin.ops.errorDetail.tabResponse') || 'Response' placeholderplaceholder</button>
+      </div>
+
+      <div v-if="activeTab==='overview'">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
           <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.requestId') placeholderplaceholder</div>
           <div class="mt-1 break-all font-mono text-sm font-medium text-gray-900 dark:text-white">
@@ -62,10 +100,83 @@
         </div>
       </div>
 
-      <!-- Basic Info -->
+      <!-- Suggestion -->
       <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
-        <h3 class="mb-4 text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.basicInfo') placeholderplaceholder</h3>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <h3 class="mb-4 text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.suggestion') || 'Suggestion' placeholderplaceholder</h3>
+        <div class="text-sm font-medium text-gray-800 dark:text-gray-200 break-words">
+          {{ handlingSuggestion placeholderplaceholder
+        </div>
+      </div>
+
+        <!-- Classification -->
+        <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+          <h3 class="mb-4 text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.classification') || 'Classification' placeholderplaceholder</h3>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">phase</div>
+              <div class="mt-1 text-sm font-bold uppercase text-gray-900 dark:text-white">{{ detail.phase || '—' placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">owner</div>
+              <div class="mt-1 text-sm font-bold uppercase text-gray-900 dark:text-white">{{ (detail as any).error_owner || '—' placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">source</div>
+              <div class="mt-1 text-sm font-bold uppercase text-gray-900 dark:text-white">{{ (detail as any).error_source || '—' placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">retryable</div>
+              <div class="mt-1 text-sm font-bold text-gray-900 dark:text-white">{{ (detail as any).is_retryable ? '✓' : '✗' placeholderplaceholder</div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">resolved_at</div>
+              <div class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-200">{{ (detail as any).resolved_at || '—' placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">resolved_by</div>
+              <div class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-200">{{ (detail as any).resolved_by_user_id ?? '—' placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">resolved_retry_id</div>
+              <div class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-200">{{ (detail as any).resolved_retry_id ?? '—' placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">retry_count</div>
+              <div class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-200">{{ (detail as any).retry_count ?? '—' placeholderplaceholder</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Retry summary -->
+        <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+          <h3 class="mb-4 text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.retrySummary') || 'Retry Summary' placeholderplaceholder</h3>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">total</div>
+              <div class="mt-1 text-sm font-bold text-gray-900 dark:text-white">{{ retryHistory.length placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">succeeded</div>
+              <div class="mt-1 text-sm font-bold text-gray-900 dark:text-white">{{ retryHistory.filter(r => r.success === true).length placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">failed</div>
+              <div class="mt-1 text-sm font-bold text-gray-900 dark:text-white">{{ retryHistory.filter(r => r.success === false).length placeholderplaceholder</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold uppercase text-gray-400">last</div>
+              <div class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-200">{{ retryHistory[0]?.created_at || '—' placeholderplaceholder</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basic Info -->
+        <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+          <h3 class="mb-4 text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.basicInfo') placeholderplaceholder</h3>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <div class="text-xs font-bold uppercase text-gray-400">{{ t('admin.ops.errorDetail.platform') placeholderplaceholder</div>
             <div class="mt-1 text-sm font-medium text-gray-900 dark:text-white">{{ detail.platform || '—' placeholderplaceholder</div>
@@ -132,30 +243,36 @@
         </div>
       </div>
 
-      <!-- Retry -->
-      <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
-        <div class="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-          <div class="space-y-1">
-            <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.retry') placeholderplaceholder</h3>
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              {{ t('admin.ops.errorDetail.retryNote1') placeholderplaceholder
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn btn-secondary btn-sm" :disabled="retrying" @click="openRetryConfirm('client')">
-              {{ t('admin.ops.errorDetail.retryClient') placeholderplaceholder
-            </button>
-            <button
-              type="button"
-              class="btn btn-secondary btn-sm"
-              :disabled="retrying || !pinnedAccountId"
-              @click="openRetryConfirm('upstream')"
-              :title="pinnedAccountId ? '' : t('admin.ops.errorDetail.retryUpstreamHint')"
-            >
-              {{ t('admin.ops.errorDetail.retryUpstream') placeholderplaceholder
-            </button>
-          </div>
-        </div>
+       <!-- Retry -->
+       <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+         <div class="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+           <div class="space-y-1">
+             <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.retry') placeholderplaceholder</h3>
+             <div class="text-xs text-gray-500 dark:text-gray-400">
+               {{ t('admin.ops.errorDetail.retryNote1') placeholderplaceholder
+             </div>
+           </div>
+           <div class="flex flex-wrap gap-2">
+             <template v-if="(detail as any).is_retryable">
+               <button type="button" class="btn btn-secondary btn-sm" :disabled="retrying" @click="openRetryConfirm('client')">
+                 {{ t('admin.ops.errorDetail.retryClient') placeholderplaceholder
+               </button>
+               <button
+                 type="button"
+                 class="btn btn-secondary btn-sm"
+                 :disabled="retrying || !pinnedAccountId"
+                 @click="openRetryConfirm('upstream')"
+                 :title="pinnedAccountId ? '' : t('admin.ops.errorDetail.retryUpstreamHint')"
+               >
+                 {{ t('admin.ops.errorDetail.retryUpstream') placeholderplaceholder
+               </button>
+             </template>
+             <template v-else>
+               <span class="text-xs font-semibold text-amber-700 dark:text-amber-300">{{ t('admin.ops.errorDetail.notRetryable') || 'Not retryable' placeholderplaceholder</span>
+             </template>
+           </div>
+         </div>
+
 
         <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <div class="md:col-span-1">
@@ -268,15 +385,98 @@
         ><code>{{ prettyJSON(detail.request_body) placeholderplaceholder</code></pre>
       </div>
 
-      <!-- Error body -->
-      <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
-        <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.errorBody') placeholderplaceholder</h3>
-        <pre
-          class="mt-4 max-h-[420px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"
-        ><code>{{ prettyJSON(detail.error_body) placeholderplaceholder</code></pre>
+       <!-- Error body -->
+       <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+         <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.errorBody') placeholderplaceholder</h3>
+         <pre
+           class="mt-4 max-h-[420px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"
+         ><code>{{ prettyJSON(detail.error_body) placeholderplaceholder</code></pre>
+       </div>
       </div>
-    </div>
-  </BaseDialog>
+
+      <div v-else-if="activeTab==='retries'">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.errorDetail.retryHistory') || 'Retry History' placeholderplaceholder</div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn btn-secondary btn-sm" @click="loadRetryHistory">{{ t('common.refresh') placeholderplaceholder</button>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <div v-if="retryHistoryLoading" class="text-sm text-gray-500 dark:text-gray-400">{{ t('common.loading') placeholderplaceholder</div>
+          <div v-else-if="!retryHistory.length" class="text-sm text-gray-500 dark:text-gray-400">{{ t('common.noData') placeholderplaceholder</div>
+          <div v-else>
+            <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
+                <div class="text-xs font-bold uppercase text-gray-400">{{ t('admin.ops.errorDetail.compareA') || 'Compare A' placeholderplaceholder</div>
+                <select v-model.number="compareA" class="input mt-2 w-full font-mono text-xs">
+                  <option :value="null">—</option>
+                  <option v-for="a in retryHistory" :key="a.id" :value="a.id">#{{ a.id placeholderplaceholder · {{ a.mode placeholderplaceholder · {{ a.status placeholderplaceholder</option>
+                </select>
+              </div>
+              <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
+                <div class="text-xs font-bold uppercase text-gray-400">{{ t('admin.ops.errorDetail.compareB') || 'Compare B' placeholderplaceholder</div>
+                <select v-model.number="compareB" class="input mt-2 w-full font-mono text-xs">
+                  <option :value="null">—</option>
+                  <option v-for="b in retryHistory" :key="b.id" :value="b.id">#{{ b.id placeholderplaceholder · {{ b.mode placeholderplaceholder · {{ b.status placeholderplaceholder</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="selectedA || selectedB" class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800">
+                <div class="text-xs font-black text-gray-900 dark:text-white">{{ selectedA ? `#${selectedA.idplaceholder · ${selectedA.modeplaceholder · ${selectedA.statusplaceholder` : '—' placeholderplaceholder</div>
+                <div class="mt-2 text-xs text-gray-600 dark:text-gray-300">http: <span class="font-mono">{{ selectedA?.http_status_code ?? '—' placeholderplaceholder</span> · used: <span class="font-mono">{{ selectedA?.used_account_id ?? '—' placeholderplaceholder</span></div>
+                <pre class="mt-3 max-h-[320px] overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-800 dark:bg-dark-900 dark:text-gray-100"><code>{{ selectedA?.response_preview || '' placeholderplaceholder</code></pre>
+                <div v-if="selectedA?.error_message" class="mt-2 text-xs text-red-600 dark:text-red-400">{{ selectedA.error_message placeholderplaceholder</div>
+              </div>
+              <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800">
+                <div class="text-xs font-black text-gray-900 dark:text-white">{{ selectedB ? `#${selectedB.idplaceholder · ${selectedB.modeplaceholder · ${selectedB.statusplaceholder` : '—' placeholderplaceholder</div>
+                <div class="mt-2 text-xs text-gray-600 dark:text-gray-300">http: <span class="font-mono">{{ selectedB?.http_status_code ?? '—' placeholderplaceholder</span> · used: <span class="font-mono">{{ selectedB?.used_account_id ?? '—' placeholderplaceholder</span></div>
+                <pre class="mt-3 max-h-[320px] overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-800 dark:bg-dark-900 dark:text-gray-100"><code>{{ selectedB?.response_preview || '' placeholderplaceholder</code></pre>
+                <div v-if="selectedB?.error_message" class="mt-2 text-xs text-red-600 dark:text-red-400">{{ selectedB.error_message placeholderplaceholder</div>
+              </div>
+            </div>
+
+            <div v-else class="space-y-3">
+              <div v-for="a in retryHistory" :key="a.id" class="rounded-xl border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-800">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-xs font-black text-gray-900 dark:text-white">#{{ a.id placeholderplaceholder · {{ a.mode placeholderplaceholder · {{ a.status placeholderplaceholder</div>
+                  <div class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ a.created_at placeholderplaceholder</div>
+                </div>
+                <div class="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-600 dark:text-gray-300 sm:grid-cols-4">
+                  <div><span class="text-gray-400">success:</span> <span class="font-mono">{{ a.success ?? '—' placeholderplaceholder</span></div>
+                  <div><span class="text-gray-400">http:</span> <span class="font-mono">{{ a.http_status_code ?? '—' placeholderplaceholder</span></div>
+                  <div><span class="text-gray-400">pinned:</span> <span class="font-mono">{{ a.pinned_account_id ?? '—' placeholderplaceholder</span></div>
+                  <div><span class="text-gray-400">used:</span> <span class="font-mono">{{ a.used_account_id ?? '—' placeholderplaceholder</span></div>
+                </div>
+                <pre v-if="a.response_preview" class="mt-3 max-h-[240px] overflow-auto rounded-lg bg-gray-50 p-3 text-xs text-gray-800 dark:bg-dark-900 dark:text-gray-100"><code>{{ a.response_preview placeholderplaceholder</code></pre>
+                <div v-if="a.error_message" class="mt-2 text-xs text-red-600 dark:text-red-400">{{ a.error_message placeholderplaceholder</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="activeTab==='request'">
+        <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+          <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.requestBody') placeholderplaceholder</h3>
+          <pre class="mt-4 max-h-[520px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"><code>{{ prettyJSON(detail.request_body) placeholderplaceholder</code></pre>
+        </div>
+      </div>
+
+      <div v-else-if="activeTab==='response'">
+        <div class="rounded-xl bg-gray-50 p-6 dark:bg-dark-900">
+          <h3 class="text-sm font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('admin.ops.errorDetail.responseBody') || 'Response' placeholderplaceholder</h3>
+          <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {{ responseTabHint placeholderplaceholder
+          </div>
+          <pre class="mt-4 max-h-[520px] overflow-auto rounded-xl border border-gray-200 bg-white p-4 text-xs text-gray-800 dark:border-dark-700 dark:bg-dark-800 dark:text-gray-100"><code>{{ prettyJSON(responseTabBody) placeholderplaceholder</code></pre>
+        </div>
+      </div>
+     </div>
+   </BaseDialog>
+
 
   <ConfirmDialog
     :show="showRetryConfirm"
@@ -285,6 +485,16 @@
     @confirm="runConfirmedRetry"
     @cancel="cancelRetry"
   />
+
+  <div v-if="showRetryConfirm && !(detail as any)?.is_retryable" class="fixed inset-0 z-[60] flex items-end justify-center p-4 pointer-events-none">
+    <div class="pointer-events-auto w-full max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">
+      <label class="flex items-center gap-2">
+        <input v-model="forceRetryAck" type="checkbox" class="h-4 w-4" />
+        <span>{{ t('admin.ops.errorDetail.forceRetry') || 'I understand and want to force retry' placeholderplaceholder</span>
+      </label>
+    </div>
+  </div>
+
 </template>
 
 <script setup lang="ts">
@@ -293,7 +503,7 @@ import { useI18n placeholder from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { useAppStore placeholder from '@/stores'
-import { opsAPI, type OpsErrorDetail, type OpsRetryMode placeholder from '@/api/admin/ops'
+import { opsAPI, type OpsErrorDetail, type OpsRetryMode, type OpsRetryAttempt placeholder from '@/api/admin/ops'
 import { formatDateTime placeholder from '@/utils/format'
 import { getSeverityClass placeholder from '../utils/opsFormatters'
 
@@ -315,9 +525,19 @@ const appStore = useAppStore()
 const loading = ref(false)
 const detail = ref<OpsErrorDetail | null>(null)
 
+const activeTab = ref<'overview' | 'retries' | 'request' | 'response'>('overview')
+
 const retrying = ref(false)
 const showRetryConfirm = ref(false)
 const pendingRetryMode = ref<OpsRetryMode>('client')
+
+const forceRetryAck = ref(false)
+const retryHistory = ref<OpsRetryAttempt[]>([])
+const retryHistoryLoading = ref(false)
+const showRetryHistory = ref(false)
+
+const compareA = ref<number | null>(null)
+const compareB = ref<number | null>(null)
 
 const pinnedAccountIdInput = ref('')
 const pinnedAccountId = computed<number | null>(() => {
@@ -369,6 +589,31 @@ function prettyJSON(raw?: string): string {
   placeholder
 placeholder
 
+const handlingSuggestion = computed(() => {
+  const d: any = detail.value
+  if (!d) return ''
+
+  const owner = String(d.error_owner || '').toLowerCase()
+  const phase = String(d.phase || '').toLowerCase()
+
+  if (owner === 'provider' && phase === 'upstream') {
+    if (retryHistory.value.some((r) => r.success === true) && d.resolved) {
+      return t('admin.ops.errorDetail.suggestUpstreamResolved') || '✓ Upstream error resolved by retry; no action needed.'
+    placeholder
+    return t('admin.ops.errorDetail.suggestUpstream') || 'Upstream instability: consider checking upstream account status, switching accounts, or retrying.'
+  placeholder
+  if (owner === 'client' && phase === 'request') {
+    return t('admin.ops.errorDetail.suggestRequest') || 'Client request validation error: contact customer to fix request parameters.'
+  placeholder
+  if (owner === 'client' && phase === 'auth') {
+    return t('admin.ops.errorDetail.suggestAuth') || 'Auth failed: verify API key/credentials.'
+  placeholder
+  if (owner === 'platform') {
+    return t('admin.ops.errorDetail.suggestPlatform') || 'Platform error: prioritize investigation and fix.'
+  placeholder
+  return t('admin.ops.errorDetail.suggestGeneric') || 'See details for more context.'
+placeholder)
+
 async function fetchDetail(id: number) {
   loading.value = true
   try {
@@ -394,10 +639,17 @@ watch(
   ([show, id]) => {
     if (!show) {
       detail.value = null
+      retryHistory.value = []
+      retryHistoryLoading.value = false
+      showRetryHistory.value = false
+      activeTab.value = 'overview'
       return
     placeholder
     if (typeof id === 'number' && id > 0) {
-      fetchDetail(id)
+      activeTab.value = 'overview'
+      fetchDetail(id).then(() => {
+        loadRetryHistory()
+      placeholder)
     placeholder
   placeholder,
   { immediate: true placeholder
@@ -405,11 +657,72 @@ watch(
 
 function openRetryConfirm(mode: OpsRetryMode) {
   pendingRetryMode.value = mode
+  // Force-ack required only when backend says not retryable.
+  forceRetryAck.value = false
   showRetryConfirm.value = true
+placeholder
+
+async function loadRetryHistory() {
+  if (!props.errorId) return
+  retryHistoryLoading.value = true
+  try {
+    const items = await opsAPI.listRetryAttempts(props.errorId, 50)
+    retryHistory.value = items || []
+
+    // Default compare selections: newest succeeded vs newest failed.
+    if (retryHistory.value.length) {
+      const succeeded = retryHistory.value.find((a) => a.success === true)
+      const failed = retryHistory.value.find((a) => a.success === false)
+      compareA.value = succeeded?.id ?? retryHistory.value[0].id
+      compareB.value = failed?.id ?? (retryHistory.value[1]?.id ?? null)
+    placeholder
+  placeholder catch (err: any) {
+    retryHistory.value = []
+    compareA.value = null
+    compareB.value = null
+    appStore.showError(err?.message || 'Failed to load retry history')
+  placeholder finally {
+    retryHistoryLoading.value = false
+  placeholder
+placeholder
+
+const selectedA = computed(() => retryHistory.value.find((a) => a.id === compareA.value) || null)
+const selectedB = computed(() => retryHistory.value.find((a) => a.id === compareB.value) || null)
+
+const bestSucceededAttempt = computed(() => retryHistory.value.find((a) => a.success === true) || null)
+
+const responseTabBody = computed(() => {
+  // Prefer any succeeded attempt preview; fall back to stored error body.
+  const succeeded = bestSucceededAttempt.value
+  if (succeeded?.response_preview) return succeeded.response_preview
+  return detail.value?.error_body || ''
+placeholder)
+
+const responseTabHint = computed(() => {
+  const succeeded = bestSucceededAttempt.value
+  if (succeeded?.response_preview) {
+    return t('admin.ops.errorDetail.responseHintSucceeded', { id: String(succeeded.id) placeholder) || `Showing succeeded retry response_preview (#${succeeded.idplaceholder)`
+  placeholder
+  return t('admin.ops.errorDetail.responseHintFallback') || 'No succeeded retry found; showing stored error_body'
+placeholder)
+
+async function markResolved(resolved: boolean) {
+  if (!props.errorId) return
+  try {
+    await opsAPI.updateErrorResolved(props.errorId, resolved)
+    await fetchDetail(props.errorId)
+    appStore.showSuccess(resolved ? (t('admin.ops.errorDetails.resolved') || 'Resolved') : (t('admin.ops.errorDetails.unresolved') || 'Unresolved'))
+  placeholder catch (err: any) {
+    appStore.showError(err?.message || 'Failed to update resolved status')
+  placeholder
 placeholder
 
 const retryConfirmMessage = computed(() => {
   const mode = pendingRetryMode.value
+  const retryable = !!(detail.value as any)?.is_retryable
+  if (!retryable) {
+    return t('admin.ops.errorDetail.forceRetryHint') || 'This error is not recommended to retry. Check the box to force retry.'
+  placeholder
   if (mode === 'upstream') {
     return t('admin.ops.errorDetail.confirmRetryMessage')
   placeholder
@@ -432,18 +745,28 @@ placeholder)
 async function runConfirmedRetry() {
   if (!props.errorId) return
   const mode = pendingRetryMode.value
+  const retryable = !!(detail.value as any)?.is_retryable
+  if (!retryable && !forceRetryAck.value) {
+    appStore.showError(t('admin.ops.errorDetail.forceRetryNeedAck') || 'Please confirm you want to force retry')
+    return
+  placeholder
+
   showRetryConfirm.value = false
 
   retrying.value = true
   try {
     const req =
       mode === 'upstream'
-        ? { mode, pinned_account_id: pinnedAccountId.value ?? undefined placeholder
-        : { mode placeholder
+        ? { mode, pinned_account_id: pinnedAccountId.value ?? undefined, force: !retryable ? true : undefined placeholder
+        : { mode, force: !retryable ? true : undefined placeholder
 
     const res = await opsAPI.retryErrorRequest(props.errorId, req)
     const summary = res.status === 'succeeded' ? t('admin.ops.errorDetail.retrySuccess') : t('admin.ops.errorDetail.retryFailed')
     appStore.showSuccess(summary)
+
+    // Refresh detail + history so resolved reflects auto resolution
+    await fetchDetail(props.errorId)
+    await loadRetryHistory()
   placeholder catch (err: any) {
     appStore.showError(err?.message || t('admin.ops.retryFailed'))
   placeholder finally {
