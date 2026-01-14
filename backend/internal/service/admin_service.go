@@ -54,7 +54,8 @@ type AdminService interface {
 	CreateProxy(ctx context.Context, input *CreateProxyInput) (*Proxy, error)
 	UpdateProxy(ctx context.Context, id int64, input *UpdateProxyInput) (*Proxy, error)
 	DeleteProxy(ctx context.Context, id int64) error
-	GetProxyAccounts(ctx context.Context, proxyID int64, page, pageSize int) ([]Account, int64, error)
+	BatchDeleteProxies(ctx context.Context, ids []int64) (*ProxyBatchDeleteResult, error)
+	GetProxyAccounts(ctx context.Context, proxyID int64) ([]ProxyAccountSummary, error)
 	CheckProxyExists(ctx context.Context, host string, port int, username, password string) (bool, error)
 	TestProxy(ctx context.Context, id int64) (*ProxyTestResult, error)
 
@@ -220,6 +221,16 @@ type GenerateRedeemCodesInput struct {
 	ValidityDays int    // 订阅类型专用：有效天数
 placeholder
 
+type ProxyBatchDeleteResult struct {
+	DeletedIDs []int64                   `json:"deleted_ids"`
+	Skipped    []ProxyBatchDeleteSkipped `json:"skipped"`
+placeholder
+
+type ProxyBatchDeleteSkipped struct {
+	ID     int64  `json:"id"`
+	Reason string `json:"reason"`
+placeholder
+
 // ProxyTestResult represents the result of testing a proxy
 type ProxyTestResult struct {
 	Success   bool   `json:"success"`
@@ -254,6 +265,7 @@ type adminServiceImpl struct {
 	redeemCodeRepo       RedeemCodeRepository
 	billingCacheService  *BillingCacheService
 	proxyProber          ProxyExitInfoProber
+	proxyLatencyCache    ProxyLatencyCache
 	authCacheInvalidator APIKeyAuthCacheInvalidator
 placeholder
 
@@ -267,6 +279,7 @@ func NewAdminService(
 	redeemCodeRepo RedeemCodeRepository,
 	billingCacheService *BillingCacheService,
 	proxyProber ProxyExitInfoProber,
+	proxyLatencyCache ProxyLatencyCache,
 	authCacheInvalidator APIKeyAuthCacheInvalidator,
 ) AdminService {
 	return &adminServiceImpl{
@@ -278,6 +291,7 @@ func NewAdminService(
 		redeemCodeRepo:       redeemCodeRepo,
 		billingCacheService:  billingCacheService,
 		proxyProber:          proxyProber,
+		proxyLatencyCache:    proxyLatencyCache,
 		authCacheInvalidator: authCacheInvalidator,
 placeholder
 placeholder
@@ -1069,6 +1083,7 @@ func (s *adminServiceImpl) ListProxiesWithAccountCount(ctx context.Context, page
 	if err != nil {
 		return nil, 0, err
 placeholder
+	s.attachProxyLatency(ctx, proxies)
 	return proxies, result.Total, nil
 placeholder
 
@@ -1077,7 +1092,12 @@ func (s *adminServiceImpl) GetAllProxies(ctx context.Context) ([]Proxy, error) {
 placeholder
 
 func (s *adminServiceImpl) GetAllProxiesWithAccountCount(ctx context.Context) ([]ProxyWithAccountCount, error) {
-	return s.proxyRepo.ListActiveWithAccountCount(ctx)
+	proxies, err := s.proxyRepo.ListActiveWithAccountCount(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+	s.attachProxyLatency(ctx, proxies)
+	return proxies, nil
 placeholder
 
 func (s *adminServiceImpl) GetProxy(ctx context.Context, id int64) (*Proxy, error) {
@@ -1097,6 +1117,8 @@ placeholder
 	if err := s.proxyRepo.Create(ctx, proxy); err != nil {
 		return nil, err
 placeholder
+	// Probe latency asynchronously so creation isn't blocked by network timeout.
+	go s.probeProxyLatency(context.Background(), proxy)
 	return proxy, nil
 placeholder
 
@@ -1135,12 +1157,53 @@ placeholder
 placeholder
 
 func (s *adminServiceImpl) DeleteProxy(ctx context.Context, id int64) error {
+	count, err := s.proxyRepo.CountAccountsByProxyID(ctx, id)
+	if err != nil {
+		return err
+placeholder
+	if count > 0 {
+		return ErrProxyInUse
+placeholder
 	return s.proxyRepo.Delete(ctx, id)
 placeholder
 
-func (s *adminServiceImpl) GetProxyAccounts(ctx context.Context, proxyID int64, page, pageSize int) ([]Account, int64, error) {
-	// Return mock data for now - would need a dedicated repository method
-	return []Account{placeholder, 0, nil
+func (s *adminServiceImpl) BatchDeleteProxies(ctx context.Context, ids []int64) (*ProxyBatchDeleteResult, error) {
+	result := &ProxyBatchDeleteResult{placeholder
+	if len(ids) == 0 {
+		return result, nil
+placeholder
+
+	for _, id := range ids {
+		count, err := s.proxyRepo.CountAccountsByProxyID(ctx, id)
+		if err != nil {
+			result.Skipped = append(result.Skipped, ProxyBatchDeleteSkipped{
+				ID:     id,
+				Reason: err.Error(),
+		placeholder)
+			continue
+	placeholder
+		if count > 0 {
+			result.Skipped = append(result.Skipped, ProxyBatchDeleteSkipped{
+				ID:     id,
+				Reason: ErrProxyInUse.Error(),
+		placeholder)
+			continue
+	placeholder
+		if err := s.proxyRepo.Delete(ctx, id); err != nil {
+			result.Skipped = append(result.Skipped, ProxyBatchDeleteSkipped{
+				ID:     id,
+				Reason: err.Error(),
+		placeholder)
+			continue
+	placeholder
+		result.DeletedIDs = append(result.DeletedIDs, id)
+placeholder
+
+	return result, nil
+placeholder
+
+func (s *adminServiceImpl) GetProxyAccounts(ctx context.Context, proxyID int64) ([]ProxyAccountSummary, error) {
+	return s.proxyRepo.ListAccountSummariesByProxyID(ctx, proxyID)
 placeholder
 
 func (s *adminServiceImpl) CheckProxyExists(ctx context.Context, host string, port int, username, password string) (bool, error) {
@@ -1240,12 +1303,24 @@ placeholder
 	proxyURL := proxy.URL()
 	exitInfo, latencyMs, err := s.proxyProber.ProbeProxy(ctx, proxyURL)
 	if err != nil {
+		s.saveProxyLatency(ctx, id, &ProxyLatencyInfo{
+			Success:   false,
+			Message:   err.Error(),
+			UpdatedAt: time.Now(),
+	placeholder)
 		return &ProxyTestResult{
 			Success: false,
 			Message: err.Error(),
 	placeholder, nil
 placeholder
 
+	latency := latencyMs
+	s.saveProxyLatency(ctx, id, &ProxyLatencyInfo{
+		Success:   true,
+		LatencyMs: &latency,
+		Message:   "Proxy is accessible",
+		UpdatedAt: time.Now(),
+placeholder)
 	return &ProxyTestResult{
 		Success:   true,
 		Message:   "Proxy is accessible",
@@ -1255,6 +1330,29 @@ placeholder
 		Region:    exitInfo.Region,
 		Country:   exitInfo.Country,
 placeholder, nil
+placeholder
+
+func (s *adminServiceImpl) probeProxyLatency(ctx context.Context, proxy *Proxy) {
+	if s.proxyProber == nil || proxy == nil {
+		return
+placeholder
+	_, latencyMs, err := s.proxyProber.ProbeProxy(ctx, proxy.URL())
+	if err != nil {
+		s.saveProxyLatency(ctx, proxy.ID, &ProxyLatencyInfo{
+			Success:   false,
+			Message:   err.Error(),
+			UpdatedAt: time.Now(),
+	placeholder)
+		return
+placeholder
+
+	latency := latencyMs
+	s.saveProxyLatency(ctx, proxy.ID, &ProxyLatencyInfo{
+		Success:   true,
+		LatencyMs: &latency,
+		Message:   "Proxy is accessible",
+		UpdatedAt: time.Now(),
+placeholder)
 placeholder
 
 // checkMixedChannelRisk 检查分组中是否存在混合渠道（Antigravity + Anthropic）
@@ -1304,6 +1402,46 @@ placeholder
 placeholder
 
 	return nil
+placeholder
+
+func (s *adminServiceImpl) attachProxyLatency(ctx context.Context, proxies []ProxyWithAccountCount) {
+	if s.proxyLatencyCache == nil || len(proxies) == 0 {
+		return
+placeholder
+
+	ids := make([]int64, 0, len(proxies))
+	for i := range proxies {
+		ids = append(ids, proxies[i].ID)
+placeholder
+
+	latencies, err := s.proxyLatencyCache.GetProxyLatencies(ctx, ids)
+	if err != nil {
+		log.Printf("Warning: load proxy latency cache failed: %v", err)
+		return
+placeholder
+
+	for i := range proxies {
+		info := latencies[proxies[i].ID]
+		if info == nil {
+			continue
+	placeholder
+		if info.Success {
+			proxies[i].LatencyStatus = "success"
+			proxies[i].LatencyMs = info.LatencyMs
+	placeholder else {
+			proxies[i].LatencyStatus = "failed"
+	placeholder
+		proxies[i].LatencyMessage = info.Message
+placeholder
+placeholder
+
+func (s *adminServiceImpl) saveProxyLatency(ctx context.Context, proxyID int64, info *ProxyLatencyInfo) {
+	if s.proxyLatencyCache == nil || info == nil {
+		return
+placeholder
+	if err := s.proxyLatencyCache.SetProxyLatency(ctx, proxyID, info); err != nil {
+		log.Printf("Warning: store proxy latency cache failed: %v", err)
+placeholder
 placeholder
 
 // getAccountPlatform 根据账号 platform 判断混合渠道检查用的平台标识
