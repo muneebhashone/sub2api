@@ -31,5 +31,16 @@ placeholder
 
 type ProxyWithAccountCount struct {
 	Proxy
-	AccountCount int64
+	AccountCount   int64
+	LatencyMs      *int64
+	LatencyStatus  string
+	LatencyMessage string
+placeholder
+
+type ProxyAccountSummary struct {
+	ID       int64
+	Name     string
+	Platform string
+	Type     string
+	Notes    *string
 placeholder
