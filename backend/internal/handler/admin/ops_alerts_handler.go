@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
+	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -18,8 +20,6 @@ var validOpsAlertMetricTypes = []string{
 	"success_rate",
 	"error_rate",
 	"upstream_error_rate",
-	"p95_latency_ms",
-	"p99_latency_ms",
 	"cpu_usage_percent",
 	"memory_usage_percent",
 	"concurrency_queue_depth",
@@ -372,8 +372,135 @@ placeholder
 	response.Success(c, gin.H{"deleted": trueplaceholder)
 placeholder
 
+// GetAlertEvent returns a single ops alert event.
+// GET /api/v1/admin/ops/alert-events/:id
+func (h *OpsHandler) GetAlertEvent(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid event ID")
+		return
+placeholder
+
+	ev, err := h.opsService.GetAlertEventByID(c.Request.Context(), id)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, ev)
+placeholder
+
+// UpdateAlertEventStatus updates an ops alert event status.
+// PUT /api/v1/admin/ops/alert-events/:id/status
+func (h *OpsHandler) UpdateAlertEventStatus(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid event ID")
+		return
+placeholder
+
+	var payload struct {
+		Status string `json:"status"`
+placeholder
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+placeholder
+	payload.Status = strings.TrimSpace(payload.Status)
+	if payload.Status == "" {
+		response.BadRequest(c, "Invalid status")
+		return
+placeholder
+	if payload.Status != service.OpsAlertStatusResolved && payload.Status != service.OpsAlertStatusManualResolved {
+		response.BadRequest(c, "Invalid status")
+		return
+placeholder
+
+	var resolvedAt *time.Time
+	if payload.Status == service.OpsAlertStatusResolved || payload.Status == service.OpsAlertStatusManualResolved {
+		now := time.Now().UTC()
+		resolvedAt = &now
+placeholder
+	if err := h.opsService.UpdateAlertEventStatus(c.Request.Context(), id, payload.Status, resolvedAt); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, gin.H{"updated": trueplaceholder)
+placeholder
+
 // ListAlertEvents lists recent ops alert events.
 // GET /api/v1/admin/ops/alert-events
+// CreateAlertSilence creates a scoped silence for ops alerts.
+// POST /api/v1/admin/ops/alert-silences
+func (h *OpsHandler) CreateAlertSilence(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	var payload struct {
+		RuleID   int64   `json:"rule_id"`
+		Platform string  `json:"platform"`
+		GroupID  *int64  `json:"group_id"`
+		Region   *string `json:"region"`
+		Until    string  `json:"until"`
+		Reason   string  `json:"reason"`
+placeholder
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+placeholder
+	until, err := time.Parse(time.RFC3339, strings.TrimSpace(payload.Until))
+	if err != nil {
+		response.BadRequest(c, "Invalid until")
+		return
+placeholder
+
+	createdBy := (*int64)(nil)
+	if subject, ok := middleware.GetAuthSubjectFromContext(c); ok {
+		uid := subject.UserID
+		createdBy = &uid
+placeholder
+
+	silence := &service.OpsAlertSilence{
+		RuleID:    payload.RuleID,
+		Platform:  strings.TrimSpace(payload.Platform),
+		GroupID:   payload.GroupID,
+		Region:    payload.Region,
+		Until:     until,
+		Reason:    strings.TrimSpace(payload.Reason),
+		CreatedBy: createdBy,
+placeholder
+
+	created, err := h.opsService.CreateAlertSilence(c.Request.Context(), silence)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, created)
+placeholder
+
 func (h *OpsHandler) ListAlertEvents(c *gin.Context) {
 	if h.opsService == nil {
 		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
@@ -384,7 +511,7 @@ placeholder
 		return
 placeholder
 
-	limit := 100
+	limit := 20
 	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
 		n, err := strconv.Atoi(raw)
 		if err != nil || n <= 0 {
@@ -398,6 +525,49 @@ placeholder
 		Limit:    limit,
 		Status:   strings.TrimSpace(c.Query("status")),
 		Severity: strings.TrimSpace(c.Query("severity")),
+placeholder
+
+	if v := strings.TrimSpace(c.Query("email_sent")); v != "" {
+		vv := strings.ToLower(v)
+		switch vv {
+		case "true", "1":
+			b := true
+			filter.EmailSent = &b
+		case "false", "0":
+			b := false
+			filter.EmailSent = &b
+		default:
+			response.BadRequest(c, "Invalid email_sent")
+			return
+	placeholder
+placeholder
+
+	// Cursor pagination: both params must be provided together.
+	rawTS := strings.TrimSpace(c.Query("before_fired_at"))
+	rawID := strings.TrimSpace(c.Query("before_id"))
+	if (rawTS == "") != (rawID == "") {
+		response.BadRequest(c, "before_fired_at and before_id must be provided together")
+		return
+placeholder
+	if rawTS != "" {
+		ts, err := time.Parse(time.RFC3339Nano, rawTS)
+		if err != nil {
+			if t2, err2 := time.Parse(time.RFC3339, rawTS); err2 == nil {
+				ts = t2
+		placeholder else {
+				response.BadRequest(c, "Invalid before_fired_at")
+				return
+		placeholder
+	placeholder
+		filter.BeforeFiredAt = &ts
+placeholder
+	if rawID != "" {
+		id, err := strconv.ParseInt(rawID, 10, 64)
+		if err != nil || id <= 0 {
+			response.BadRequest(c, "Invalid before_id")
+			return
+	placeholder
+		filter.BeforeID = &id
 placeholder
 
 	// Optional global filter support (platform/group/time range).

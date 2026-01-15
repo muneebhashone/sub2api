@@ -196,6 +196,28 @@ placeholder
 	response.Success(c, gin.H{"message": "Proxy deleted successfully"placeholder)
 placeholder
 
+// BatchDelete handles batch deleting proxies
+// POST /api/v1/admin/proxies/batch-delete
+func (h *ProxyHandler) BatchDelete(c *gin.Context) {
+	type BatchDeleteRequest struct {
+		IDs []int64 `json:"ids" binding:"required,min=1"`
+placeholder
+
+	var req BatchDeleteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	result, err := h.adminService.BatchDeleteProxies(c.Request.Context(), req.IDs)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, result)
+placeholder
+
 // Test handles testing proxy connectivity
 // POST /api/v1/admin/proxies/:id/test
 func (h *ProxyHandler) Test(c *gin.Context) {
@@ -243,19 +265,17 @@ func (h *ProxyHandler) GetProxyAccounts(c *gin.Context) {
 		return
 placeholder
 
-	page, pageSize := response.ParsePagination(c)
-
-	accounts, total, err := h.adminService.GetProxyAccounts(c.Request.Context(), proxyID, page, pageSize)
+	accounts, err := h.adminService.GetProxyAccounts(c.Request.Context(), proxyID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
 
-	out := make([]dto.Account, 0, len(accounts))
+	out := make([]dto.ProxyAccountSummary, 0, len(accounts))
 	for i := range accounts {
-		out = append(out, *dto.AccountFromService(&accounts[i]))
+		out = append(out, *dto.ProxyAccountSummaryFromService(&accounts[i]))
 placeholder
-	response.Paginated(c, out, total, page, pageSize)
+	response.Success(c, out)
 placeholder
 
 // BatchCreateProxyItem represents a single proxy in batch create request
