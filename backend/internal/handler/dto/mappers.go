@@ -218,6 +218,11 @@ placeholder
 		LatencyMs:      p.LatencyMs,
 		LatencyStatus:  p.LatencyStatus,
 		LatencyMessage: p.LatencyMessage,
+		IPAddress:      p.IPAddress,
+		Country:        p.Country,
+		CountryCode:    p.CountryCode,
+		Region:         p.Region,
+		City:           p.City,
 placeholder
 placeholder
 
