@@ -26,6 +26,8 @@ interface Props {
   autoRefreshEnabled?: boolean
   autoRefreshCountdown?: number
   fullscreen?: boolean
+  customStartTime?: string | null
+  customEndTime?: string | null
 placeholder
 
 interface Emits {
@@ -33,6 +35,7 @@ interface Emits {
   (e: 'update:group', value: number | null): void
   (e: 'update:timeRange', value: string): void
   (e: 'update:queryMode', value: string): void
+  (e: 'update:customTimeRange', startTime: string, endTime: string): void
   (e: 'refresh'): void
   (e: 'openRequestDetails', preset?: OpsRequestDetailsPreset): void
   (e: 'openErrorDetails', kind: 'request' | 'upstream'): void
@@ -85,6 +88,23 @@ watch(
 
 // --- Filters ---
 
+const showCustomTimeRangeDialog = ref(false)
+const customStartTimeInput = ref('')
+const customEndTimeInput = ref('')
+
+function formatCustomTimeRangeLabel(startTime: string, endTime: string): string {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  const formatDate = (d: Date) => {
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hour = String(d.getHours()).padStart(2, '0')
+    const minute = String(d.getMinutes()).padStart(2, '0')
+    return `${monthplaceholder-${dayplaceholder ${hourplaceholder:${minuteplaceholder`
+  placeholder
+  return `${formatDate(start)placeholder ~ ${formatDate(end)placeholder`
+placeholder
+
 const groups = ref<Array<{ id: number; name: string; platform: string placeholder>>([])
 
 const platformOptions = computed(() => [
@@ -100,7 +120,13 @@ const timeRangeOptions = computed(() => [
   { value: '30m', label: t('admin.ops.timeRange.30m') placeholder,
   { value: '1h', label: t('admin.ops.timeRange.1h') placeholder,
   { value: '6h', label: t('admin.ops.timeRange.6h') placeholder,
-  { value: '24h', label: t('admin.ops.timeRange.24h') placeholder
+  { value: '24h', label: t('admin.ops.timeRange.24h') placeholder,
+  {
+    value: 'custom',
+    label: props.timeRange === 'custom' && props.customStartTime && props.customEndTime
+      ? `${t('admin.ops.timeRange.custom')placeholder (${formatCustomTimeRangeLabel(props.customStartTime, props.customEndTime)placeholder)`
+      : t('admin.ops.timeRange.custom')
+  placeholder
 ])
 
 const queryModeOptions = computed(() => [
@@ -149,7 +175,32 @@ function handleGroupChange(val: string | number | boolean | null) {
 placeholder
 
 function handleTimeRangeChange(val: string | number | boolean | null) {
-  emit('update:timeRange', String(val || '1h'))
+  const newValue = String(val || '1h')
+  if (newValue === 'custom') {
+    // 初始化为最近1小时
+    const now = new Date()
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    customStartTimeInput.value = oneHourAgo.toISOString().slice(0, 16)
+    customEndTimeInput.value = now.toISOString().slice(0, 16)
+    showCustomTimeRangeDialog.value = true
+  placeholder else {
+    emit('update:timeRange', newValue)
+  placeholder
+placeholder
+
+function handleCustomTimeRangeConfirm() {
+  if (!customStartTimeInput.value || !customEndTimeInput.value) return
+  const startTime = new Date(customStartTimeInput.value).toISOString()
+  const endTime = new Date(customEndTimeInput.value).toISOString()
+  emit('update:timeRange', 'custom')
+  emit('update:customTimeRange', startTime, endTime)
+  showCustomTimeRangeDialog.value = false
+placeholder
+
+function handleCustomTimeRangeCancel() {
+  showCustomTimeRangeDialog.value = false
+  // 如果当前不是 custom，不需要做任何事
+  // 如果当前是 custom，保持不变
 placeholder
 
 function handleQueryModeChange(val: string | number | boolean | null) {
@@ -163,11 +214,6 @@ placeholder
 function openErrorDetails(kind: 'request' | 'upstream') {
   emit('openErrorDetails', kind)
 placeholder
-
-const updatedAtLabel = computed(() => {
-  if (!props.lastUpdated) return t('common.unknown')
-  return props.lastUpdated.toLocaleTimeString()
-placeholder)
 
 // --- Threshold checking helpers ---
 type ThresholdLevel = 'normal' | 'warning' | 'critical'
@@ -829,25 +875,11 @@ placeholder
           </span>
 
           <span>·</span>
-          <span>{{ t('common.refresh') placeholderplaceholder: {{ updatedAtLabel placeholderplaceholder</span>
+          <span>{{ t('common.refresh') placeholderplaceholder: {{ props.lastUpdated ? props.lastUpdated.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' placeholder).replace(/\//g, '-') : t('common.unknown') placeholderplaceholder</span>
 
           <template v-if="props.autoRefreshEnabled && props.autoRefreshCountdown !== undefined">
             <span>·</span>
-            <span class="flex items-center gap-1">
-              <svg class="h-3 w-3 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>{{ t('admin.ops.settings.autoRefreshCountdown', { seconds: props.autoRefreshCountdown placeholder) placeholderplaceholder</span>
-            </span>
-          </template>
-
-          <template v-if="systemMetrics">
-            <span>·</span>
-            <span>
-              {{ t('admin.ops.collectedAt') placeholderplaceholder {{ formatTimeShort(systemMetrics.created_at) placeholderplaceholder
-              ({{ t('admin.ops.window') placeholderplaceholder {{ systemMetrics.window_minutes placeholderplaceholderm)
-            </span>
+            <span>剩余 {{ props.autoRefreshCountdown placeholderplaceholders</span>
           </template>
         </div>
       </div>
@@ -1531,6 +1563,48 @@ placeholder
           >
             {{ hb.last_error placeholderplaceholder
           </div>
+        </div>
+      </div>
+    </BaseDialog>
+
+    <!-- Custom Time Range Dialog -->
+    <BaseDialog :show="showCustomTimeRangeDialog" :title="t('admin.ops.timeRange.custom')" width="narrow" @close="handleCustomTimeRangeCancel">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('admin.ops.customTimeRange.startTime') placeholderplaceholder
+          </label>
+          <input
+            v-model="customStartTimeInput"
+            type="datetime-local"
+            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-dark-600 dark:bg-dark-800 dark:text-white"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('admin.ops.customTimeRange.endTime') placeholderplaceholder
+          </label>
+          <input
+            v-model="customEndTimeInput"
+            type="datetime-local"
+            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-dark-600 dark:bg-dark-800 dark:text-white"
+          />
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-dark-700 dark:text-gray-300 dark:hover:bg-dark-600"
+            @click="handleCustomTimeRangeCancel"
+          >
+            {{ t('common.cancel') placeholderplaceholder
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+            @click="handleCustomTimeRangeConfirm"
+          >
+            {{ t('common.confirm') placeholderplaceholder
+          </button>
         </div>
       </div>
     </BaseDialog>
