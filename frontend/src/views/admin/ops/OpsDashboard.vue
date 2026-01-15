@@ -693,8 +693,8 @@ placeholder)
 
 async function loadThresholds() {
   try {
-    const settings = await opsAPI.getAlertRuntimeSettings()
-    metricThresholds.value = settings.thresholds || null
+    const thresholds = await opsAPI.getMetricThresholds()
+    metricThresholds.value = thresholds || null
   placeholder catch (err) {
     console.warn('[OpsDashboard] Failed to load thresholds', err)
     metricThresholds.value = null
