@@ -40,7 +40,7 @@ placeholder
 		return "", errors.New("not a gemini oauth account")
 placeholder
 
-	cacheKey := geminiTokenCacheKey(account)
+	cacheKey := GeminiTokenCacheKey(account)
 
 	// 1) Try cache first.
 	if p.tokenCache != nil {
@@ -151,7 +151,7 @@ placeholder
 	return accessToken, nil
 placeholder
 
-func geminiTokenCacheKey(account *Account) string {
+func GeminiTokenCacheKey(account *Account) string {
 	projectID := strings.TrimSpace(account.GetCredential("project_id"))
 	if projectID != "" {
 		return projectID

@@ -357,9 +357,6 @@ const handleBulkToggleSchedulable = async (schedulable: boolean) => {
     placeholder else {
       selIds.value = hasIds ? [] : accountIds
     placeholder
-    load().catch((error) => {
-      console.error('Failed to refresh accounts:', error)
-    placeholder)
   placeholder catch (error) {
     console.error('Failed to bulk toggle schedulable:', error)
     appStore.showError(t('common.error'))
@@ -383,9 +380,6 @@ const handleToggleSchedulable = async (a: Account) => {
   try {
     const updated = await adminAPI.accounts.setSchedulable(a.id, nextSchedulable)
     updateSchedulableInList([a.id], updated?.schedulable ?? nextSchedulable)
-    load().catch((error) => {
-      console.error('Failed to refresh accounts:', error)
-    placeholder)
   placeholder catch (error) {
     console.error('Failed to toggle schedulable:', error)
     appStore.showError(t('admin.accounts.failedToToggleSchedulable'))
