@@ -125,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted placeholder from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
@@ -208,7 +208,56 @@ const cols = computed(() => {
 placeholder)
 
 const handleEdit = (a: Account) => { edAcc.value = a; showEdit.value = true placeholder
-const openMenu = (a: Account, e: MouseEvent) => { menu.acc = a; menu.pos = { top: e.clientY, left: e.clientX - 200 placeholder; menu.show = true placeholder
+const openMenu = (a: Account, e: MouseEvent) => {
+  menu.acc = a
+
+  const target = e.currentTarget as HTMLElement
+  if (target) {
+    const rect = target.getBoundingClientRect()
+    const menuWidth = 200
+    const menuHeight = 240
+    const padding = 8
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    let left, top
+
+    if (viewportWidth < 768) {
+      // 居中显示,水平位置
+      left = Math.max(padding, Math.min(
+        rect.left + rect.width / 2 - menuWidth / 2,
+        viewportWidth - menuWidth - padding
+      ))
+
+      // 优先显示在按钮下方
+      top = rect.bottom + 4
+
+      // 如果下方空间不够,显示在上方
+      if (top + menuHeight > viewportHeight - padding) {
+        top = rect.top - menuHeight - 4
+        // 如果上方也不够,就贴在视口顶部
+        if (top < padding) {
+          top = padding
+        placeholder
+      placeholder
+    placeholder else {
+      left = Math.max(padding, Math.min(
+        e.clientX - menuWidth,
+        viewportWidth - menuWidth - padding
+      ))
+      top = e.clientY
+      if (top + menuHeight > viewportHeight - padding) {
+        top = viewportHeight - menuHeight - padding
+      placeholder
+    placeholder
+
+    menu.pos = { top, left placeholder
+  placeholder else {
+    menu.pos = { top: e.clientY, left: e.clientX - 200 placeholder
+  placeholder
+
+  menu.show = true
+placeholder
 const toggleSel = (id: number) => { const i = selIds.value.indexOf(id); if(i === -1) selIds.value.push(id); else selIds.value.splice(i, 1) placeholder
 const selectPage = () => { selIds.value = [...new Set([...selIds.value, ...accounts.value.map(a => a.id)])] placeholder
 const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; reload() placeholder catch (error) { console.error('Failed to bulk delete accounts:', error) placeholder placeholder
@@ -366,5 +415,14 @@ const isExpired = (value: number | null) => {
   return value * 1000 <= Date.now()
 placeholder
 
-onMounted(async () => { load(); try { const [p, g] = await Promise.all([adminAPI.proxies.getAll(), adminAPI.groups.getAll()]); proxies.value = p; groups.value = g placeholder catch (error) { console.error('Failed to load proxies/groups:', error) placeholder placeholder)
+// 滚动时关闭菜单
+const handleScroll = () => {
+  menu.show = false
+placeholder
+
+onMounted(async () => { load(); try { const [p, g] = await Promise.all([adminAPI.proxies.getAll(), adminAPI.groups.getAll()]); proxies.value = p; groups.value = g placeholder catch (error) { console.error('Failed to load proxies/groups:', error) placeholder; window.addEventListener('scroll', handleScroll, true) placeholder)
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll, true)
+placeholder)
 </script>
