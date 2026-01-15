@@ -38,8 +38,18 @@ placeholder{
 				if err := json.Unmarshal([]byte(result), &payload); err != nil {
 					t.Fatalf("Failed to parse result: %v", err)
 			placeholder
-				toolCalls := payload["tool_calls"].([]any)
-				functionCall := toolCalls[0].(map[string]any)["function"].(map[string]any)
+				toolCalls, ok := payload["tool_calls"].([]any)
+				if !ok || len(toolCalls) == 0 {
+					t.Fatal("No tool_calls found in result")
+			placeholder
+				toolCall, ok := toolCalls[0].(map[string]any)
+				if !ok {
+					t.Fatal("Invalid tool_call format")
+			placeholder
+				functionCall, ok := toolCall["function"].(map[string]any)
+				if !ok {
+					t.Fatal("Invalid function format")
+			placeholder
 				if functionCall["name"] != "edit" {
 					t.Errorf("Expected tool name 'edit', got '%v'", functionCall["name"])
 			placeholder
@@ -54,7 +64,10 @@ placeholder{
 				if err := json.Unmarshal([]byte(result), &payload); err != nil {
 					t.Fatalf("Failed to parse result: %v", err)
 			placeholder
-				functionCall := payload["function_call"].(map[string]any)
+				functionCall, ok := payload["function_call"].(map[string]any)
+				if !ok {
+					t.Fatal("Invalid function_call format")
+			placeholder
 				if functionCall["name"] != "todowrite" {
 					t.Errorf("Expected tool name 'todowrite', got '%v'", functionCall["name"])
 			placeholder
@@ -131,8 +144,18 @@ placeholder{
 				if err := json.Unmarshal([]byte(result), &payload); err != nil {
 					t.Fatalf("Failed to parse result: %v", err)
 			placeholder
-				toolCalls := payload["tool_calls"].([]any)
-				functionCall := toolCalls[0].(map[string]any)["function"].(map[string]any)
+				toolCalls, ok := payload["tool_calls"].([]any)
+				if !ok || len(toolCalls) == 0 {
+					t.Fatal("No tool_calls found in result")
+			placeholder
+				toolCall, ok := toolCalls[0].(map[string]any)
+				if !ok {
+					t.Fatal("Invalid tool_call format")
+			placeholder
+				functionCall, ok := toolCall["function"].(map[string]any)
+				if !ok {
+					t.Fatal("Invalid function format")
+			placeholder
 				if functionCall["name"] != "edit" {
 					t.Errorf("Expected tool name 'edit', got '%v'", functionCall["name"])
 			placeholder
