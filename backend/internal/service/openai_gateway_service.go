@@ -94,6 +94,7 @@ type OpenAIGatewayService struct {
 	httpUpstream        HTTPUpstream
 	deferredService     *DeferredService
 	openAITokenProvider *OpenAITokenProvider
+	toolCorrector       *CodexToolCorrector
 placeholder
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService
@@ -128,6 +129,7 @@ func NewOpenAIGatewayService(
 		httpUpstream:        httpUpstream,
 		deferredService:     deferredService,
 		openAITokenProvider: openAITokenProvider,
+		toolCorrector:       NewCodexToolCorrector(),
 placeholder
 placeholder
 
@@ -1106,6 +1108,11 @@ placeholder
 					line = s.replaceModelInSSELine(line, mappedModel, originalModel)
 			placeholder
 
+				// Correct Codex tool calls if needed (apply_patch -> edit, etc.)
+				if correctedData, corrected := s.toolCorrector.CorrectToolCallsInSSEData(data); corrected {
+					line = "data: " + correctedData
+			placeholder
+
 				// Forward line
 				if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
 					sendErrorEvent("write_failed")
@@ -1191,6 +1198,20 @@ placeholder
 placeholder
 
 	return line
+placeholder
+
+// correctToolCallsInResponseBody 修正响应体中的工具调用
+func (s *OpenAIGatewayService) correctToolCallsInResponseBody(body []byte) []byte {
+	if len(body) == 0 {
+		return body
+placeholder
+
+	bodyStr := string(body)
+	corrected, changed := s.toolCorrector.CorrectToolCallsInSSEData(bodyStr)
+	if changed {
+		return []byte(corrected)
+placeholder
+	return body
 placeholder
 
 func (s *OpenAIGatewayService) parseSSEUsage(data string, usage *OpenAIUsage) {
@@ -1296,6 +1317,8 @@ func (s *OpenAIGatewayService) handleOAuthSSEToJSON(resp *http.Response, c *gin.
 		if originalModel != mappedModel {
 			body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
 	placeholder
+		// Correct tool calls in final response
+		body = s.correctToolCallsInResponseBody(body)
 placeholder else {
 		usage = s.parseSSEUsageFromBody(bodyText)
 		if originalModel != mappedModel {
