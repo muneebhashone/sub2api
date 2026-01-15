@@ -186,13 +186,16 @@ placeholder
 
 // GetUsageTrend handles getting usage trend data
 // GET /api/v1/admin/dashboard/trend
-// Query params: start_date, end_date (YYYY-MM-DD), granularity (day/hour), user_id, api_key_id
+// Query params: start_date, end_date (YYYY-MM-DD), granularity (day/hour), user_id, api_key_id, model, account_id, group_id, stream
 func (h *DashboardHandler) GetUsageTrend(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	granularity := c.DefaultQuery("granularity", "day")
 
 	// Parse optional filter params
-	var userID, apiKeyID int64
+	var userID, apiKeyID, accountID, groupID int64
+	var model string
+	var stream *bool
+
 	if userIDStr := c.Query("user_id"); userIDStr != "" {
 		if id, err := strconv.ParseInt(userIDStr, 10, 64); err == nil {
 			userID = id
@@ -203,8 +206,26 @@ placeholder
 			apiKeyID = id
 	placeholder
 placeholder
+	if accountIDStr := c.Query("account_id"); accountIDStr != "" {
+		if id, err := strconv.ParseInt(accountIDStr, 10, 64); err == nil {
+			accountID = id
+	placeholder
+placeholder
+	if groupIDStr := c.Query("group_id"); groupIDStr != "" {
+		if id, err := strconv.ParseInt(groupIDStr, 10, 64); err == nil {
+			groupID = id
+	placeholder
+placeholder
+	if modelStr := c.Query("model"); modelStr != "" {
+		model = modelStr
+placeholder
+	if streamStr := c.Query("stream"); streamStr != "" {
+		if streamVal, err := strconv.ParseBool(streamStr); err == nil {
+			stream = &streamVal
+	placeholder
+placeholder
 
-	trend, err := h.dashboardService.GetUsageTrendWithFilters(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID)
+	trend, err := h.dashboardService.GetUsageTrendWithFilters(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, stream)
 	if err != nil {
 		response.Error(c, 500, "Failed to get usage trend")
 		return
@@ -220,12 +241,14 @@ placeholder
 
 // GetModelStats handles getting model usage statistics
 // GET /api/v1/admin/dashboard/models
-// Query params: start_date, end_date (YYYY-MM-DD), user_id, api_key_id
+// Query params: start_date, end_date (YYYY-MM-DD), user_id, api_key_id, account_id, group_id, stream
 func (h *DashboardHandler) GetModelStats(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 
 	// Parse optional filter params
-	var userID, apiKeyID int64
+	var userID, apiKeyID, accountID, groupID int64
+	var stream *bool
+
 	if userIDStr := c.Query("user_id"); userIDStr != "" {
 		if id, err := strconv.ParseInt(userIDStr, 10, 64); err == nil {
 			userID = id
@@ -236,8 +259,23 @@ placeholder
 			apiKeyID = id
 	placeholder
 placeholder
+	if accountIDStr := c.Query("account_id"); accountIDStr != "" {
+		if id, err := strconv.ParseInt(accountIDStr, 10, 64); err == nil {
+			accountID = id
+	placeholder
+placeholder
+	if groupIDStr := c.Query("group_id"); groupIDStr != "" {
+		if id, err := strconv.ParseInt(groupIDStr, 10, 64); err == nil {
+			groupID = id
+	placeholder
+placeholder
+	if streamStr := c.Query("stream"); streamStr != "" {
+		if streamVal, err := strconv.ParseBool(streamStr); err == nil {
+			stream = &streamVal
+	placeholder
+placeholder
 
-	stats, err := h.dashboardService.GetModelStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID)
+	stats, err := h.dashboardService.GetModelStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, stream)
 	if err != nil {
 		response.Error(c, 500, "Failed to get model statistics")
 		return

@@ -141,24 +141,6 @@ const metricDefinitions = computed(() => {
       unit: '%'
     placeholder,
     {
-      type: 'p95_latency_ms',
-      group: 'system',
-      label: t('admin.ops.alertRules.metrics.p95'),
-      description: t('admin.ops.alertRules.metricDescriptions.p95'),
-      recommendedOperator: '>',
-      recommendedThreshold: 1000,
-      unit: 'ms'
-    placeholder,
-    {
-      type: 'p99_latency_ms',
-      group: 'system',
-      label: t('admin.ops.alertRules.metrics.p99'),
-      description: t('admin.ops.alertRules.metricDescriptions.p99'),
-      recommendedOperator: '>',
-      recommendedThreshold: 2000,
-      unit: 'ms'
-    placeholder,
-    {
       type: 'cpu_usage_percent',
       group: 'system',
       label: t('admin.ops.alertRules.metrics.cpu'),

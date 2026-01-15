@@ -4,7 +4,13 @@
  */
 
 import { apiClient placeholder from '../client'
-import type { Proxy, CreateProxyRequest, UpdateProxyRequest, PaginatedResponse placeholder from '@/types'
+import type {
+  Proxy,
+  ProxyAccountSummary,
+  CreateProxyRequest,
+  UpdateProxyRequest,
+  PaginatedResponse
+placeholder from '@/types'
 
 /**
  * List all proxies with pagination
@@ -160,8 +166,8 @@ placeholder
  * @param id - Proxy ID
  * @returns List of accounts using the proxy
  */
-export async function getProxyAccounts(id: number): Promise<PaginatedResponse<any>> {
-  const { data placeholder = await apiClient.get<PaginatedResponse<any>>(`/admin/proxies/${idplaceholder/accounts`)
+export async function getProxyAccounts(id: number): Promise<ProxyAccountSummary[]> {
+  const { data placeholder = await apiClient.get<ProxyAccountSummary[]>(`/admin/proxies/${idplaceholder/accounts`)
   return data
 placeholder
 
@@ -189,6 +195,17 @@ placeholder> {
   return data
 placeholder
 
+export async function batchDelete(ids: number[]): Promise<{
+  deleted_ids: number[]
+  skipped: Array<{ id: number; reason: string placeholder>
+placeholder> {
+  const { data placeholder = await apiClient.post<{
+    deleted_ids: number[]
+    skipped: Array<{ id: number; reason: string placeholder>
+  placeholder>('/admin/proxies/batch-delete', { ids placeholder)
+  return data
+placeholder
+
 export const proxiesAPI = {
   list,
   getAll,
@@ -201,7 +218,8 @@ export const proxiesAPI = {
   testProxy,
   getStats,
   getProxyAccounts,
-  batchCreate
+  batchCreate,
+  batchDelete
 placeholder
 
 export default proxiesAPI
