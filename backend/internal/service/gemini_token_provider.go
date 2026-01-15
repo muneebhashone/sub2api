@@ -154,7 +154,7 @@ placeholder
 func GeminiTokenCacheKey(account *Account) string {
 	projectID := strings.TrimSpace(account.GetCredential("project_id"))
 	if projectID != "" {
-		return projectID
+		return "gemini:" + projectID
 placeholder
-	return "account:" + strconv.FormatInt(account.ID, 10)
+	return "gemini:account:" + strconv.FormatInt(account.ID, 10)
 placeholder
