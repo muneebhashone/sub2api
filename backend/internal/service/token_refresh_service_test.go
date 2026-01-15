@@ -197,7 +197,7 @@ placeholder
 	require.Equal(t, 0, invalidator.calls) // 非 OAuth 不触发缓存失效
 placeholder
 
-// TestTokenRefreshService_RefreshWithRetry_OtherPlatformOAuth 测试其他平台的 OAuth 账号不触发缓存失效
+// TestTokenRefreshService_RefreshWithRetry_OtherPlatformOAuth 测试所有 OAuth 平台都触发缓存失效
 func TestTokenRefreshService_RefreshWithRetry_OtherPlatformOAuth(t *testing.T) {
 	repo := &tokenRefreshAccountRepo{placeholder
 	invalidator := &tokenCacheInvalidatorStub{placeholder
@@ -210,7 +210,7 @@ placeholder
 	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, cfg)
 	account := &Account{
 		ID:       10,
-		Platform: PlatformOpenAI, // 其他平台
+		Platform: PlatformOpenAI, // OpenAI OAuth 账户
 		Type:     AccountTypeOAuth,
 placeholder
 	refresher := &tokenRefresherStub{
@@ -222,7 +222,7 @@ placeholder
 	err := service.refreshWithRetry(context.Background(), account, refresher)
 placeholder
 	require.Equal(t, 1, repo.updateCalls)
-	require.Equal(t, 0, invalidator.calls) // 其他平台不触发缓存失效
+	require.Equal(t, 1, invalidator.calls) // 所有 OAuth 账户刷新后触发缓存失效
 placeholder
 
 // TestTokenRefreshService_RefreshWithRetry_UpdateFailed 测试更新失败的情况
