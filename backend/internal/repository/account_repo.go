@@ -80,6 +80,10 @@ placeholder
 		SetSchedulable(account.Schedulable).
 		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
 
+	if account.RateMultiplier != nil {
+		builder.SetRateMultiplier(*account.RateMultiplier)
+placeholder
+
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
 placeholder
@@ -290,6 +294,10 @@ placeholder
 		SetErrorMessage(account.ErrorMessage).
 		SetSchedulable(account.Schedulable).
 		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
+
+	if account.RateMultiplier != nil {
+		builder.SetRateMultiplier(*account.RateMultiplier)
+placeholder
 
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
@@ -999,6 +1007,11 @@ placeholder
 		args = append(args, *updates.Priority)
 		idx++
 placeholder
+	if updates.RateMultiplier != nil {
+		setClauses = append(setClauses, "rate_multiplier = $"+itoa(idx))
+		args = append(args, *updates.RateMultiplier)
+		idx++
+placeholder
 	if updates.Status != nil {
 		setClauses = append(setClauses, "status = $"+itoa(idx))
 		args = append(args, *updates.Status)
@@ -1347,6 +1360,8 @@ func accountEntityToService(m *dbent.Account) *service.Account {
 		return nil
 placeholder
 
+	rateMultiplier := m.RateMultiplier
+
 	return &service.Account{
 		ID:                  m.ID,
 		Name:                m.Name,
@@ -1358,6 +1373,7 @@ placeholder
 		ProxyID:             m.ProxyID,
 		Concurrency:         m.Concurrency,
 		Priority:            m.Priority,
+		RateMultiplier:      &rateMultiplier,
 		Status:              m.Status,
 		ErrorMessage:        derefString(m.ErrorMessage),
 		LastUsedAt:          m.LastUsedAt,
