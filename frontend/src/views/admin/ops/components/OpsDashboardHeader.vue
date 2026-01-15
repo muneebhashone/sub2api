@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch placeholder from 'vue'
-import { useIntervalFn placeholder from '@vueuse/core'
+import { computed, onMounted, ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import Select from '@/components/common/Select.vue'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
@@ -315,31 +314,33 @@ watch(
   { immediate: true placeholder
 )
 
-const { pause: pauseRealtimeTrafficRefresh, resume: resumeRealtimeTrafficRefresh placeholder = useIntervalFn(
-  () => {
-    loadRealtimeTrafficSummary()
-  placeholder,
-  5000,
-  { immediate: false placeholder
-)
-
 watch(
   () => adminSettingsStore.opsRealtimeMonitoringEnabled,
   (enabled) => {
-    if (enabled) {
-      resumeRealtimeTrafficRefresh()
-    placeholder else {
-      pauseRealtimeTrafficRefresh()
+    if (!enabled) {
       // Keep UI stable when realtime monitoring is turned off.
       realtimeTrafficSummary.value = makeZeroRealtimeTrafficSummary()
+    placeholder else {
+      loadRealtimeTrafficSummary()
     placeholder
   placeholder,
   { immediate: true placeholder
 )
 
-onUnmounted(() => {
-  pauseRealtimeTrafficRefresh()
-placeholder)
+// Realtime traffic refresh follows the parent (OpsDashboard) refresh cadence.
+watch(
+  () => [props.autoRefreshEnabled, props.autoRefreshCountdown, props.loading] as const,
+  ([enabled, countdown, loading]) => {
+    if (!enabled) return
+    if (loading) return
+    // Treat countdown reset (or reaching 0) as a refresh boundary.
+    if (countdown === 0) {
+      loadRealtimeTrafficSummary()
+    placeholder
+  placeholder
+)
+
+// no-op: parent controls refresh cadence
 
 const displayRealTimeQps = computed(() => {
   const v = realtimeTrafficSummary.value?.qps?.current
@@ -1442,7 +1443,7 @@ placeholder
         <!-- MEM -->
         <div class="rounded-xl bg-gray-50 p-3 dark:bg-dark-900">
           <div class="flex items-center gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.mem') placeholderplaceholder</div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.memory') placeholderplaceholder</div>
             <HelpTooltip v-if="!props.fullscreen" :content="t('admin.ops.tooltips.memory')" />
           </div>
           <div class="mt-1 text-lg font-black" :class="memPercentClass">
@@ -1545,7 +1546,10 @@ placeholder
         >
           <div class="flex items-center justify-between gap-3">
             <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ hb.job_name placeholderplaceholder</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">{{ formatTimeShort(hb.updated_at) placeholderplaceholder</div>
+            <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <span v-if="hb.last_duration_ms != null" class="font-mono">{{ hb.last_duration_ms placeholderplaceholderms</span>
+              <span>{{ formatTimeShort(hb.updated_at) placeholderplaceholder</span>
+            </div>
           </div>
 
           <div class="mt-2 grid grid-cols-1 gap-2 text-xs text-gray-600 dark:text-gray-300 sm:grid-cols-2">
@@ -1554,6 +1558,9 @@ placeholder
             </div>
             <div>
               {{ t('admin.ops.lastError') placeholderplaceholder <span class="font-mono">{{ formatTimeShort(hb.last_error_at) placeholderplaceholder</span>
+            </div>
+            <div>
+              {{ t('admin.ops.result') placeholderplaceholder <span class="font-mono">{{ hb.last_result || '-' placeholderplaceholder</span>
             </div>
           </div>
 

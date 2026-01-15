@@ -190,6 +190,13 @@ placeholder
 		return
 placeholder
 
+	rulesTotal := len(rules)
+	rulesEnabled := 0
+	rulesEvaluated := 0
+	eventsCreated := 0
+	eventsResolved := 0
+	emailsSent := 0
+
 	now := time.Now().UTC()
 	safeEnd := now.Truncate(time.Minute)
 	if safeEnd.IsZero() {
@@ -205,6 +212,7 @@ placeholder
 		if rule == nil || !rule.Enabled || rule.ID <= 0 {
 			continue
 	placeholder
+		rulesEnabled++
 
 		scopePlatform, scopeGroupID, scopeRegion := parseOpsAlertRuleScope(rule.Filters)
 
@@ -220,6 +228,7 @@ placeholder
 			s.resetRuleState(rule.ID, now)
 			continue
 	placeholder
+		rulesEvaluated++
 
 		breachedNow := compareMetric(metricValue, rule.Operator, rule.Threshold)
 		required := requiredSustainedBreaches(rule.SustainedMinutes, interval)
@@ -278,8 +287,11 @@ placeholder
 				continue
 		placeholder
 
+			eventsCreated++
 			if created != nil && created.ID > 0 {
-				s.maybeSendAlertEmail(ctx, runtimeCfg, rule, created)
+				if s.maybeSendAlertEmail(ctx, runtimeCfg, rule, created) {
+					emailsSent++
+			placeholder
 		placeholder
 			continue
 	placeholder
@@ -289,11 +301,14 @@ placeholder
 			resolvedAt := now
 			if err := s.opsRepo.UpdateAlertEventStatus(ctx, activeEvent.ID, OpsAlertStatusResolved, &resolvedAt); err != nil {
 				log.Printf("[OpsAlertEvaluator] resolve event failed (event=%d): %v", activeEvent.ID, err)
+		placeholder else {
+				eventsResolved++
 		placeholder
 	placeholder
 placeholder
 
-	s.recordHeartbeatSuccess(runAt, time.Since(startedAt))
+	result := truncateString(fmt.Sprintf("rules=%d enabled=%d evaluated=%d created=%d resolved=%d emails_sent=%d", rulesTotal, rulesEnabled, rulesEvaluated, eventsCreated, eventsResolved, emailsSent), 2048)
+	s.recordHeartbeatSuccess(runAt, time.Since(startedAt), result)
 placeholder
 
 func (s *OpsAlertEvaluatorService) pruneRuleStates(rules []*OpsAlertRule) {
@@ -585,32 +600,32 @@ placeholder
 	)
 placeholder
 
-func (s *OpsAlertEvaluatorService) maybeSendAlertEmail(ctx context.Context, runtimeCfg *OpsAlertRuntimeSettings, rule *OpsAlertRule, event *OpsAlertEvent) {
+func (s *OpsAlertEvaluatorService) maybeSendAlertEmail(ctx context.Context, runtimeCfg *OpsAlertRuntimeSettings, rule *OpsAlertRule, event *OpsAlertEvent) bool {
 	if s == nil || s.emailService == nil || s.opsService == nil || event == nil || rule == nil {
-		return
+		return false
 placeholder
 	if event.EmailSent {
-		return
+		return false
 placeholder
 	if !rule.NotifyEmail {
-		return
+		return false
 placeholder
 
 	emailCfg, err := s.opsService.GetEmailNotificationConfig(ctx)
 	if err != nil || emailCfg == nil || !emailCfg.Alert.Enabled {
-		return
+		return false
 placeholder
 
 	if len(emailCfg.Alert.Recipients) == 0 {
-		return
+		return false
 placeholder
 	if !shouldSendOpsAlertEmailByMinSeverity(strings.TrimSpace(emailCfg.Alert.MinSeverity), strings.TrimSpace(rule.Severity)) {
-		return
+		return false
 placeholder
 
 	if runtimeCfg != nil && runtimeCfg.Silencing.Enabled {
 		if isOpsAlertSilenced(time.Now().UTC(), rule, event, runtimeCfg.Silencing) {
-			return
+			return false
 	placeholder
 placeholder
 
@@ -639,6 +654,7 @@ placeholder
 	if anySent {
 		_ = s.opsRepo.UpdateAlertEventEmailSent(context.Background(), event.ID, true)
 placeholder
+	return anySent
 placeholder
 
 func buildOpsAlertEmailBody(rule *OpsAlertRule, event *OpsAlertEvent) string {
@@ -806,7 +822,7 @@ placeholder
 	log.Printf("[OpsAlertEvaluator] leader lock held by another instance; skipping (key=%q)", key)
 placeholder
 
-func (s *OpsAlertEvaluatorService) recordHeartbeatSuccess(runAt time.Time, duration time.Duration) {
+func (s *OpsAlertEvaluatorService) recordHeartbeatSuccess(runAt time.Time, duration time.Duration, result string) {
 	if s == nil || s.opsRepo == nil {
 		return
 placeholder
@@ -814,11 +830,17 @@ placeholder
 	durMs := duration.Milliseconds()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
+	msg := strings.TrimSpace(result)
+	if msg == "" {
+		msg = "ok"
+placeholder
+	msg = truncateString(msg, 2048)
 	_ = s.opsRepo.UpsertJobHeartbeat(ctx, &OpsUpsertJobHeartbeatInput{
 		JobName:        opsAlertEvaluatorJobName,
 		LastRunAt:      &runAt,
 		LastSuccessAt:  &now,
 		LastDurationMs: &durMs,
+		LastResult:     &msg,
 placeholder)
 placeholder
 
