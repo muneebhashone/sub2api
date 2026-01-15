@@ -117,21 +117,6 @@
             <code class="code text-xs">{{ row.host placeholderplaceholder:{{ row.port placeholderplaceholder</code>
           </template>
 
-          <template #cell-location="{ row placeholder">
-            <div class="flex items-center gap-2">
-              <img
-                v-if="row.country_code"
-                :src="flagUrl(row.country_code)"
-                :alt="row.country || row.country_code"
-                class="h-4 w-6 rounded-sm"
-              />
-              <span v-if="formatLocation(row)" class="text-sm text-gray-700 dark:text-gray-200">
-                {{ formatLocation(row) placeholderplaceholder
-              </span>
-              <span v-else class="text-sm text-gray-400">-</span>
-            </div>
-          </template>
-
           <template #cell-account_count="{ row, value placeholder">
             <button
               v-if="(value || 0) > 0"
@@ -680,7 +665,6 @@ const columns = computed<Column[]>(() => [
   { key: 'name', label: t('admin.proxies.columns.name'), sortable: true placeholder,
   { key: 'protocol', label: t('admin.proxies.columns.protocol'), sortable: true placeholder,
   { key: 'address', label: t('admin.proxies.columns.address'), sortable: false placeholder,
-  { key: 'location', label: t('admin.proxies.columns.location'), sortable: false placeholder,
   { key: 'account_count', label: t('admin.proxies.columns.accounts'), sortable: true placeholder,
   { key: 'latency', label: t('admin.proxies.columns.latency'), sortable: false placeholder,
   { key: 'status', label: t('admin.proxies.columns.status'), sortable: true placeholder,
@@ -1074,46 +1058,19 @@ placeholder
 
 const applyLatencyResult = (
   proxyId: number,
-  result: {
-    success: boolean
-    latency_ms?: number
-    message?: string
-    ip_address?: string
-    country?: string
-    country_code?: string
-    region?: string
-    city?: string
-  placeholder
+  result: { success: boolean; latency_ms?: number; message?: string placeholder
 ) => {
   const target = proxies.value.find((proxy) => proxy.id === proxyId)
   if (!target) return
   if (result.success) {
     target.latency_status = 'success'
     target.latency_ms = result.latency_ms
-    target.ip_address = result.ip_address
-    target.country = result.country
-    target.country_code = result.country_code
-    target.region = result.region
-    target.city = result.city
   placeholder else {
     target.latency_status = 'failed'
     target.latency_ms = undefined
-    target.ip_address = undefined
-    target.country = undefined
-    target.country_code = undefined
-    target.region = undefined
-    target.city = undefined
   placeholder
   target.latency_message = result.message
 placeholder
-
-const formatLocation = (proxy: Proxy) => {
-  const parts = [proxy.country, proxy.city].filter(Boolean) as string[]
-  return parts.join(' · ')
-placeholder
-
-const flagUrl = (code: string) =>
-  `https://unpkg.com/flag-icons/flags/4x3/${code.toLowerCase()placeholder.svg`
 
 const startTestingProxy = (proxyId: number) => {
   testingProxyIds.value = new Set([...testingProxyIds.value, proxyId])

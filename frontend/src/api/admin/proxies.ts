@@ -126,7 +126,6 @@ export async function testProxy(id: number): Promise<{
   city?: string
   region?: string
   country?: string
-  country_code?: string
 placeholder> {
   const { data placeholder = await apiClient.post<{
     success: boolean
@@ -136,7 +135,6 @@ placeholder> {
     city?: string
     region?: string
     country?: string
-    country_code?: string
   placeholder>(`/admin/proxies/${idplaceholder/test`)
   return data
 placeholder
