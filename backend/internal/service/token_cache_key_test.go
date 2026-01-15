@@ -22,7 +22,7 @@ placeholder{
 					"project_id": "my-project-123",
 			placeholder,
 		placeholder,
-			expected: "my-project-123",
+			expected: "gemini:my-project-123",
 	placeholder,
 		{
 			name: "project_id_with_whitespace",
@@ -32,7 +32,7 @@ placeholder{
 					"project_id": "  project-with-spaces  ",
 			placeholder,
 		placeholder,
-			expected: "project-with-spaces",
+			expected: "gemini:project-with-spaces",
 	placeholder,
 		{
 			name: "empty_project_id_fallback_to_account_id",
@@ -42,7 +42,7 @@ placeholder{
 					"project_id": "",
 			placeholder,
 		placeholder,
-			expected: "account:102",
+			expected: "gemini:account:102",
 	placeholder,
 		{
 			name: "whitespace_only_project_id_fallback_to_account_id",
@@ -52,7 +52,7 @@ placeholder{
 					"project_id": "   ",
 			placeholder,
 		placeholder,
-			expected: "account:103",
+			expected: "gemini:account:103",
 	placeholder,
 		{
 			name: "no_project_id_key_fallback_to_account_id",
@@ -60,7 +60,7 @@ placeholder{
 				ID:          104,
 		placeholderplaceholder,
 		placeholder,
-			expected: "account:104",
+			expected: "gemini:account:104",
 	placeholder,
 		{
 			name: "nil_credentials_fallback_to_account_id",
@@ -68,7 +68,7 @@ placeholder{
 				ID:          105,
 				Credentials: nil,
 		placeholder,
-			expected: "account:105",
+			expected: "gemini:account:105",
 	placeholder,
 placeholder
 

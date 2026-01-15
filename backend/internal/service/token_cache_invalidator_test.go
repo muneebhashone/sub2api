@@ -51,7 +51,7 @@ placeholder
 
 	err := invalidator.InvalidateToken(context.Background(), account)
 placeholder
-	require.Equal(t, []string{"project-x"placeholder, cache.deletedKeys)
+	require.Equal(t, []string{"gemini:project-x"placeholder, cache.deletedKeys)
 placeholder
 
 func TestCompositeTokenCacheInvalidator_Antigravity(t *testing.T) {
@@ -253,7 +253,7 @@ func TestCompositeTokenCacheInvalidator_AllPlatformsIntegration(t *testing.T) {
 placeholder
 
 	expectedKeys := []string{
-		"gemini-proj",
+		"gemini:gemini-proj",
 		"ag:ag-proj",
 		"openai:account:3",
 		"claude:account:4",
