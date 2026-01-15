@@ -151,3 +151,109 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestOpenAITokenCacheKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		account  *Account
+		expected string
+placeholder{
+		{
+			name: "basic_account",
+			account: &Account{
+				ID: 300,
+		placeholder,
+			expected: "openai:account:300",
+	placeholder,
+		{
+			name: "account_with_credentials",
+			account: &Account{
+				ID: 301,
+		placeholder
+					"access_token": "test-token",
+			placeholder,
+		placeholder,
+			expected: "openai:account:301",
+	placeholder,
+		{
+			name: "account_id_zero",
+			account: &Account{
+				ID: 0,
+		placeholder,
+			expected: "openai:account:0",
+	placeholder,
+		{
+			name: "large_account_id",
+			account: &Account{
+				ID: 9999999999,
+		placeholder,
+			expected: "openai:account:9999999999",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := OpenAITokenCacheKey(tt.account)
+			require.Equal(t, tt.expected, result)
+	placeholder)
+placeholder
+placeholder
+
+func TestClaudeTokenCacheKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		account  *Account
+		expected string
+placeholder{
+		{
+			name: "basic_account",
+			account: &Account{
+				ID: 400,
+		placeholder,
+			expected: "claude:account:400",
+	placeholder,
+		{
+			name: "account_with_credentials",
+			account: &Account{
+				ID: 401,
+		placeholder
+					"access_token": "claude-token",
+			placeholder,
+		placeholder,
+			expected: "claude:account:401",
+	placeholder,
+		{
+			name: "account_id_zero",
+			account: &Account{
+				ID: 0,
+		placeholder,
+			expected: "claude:account:0",
+	placeholder,
+		{
+			name: "large_account_id",
+			account: &Account{
+				ID: 9999999999,
+		placeholder,
+			expected: "claude:account:9999999999",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ClaudeTokenCacheKey(tt.account)
+			require.Equal(t, tt.expected, result)
+	placeholder)
+placeholder
+placeholder
+
+func TestCacheKeyUniqueness(t *testing.T) {
+	// 确保不同平台的缓存键不会冲突
+	account := &Account{ID: placeholder
+
+	openaiKey := OpenAITokenCacheKey(account)
+	claudeKey := ClaudeTokenCacheKey(account)
+
+	require.NotEqual(t, openaiKey, claudeKey, "OpenAI and Claude cache keys should be different")
+	require.Contains(t, openaiKey, "openai:")
+	require.Contains(t, claudeKey, "claude:")
+placeholder
