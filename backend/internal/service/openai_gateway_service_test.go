@@ -38,6 +38,20 @@ type cancelReadCloser struct{placeholder
 func (c cancelReadCloser) Read(p []byte) (int, error) { return 0, context.Canceled placeholder
 func (c cancelReadCloser) Close() error               { return nil placeholder
 
+type failingGinWriter struct {
+	gin.ResponseWriter
+	failAfter int
+	writes    int
+placeholder
+
+func (w *failingGinWriter) Write(p []byte) (int, error) {
+	if w.writes >= w.failAfter {
+		return 0, errors.New("write failed")
+placeholder
+	w.writes++
+	return w.ResponseWriter.Write(p)
+placeholder
+
 func (c stubConcurrencyCache) AcquireAccountSlot(ctx context.Context, accountID int64, maxConcurrency int, requestID string) (bool, error) {
 	return true, nil
 placeholder
@@ -207,6 +221,51 @@ placeholder
 		t.Fatalf("expected nil error, got %v", err)
 placeholder
 	if strings.Contains(rec.Body.String(), "event: error") || strings.Contains(rec.Body.String(), "stream_read_error") {
+		t.Fatalf("expected no injected SSE error event, got %q", rec.Body.String())
+placeholder
+placeholder
+
+func TestOpenAIStreamingClientDisconnectDrainsUpstreamUsage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+	c.Writer = &failingGinWriter{ResponseWriter: c.Writer, failAfter: 0placeholder
+
+	pr, pw := io.Pipe()
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       pr,
+		Header:     http.Header{placeholder,
+placeholder
+
+	go func() {
+		defer func() { _ = pw.Close() placeholder()
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.in_progress\",\"response\":{placeholderplaceholder\n\n"))
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":3,\"output_tokens\":5,\"input_tokens_details\":{\"cached_tokens\":1placeholderplaceholderplaceholderplaceholder\n\n"))
+placeholder()
+
+	result, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model")
+	_ = pr.Close()
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+placeholder
+	if result == nil || result.usage == nil {
+		t.Fatalf("expected usage result")
+placeholder
+	if result.usage.InputTokens != 3 || result.usage.OutputTokens != 5 || result.usage.CacheReadInputTokens != 1 {
+		t.Fatalf("unexpected usage: %+v", *result.usage)
+placeholder
+	if strings.Contains(rec.Body.String(), "event: error") || strings.Contains(rec.Body.String(), "write_failed") {
 		t.Fatalf("expected no injected SSE error event, got %q", rec.Body.String())
 placeholder
 placeholder
