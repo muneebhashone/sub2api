@@ -153,8 +153,10 @@ func (s *groupRepoStub) DeleteAccountGroupsByGroupID(ctx context.Context, groupI
 placeholder
 
 type proxyRepoStub struct {
-	deleteErr  error
-	deletedIDs []int64
+	deleteErr    error
+	countErr     error
+	accountCount int64
+	deletedIDs   []int64
 placeholder
 
 func (s *proxyRepoStub) Create(ctx context.Context, proxy *Proxy) error {
@@ -199,7 +201,14 @@ func (s *proxyRepoStub) ExistsByHostPortAuth(ctx context.Context, host string, p
 placeholder
 
 func (s *proxyRepoStub) CountAccountsByProxyID(ctx context.Context, proxyID int64) (int64, error) {
-	panic("unexpected CountAccountsByProxyID call")
+	if s.countErr != nil {
+		return 0, s.countErr
+placeholder
+	return s.accountCount, nil
+placeholder
+
+func (s *proxyRepoStub) ListAccountSummariesByProxyID(ctx context.Context, proxyID int64) ([]ProxyAccountSummary, error) {
+	panic("unexpected ListAccountSummariesByProxyID call")
 placeholder
 
 type redeemRepoStub struct {
@@ -407,6 +416,15 @@ func TestAdminService_DeleteProxy_Idempotent(t *testing.T) {
 	err := svc.DeleteProxy(context.Background(), 404)
 placeholder
 	require.Equal(t, []int64{404placeholder, repo.deletedIDs)
+placeholder
+
+func TestAdminService_DeleteProxy_InUse(t *testing.T) {
+	repo := &proxyRepoStub{accountCount: 2placeholder
+	svc := &adminServiceImpl{proxyRepo: repoplaceholder
+
+	err := svc.DeleteProxy(context.Background(), 77)
+	require.ErrorIs(t, err, ErrProxyInUse)
+	require.Empty(t, repo.deletedIDs)
 placeholder
 
 func TestAdminService_DeleteProxy_Error(t *testing.T) {
