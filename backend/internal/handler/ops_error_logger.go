@@ -544,6 +544,11 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 		body := w.buf.Bytes()
 		parsed := parseOpsErrorResponse(body)
 
+		// Skip logging if the error should be filtered based on settings
+		if shouldSkipOpsErrorLog(c.Request.Context(), ops, parsed.Message, string(body), c.Request.URL.Path) {
+			return
+	placeholder
+
 		apiKey, _ := middleware2.GetAPIKeyFromContext(c)
 
 		clientRequestID, _ := c.Request.Context().Value(ctxkey.ClientRequestID).(string)
@@ -832,28 +837,30 @@ placeholder
 
 func classifyOpsPhase(errType, message, code string) string {
 	msg := strings.ToLower(message)
+	// Standardized phases: request|auth|routing|upstream|network|internal
+	// Map billing/concurrency/response => request; scheduling => routing.
 	switch strings.TrimSpace(code) {
 	case "INSUFFICIENT_BALANCE", "USAGE_LIMIT_EXCEEDED", "SUBSCRIPTION_NOT_FOUND", "SUBSCRIPTION_INVALID":
-		return "billing"
+		return "request"
 placeholder
 
 	switch errType {
 	case "authentication_error":
 		return "auth"
 	case "billing_error", "subscription_error":
-		return "billing"
+		return "request"
 	case "rate_limit_error":
 		if strings.Contains(msg, "concurrency") || strings.Contains(msg, "pending") || strings.Contains(msg, "queue") {
-			return "concurrency"
+			return "request"
 	placeholder
 		return "upstream"
 	case "invalid_request_error":
-		return "response"
+		return "request"
 	case "upstream_error", "overloaded_error":
 		return "upstream"
 	case "api_error":
 		if strings.Contains(msg, "no available accounts") {
-			return "scheduling"
+			return "routing"
 	placeholder
 		return "internal"
 	default:
@@ -914,34 +921,38 @@ placeholder
 placeholder
 
 func classifyOpsErrorOwner(phase string, message string) string {
+	// Standardized owners: client|provider|platform
 	switch phase {
 	case "upstream", "network":
 		return "provider"
-	case "billing", "concurrency", "auth", "response":
+	case "request", "auth":
 		return "client"
+	case "routing", "internal":
+		return "platform"
 	default:
 		if strings.Contains(strings.ToLower(message), "upstream") {
 			return "provider"
 	placeholder
-		return "sub2api"
+		return "platform"
 placeholder
 placeholder
 
 func classifyOpsErrorSource(phase string, message string) string {
+	// Standardized sources: client_request|upstream_http|gateway
 	switch phase {
 	case "upstream":
 		return "upstream_http"
 	case "network":
-		return "upstream_network"
-	case "billing":
-		return "billing"
-	case "concurrency":
-		return "concurrency"
+		return "gateway"
+	case "request", "auth":
+		return "client_request"
+	case "routing", "internal":
+		return "gateway"
 	default:
 		if strings.Contains(strings.ToLower(message), "upstream") {
 			return "upstream_http"
 	placeholder
-		return "internal"
+		return "gateway"
 placeholder
 placeholder
 
@@ -962,4 +973,43 @@ placeholder
 
 func strconvItoa(v int) string {
 	return strconv.Itoa(v)
+placeholder
+
+// shouldSkipOpsErrorLog determines if an error should be skipped from logging based on settings.
+// Returns true for errors that should be filtered according to OpsAdvancedSettings.
+func shouldSkipOpsErrorLog(ctx context.Context, ops *service.OpsService, message, body, requestPath string) bool {
+	if ops == nil {
+		return false
+placeholder
+
+	// Get advanced settings to check filter configuration
+	settings, err := ops.GetOpsAdvancedSettings(ctx)
+	if err != nil || settings == nil {
+		// If we can't get settings, don't skip (fail open)
+		return false
+placeholder
+
+	msgLower := strings.ToLower(message)
+	bodyLower := strings.ToLower(body)
+
+	// Check if count_tokens errors should be ignored
+	if settings.IgnoreCountTokensErrors && strings.Contains(requestPath, "/count_tokens") {
+		return true
+placeholder
+
+	// Check if context canceled errors should be ignored (client disconnects)
+	if settings.IgnoreContextCanceled {
+		if strings.Contains(msgLower, "context canceled") || strings.Contains(bodyLower, "context canceled") {
+			return true
+	placeholder
+placeholder
+
+	// Check if "no available accounts" errors should be ignored
+	if settings.IgnoreNoAvailableAccounts {
+		if strings.Contains(msgLower, "no available accounts") || strings.Contains(bodyLower, "no available accounts") {
+			return true
+	placeholder
+placeholder
+
+	return false
 placeholder
