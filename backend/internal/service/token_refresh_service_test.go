@@ -276,9 +276,9 @@ placeholder
 
 	err := service.refreshWithRetry(context.Background(), account, refresher)
 placeholder
-	require.Equal(t, 0, repo.updateCalls)       // 刷新失败不应更新
-	require.Equal(t, 0, invalidator.calls)      // 刷新失败不应触发缓存失效
-	require.Equal(t, 1, repo.setErrorCalls)     // 应设置错误状态
+	require.Equal(t, 0, repo.updateCalls)   // 刷新失败不应更新
+	require.Equal(t, 0, invalidator.calls)  // 刷新失败不应触发缓存失效
+	require.Equal(t, 1, repo.setErrorCalls) // 应设置错误状态
 placeholder
 
 // TestTokenRefreshService_RefreshWithRetry_AntigravityRefreshFailed 测试 Antigravity 刷新失败不设置错误状态
