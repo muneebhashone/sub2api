@@ -696,11 +696,11 @@ placeholder
 		Platform: PlatformAnthropic,
 		Type:     AccountTypeOAuth,
 placeholder
-			"access_token":   "old-access-token",
-			"refresh_token":  "old-refresh-token",
-			"expires_at":     expiresAt,
-			"custom_field":   "should-be-preserved",
-			"organization":   "test-org",
+			"access_token":  "old-access-token",
+			"refresh_token": "old-refresh-token",
+			"expires_at":    expiresAt,
+			"custom_field":  "should-be-preserved",
+			"organization":  "test-org",
 	placeholder,
 placeholder
 	accountRepo.account = account

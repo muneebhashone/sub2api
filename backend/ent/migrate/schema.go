@@ -226,6 +226,8 @@ placeholder
 		{Name: "image_price_4k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "model_routing", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "model_routing_enabled", Type: field.TypeBool, Default: falseplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{

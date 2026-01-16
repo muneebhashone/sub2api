@@ -545,20 +545,20 @@ placeholder
 
 func TestOpenAITokenProvider_TTLCalculation(t *testing.T) {
 	tests := []struct {
-		name        string
-		expiresIn   time.Duration
+		name      string
+		expiresIn time.Duration
 placeholder{
 		{
-			name:        "far_future_expiry",
-			expiresIn:   1 * time.Hour,
+			name:      "far_future_expiry",
+			expiresIn: 1 * time.Hour,
 	placeholder,
 		{
-			name:        "medium_expiry",
-			expiresIn:   10 * time.Minute,
+			name:      "medium_expiry",
+			expiresIn: 10 * time.Minute,
 	placeholder,
 		{
-			name:        "near_expiry",
-			expiresIn:   6 * time.Minute,
+			name:      "near_expiry",
+			expiresIn: 6 * time.Minute,
 	placeholder,
 placeholder
 
