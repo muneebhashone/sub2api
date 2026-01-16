@@ -149,7 +149,7 @@ placeholder
 		log.Printf("[OpsCleanup] cleanup failed: %v", err)
 		return
 placeholder
-	s.recordHeartbeatSuccess(runAt, time.Since(startedAt))
+	s.recordHeartbeatSuccess(runAt, time.Since(startedAt), counts)
 	log.Printf("[OpsCleanup] cleanup complete: %s", counts)
 placeholder
 
@@ -330,12 +330,13 @@ placeholder
 	return release, true
 placeholder
 
-func (s *OpsCleanupService) recordHeartbeatSuccess(runAt time.Time, duration time.Duration) {
+func (s *OpsCleanupService) recordHeartbeatSuccess(runAt time.Time, duration time.Duration, counts opsCleanupDeletedCounts) {
 	if s == nil || s.opsRepo == nil {
 		return
 placeholder
 	now := time.Now().UTC()
 	durMs := duration.Milliseconds()
+	result := truncateString(counts.String(), 2048)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_ = s.opsRepo.UpsertJobHeartbeat(ctx, &OpsUpsertJobHeartbeatInput{
@@ -343,6 +344,7 @@ placeholder
 		LastRunAt:      &runAt,
 		LastSuccessAt:  &now,
 		LastDurationMs: &durMs,
+		LastResult:     &result,
 placeholder)
 placeholder
 
