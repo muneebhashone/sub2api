@@ -178,6 +178,10 @@ placeholder
 				Status:           StatusActive,
 				SubscriptionType: SubscriptionTypeStandard,
 				RateMultiplier:   1,
+				ModelRoutingEnabled: true,
+				ModelRouting: map[string][]int64{
+					"claude-opus-*": {1, 2placeholder,
+			placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -190,6 +194,8 @@ placeholder
 	require.Equal(t, int64(1), apiKey.ID)
 	require.Equal(t, int64(2), apiKey.User.ID)
 	require.Equal(t, groupID, apiKey.Group.ID)
+	require.True(t, apiKey.Group.ModelRoutingEnabled)
+	require.Equal(t, map[string][]int64{"claude-opus-*": {1, 2placeholderplaceholder, apiKey.Group.ModelRouting)
 placeholder
 
 func TestAPIKeyService_GetByKey_NegativeCache(t *testing.T) {

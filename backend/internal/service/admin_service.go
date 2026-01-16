@@ -106,6 +106,9 @@ type CreateGroupInput struct {
 	ImagePrice4K    *float64
 	ClaudeCodeOnly  bool   // 仅允许 Claude Code 客户端
 	FallbackGroupID *int64 // 降级分组 ID
+	// 模型路由配置（仅 anthropic 平台使用）
+	ModelRouting        map[string][]int64
+	ModelRoutingEnabled bool // 是否启用模型路由
 placeholder
 
 type UpdateGroupInput struct {
@@ -125,6 +128,9 @@ type UpdateGroupInput struct {
 	ImagePrice4K    *float64
 	ClaudeCodeOnly  *bool  // 仅允许 Claude Code 客户端
 	FallbackGroupID *int64 // 降级分组 ID
+	// 模型路由配置（仅 anthropic 平台使用）
+	ModelRouting        map[string][]int64
+	ModelRoutingEnabled *bool // 是否启用模型路由
 placeholder
 
 type CreateAccountInput struct {
@@ -581,6 +587,7 @@ placeholder
 		ImagePrice4K:     imagePrice4K,
 		ClaudeCodeOnly:   input.ClaudeCodeOnly,
 		FallbackGroupID:  input.FallbackGroupID,
+		ModelRouting:     input.ModelRouting,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
@@ -707,6 +714,14 @@ placeholder
 			// 传入 0 或负数表示清除降级分组
 			group.FallbackGroupID = nil
 	placeholder
+placeholder
+
+	// 模型路由配置
+	if input.ModelRouting != nil {
+		group.ModelRouting = input.ModelRouting
+placeholder
+	if input.ModelRoutingEnabled != nil {
+		group.ModelRoutingEnabled = *input.ModelRoutingEnabled
 placeholder
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
