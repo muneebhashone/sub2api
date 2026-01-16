@@ -599,7 +599,7 @@ placeholder{
 			name: "Gemini平台-有映射配置-只支持配置的模型",
 			account: &Account{
 				Platform:    PlatformGemini,
-		placeholder"model_mapping": map[string]any{"gemini-1.5-pro": "x"placeholderplaceholder,
+		placeholder"model_mapping": map[string]any{"gemini-2.5-pro": "x"placeholderplaceholder,
 		placeholder,
 			model:    "gemini-2.5-flash",
 			expected: false,
