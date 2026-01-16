@@ -439,7 +439,7 @@ placeholder
 	placeholder
 		runes := []rune(lower)
 		runes[0] = unicode.ToUpper(runes[0])
-		builder.WriteString(string(runes))
+		_, _ = builder.WriteString(string(runes))
 placeholder
 	return builder.String()
 placeholder
@@ -723,12 +723,8 @@ placeholder
 	placeholder
 placeholder
 
-	if _, ok := req["temperature"]; ok {
-		delete(req, "temperature")
-placeholder
-	if _, ok := req["tool_choice"]; ok {
-		delete(req, "tool_choice")
-placeholder
+	delete(req, "temperature")
+	delete(req, "tool_choice")
 
 	newBody, err := json.Marshal(req)
 	if err != nil {
