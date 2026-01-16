@@ -2328,12 +2328,19 @@ placeholder
 		applyClaudeOAuthHeaderDefaults(req, reqStream)
 placeholder
 
-	// 处理anthropic-beta header（OAuth账号需要特殊处理）
-	if tokenType == "oauth" && mimicClaudeCode {
-		if requestHasTools(body) {
-			req.Header.Set("anthropic-beta", claude.MessageBetaHeaderWithTools)
+	// 处理 anthropic-beta header（OAuth 账号需要包含 oauth beta）
+	if tokenType == "oauth" {
+		if mimicClaudeCode {
+			// 非 Claude Code 客户端：按 Claude Code 规则生成 beta header
+			if requestHasTools(body) {
+				req.Header.Set("anthropic-beta", claude.MessageBetaHeaderWithTools)
+		placeholder else {
+				req.Header.Set("anthropic-beta", claude.MessageBetaHeaderNoTools)
+		placeholder
 	placeholder else {
-			req.Header.Set("anthropic-beta", claude.MessageBetaHeaderNoTools)
+			// Claude Code 客户端：尽量透传原始 header，仅补齐 oauth beta
+			clientBetaHeader := req.Header.Get("anthropic-beta")
+			req.Header.Set("anthropic-beta", s.getBetaHeader(modelID, clientBetaHeader))
 	placeholder
 placeholder else if s.cfg != nil && s.cfg.Gateway.InjectBetaForAPIKey && req.Header.Get("anthropic-beta") == "" {
 		// API-key：仅在请求显式使用 beta 特性且客户端未提供时，按需补齐（默认关闭）
@@ -3576,8 +3583,21 @@ placeholder
 placeholder
 
 	// OAuth 账号：处理 anthropic-beta header
-	if tokenType == "oauth" && mimicClaudeCode {
-		req.Header.Set("anthropic-beta", claude.CountTokensBetaHeader)
+	if tokenType == "oauth" {
+		if mimicClaudeCode {
+			req.Header.Set("anthropic-beta", claude.CountTokensBetaHeader)
+	placeholder else {
+			clientBetaHeader := req.Header.Get("anthropic-beta")
+			if clientBetaHeader == "" {
+				req.Header.Set("anthropic-beta", claude.CountTokensBetaHeader)
+		placeholder else {
+				beta := s.getBetaHeader(modelID, clientBetaHeader)
+				if !strings.Contains(beta, claude.BetaTokenCounting) {
+					beta = beta + "," + claude.BetaTokenCounting
+			placeholder
+				req.Header.Set("anthropic-beta", beta)
+		placeholder
+	placeholder
 placeholder else if s.cfg != nil && s.cfg.Gateway.InjectBetaForAPIKey && req.Header.Get("anthropic-beta") == "" {
 		// API-key：与 messages 同步的按需 beta 注入（默认关闭）
 		if requestNeedsBetaFeatures(body) {
