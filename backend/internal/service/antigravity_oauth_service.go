@@ -149,12 +149,6 @@ placeholder else if loadResp != nil && loadResp.CloudAICompanionProject != "" {
 		result.ProjectID = loadResp.CloudAICompanionProject
 placeholder
 
-	// 兜底：随机生成 project_id
-	if result.ProjectID == "" {
-		result.ProjectID = antigravity.GenerateMockProjectID()
-		fmt.Printf("[AntigravityOAuth] 使用随机生成的 project_id: %s\n", result.ProjectID)
-placeholder
-
 	return result, nil
 placeholder
 
@@ -236,14 +230,23 @@ placeholder
 		return nil, err
 placeholder
 
-	// 保留原有的 project_id 和 email
-	existingProjectID := strings.TrimSpace(account.GetCredential("project_id"))
-	if existingProjectID != "" {
-		tokenInfo.ProjectID = existingProjectID
-placeholder
+	// 保留原有的 email
 	existingEmail := strings.TrimSpace(account.GetCredential("email"))
 	if existingEmail != "" {
 		tokenInfo.Email = existingEmail
+placeholder
+
+	// 每次刷新都调用 LoadCodeAssist 更新 project_id
+	client := antigravity.NewClient(proxyURL)
+	loadResp, _, err := client.LoadCodeAssist(ctx, tokenInfo.AccessToken)
+	if err != nil {
+		// 失败时保留原有的 project_id
+		existingProjectID := strings.TrimSpace(account.GetCredential("project_id"))
+		if existingProjectID != "" {
+			tokenInfo.ProjectID = existingProjectID
+	placeholder
+placeholder else if loadResp != nil && loadResp.CloudAICompanionProject != "" {
+		tokenInfo.ProjectID = loadResp.CloudAICompanionProject
 placeholder
 
 	return tokenInfo, nil
