@@ -358,6 +358,8 @@ placeholder
 		var rawResp map[string]any
 		_ = json.Unmarshal(respBodyBytes, &rawResp)
 
+		// 标记成功的 URL，下次优先使用
+		DefaultURLAvailability.MarkSuccess(baseURL)
 		return &loadResp, rawResp, nil
 placeholder
 
@@ -449,6 +451,8 @@ placeholder
 		var rawResp map[string]any
 		_ = json.Unmarshal(respBodyBytes, &rawResp)
 
+		// 标记成功的 URL，下次优先使用
+		DefaultURLAvailability.MarkSuccess(baseURL)
 		return &modelsResp, rawResp, nil
 placeholder
 

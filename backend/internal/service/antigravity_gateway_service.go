@@ -266,6 +266,8 @@ placeholder
 		// 解析流式响应，提取文本
 		text := extractTextFromSSEResponse(respBody)
 
+		// 标记成功的 URL，下次优先使用
+		antigravity.DefaultURLAvailability.MarkSuccess(baseURL)
 		return &TestConnectionResult{
 			Text:        text,
 			MappedModel: mappedModel,
@@ -551,8 +553,10 @@ placeholder
 
 	// 重试循环
 	var resp *http.Response
+	var usedBaseURL string // 追踪成功使用的 URL
 urlFallbackLoop:
 	for urlIdx, baseURL := range availableURLs {
+		usedBaseURL = baseURL
 		for attempt := 1; attempt <= antigravityMaxRetries; attempt++ {
 			// 检查 context 是否已取消（客户端断开连接）
 			select {
@@ -627,6 +631,11 @@ urlFallbackLoop:
 	placeholder
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
+
+	// 请求成功，标记 URL 供后续优先使用
+	if resp.StatusCode < 400 && usedBaseURL != "" {
+		antigravity.DefaultURLAvailability.MarkSuccess(usedBaseURL)
+placeholder
 
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
@@ -1097,8 +1106,10 @@ placeholder
 
 	// 重试循环
 	var resp *http.Response
+	var usedBaseURL string // 追踪成功使用的 URL
 urlFallbackLoop:
 	for urlIdx, baseURL := range availableURLs {
+		usedBaseURL = baseURL
 		for attempt := 1; attempt <= antigravityMaxRetries; attempt++ {
 			// 检查 context 是否已取消（客户端断开连接）
 			select {
@@ -1176,6 +1187,11 @@ placeholder
 			_ = resp.Body.Close()
 	placeholder
 placeholder()
+
+	// 请求成功，标记 URL 供后续优先使用
+	if resp.StatusCode < 400 && usedBaseURL != "" {
+		antigravity.DefaultURLAvailability.MarkSuccess(usedBaseURL)
+placeholder
 
 	// 处理错误响应
 	if resp.StatusCode >= 400 {
