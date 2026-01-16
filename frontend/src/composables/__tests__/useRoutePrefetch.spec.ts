@@ -2,20 +2,7 @@
  * useRoutePrefetch 组合式函数单元测试
  */
 import { describe, it, expect, vi, beforeEach, afterEach placeholder from 'vitest'
-import type { RouteLocationNormalized placeholder from 'vue-router'
-
-// Mock 所有动态 import
-vi.mock('@/views/admin/AccountsView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/admin/UsersView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/admin/DashboardView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/admin/GroupsView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/admin/SubscriptionsView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/admin/RedeemView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/user/KeysView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/user/UsageView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/user/DashboardView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/user/RedeemView.vue', () => ({ default: {placeholder placeholder))
-vi.mock('@/views/user/ProfileView.vue', () => ({ default: {placeholder placeholder))
+import type { RouteLocationNormalized, Router, RouteRecordNormalized placeholder from 'vue-router'
 
 import { useRoutePrefetch, _adminPrefetchMap, _userPrefetchMap placeholder from '../useRoutePrefetch'
 
@@ -32,11 +19,37 @@ const createMockRoute = (path: string): RouteLocationNormalized => ({
   redirectedFrom: undefined
 placeholder)
 
+// Mock Router
+const createMockRouter = (): Router => {
+  const mockImportFn = vi.fn().mockResolvedValue({ default: {placeholder placeholder)
+
+  const routes: Partial<RouteRecordNormalized>[] = [
+    { path: '/admin/dashboard', components: { default: mockImportFn placeholder placeholder,
+    { path: '/admin/accounts', components: { default: mockImportFn placeholder placeholder,
+    { path: '/admin/users', components: { default: mockImportFn placeholder placeholder,
+    { path: '/admin/groups', components: { default: mockImportFn placeholder placeholder,
+    { path: '/admin/subscriptions', components: { default: mockImportFn placeholder placeholder,
+    { path: '/admin/redeem', components: { default: mockImportFn placeholder placeholder,
+    { path: '/dashboard', components: { default: mockImportFn placeholder placeholder,
+    { path: '/keys', components: { default: mockImportFn placeholder placeholder,
+    { path: '/usage', components: { default: mockImportFn placeholder placeholder,
+    { path: '/redeem', components: { default: mockImportFn placeholder placeholder,
+    { path: '/profile', components: { default: mockImportFn placeholder placeholder
+  ]
+
+  return {
+    getRoutes: () => routes as RouteRecordNormalized[]
+  placeholder as Router
+placeholder
+
 describe('useRoutePrefetch', () => {
   let originalRequestIdleCallback: typeof window.requestIdleCallback
   let originalCancelIdleCallback: typeof window.cancelIdleCallback
+  let mockRouter: Router
 
   beforeEach(() => {
+    mockRouter = createMockRouter()
+
     // 保存原始函数
     originalRequestIdleCallback = window.requestIdleCallback
     originalCancelIdleCallback = window.cancelIdleCallback
@@ -58,14 +71,14 @@ describe('useRoutePrefetch', () => {
 
   describe('_isAdminRoute', () => {
     it('应该正确识别管理员路由', () => {
-      const { _isAdminRoute placeholder = useRoutePrefetch()
+      const { _isAdminRoute placeholder = useRoutePrefetch(mockRouter)
       expect(_isAdminRoute('/admin/dashboard')).toBe(true)
       expect(_isAdminRoute('/admin/users')).toBe(true)
       expect(_isAdminRoute('/admin/accounts')).toBe(true)
     placeholder)
 
     it('应该正确识别非管理员路由', () => {
-      const { _isAdminRoute placeholder = useRoutePrefetch()
+      const { _isAdminRoute placeholder = useRoutePrefetch(mockRouter)
       expect(_isAdminRoute('/dashboard')).toBe(false)
       expect(_isAdminRoute('/keys')).toBe(false)
       expect(_isAdminRoute('/usage')).toBe(false)
@@ -74,7 +87,7 @@ describe('useRoutePrefetch', () => {
 
   describe('_getPrefetchConfig', () => {
     it('管理员 dashboard 应该返回正确的预加载配置', () => {
-      const { _getPrefetchConfig placeholder = useRoutePrefetch()
+      const { _getPrefetchConfig placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/admin/dashboard')
       const config = _getPrefetchConfig(route)
 
@@ -82,7 +95,7 @@ describe('useRoutePrefetch', () => {
     placeholder)
 
     it('普通用户 dashboard 应该返回正确的预加载配置', () => {
-      const { _getPrefetchConfig placeholder = useRoutePrefetch()
+      const { _getPrefetchConfig placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/dashboard')
       const config = _getPrefetchConfig(route)
 
@@ -90,7 +103,7 @@ describe('useRoutePrefetch', () => {
     placeholder)
 
     it('未定义的路由应该返回空数组', () => {
-      const { _getPrefetchConfig placeholder = useRoutePrefetch()
+      const { _getPrefetchConfig placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/unknown-route')
       const config = _getPrefetchConfig(route)
 
@@ -100,7 +113,7 @@ describe('useRoutePrefetch', () => {
 
   describe('triggerPrefetch', () => {
     it('应该在浏览器空闲时触发预加载', async () => {
-      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch()
+      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/admin/dashboard')
 
       triggerPrefetch(route)
@@ -112,7 +125,7 @@ describe('useRoutePrefetch', () => {
     placeholder)
 
     it('应该避免重复预加载同一路由', async () => {
-      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch()
+      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/admin/dashboard')
 
       triggerPrefetch(route)
@@ -129,7 +142,7 @@ describe('useRoutePrefetch', () => {
 
   describe('cancelPendingPrefetch', () => {
     it('应该取消挂起的预加载任务', () => {
-      const { triggerPrefetch, cancelPendingPrefetch, prefetchedRoutes placeholder = useRoutePrefetch()
+      const { triggerPrefetch, cancelPendingPrefetch, prefetchedRoutes placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/admin/dashboard')
 
       triggerPrefetch(route)
@@ -142,7 +155,7 @@ describe('useRoutePrefetch', () => {
 
   describe('路由变化时取消之前的预加载', () => {
     it('应该在路由变化时取消之前的预加载任务', async () => {
-      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch()
+      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch(mockRouter)
 
       // 触发第一个路由的预加载
       triggerPrefetch(createMockRoute('/admin/dashboard'))
@@ -160,7 +173,7 @@ describe('useRoutePrefetch', () => {
 
   describe('resetPrefetchState', () => {
     it('应该重置所有预加载状态', async () => {
-      const { triggerPrefetch, resetPrefetchState, prefetchedRoutes placeholder = useRoutePrefetch()
+      const { triggerPrefetch, resetPrefetchState, prefetchedRoutes placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/admin/dashboard')
 
       triggerPrefetch(route)
@@ -194,7 +207,7 @@ describe('useRoutePrefetch', () => {
         return setTimeout(() => cb({ didTimeout: true, timeRemaining: () => 0 placeholder), timeout)
       placeholder)
 
-      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch()
+      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/dashboard')
 
       triggerPrefetch(route)
@@ -208,12 +221,24 @@ describe('useRoutePrefetch', () => {
 
   describe('预加载失败处理', () => {
     it('预加载失败时应该静默处理不影响页面功能', async () => {
-      // 这个测试验证预加载失败不会抛出异常
-      const { triggerPrefetch placeholder = useRoutePrefetch()
+      const { triggerPrefetch placeholder = useRoutePrefetch(mockRouter)
       const route = createMockRoute('/admin/dashboard')
 
       // 不应该抛出异常
       expect(() => triggerPrefetch(route)).not.toThrow()
+    placeholder)
+  placeholder)
+
+  describe('无 router 时的行为', () => {
+    it('没有传入 router 时应该正常工作但不执行预加载', async () => {
+      const { triggerPrefetch, prefetchedRoutes placeholder = useRoutePrefetch()
+      const route = createMockRoute('/admin/dashboard')
+
+      triggerPrefetch(route)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // 没有 router，无法获取组件，所以不会预加载
+      expect(prefetchedRoutes.value.size).toBe(0)
     placeholder)
   placeholder)
 placeholder)
