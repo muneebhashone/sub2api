@@ -769,6 +769,145 @@ placeholder
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 
+		// 优先检测 thinking block 的 signature 相关错误（400）并重试一次：
+		// Antigravity /v1internal 链路在部分场景会对 thought/thinking signature 做严格校验，
+		// 当历史消息携带的 signature 不合法时会直接 400；去除 thinking 后可继续完成请求。
+		if resp.StatusCode == http.StatusBadRequest && isSignatureRelatedError(respBody) {
+			upstreamMsg := strings.TrimSpace(extractAntigravityErrorMessage(respBody))
+			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
+			logBody := s.settingService != nil && s.settingService.cfg != nil && s.settingService.cfg.Gateway.LogUpstreamErrorBody
+			maxBytes := 2048
+			if s.settingService != nil && s.settingService.cfg != nil && s.settingService.cfg.Gateway.LogUpstreamErrorBodyMaxBytes > 0 {
+				maxBytes = s.settingService.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+		placeholder
+			upstreamDetail := ""
+			if logBody {
+				upstreamDetail = truncateString(string(respBody), maxBytes)
+		placeholder
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				AccountName:        account.Name,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  resp.Header.Get("x-request-id"),
+				Kind:               "signature_error",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
+
+			// Conservative two-stage fallback:
+			// 1) Disable top-level thinking + thinking->text
+			// 2) Only if still signature-related 400: also downgrade tool_use/tool_result to text.
+
+			retryStages := []struct {
+				name  string
+				strip func(*antigravity.ClaudeRequest) (bool, error)
+		placeholder{
+				{name: "thinking-only", strip: stripThinkingFromClaudeRequestplaceholder,
+				{name: "thinking+tools", strip: stripSignatureSensitiveBlocksFromClaudeRequestplaceholder,
+		placeholder
+
+			for _, stage := range retryStages {
+				retryClaudeReq := claudeReq
+				retryClaudeReq.Messages = append([]antigravity.ClaudeMessage(nil), claudeReq.Messages...)
+
+				stripped, stripErr := stage.strip(&retryClaudeReq)
+				if stripErr != nil || !stripped {
+					continue
+			placeholder
+
+				log.Printf("Antigravity account %d: detected signature-related 400, retrying once (%s)", account.ID, stage.name)
+
+				retryGeminiBody, txErr := antigravity.TransformClaudeToGeminiWithOptions(&retryClaudeReq, projectID, mappedModel, s.getClaudeTransformOptions(ctx))
+				if txErr != nil {
+					continue
+			placeholder
+				retryResult, retryErr := antigravityRetryLoop(antigravityRetryLoopParams{
+					ctx:            ctx,
+					prefix:         prefix,
+					account:        account,
+					proxyURL:       proxyURL,
+					accessToken:    accessToken,
+					action:         action,
+					body:           retryGeminiBody,
+					quotaScope:     quotaScope,
+					c:              c,
+					httpUpstream:   s.httpUpstream,
+					settingService: s.settingService,
+					handleError:    s.handleUpstreamError,
+			placeholder)
+				if retryErr != nil {
+					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+						Platform:           account.Platform,
+						AccountID:          account.ID,
+						AccountName:        account.Name,
+						UpstreamStatusCode: 0,
+						Kind:               "signature_retry_request_error",
+						Message:            sanitizeUpstreamErrorMessage(retryErr.Error()),
+				placeholder)
+					log.Printf("Antigravity account %d: signature retry request failed (%s): %v", account.ID, stage.name, retryErr)
+					continue
+			placeholder
+
+				retryResp := retryResult.resp
+				if retryResp.StatusCode < 400 {
+					_ = resp.Body.Close()
+					resp = retryResp
+					respBody = nil
+					break
+			placeholder
+
+				retryBody, _ := io.ReadAll(io.LimitReader(retryResp.Body, 2<<20))
+				_ = retryResp.Body.Close()
+				if retryResp.StatusCode == http.StatusTooManyRequests {
+					retryBaseURL := ""
+					if retryResp.Request != nil && retryResp.Request.URL != nil {
+						retryBaseURL = retryResp.Request.URL.Scheme + "://" + retryResp.Request.URL.Host
+				placeholder
+					log.Printf("%s status=429 rate_limited base_url=%s retry_stage=%s body=%s", prefix, retryBaseURL, stage.name, truncateForLog(retryBody, 200))
+			placeholder
+				kind := "signature_retry"
+				if strings.TrimSpace(stage.name) != "" {
+					kind = "signature_retry_" + strings.ReplaceAll(stage.name, "+", "_")
+			placeholder
+				retryUpstreamMsg := strings.TrimSpace(extractAntigravityErrorMessage(retryBody))
+				retryUpstreamMsg = sanitizeUpstreamErrorMessage(retryUpstreamMsg)
+				retryUpstreamDetail := ""
+				if logBody {
+					retryUpstreamDetail = truncateString(string(retryBody), maxBytes)
+			placeholder
+				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					Platform:           account.Platform,
+					AccountID:          account.ID,
+					AccountName:        account.Name,
+					UpstreamStatusCode: retryResp.StatusCode,
+					UpstreamRequestID:  retryResp.Header.Get("x-request-id"),
+					Kind:               kind,
+					Message:            retryUpstreamMsg,
+					Detail:             retryUpstreamDetail,
+			placeholder)
+
+				// If this stage fixed the signature issue, we stop; otherwise we may try the next stage.
+				if retryResp.StatusCode != http.StatusBadRequest || !isSignatureRelatedError(retryBody) {
+					respBody = retryBody
+					resp = &http.Response{
+						StatusCode: retryResp.StatusCode,
+						Header:     retryResp.Header.Clone(),
+						Body:       io.NopCloser(bytes.NewReader(retryBody)),
+				placeholder
+					break
+			placeholder
+
+				// Still signature-related; capture context and allow next stage.
+				respBody = retryBody
+				resp = &http.Response{
+					StatusCode: retryResp.StatusCode,
+					Header:     retryResp.Header.Clone(),
+					Body:       io.NopCloser(bytes.NewReader(retryBody)),
+			placeholder
+		placeholder
+	placeholder
+
 		// 处理错误响应（重试后仍失败或不触发重试）
 		if resp.StatusCode >= 400 {
 			s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
