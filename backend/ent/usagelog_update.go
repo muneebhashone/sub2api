@@ -415,6 +415,33 @@ func (_u *UsageLogUpdate) AddRateMultiplier(v float64) *UsageLogUpdate {
 	return _u
 placeholder
 
+// SetAccountRateMultiplier sets the "account_rate_multiplier" field.
+func (_u *UsageLogUpdate) SetAccountRateMultiplier(v float64) *UsageLogUpdate {
+	_u.mutation.ResetAccountRateMultiplier()
+	_u.mutation.SetAccountRateMultiplier(v)
+	return _u
+placeholder
+
+// SetNillableAccountRateMultiplier sets the "account_rate_multiplier" field if the given value is not nil.
+func (_u *UsageLogUpdate) SetNillableAccountRateMultiplier(v *float64) *UsageLogUpdate {
+	if v != nil {
+		_u.SetAccountRateMultiplier(*v)
+placeholder
+	return _u
+placeholder
+
+// AddAccountRateMultiplier adds value to the "account_rate_multiplier" field.
+func (_u *UsageLogUpdate) AddAccountRateMultiplier(v float64) *UsageLogUpdate {
+	_u.mutation.AddAccountRateMultiplier(v)
+	return _u
+placeholder
+
+// ClearAccountRateMultiplier clears the value of the "account_rate_multiplier" field.
+func (_u *UsageLogUpdate) ClearAccountRateMultiplier() *UsageLogUpdate {
+	_u.mutation.ClearAccountRateMultiplier()
+	return _u
+placeholder
+
 // SetBillingType sets the "billing_type" field.
 func (_u *UsageLogUpdate) SetBillingType(v int8) *UsageLogUpdate {
 	_u.mutation.ResetBillingType()
@@ -521,6 +548,26 @@ placeholder
 // ClearUserAgent clears the value of the "user_agent" field.
 func (_u *UsageLogUpdate) ClearUserAgent() *UsageLogUpdate {
 	_u.mutation.ClearUserAgent()
+	return _u
+placeholder
+
+// SetIPAddress sets the "ip_address" field.
+func (_u *UsageLogUpdate) SetIPAddress(v string) *UsageLogUpdate {
+	_u.mutation.SetIPAddress(v)
+	return _u
+placeholder
+
+// SetNillableIPAddress sets the "ip_address" field if the given value is not nil.
+func (_u *UsageLogUpdate) SetNillableIPAddress(v *string) *UsageLogUpdate {
+	if v != nil {
+		_u.SetIPAddress(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearIPAddress clears the value of the "ip_address" field.
+func (_u *UsageLogUpdate) ClearIPAddress() *UsageLogUpdate {
+	_u.mutation.ClearIPAddress()
 	return _u
 placeholder
 
@@ -669,6 +716,11 @@ placeholder
 			return &ValidationError{Name: "user_agent", err: fmt.Errorf(`ent: validator failed for field "UsageLog.user_agent": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.IPAddress(); ok {
+		if err := usagelog.IPAddressValidator(v); err != nil {
+			return &ValidationError{Name: "ip_address", err: fmt.Errorf(`ent: validator failed for field "UsageLog.ip_address": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.ImageSize(); ok {
 		if err := usagelog.ImageSizeValidator(v); err != nil {
 			return &ValidationError{Name: "image_size", err: fmt.Errorf(`ent: validator failed for field "UsageLog.image_size": %w`, err)placeholder
@@ -782,6 +834,15 @@ placeholder
 	if value, ok := _u.mutation.AddedRateMultiplier(); ok {
 		_spec.AddField(usagelog.FieldRateMultiplier, field.TypeFloat64, value)
 placeholder
+	if value, ok := _u.mutation.AccountRateMultiplier(); ok {
+		_spec.SetField(usagelog.FieldAccountRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedAccountRateMultiplier(); ok {
+		_spec.AddField(usagelog.FieldAccountRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.AccountRateMultiplierCleared() {
+		_spec.ClearField(usagelog.FieldAccountRateMultiplier, field.TypeFloat64)
+placeholder
 	if value, ok := _u.mutation.BillingType(); ok {
 		_spec.SetField(usagelog.FieldBillingType, field.TypeInt8, value)
 placeholder
@@ -814,6 +875,12 @@ placeholder
 placeholder
 	if _u.mutation.UserAgentCleared() {
 		_spec.ClearField(usagelog.FieldUserAgent, field.TypeString)
+placeholder
+	if value, ok := _u.mutation.IPAddress(); ok {
+		_spec.SetField(usagelog.FieldIPAddress, field.TypeString, value)
+placeholder
+	if _u.mutation.IPAddressCleared() {
+		_spec.ClearField(usagelog.FieldIPAddress, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.ImageCount(); ok {
 		_spec.SetField(usagelog.FieldImageCount, field.TypeInt, value)
@@ -1375,6 +1442,33 @@ func (_u *UsageLogUpdateOne) AddRateMultiplier(v float64) *UsageLogUpdateOne {
 	return _u
 placeholder
 
+// SetAccountRateMultiplier sets the "account_rate_multiplier" field.
+func (_u *UsageLogUpdateOne) SetAccountRateMultiplier(v float64) *UsageLogUpdateOne {
+	_u.mutation.ResetAccountRateMultiplier()
+	_u.mutation.SetAccountRateMultiplier(v)
+	return _u
+placeholder
+
+// SetNillableAccountRateMultiplier sets the "account_rate_multiplier" field if the given value is not nil.
+func (_u *UsageLogUpdateOne) SetNillableAccountRateMultiplier(v *float64) *UsageLogUpdateOne {
+	if v != nil {
+		_u.SetAccountRateMultiplier(*v)
+placeholder
+	return _u
+placeholder
+
+// AddAccountRateMultiplier adds value to the "account_rate_multiplier" field.
+func (_u *UsageLogUpdateOne) AddAccountRateMultiplier(v float64) *UsageLogUpdateOne {
+	_u.mutation.AddAccountRateMultiplier(v)
+	return _u
+placeholder
+
+// ClearAccountRateMultiplier clears the value of the "account_rate_multiplier" field.
+func (_u *UsageLogUpdateOne) ClearAccountRateMultiplier() *UsageLogUpdateOne {
+	_u.mutation.ClearAccountRateMultiplier()
+	return _u
+placeholder
+
 // SetBillingType sets the "billing_type" field.
 func (_u *UsageLogUpdateOne) SetBillingType(v int8) *UsageLogUpdateOne {
 	_u.mutation.ResetBillingType()
@@ -1481,6 +1575,26 @@ placeholder
 // ClearUserAgent clears the value of the "user_agent" field.
 func (_u *UsageLogUpdateOne) ClearUserAgent() *UsageLogUpdateOne {
 	_u.mutation.ClearUserAgent()
+	return _u
+placeholder
+
+// SetIPAddress sets the "ip_address" field.
+func (_u *UsageLogUpdateOne) SetIPAddress(v string) *UsageLogUpdateOne {
+	_u.mutation.SetIPAddress(v)
+	return _u
+placeholder
+
+// SetNillableIPAddress sets the "ip_address" field if the given value is not nil.
+func (_u *UsageLogUpdateOne) SetNillableIPAddress(v *string) *UsageLogUpdateOne {
+	if v != nil {
+		_u.SetIPAddress(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearIPAddress clears the value of the "ip_address" field.
+func (_u *UsageLogUpdateOne) ClearIPAddress() *UsageLogUpdateOne {
+	_u.mutation.ClearIPAddress()
 	return _u
 placeholder
 
@@ -1642,6 +1756,11 @@ placeholder
 			return &ValidationError{Name: "user_agent", err: fmt.Errorf(`ent: validator failed for field "UsageLog.user_agent": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.IPAddress(); ok {
+		if err := usagelog.IPAddressValidator(v); err != nil {
+			return &ValidationError{Name: "ip_address", err: fmt.Errorf(`ent: validator failed for field "UsageLog.ip_address": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.ImageSize(); ok {
 		if err := usagelog.ImageSizeValidator(v); err != nil {
 			return &ValidationError{Name: "image_size", err: fmt.Errorf(`ent: validator failed for field "UsageLog.image_size": %w`, err)placeholder
@@ -1772,6 +1891,15 @@ placeholder
 	if value, ok := _u.mutation.AddedRateMultiplier(); ok {
 		_spec.AddField(usagelog.FieldRateMultiplier, field.TypeFloat64, value)
 placeholder
+	if value, ok := _u.mutation.AccountRateMultiplier(); ok {
+		_spec.SetField(usagelog.FieldAccountRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedAccountRateMultiplier(); ok {
+		_spec.AddField(usagelog.FieldAccountRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.AccountRateMultiplierCleared() {
+		_spec.ClearField(usagelog.FieldAccountRateMultiplier, field.TypeFloat64)
+placeholder
 	if value, ok := _u.mutation.BillingType(); ok {
 		_spec.SetField(usagelog.FieldBillingType, field.TypeInt8, value)
 placeholder
@@ -1804,6 +1932,12 @@ placeholder
 placeholder
 	if _u.mutation.UserAgentCleared() {
 		_spec.ClearField(usagelog.FieldUserAgent, field.TypeString)
+placeholder
+	if value, ok := _u.mutation.IPAddress(); ok {
+		_spec.SetField(usagelog.FieldIPAddress, field.TypeString, value)
+placeholder
+	if _u.mutation.IPAddressCleared() {
+		_spec.ClearField(usagelog.FieldIPAddress, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.ImageCount(); ok {
 		_spec.SetField(usagelog.FieldImageCount, field.TypeInt, value)

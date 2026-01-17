@@ -19,14 +19,16 @@ type SettingHandler struct {
 	settingService   *service.SettingService
 	emailService     *service.EmailService
 	turnstileService *service.TurnstileService
+	opsService       *service.OpsService
 placeholder
 
 // NewSettingHandler 创建系统设置处理器
-func NewSettingHandler(settingService *service.SettingService, emailService *service.EmailService, turnstileService *service.TurnstileService) *SettingHandler {
+func NewSettingHandler(settingService *service.SettingService, emailService *service.EmailService, turnstileService *service.TurnstileService, opsService *service.OpsService) *SettingHandler {
 	return &SettingHandler{
 		settingService:   settingService,
 		emailService:     emailService,
 		turnstileService: turnstileService,
+		opsService:       opsService,
 placeholder
 placeholder
 
@@ -38,6 +40,9 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 placeholder
+
+	// Check if ops monitoring is enabled (respects config.ops.enabled)
+	opsEnabled := h.opsService != nil && h.opsService.IsMonitoringEnabled(c.Request.Context())
 
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  settings.RegistrationEnabled,
@@ -62,6 +67,7 @@ placeholder
 		APIBaseURL:                           settings.APIBaseURL,
 		ContactInfo:                          settings.ContactInfo,
 		DocURL:                               settings.DocURL,
+		HomeContent:                          settings.HomeContent,
 		DefaultConcurrency:                   settings.DefaultConcurrency,
 		DefaultBalance:                       settings.DefaultBalance,
 		EnableModelFallback:                  settings.EnableModelFallback,
@@ -71,6 +77,10 @@ placeholder
 		FallbackModelAntigravity:             settings.FallbackModelAntigravity,
 		EnableIdentityPatch:                  settings.EnableIdentityPatch,
 		IdentityPatchPrompt:                  settings.IdentityPatchPrompt,
+		OpsMonitoringEnabled:                 opsEnabled && settings.OpsMonitoringEnabled,
+		OpsRealtimeMonitoringEnabled:         settings.OpsRealtimeMonitoringEnabled,
+		OpsQueryModeDefault:                  settings.OpsQueryModeDefault,
+		OpsMetricsIntervalSeconds:            settings.OpsMetricsIntervalSeconds,
 placeholder)
 placeholder
 
@@ -94,7 +104,7 @@ type UpdateSettingsRequest struct {
 	TurnstileSiteKey   string `json:"turnstile_site_key"`
 	TurnstileSecretKey string `json:"turnstile_secret_key"`
 
-	// LinuxDo Connect OAuth 登录（终端用户 SSO）
+	// LinuxDo Connect OAuth 登录
 	LinuxDoConnectEnabled      bool   `json:"linuxdo_connect_enabled"`
 	LinuxDoConnectClientID     string `json:"linuxdo_connect_client_id"`
 	LinuxDoConnectClientSecret string `json:"linuxdo_connect_client_secret"`
@@ -107,6 +117,7 @@ type UpdateSettingsRequest struct {
 	APIBaseURL   string `json:"api_base_url"`
 	ContactInfo  string `json:"contact_info"`
 	DocURL       string `json:"doc_url"`
+	HomeContent  string `json:"home_content"`
 
 	// 默认配置
 	DefaultConcurrency int     `json:"default_concurrency"`
@@ -122,6 +133,12 @@ type UpdateSettingsRequest struct {
 	// Identity patch configuration (Claude -> Gemini)
 	EnableIdentityPatch bool   `json:"enable_identity_patch"`
 	IdentityPatchPrompt string `json:"identity_patch_prompt"`
+
+	// Ops monitoring (vNext)
+	OpsMonitoringEnabled         *bool   `json:"ops_monitoring_enabled"`
+	OpsRealtimeMonitoringEnabled *bool   `json:"ops_realtime_monitoring_enabled"`
+	OpsQueryModeDefault          *string `json:"ops_query_mode_default"`
+	OpsMetricsIntervalSeconds    *int    `json:"ops_metrics_interval_seconds"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -206,6 +223,18 @@ placeholder
 	placeholder
 placeholder
 
+	// Ops metrics collector interval validation (seconds).
+	if req.OpsMetricsIntervalSeconds != nil {
+		v := *req.OpsMetricsIntervalSeconds
+		if v < 60 {
+			v = 60
+	placeholder
+		if v > 3600 {
+			v = 3600
+	placeholder
+		req.OpsMetricsIntervalSeconds = &v
+placeholder
+
 	settings := &service.SystemSettings{
 		RegistrationEnabled:        req.RegistrationEnabled,
 		EmailVerifyEnabled:         req.EmailVerifyEnabled,
@@ -229,6 +258,7 @@ placeholder
 		APIBaseURL:                 req.APIBaseURL,
 		ContactInfo:                req.ContactInfo,
 		DocURL:                     req.DocURL,
+		HomeContent:                req.HomeContent,
 		DefaultConcurrency:         req.DefaultConcurrency,
 		DefaultBalance:             req.DefaultBalance,
 		EnableModelFallback:        req.EnableModelFallback,
@@ -238,6 +268,30 @@ placeholder
 		FallbackModelAntigravity:   req.FallbackModelAntigravity,
 		EnableIdentityPatch:        req.EnableIdentityPatch,
 		IdentityPatchPrompt:        req.IdentityPatchPrompt,
+		OpsMonitoringEnabled: func() bool {
+			if req.OpsMonitoringEnabled != nil {
+				return *req.OpsMonitoringEnabled
+		placeholder
+			return previousSettings.OpsMonitoringEnabled
+	placeholder(),
+		OpsRealtimeMonitoringEnabled: func() bool {
+			if req.OpsRealtimeMonitoringEnabled != nil {
+				return *req.OpsRealtimeMonitoringEnabled
+		placeholder
+			return previousSettings.OpsRealtimeMonitoringEnabled
+	placeholder(),
+		OpsQueryModeDefault: func() string {
+			if req.OpsQueryModeDefault != nil {
+				return *req.OpsQueryModeDefault
+		placeholder
+			return previousSettings.OpsQueryModeDefault
+	placeholder(),
+		OpsMetricsIntervalSeconds: func() int {
+			if req.OpsMetricsIntervalSeconds != nil {
+				return *req.OpsMetricsIntervalSeconds
+		placeholder
+			return previousSettings.OpsMetricsIntervalSeconds
+	placeholder(),
 placeholder
 
 	if err := h.settingService.UpdateSettings(c.Request.Context(), settings); err != nil {
@@ -277,6 +331,7 @@ placeholder
 		APIBaseURL:                           updatedSettings.APIBaseURL,
 		ContactInfo:                          updatedSettings.ContactInfo,
 		DocURL:                               updatedSettings.DocURL,
+		HomeContent:                          updatedSettings.HomeContent,
 		DefaultConcurrency:                   updatedSettings.DefaultConcurrency,
 		DefaultBalance:                       updatedSettings.DefaultBalance,
 		EnableModelFallback:                  updatedSettings.EnableModelFallback,
@@ -286,6 +341,10 @@ placeholder
 		FallbackModelAntigravity:             updatedSettings.FallbackModelAntigravity,
 		EnableIdentityPatch:                  updatedSettings.EnableIdentityPatch,
 		IdentityPatchPrompt:                  updatedSettings.IdentityPatchPrompt,
+		OpsMonitoringEnabled:                 updatedSettings.OpsMonitoringEnabled,
+		OpsRealtimeMonitoringEnabled:         updatedSettings.OpsRealtimeMonitoringEnabled,
+		OpsQueryModeDefault:                  updatedSettings.OpsQueryModeDefault,
+		OpsMetricsIntervalSeconds:            updatedSettings.OpsMetricsIntervalSeconds,
 placeholder)
 placeholder
 
@@ -377,6 +436,9 @@ placeholder
 	if before.DocURL != after.DocURL {
 		changed = append(changed, "doc_url")
 placeholder
+	if before.HomeContent != after.HomeContent {
+		changed = append(changed, "home_content")
+placeholder
 	if before.DefaultConcurrency != after.DefaultConcurrency {
 		changed = append(changed, "default_concurrency")
 placeholder
@@ -403,6 +465,18 @@ placeholder
 placeholder
 	if before.IdentityPatchPrompt != after.IdentityPatchPrompt {
 		changed = append(changed, "identity_patch_prompt")
+placeholder
+	if before.OpsMonitoringEnabled != after.OpsMonitoringEnabled {
+		changed = append(changed, "ops_monitoring_enabled")
+placeholder
+	if before.OpsRealtimeMonitoringEnabled != after.OpsRealtimeMonitoringEnabled {
+		changed = append(changed, "ops_realtime_monitoring_enabled")
+placeholder
+	if before.OpsQueryModeDefault != after.OpsQueryModeDefault {
+		changed = append(changed, "ops_query_mode_default")
+placeholder
+	if before.OpsMetricsIntervalSeconds != after.OpsMetricsIntervalSeconds {
+		changed = append(changed, "ops_metrics_interval_seconds")
 placeholder
 	return changed
 placeholder
@@ -579,4 +653,69 @@ func (h *SettingHandler) DeleteAdminAPIKey(c *gin.Context) {
 placeholder
 
 	response.Success(c, gin.H{"message": "Admin API key deleted"placeholder)
+placeholder
+
+// GetStreamTimeoutSettings 获取流超时处理配置
+// GET /api/v1/admin/settings/stream-timeout
+func (h *SettingHandler) GetStreamTimeoutSettings(c *gin.Context) {
+	settings, err := h.settingService.GetStreamTimeoutSettings(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.StreamTimeoutSettings{
+		Enabled:                settings.Enabled,
+		Action:                 settings.Action,
+		TempUnschedMinutes:     settings.TempUnschedMinutes,
+		ThresholdCount:         settings.ThresholdCount,
+		ThresholdWindowMinutes: settings.ThresholdWindowMinutes,
+placeholder)
+placeholder
+
+// UpdateStreamTimeoutSettingsRequest 更新流超时配置请求
+type UpdateStreamTimeoutSettingsRequest struct {
+	Enabled                bool   `json:"enabled"`
+	Action                 string `json:"action"`
+	TempUnschedMinutes     int    `json:"temp_unsched_minutes"`
+	ThresholdCount         int    `json:"threshold_count"`
+	ThresholdWindowMinutes int    `json:"threshold_window_minutes"`
+placeholder
+
+// UpdateStreamTimeoutSettings 更新流超时处理配置
+// PUT /api/v1/admin/settings/stream-timeout
+func (h *SettingHandler) UpdateStreamTimeoutSettings(c *gin.Context) {
+	var req UpdateStreamTimeoutSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	settings := &service.StreamTimeoutSettings{
+		Enabled:                req.Enabled,
+		Action:                 req.Action,
+		TempUnschedMinutes:     req.TempUnschedMinutes,
+		ThresholdCount:         req.ThresholdCount,
+		ThresholdWindowMinutes: req.ThresholdWindowMinutes,
+placeholder
+
+	if err := h.settingService.SetStreamTimeoutSettings(c.Request.Context(), settings); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+
+	// 重新获取设置返回
+	updatedSettings, err := h.settingService.GetStreamTimeoutSettings(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.StreamTimeoutSettings{
+		Enabled:                updatedSettings.Enabled,
+		Action:                 updatedSettings.Action,
+		TempUnschedMinutes:     updatedSettings.TempUnschedMinutes,
+		ThresholdCount:         updatedSettings.ThresholdCount,
+		ThresholdWindowMinutes: updatedSettings.ThresholdWindowMinutes,
+placeholder)
 placeholder

@@ -49,6 +49,9 @@ placeholder
 	if !a.IsSchedulable() {
 		return false
 placeholder
+	if a.isModelRateLimited(requestedModel) {
+		return false
+placeholder
 	if a.Platform != PlatformAntigravity {
 		return true
 placeholder

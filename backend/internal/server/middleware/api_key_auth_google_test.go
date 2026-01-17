@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -26,14 +27,17 @@ placeholder
 func (f fakeAPIKeyRepo) GetByID(ctx context.Context, id int64) (*service.APIKey, error) {
 	return nil, errors.New("not implemented")
 placeholder
-func (f fakeAPIKeyRepo) GetOwnerID(ctx context.Context, id int64) (int64, error) {
-	return 0, errors.New("not implemented")
+func (f fakeAPIKeyRepo) GetKeyAndOwnerID(ctx context.Context, id int64) (string, int64, error) {
+	return "", 0, errors.New("not implemented")
 placeholder
 func (f fakeAPIKeyRepo) GetByKey(ctx context.Context, key string) (*service.APIKey, error) {
 	if f.getByKey == nil {
 		return nil, errors.New("unexpected call")
 placeholder
 	return f.getByKey(ctx, key)
+placeholder
+func (f fakeAPIKeyRepo) GetByKeyForAuth(ctx context.Context, key string) (*service.APIKey, error) {
+	return f.GetByKey(ctx, key)
 placeholder
 func (f fakeAPIKeyRepo) Update(ctx context.Context, key *service.APIKey) error {
 	return errors.New("not implemented")
@@ -64,6 +68,12 @@ func (f fakeAPIKeyRepo) ClearGroupIDByGroupID(ctx context.Context, groupID int64
 placeholder
 func (f fakeAPIKeyRepo) CountByGroupID(ctx context.Context, groupID int64) (int64, error) {
 	return 0, errors.New("not implemented")
+placeholder
+func (f fakeAPIKeyRepo) ListKeysByUserID(ctx context.Context, userID int64) ([]string, error) {
+	return nil, errors.New("not implemented")
+placeholder
+func (f fakeAPIKeyRepo) ListKeysByGroupID(ctx context.Context, groupID int64) ([]string, error) {
+	return nil, errors.New("not implemented")
 placeholder
 
 type googleErrorResponse struct {
@@ -131,6 +141,70 @@ placeholder)
 	require.Equal(t, http.StatusBadRequest, resp.Error.Code)
 	require.Equal(t, "Query parameter api_key is deprecated. Use Authorization header or key instead.", resp.Error.Message)
 	require.Equal(t, "INVALID_ARGUMENT", resp.Error.Status)
+placeholder
+
+func TestApiKeyAuthWithSubscriptionGoogleSetsGroupContext(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	group := &service.Group{
+		ID:       99,
+		Name:     "g1",
+		Status:   service.StatusActive,
+		Platform: service.PlatformGemini,
+		Hydrated: true,
+placeholder
+	user := &service.User{
+		ID:          7,
+		Role:        service.RoleUser,
+		Status:      service.StatusActive,
+		Balance:     10,
+		Concurrency: 3,
+placeholder
+	apiKey := &service.APIKey{
+		ID:     100,
+		UserID: user.ID,
+		Key:    "test-key",
+		Status: service.StatusActive,
+		User:   user,
+		Group:  group,
+placeholder
+	apiKey.GroupID = &group.ID
+
+	apiKeyService := service.NewAPIKeyService(
+		fakeAPIKeyRepo{
+			getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
+				if key != apiKey.Key {
+					return nil, service.ErrAPIKeyNotFound
+			placeholder
+				clone := *apiKey
+				return &clone, nil
+		placeholder,
+	placeholder,
+		nil,
+		nil,
+		nil,
+		nil,
+		&config.Config{RunMode: config.RunModeSimpleplaceholder,
+	)
+
+	cfg := &config.Config{RunMode: config.RunModeSimpleplaceholder
+	r := gin.New()
+	r.Use(APIKeyAuthWithSubscriptionGoogle(apiKeyService, nil, cfg))
+	r.GET("/v1beta/test", func(c *gin.Context) {
+		groupFromCtx, ok := c.Request.Context().Value(ctxkey.Group).(*service.Group)
+		if !ok || groupFromCtx == nil || groupFromCtx.ID != group.ID {
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": falseplaceholder)
+			return
+	placeholder
+		c.JSON(http.StatusOK, gin.H{"ok": trueplaceholder)
+placeholder)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1beta/test", nil)
+	req.Header.Set("x-api-key", apiKey.Key)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
 placeholder
 
 func TestApiKeyAuthWithSubscriptionGoogle_QueryKeyAllowedOnV1Beta(t *testing.T) {

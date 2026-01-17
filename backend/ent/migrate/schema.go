@@ -18,6 +18,8 @@ var (
 		{Name: "key", Type: field.TypeString, Unique: true, Size: 128placeholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
+		{Name: "ip_whitelist", Type: field.TypeJSON, Nullable: trueplaceholder,
+		{Name: "ip_blacklist", Type: field.TypeJSON, Nullable: trueplaceholder,
 		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "user_id", Type: field.TypeInt64placeholder,
 placeholder
@@ -29,13 +31,13 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "api_keys_groups_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[7]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[9]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[8]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[10]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
@@ -44,12 +46,12 @@ placeholder
 			{
 				Name:    "apikey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[8]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[10]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[7]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[9]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_status",
@@ -77,6 +79,7 @@ placeholder
 		{Name: "extra", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "concurrency", Type: field.TypeInt, Default: 3placeholder,
 		{Name: "priority", Type: field.TypeInt, Default: 50placeholder,
+		{Name: "rate_multiplier", Type: field.TypeFloat64, Default: 1, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -99,7 +102,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[24]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[25]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -118,12 +121,12 @@ placeholder
 			{
 				Name:    "account_status",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[12]placeholder,
+				Columns: []*schema.Column{AccountsColumns[13]placeholder,
 		placeholder,
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[24]placeholder,
+				Columns: []*schema.Column{AccountsColumns[25]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
@@ -133,27 +136,27 @@ placeholder
 			{
 				Name:    "account_last_used_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[14]placeholder,
+				Columns: []*schema.Column{AccountsColumns[15]placeholder,
 		placeholder,
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[17]placeholder,
+				Columns: []*schema.Column{AccountsColumns[18]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[18]placeholder,
+				Columns: []*schema.Column{AccountsColumns[19]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[19]placeholder,
+				Columns: []*schema.Column{AccountsColumns[20]placeholder,
 		placeholder,
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[20]placeholder,
+				Columns: []*schema.Column{AccountsColumns[21]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
@@ -223,6 +226,8 @@ placeholder
 		{Name: "image_price_4k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "model_routing", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "model_routing_enabled", Type: field.TypeBool, Default: falseplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
@@ -254,6 +259,82 @@ placeholder
 				Name:    "group_deleted_at",
 				Unique:  false,
 				Columns: []*schema.Column{GroupsColumns[3]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// PromoCodesColumns holds the columns for the "promo_codes" table.
+	PromoCodesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "code", Type: field.TypeString, Unique: true, Size: 32placeholder,
+		{Name: "bonus_amount", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "max_uses", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "used_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// PromoCodesTable holds the schema information for the "promo_codes" table.
+	PromoCodesTable = &schema.Table{
+		Name:       "promo_codes",
+		Columns:    PromoCodesColumns,
+		PrimaryKey: []*schema.Column{PromoCodesColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "promocode_status",
+				Unique:  false,
+				Columns: []*schema.Column{PromoCodesColumns[5]placeholder,
+		placeholder,
+			{
+				Name:    "promocode_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{PromoCodesColumns[6]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// PromoCodeUsagesColumns holds the columns for the "promo_code_usages" table.
+	PromoCodeUsagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "bonus_amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "used_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "promo_code_id", Type: field.TypeInt64placeholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+placeholder
+	// PromoCodeUsagesTable holds the schema information for the "promo_code_usages" table.
+	PromoCodeUsagesTable = &schema.Table{
+		Name:       "promo_code_usages",
+		Columns:    PromoCodeUsagesColumns,
+		PrimaryKey: []*schema.Column{PromoCodeUsagesColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "promo_code_usages_promo_codes_usage_records",
+				Columns:    []*schema.Column{PromoCodeUsagesColumns[3]placeholder,
+				RefColumns: []*schema.Column{PromoCodesColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+			{
+				Symbol:     "promo_code_usages_users_promo_code_usages",
+				Columns:    []*schema.Column{PromoCodeUsagesColumns[4]placeholder,
+				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "promocodeusage_promo_code_id",
+				Unique:  false,
+				Columns: []*schema.Column{PromoCodeUsagesColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "promocodeusage_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{PromoCodeUsagesColumns[4]placeholder,
+		placeholder,
+			{
+				Name:    "promocodeusage_promo_code_id_user_id",
+				Unique:  true,
+				Columns: []*schema.Column{PromoCodeUsagesColumns[3], PromoCodeUsagesColumns[4]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -371,11 +452,13 @@ placeholder
 		{Name: "total_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
 		{Name: "actual_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
 		{Name: "rate_multiplier", Type: field.TypeFloat64, Default: 1, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
+		{Name: "account_rate_multiplier", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 		{Name: "billing_type", Type: field.TypeInt8, Default: 0placeholder,
 		{Name: "stream", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "duration_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "first_token_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "user_agent", Type: field.TypeString, Nullable: true, Size: 512placeholder,
+		{Name: "ip_address", Type: field.TypeString, Nullable: true, Size: 45placeholder,
 		{Name: "image_count", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "image_size", Type: field.TypeString, Nullable: true, Size: 10placeholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -393,31 +476,31 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[24]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[26]placeholder,
 				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[25]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[27]placeholder,
 				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[26]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[28]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[27]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[29]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[28]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[30]placeholder,
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -426,32 +509,32 @@ placeholder
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[27]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[29]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[24]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[26]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[25]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[27]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[28]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[28]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[30]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[23]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[25]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_model",
@@ -466,12 +549,12 @@ placeholder
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[27], UsageLogsColumns[23]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[29], UsageLogsColumns[25]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[24], UsageLogsColumns[23]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[25]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -717,6 +800,8 @@ placeholder
 		AccountsTable,
 		AccountGroupsTable,
 		GroupsTable,
+		PromoCodesTable,
+		PromoCodeUsagesTable,
 		ProxiesTable,
 		RedeemCodesTable,
 		SettingsTable,
@@ -746,6 +831,14 @@ placeholder
 placeholder
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",
+placeholder
+	PromoCodesTable.Annotation = &entsql.Annotation{
+		Table: "promo_codes",
+placeholder
+	PromoCodeUsagesTable.ForeignKeys[0].RefTable = PromoCodesTable
+	PromoCodeUsagesTable.ForeignKeys[1].RefTable = UsersTable
+	PromoCodeUsagesTable.Annotation = &entsql.Annotation{
+		Table: "promo_code_usages",
 placeholder
 	ProxiesTable.Annotation = &entsql.Annotation{
 		Table: "proxies",

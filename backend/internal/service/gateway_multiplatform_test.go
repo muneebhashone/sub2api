@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
 )
@@ -23,9 +24,11 @@ type mockAccountRepoForPlatform struct {
 	accounts         []Account
 	accountsByID     map[int64]*Account
 	listPlatformFunc func(ctx context.Context, platform string) ([]Account, error)
+	getByIDCalls     int
 placeholder
 
 func (m *mockAccountRepoForPlatform) GetByID(ctx context.Context, id int64) (*Account, error) {
+	m.getByIDCalls++
 	if acc, ok := m.accountsByID[id]; ok {
 		return acc, nil
 placeholder
@@ -142,6 +145,9 @@ placeholder
 func (m *mockAccountRepoForPlatform) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope AntigravityQuotaScope, resetAt time.Time) error {
 	return nil
 placeholder
+func (m *mockAccountRepoForPlatform) SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error {
+	return nil
+placeholder
 func (m *mockAccountRepoForPlatform) SetOverloaded(ctx context.Context, id int64, until time.Time) error {
 	return nil
 placeholder
@@ -155,6 +161,9 @@ func (m *mockAccountRepoForPlatform) ClearRateLimit(ctx context.Context, id int6
 	return nil
 placeholder
 func (m *mockAccountRepoForPlatform) ClearAntigravityQuotaScopes(ctx context.Context, id int64) error {
+	return nil
+placeholder
+func (m *mockAccountRepoForPlatform) ClearModelRateLimits(ctx context.Context, id int64) error {
 	return nil
 placeholder
 func (m *mockAccountRepoForPlatform) UpdateSessionWindow(ctx context.Context, id int64, start, end *time.Time, status string) error {
@@ -192,6 +201,56 @@ placeholder
 
 func (m *mockGatewayCacheForPlatform) RefreshSessionTTL(ctx context.Context, groupID int64, sessionHash string, ttl time.Duration) error {
 	return nil
+placeholder
+
+type mockGroupRepoForGateway struct {
+	groups           map[int64]*Group
+	getByIDCalls     int
+	getByIDLiteCalls int
+placeholder
+
+func (m *mockGroupRepoForGateway) GetByID(ctx context.Context, id int64) (*Group, error) {
+	m.getByIDCalls++
+	if g, ok := m.groups[id]; ok {
+		return g, nil
+placeholder
+	return nil, ErrGroupNotFound
+placeholder
+
+func (m *mockGroupRepoForGateway) GetByIDLite(ctx context.Context, id int64) (*Group, error) {
+	m.getByIDLiteCalls++
+	if g, ok := m.groups[id]; ok {
+		return g, nil
+placeholder
+	return nil, ErrGroupNotFound
+placeholder
+
+func (m *mockGroupRepoForGateway) Create(ctx context.Context, group *Group) error { return nil placeholder
+func (m *mockGroupRepoForGateway) Update(ctx context.Context, group *Group) error { return nil placeholder
+func (m *mockGroupRepoForGateway) Delete(ctx context.Context, id int64) error     { return nil placeholder
+func (m *mockGroupRepoForGateway) DeleteCascade(ctx context.Context, id int64) ([]int64, error) {
+	return nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) List(ctx context.Context, params pagination.PaginationParams) ([]Group, *pagination.PaginationResult, error) {
+	return nil, nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ListWithFilters(ctx context.Context, params pagination.PaginationParams, platform, status, search string, isExclusive *bool) ([]Group, *pagination.PaginationResult, error) {
+	return nil, nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ListActive(ctx context.Context) ([]Group, error) {
+	return nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ListActiveByPlatform(ctx context.Context, platform string) ([]Group, error) {
+	return nil, nil
+placeholder
+func (m *mockGroupRepoForGateway) ExistsByName(ctx context.Context, name string) (bool, error) {
+	return false, nil
+placeholder
+func (m *mockGroupRepoForGateway) GetAccountCount(ctx context.Context, groupID int64) (int64, error) {
+	return 0, nil
+placeholder
+func (m *mockGroupRepoForGateway) DeleteAccountGroupsByGroupID(ctx context.Context, groupID int64) (int64, error) {
+	return 0, nil
 placeholder
 
 func ptr[T any](v T) *T {
@@ -900,6 +959,74 @@ placeholder
 	return m.accountWaitCounts[accountID], nil
 placeholder
 
+type mockConcurrencyCache struct {
+	acquireAccountCalls int
+	loadBatchCalls      int
+placeholder
+
+func (m *mockConcurrencyCache) AcquireAccountSlot(ctx context.Context, accountID int64, maxConcurrency int, requestID string) (bool, error) {
+	m.acquireAccountCalls++
+	return true, nil
+placeholder
+
+func (m *mockConcurrencyCache) ReleaseAccountSlot(ctx context.Context, accountID int64, requestID string) error {
+	return nil
+placeholder
+
+func (m *mockConcurrencyCache) GetAccountConcurrency(ctx context.Context, accountID int64) (int, error) {
+	return 0, nil
+placeholder
+
+func (m *mockConcurrencyCache) IncrementAccountWaitCount(ctx context.Context, accountID int64, maxWait int) (bool, error) {
+	return true, nil
+placeholder
+
+func (m *mockConcurrencyCache) DecrementAccountWaitCount(ctx context.Context, accountID int64) error {
+	return nil
+placeholder
+
+func (m *mockConcurrencyCache) GetAccountWaitingCount(ctx context.Context, accountID int64) (int, error) {
+	return 0, nil
+placeholder
+
+func (m *mockConcurrencyCache) AcquireUserSlot(ctx context.Context, userID int64, maxConcurrency int, requestID string) (bool, error) {
+	return true, nil
+placeholder
+
+func (m *mockConcurrencyCache) ReleaseUserSlot(ctx context.Context, userID int64, requestID string) error {
+	return nil
+placeholder
+
+func (m *mockConcurrencyCache) GetUserConcurrency(ctx context.Context, userID int64) (int, error) {
+	return 0, nil
+placeholder
+
+func (m *mockConcurrencyCache) IncrementWaitCount(ctx context.Context, userID int64, maxWait int) (bool, error) {
+	return true, nil
+placeholder
+
+func (m *mockConcurrencyCache) DecrementWaitCount(ctx context.Context, userID int64) error {
+	return nil
+placeholder
+
+func (m *mockConcurrencyCache) GetAccountsLoadBatch(ctx context.Context, accounts []AccountWithConcurrency) (map[int64]*AccountLoadInfo, error) {
+	m.loadBatchCalls++
+	result := make(map[int64]*AccountLoadInfo, len(accounts))
+	for _, acc := range accounts {
+		result[acc.ID] = &AccountLoadInfo{
+			AccountID:          acc.ID,
+			CurrentConcurrency: 0,
+			WaitingCount:       0,
+			LoadRate:           0,
+	placeholder
+placeholder
+	return result, nil
+placeholder
+
+func (m *mockConcurrencyCache) CleanupExpiredAccountSlots(ctx context.Context, accountID int64) error {
+	return nil
+placeholder
+
 // TestGatewayService_SelectAccountWithLoadAwareness tests load-aware account selection
 func TestGatewayService_SelectAccountWithLoadAwareness(t *testing.T) {
 	ctx := context.Background()
@@ -928,11 +1055,65 @@ func TestGatewayService_SelectAccountWithLoadAwareness(t *testing.T) {
 			concurrencyService: nil, // No concurrency service
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
 		require.Equal(t, int64(1), result.Account.ID, "应选择优先级最高的账号")
+placeholder)
+
+	t.Run("模型路由-无ConcurrencyService也生效", func(t *testing.T) {
+		groupID := int64(1)
+		sessionHash := "sticky"
+
+		repo := &mockAccountRepoForPlatform{
+			accounts: []Account{
+				{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: true, Concurrency: 5, AccountGroups: []AccountGroup{{GroupID: groupIDplaceholderplaceholderplaceholder,
+				{ID: 2, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: true, Concurrency: 5, AccountGroups: []AccountGroup{{GroupID: groupIDplaceholderplaceholderplaceholder,
+		placeholder,
+			accountsByID: map[int64]*Account{placeholder,
+	placeholder
+		for i := range repo.accounts {
+			repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	placeholder
+
+		cache := &mockGatewayCacheForPlatform{
+			sessionBindings: map[string]int64{sessionHash: 1placeholder,
+	placeholder
+
+		groupRepo := &mockGroupRepoForGateway{
+			groups: map[int64]*Group{
+				groupID: {
+					ID:                  groupID,
+					Platform:            PlatformAnthropic,
+					Status:              StatusActive,
+					Hydrated:            true,
+					ModelRoutingEnabled: true,
+					ModelRouting: map[string][]int64{
+						"claude-a": {1placeholder,
+						"claude-b": {2placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder
+
+		cfg := testConfig()
+		cfg.Gateway.Scheduling.LoadBatchEnabled = true
+
+		svc := &GatewayService{
+			accountRepo:        repo,
+			groupRepo:          groupRepo,
+			cache:              cache,
+			cfg:                cfg,
+			concurrencyService: nil, // legacy path
+	placeholder
+
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, &groupID, sessionHash, "claude-b", nil, "")
+	placeholder
+		require.NotNil(t, result)
+		require.NotNil(t, result.Account)
+		require.Equal(t, int64(2), result.Account.ID, "切换到 claude-b 时应按模型路由切换账号")
+		require.Equal(t, int64(2), cache.sessionBindings[sessionHash], "粘性绑定应更新为路由选择的账号")
 placeholder)
 
 	t.Run("无ConcurrencyService-降级到传统选择", func(t *testing.T) {
@@ -959,7 +1140,7 @@ placeholder)
 			concurrencyService: nil,
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -991,11 +1172,83 @@ placeholder)
 	placeholder
 
 		excludedIDs := map[int64]struct{placeholder{1: {placeholderplaceholder
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", excludedIDs)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", excludedIDs, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
 		require.Equal(t, int64(2), result.Account.ID, "不应选择被排除的账号")
+placeholder)
+
+	t.Run("粘性命中-不调用GetByID", func(t *testing.T) {
+		repo := &mockAccountRepoForPlatform{
+			accounts: []Account{
+				{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: true, Concurrency: 5placeholder,
+		placeholder,
+			accountsByID: map[int64]*Account{placeholder,
+	placeholder
+		for i := range repo.accounts {
+			repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	placeholder
+
+		cache := &mockGatewayCacheForPlatform{
+			sessionBindings: map[string]int64{"sticky": 1placeholder,
+	placeholder
+
+		cfg := testConfig()
+		cfg.Gateway.Scheduling.LoadBatchEnabled = true
+
+		concurrencyCache := &mockConcurrencyCache{placeholder
+
+		svc := &GatewayService{
+			accountRepo:        repo,
+			cache:              cache,
+			cfg:                cfg,
+			concurrencyService: NewConcurrencyService(concurrencyCache),
+	placeholder
+
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "sticky", "claude-3-5-sonnet-20241022", nil, "")
+	placeholder
+		require.NotNil(t, result)
+		require.NotNil(t, result.Account)
+		require.Equal(t, int64(1), result.Account.ID)
+		require.Equal(t, 0, repo.getByIDCalls, "粘性命中不应调用GetByID")
+		require.Equal(t, 0, concurrencyCache.loadBatchCalls, "粘性命中应在负载批量查询前返回")
+placeholder)
+
+	t.Run("粘性账号不在候选集-回退负载感知选择", func(t *testing.T) {
+		repo := &mockAccountRepoForPlatform{
+			accounts: []Account{
+				{ID: 2, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: true, Concurrency: 5placeholder,
+		placeholder,
+			accountsByID: map[int64]*Account{placeholder,
+	placeholder
+		for i := range repo.accounts {
+			repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	placeholder
+
+		cache := &mockGatewayCacheForPlatform{
+			sessionBindings: map[string]int64{"sticky": 1placeholder,
+	placeholder
+
+		cfg := testConfig()
+		cfg.Gateway.Scheduling.LoadBatchEnabled = true
+
+		concurrencyCache := &mockConcurrencyCache{placeholder
+
+		svc := &GatewayService{
+			accountRepo:        repo,
+			cache:              cache,
+			cfg:                cfg,
+			concurrencyService: NewConcurrencyService(concurrencyCache),
+	placeholder
+
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "sticky", "claude-3-5-sonnet-20241022", nil, "")
+	placeholder
+		require.NotNil(t, result)
+		require.NotNil(t, result.Account)
+		require.Equal(t, int64(2), result.Account.ID, "粘性账号不在候选集时应回退到可用账号")
+		require.Equal(t, 0, repo.getByIDCalls, "粘性账号缺失不应回退到GetByID")
+		require.Equal(t, 1, concurrencyCache.loadBatchCalls, "应继续进行负载批量查询")
 placeholder)
 
 	t.Run("无可用账号-返回错误", func(t *testing.T) {
@@ -1016,9 +1269,264 @@ placeholder)
 			concurrencyService: nil,
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.Nil(t, result)
 		require.Contains(t, err.Error(), "no available accounts")
 placeholder)
+
+	t.Run("过滤不可调度账号-限流账号被跳过", func(t *testing.T) {
+		now := time.Now()
+		resetAt := now.Add(10 * time.Minute)
+
+		repo := &mockAccountRepoForPlatform{
+			accounts: []Account{
+				{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: true, Concurrency: 5, RateLimitResetAt: &resetAtplaceholder,
+				{ID: 2, Platform: PlatformAnthropic, Priority: 2, Status: StatusActive, Schedulable: true, Concurrency: 5placeholder,
+		placeholder,
+			accountsByID: map[int64]*Account{placeholder,
+	placeholder
+		for i := range repo.accounts {
+			repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	placeholder
+
+		cache := &mockGatewayCacheForPlatform{placeholder
+		cfg := testConfig()
+		cfg.Gateway.Scheduling.LoadBatchEnabled = false
+
+		svc := &GatewayService{
+			accountRepo:        repo,
+			cache:              cache,
+			cfg:                cfg,
+			concurrencyService: nil,
+	placeholder
+
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
+	placeholder
+		require.NotNil(t, result)
+		require.NotNil(t, result.Account)
+		require.Equal(t, int64(2), result.Account.ID, "应跳过限流账号，选择可用账号")
+placeholder)
+
+	t.Run("过滤不可调度账号-过载账号被跳过", func(t *testing.T) {
+		now := time.Now()
+		overloadUntil := now.Add(10 * time.Minute)
+
+		repo := &mockAccountRepoForPlatform{
+			accounts: []Account{
+				{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: true, Concurrency: 5, OverloadUntil: &overloadUntilplaceholder,
+				{ID: 2, Platform: PlatformAnthropic, Priority: 2, Status: StatusActive, Schedulable: true, Concurrency: 5placeholder,
+		placeholder,
+			accountsByID: map[int64]*Account{placeholder,
+	placeholder
+		for i := range repo.accounts {
+			repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	placeholder
+
+		cache := &mockGatewayCacheForPlatform{placeholder
+		cfg := testConfig()
+		cfg.Gateway.Scheduling.LoadBatchEnabled = false
+
+		svc := &GatewayService{
+			accountRepo:        repo,
+			cache:              cache,
+			cfg:                cfg,
+			concurrencyService: nil,
+	placeholder
+
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
+	placeholder
+		require.NotNil(t, result)
+		require.NotNil(t, result.Account)
+		require.Equal(t, int64(2), result.Account.ID, "应跳过过载账号，选择可用账号")
+placeholder)
+placeholder
+
+func TestGatewayService_GroupResolution_ReusesContextGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(42)
+	group := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, group)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{groupID: groupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 0, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_GroupResolution_IgnoresInvalidContextGroup(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(42)
+	ctxGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, ctxGroup)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	group := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{groupID: groupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_GroupContext_OverwritesInvalidContextGroup(t *testing.T) {
+	groupID := int64(42)
+	invalidGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+placeholder
+	hydratedGroup := &Group{
+		ID:       groupID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+
+	ctx := context.WithValue(context.Background(), ctxkey.Group, invalidGroup)
+	svc := &GatewayService{placeholder
+	ctx = svc.withGroupContext(ctx, hydratedGroup)
+
+	got, ok := ctx.Value(ctxkey.Group).(*Group)
+	require.True(t, ok)
+	require.Same(t, hydratedGroup, got)
+placeholder
+
+func TestGatewayService_GroupResolution_FallbackUsesLiteOnce(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10)
+	fallbackID := int64(11)
+	group := &Group{
+		ID:              groupID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &fallbackID,
+		Hydrated:        true,
+placeholder
+	fallbackGroup := &Group{
+		ID:       fallbackID,
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		Hydrated: true,
+placeholder
+	ctx = context.WithValue(ctx, ctxkey.Group, group)
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Priority: 1, Status: StatusActive, Schedulable: trueplaceholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{fallbackID: fallbackGroupplaceholder,
+placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   groupRepo,
+		cfg:         testConfig(),
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-3-5-sonnet-20241022", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, 0, groupRepo.getByIDCalls)
+	require.Equal(t, 1, groupRepo.getByIDLiteCalls)
+placeholder
+
+func TestGatewayService_ResolveGatewayGroup_DetectsFallbackCycle(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10)
+	fallbackID := int64(11)
+
+	group := &Group{
+		ID:              groupID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &fallbackID,
+placeholder
+	fallbackGroup := &Group{
+		ID:              fallbackID,
+		Platform:        PlatformAnthropic,
+		Status:          StatusActive,
+		ClaudeCodeOnly:  true,
+		FallbackGroupID: &groupID,
+placeholder
+
+	groupRepo := &mockGroupRepoForGateway{
+		groups: map[int64]*Group{
+			groupID:    group,
+			fallbackID: fallbackGroup,
+	placeholder,
+placeholder
+
+	svc := &GatewayService{
+		groupRepo: groupRepo,
+placeholder
+
+	gotGroup, gotID, err := svc.resolveGatewayGroup(ctx, &groupID)
+placeholder
+	require.Nil(t, gotGroup)
+	require.Nil(t, gotID)
+	require.Contains(t, err.Error(), "fallback group cycle")
 placeholder

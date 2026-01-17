@@ -53,16 +53,18 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		return nil
 placeholder
 	return &APIKey{
-		ID:        k.ID,
-		UserID:    k.UserID,
-		Key:       k.Key,
-		Name:      k.Name,
-		GroupID:   k.GroupID,
-		Status:    k.Status,
-		CreatedAt: k.CreatedAt,
-		UpdatedAt: k.UpdatedAt,
-		User:      UserFromServiceShallow(k.User),
-		Group:     GroupFromServiceShallow(k.Group),
+		ID:          k.ID,
+		UserID:      k.UserID,
+		Key:         k.Key,
+		Name:        k.Name,
+		GroupID:     k.GroupID,
+		Status:      k.Status,
+		IPWhitelist: k.IPWhitelist,
+		IPBlacklist: k.IPBlacklist,
+		CreatedAt:   k.CreatedAt,
+		UpdatedAt:   k.UpdatedAt,
+		User:        UserFromServiceShallow(k.User),
+		Group:       GroupFromServiceShallow(k.Group),
 placeholder
 placeholder
 
@@ -71,25 +73,27 @@ func GroupFromServiceShallow(g *service.Group) *Group {
 		return nil
 placeholder
 	return &Group{
-		ID:               g.ID,
-		Name:             g.Name,
-		Description:      g.Description,
-		Platform:         g.Platform,
-		RateMultiplier:   g.RateMultiplier,
-		IsExclusive:      g.IsExclusive,
-		Status:           g.Status,
-		SubscriptionType: g.SubscriptionType,
-		DailyLimitUSD:    g.DailyLimitUSD,
-		WeeklyLimitUSD:   g.WeeklyLimitUSD,
-		MonthlyLimitUSD:  g.MonthlyLimitUSD,
-		ImagePrice1K:     g.ImagePrice1K,
-		ImagePrice2K:     g.ImagePrice2K,
-		ImagePrice4K:     g.ImagePrice4K,
-		ClaudeCodeOnly:   g.ClaudeCodeOnly,
-		FallbackGroupID:  g.FallbackGroupID,
-		CreatedAt:        g.CreatedAt,
-		UpdatedAt:        g.UpdatedAt,
-		AccountCount:     g.AccountCount,
+		ID:                  g.ID,
+		Name:                g.Name,
+		Description:         g.Description,
+		Platform:            g.Platform,
+		RateMultiplier:      g.RateMultiplier,
+		IsExclusive:         g.IsExclusive,
+		Status:              g.Status,
+		SubscriptionType:    g.SubscriptionType,
+		DailyLimitUSD:       g.DailyLimitUSD,
+		WeeklyLimitUSD:      g.WeeklyLimitUSD,
+		MonthlyLimitUSD:     g.MonthlyLimitUSD,
+		ImagePrice1K:        g.ImagePrice1K,
+		ImagePrice2K:        g.ImagePrice2K,
+		ImagePrice4K:        g.ImagePrice4K,
+		ClaudeCodeOnly:      g.ClaudeCodeOnly,
+		FallbackGroupID:     g.FallbackGroupID,
+		ModelRouting:        g.ModelRouting,
+		ModelRoutingEnabled: g.ModelRoutingEnabled,
+		CreatedAt:           g.CreatedAt,
+		UpdatedAt:           g.UpdatedAt,
+		AccountCount:        g.AccountCount,
 placeholder
 placeholder
 
@@ -112,7 +116,7 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 	if a == nil {
 		return nil
 placeholder
-placeholder
+	out := &Account{
 		ID:                      a.ID,
 		Name:                    a.Name,
 		Notes:                   a.Notes,
@@ -123,6 +127,7 @@ placeholder
 		ProxyID:                 a.ProxyID,
 		Concurrency:             a.Concurrency,
 		Priority:                a.Priority,
+		RateMultiplier:          a.BillingRateMultiplier(),
 		Status:                  a.Status,
 		ErrorMessage:            a.ErrorMessage,
 		LastUsedAt:              a.LastUsedAt,
@@ -141,6 +146,24 @@ placeholder
 		SessionWindowStatus:     a.SessionWindowStatus,
 		GroupIDs:                a.GroupIDs,
 placeholder
+
+	// 提取 5h 窗口费用控制和会话数量控制配置（仅 Anthropic OAuth/SetupToken 账号有效）
+	if a.IsAnthropicOAuthOrSetupToken() {
+		if limit := a.GetWindowCostLimit(); limit > 0 {
+			out.WindowCostLimit = &limit
+	placeholder
+		if reserve := a.GetWindowCostStickyReserve(); reserve > 0 {
+			out.WindowCostStickyReserve = &reserve
+	placeholder
+		if maxSessions := a.GetMaxSessions(); maxSessions > 0 {
+			out.MaxSessions = &maxSessions
+	placeholder
+		if idleTimeout := a.GetSessionIdleTimeoutMinutes(); idleTimeout > 0 {
+			out.SessionIdleTimeoutMin = &idleTimeout
+	placeholder
+placeholder
+
+	return out
 placeholder
 
 func AccountFromService(a *service.Account) *Account {
@@ -210,8 +233,29 @@ func ProxyWithAccountCountFromService(p *service.ProxyWithAccountCount) *ProxyWi
 		return nil
 placeholder
 	return &ProxyWithAccountCount{
-		Proxy:        *ProxyFromService(&p.Proxy),
-		AccountCount: p.AccountCount,
+		Proxy:          *ProxyFromService(&p.Proxy),
+		AccountCount:   p.AccountCount,
+		LatencyMs:      p.LatencyMs,
+		LatencyStatus:  p.LatencyStatus,
+		LatencyMessage: p.LatencyMessage,
+		IPAddress:      p.IPAddress,
+		Country:        p.Country,
+		CountryCode:    p.CountryCode,
+		Region:         p.Region,
+		City:           p.City,
+placeholder
+placeholder
+
+func ProxyAccountSummaryFromService(a *service.ProxyAccountSummary) *ProxyAccountSummary {
+	if a == nil {
+		return nil
+placeholder
+	return &ProxyAccountSummary{
+		ID:       a.ID,
+		Name:     a.Name,
+		Platform: a.Platform,
+		Type:     a.Type,
+		Notes:    a.Notes,
 placeholder
 placeholder
 
@@ -250,11 +294,12 @@ placeholder
 
 // usageLogFromServiceBase is a helper that converts service UsageLog to DTO.
 // The account parameter allows caller to control what Account info is included.
-func usageLogFromServiceBase(l *service.UsageLog, account *AccountSummary) *UsageLog {
+// The includeIPAddress parameter controls whether to include the IP address (admin-only).
+func usageLogFromServiceBase(l *service.UsageLog, account *AccountSummary, includeIPAddress bool) *UsageLog {
 	if l == nil {
 		return nil
 placeholder
-	return &UsageLog{
+	result := &UsageLog{
 		ID:                    l.ID,
 		UserID:                l.UserID,
 		APIKeyID:              l.APIKeyID,
@@ -276,6 +321,7 @@ placeholder
 		TotalCost:             l.TotalCost,
 		ActualCost:            l.ActualCost,
 		RateMultiplier:        l.RateMultiplier,
+		AccountRateMultiplier: l.AccountRateMultiplier,
 		BillingType:           l.BillingType,
 		Stream:                l.Stream,
 		DurationMs:            l.DurationMs,
@@ -290,21 +336,26 @@ placeholder
 		Group:                 GroupFromServiceShallow(l.Group),
 		Subscription:          UserSubscriptionFromService(l.Subscription),
 placeholder
+	// IP 地址仅对管理员可见
+	if includeIPAddress {
+		result.IPAddress = l.IPAddress
+placeholder
+	return result
 placeholder
 
 // UsageLogFromService converts a service UsageLog to DTO for regular users.
-// It excludes Account details - users should not see account information.
+// It excludes Account details and IP address - users should not see these.
 func UsageLogFromService(l *service.UsageLog) *UsageLog {
-	return usageLogFromServiceBase(l, nil)
+	return usageLogFromServiceBase(l, nil, false)
 placeholder
 
 // UsageLogFromServiceAdmin converts a service UsageLog to DTO for admin users.
-// It includes minimal Account info (ID, Name only).
+// It includes minimal Account info (ID, Name only) and IP address.
 func UsageLogFromServiceAdmin(l *service.UsageLog) *UsageLog {
 	if l == nil {
 		return nil
 placeholder
-	return usageLogFromServiceBase(l, AccountSummaryFromService(l.Account))
+	return usageLogFromServiceBase(l, AccountSummaryFromService(l.Account), true)
 placeholder
 
 func SettingFromService(s *service.Setting) *Setting {
@@ -360,5 +411,37 @@ placeholder
 		FailedCount:   r.FailedCount,
 		Subscriptions: subs,
 		Errors:        r.Errors,
+placeholder
+placeholder
+
+func PromoCodeFromService(pc *service.PromoCode) *PromoCode {
+	if pc == nil {
+		return nil
+placeholder
+	return &PromoCode{
+		ID:          pc.ID,
+		Code:        pc.Code,
+		BonusAmount: pc.BonusAmount,
+		MaxUses:     pc.MaxUses,
+		UsedCount:   pc.UsedCount,
+		Status:      pc.Status,
+		ExpiresAt:   pc.ExpiresAt,
+		Notes:       pc.Notes,
+		CreatedAt:   pc.CreatedAt,
+		UpdatedAt:   pc.UpdatedAt,
+placeholder
+placeholder
+
+func PromoCodeUsageFromService(u *service.PromoCodeUsage) *PromoCodeUsage {
+	if u == nil {
+		return nil
+placeholder
+	return &PromoCodeUsage{
+		ID:          u.ID,
+		PromoCodeID: u.PromoCodeID,
+		UserID:      u.UserID,
+		BonusAmount: u.BonusAmount,
+		UsedAt:      u.UsedAt,
+		User:        UserFromServiceShallow(u.User),
 placeholder
 placeholder

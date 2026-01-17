@@ -15,6 +15,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
@@ -79,6 +80,10 @@ placeholder
 		SetSchedulable(account.Schedulable).
 		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
 
+	if account.RateMultiplier != nil {
+		builder.SetRateMultiplier(*account.RateMultiplier)
+placeholder
+
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
 placeholder
@@ -115,6 +120,9 @@ placeholder
 	account.ID = created.ID
 	account.CreatedAt = created.CreatedAt
 	account.UpdatedAt = created.UpdatedAt
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &account.ID, nil, buildSchedulerGroupPayload(account.GroupIDs)); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue account create failed: account=%d err=%v", account.ID, err)
+placeholder
 	return nil
 placeholder
 
@@ -287,6 +295,10 @@ placeholder
 		SetSchedulable(account.Schedulable).
 		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
 
+	if account.RateMultiplier != nil {
+		builder.SetRateMultiplier(*account.RateMultiplier)
+placeholder
+
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
 placeholder else {
@@ -341,10 +353,17 @@ placeholder
 		return translatePersistenceError(err, service.ErrAccountNotFound, nil)
 placeholder
 	account.UpdatedAt = updated.UpdatedAt
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &account.ID, nil, buildSchedulerGroupPayload(account.GroupIDs)); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue account update failed: account=%d err=%v", account.ID, err)
+placeholder
 	return nil
 placeholder
 
 func (r *accountRepository) Delete(ctx context.Context, id int64) error {
+	groupIDs, err := r.loadAccountGroupIDs(ctx, id)
+	if err != nil {
+		return err
+placeholder
 	// 使用事务保证账号与关联分组的删除原子性
 	tx, err := r.client.Tx(ctx)
 	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
@@ -368,7 +387,12 @@ placeholder
 placeholder
 
 	if tx != nil {
-		return tx.Commit()
+		if err := tx.Commit(); err != nil {
+			return err
+	placeholder
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, buildSchedulerGroupPayload(groupIDs)); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue account delete failed: account=%d err=%v", id, err)
 placeholder
 	return nil
 placeholder
@@ -455,7 +479,18 @@ func (r *accountRepository) UpdateLastUsed(ctx context.Context, id int64) error 
 		Where(dbaccount.IDEQ(id)).
 		SetLastUsedAt(now).
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	payload := map[string]any{
+		"last_used": map[string]int64{
+			strconv.FormatInt(id, 10): now.Unix(),
+	placeholder,
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountLastUsed, &id, nil, payload); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue last used failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) BatchUpdateLastUsed(ctx context.Context, updates map[int64]time.Time) error {
@@ -479,7 +514,18 @@ placeholder
 	args = append(args, pq.Array(ids))
 
 	_, err := r.sql.ExecContext(ctx, caseSQL, args...)
-	return err
+	if err != nil {
+		return err
+placeholder
+	lastUsedPayload := make(map[string]int64, len(updates))
+	for id, ts := range updates {
+		lastUsedPayload[strconv.FormatInt(id, 10)] = ts.Unix()
+placeholder
+	payload := map[string]any{"last_used": lastUsedPayloadplaceholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountLastUsed, nil, nil, payload); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue batch last used failed: err=%v", err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) SetError(ctx context.Context, id int64, errorMsg string) error {
@@ -488,7 +534,13 @@ func (r *accountRepository) SetError(ctx context.Context, id int64, errorMsg str
 		SetStatus(service.StatusError).
 		SetErrorMessage(errorMsg).
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue set error failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) ClearError(ctx context.Context, id int64) error {
@@ -506,7 +558,14 @@ func (r *accountRepository) AddToGroup(ctx context.Context, accountID, groupID i
 		SetGroupID(groupID).
 		SetPriority(priority).
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	payload := buildSchedulerGroupPayload([]int64{groupIDplaceholder)
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountGroupsChanged, &accountID, nil, payload); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue add to group failed: account=%d group=%d err=%v", accountID, groupID, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) RemoveFromGroup(ctx context.Context, accountID, groupID int64) error {
@@ -516,7 +575,14 @@ func (r *accountRepository) RemoveFromGroup(ctx context.Context, accountID, grou
 			dbaccountgroup.GroupIDEQ(groupID),
 		).
 		Exec(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	payload := buildSchedulerGroupPayload([]int64{groupIDplaceholder)
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountGroupsChanged, &accountID, nil, payload); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue remove from group failed: account=%d group=%d err=%v", accountID, groupID, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) GetGroups(ctx context.Context, accountID int64) ([]service.Group, error) {
@@ -537,6 +603,10 @@ placeholder
 placeholder
 
 func (r *accountRepository) BindGroups(ctx context.Context, accountID int64, groupIDs []int64) error {
+	existingGroupIDs, err := r.loadAccountGroupIDs(ctx, accountID)
+	if err != nil {
+		return err
+placeholder
 	// 使用事务保证删除旧绑定与创建新绑定的原子性
 	tx, err := r.client.Tx(ctx)
 	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
@@ -577,7 +647,13 @@ placeholder
 placeholder
 
 	if tx != nil {
-		return tx.Commit()
+		if err := tx.Commit(); err != nil {
+			return err
+	placeholder
+placeholder
+	payload := buildSchedulerGroupPayload(mergeGroupIDs(existingGroupIDs, groupIDs))
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountGroupsChanged, &accountID, nil, payload); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue bind groups failed: account=%d err=%v", accountID, err)
 placeholder
 	return nil
 placeholder
@@ -681,7 +757,13 @@ func (r *accountRepository) SetRateLimited(ctx context.Context, id int64, resetA
 		SetRateLimitedAt(now).
 		SetRateLimitResetAt(resetAt).
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue rate limit failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope service.AntigravityQuotaScope, resetAt time.Time) error {
@@ -715,6 +797,49 @@ placeholder
 	if affected == 0 {
 		return service.ErrAccountNotFound
 placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue quota scope failed: account=%d err=%v", id, err)
+placeholder
+	return nil
+placeholder
+
+func (r *accountRepository) SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error {
+	if scope == "" {
+		return nil
+placeholder
+	now := time.Now().UTC()
+	payload := map[string]string{
+		"rate_limited_at":     now.Format(time.RFC3339),
+		"rate_limit_reset_at": resetAt.UTC().Format(time.RFC3339),
+placeholder
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return err
+placeholder
+
+	path := "{model_rate_limits," + scope + "placeholder"
+	client := clientFromContext(ctx, r.client)
+	result, err := client.ExecContext(
+		ctx,
+		"UPDATE accounts SET extra = jsonb_set(COALESCE(extra, '{placeholder'::jsonb), $1::text[], $2::jsonb, true), updated_at = NOW() WHERE id = $3 AND deleted_at IS NULL",
+		path,
+		raw,
+		id,
+	)
+	if err != nil {
+		return err
+placeholder
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+placeholder
+	if affected == 0 {
+		return service.ErrAccountNotFound
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue model rate limit failed: account=%d err=%v", id, err)
+placeholder
 	return nil
 placeholder
 
@@ -723,7 +848,13 @@ func (r *accountRepository) SetOverloaded(ctx context.Context, id int64, until t
 		Where(dbaccount.IDEQ(id)).
 		SetOverloadUntil(until).
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue overload failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
@@ -736,7 +867,13 @@ func (r *accountRepository) SetTempUnschedulable(ctx context.Context, id int64, 
 			AND deleted_at IS NULL
 			AND (temp_unschedulable_until IS NULL OR temp_unschedulable_until < $1)
 	`, until, reason, id)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue temp unschedulable failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) ClearTempUnschedulable(ctx context.Context, id int64) error {
@@ -748,7 +885,13 @@ func (r *accountRepository) ClearTempUnschedulable(ctx context.Context, id int64
 		WHERE id = $1
 			AND deleted_at IS NULL
 	`, id)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue clear temp unschedulable failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) ClearRateLimit(ctx context.Context, id int64) error {
@@ -758,7 +901,13 @@ func (r *accountRepository) ClearRateLimit(ctx context.Context, id int64) error 
 		ClearRateLimitResetAt().
 		ClearOverloadUntil().
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue clear rate limit failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) ClearAntigravityQuotaScopes(ctx context.Context, id int64) error {
@@ -778,6 +927,33 @@ placeholder
 placeholder
 	if affected == 0 {
 		return service.ErrAccountNotFound
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue clear quota scopes failed: account=%d err=%v", id, err)
+placeholder
+	return nil
+placeholder
+
+func (r *accountRepository) ClearModelRateLimits(ctx context.Context, id int64) error {
+	client := clientFromContext(ctx, r.client)
+	result, err := client.ExecContext(
+		ctx,
+		"UPDATE accounts SET extra = COALESCE(extra, '{placeholder'::jsonb) - 'model_rate_limits', updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL",
+		id,
+	)
+	if err != nil {
+		return err
+placeholder
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+placeholder
+	if affected == 0 {
+		return service.ErrAccountNotFound
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue clear model rate limit failed: account=%d err=%v", id, err)
 placeholder
 	return nil
 placeholder
@@ -801,7 +977,13 @@ func (r *accountRepository) SetSchedulable(ctx context.Context, id int64, schedu
 		Where(dbaccount.IDEQ(id)).
 		SetSchedulable(schedulable).
 		Save(ctx)
-	return err
+	if err != nil {
+		return err
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue schedulable change failed: account=%d err=%v", id, err)
+placeholder
+	return nil
 placeholder
 
 func (r *accountRepository) AutoPauseExpiredAccounts(ctx context.Context, now time.Time) (int64, error) {
@@ -821,6 +1003,11 @@ placeholder
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return 0, err
+placeholder
+	if rows > 0 {
+		if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventFullRebuild, nil, nil, nil); err != nil {
+			log.Printf("[SchedulerOutbox] enqueue auto pause rebuild failed: err=%v", err)
+	placeholder
 placeholder
 	return rows, nil
 placeholder
@@ -852,6 +1039,9 @@ placeholder
 placeholder
 	if affected == 0 {
 		return service.ErrAccountNotFound
+placeholder
+	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+		log.Printf("[SchedulerOutbox] enqueue extra update failed: account=%d err=%v", id, err)
 placeholder
 	return nil
 placeholder
@@ -888,6 +1078,11 @@ placeholder
 	if updates.Priority != nil {
 		setClauses = append(setClauses, "priority = $"+itoa(idx))
 		args = append(args, *updates.Priority)
+		idx++
+placeholder
+	if updates.RateMultiplier != nil {
+		setClauses = append(setClauses, "rate_multiplier = $"+itoa(idx))
+		args = append(args, *updates.RateMultiplier)
 		idx++
 placeholder
 	if updates.Status != nil {
@@ -936,6 +1131,12 @@ placeholder
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return 0, err
+placeholder
+	if rows > 0 {
+		payload := map[string]any{"account_ids": idsplaceholder
+		if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountBulkChanged, nil, nil, payload); err != nil {
+			log.Printf("[SchedulerOutbox] enqueue bulk update failed: err=%v", err)
+	placeholder
 placeholder
 	return rows, nil
 placeholder
@@ -1179,10 +1380,60 @@ placeholder
 	return groupsByAccount, groupIDsByAccount, accountGroupsByAccount, nil
 placeholder
 
+func (r *accountRepository) loadAccountGroupIDs(ctx context.Context, accountID int64) ([]int64, error) {
+	entries, err := r.client.AccountGroup.
+		Query().
+		Where(dbaccountgroup.AccountIDEQ(accountID)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+	ids := make([]int64, 0, len(entries))
+	for _, entry := range entries {
+		ids = append(ids, entry.GroupID)
+placeholder
+	return ids, nil
+placeholder
+
+func mergeGroupIDs(a []int64, b []int64) []int64 {
+	seen := make(map[int64]struct{placeholder, len(a)+len(b))
+	out := make([]int64, 0, len(a)+len(b))
+	for _, id := range a {
+		if id <= 0 {
+			continue
+	placeholder
+		if _, ok := seen[id]; ok {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		out = append(out, id)
+placeholder
+	for _, id := range b {
+		if id <= 0 {
+			continue
+	placeholder
+		if _, ok := seen[id]; ok {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		out = append(out, id)
+placeholder
+	return out
+placeholder
+
+func buildSchedulerGroupPayload(groupIDs []int64) map[string]any {
+	if len(groupIDs) == 0 {
+		return nil
+placeholder
+	return map[string]any{"group_ids": groupIDsplaceholder
+placeholder
+
 func accountEntityToService(m *dbent.Account) *service.Account {
 	if m == nil {
 		return nil
 placeholder
+
+	rateMultiplier := m.RateMultiplier
 
 	return &service.Account{
 		ID:                  m.ID,
@@ -1195,6 +1446,7 @@ placeholder
 		ProxyID:             m.ProxyID,
 		Concurrency:         m.Concurrency,
 		Priority:            m.Priority,
+		RateMultiplier:      &rateMultiplier,
 		Status:              m.Status,
 		ErrorMessage:        derefString(m.ErrorMessage),
 		LastUsedAt:          m.LastUsedAt,
