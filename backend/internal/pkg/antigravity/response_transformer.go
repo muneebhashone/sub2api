@@ -3,6 +3,7 @@ package antigravity
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // TransformGeminiToClaude 将 Gemini 响应转换为 Claude 格式（非流式）
@@ -61,6 +62,12 @@ placeholder
 	// 处理所有 parts
 	for _, part := range parts {
 		p.processPart(&part)
+placeholder
+
+	if len(geminiResp.Candidates) > 0 {
+		if grounding := geminiResp.Candidates[0].GroundingMetadata; grounding != nil {
+			p.processGrounding(grounding)
+	placeholder
 placeholder
 
 	// 刷新剩余内容
@@ -190,6 +197,18 @@ placeholder
 placeholder
 placeholder
 
+func (p *NonStreamingProcessor) processGrounding(grounding *GeminiGroundingMetadata) {
+	groundingText := buildGroundingText(grounding)
+	if groundingText == "" {
+		return
+placeholder
+
+	p.flushThinking()
+	p.flushText()
+	p.textBuilder += groundingText
+	p.flushText()
+placeholder
+
 // flushText 刷新 text builder
 func (p *NonStreamingProcessor) flushText() {
 	if p.textBuilder == "" {
@@ -260,6 +279,44 @@ placeholder
 		StopReason: stopReason,
 		Usage:      usage,
 placeholder
+placeholder
+
+func buildGroundingText(grounding *GeminiGroundingMetadata) string {
+	if grounding == nil {
+		return ""
+placeholder
+
+	var builder strings.Builder
+
+	if len(grounding.WebSearchQueries) > 0 {
+		builder.WriteString("\n\n---\nWeb search queries: ")
+		builder.WriteString(strings.Join(grounding.WebSearchQueries, ", "))
+placeholder
+
+	if len(grounding.GroundingChunks) > 0 {
+		var links []string
+		for i, chunk := range grounding.GroundingChunks {
+			if chunk.Web == nil {
+				continue
+		placeholder
+			title := strings.TrimSpace(chunk.Web.Title)
+			if title == "" {
+				title = "Source"
+		placeholder
+			uri := strings.TrimSpace(chunk.Web.URI)
+			if uri == "" {
+				uri = "#"
+		placeholder
+			links = append(links, fmt.Sprintf("[%d] [%s](%s)", i+1, title, uri))
+	placeholder
+
+		if len(links) > 0 {
+			builder.WriteString("\n\nSources:\n")
+			builder.WriteString(strings.Join(links, "\n"))
+	placeholder
+placeholder
+
+	return builder.String()
 placeholder
 
 // generateRandomID 生成随机 ID
