@@ -45,7 +45,7 @@ placeholder
 		return "", errors.New("not an antigravity oauth account")
 placeholder
 
-	cacheKey := antigravityTokenCacheKey(account)
+	cacheKey := AntigravityTokenCacheKey(account)
 
 	// 1. 先尝试缓存
 	if p.tokenCache != nil {
@@ -121,7 +121,7 @@ placeholder
 	return accessToken, nil
 placeholder
 
-func antigravityTokenCacheKey(account *Account) string {
+func AntigravityTokenCacheKey(account *Account) string {
 	projectID := strings.TrimSpace(account.GetCredential("project_id"))
 	if projectID != "" {
 		return "ag:" + projectID

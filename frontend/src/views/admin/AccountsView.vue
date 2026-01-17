@@ -34,15 +34,8 @@
           <template #cell-platform_type="{ row placeholder">
             <PlatformTypeBadge :platform="row.platform" :type="row.type" />
           </template>
-          <template #cell-concurrency="{ row placeholder">
-            <div class="flex items-center gap-1.5">
-              <span :class="['inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium', (row.current_concurrency || 0) >= row.concurrency ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : (row.current_concurrency || 0) > 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400']">
-                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
-                <span class="font-mono">{{ row.current_concurrency || 0 placeholderplaceholder</span>
-                <span class="text-gray-400 dark:text-gray-500">/</span>
-                <span class="font-mono">{{ row.concurrency placeholderplaceholder</span>
-              </span>
-            </div>
+          <template #cell-capacity="{ row placeholder">
+            <AccountCapacityCell :account="row" />
           </template>
           <template #cell-status="{ row placeholder">
             <AccountStatusIndicator :account="row" @show-temp-unsched="handleShowTempUnsched" />
@@ -60,6 +53,11 @@
           </template>
           <template #cell-usage="{ row placeholder">
             <AccountUsageCell :account="row" />
+          </template>
+          <template #cell-rate_multiplier="{ row placeholder">
+            <span class="text-sm font-mono text-gray-700 dark:text-gray-300">
+              {{ (row.rate_multiplier ?? 1).toFixed(2) placeholderplaceholderx
+            </span>
           </template>
           <template #cell-priority="{ value placeholder">
             <span class="text-sm text-gray-700 dark:text-gray-300">{{ value placeholderplaceholder</span>
@@ -120,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted placeholder from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
@@ -143,6 +141,7 @@ import AccountStatusIndicator from '@/components/account/AccountStatusIndicator.
 import AccountUsageCell from '@/components/account/AccountUsageCell.vue'
 import AccountTodayStatsCell from '@/components/account/AccountTodayStatsCell.vue'
 import AccountGroupsCell from '@/components/account/AccountGroupsCell.vue'
+import AccountCapacityCell from '@/components/account/AccountCapacityCell.vue'
 import PlatformTypeBadge from '@/components/common/PlatformTypeBadge.vue'
 import { formatDateTime, formatRelativeTime placeholder from '@/utils/format'
 import type { Account, Proxy, Group placeholder from '@/types'
@@ -182,7 +181,7 @@ const cols = computed(() => {
     { key: 'select', label: '', sortable: false placeholder,
     { key: 'name', label: t('admin.accounts.columns.name'), sortable: true placeholder,
     { key: 'platform_type', label: t('admin.accounts.columns.platformType'), sortable: false placeholder,
-    { key: 'concurrency', label: t('admin.accounts.columns.concurrencyStatus'), sortable: false placeholder,
+    { key: 'capacity', label: t('admin.accounts.columns.capacity'), sortable: false placeholder,
     { key: 'status', label: t('admin.accounts.columns.status'), sortable: true placeholder,
     { key: 'schedulable', label: t('admin.accounts.columns.schedulable'), sortable: true placeholder,
     { key: 'today_stats', label: t('admin.accounts.columns.todayStats'), sortable: false placeholder
@@ -190,10 +189,11 @@ const cols = computed(() => {
   if (!authStore.isSimpleMode) {
     c.push({ key: 'groups', label: t('admin.accounts.columns.groups'), sortable: false placeholder)
   placeholder
-  c.push(
-    { key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false placeholder,
-    { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true placeholder,
-    { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true placeholder,
+    c.push(
+      { key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false placeholder,
+      { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true placeholder,
+      { key: 'rate_multiplier', label: t('admin.accounts.columns.billingRateMultiplier'), sortable: true placeholder,
+      { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true placeholder,
     { key: 'expires_at', label: t('admin.accounts.columns.expiresAt'), sortable: true placeholder,
     { key: 'notes', label: t('admin.accounts.columns.notes'), sortable: false placeholder,
     { key: 'actions', label: t('admin.accounts.columns.actions'), sortable: false placeholder
@@ -202,7 +202,56 @@ const cols = computed(() => {
 placeholder)
 
 const handleEdit = (a: Account) => { edAcc.value = a; showEdit.value = true placeholder
-const openMenu = (a: Account, e: MouseEvent) => { menu.acc = a; menu.pos = { top: e.clientY, left: e.clientX - 200 placeholder; menu.show = true placeholder
+const openMenu = (a: Account, e: MouseEvent) => {
+  menu.acc = a
+
+  const target = e.currentTarget as HTMLElement
+  if (target) {
+    const rect = target.getBoundingClientRect()
+    const menuWidth = 200
+    const menuHeight = 240
+    const padding = 8
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    let left, top
+
+    if (viewportWidth < 768) {
+      // 居中显示,水平位置
+      left = Math.max(padding, Math.min(
+        rect.left + rect.width / 2 - menuWidth / 2,
+        viewportWidth - menuWidth - padding
+      ))
+
+      // 优先显示在按钮下方
+      top = rect.bottom + 4
+
+      // 如果下方空间不够,显示在上方
+      if (top + menuHeight > viewportHeight - padding) {
+        top = rect.top - menuHeight - 4
+        // 如果上方也不够,就贴在视口顶部
+        if (top < padding) {
+          top = padding
+        placeholder
+      placeholder
+    placeholder else {
+      left = Math.max(padding, Math.min(
+        e.clientX - menuWidth,
+        viewportWidth - menuWidth - padding
+      ))
+      top = e.clientY
+      if (top + menuHeight > viewportHeight - padding) {
+        top = viewportHeight - menuHeight - padding
+      placeholder
+    placeholder
+
+    menu.pos = { top, left placeholder
+  placeholder else {
+    menu.pos = { top: e.clientY, left: e.clientX - 200 placeholder
+  placeholder
+
+  menu.show = true
+placeholder
 const toggleSel = (id: number) => { const i = selIds.value.indexOf(id); if(i === -1) selIds.value.push(id); else selIds.value.splice(i, 1) placeholder
 const selectPage = () => { selIds.value = [...new Set([...selIds.value, ...accounts.value.map(a => a.id)])] placeholder
 const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; reload() placeholder catch (error) { console.error('Failed to bulk delete accounts:', error) placeholder placeholder
@@ -302,9 +351,6 @@ const handleBulkToggleSchedulable = async (schedulable: boolean) => {
     placeholder else {
       selIds.value = hasIds ? [] : accountIds
     placeholder
-    load().catch((error) => {
-      console.error('Failed to refresh accounts:', error)
-    placeholder)
   placeholder catch (error) {
     console.error('Failed to bulk toggle schedulable:', error)
     appStore.showError(t('common.error'))
@@ -328,9 +374,6 @@ const handleToggleSchedulable = async (a: Account) => {
   try {
     const updated = await adminAPI.accounts.setSchedulable(a.id, nextSchedulable)
     updateSchedulableInList([a.id], updated?.schedulable ?? nextSchedulable)
-    load().catch((error) => {
-      console.error('Failed to refresh accounts:', error)
-    placeholder)
   placeholder catch (error) {
     console.error('Failed to toggle schedulable:', error)
     appStore.showError(t('admin.accounts.failedToToggleSchedulable'))
@@ -360,5 +403,24 @@ const isExpired = (value: number | null) => {
   return value * 1000 <= Date.now()
 placeholder
 
-onMounted(async () => { load(); try { const [p, g] = await Promise.all([adminAPI.proxies.getAll(), adminAPI.groups.getAll()]); proxies.value = p; groups.value = g placeholder catch (error) { console.error('Failed to load proxies/groups:', error) placeholder placeholder)
+// 滚动时关闭菜单
+const handleScroll = () => {
+  menu.show = false
+placeholder
+
+onMounted(async () => {
+  load()
+  try {
+    const [p, g] = await Promise.all([adminAPI.proxies.getAll(), adminAPI.groups.getAll()])
+    proxies.value = p
+    groups.value = g
+  placeholder catch (error) {
+    console.error('Failed to load proxies/groups:', error)
+  placeholder
+  window.addEventListener('scroll', handleScroll, true)
+placeholder)
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll, true)
+placeholder)
 </script>

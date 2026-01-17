@@ -32,13 +32,18 @@
           formatTokens(stats.tokens)
         placeholderplaceholder</span>
       </div>
-      <!-- Cost -->
+      <!-- Cost (Account) -->
       <div class="flex items-center gap-1">
-        <span class="text-gray-500 dark:text-gray-400"
-          >{{ t('admin.accounts.stats.cost') placeholderplaceholder:</span
-        >
+        <span class="text-gray-500 dark:text-gray-400">{{ t('usage.accountBilled') placeholderplaceholder:</span>
         <span class="font-medium text-emerald-600 dark:text-emerald-400">{{
           formatCurrency(stats.cost)
+        placeholderplaceholder</span>
+      </div>
+      <!-- Cost (User/API Key) -->
+      <div v-if="stats.user_cost != null" class="flex items-center gap-1">
+        <span class="text-gray-500 dark:text-gray-400">{{ t('usage.userBilled') placeholderplaceholder:</span>
+        <span class="font-medium text-gray-700 dark:text-gray-300">{{
+          formatCurrency(stats.user_cost)
         placeholderplaceholder</span>
       </div>
     </div>
