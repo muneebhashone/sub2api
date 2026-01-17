@@ -129,31 +129,10 @@ urlFallbackLoop:
 				_ = resp.Body.Close()
 
 				// "Resource has been exhausted" 是 URL 级别限流，切换 URL
-				if isURLLevelRateLimit(respBody) {
-					upstreamMsg := strings.TrimSpace(extractAntigravityErrorMessage(respBody))
-					upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
-					appendOpsUpstreamError(p.c, OpsUpstreamErrorEvent{
-						Platform:           p.account.Platform,
-						AccountID:          p.account.ID,
-						AccountName:        p.account.Name,
-						UpstreamStatusCode: resp.StatusCode,
-						UpstreamRequestID:  resp.Header.Get("x-request-id"),
-						Kind:               "retry",
-						Message:            upstreamMsg,
-						Detail:             getUpstreamDetail(respBody),
-				placeholder)
-					if urlIdx < len(availableURLs)-1 {
-						log.Printf("%s URL fallback (HTTP 429): %s -> %s body=%s", p.prefix, baseURL, availableURLs[urlIdx+1], truncateForLog(respBody, 200))
-						continue urlFallbackLoop
-				placeholder
-					log.Printf("%s status=429 url_rate_limited base_url=%s body=%s", p.prefix, baseURL, truncateForLog(respBody, 200))
-					resp = &http.Response{
-						StatusCode: resp.StatusCode,
-						Header:     resp.Header.Clone(),
-						Body:       io.NopCloser(bytes.NewReader(respBody)),
-						Request:    resp.Request,
-				placeholder
-					break urlFallbackLoop
+				if isURLLevelRateLimit(respBody) && urlIdx < len(availableURLs)-1 {
+					antigravity.DefaultURLAvailability.MarkUnavailable(baseURL)
+					log.Printf("%s URL fallback (429): %s -> %s", p.prefix, baseURL, availableURLs[urlIdx+1])
+					continue urlFallbackLoop
 			placeholder
 
 				// 账户/模型配额限流，重试 3 次（指数退避）
@@ -853,20 +832,11 @@ placeholder
 				if txErr != nil {
 					continue
 			placeholder
-				retryResult, retryErr := antigravityRetryLoop(antigravityRetryLoopParams{
-					ctx:            ctx,
-					prefix:         prefix,
-					account:        account,
-					proxyURL:       proxyURL,
-					accessToken:    accessToken,
-					action:         action,
-					body:           retryGeminiBody,
-					quotaScope:     quotaScope,
-					c:              c,
-					httpUpstream:   s.httpUpstream,
-					settingService: s.settingService,
-					handleError:    s.handleUpstreamError,
-			placeholder)
+				retryReq, buildErr := antigravity.NewAPIRequest(ctx, action, accessToken, retryGeminiBody)
+				if buildErr != nil {
+					continue
+			placeholder
+				retryResp, retryErr := s.httpUpstream.Do(retryReq, proxyURL, account.ID, account.Concurrency)
 				if retryErr != nil {
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 						Platform:           account.Platform,
@@ -880,7 +850,6 @@ placeholder
 					continue
 			placeholder
 
-				retryResp := retryResult.resp
 				if retryResp.StatusCode < 400 {
 					_ = resp.Body.Close()
 					resp = retryResp
@@ -890,13 +859,6 @@ placeholder
 
 				retryBody, _ := io.ReadAll(io.LimitReader(retryResp.Body, 2<<20))
 				_ = retryResp.Body.Close()
-				if retryResp.StatusCode == http.StatusTooManyRequests {
-					retryBaseURL := ""
-					if retryResp.Request != nil && retryResp.Request.URL != nil {
-						retryBaseURL = retryResp.Request.URL.Scheme + "://" + retryResp.Request.URL.Host
-				placeholder
-					log.Printf("%s status=429 rate_limited base_url=%s retry_stage=%s body=%s", prefix, retryBaseURL, stage.name, truncateForLog(retryBody, 200))
-			placeholder
 				kind := "signature_retry"
 				if strings.TrimSpace(stage.name) != "" {
 					kind = "signature_retry_" + strings.ReplaceAll(stage.name, "+", "_")
@@ -941,15 +903,9 @@ placeholder
 
 		// 处理错误响应（重试后仍失败或不触发重试）
 		if resp.StatusCode >= 400 {
-			urlLevelRateLimit := resp.StatusCode == http.StatusTooManyRequests && isURLLevelRateLimit(respBody)
-			if !urlLevelRateLimit {
-				s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
-		placeholder
+			s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
 
 			if s.shouldFailoverUpstreamError(resp.StatusCode) {
-				if urlLevelRateLimit {
-					return nil, s.writeMappedClaudeError(c, account, resp.StatusCode, resp.Header.Get("x-request-id"), respBody)
-			placeholder
 				upstreamMsg := strings.TrimSpace(extractAntigravityErrorMessage(respBody))
 				upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 				logBody := s.settingService != nil && s.settingService.cfg != nil && s.settingService.cfg.Gateway.LogUpstreamErrorBody
@@ -1559,10 +1515,7 @@ placeholder()
 		if unwrapErr != nil || len(unwrappedForOps) == 0 {
 			unwrappedForOps = respBody
 	placeholder
-		urlLevelRateLimit := resp.StatusCode == http.StatusTooManyRequests && isURLLevelRateLimit(unwrappedForOps)
-		if !urlLevelRateLimit {
-			s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
-	placeholder
+		s.handleUpstreamError(ctx, prefix, account, resp.StatusCode, resp.Header, respBody, quotaScope)
 		upstreamMsg := strings.TrimSpace(extractAntigravityErrorMessage(unwrappedForOps))
 		upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 
@@ -1580,9 +1533,6 @@ placeholder()
 		setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
 
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
-			if urlLevelRateLimit {
-				return nil, s.writeGoogleError(c, resp.StatusCode, upstreamMsg)
-		placeholder
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 				Platform:           account.Platform,
 				AccountID:          account.ID,
