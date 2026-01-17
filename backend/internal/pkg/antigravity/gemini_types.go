@@ -143,10 +143,10 @@ placeholder
 
 // GeminiCandidate Gemini 候选响应
 type GeminiCandidate struct {
-	Content            *GeminiContent           `json:"content,omitempty"`
-	FinishReason       string                   `json:"finishReason,omitempty"`
-	Index              int                      `json:"index,omitempty"`
-	GroundingMetadata  *GeminiGroundingMetadata `json:"groundingMetadata,omitempty"`
+	Content           *GeminiContent           `json:"content,omitempty"`
+	FinishReason      string                   `json:"finishReason,omitempty"`
+	Index             int                      `json:"index,omitempty"`
+	GroundingMetadata *GeminiGroundingMetadata `json:"groundingMetadata,omitempty"`
 placeholder
 
 // GeminiUsageMetadata Gemini 用量元数据
