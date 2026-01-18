@@ -161,6 +161,11 @@ placeholder
 		if idleTimeout := a.GetSessionIdleTimeoutMinutes(); idleTimeout > 0 {
 			out.SessionIdleTimeoutMin = &idleTimeout
 	placeholder
+		// TLS指纹伪装开关
+		if a.IsTLSFingerprintEnabled() {
+			enabled := true
+			out.EnableTLSFingerprint = &enabled
+	placeholder
 placeholder
 
 	return out
