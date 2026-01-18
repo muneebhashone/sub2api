@@ -434,6 +434,44 @@ placeholder
 		Columns:    SettingsColumns,
 		PrimaryKey: []*schema.Column{SettingsColumns[0]placeholder,
 placeholder
+	// UsageCleanupTasksColumns holds the columns for the "usage_cleanup_tasks" table.
+	UsageCleanupTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "status", Type: field.TypeString, Size: 20placeholder,
+		{Name: "filters", Type: field.TypeJSONplaceholder,
+		{Name: "created_by", Type: field.TypeInt64placeholder,
+		{Name: "deleted_rows", Type: field.TypeInt64, Default: 0placeholder,
+		{Name: "error_message", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "canceled_by", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "canceled_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "started_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "finished_at", Type: field.TypeTime, Nullable: trueplaceholder,
+placeholder
+	// UsageCleanupTasksTable holds the schema information for the "usage_cleanup_tasks" table.
+	UsageCleanupTasksTable = &schema.Table{
+		Name:       "usage_cleanup_tasks",
+		Columns:    UsageCleanupTasksColumns,
+		PrimaryKey: []*schema.Column{UsageCleanupTasksColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "usagecleanuptask_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageCleanupTasksColumns[3], UsageCleanupTasksColumns[1]placeholder,
+		placeholder,
+			{
+				Name:    "usagecleanuptask_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageCleanupTasksColumns[1]placeholder,
+		placeholder,
+			{
+				Name:    "usagecleanuptask_canceled_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageCleanupTasksColumns[9]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// UsageLogsColumns holds the columns for the "usage_logs" table.
 	UsageLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -805,6 +843,7 @@ placeholder
 		ProxiesTable,
 		RedeemCodesTable,
 		SettingsTable,
+		UsageCleanupTasksTable,
 		UsageLogsTable,
 		UsersTable,
 		UserAllowedGroupsTable,
@@ -850,6 +889,9 @@ placeholder
 placeholder
 	SettingsTable.Annotation = &entsql.Annotation{
 		Table: "settings",
+placeholder
+	UsageCleanupTasksTable.Annotation = &entsql.Annotation{
+		Table: "usage_cleanup_tasks",
 placeholder
 	UsageLogsTable.ForeignKeys[0].RefTable = APIKeysTable
 	UsageLogsTable.ForeignKeys[1].RefTable = AccountsTable

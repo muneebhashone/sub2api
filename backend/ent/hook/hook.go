@@ -117,6 +117,18 @@ placeholder
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SettingMutation", m)
 placeholder
 
+// The UsageCleanupTaskFunc type is an adapter to allow the use of ordinary
+// function as UsageCleanupTask mutator.
+type UsageCleanupTaskFunc func(context.Context, *ent.UsageCleanupTaskMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UsageCleanupTaskFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UsageCleanupTaskMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UsageCleanupTaskMutation", m)
+placeholder
+
 // The UsageLogFunc type is an adapter to allow the use of ordinary
 // function as UsageLog mutator.
 type UsageLogFunc func(context.Context, *ent.UsageLogMutation) (ent.Value, error)

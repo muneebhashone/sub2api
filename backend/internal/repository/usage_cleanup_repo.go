@@ -7,43 +7,41 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
+	dbusagecleanuptask "github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
 type usageCleanupRepository struct {
-	sql sqlExecutor
+	client *dbent.Client
+	sql    sqlExecutor
 placeholder
 
-func NewUsageCleanupRepository(sqlDB *sql.DB) service.UsageCleanupRepository {
-	return &usageCleanupRepository{sql: sqlDBplaceholder
+func NewUsageCleanupRepository(client *dbent.Client, sqlDB *sql.DB) service.UsageCleanupRepository {
+	return newUsageCleanupRepositoryWithSQL(client, sqlDB)
+placeholder
+
+func newUsageCleanupRepositoryWithSQL(client *dbent.Client, sqlq sqlExecutor) *usageCleanupRepository {
+	return &usageCleanupRepository{client: client, sql: sqlqplaceholder
 placeholder
 
 func (r *usageCleanupRepository) CreateTask(ctx context.Context, task *service.UsageCleanupTask) error {
 	if task == nil {
 		return nil
 placeholder
-	filtersJSON, err := json.Marshal(task.Filters)
-	if err != nil {
-		return fmt.Errorf("marshal cleanup filters: %w", err)
+	if r.client != nil {
+		return r.createTaskWithEnt(ctx, task)
 placeholder
-	query := `
-		INSERT INTO usage_cleanup_tasks (
-			status,
-			filters,
-			created_by,
-			deleted_rows
-		) VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at, updated_at
-	`
-	if err := scanSingleRow(ctx, r.sql, query, []any{task.Status, filtersJSON, task.CreatedBy, task.DeletedRowsplaceholder, &task.ID, &task.CreatedAt, &task.UpdatedAt); err != nil {
-		return err
-placeholder
-	return nil
+	return r.createTaskWithSQL(ctx, task)
 placeholder
 
 func (r *usageCleanupRepository) ListTasks(ctx context.Context, params pagination.PaginationParams) ([]service.UsageCleanupTask, *pagination.PaginationResult, error) {
+	if r.client != nil {
+		return r.listTasksWithEnt(ctx, params)
+placeholder
 	var total int64
 	if err := scanSingleRow(ctx, r.sql, "SELECT COUNT(*) FROM usage_cleanup_tasks", nil, &total); err != nil {
 		return nil, nil, err
@@ -57,14 +55,14 @@ placeholder
 			canceled_by, canceled_at,
 			started_at, finished_at, created_at, updated_at
 		FROM usage_cleanup_tasks
-		ORDER BY created_at DESC
+		ORDER BY created_at DESC, id DESC
 		LIMIT $1 OFFSET $2
 	`
 	rows, err := r.sql.QueryContext(ctx, query, params.Limit(), params.Offset())
 	if err != nil {
 		return nil, nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	tasks := make([]service.UsageCleanupTask, 0)
 	for rows.Next() {
@@ -194,6 +192,9 @@ placeholder
 placeholder
 
 func (r *usageCleanupRepository) GetTaskStatus(ctx context.Context, taskID int64) (string, error) {
+	if r.client != nil {
+		return r.getTaskStatusWithEnt(ctx, taskID)
+placeholder
 	var status string
 	if err := scanSingleRow(ctx, r.sql, "SELECT status FROM usage_cleanup_tasks WHERE id = $1", []any{taskIDplaceholder, &status); err != nil {
 		return "", err
@@ -202,6 +203,9 @@ placeholder
 placeholder
 
 func (r *usageCleanupRepository) UpdateTaskProgress(ctx context.Context, taskID int64, deletedRows int64) error {
+	if r.client != nil {
+		return r.updateTaskProgressWithEnt(ctx, taskID, deletedRows)
+placeholder
 	query := `
 		UPDATE usage_cleanup_tasks
 		SET deleted_rows = $1,
@@ -213,6 +217,9 @@ func (r *usageCleanupRepository) UpdateTaskProgress(ctx context.Context, taskID 
 placeholder
 
 func (r *usageCleanupRepository) CancelTask(ctx context.Context, taskID int64, canceledBy int64) (bool, error) {
+	if r.client != nil {
+		return r.cancelTaskWithEnt(ctx, taskID, canceledBy)
+placeholder
 	query := `
 		UPDATE usage_cleanup_tasks
 		SET status = $1,
@@ -243,6 +250,9 @@ placeholder
 placeholder
 
 func (r *usageCleanupRepository) MarkTaskSucceeded(ctx context.Context, taskID int64, deletedRows int64) error {
+	if r.client != nil {
+		return r.markTaskSucceededWithEnt(ctx, taskID, deletedRows)
+placeholder
 	query := `
 		UPDATE usage_cleanup_tasks
 		SET status = $1,
@@ -256,6 +266,9 @@ func (r *usageCleanupRepository) MarkTaskSucceeded(ctx context.Context, taskID i
 placeholder
 
 func (r *usageCleanupRepository) MarkTaskFailed(ctx context.Context, taskID int64, deletedRows int64, errorMsg string) error {
+	if r.client != nil {
+		return r.markTaskFailedWithEnt(ctx, taskID, deletedRows, errorMsg)
+placeholder
 	query := `
 		UPDATE usage_cleanup_tasks
 		SET status = $1,
@@ -295,7 +308,7 @@ placeholder
 	if err != nil {
 		return 0, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	var deleted int64
 	for rows.Next() {
@@ -357,7 +370,182 @@ placeholder
 	if filters.BillingType != nil {
 		conditions = append(conditions, fmt.Sprintf("billing_type = $%d", idx))
 		args = append(args, *filters.BillingType)
-		idx++
 placeholder
 	return strings.Join(conditions, " AND "), args
+placeholder
+
+func (r *usageCleanupRepository) createTaskWithEnt(ctx context.Context, task *service.UsageCleanupTask) error {
+	client := clientFromContext(ctx, r.client)
+	filtersJSON, err := json.Marshal(task.Filters)
+	if err != nil {
+		return fmt.Errorf("marshal cleanup filters: %w", err)
+placeholder
+	created, err := client.UsageCleanupTask.
+		Create().
+		SetStatus(task.Status).
+		SetFilters(json.RawMessage(filtersJSON)).
+		SetCreatedBy(task.CreatedBy).
+		SetDeletedRows(task.DeletedRows).
+		Save(ctx)
+	if err != nil {
+		return err
+placeholder
+	task.ID = created.ID
+	task.CreatedAt = created.CreatedAt
+	task.UpdatedAt = created.UpdatedAt
+	return nil
+placeholder
+
+func (r *usageCleanupRepository) createTaskWithSQL(ctx context.Context, task *service.UsageCleanupTask) error {
+	filtersJSON, err := json.Marshal(task.Filters)
+	if err != nil {
+		return fmt.Errorf("marshal cleanup filters: %w", err)
+placeholder
+	query := `
+		INSERT INTO usage_cleanup_tasks (
+			status,
+			filters,
+			created_by,
+			deleted_rows
+		) VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, updated_at
+	`
+	if err := scanSingleRow(ctx, r.sql, query, []any{task.Status, filtersJSON, task.CreatedBy, task.DeletedRowsplaceholder, &task.ID, &task.CreatedAt, &task.UpdatedAt); err != nil {
+		return err
+placeholder
+	return nil
+placeholder
+
+func (r *usageCleanupRepository) listTasksWithEnt(ctx context.Context, params pagination.PaginationParams) ([]service.UsageCleanupTask, *pagination.PaginationResult, error) {
+	client := clientFromContext(ctx, r.client)
+	query := client.UsageCleanupTask.Query()
+	total, err := query.Clone().Count(ctx)
+	if err != nil {
+		return nil, nil, err
+placeholder
+	if total == 0 {
+		return []service.UsageCleanupTask{placeholder, paginationResultFromTotal(0, params), nil
+placeholder
+	rows, err := query.
+		Order(dbent.Desc(dbusagecleanuptask.FieldCreatedAt), dbent.Desc(dbusagecleanuptask.FieldID)).
+		Offset(params.Offset()).
+		Limit(params.Limit()).
+		All(ctx)
+	if err != nil {
+		return nil, nil, err
+placeholder
+	tasks := make([]service.UsageCleanupTask, 0, len(rows))
+	for _, row := range rows {
+		task, err := usageCleanupTaskFromEnt(row)
+		if err != nil {
+			return nil, nil, err
+	placeholder
+		tasks = append(tasks, task)
+placeholder
+	return tasks, paginationResultFromTotal(int64(total), params), nil
+placeholder
+
+func (r *usageCleanupRepository) getTaskStatusWithEnt(ctx context.Context, taskID int64) (string, error) {
+	client := clientFromContext(ctx, r.client)
+	task, err := client.UsageCleanupTask.Query().
+		Where(dbusagecleanuptask.IDEQ(taskID)).
+		Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return "", sql.ErrNoRows
+	placeholder
+		return "", err
+placeholder
+	return task.Status, nil
+placeholder
+
+func (r *usageCleanupRepository) updateTaskProgressWithEnt(ctx context.Context, taskID int64, deletedRows int64) error {
+	client := clientFromContext(ctx, r.client)
+	now := time.Now()
+	_, err := client.UsageCleanupTask.Update().
+		Where(dbusagecleanuptask.IDEQ(taskID)).
+		SetDeletedRows(deletedRows).
+		SetUpdatedAt(now).
+		Save(ctx)
+	return err
+placeholder
+
+func (r *usageCleanupRepository) cancelTaskWithEnt(ctx context.Context, taskID int64, canceledBy int64) (bool, error) {
+	client := clientFromContext(ctx, r.client)
+	now := time.Now()
+	affected, err := client.UsageCleanupTask.Update().
+		Where(
+			dbusagecleanuptask.IDEQ(taskID),
+			dbusagecleanuptask.StatusIn(service.UsageCleanupStatusPending, service.UsageCleanupStatusRunning),
+		).
+		SetStatus(service.UsageCleanupStatusCanceled).
+		SetCanceledBy(canceledBy).
+		SetCanceledAt(now).
+		SetFinishedAt(now).
+		ClearErrorMessage().
+		SetUpdatedAt(now).
+		Save(ctx)
+	if err != nil {
+		return false, err
+placeholder
+	return affected > 0, nil
+placeholder
+
+func (r *usageCleanupRepository) markTaskSucceededWithEnt(ctx context.Context, taskID int64, deletedRows int64) error {
+	client := clientFromContext(ctx, r.client)
+	now := time.Now()
+	_, err := client.UsageCleanupTask.Update().
+		Where(dbusagecleanuptask.IDEQ(taskID)).
+		SetStatus(service.UsageCleanupStatusSucceeded).
+		SetDeletedRows(deletedRows).
+		SetFinishedAt(now).
+		SetUpdatedAt(now).
+		Save(ctx)
+	return err
+placeholder
+
+func (r *usageCleanupRepository) markTaskFailedWithEnt(ctx context.Context, taskID int64, deletedRows int64, errorMsg string) error {
+	client := clientFromContext(ctx, r.client)
+	now := time.Now()
+	_, err := client.UsageCleanupTask.Update().
+		Where(dbusagecleanuptask.IDEQ(taskID)).
+		SetStatus(service.UsageCleanupStatusFailed).
+		SetDeletedRows(deletedRows).
+		SetErrorMessage(errorMsg).
+		SetFinishedAt(now).
+		SetUpdatedAt(now).
+		Save(ctx)
+	return err
+placeholder
+
+func usageCleanupTaskFromEnt(row *dbent.UsageCleanupTask) (service.UsageCleanupTask, error) {
+	task := service.UsageCleanupTask{
+		ID:          row.ID,
+		Status:      row.Status,
+		CreatedBy:   row.CreatedBy,
+		DeletedRows: row.DeletedRows,
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+placeholder
+	if len(row.Filters) > 0 {
+		if err := json.Unmarshal(row.Filters, &task.Filters); err != nil {
+			return service.UsageCleanupTask{placeholder, fmt.Errorf("parse cleanup filters: %w", err)
+	placeholder
+placeholder
+	if row.ErrorMessage != nil {
+		task.ErrorMsg = row.ErrorMessage
+placeholder
+	if row.CanceledBy != nil {
+		task.CanceledBy = row.CanceledBy
+placeholder
+	if row.CanceledAt != nil {
+		task.CanceledAt = row.CanceledAt
+placeholder
+	if row.StartedAt != nil {
+		task.StartedAt = row.StartedAt
+placeholder
+	if row.FinishedAt != nil {
+		task.FinishedAt = row.FinishedAt
+placeholder
+	return task, nil
 placeholder
