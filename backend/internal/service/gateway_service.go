@@ -1293,18 +1293,6 @@ placeholder
 	return allowed
 placeholder
 
-// extractSessionUUID 从 metadata.user_id 中提取会话 UUID
-// 格式: user_{64位hexplaceholder_account__session_{uuidplaceholder
-func extractSessionUUID(metadataUserID string) string {
-	if metadataUserID == "" {
-		return ""
-placeholder
-	if match := sessionIDRegex.FindStringSubmatch(metadataUserID); len(match) > 1 {
-		return match[1]
-placeholder
-	return ""
-placeholder
-
 func (s *GatewayService) getSchedulableAccount(ctx context.Context, accountID int64) (*Account, error) {
 	if s.schedulerSnapshot != nil {
 		return s.schedulerSnapshot.GetAccount(ctx, accountID)
