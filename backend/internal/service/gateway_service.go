@@ -3460,8 +3460,158 @@ placeholder
 placeholder
 
 	needModelReplace := originalModel != mappedModel
-	rewriteTools := mimicClaudeCode
 	clientDisconnected := false // 客户端断开标志，断开后继续读取上游以获取完整usage
+
+	pendingEventLines := make([]string, 0, 4)
+	toolInputBuffers := make(map[int]string)
+
+	transformToolInputJSON := func(raw string) string {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return raw
+	placeholder
+
+		var parsed any
+		if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+			return replaceToolNamesInText(raw, toolNameMap)
+	placeholder
+
+		rewritten, changed := rewriteParamKeysInValue(parsed, toolNameMap)
+		if changed {
+			if bytes, err := json.Marshal(rewritten); err == nil {
+				return string(bytes)
+		placeholder
+	placeholder
+		return raw
+placeholder
+
+	processSSEEvent := func(lines []string) ([]string, string, error) {
+		if len(lines) == 0 {
+			return nil, "", nil
+	placeholder
+
+		eventName := ""
+		dataLine := ""
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "event:") {
+				eventName = strings.TrimSpace(strings.TrimPrefix(trimmed, "event:"))
+				continue
+		placeholder
+			if dataLine == "" && sseDataRe.MatchString(trimmed) {
+				dataLine = sseDataRe.ReplaceAllString(trimmed, "")
+		placeholder
+	placeholder
+
+		if eventName == "error" {
+			return nil, dataLine, errors.New("have error in stream")
+	placeholder
+
+		if dataLine == "" {
+			return []string{strings.Join(lines, "\n") + "\n\n"placeholder, "", nil
+	placeholder
+
+		if dataLine == "[DONE]" {
+			block := ""
+			if eventName != "" {
+				block = "event: " + eventName + "\n"
+		placeholder
+			block += "data: " + dataLine + "\n\n"
+			return []string{blockplaceholder, dataLine, nil
+	placeholder
+
+		var event map[string]any
+		if err := json.Unmarshal([]byte(dataLine), &event); err != nil {
+			replaced := replaceToolNamesInText(dataLine, toolNameMap)
+			block := ""
+			if eventName != "" {
+				block = "event: " + eventName + "\n"
+		placeholder
+			block += "data: " + replaced + "\n\n"
+			return []string{blockplaceholder, replaced, nil
+	placeholder
+
+		eventType, _ := event["type"].(string)
+		if eventName == "" {
+			eventName = eventType
+	placeholder
+
+		if needModelReplace && eventType == "message_start" {
+			if msg, ok := event["message"].(map[string]any); ok {
+				if model, ok := msg["model"].(string); ok && model == mappedModel {
+					msg["model"] = originalModel
+			placeholder
+		placeholder
+	placeholder
+
+		if eventType == "content_block_delta" {
+			if delta, ok := event["delta"].(map[string]any); ok {
+				if deltaType, _ := delta["type"].(string); deltaType == "input_json_delta" {
+					if indexVal, ok := event["index"].(float64); ok {
+						index := int(indexVal)
+						if partial, ok := delta["partial_json"].(string); ok {
+							toolInputBuffers[index] += partial
+					placeholder
+				placeholder
+					return nil, dataLine, nil
+			placeholder
+		placeholder
+	placeholder
+
+		if eventType == "content_block_stop" {
+			if indexVal, ok := event["index"].(float64); ok {
+				index := int(indexVal)
+				if buffered := toolInputBuffers[index]; buffered != "" {
+					delete(toolInputBuffers, index)
+
+					transformed := transformToolInputJSON(buffered)
+					synthetic := map[string]any{
+						"type":  "content_block_delta",
+						"index": index,
+						"delta": map[string]any{
+							"type":         "input_json_delta",
+							"partial_json": transformed,
+					placeholder,
+				placeholder
+
+					synthBytes, synthErr := json.Marshal(synthetic)
+					if synthErr == nil {
+						synthBlock := "event: content_block_delta\n" + "data: " + string(synthBytes) + "\n\n"
+
+						rewriteToolNamesInValue(event, toolNameMap)
+						stopBytes, stopErr := json.Marshal(event)
+						if stopErr == nil {
+							stopBlock := ""
+							if eventName != "" {
+								stopBlock = "event: " + eventName + "\n"
+						placeholder
+							stopBlock += "data: " + string(stopBytes) + "\n\n"
+							return []string{synthBlock, stopBlockplaceholder, string(stopBytes), nil
+					placeholder
+				placeholder
+			placeholder
+		placeholder
+	placeholder
+
+		rewriteToolNamesInValue(event, toolNameMap)
+		newData, err := json.Marshal(event)
+		if err != nil {
+			replaced := replaceToolNamesInText(dataLine, toolNameMap)
+			block := ""
+			if eventName != "" {
+				block = "event: " + eventName + "\n"
+		placeholder
+			block += "data: " + replaced + "\n\n"
+			return []string{blockplaceholder, replaced, nil
+	placeholder
+
+		block := ""
+		if eventName != "" {
+			block = "event: " + eventName + "\n"
+	placeholder
+		block += "data: " + string(newData) + "\n\n"
+		return []string{blockplaceholder, string(newData), nil
+placeholder
 
 	for {
 		select {
@@ -3491,45 +3641,43 @@ placeholder
 				return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream read error: %w", ev.err)
 		placeholder
 			line := ev.line
-			if line == "event: error" {
-				// 上游返回错误事件，如果客户端已断开仍返回已收集的 usage
-				if clientDisconnected {
-					return &streamingResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: trueplaceholder, nil
+			trimmed := strings.TrimSpace(line)
+
+			if trimmed == "" {
+				if len(pendingEventLines) == 0 {
+					continue
 			placeholder
-				return nil, errors.New("have error in stream")
+
+				outputBlocks, data, err := processSSEEvent(pendingEventLines)
+				pendingEventLines = pendingEventLines[:0]
+				if err != nil {
+					if clientDisconnected {
+						return &streamingResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: trueplaceholder, nil
+				placeholder
+					return nil, err
+			placeholder
+
+				for _, block := range outputBlocks {
+					if !clientDisconnected {
+						if _, werr := fmt.Fprint(w, block); werr != nil {
+							clientDisconnected = true
+							log.Printf("Client disconnected during streaming, continuing to drain upstream for billing")
+							break
+					placeholder
+						flusher.Flush()
+				placeholder
+					if data != "" {
+						if firstTokenMs == nil && data != "[DONE]" {
+							ms := int(time.Since(startTime).Milliseconds())
+							firstTokenMs = &ms
+					placeholder
+						s.parseSSEUsage(data, usage)
+				placeholder
+			placeholder
+				continue
 		placeholder
 
-			// Extract data from SSE line (supports both "data: " and "data:" formats)
-			var data string
-			if sseDataRe.MatchString(line) {
-				// 如果有模型映射，替换响应中的model字段
-				if needModelReplace {
-					line = s.replaceModelInSSELine(line, mappedModel, originalModel)
-			placeholder
-				if rewriteTools {
-					line = s.replaceToolNamesInSSELine(line, toolNameMap)
-			placeholder
-				data = sseDataRe.ReplaceAllString(line, "")
-		placeholder
-
-			// 写入客户端（统一处理 data 行和非 data 行）
-			if !clientDisconnected {
-				if _, err := fmt.Fprintf(w, "%s\n", line); err != nil {
-					clientDisconnected = true
-					log.Printf("Client disconnected during streaming, continuing to drain upstream for billing")
-			placeholder else {
-					flusher.Flush()
-			placeholder
-		placeholder
-
-			// 无论客户端是否断开，都解析 usage（仅对 data 行）
-			if data != "" {
-				if firstTokenMs == nil && data != "[DONE]" {
-					ms := int(time.Since(startTime).Milliseconds())
-					firstTokenMs = &ms
-			placeholder
-				s.parseSSEUsage(data, usage)
-		placeholder
+			pendingEventLines = append(pendingEventLines, line)
 
 		case <-intervalCh:
 			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
