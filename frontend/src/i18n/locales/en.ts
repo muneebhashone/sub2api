@@ -571,7 +571,10 @@ export default {
     previous: 'Previous',
     next: 'Next',
     perPage: 'Per page',
-    goToPage: 'Go to page {pageplaceholder'
+    goToPage: 'Go to page {pageplaceholder',
+    jumpTo: 'Jump to',
+    jumpPlaceholder: 'Page',
+    jumpAction: 'Go'
   placeholder,
 
   // Errors
