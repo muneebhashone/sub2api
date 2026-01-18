@@ -1052,7 +1052,7 @@ func TestGatewayService_SelectAccountWithLoadAwareness(t *testing.T) {
 			concurrencyService: nil, // No concurrency service
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1105,7 +1105,7 @@ placeholder)
 			concurrencyService: nil, // legacy path
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, &groupID, sessionHash, "claude-b", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, &groupID, sessionHash, "claude-b", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1137,7 +1137,7 @@ placeholder)
 			concurrencyService: nil,
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1169,7 +1169,7 @@ placeholder)
 	placeholder
 
 		excludedIDs := map[int64]struct{placeholder{1: {placeholderplaceholder
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", excludedIDs)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", excludedIDs, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1203,7 +1203,7 @@ placeholder)
 			concurrencyService: NewConcurrencyService(concurrencyCache),
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "sticky", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "sticky", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1239,7 +1239,7 @@ placeholder)
 			concurrencyService: NewConcurrencyService(concurrencyCache),
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "sticky", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "sticky", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1266,7 +1266,7 @@ placeholder)
 			concurrencyService: nil,
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.Nil(t, result)
 		require.Contains(t, err.Error(), "no available accounts")
@@ -1298,7 +1298,7 @@ placeholder)
 			concurrencyService: nil,
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
@@ -1331,7 +1331,7 @@ placeholder)
 			concurrencyService: nil,
 	placeholder
 
-		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil)
+		result, err := svc.SelectAccountWithLoadAwareness(ctx, nil, "", "claude-3-5-sonnet-20241022", nil, "")
 	placeholder
 		require.NotNil(t, result)
 		require.NotNil(t, result.Account)
