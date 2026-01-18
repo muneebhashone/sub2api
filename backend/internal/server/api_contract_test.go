@@ -618,6 +618,14 @@ func (stubApiKeyCache) DeleteAuthCache(ctx context.Context, key string) error {
 	return nil
 placeholder
 
+func (stubApiKeyCache) PublishAuthCacheInvalidation(ctx context.Context, cacheKey string) error {
+	return nil
+placeholder
+
+func (stubApiKeyCache) SubscribeAuthCacheInvalidation(ctx context.Context, handler func(cacheKey string)) error {
+	return nil
+placeholder
+
 type stubGroupRepo struct{placeholder
 
 func (stubGroupRepo) Create(ctx context.Context, group *service.Group) error {
