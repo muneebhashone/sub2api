@@ -4,7 +4,7 @@
  */
 
 import { apiClient placeholder from '../client'
-import type { UsageLog, UsageQueryParams, PaginatedResponse placeholder from '@/types'
+import type { AdminUsageLog, UsageQueryParams, PaginatedResponse placeholder from '@/types'
 
 // ==================== Types ====================
 
@@ -85,8 +85,8 @@ placeholder
 export async function list(
   params: AdminUsageQueryParams,
   options?: { signal?: AbortSignal placeholder
-): Promise<PaginatedResponse<UsageLog>> {
-  const { data placeholder = await apiClient.get<PaginatedResponse<UsageLog>>('/admin/usage', {
+): Promise<PaginatedResponse<AdminUsageLog>> {
+  const { data placeholder = await apiClient.get<PaginatedResponse<AdminUsageLog>>('/admin/usage', {
     params,
     signal: options?.signal
   placeholder)
