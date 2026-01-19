@@ -88,6 +88,9 @@ placeholder
 func (m *mockAccountRepoForGemini) SetError(ctx context.Context, id int64, errorMsg string) error {
 	return nil
 placeholder
+func (m *mockAccountRepoForGemini) ClearError(ctx context.Context, id int64) error {
+	return nil
+placeholder
 func (m *mockAccountRepoForGemini) SetSchedulable(ctx context.Context, id int64, schedulable bool) error {
 	return nil
 placeholder

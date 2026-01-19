@@ -31,6 +31,8 @@ type GatewayHandler struct {
 	userService               *service.UserService
 	billingCacheService       *service.BillingCacheService
 	concurrencyHelper         *ConcurrencyHelper
+	maxAccountSwitches        int
+	maxAccountSwitchesGemini  int
 placeholder
 
 // NewGatewayHandler creates a new GatewayHandler
@@ -44,8 +46,16 @@ func NewGatewayHandler(
 	cfg *config.Config,
 ) *GatewayHandler {
 	pingInterval := time.Duration(0)
+	maxAccountSwitches := 10
+	maxAccountSwitchesGemini := 3
 	if cfg != nil {
 		pingInterval = time.Duration(cfg.Concurrency.PingInterval) * time.Second
+		if cfg.Gateway.MaxAccountSwitches > 0 {
+			maxAccountSwitches = cfg.Gateway.MaxAccountSwitches
+	placeholder
+		if cfg.Gateway.MaxAccountSwitchesGemini > 0 {
+			maxAccountSwitchesGemini = cfg.Gateway.MaxAccountSwitchesGemini
+	placeholder
 placeholder
 	return &GatewayHandler{
 		gatewayService:            gatewayService,
@@ -54,6 +64,8 @@ placeholder
 		userService:               userService,
 		billingCacheService:       billingCacheService,
 		concurrencyHelper:         NewConcurrencyHelper(concurrencyService, SSEPingFormatClaude, pingInterval),
+		maxAccountSwitches:        maxAccountSwitches,
+		maxAccountSwitchesGemini:  maxAccountSwitchesGemini,
 placeholder
 placeholder
 
@@ -179,7 +191,7 @@ placeholder
 placeholder
 
 	if platform == service.PlatformGemini {
-		const maxAccountSwitches = 3
+		maxAccountSwitches := h.maxAccountSwitchesGemini
 		switchCount := 0
 		failedAccountIDs := make(map[int64]struct{placeholder)
 		lastFailoverStatus := 0
@@ -313,7 +325,7 @@ placeholder
 	placeholder
 placeholder
 
-	const maxAccountSwitches = 10
+	maxAccountSwitches := h.maxAccountSwitches
 	switchCount := 0
 	failedAccountIDs := make(map[int64]struct{placeholder)
 	lastFailoverStatus := 0
