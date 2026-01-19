@@ -316,7 +316,7 @@ func RedeemCodeFromServiceAdmin(rc *service.RedeemCode) *AdminRedeemCode {
 placeholder
 	return &AdminRedeemCode{
 		RedeemCode: redeemCodeFromServiceBase(rc),
-		Notes:     rc.Notes,
+		Notes:      rc.Notes,
 placeholder
 placeholder
 
