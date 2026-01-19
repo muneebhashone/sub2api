@@ -442,7 +442,27 @@ func UserSubscriptionFromService(sub *service.UserSubscription) *UserSubscriptio
 	if sub == nil {
 		return nil
 placeholder
-	return &UserSubscription{
+	out := userSubscriptionFromServiceBase(sub)
+	return &out
+placeholder
+
+// UserSubscriptionFromServiceAdmin converts a service UserSubscription to DTO for admin users.
+// It includes assignment metadata and notes.
+func UserSubscriptionFromServiceAdmin(sub *service.UserSubscription) *AdminUserSubscription {
+	if sub == nil {
+		return nil
+placeholder
+	return &AdminUserSubscription{
+		UserSubscription: userSubscriptionFromServiceBase(sub),
+		AssignedBy:       sub.AssignedBy,
+		AssignedAt:       sub.AssignedAt,
+		Notes:            sub.Notes,
+		AssignedByUser:   UserFromServiceShallow(sub.AssignedByUser),
+placeholder
+placeholder
+
+func userSubscriptionFromServiceBase(sub *service.UserSubscription) UserSubscription {
+	return UserSubscription{
 		ID:                 sub.ID,
 		UserID:             sub.UserID,
 		GroupID:            sub.GroupID,
@@ -455,14 +475,10 @@ placeholder
 		DailyUsageUSD:      sub.DailyUsageUSD,
 		WeeklyUsageUSD:     sub.WeeklyUsageUSD,
 		MonthlyUsageUSD:    sub.MonthlyUsageUSD,
-		AssignedBy:         sub.AssignedBy,
-		AssignedAt:         sub.AssignedAt,
-		Notes:              sub.Notes,
 		CreatedAt:          sub.CreatedAt,
 		UpdatedAt:          sub.UpdatedAt,
 		User:               UserFromServiceShallow(sub.User),
 		Group:              GroupFromServiceShallow(sub.Group),
-		AssignedByUser:     UserFromServiceShallow(sub.AssignedByUser),
 placeholder
 placeholder
 
@@ -470,9 +486,9 @@ func BulkAssignResultFromService(r *service.BulkAssignResult) *BulkAssignResult 
 	if r == nil {
 		return nil
 placeholder
-	subs := make([]UserSubscription, 0, len(r.Subscriptions))
+	subs := make([]AdminUserSubscription, 0, len(r.Subscriptions))
 	for i := range r.Subscriptions {
-		subs = append(subs, *UserSubscriptionFromService(&r.Subscriptions[i]))
+		subs = append(subs, *UserSubscriptionFromServiceAdmin(&r.Subscriptions[i]))
 placeholder
 	return &BulkAssignResult{
 		SuccessCount:  r.SuccessCount,

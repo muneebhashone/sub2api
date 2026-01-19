@@ -83,9 +83,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.UserSubscription, 0, len(subscriptions))
+	out := make([]dto.AdminUserSubscription, 0, len(subscriptions))
 	for i := range subscriptions {
-		out = append(out, *dto.UserSubscriptionFromService(&subscriptions[i]))
+		out = append(out, *dto.UserSubscriptionFromServiceAdmin(&subscriptions[i]))
 placeholder
 	response.PaginatedWithResult(c, out, toResponsePagination(pagination))
 placeholder
@@ -105,7 +105,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserSubscriptionFromService(subscription))
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
 placeholder
 
 // GetProgress handles getting subscription usage progress
@@ -150,7 +150,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.UserSubscriptionFromService(subscription))
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
 placeholder
 
 // BulkAssign handles bulk assigning subscriptions to multiple users
@@ -201,7 +201,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserSubscriptionFromService(subscription))
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
 placeholder
 
 // Revoke handles revoking a subscription
@@ -239,9 +239,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.UserSubscription, 0, len(subscriptions))
+	out := make([]dto.AdminUserSubscription, 0, len(subscriptions))
 	for i := range subscriptions {
-		out = append(out, *dto.UserSubscriptionFromService(&subscriptions[i]))
+		out = append(out, *dto.UserSubscriptionFromServiceAdmin(&subscriptions[i]))
 placeholder
 	response.PaginatedWithResult(c, out, toResponsePagination(pagination))
 placeholder
@@ -261,9 +261,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.UserSubscription, 0, len(subscriptions))
+	out := make([]dto.AdminUserSubscription, 0, len(subscriptions))
 	for i := range subscriptions {
-		out = append(out, *dto.UserSubscriptionFromService(&subscriptions[i]))
+		out = append(out, *dto.UserSubscriptionFromServiceAdmin(&subscriptions[i]))
 placeholder
 	response.Success(c, out)
 placeholder
