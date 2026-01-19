@@ -187,14 +187,14 @@ import AccountCapacityCell from '@/components/account/AccountCapacityCell.vue'
 import PlatformTypeBadge from '@/components/common/PlatformTypeBadge.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { formatDateTime, formatRelativeTime placeholder from '@/utils/format'
-import type { Account, Proxy, Group placeholder from '@/types'
+import type { Account, Proxy, AdminGroup placeholder from '@/types'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 
 const proxies = ref<Proxy[]>([])
-const groups = ref<Group[]>([])
+const groups = ref<AdminGroup[]>([])
 const selIds = ref<number[]>([])
 const showCreate = ref(false)
 const showEdit = ref(false)

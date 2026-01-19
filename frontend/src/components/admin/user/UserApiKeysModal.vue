@@ -32,10 +32,10 @@ import { ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import { formatDateTime placeholder from '@/utils/format'
-import type { User, ApiKey placeholder from '@/types'
+import type { AdminUser, ApiKey placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 
-const props = defineProps<{ show: boolean, user: User | null placeholder>()
+const props = defineProps<{ show: boolean, user: AdminUser | null placeholder>()
 defineEmits(['close']); const { t placeholder = useI18n()
 const apiKeys = ref<ApiKey[]>([]); const loading = ref(false)
 

@@ -883,7 +883,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
 import { adminAPI placeholder from '@/api/admin'
-import type { Account, Proxy, Group placeholder from '@/types'
+import type { Account, Proxy, AdminGroup placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -901,7 +901,7 @@ interface Props {
   show: boolean
   account: Account | null
   proxies: Proxy[]
-  groups: Group[]
+  groups: AdminGroup[]
 placeholder
 
 const props = defineProps<Props>()
