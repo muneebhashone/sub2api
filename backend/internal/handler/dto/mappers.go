@@ -166,6 +166,11 @@ placeholder
 			enabled := true
 			out.EnableTLSFingerprint = &enabled
 	placeholder
+		// 会话ID伪装开关
+		if a.IsSessionIDMaskingEnabled() {
+			enabled := true
+			out.EnableSessionIDMasking = &enabled
+	placeholder
 placeholder
 
 	return out
