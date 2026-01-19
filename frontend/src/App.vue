@@ -2,6 +2,7 @@
 import { RouterView, useRouter, useRoute placeholder from 'vue-router'
 import { onMounted, watch placeholder from 'vue'
 import Toast from '@/components/common/Toast.vue'
+import NavigationProgress from '@/components/common/NavigationProgress.vue'
 import { useAppStore, useAuthStore, useSubscriptionStore placeholder from '@/stores'
 import { getSetupStatus placeholder from '@/api/setup'
 
@@ -84,6 +85,7 @@ placeholder)
 </script>
 
 <template>
+  <NavigationProgress />
   <RouterView />
   <Toast />
 </template>
