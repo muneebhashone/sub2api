@@ -363,6 +363,36 @@ placeholder
 	return usageLogFromServiceBase(l, AccountSummaryFromService(l.Account), true)
 placeholder
 
+func UsageCleanupTaskFromService(task *service.UsageCleanupTask) *UsageCleanupTask {
+	if task == nil {
+		return nil
+placeholder
+	return &UsageCleanupTask{
+		ID:     task.ID,
+		Status: task.Status,
+		Filters: UsageCleanupFilters{
+			StartTime:   task.Filters.StartTime,
+			EndTime:     task.Filters.EndTime,
+			UserID:      task.Filters.UserID,
+			APIKeyID:    task.Filters.APIKeyID,
+			AccountID:   task.Filters.AccountID,
+			GroupID:     task.Filters.GroupID,
+			Model:       task.Filters.Model,
+			Stream:      task.Filters.Stream,
+			BillingType: task.Filters.BillingType,
+	placeholder,
+		CreatedBy:    task.CreatedBy,
+		DeletedRows:  task.DeletedRows,
+		ErrorMessage: task.ErrorMsg,
+		CanceledBy:   task.CanceledBy,
+		CanceledAt:   task.CanceledAt,
+		StartedAt:    task.StartedAt,
+		FinishedAt:   task.FinishedAt,
+		CreatedAt:    task.CreatedAt,
+		UpdatedAt:    task.UpdatedAt,
+placeholder
+placeholder
+
 func SettingFromService(s *service.Setting) *Setting {
 	if s == nil {
 		return nil

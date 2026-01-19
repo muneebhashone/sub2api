@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -88,6 +91,7 @@ placeholder
 
 func startRedis(t *testing.T, ctx context.Context) *redis.Client {
 placeholder
+	ensureDockerAvailable(t)
 
 	redisContainer, err := tcredis.Run(ctx, redisImageTag)
 placeholder
@@ -111,4 +115,44 @@ placeholder)
 placeholder)
 
 	return rdb
+placeholder
+
+func ensureDockerAvailable(t *testing.T) {
+placeholder
+	if dockerAvailable() {
+		return
+placeholder
+	t.Skip("Docker 未启用，跳过依赖 testcontainers 的集成测试")
+placeholder
+
+func dockerAvailable() bool {
+	if os.Getenv("DOCKER_HOST") != "" {
+		return true
+placeholder
+
+	socketCandidates := []string{
+		"/var/run/docker.sock",
+		filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "docker.sock"),
+		filepath.Join(userHomeDir(), ".docker", "run", "docker.sock"),
+		filepath.Join(userHomeDir(), ".docker", "desktop", "docker.sock"),
+		filepath.Join("/run/user", strconv.Itoa(os.Getuid()), "docker.sock"),
+placeholder
+
+	for _, socket := range socketCandidates {
+		if socket == "" {
+			continue
+	placeholder
+		if _, err := os.Stat(socket); err == nil {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func userHomeDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+placeholder
+	return home
 placeholder
