@@ -151,6 +151,9 @@ placeholder
 placeholder
 
 func (s *UsageCleanupService) runOnce() {
+	if s == nil {
+		return
+placeholder
 	if !atomic.CompareAndSwapInt32(&s.running, 0, 1) {
 		log.Printf("[UsageCleanup] run_once skipped: already_running=true")
 		return
@@ -158,7 +161,7 @@ placeholder
 	defer atomic.StoreInt32(&s.running, 0)
 
 	parent := context.Background()
-	if s != nil && s.workerCtx != nil {
+	if s.workerCtx != nil {
 		parent = s.workerCtx
 placeholder
 	ctx, cancel := context.WithTimeout(parent, s.taskTimeout())

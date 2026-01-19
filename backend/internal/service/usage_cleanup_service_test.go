@@ -266,9 +266,11 @@ placeholder
 placeholder
 
 func TestUsageCleanupServiceRunOnceSuccess(t *testing.T) {
+	start := time.Now()
+	end := start.Add(2 * time.Hour)
 	repo := &cleanupRepoStub{
 		claimQueue: []*UsageCleanupTask{
-			{ID: 5, Filters: UsageCleanupFilters{StartTime: time.Now(), EndTime: time.Now().Add(2 * time.Hour)placeholderplaceholder,
+			{ID: 5, Filters: UsageCleanupFilters{StartTime: start, EndTime: endplaceholderplaceholder,
 	placeholder,
 		deleteQueue: []cleanupDeleteResponse{
 			{deleted: 2placeholder,
@@ -284,6 +286,9 @@ placeholder
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 	require.Len(t, repo.deleteCalls, 3)
+	require.Equal(t, 2, repo.deleteCalls[0].limit)
+	require.True(t, repo.deleteCalls[0].filters.StartTime.Equal(start))
+	require.True(t, repo.deleteCalls[0].filters.EndTime.Equal(end))
 	require.Len(t, repo.markSucceeded, 1)
 	require.Empty(t, repo.markFailed)
 	require.Equal(t, int64(5), repo.markSucceeded[0].taskID)
