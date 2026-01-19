@@ -1816,7 +1816,7 @@ placeholder from '@/composables/useAccountOAuth'
 import { useOpenAIOAuth placeholder from '@/composables/useOpenAIOAuth'
 import { useGeminiOAuth placeholder from '@/composables/useGeminiOAuth'
 import { useAntigravityOAuth placeholder from '@/composables/useAntigravityOAuth'
-import type { Proxy, Group, AccountPlatform, AccountType placeholder from '@/types'
+import type { Proxy, AdminGroup, AccountPlatform, AccountType placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
@@ -1862,7 +1862,7 @@ placeholder)
 interface Props {
   show: boolean
   proxies: Proxy[]
-  groups: Group[]
+  groups: AdminGroup[]
 placeholder
 
 const props = defineProps<Props>()

@@ -72,36 +72,29 @@ func GroupFromServiceShallow(g *service.Group) *Group {
 	if g == nil {
 		return nil
 placeholder
-	return &Group{
-		ID:                  g.ID,
-		Name:                g.Name,
-		Description:         g.Description,
-		Platform:            g.Platform,
-		RateMultiplier:      g.RateMultiplier,
-		IsExclusive:         g.IsExclusive,
-		Status:              g.Status,
-		SubscriptionType:    g.SubscriptionType,
-		DailyLimitUSD:       g.DailyLimitUSD,
-		WeeklyLimitUSD:      g.WeeklyLimitUSD,
-		MonthlyLimitUSD:     g.MonthlyLimitUSD,
-		ImagePrice1K:        g.ImagePrice1K,
-		ImagePrice2K:        g.ImagePrice2K,
-		ImagePrice4K:        g.ImagePrice4K,
-		ClaudeCodeOnly:      g.ClaudeCodeOnly,
-		FallbackGroupID:     g.FallbackGroupID,
-		ModelRouting:        g.ModelRouting,
-		ModelRoutingEnabled: g.ModelRoutingEnabled,
-		CreatedAt:           g.CreatedAt,
-		UpdatedAt:           g.UpdatedAt,
-		AccountCount:        g.AccountCount,
-placeholder
+	out := groupFromServiceBase(g)
+	return &out
 placeholder
 
 func GroupFromService(g *service.Group) *Group {
 	if g == nil {
 		return nil
 placeholder
-	out := GroupFromServiceShallow(g)
+	return GroupFromServiceShallow(g)
+placeholder
+
+// GroupFromServiceAdmin converts a service Group to DTO for admin users.
+// It includes internal fields like model_routing and account_count.
+func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
+	if g == nil {
+		return nil
+placeholder
+	out := &AdminGroup{
+		Group:               groupFromServiceBase(g),
+		ModelRouting:        g.ModelRouting,
+		ModelRoutingEnabled: g.ModelRoutingEnabled,
+		AccountCount:        g.AccountCount,
+placeholder
 	if len(g.AccountGroups) > 0 {
 		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))
 		for i := range g.AccountGroups {
@@ -110,6 +103,29 @@ placeholder
 	placeholder
 placeholder
 	return out
+placeholder
+
+func groupFromServiceBase(g *service.Group) Group {
+	return Group{
+		ID:               g.ID,
+		Name:             g.Name,
+		Description:      g.Description,
+		Platform:         g.Platform,
+		RateMultiplier:   g.RateMultiplier,
+		IsExclusive:      g.IsExclusive,
+		Status:           g.Status,
+		SubscriptionType: g.SubscriptionType,
+		DailyLimitUSD:    g.DailyLimitUSD,
+		WeeklyLimitUSD:   g.WeeklyLimitUSD,
+		MonthlyLimitUSD:  g.MonthlyLimitUSD,
+		ImagePrice1K:     g.ImagePrice1K,
+		ImagePrice2K:     g.ImagePrice2K,
+		ImagePrice4K:     g.ImagePrice4K,
+		ClaudeCodeOnly:   g.ClaudeCodeOnly,
+		FallbackGroupID:  g.FallbackGroupID,
+		CreatedAt:        g.CreatedAt,
+		UpdatedAt:        g.UpdatedAt,
+placeholder
 placeholder
 
 func AccountFromServiceShallow(a *service.Account) *Account {
