@@ -56,12 +56,12 @@ import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { adminAPI placeholder from '@/api/admin'
-import type { User, UserAttributeValuesMap placeholder from '@/types'
+import type { AdminUser, UserAttributeValuesMap placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import UserAttributeForm from '@/components/user/UserAttributeForm.vue'
 import Icon from '@/components/icons/Icon.vue'
 
-const props = defineProps<{ show: boolean, user: User | null placeholder>()
+const props = defineProps<{ show: boolean, user: AdminUser | null placeholder>()
 const emit = defineEmits(['close', 'success'])
 const { t placeholder = useI18n(); const appStore = useAppStore(); const { copyToClipboard placeholder = useClipboard()
 

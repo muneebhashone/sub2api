@@ -47,9 +47,6 @@ placeholder
 		return
 placeholder
 
-	// 清空notes字段，普通用户不应看到备注
-	userData.Notes = ""
-
 	response.Success(c, dto.UserFromService(userData))
 placeholder
 
@@ -104,9 +101,6 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-
-	// 清空notes字段，普通用户不应看到备注
-	updatedUser.Notes = ""
 
 	response.Success(c, dto.UserFromService(updatedUser))
 placeholder
