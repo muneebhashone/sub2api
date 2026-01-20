@@ -97,11 +97,24 @@ var allowedHeaders = map[string]bool{
 	"content-type":                              true,
 placeholder
 
-// GatewayCache defines cache operations for gateway service
+// GatewayCache 定义网关服务的缓存操作接口。
+// 提供粘性会话（Sticky Session）的存储、查询、刷新和删除功能。
+//
+// GatewayCache defines cache operations for gateway service.
+// Provides sticky session storage, retrieval, refresh and deletion capabilities.
 type GatewayCache interface {
+	// GetSessionAccountID 获取粘性会话绑定的账号 ID
+	// Get the account ID bound to a sticky session
 	GetSessionAccountID(ctx context.Context, groupID int64, sessionHash string) (int64, error)
+	// SetSessionAccountID 设置粘性会话与账号的绑定关系
+	// Set the binding between sticky session and account
 	SetSessionAccountID(ctx context.Context, groupID int64, sessionHash string, accountID int64, ttl time.Duration) error
+	// RefreshSessionTTL 刷新粘性会话的过期时间
+	// Refresh the expiration time of a sticky session
 	RefreshSessionTTL(ctx context.Context, groupID int64, sessionHash string, ttl time.Duration) error
+	// DeleteSessionAccountID 删除粘性会话绑定，用于账号不可用时主动清理
+	// Delete sticky session binding, used to proactively clean up when account becomes unavailable
+	DeleteSessionAccountID(ctx context.Context, groupID int64, sessionHash string) error
 placeholder
 
 // derefGroupID safely dereferences *int64 to int64, returning 0 if nil
@@ -110,6 +123,28 @@ func derefGroupID(groupID *int64) int64 {
 		return 0
 placeholder
 	return *groupID
+placeholder
+
+// shouldClearStickySession 检查账号是否处于不可调度状态，需要清理粘性会话绑定。
+// 当账号状态为错误、禁用、不可调度，或处于临时不可调度期间时，返回 true。
+// 这确保后续请求不会继续使用不可用的账号。
+//
+// shouldClearStickySession checks if an account is in an unschedulable state
+// and the sticky session binding should be cleared.
+// Returns true when account status is error/disabled, schedulable is false,
+// or within temporary unschedulable period.
+// This ensures subsequent requests won't continue using unavailable accounts.
+func shouldClearStickySession(account *Account) bool {
+	if account == nil {
+		return false
+placeholder
+	if account.Status == StatusError || account.Status == StatusDisabled || !account.Schedulable {
+		return true
+placeholder
+	if account.TempUnschedulableUntil != nil && time.Now().Before(*account.TempUnschedulableUntil) {
+		return true
+placeholder
+	return false
 placeholder
 
 type AccountWaitPlan struct {
@@ -620,6 +655,8 @@ placeholder
 						placeholder
 							// 粘性账号槽位满且等待队列已满，继续使用负载感知选择
 					placeholder
+				placeholder else {
+						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 				placeholder
 			placeholder
 		placeholder
@@ -720,37 +757,46 @@ placeholder
 		accountID, err := s.cache.GetSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 		if err == nil && accountID > 0 && !isExcluded(accountID) {
 			account, ok := accountByID[accountID]
-			if ok && s.isAccountInGroup(account, groupID) &&
-				s.isAccountAllowedForPlatform(account, platform, useMixed) &&
-				account.IsSchedulableForModel(requestedModel) &&
-				(requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) &&
-				s.isAccountSchedulableForWindowCost(ctx, account, true) { // 粘性会话窗口费用检查
-				result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
-				if err == nil && result.Acquired {
-					// 会话数量限制检查
-					if !s.checkAndRegisterSession(ctx, account, sessionUUID) {
-						result.ReleaseFunc() // 释放槽位，继续到 Layer 2
-				placeholder else {
-						_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL)
+			if ok {
+				// 检查账户是否需要清理粘性会话绑定
+				// Check if the account needs sticky session cleanup
+				clearSticky := shouldClearStickySession(account)
+				if clearSticky {
+					_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
+			placeholder
+				if !clearSticky && s.isAccountInGroup(account, groupID) &&
+					s.isAccountAllowedForPlatform(account, platform, useMixed) &&
+					account.IsSchedulableForModel(requestedModel) &&
+					(requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) &&
+					s.isAccountSchedulableForWindowCost(ctx, account, true) { // 粘性会话窗口费用检查
+					result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
+					if err == nil && result.Acquired {
+						// 会话数量限制检查
+						// Session count limit check
+						if !s.checkAndRegisterSession(ctx, account, sessionUUID) {
+							result.ReleaseFunc() // 释放槽位，继续到 Layer 2
+					placeholder else {
+							_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL)
+							return &AccountSelectionResult{
+								Account:     account,
+								Acquired:    true,
+								ReleaseFunc: result.ReleaseFunc,
+						placeholder, nil
+					placeholder
+				placeholder
+
+					waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, accountID)
+					if waitingCount < cfg.StickySessionMaxWaiting {
 						return &AccountSelectionResult{
-							Account:     account,
-							Acquired:    true,
-							ReleaseFunc: result.ReleaseFunc,
+							Account: account,
+							WaitPlan: &AccountWaitPlan{
+								AccountID:      accountID,
+								MaxConcurrency: account.Concurrency,
+								Timeout:        cfg.StickySessionWaitTimeout,
+								MaxWaiting:     cfg.StickySessionMaxWaiting,
+						placeholder,
 					placeholder, nil
 				placeholder
-			placeholder
-
-				waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, accountID)
-				if waitingCount < cfg.StickySessionMaxWaiting {
-					return &AccountSelectionResult{
-						Account: account,
-						WaitPlan: &AccountWaitPlan{
-							AccountID:      accountID,
-							MaxConcurrency: account.Concurrency,
-							Timeout:        cfg.StickySessionWaitTimeout,
-							MaxWaiting:     cfg.StickySessionMaxWaiting,
-					placeholder,
-				placeholder, nil
 			placeholder
 		placeholder
 	placeholder
@@ -1278,14 +1324,20 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 				if _, excluded := excludedIDs[accountID]; !excluded {
 					account, err := s.getSchedulableAccount(ctx, accountID)
 					// 检查账号分组归属和平台匹配（确保粘性会话不会跨分组或跨平台）
-					if err == nil && s.isAccountInGroup(account, groupID) && account.Platform == platform && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
-						if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-							log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+					if err == nil {
+						clearSticky := shouldClearStickySession(account)
+						if clearSticky {
+							_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 					placeholder
-						if s.debugModelRoutingEnabled() {
-							log.Printf("[ModelRoutingDebug] legacy routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
+						if !clearSticky && s.isAccountInGroup(account, groupID) && account.Platform == platform && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
+							if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
+								log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+						placeholder
+							if s.debugModelRoutingEnabled() {
+								log.Printf("[ModelRoutingDebug] legacy routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
+						placeholder
+							return account, nil
 					placeholder
-						return account, nil
 				placeholder
 			placeholder
 		placeholder
@@ -1375,11 +1427,17 @@ placeholder
 			if _, excluded := excludedIDs[accountID]; !excluded {
 				account, err := s.getSchedulableAccount(ctx, accountID)
 				// 检查账号分组归属和平台匹配（确保粘性会话不会跨分组或跨平台）
-				if err == nil && s.isAccountInGroup(account, groupID) && account.Platform == platform && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
-					if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-						log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+				if err == nil {
+					clearSticky := shouldClearStickySession(account)
+					if clearSticky {
+						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 				placeholder
-					return account, nil
+					if !clearSticky && s.isAccountInGroup(account, groupID) && account.Platform == platform && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
+						if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
+							log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+					placeholder
+						return account, nil
+				placeholder
 			placeholder
 		placeholder
 	placeholder
@@ -1479,15 +1537,21 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 				if _, excluded := excludedIDs[accountID]; !excluded {
 					account, err := s.getSchedulableAccount(ctx, accountID)
 					// 检查账号分组归属和有效性：原生平台直接匹配，antigravity 需要启用混合调度
-					if err == nil && s.isAccountInGroup(account, groupID) && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
-						if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
-							if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-								log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+					if err == nil {
+						clearSticky := shouldClearStickySession(account)
+						if clearSticky {
+							_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
+					placeholder
+						if !clearSticky && s.isAccountInGroup(account, groupID) && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
+							if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
+								if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
+									log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+							placeholder
+								if s.debugModelRoutingEnabled() {
+									log.Printf("[ModelRoutingDebug] legacy mixed routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
+							placeholder
+								return account, nil
 						placeholder
-							if s.debugModelRoutingEnabled() {
-								log.Printf("[ModelRoutingDebug] legacy mixed routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
-						placeholder
-							return account, nil
 					placeholder
 				placeholder
 			placeholder
@@ -1578,12 +1642,18 @@ placeholder
 			if _, excluded := excludedIDs[accountID]; !excluded {
 				account, err := s.getSchedulableAccount(ctx, accountID)
 				// 检查账号分组归属和有效性：原生平台直接匹配，antigravity 需要启用混合调度
-				if err == nil && s.isAccountInGroup(account, groupID) && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
-					if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
-						if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-							log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+				if err == nil {
+					clearSticky := shouldClearStickySession(account)
+					if clearSticky {
+						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
+				placeholder
+					if !clearSticky && s.isAccountInGroup(account, groupID) && account.IsSchedulableForModel(requestedModel) && (requestedModel == "" || s.isModelSupportedByAccount(account, requestedModel)) {
+						if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
+							if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
+								log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
+						placeholder
+							return account, nil
 					placeholder
-						return account, nil
 				placeholder
 			placeholder
 		placeholder
