@@ -244,6 +244,13 @@ placeholder))
 	require.ErrorContains(s.T(), err, "status 401")
 placeholder
 
+func TestNewOpenAIOAuthClient_DefaultTokenURL(t *testing.T) {
+	client := NewOpenAIOAuthClient()
+	svc, ok := client.(*openaiOAuthService)
+	require.True(t, ok)
+	require.Equal(t, openai.TokenURL, svc.tokenURL)
+placeholder
+
 func TestOpenAIOAuthServiceSuite(t *testing.T) {
 	suite.Run(t, new(OpenAIOAuthServiceSuite))
 placeholder
