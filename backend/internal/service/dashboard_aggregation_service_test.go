@@ -27,6 +27,10 @@ func (s *dashboardAggregationRepoTestStub) AggregateRange(ctx context.Context, s
 	return s.aggregateErr
 placeholder
 
+func (s *dashboardAggregationRepoTestStub) RecomputeRange(ctx context.Context, start, end time.Time) error {
+	return s.AggregateRange(ctx, start, end)
+placeholder
+
 func (s *dashboardAggregationRepoTestStub) GetAggregationWatermark(ctx context.Context) (time.Time, error) {
 	return s.watermark, nil
 placeholder

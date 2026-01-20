@@ -143,9 +143,10 @@ placeholder
 
 // GeminiCandidate Gemini 候选响应
 type GeminiCandidate struct {
-	Content      *GeminiContent `json:"content,omitempty"`
-	FinishReason string         `json:"finishReason,omitempty"`
-	Index        int            `json:"index,omitempty"`
+	Content           *GeminiContent           `json:"content,omitempty"`
+	FinishReason      string                   `json:"finishReason,omitempty"`
+	Index             int                      `json:"index,omitempty"`
+	GroundingMetadata *GeminiGroundingMetadata `json:"groundingMetadata,omitempty"`
 placeholder
 
 // GeminiUsageMetadata Gemini 用量元数据
@@ -154,6 +155,23 @@ type GeminiUsageMetadata struct {
 	CandidatesTokenCount    int `json:"candidatesTokenCount,omitempty"`
 	CachedContentTokenCount int `json:"cachedContentTokenCount,omitempty"`
 	TotalTokenCount         int `json:"totalTokenCount,omitempty"`
+placeholder
+
+// GeminiGroundingMetadata Gemini grounding 元数据（Web Search）
+type GeminiGroundingMetadata struct {
+	WebSearchQueries []string               `json:"webSearchQueries,omitempty"`
+	GroundingChunks  []GeminiGroundingChunk `json:"groundingChunks,omitempty"`
+placeholder
+
+// GeminiGroundingChunk Gemini grounding chunk
+type GeminiGroundingChunk struct {
+	Web *GeminiGroundingWeb `json:"web,omitempty"`
+placeholder
+
+// GeminiGroundingWeb Gemini grounding web 信息
+type GeminiGroundingWeb struct {
+	Title string `json:"title,omitempty"`
+	URI   string `json:"uri,omitempty"`
 placeholder
 
 // DefaultSafetySettings 默认安全设置（关闭所有过滤）

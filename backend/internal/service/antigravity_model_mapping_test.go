@@ -30,7 +30,7 @@ placeholder{
 		{"可映射 - claude-3-haiku-20240307", "claude-3-haiku-20240307", trueplaceholder,
 
 		// Gemini 前缀透传
-		{"Gemini前缀 - gemini-1.5-pro", "gemini-1.5-pro", trueplaceholder,
+		{"Gemini前缀 - gemini-2.5-pro", "gemini-2.5-pro", trueplaceholder,
 		{"Gemini前缀 - gemini-unknown-model", "gemini-unknown-model", trueplaceholder,
 		{"Gemini前缀 - gemini-future-version", "gemini-future-version", trueplaceholder,
 
@@ -142,10 +142,10 @@ placeholder{
 			expected:       "gemini-2.5-flash",
 	placeholder,
 		{
-			name:           "Gemini透传 - gemini-1.5-pro",
-			requestedModel: "gemini-1.5-pro",
+			name:           "Gemini透传 - gemini-2.5-pro",
+			requestedModel: "gemini-2.5-pro",
 			accountMapping: nil,
-			expected:       "gemini-1.5-pro",
+			expected:       "gemini-2.5-pro",
 	placeholder,
 		{
 			name:           "Gemini透传 - gemini-future-model",

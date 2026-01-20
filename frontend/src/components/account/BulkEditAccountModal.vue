@@ -648,7 +648,7 @@ import { ref, watch, computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
-import type { Proxy, Group placeholder from '@/types'
+import type { Proxy, AdminGroup placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Select from '@/components/common/Select.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
@@ -659,7 +659,7 @@ interface Props {
   show: boolean
   accountIds: number[]
   proxies: Proxy[]
-  groups: Group[]
+  groups: AdminGroup[]
 placeholder
 
 const props = defineProps<Props>()

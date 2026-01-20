@@ -133,12 +133,30 @@ func NewOpenAIGatewayService(
 placeholder
 placeholder
 
-// GenerateSessionHash generates session hash from header (OpenAI uses session_id header)
-func (s *OpenAIGatewayService) GenerateSessionHash(c *gin.Context) string {
-	sessionID := c.GetHeader("session_id")
+// GenerateSessionHash generates a sticky-session hash for OpenAI requests.
+//
+// Priority:
+//  1. Header: session_id
+//  2. Header: conversation_id
+//  3. Body:   prompt_cache_key (opencode)
+func (s *OpenAIGatewayService) GenerateSessionHash(c *gin.Context, reqBody map[string]any) string {
+	if c == nil {
+		return ""
+placeholder
+
+	sessionID := strings.TrimSpace(c.GetHeader("session_id"))
+	if sessionID == "" {
+		sessionID = strings.TrimSpace(c.GetHeader("conversation_id"))
+placeholder
+	if sessionID == "" && reqBody != nil {
+		if v, ok := reqBody["prompt_cache_key"].(string); ok {
+			sessionID = strings.TrimSpace(v)
+	placeholder
+placeholder
 	if sessionID == "" {
 		return ""
 placeholder
+
 	hash := sha256.Sum256([]byte(sessionID))
 	return hex.EncodeToString(hash[:])
 placeholder

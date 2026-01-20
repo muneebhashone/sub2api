@@ -53,9 +53,9 @@ type BulkAssignSubscriptionRequest struct {
 	Notes        string  `json:"notes"`
 placeholder
 
-// ExtendSubscriptionRequest represents extend subscription request
-type ExtendSubscriptionRequest struct {
-	Days int `json:"days" binding:"required,min=1,max=36500"` // max 100 years
+// AdjustSubscriptionRequest represents adjust subscription request (extend or shorten)
+type AdjustSubscriptionRequest struct {
+	Days int `json:"days" binding:"required,min=-36500,max=36500"` // negative to shorten, positive to extend
 placeholder
 
 // List handles listing all subscriptions with pagination and filters
@@ -83,9 +83,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.UserSubscription, 0, len(subscriptions))
+	out := make([]dto.AdminUserSubscription, 0, len(subscriptions))
 	for i := range subscriptions {
-		out = append(out, *dto.UserSubscriptionFromService(&subscriptions[i]))
+		out = append(out, *dto.UserSubscriptionFromServiceAdmin(&subscriptions[i]))
 placeholder
 	response.PaginatedWithResult(c, out, toResponsePagination(pagination))
 placeholder
@@ -105,7 +105,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserSubscriptionFromService(subscription))
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
 placeholder
 
 // GetProgress handles getting subscription usage progress
@@ -150,7 +150,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.UserSubscriptionFromService(subscription))
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
 placeholder
 
 // BulkAssign handles bulk assigning subscriptions to multiple users
@@ -180,7 +180,7 @@ placeholder
 	response.Success(c, dto.BulkAssignResultFromService(result))
 placeholder
 
-// Extend handles extending a subscription
+// Extend handles adjusting a subscription (extend or shorten)
 // POST /api/v1/admin/subscriptions/:id/extend
 func (h *SubscriptionHandler) Extend(c *gin.Context) {
 	subscriptionID, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -189,7 +189,7 @@ func (h *SubscriptionHandler) Extend(c *gin.Context) {
 		return
 placeholder
 
-	var req ExtendSubscriptionRequest
+	var req AdjustSubscriptionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
@@ -201,7 +201,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserSubscriptionFromService(subscription))
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
 placeholder
 
 // Revoke handles revoking a subscription
@@ -239,9 +239,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.UserSubscription, 0, len(subscriptions))
+	out := make([]dto.AdminUserSubscription, 0, len(subscriptions))
 	for i := range subscriptions {
-		out = append(out, *dto.UserSubscriptionFromService(&subscriptions[i]))
+		out = append(out, *dto.UserSubscriptionFromServiceAdmin(&subscriptions[i]))
 placeholder
 	response.PaginatedWithResult(c, out, toResponsePagination(pagination))
 placeholder
@@ -261,9 +261,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.UserSubscription, 0, len(subscriptions))
+	out := make([]dto.AdminUserSubscription, 0, len(subscriptions))
 	for i := range subscriptions {
-		out = append(out, *dto.UserSubscriptionFromService(&subscriptions[i]))
+		out = append(out, *dto.UserSubscriptionFromServiceAdmin(&subscriptions[i]))
 placeholder
 	response.Success(c, out)
 placeholder

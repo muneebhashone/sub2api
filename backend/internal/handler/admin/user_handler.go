@@ -84,9 +84,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.User, 0, len(users))
+	out := make([]dto.AdminUser, 0, len(users))
 	for i := range users {
-		out = append(out, *dto.UserFromService(&users[i]))
+		out = append(out, *dto.UserFromServiceAdmin(&users[i]))
 placeholder
 	response.Paginated(c, out, total, page, pageSize)
 placeholder
@@ -129,7 +129,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(user))
+	response.Success(c, dto.UserFromServiceAdmin(user))
 placeholder
 
 // Create handles creating a new user
@@ -155,7 +155,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(user))
+	response.Success(c, dto.UserFromServiceAdmin(user))
 placeholder
 
 // Update handles updating a user
@@ -189,7 +189,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(user))
+	response.Success(c, dto.UserFromServiceAdmin(user))
 placeholder
 
 // Delete handles deleting a user
@@ -231,7 +231,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(user))
+	response.Success(c, dto.UserFromServiceAdmin(user))
 placeholder
 
 // GetUserAPIKeys handles getting user's API keys
