@@ -618,6 +618,14 @@ func (stubApiKeyCache) DeleteAuthCache(ctx context.Context, key string) error {
 	return nil
 placeholder
 
+func (stubApiKeyCache) PublishAuthCacheInvalidation(ctx context.Context, cacheKey string) error {
+	return nil
+placeholder
+
+func (stubApiKeyCache) SubscribeAuthCacheInvalidation(ctx context.Context, handler func(cacheKey string)) error {
+	return nil
+placeholder
+
 type stubGroupRepo struct{placeholder
 
 func (stubGroupRepo) Create(ctx context.Context, group *service.Group) error {
@@ -733,6 +741,10 @@ func (s *stubAccountRepo) BatchUpdateLastUsed(ctx context.Context, updates map[i
 placeholder
 
 func (s *stubAccountRepo) SetError(ctx context.Context, id int64, errorMsg string) error {
+	return errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ClearError(ctx context.Context, id int64) error {
 	return errors.New("not implemented")
 placeholder
 

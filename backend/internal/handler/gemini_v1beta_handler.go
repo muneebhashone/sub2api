@@ -220,7 +220,7 @@ placeholder
 	if sessionHash != "" {
 		sessionKey = "gemini:" + sessionHash
 placeholder
-	const maxAccountSwitches = 3
+	maxAccountSwitches := h.maxAccountSwitchesGemini
 	switchCount := 0
 	failedAccountIDs := make(map[int64]struct{placeholder)
 	lastFailoverStatus := 0
