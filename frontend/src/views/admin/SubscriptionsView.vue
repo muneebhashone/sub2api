@@ -466,7 +466,28 @@
             v-model="assignForm.group_id"
             :options="subscriptionGroupOptions"
             :placeholder="t('admin.subscriptions.selectGroup')"
-          />
+          >
+            <template #selected="{ option placeholder">
+              <GroupBadge
+                v-if="option"
+                :name="(option as unknown as GroupOption).label"
+                :platform="(option as unknown as GroupOption).platform"
+                :subscription-type="(option as unknown as GroupOption).subscriptionType"
+                :rate-multiplier="(option as unknown as GroupOption).rate"
+              />
+              <span v-else class="text-gray-400">{{ t('admin.subscriptions.selectGroup') placeholderplaceholder</span>
+            </template>
+            <template #option="{ option, selected placeholder">
+              <GroupOptionItem
+                :name="(option as unknown as GroupOption).label"
+                :platform="(option as unknown as GroupOption).platform"
+                :subscription-type="(option as unknown as GroupOption).subscriptionType"
+                :rate-multiplier="(option as unknown as GroupOption).rate"
+                :description="(option as unknown as GroupOption).description"
+                :selected="selected"
+              />
+            </template>
+          </Select>
           <p class="input-hint">{{ t('admin.subscriptions.groupHint') placeholderplaceholder</p>
         </div>
         <div>
@@ -599,7 +620,7 @@ import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
-import type { UserSubscription, Group placeholder from '@/types'
+import type { UserSubscription, Group, GroupPlatform, SubscriptionType placeholder from '@/types'
 import type { SimpleUser placeholder from '@/api/admin/usage'
 import type { Column placeholder from '@/components/common/types'
 import { formatDateOnly placeholder from '@/utils/format'
@@ -612,10 +633,20 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
+import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Icon from '@/components/icons/Icon.vue'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
+
+interface GroupOption {
+  value: number
+  label: string
+  description: string | null
+  platform: GroupPlatform
+  subscriptionType: SubscriptionType
+  rate: number
+placeholder
 
 // User column display mode: 'email' or 'username'
 const userColumnMode = ref<'email' | 'username'>('email')
@@ -792,7 +823,14 @@ const groupOptions = computed(() => [
 const subscriptionGroupOptions = computed(() =>
   groups.value
     .filter((g) => g.subscription_type === 'subscription' && g.status === 'active')
-    .map((g) => ({ value: g.id, label: g.name placeholder))
+    .map((g) => ({
+      value: g.id,
+      label: g.name,
+      description: g.description,
+      platform: g.platform,
+      subscriptionType: g.subscription_type,
+      rate: g.rate_multiplier
+    placeholder))
 )
 
 const applyFilters = () => {
