@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -342,6 +343,44 @@ placeholder{
 		placeholder`,
 	placeholder,
 		{
+			name: "POST /api/v1/admin/accounts/lookup",
+			setup: func(t *testing.T, deps *contractDeps) {
+			placeholder
+				deps.accountRepo.lookupAccounts = []service.Account{
+					{
+						ID:       101,
+						Name:     "Alice Account",
+						Platform: "antigravity",
+				placeholder
+							"email": "alice@example.com",
+					placeholder,
+				placeholder,
+			placeholder
+		placeholder,
+			method: http.MethodPost,
+			path:   "/api/v1/admin/accounts/lookup",
+			body:   `{"platform":"antigravity","emails":["Alice@Example.com","bob@example.com"]placeholder`,
+			headers: map[string]string{
+				"Content-Type": "application/json",
+		placeholder,
+			wantStatus: http.StatusOK,
+			wantJSON: `{
+				"code": 0,
+				"message": "success",
+				"data": {
+					"matched": [
+						{
+							"email": "alice@example.com",
+							"account_id": 101,
+							"platform": "antigravity",
+							"name": "Alice Account"
+					placeholder
+					],
+					"missing": ["bob@example.com"]
+			placeholder
+		placeholder`,
+	placeholder,
+		{
 			name:   "POST /api/v1/admin/accounts/bulk-update",
 			method: http.MethodPost,
 			path:   "/api/v1/admin/accounts/bulk-update",
@@ -387,6 +426,7 @@ type contractDeps struct {
 	apiKeyRepo  *stubApiKeyRepo
 	usageRepo   *stubUsageLogRepo
 	settingRepo *stubSettingRepo
+	accountRepo *stubAccountRepo
 placeholder
 
 func newContractDeps(t *testing.T) *contractDeps {
@@ -482,6 +522,7 @@ placeholder
 	v1Admin.Use(adminAuth)
 	v1Admin.GET("/settings", adminSettingHandler.GetSettings)
 	v1Admin.POST("/accounts/bulk-update", adminAccountHandler.BulkUpdate)
+	v1Admin.POST("/accounts/lookup", adminAccountHandler.Lookup)
 
 	return &contractDeps{
 		now:         now,
@@ -489,6 +530,7 @@ placeholder
 		apiKeyRepo:  apiKeyRepo,
 		usageRepo:   usageRepo,
 		settingRepo: settingRepo,
+		accountRepo: &accountRepo,
 placeholder
 placeholder
 
@@ -673,7 +715,8 @@ func (stubGroupRepo) DeleteAccountGroupsByGroupID(ctx context.Context, groupID i
 placeholder
 
 type stubAccountRepo struct {
-	bulkUpdateIDs []int64
+	bulkUpdateIDs  []int64
+	lookupAccounts []service.Account
 placeholder
 
 func (s *stubAccountRepo) Create(ctx context.Context, account *service.Account) error {
@@ -722,6 +765,36 @@ placeholder
 
 func (s *stubAccountRepo) ListByPlatform(ctx context.Context, platform string) ([]service.Account, error) {
 	return nil, errors.New("not implemented")
+placeholder
+
+func (s *stubAccountRepo) ListByPlatformAndCredentialEmails(ctx context.Context, platform string, emails []string) ([]service.Account, error) {
+	if len(s.lookupAccounts) == 0 {
+		return nil, nil
+placeholder
+	emailSet := make(map[string]struct{placeholder, len(emails))
+	for _, email := range emails {
+		normalized := strings.ToLower(strings.TrimSpace(email))
+		if normalized == "" {
+			continue
+	placeholder
+		emailSet[normalized] = struct{placeholder{placeholder
+placeholder
+	var matches []service.Account
+	for i := range s.lookupAccounts {
+		account := &s.lookupAccounts[i]
+		if account.Platform != platform {
+			continue
+	placeholder
+		accountEmail := strings.ToLower(strings.TrimSpace(account.GetCredential("email")))
+		if accountEmail == "" {
+			continue
+	placeholder
+		if _, ok := emailSet[accountEmail]; !ok {
+			continue
+	placeholder
+		matches = append(matches, *account)
+placeholder
+	return matches, nil
 placeholder
 
 func (s *stubAccountRepo) UpdateLastUsed(ctx context.Context, id int64) error {

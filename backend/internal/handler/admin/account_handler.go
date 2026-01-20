@@ -129,6 +129,13 @@ type BulkUpdateAccountsRequest struct {
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
 placeholder
 
+// AccountLookupRequest 用于凭证身份信息查找账号
+type AccountLookupRequest struct {
+	Platform     string   `json:"platform" binding:"required"`
+	Emails       []string `json:"emails" binding:"required,min=1"`
+	IdentityType string   `json:"identity_type"`
+placeholder
+
 // AccountWithConcurrency extends Account with real-time concurrency info
 type AccountWithConcurrency struct {
 	*dto.Account
@@ -256,6 +263,87 @@ placeholder
 placeholder
 
 	response.Paginated(c, result, total, page, pageSize)
+placeholder
+
+// Lookup 根据凭证身份信息查找账号
+// POST /api/v1/admin/accounts/lookup
+func (h *AccountHandler) Lookup(c *gin.Context) {
+	var req AccountLookupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	identityType := strings.TrimSpace(req.IdentityType)
+	if identityType == "" {
+		identityType = "credential_email"
+placeholder
+	if identityType != "credential_email" {
+		response.BadRequest(c, "Unsupported identity_type")
+		return
+placeholder
+
+	platform := strings.TrimSpace(req.Platform)
+	if platform == "" {
+		response.BadRequest(c, "Platform is required")
+		return
+placeholder
+
+	normalized := make([]string, 0, len(req.Emails))
+	seen := make(map[string]struct{placeholder)
+	for _, email := range req.Emails {
+		cleaned := strings.ToLower(strings.TrimSpace(email))
+		if cleaned == "" {
+			continue
+	placeholder
+		if _, ok := seen[cleaned]; ok {
+			continue
+	placeholder
+		seen[cleaned] = struct{placeholder{placeholder
+		normalized = append(normalized, cleaned)
+placeholder
+	if len(normalized) == 0 {
+		response.BadRequest(c, "Emails is required")
+		return
+placeholder
+
+	accounts, err := h.adminService.LookupAccountsByCredentialEmail(c.Request.Context(), platform, normalized)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	matchedMap := make(map[string]service.Account)
+	for _, account := range accounts {
+		email := strings.ToLower(strings.TrimSpace(account.GetCredential("email")))
+		if email == "" {
+			continue
+	placeholder
+		if _, ok := matchedMap[email]; ok {
+			continue
+	placeholder
+		matchedMap[email] = account
+placeholder
+
+	matched := make([]gin.H, 0, len(matchedMap))
+	missing := make([]string, 0)
+	for _, email := range normalized {
+		if account, ok := matchedMap[email]; ok {
+			matched = append(matched, gin.H{
+				"email":      email,
+				"account_id": account.ID,
+				"platform":   account.Platform,
+				"name":       account.Name,
+		placeholder)
+			continue
+	placeholder
+		missing = append(missing, email)
+placeholder
+
+	response.Success(c, gin.H{
+		"matched": matched,
+		"missing": missing,
+placeholder)
 placeholder
 
 // GetByID handles getting an account by ID

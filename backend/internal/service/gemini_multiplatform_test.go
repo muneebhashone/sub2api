@@ -81,6 +81,9 @@ placeholder
 func (m *mockAccountRepoForGemini) ListByPlatform(ctx context.Context, platform string) ([]Account, error) {
 	return nil, nil
 placeholder
+func (m *mockAccountRepoForGemini) ListByPlatformAndCredentialEmails(ctx context.Context, platform string, emails []string) ([]Account, error) {
+	return nil, nil
+placeholder
 func (m *mockAccountRepoForGemini) UpdateLastUsed(ctx context.Context, id int64) error { return nil placeholder
 func (m *mockAccountRepoForGemini) BatchUpdateLastUsed(ctx context.Context, updates map[int64]time.Time) error {
 	return nil
