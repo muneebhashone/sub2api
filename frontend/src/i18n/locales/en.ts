@@ -169,7 +169,13 @@ export default {
       justNow: 'Just now',
       minutesAgo: '{nplaceholderm ago',
       hoursAgo: '{nplaceholderh ago',
-      daysAgo: '{nplaceholderd ago'
+      daysAgo: '{nplaceholderd ago',
+      countdown: {
+        daysHours: '{dplaceholderd {hplaceholderh',
+        hoursMinutes: '{hplaceholderh {mplaceholderm',
+        minutes: '{mplaceholderm',
+        withSuffix: '{timeplaceholder to lift'
+      placeholder
     placeholder
   placeholder,
 
@@ -1090,6 +1096,8 @@ export default {
         cooldown: 'Cooldown',
         paused: 'Paused',
         limited: 'Limited',
+        rateLimited: 'Rate Limited',
+        overloaded: 'Overloaded',
         tempUnschedulable: 'Temp Unschedulable',
         rateLimitedUntil: 'Rate limited until {timeplaceholder',
         overloadedUntil: 'Overloaded until {timeplaceholder',
