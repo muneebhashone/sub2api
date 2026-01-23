@@ -490,9 +490,23 @@ placeholder
 placeholder
 
 // buildGenerationConfig 构建 generationConfig
+const (
+	defaultMaxOutputTokens   = 64000
+	maxOutputTokensUpperBound = 65000
+	maxOutputTokensClaude     = 64000
+)
+
+func maxOutputTokensLimit(model string) int {
+	if strings.HasPrefix(model, "claude-") {
+		return maxOutputTokensClaude
+placeholder
+	return maxOutputTokensUpperBound
+placeholder
+
 func buildGenerationConfig(req *ClaudeRequest) *GeminiGenerationConfig {
+	maxLimit := maxOutputTokensLimit(req.Model)
 	config := &GeminiGenerationConfig{
-		MaxOutputTokens: 64000, // 默认最大输出
+		MaxOutputTokens: defaultMaxOutputTokens, // 默认最大输出
 		StopSequences:   DefaultStopSequences,
 placeholder
 
@@ -514,6 +528,10 @@ placeholder
 		placeholder
 			config.ThinkingConfig.ThinkingBudget = budget
 	placeholder
+placeholder
+
+	if config.MaxOutputTokens > maxLimit {
+		config.MaxOutputTokens = maxLimit
 placeholder
 
 	// 其他参数
