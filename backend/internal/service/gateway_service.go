@@ -55,6 +55,15 @@ placeholder
 	return sessionHash[:8]
 placeholder
 
+func normalizeClaudeModelForAnthropic(requestedModel string) string {
+	for _, prefix := range anthropicPrefixMappings {
+		if strings.HasPrefix(requestedModel, prefix) {
+			return prefix
+	placeholder
+placeholder
+	return requestedModel
+placeholder
+
 // sseDataRe matches SSE data lines with optional whitespace after colon.
 // Some upstream APIs return non-standard "data:" without space (should be "data: ").
 var (
@@ -70,6 +79,12 @@ var (
 		"You are a Claude agent, built on Anthropic's Claude Agent SDK",        // Agent SDK 变体
 		"You are a file search specialist for Claude Code",                     // Explore Agent 版
 		"You are a helpful AI assistant tasked with summarizing conversations", // Compact 版
+placeholder
+
+	anthropicPrefixMappings = []string{
+		"claude-opus-4-5",
+		"claude-haiku-4-5",
+		"claude-sonnet-4-5",
 placeholder
 )
 
@@ -951,6 +966,10 @@ placeholder
 	return group, nil
 placeholder
 
+func (s *GatewayService) ResolveGroupByID(ctx context.Context, groupID int64) (*Group, error) {
+	return s.resolveGroupByID(ctx, groupID)
+placeholder
+
 func (s *GatewayService) routingAccountIDsForRequest(ctx context.Context, groupID *int64, requestedModel string, platform string) []int64 {
 	if groupID == nil || requestedModel == "" || platform != PlatformAnthropic {
 		return nil
@@ -1016,7 +1035,7 @@ func (s *GatewayService) checkClaudeCodeRestriction(ctx context.Context, groupID
 placeholder
 
 	// 强制平台模式不检查 Claude Code 限制
-	if _, hasForcePlatform := ctx.Value(ctxkey.ForcePlatform).(string); hasForcePlatform {
+	if forcePlatform, hasForcePlatform := ctx.Value(ctxkey.ForcePlatform).(string); hasForcePlatform && forcePlatform != "" {
 		return nil, groupID, nil
 placeholder
 
@@ -1719,6 +1738,9 @@ func (s *GatewayService) isModelSupportedByAccount(account *Account, requestedMo
 		// Antigravity 平台使用专门的模型支持检查
 		return IsAntigravityModelSupported(requestedModel)
 placeholder
+	if account.Platform == PlatformAnthropic {
+		requestedModel = normalizeClaudeModelForAnthropic(requestedModel)
+placeholder
 	// 其他平台使用账户的模型支持检查
 	return account.IsModelSupported(requestedModel)
 placeholder
@@ -2115,16 +2137,28 @@ placeholder
 	// 强制执行 cache_control 块数量限制（最多 4 个）
 	body = enforceCacheControlLimit(body)
 
-	// 应用模型映射（仅对apikey类型账号）
+	// 应用模型映射（APIKey 明确映射优先，其次使用 Anthropic 前缀映射）
 	originalModel := reqModel
+	mappedModel := reqModel
+	mappingSource := ""
 	if account.Type == AccountTypeAPIKey {
-		mappedModel := account.GetMappedModel(reqModel)
+		mappedModel = account.GetMappedModel(reqModel)
 		if mappedModel != reqModel {
-			// 替换请求体中的模型名
-			body = s.replaceModelInBody(body, mappedModel)
-			reqModel = mappedModel
-			log.Printf("Model mapping applied: %s -> %s (account: %s)", originalModel, mappedModel, account.Name)
+			mappingSource = "account"
 	placeholder
+placeholder
+	if mappingSource == "" && account.Platform == PlatformAnthropic {
+		normalized := normalizeClaudeModelForAnthropic(reqModel)
+		if normalized != reqModel {
+			mappedModel = normalized
+			mappingSource = "prefix"
+	placeholder
+placeholder
+	if mappedModel != reqModel {
+		// 替换请求体中的模型名
+		body = s.replaceModelInBody(body, mappedModel)
+		reqModel = mappedModel
+		log.Printf("Model mapping applied: %s -> %s (account: %s, source=%s)", originalModel, mappedModel, account.Name, mappingSource)
 placeholder
 
 	// 获取凭证
@@ -3426,15 +3460,27 @@ placeholder
 		return nil
 placeholder
 
-	// 应用模型映射（仅对 apikey 类型账号）
-	if account.Type == AccountTypeAPIKey {
-		if reqModel != "" {
-			mappedModel := account.GetMappedModel(reqModel)
+	// 应用模型映射（APIKey 明确映射优先，其次使用 Anthropic 前缀映射）
+	if reqModel != "" {
+		mappedModel := reqModel
+		mappingSource := ""
+		if account.Type == AccountTypeAPIKey {
+			mappedModel = account.GetMappedModel(reqModel)
 			if mappedModel != reqModel {
-				body = s.replaceModelInBody(body, mappedModel)
-				reqModel = mappedModel
-				log.Printf("CountTokens model mapping applied: %s -> %s (account: %s)", parsed.Model, mappedModel, account.Name)
+				mappingSource = "account"
 		placeholder
+	placeholder
+		if mappingSource == "" && account.Platform == PlatformAnthropic {
+			normalized := normalizeClaudeModelForAnthropic(reqModel)
+			if normalized != reqModel {
+				mappedModel = normalized
+				mappingSource = "prefix"
+		placeholder
+	placeholder
+		if mappedModel != reqModel {
+			body = s.replaceModelInBody(body, mappedModel)
+			reqModel = mappedModel
+			log.Printf("CountTokens model mapping applied: %s -> %s (account: %s, source=%s)", parsed.Model, mappedModel, account.Name, mappingSource)
 	placeholder
 placeholder
 

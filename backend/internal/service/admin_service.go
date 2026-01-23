@@ -108,6 +108,8 @@ type CreateGroupInput struct {
 	ImagePrice4K    *float64
 	ClaudeCodeOnly  bool   // 仅允许 Claude Code 客户端
 	FallbackGroupID *int64 // 降级分组 ID
+	// 无效请求兜底分组 ID（仅 anthropic 平台使用）
+	FallbackGroupIDOnInvalidRequest *int64
 	// 模型路由配置（仅 anthropic 平台使用）
 	ModelRouting        map[string][]int64
 	ModelRoutingEnabled bool // 是否启用模型路由
@@ -130,6 +132,8 @@ type UpdateGroupInput struct {
 	ImagePrice4K    *float64
 	ClaudeCodeOnly  *bool  // 仅允许 Claude Code 客户端
 	FallbackGroupID *int64 // 降级分组 ID
+	// 无效请求兜底分组 ID（仅 anthropic 平台使用）
+	FallbackGroupIDOnInvalidRequest *int64
 	// 模型路由配置（仅 anthropic 平台使用）
 	ModelRouting        map[string][]int64
 	ModelRoutingEnabled *bool // 是否启用模型路由
@@ -572,24 +576,35 @@ placeholder
 			return nil, err
 	placeholder
 placeholder
+	fallbackOnInvalidRequest := input.FallbackGroupIDOnInvalidRequest
+	if fallbackOnInvalidRequest != nil && *fallbackOnInvalidRequest <= 0 {
+		fallbackOnInvalidRequest = nil
+placeholder
+	// 校验无效请求兜底分组
+	if fallbackOnInvalidRequest != nil {
+		if err := s.validateFallbackGroupOnInvalidRequest(ctx, 0, platform, subscriptionType, *fallbackOnInvalidRequest); err != nil {
+			return nil, err
+	placeholder
+placeholder
 
 	group := &Group{
-		Name:             input.Name,
-		Description:      input.Description,
-		Platform:         platform,
-		RateMultiplier:   input.RateMultiplier,
-		IsExclusive:      input.IsExclusive,
-		Status:           StatusActive,
-		SubscriptionType: subscriptionType,
-		DailyLimitUSD:    dailyLimit,
-		WeeklyLimitUSD:   weeklyLimit,
-		MonthlyLimitUSD:  monthlyLimit,
-		ImagePrice1K:     imagePrice1K,
-		ImagePrice2K:     imagePrice2K,
-		ImagePrice4K:     imagePrice4K,
-		ClaudeCodeOnly:   input.ClaudeCodeOnly,
-		FallbackGroupID:  input.FallbackGroupID,
-		ModelRouting:     input.ModelRouting,
+		Name:                            input.Name,
+		Description:                     input.Description,
+		Platform:                        platform,
+		RateMultiplier:                  input.RateMultiplier,
+		IsExclusive:                     input.IsExclusive,
+		Status:                          StatusActive,
+		SubscriptionType:                subscriptionType,
+		DailyLimitUSD:                   dailyLimit,
+		WeeklyLimitUSD:                  weeklyLimit,
+		MonthlyLimitUSD:                 monthlyLimit,
+		ImagePrice1K:                    imagePrice1K,
+		ImagePrice2K:                    imagePrice2K,
+		ImagePrice4K:                    imagePrice4K,
+		ClaudeCodeOnly:                  input.ClaudeCodeOnly,
+		FallbackGroupID:                 input.FallbackGroupID,
+		FallbackGroupIDOnInvalidRequest: fallbackOnInvalidRequest,
+		ModelRouting:                    input.ModelRouting,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
@@ -649,6 +664,37 @@ placeholder
 	placeholder
 		nextID = *fallbackGroup.FallbackGroupID
 placeholder
+placeholder
+
+// validateFallbackGroupOnInvalidRequest 校验无效请求兜底分组的有效性
+// currentGroupID: 当前分组 ID（新建时为 0）
+// platform/subscriptionType: 当前分组的有效平台/订阅类型
+// fallbackGroupID: 兜底分组 ID
+func (s *adminServiceImpl) validateFallbackGroupOnInvalidRequest(ctx context.Context, currentGroupID int64, platform, subscriptionType string, fallbackGroupID int64) error {
+	if platform != PlatformAnthropic && platform != PlatformAntigravity {
+		return fmt.Errorf("invalid request fallback only supported for anthropic or antigravity groups")
+placeholder
+	if subscriptionType == SubscriptionTypeSubscription {
+		return fmt.Errorf("subscription groups cannot set invalid request fallback")
+placeholder
+	if currentGroupID > 0 && currentGroupID == fallbackGroupID {
+		return fmt.Errorf("cannot set self as invalid request fallback group")
+placeholder
+
+	fallbackGroup, err := s.groupRepo.GetByIDLite(ctx, fallbackGroupID)
+	if err != nil {
+		return fmt.Errorf("fallback group not found: %w", err)
+placeholder
+	if fallbackGroup.Platform != PlatformAnthropic {
+		return fmt.Errorf("fallback group must be anthropic platform")
+placeholder
+	if fallbackGroup.SubscriptionType == SubscriptionTypeSubscription {
+		return fmt.Errorf("fallback group cannot be subscription type")
+placeholder
+	if fallbackGroup.FallbackGroupIDOnInvalidRequest != nil {
+		return fmt.Errorf("fallback group cannot have invalid request fallback configured")
+placeholder
+	return nil
 placeholder
 
 func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *UpdateGroupInput) (*Group, error) {
@@ -717,6 +763,20 @@ placeholder
 			group.FallbackGroupID = nil
 	placeholder
 placeholder
+	fallbackOnInvalidRequest := group.FallbackGroupIDOnInvalidRequest
+	if input.FallbackGroupIDOnInvalidRequest != nil {
+		if *input.FallbackGroupIDOnInvalidRequest > 0 {
+			fallbackOnInvalidRequest = input.FallbackGroupIDOnInvalidRequest
+	placeholder else {
+			fallbackOnInvalidRequest = nil
+	placeholder
+placeholder
+	if fallbackOnInvalidRequest != nil {
+		if err := s.validateFallbackGroupOnInvalidRequest(ctx, id, group.Platform, group.SubscriptionType, *fallbackOnInvalidRequest); err != nil {
+			return nil, err
+	placeholder
+placeholder
+	group.FallbackGroupIDOnInvalidRequest = fallbackOnInvalidRequest
 
 	// 模型路由配置
 	if input.ModelRouting != nil {
