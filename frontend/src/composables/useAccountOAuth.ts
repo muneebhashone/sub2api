@@ -17,6 +17,7 @@ placeholder
 export interface TokenInfo {
   org_uuid?: string
   account_uuid?: string
+  email_address?: string
   [key: string]: unknown
 placeholder
 
@@ -159,6 +160,9 @@ export function useAccountOAuth() {
     placeholder
     if (tokenInfo.account_uuid) {
       extra.account_uuid = tokenInfo.account_uuid
+    placeholder
+    if (tokenInfo.email_address) {
+      extra.email_address = tokenInfo.email_address
     placeholder
     return Object.keys(extra).length > 0 ? extra : undefined
   placeholder
