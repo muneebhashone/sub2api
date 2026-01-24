@@ -247,3 +247,85 @@ placeholder
 		BonusAmount: promoCode.BonusAmount,
 placeholder)
 placeholder
+
+// ForgotPasswordRequest 忘记密码请求
+type ForgotPasswordRequest struct {
+	Email          string `json:"email" binding:"required,email"`
+	TurnstileToken string `json:"turnstile_token"`
+placeholder
+
+// ForgotPasswordResponse 忘记密码响应
+type ForgotPasswordResponse struct {
+	Message string `json:"message"`
+placeholder
+
+// ForgotPassword 请求密码重置
+// POST /api/v1/auth/forgot-password
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	// Turnstile 验证
+	if err := h.authService.VerifyTurnstile(c.Request.Context(), req.TurnstileToken, ip.GetClientIP(c)); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	// Build frontend base URL from request
+	scheme := "https"
+	if c.Request.TLS == nil {
+		// Check X-Forwarded-Proto header (common in reverse proxy setups)
+		if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+			scheme = proto
+	placeholder else {
+			scheme = "http"
+	placeholder
+placeholder
+	frontendBaseURL := scheme + "://" + c.Request.Host
+
+	// Request password reset (async)
+	// Note: This returns success even if email doesn't exist (to prevent enumeration)
+	if err := h.authService.RequestPasswordResetAsync(c.Request.Context(), req.Email, frontendBaseURL); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, ForgotPasswordResponse{
+		Message: "If your email is registered, you will receive a password reset link shortly.",
+placeholder)
+placeholder
+
+// ResetPasswordRequest 重置密码请求
+type ResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+placeholder
+
+// ResetPasswordResponse 重置密码响应
+type ResetPasswordResponse struct {
+	Message string `json:"message"`
+placeholder
+
+// ResetPassword 重置密码
+// POST /api/v1/auth/reset-password
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	// Reset password
+	if err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.Token, req.NewPassword); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, ResetPasswordResponse{
+		Message: "Your password has been reset successfully. You can now log in with your new password.",
+placeholder)
+placeholder

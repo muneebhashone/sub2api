@@ -79,6 +79,24 @@ const routes: RouteRecordRaw[] = [
       title: 'LinuxDo OAuth Callback'
     placeholder
   placeholder,
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/auth/ForgotPasswordView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Forgot Password'
+    placeholder
+  placeholder,
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/views/auth/ResetPasswordView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Reset Password'
+    placeholder
+  placeholder,
 
   // ==================== User Routes ====================
   {

@@ -133,6 +133,57 @@ export async function validatePromoCode(code: string): Promise<ValidatePromoCode
   return data
 placeholder
 
+/**
+ * Forgot password request
+ */
+export interface ForgotPasswordRequest {
+  email: string
+  turnstile_token?: string
+placeholder
+
+/**
+ * Forgot password response
+ */
+export interface ForgotPasswordResponse {
+  message: string
+placeholder
+
+/**
+ * Request password reset link
+ * @param request - Email and optional Turnstile token
+ * @returns Response with message
+ */
+export async function forgotPassword(request: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+  const { data placeholder = await apiClient.post<ForgotPasswordResponse>('/auth/forgot-password', request)
+  return data
+placeholder
+
+/**
+ * Reset password request
+ */
+export interface ResetPasswordRequest {
+  email: string
+  token: string
+  new_password: string
+placeholder
+
+/**
+ * Reset password response
+ */
+export interface ResetPasswordResponse {
+  message: string
+placeholder
+
+/**
+ * Reset password with token
+ * @param request - Email, token, and new password
+ * @returns Response with message
+ */
+export async function resetPassword(request: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+  const { data placeholder = await apiClient.post<ResetPasswordResponse>('/auth/reset-password', request)
+  return data
+placeholder
+
 export const authAPI = {
   login,
   register,
@@ -144,7 +195,9 @@ export const authAPI = {
   clearAuthToken,
   getPublicSettings,
   sendVerifyCode,
-  validatePromoCode
+  validatePromoCode,
+  forgotPassword,
+  resetPassword
 placeholder
 
 export default authAPI
