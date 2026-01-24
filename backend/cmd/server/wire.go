@@ -70,6 +70,7 @@ func provideCleanup(
 	schedulerSnapshot *service.SchedulerSnapshotService,
 	tokenRefresh *service.TokenRefreshService,
 	accountExpiry *service.AccountExpiryService,
+	subscriptionExpiry *service.SubscriptionExpiryService,
 	usageCleanup *service.UsageCleanupService,
 	pricing *service.PricingService,
 	emailQueue *service.EmailQueueService,
@@ -136,6 +137,10 @@ func provideCleanup(
 	placeholder
 			{"AccountExpiryService", func() error {
 				accountExpiry.Stop()
+				return nil
+	placeholder
+			{"SubscriptionExpiryService", func() error {
+				subscriptionExpiry.Stop()
 				return nil
 	placeholder
 			{"PricingService", func() error {
