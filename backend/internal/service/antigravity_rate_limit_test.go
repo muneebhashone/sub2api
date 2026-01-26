@@ -94,14 +94,14 @@ placeholder
 
 	var handleErrorCalled bool
 	result, err := antigravityRetryLoop(antigravityRetryLoopParams{
-		prefix:      "[test]",
-		ctx:         context.Background(),
-		account:     account,
-		proxyURL:    "",
-		accessToken: "token",
-		action:      "generateContent",
-		body:        []byte(`{"input":"test"placeholder`),
-		quotaScope:  AntigravityQuotaScopeClaude,
+		prefix:       "[test]",
+		ctx:          context.Background(),
+		account:      account,
+		proxyURL:     "",
+		accessToken:  "token",
+		action:       "generateContent",
+		body:         []byte(`{"input":"test"placeholder`),
+		quotaScope:   AntigravityQuotaScopeClaude,
 		httpUpstream: upstream,
 		handleError: func(ctx context.Context, prefix string, account *Account, statusCode int, headers http.Header, body []byte, quotaScope AntigravityQuotaScope) {
 			handleErrorCalled = true
