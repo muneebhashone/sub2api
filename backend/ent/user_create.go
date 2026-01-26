@@ -167,6 +167,48 @@ placeholder
 	return _c
 placeholder
 
+// SetTotpSecretEncrypted sets the "totp_secret_encrypted" field.
+func (_c *UserCreate) SetTotpSecretEncrypted(v string) *UserCreate {
+	_c.mutation.SetTotpSecretEncrypted(v)
+	return _c
+placeholder
+
+// SetNillableTotpSecretEncrypted sets the "totp_secret_encrypted" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTotpSecretEncrypted(v *string) *UserCreate {
+	if v != nil {
+		_c.SetTotpSecretEncrypted(*v)
+placeholder
+	return _c
+placeholder
+
+// SetTotpEnabled sets the "totp_enabled" field.
+func (_c *UserCreate) SetTotpEnabled(v bool) *UserCreate {
+	_c.mutation.SetTotpEnabled(v)
+	return _c
+placeholder
+
+// SetNillableTotpEnabled sets the "totp_enabled" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTotpEnabled(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetTotpEnabled(*v)
+placeholder
+	return _c
+placeholder
+
+// SetTotpEnabledAt sets the "totp_enabled_at" field.
+func (_c *UserCreate) SetTotpEnabledAt(v time.Time) *UserCreate {
+	_c.mutation.SetTotpEnabledAt(v)
+	return _c
+placeholder
+
+// SetNillableTotpEnabledAt sets the "totp_enabled_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTotpEnabledAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetTotpEnabledAt(*v)
+placeholder
+	return _c
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *UserCreate) AddAPIKeyIDs(ids ...int64) *UserCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -362,6 +404,10 @@ placeholder
 		v := user.DefaultNotes
 		_c.mutation.SetNotes(v)
 placeholder
+	if _, ok := _c.mutation.TotpEnabled(); !ok {
+		v := user.DefaultTotpEnabled
+		_c.mutation.SetTotpEnabled(v)
+placeholder
 	return nil
 placeholder
 
@@ -421,6 +467,9 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.Notes(); !ok {
 		return &ValidationError{Name: "notes", err: errors.New(`ent: missing required field "User.notes"`)placeholder
+placeholder
+	if _, ok := _c.mutation.TotpEnabled(); !ok {
+		return &ValidationError{Name: "totp_enabled", err: errors.New(`ent: missing required field "User.totp_enabled"`)placeholder
 placeholder
 	return nil
 placeholder
@@ -492,6 +541,18 @@ placeholder
 	if value, ok := _c.mutation.Notes(); ok {
 		_spec.SetField(user.FieldNotes, field.TypeString, value)
 		_node.Notes = value
+placeholder
+	if value, ok := _c.mutation.TotpSecretEncrypted(); ok {
+		_spec.SetField(user.FieldTotpSecretEncrypted, field.TypeString, value)
+		_node.TotpSecretEncrypted = &value
+placeholder
+	if value, ok := _c.mutation.TotpEnabled(); ok {
+		_spec.SetField(user.FieldTotpEnabled, field.TypeBool, value)
+		_node.TotpEnabled = value
+placeholder
+	if value, ok := _c.mutation.TotpEnabledAt(); ok {
+		_spec.SetField(user.FieldTotpEnabledAt, field.TypeTime, value)
+		_node.TotpEnabledAt = &value
 placeholder
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -815,6 +876,54 @@ func (u *UserUpsert) UpdateNotes() *UserUpsert {
 	return u
 placeholder
 
+// SetTotpSecretEncrypted sets the "totp_secret_encrypted" field.
+func (u *UserUpsert) SetTotpSecretEncrypted(v string) *UserUpsert {
+	u.Set(user.FieldTotpSecretEncrypted, v)
+	return u
+placeholder
+
+// UpdateTotpSecretEncrypted sets the "totp_secret_encrypted" field to the value that was provided on create.
+func (u *UserUpsert) UpdateTotpSecretEncrypted() *UserUpsert {
+	u.SetExcluded(user.FieldTotpSecretEncrypted)
+	return u
+placeholder
+
+// ClearTotpSecretEncrypted clears the value of the "totp_secret_encrypted" field.
+func (u *UserUpsert) ClearTotpSecretEncrypted() *UserUpsert {
+	u.SetNull(user.FieldTotpSecretEncrypted)
+	return u
+placeholder
+
+// SetTotpEnabled sets the "totp_enabled" field.
+func (u *UserUpsert) SetTotpEnabled(v bool) *UserUpsert {
+	u.Set(user.FieldTotpEnabled, v)
+	return u
+placeholder
+
+// UpdateTotpEnabled sets the "totp_enabled" field to the value that was provided on create.
+func (u *UserUpsert) UpdateTotpEnabled() *UserUpsert {
+	u.SetExcluded(user.FieldTotpEnabled)
+	return u
+placeholder
+
+// SetTotpEnabledAt sets the "totp_enabled_at" field.
+func (u *UserUpsert) SetTotpEnabledAt(v time.Time) *UserUpsert {
+	u.Set(user.FieldTotpEnabledAt, v)
+	return u
+placeholder
+
+// UpdateTotpEnabledAt sets the "totp_enabled_at" field to the value that was provided on create.
+func (u *UserUpsert) UpdateTotpEnabledAt() *UserUpsert {
+	u.SetExcluded(user.FieldTotpEnabledAt)
+	return u
+placeholder
+
+// ClearTotpEnabledAt clears the value of the "totp_enabled_at" field.
+func (u *UserUpsert) ClearTotpEnabledAt() *UserUpsert {
+	u.SetNull(user.FieldTotpEnabledAt)
+	return u
+placeholder
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -1018,6 +1127,62 @@ placeholder
 func (u *UserUpsertOne) UpdateNotes() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateNotes()
+placeholder)
+placeholder
+
+// SetTotpSecretEncrypted sets the "totp_secret_encrypted" field.
+func (u *UserUpsertOne) SetTotpSecretEncrypted(v string) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotpSecretEncrypted(v)
+placeholder)
+placeholder
+
+// UpdateTotpSecretEncrypted sets the "totp_secret_encrypted" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateTotpSecretEncrypted() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotpSecretEncrypted()
+placeholder)
+placeholder
+
+// ClearTotpSecretEncrypted clears the value of the "totp_secret_encrypted" field.
+func (u *UserUpsertOne) ClearTotpSecretEncrypted() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearTotpSecretEncrypted()
+placeholder)
+placeholder
+
+// SetTotpEnabled sets the "totp_enabled" field.
+func (u *UserUpsertOne) SetTotpEnabled(v bool) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotpEnabled(v)
+placeholder)
+placeholder
+
+// UpdateTotpEnabled sets the "totp_enabled" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateTotpEnabled() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotpEnabled()
+placeholder)
+placeholder
+
+// SetTotpEnabledAt sets the "totp_enabled_at" field.
+func (u *UserUpsertOne) SetTotpEnabledAt(v time.Time) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotpEnabledAt(v)
+placeholder)
+placeholder
+
+// UpdateTotpEnabledAt sets the "totp_enabled_at" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateTotpEnabledAt() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotpEnabledAt()
+placeholder)
+placeholder
+
+// ClearTotpEnabledAt clears the value of the "totp_enabled_at" field.
+func (u *UserUpsertOne) ClearTotpEnabledAt() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearTotpEnabledAt()
 placeholder)
 placeholder
 
@@ -1390,6 +1555,62 @@ placeholder
 func (u *UserUpsertBulk) UpdateNotes() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateNotes()
+placeholder)
+placeholder
+
+// SetTotpSecretEncrypted sets the "totp_secret_encrypted" field.
+func (u *UserUpsertBulk) SetTotpSecretEncrypted(v string) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotpSecretEncrypted(v)
+placeholder)
+placeholder
+
+// UpdateTotpSecretEncrypted sets the "totp_secret_encrypted" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateTotpSecretEncrypted() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotpSecretEncrypted()
+placeholder)
+placeholder
+
+// ClearTotpSecretEncrypted clears the value of the "totp_secret_encrypted" field.
+func (u *UserUpsertBulk) ClearTotpSecretEncrypted() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearTotpSecretEncrypted()
+placeholder)
+placeholder
+
+// SetTotpEnabled sets the "totp_enabled" field.
+func (u *UserUpsertBulk) SetTotpEnabled(v bool) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotpEnabled(v)
+placeholder)
+placeholder
+
+// UpdateTotpEnabled sets the "totp_enabled" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateTotpEnabled() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotpEnabled()
+placeholder)
+placeholder
+
+// SetTotpEnabledAt sets the "totp_enabled_at" field.
+func (u *UserUpsertBulk) SetTotpEnabledAt(v time.Time) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetTotpEnabledAt(v)
+placeholder)
+placeholder
+
+// UpdateTotpEnabledAt sets the "totp_enabled_at" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateTotpEnabledAt() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateTotpEnabledAt()
+placeholder)
+placeholder
+
+// ClearTotpEnabledAt clears the value of the "totp_enabled_at" field.
+func (u *UserUpsertBulk) ClearTotpEnabledAt() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearTotpEnabledAt()
 placeholder)
 placeholder
 

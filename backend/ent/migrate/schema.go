@@ -610,6 +610,9 @@ placeholder
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "username", Type: field.TypeString, Size: 100, Default: ""placeholder,
 		{Name: "notes", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "totp_secret_encrypted", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "totp_enabled", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "totp_enabled_at", Type: field.TypeTime, Nullable: trueplaceholder,
 placeholder
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{

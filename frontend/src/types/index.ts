@@ -1108,3 +1108,52 @@ export interface UpdatePromoCodeRequest {
   expires_at?: number | null
   notes?: string
 placeholder
+
+// ==================== TOTP (2FA) Types ====================
+
+export interface TotpStatus {
+  enabled: boolean
+  enabled_at: number | null  // Unix timestamp in seconds
+  feature_enabled: boolean
+placeholder
+
+export interface TotpSetupRequest {
+  email_code?: string
+  password?: string
+placeholder
+
+export interface TotpSetupResponse {
+  secret: string
+  qr_code_url: string
+  setup_token: string
+  countdown: number
+placeholder
+
+export interface TotpEnableRequest {
+  totp_code: string
+  setup_token: string
+placeholder
+
+export interface TotpEnableResponse {
+  success: boolean
+placeholder
+
+export interface TotpDisableRequest {
+  email_code?: string
+  password?: string
+placeholder
+
+export interface TotpVerificationMethod {
+  method: 'email' | 'password'
+placeholder
+
+export interface TotpLoginResponse {
+  requires_2fa: boolean
+  temp_token?: string
+  user_email_masked?: string
+placeholder
+
+export interface TotpLogin2FARequest {
+  temp_token: string
+  totp_code: string
+placeholder
