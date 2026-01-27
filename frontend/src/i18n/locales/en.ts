@@ -2617,6 +2617,7 @@ export default {
         empty: 'No data',
         queued: 'Queue {countplaceholder',
         rateLimited: 'Rate-limited {countplaceholder',
+        scopeRateLimitedTooltip: '{scopeplaceholder rate-limited ({countplaceholder accounts)',
         errorAccounts: 'Errors {countplaceholder',
         loadFailed: 'Failed to load concurrency data'
       placeholder,
