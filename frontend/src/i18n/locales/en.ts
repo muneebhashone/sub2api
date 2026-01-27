@@ -1081,6 +1081,7 @@ export default {
         limited: 'Limited',
         tempUnschedulable: 'Temp Unschedulable',
         rateLimitedUntil: 'Rate limited until {timeplaceholder',
+        scopeRateLimitedUntil: '{scopeplaceholder rate limited until {timeplaceholder',
         overloadedUntil: 'Overloaded until {timeplaceholder',
         viewTempUnschedDetails: 'View temp unschedulable details'
       placeholder,
