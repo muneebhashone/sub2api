@@ -224,6 +224,7 @@ placeholder
 			FallbackGroupIDOnInvalidRequest: apiKey.Group.FallbackGroupIDOnInvalidRequest,
 			ModelRouting:                    apiKey.Group.ModelRouting,
 			ModelRoutingEnabled:             apiKey.Group.ModelRoutingEnabled,
+			MCPXMLInject:                    apiKey.Group.MCPXMLInject,
 	placeholder
 placeholder
 	return snapshot
@@ -269,6 +270,7 @@ placeholder
 			FallbackGroupIDOnInvalidRequest: snapshot.Group.FallbackGroupIDOnInvalidRequest,
 			ModelRouting:                    snapshot.Group.ModelRouting,
 			ModelRoutingEnabled:             snapshot.Group.ModelRoutingEnabled,
+			MCPXMLInject:                    snapshot.Group.MCPXMLInject,
 	placeholder
 placeholder
 	return apiKey

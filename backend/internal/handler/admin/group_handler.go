@@ -44,6 +44,7 @@ type CreateGroupRequest struct {
 	// 模型路由配置（仅 anthropic 平台使用）
 	ModelRouting        map[string][]int64 `json:"model_routing"`
 	ModelRoutingEnabled bool               `json:"model_routing_enabled"`
+	MCPXMLInject        *bool              `json:"mcp_xml_inject"`
 placeholder
 
 // UpdateGroupRequest represents update group request
@@ -68,6 +69,7 @@ type UpdateGroupRequest struct {
 	// 模型路由配置（仅 anthropic 平台使用）
 	ModelRouting        map[string][]int64 `json:"model_routing"`
 	ModelRoutingEnabled *bool              `json:"model_routing_enabled"`
+	MCPXMLInject        *bool              `json:"mcp_xml_inject"`
 placeholder
 
 // List handles listing all groups with pagination
@@ -174,6 +176,7 @@ placeholder
 		FallbackGroupIDOnInvalidRequest: req.FallbackGroupIDOnInvalidRequest,
 		ModelRouting:                    req.ModelRouting,
 		ModelRoutingEnabled:             req.ModelRoutingEnabled,
+		MCPXMLInject:                    req.MCPXMLInject,
 placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -217,6 +220,7 @@ placeholder
 		FallbackGroupIDOnInvalidRequest: req.FallbackGroupIDOnInvalidRequest,
 		ModelRouting:                    req.ModelRouting,
 		ModelRoutingEnabled:             req.ModelRoutingEnabled,
+		MCPXMLInject:                    req.MCPXMLInject,
 placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
