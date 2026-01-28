@@ -421,6 +421,16 @@ const userNavItems = computed(() => {
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
+    ...(appStore.cachedPublicSettings?.purchase_subscription_enabled
+      ? [
+          {
+            path: '/purchase',
+            label: t('nav.buySubscription'),
+            icon: CreditCardIcon,
+            hideInSimpleMode: true
+          placeholder
+        ]
+      : []),
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
     { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
   ]
@@ -433,6 +443,16 @@ const personalNavItems = computed(() => {
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
+    ...(appStore.cachedPublicSettings?.purchase_subscription_enabled
+      ? [
+          {
+            path: '/purchase',
+            label: t('nav.buySubscription'),
+            icon: CreditCardIcon,
+            hideInSimpleMode: true
+          placeholder
+        ]
+      : []),
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
     { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder
   ]
