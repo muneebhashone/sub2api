@@ -795,17 +795,15 @@ placeholder
 	if parsed.MetadataUserID != "" {
 		return ""
 placeholder
-	accountUUID := account.GetExtraString("account_uuid")
-	if accountUUID == "" {
-		return ""
-placeholder
 
 	userID := strings.TrimSpace(account.GetClaudeUserID())
 	if userID == "" && fp != nil {
 		userID = fp.ClientID
 placeholder
 	if userID == "" {
-		return ""
+		// Fall back to a random, well-formed client id so we can still satisfy
+		// Claude Code OAuth requirements when account metadata is incomplete.
+		userID = generateClientID()
 placeholder
 
 	sessionHash := s.GenerateSessionHash(parsed)
@@ -814,7 +812,14 @@ placeholder
 		seed := fmt.Sprintf("%d::%s", account.ID, sessionHash)
 		sessionID = generateSessionUUID(seed)
 placeholder
-	return fmt.Sprintf("user_%s_account_%s_session_%s", userID, accountUUID, sessionID)
+
+	// Prefer the newer format that includes account_uuid (if present),
+	// otherwise fall back to the legacy Claude Code format.
+	accountUUID := strings.TrimSpace(account.GetExtraString("account_uuid"))
+	if accountUUID != "" {
+		return fmt.Sprintf("user_%s_account_%s_session_%s", userID, accountUUID, sessionID)
+placeholder
+	return fmt.Sprintf("user_%s_account__session_%s", userID, sessionID)
 placeholder
 
 func generateSessionUUID(seed string) string {
