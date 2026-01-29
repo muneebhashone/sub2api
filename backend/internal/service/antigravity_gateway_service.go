@@ -1412,8 +1412,15 @@ placeholder
 		proxyURL = account.Proxy.URL()
 placeholder
 
+	// 过滤掉 parts 为空的消息（Gemini API 不接受空 parts）
+	filteredBody, err := filterEmptyPartsFromGeminiRequest(body)
+	if err != nil {
+		log.Printf("[Antigravity] Failed to filter empty parts: %v", err)
+		filteredBody = body
+placeholder
+
 	// Antigravity 上游要求必须包含身份提示词，注入到请求中
-	injectedBody, err := injectIdentityPatchToGeminiRequest(body)
+	injectedBody, err := injectIdentityPatchToGeminiRequest(filteredBody)
 	if err != nil {
 		return nil, err
 placeholder
@@ -2776,5 +2783,57 @@ placeholder
 		return body, nil
 placeholder
 
+	return json.Marshal(payload)
+placeholder
+
+// filterEmptyPartsFromGeminiRequest 过滤 Gemini 请求中 parts 为空的消息
+// Gemini API 不接受 parts 为空数组的消息，会返回 400 错误
+func filterEmptyPartsFromGeminiRequest(body []byte) ([]byte, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, err
+placeholder
+
+	contents, ok := payload["contents"].([]any)
+	if !ok || len(contents) == 0 {
+		return body, nil
+placeholder
+
+	filtered := make([]any, 0, len(contents))
+	modified := false
+
+	for _, c := range contents {
+		contentMap, ok := c.(map[string]any)
+		if !ok {
+			filtered = append(filtered, c)
+			continue
+	placeholder
+
+		parts, hasParts := contentMap["parts"]
+		if !hasParts {
+			filtered = append(filtered, c)
+			continue
+	placeholder
+
+		partsSlice, ok := parts.([]any)
+		if !ok {
+			filtered = append(filtered, c)
+			continue
+	placeholder
+
+		// 跳过 parts 为空数组的消息
+		if len(partsSlice) == 0 {
+			modified = true
+			continue
+	placeholder
+
+		filtered = append(filtered, c)
+placeholder
+
+	if !modified {
+		return body, nil
+placeholder
+
+	payload["contents"] = filtered
 	return json.Marshal(payload)
 placeholder
