@@ -434,6 +434,172 @@ placeholder
 		Columns:    SettingsColumns,
 		PrimaryKey: []*schema.Column{SettingsColumns[0]placeholder,
 placeholder
+	// SoraAccountsColumns holds the columns for the "sora_accounts" table.
+	SoraAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "account_id", Type: field.TypeInt64placeholder,
+		{Name: "access_token", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "session_token", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "refresh_token", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "client_id", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "email", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "username", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "remark", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "use_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "plan_type", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "plan_title", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "subscription_end", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "sora_supported", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "sora_invite_code", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "sora_redeemed_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "sora_remaining_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "sora_total_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "sora_cooldown_until", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "cooled_until", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "image_enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "video_enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "image_concurrency", Type: field.TypeInt, Default: -1placeholder,
+		{Name: "video_concurrency", Type: field.TypeInt, Default: -1placeholder,
+		{Name: "is_expired", Type: field.TypeBool, Default: falseplaceholder,
+placeholder
+	// SoraAccountsTable holds the schema information for the "sora_accounts" table.
+	SoraAccountsTable = &schema.Table{
+		Name:       "sora_accounts",
+		Columns:    SoraAccountsColumns,
+		PrimaryKey: []*schema.Column{SoraAccountsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "soraaccount_account_id",
+				Unique:  true,
+				Columns: []*schema.Column{SoraAccountsColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "soraaccount_plan_type",
+				Unique:  false,
+				Columns: []*schema.Column{SoraAccountsColumns[12]placeholder,
+		placeholder,
+			{
+				Name:    "soraaccount_sora_supported",
+				Unique:  false,
+				Columns: []*schema.Column{SoraAccountsColumns[15]placeholder,
+		placeholder,
+			{
+				Name:    "soraaccount_image_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{SoraAccountsColumns[22]placeholder,
+		placeholder,
+			{
+				Name:    "soraaccount_video_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{SoraAccountsColumns[23]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// SoraCacheFilesColumns holds the columns for the "sora_cache_files" table.
+	SoraCacheFilesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "task_id", Type: field.TypeString, Nullable: true, Size: 120placeholder,
+		{Name: "account_id", Type: field.TypeInt64placeholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+		{Name: "media_type", Type: field.TypeString, Size: 32placeholder,
+		{Name: "original_url", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "cache_path", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "cache_url", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "size_bytes", Type: field.TypeInt64, Default: 0placeholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// SoraCacheFilesTable holds the schema information for the "sora_cache_files" table.
+	SoraCacheFilesTable = &schema.Table{
+		Name:       "sora_cache_files",
+		Columns:    SoraCacheFilesColumns,
+		PrimaryKey: []*schema.Column{SoraCacheFilesColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "soracachefile_account_id",
+				Unique:  false,
+				Columns: []*schema.Column{SoraCacheFilesColumns[2]placeholder,
+		placeholder,
+			{
+				Name:    "soracachefile_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{SoraCacheFilesColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "soracachefile_media_type",
+				Unique:  false,
+				Columns: []*schema.Column{SoraCacheFilesColumns[4]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// SoraTasksColumns holds the columns for the "sora_tasks" table.
+	SoraTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "task_id", Type: field.TypeString, Unique: true, Size: 120placeholder,
+		{Name: "account_id", Type: field.TypeInt64placeholder,
+		{Name: "model", Type: field.TypeString, Size: 120placeholder,
+		{Name: "prompt", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "status", Type: field.TypeString, Size: 32, Default: "processing"placeholder,
+		{Name: "progress", Type: field.TypeFloat64, Default: 0placeholder,
+		{Name: "result_urls", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "retry_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// SoraTasksTable holds the schema information for the "sora_tasks" table.
+	SoraTasksTable = &schema.Table{
+		Name:       "sora_tasks",
+		Columns:    SoraTasksColumns,
+		PrimaryKey: []*schema.Column{SoraTasksColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "soratask_account_id",
+				Unique:  false,
+				Columns: []*schema.Column{SoraTasksColumns[2]placeholder,
+		placeholder,
+			{
+				Name:    "soratask_status",
+				Unique:  false,
+				Columns: []*schema.Column{SoraTasksColumns[5]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// SoraUsageStatsColumns holds the columns for the "sora_usage_stats" table.
+	SoraUsageStatsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "account_id", Type: field.TypeInt64placeholder,
+		{Name: "image_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "video_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "error_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "last_error_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "today_image_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "today_video_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "today_error_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "today_date", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "date"placeholderplaceholder,
+		{Name: "consecutive_error_count", Type: field.TypeInt, Default: 0placeholder,
+placeholder
+	// SoraUsageStatsTable holds the schema information for the "sora_usage_stats" table.
+	SoraUsageStatsTable = &schema.Table{
+		Name:       "sora_usage_stats",
+		Columns:    SoraUsageStatsColumns,
+		PrimaryKey: []*schema.Column{SoraUsageStatsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "sorausagestat_account_id",
+				Unique:  true,
+				Columns: []*schema.Column{SoraUsageStatsColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "sorausagestat_today_date",
+				Unique:  false,
+				Columns: []*schema.Column{SoraUsageStatsColumns[11]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// UsageCleanupTasksColumns holds the columns for the "usage_cleanup_tasks" table.
 	UsageCleanupTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -843,6 +1009,10 @@ placeholder
 		ProxiesTable,
 		RedeemCodesTable,
 		SettingsTable,
+		SoraAccountsTable,
+		SoraCacheFilesTable,
+		SoraTasksTable,
+		SoraUsageStatsTable,
 		UsageCleanupTasksTable,
 		UsageLogsTable,
 		UsersTable,
@@ -889,6 +1059,18 @@ placeholder
 placeholder
 	SettingsTable.Annotation = &entsql.Annotation{
 		Table: "settings",
+placeholder
+	SoraAccountsTable.Annotation = &entsql.Annotation{
+		Table: "sora_accounts",
+placeholder
+	SoraCacheFilesTable.Annotation = &entsql.Annotation{
+		Table: "sora_cache_files",
+placeholder
+	SoraTasksTable.Annotation = &entsql.Annotation{
+		Table: "sora_tasks",
+placeholder
+	SoraUsageStatsTable.Annotation = &entsql.Annotation{
+		Table: "sora_usage_stats",
 placeholder
 	UsageCleanupTasksTable.Annotation = &entsql.Annotation{
 		Table: "usage_cleanup_tasks",
