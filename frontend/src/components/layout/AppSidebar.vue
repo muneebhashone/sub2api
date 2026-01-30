@@ -319,6 +319,21 @@ const ServerIcon = {
     )
 placeholder
 
+const BellIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' placeholder,
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9a6 6 0 10-12 0v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0'
+        placeholder)
+      ]
+    )
+placeholder
+
 const TicketIcon = {
   render: () =>
     h(
@@ -418,6 +433,7 @@ placeholder
 const userNavItems = computed(() => {
   const items = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
+    { path: '/announcements', label: t('nav.announcements'), icon: BellIcon placeholder,
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
@@ -440,6 +456,7 @@ placeholder)
 // Personal navigation items (for admin's "My Account" section, without Dashboard)
 const personalNavItems = computed(() => {
   const items = [
+    { path: '/announcements', label: t('nav.announcements'), icon: BellIcon placeholder,
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
@@ -470,6 +487,7 @@ const adminNavItems = computed(() => {
     { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon placeholder,
+    { path: '/admin/announcements', label: t('nav.announcements'), icon: BellIcon placeholder,
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon placeholder,
     { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true placeholder,
