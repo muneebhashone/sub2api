@@ -56,6 +56,7 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379placeholder
       - REDIS_PASSWORD=${REDIS_PASSWORD:-placeholder
       - REDIS_DB=${REDIS_DB:-0placeholder
+      - REDIS_ENABLE_TLS=${REDIS_ENABLE_TLS:-falseplaceholder
 
       # =======================================================================
       # Admin Account (auto-created on first run)
