@@ -77,6 +77,9 @@ placeholder
 func (m *mockAccountRepoForPlatform) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*Account, error) {
 	return nil, nil
 placeholder
+func (m *mockAccountRepoForPlatform) FindByExtraField(ctx context.Context, key string, value interface{placeholder) ([]Account, error) {
+	return nil, nil
+placeholder
 func (m *mockAccountRepoForPlatform) Update(ctx context.Context, account *Account) error {
 	return nil
 placeholder

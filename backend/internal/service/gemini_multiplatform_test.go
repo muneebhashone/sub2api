@@ -66,6 +66,9 @@ func (m *mockAccountRepoForGemini) Create(ctx context.Context, account *Account)
 func (m *mockAccountRepoForGemini) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*Account, error) {
 	return nil, nil
 placeholder
+func (m *mockAccountRepoForGemini) FindByExtraField(ctx context.Context, key string, value interface{placeholder) ([]Account, error) {
+	return nil, nil
+placeholder
 func (m *mockAccountRepoForGemini) Update(ctx context.Context, account *Account) error { return nil placeholder
 func (m *mockAccountRepoForGemini) Delete(ctx context.Context, id int64) error         { return nil placeholder
 func (m *mockAccountRepoForGemini) List(ctx context.Context, params pagination.PaginationParams) ([]Account, *pagination.PaginationResult, error) {
