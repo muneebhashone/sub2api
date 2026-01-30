@@ -72,4 +72,3 @@ placeholder
 		UpdatedAt: a.Announcement.UpdatedAt,
 placeholder
 placeholder
-
