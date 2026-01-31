@@ -375,7 +375,7 @@ placeholder
 
 	token, err := provider.GetAccessToken(context.Background(), account)
 placeholder
-	require.Contains(t, err.Error(), "not an openai oauth account")
+	require.Contains(t, err.Error(), "not an openai/sora oauth account")
 	require.Empty(t, token)
 placeholder
 
@@ -389,7 +389,7 @@ placeholder
 
 	token, err := provider.GetAccessToken(context.Background(), account)
 placeholder
-	require.Contains(t, err.Error(), "not an openai oauth account")
+	require.Contains(t, err.Error(), "not an openai/sora oauth account")
 	require.Empty(t, token)
 placeholder
 

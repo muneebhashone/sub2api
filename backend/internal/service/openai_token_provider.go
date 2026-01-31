@@ -41,8 +41,8 @@ func (p *OpenAITokenProvider) GetAccessToken(ctx context.Context, account *Accou
 	if account == nil {
 		return "", errors.New("account is nil")
 placeholder
-	if account.Platform != PlatformOpenAI || account.Type != AccountTypeOAuth {
-		return "", errors.New("not an openai oauth account")
+	if (account.Platform != PlatformOpenAI && account.Platform != PlatformSora) || account.Type != AccountTypeOAuth {
+		return "", errors.New("not an openai/sora oauth account")
 placeholder
 
 	cacheKey := OpenAITokenCacheKey(account)
@@ -157,7 +157,7 @@ placeholder
 	placeholder
 placeholder
 
-	accessToken := account.GetOpenAIAccessToken()
+	accessToken := account.GetCredential("access_token")
 	if strings.TrimSpace(accessToken) == "" {
 		return "", errors.New("access_token not found in credentials")
 placeholder
