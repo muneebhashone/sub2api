@@ -928,6 +928,7 @@ placeholder)
 	viper.SetDefault("sora2api.admin_token_ttl_seconds", 900)
 	viper.SetDefault("sora2api.admin_timeout_seconds", 10)
 	viper.SetDefault("sora2api.token_import_mode", "at")
+
 placeholder
 
 func (c *Config) Validate() error {
@@ -1263,20 +1264,6 @@ placeholder
 		if err := ValidateAbsoluteHTTPURL(c.Sora2API.BaseURL); err != nil {
 			return fmt.Errorf("sora2api.base_url invalid: %w", err)
 	placeholder
-		warnIfInsecureURL("sora2api.base_url", c.Sora2API.BaseURL)
-placeholder
-	if mode := strings.TrimSpace(strings.ToLower(c.Sora2API.TokenImportMode)); mode != "" {
-		switch mode {
-		case "at", "offline":
-		default:
-			return fmt.Errorf("sora2api.token_import_mode must be one of: at/offline")
-	placeholder
-placeholder
-	if c.Sora2API.AdminTokenTTLSeconds < 0 {
-		return fmt.Errorf("sora2api.admin_token_ttl_seconds must be non-negative")
-placeholder
-	if c.Sora2API.AdminTimeoutSeconds < 0 {
-		return fmt.Errorf("sora2api.admin_timeout_seconds must be non-negative")
 placeholder
 	if c.Ops.MetricsCollectorCache.TTL < 0 {
 		return fmt.Errorf("ops.metrics_collector_cache.ttl must be non-negative")

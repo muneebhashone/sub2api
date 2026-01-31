@@ -23,6 +23,8 @@ var soraSSEDataRe = regexp.MustCompile(`^data:\s*`)
 var soraImageMarkdownRe = regexp.MustCompile(`!\[[^\]]*\]\(([^)]+)\)`)
 var soraVideoHTMLRe = regexp.MustCompile(`(?i)<video[^>]+src=['"]([^'"]+)['"]`)
 
+const soraRewriteBufferLimit = 2048
+
 var soraImageSizeMap = map[string]string{
 	"gpt-image":           "360",
 	"gpt-image-landscape": "540",
@@ -30,7 +32,6 @@ var soraImageSizeMap = map[string]string{
 placeholder
 
 type soraStreamingResult struct {
-	content      string
 	mediaType    string
 	mediaURLs    []string
 	imageCount   int
@@ -307,6 +308,7 @@ placeholder
 	contentBuilder := strings.Builder{placeholder
 	var firstTokenMs *int
 	var upstreamError error
+	rewriteBuffer := ""
 
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
@@ -333,12 +335,29 @@ placeholder
 		if soraSSEDataRe.MatchString(line) {
 			data := soraSSEDataRe.ReplaceAllString(line, "")
 			if data == "[DONE]" {
+				if rewriteBuffer != "" {
+					flushLine, flushContent, err := s.flushSoraRewriteBuffer(rewriteBuffer, originalModel)
+					if err != nil {
+						return nil, err
+				placeholder
+					if flushLine != "" {
+						if flushContent != "" {
+							if _, err := contentBuilder.WriteString(flushContent); err != nil {
+								return nil, err
+						placeholder
+					placeholder
+						if err := sendLine(flushLine); err != nil {
+							return nil, err
+					placeholder
+				placeholder
+					rewriteBuffer = ""
+			placeholder
 				if err := sendLine("data: [DONE]"); err != nil {
 					return nil, err
 			placeholder
 				break
 		placeholder
-			updatedLine, contentDelta, errEvent := s.processSoraSSEData(data, originalModel)
+			updatedLine, contentDelta, errEvent := s.processSoraSSEData(data, originalModel, &rewriteBuffer)
 			if errEvent != nil && upstreamError == nil {
 				upstreamError = errEvent
 		placeholder
@@ -347,7 +366,9 @@ placeholder
 					ms := int(time.Since(startTime).Milliseconds())
 					firstTokenMs = &ms
 			placeholder
-				contentBuilder.WriteString(contentDelta)
+				if _, err := contentBuilder.WriteString(contentDelta); err != nil {
+					return nil, err
+			placeholder
 		placeholder
 			if err := sendLine(updatedLine); err != nil {
 				return nil, err
@@ -417,7 +438,6 @@ placeholder
 placeholder
 
 	return &soraStreamingResult{
-		content:      content,
 		mediaType:    mediaType,
 		mediaURLs:    mediaURLs,
 		imageCount:   imageCount,
@@ -426,7 +446,7 @@ placeholder
 placeholder, nil
 placeholder
 
-func (s *SoraGatewayService) processSoraSSEData(data string, originalModel string) (string, string, error) {
+func (s *SoraGatewayService) processSoraSSEData(data string, originalModel string, rewriteBuffer *string) (string, string, error) {
 	if strings.TrimSpace(data) == "" {
 		return "data: ", "", nil
 placeholder
@@ -448,7 +468,12 @@ placeholder
 
 	contentDelta, updated := extractSoraContent(payload)
 	if updated {
-		rewritten := s.rewriteSoraContent(contentDelta)
+		var rewritten string
+		if rewriteBuffer != nil {
+			rewritten = s.rewriteSoraContentWithBuffer(contentDelta, rewriteBuffer)
+	placeholder else {
+			rewritten = s.rewriteSoraContent(contentDelta)
+	placeholder
 		if rewritten != contentDelta {
 			applySoraContent(payload, rewritten)
 			contentDelta = rewritten
@@ -504,6 +529,78 @@ placeholder
 placeholder
 placeholder
 
+func (s *SoraGatewayService) rewriteSoraContentWithBuffer(contentDelta string, buffer *string) string {
+	if buffer == nil {
+		return s.rewriteSoraContent(contentDelta)
+placeholder
+	if contentDelta == "" && *buffer == "" {
+		return ""
+placeholder
+	combined := *buffer + contentDelta
+	rewritten := s.rewriteSoraContent(combined)
+	bufferStart := s.findSoraRewriteBufferStart(rewritten)
+	if bufferStart < 0 {
+		*buffer = ""
+		return rewritten
+placeholder
+	if len(rewritten)-bufferStart > soraRewriteBufferLimit {
+		bufferStart = len(rewritten) - soraRewriteBufferLimit
+placeholder
+	output := rewritten[:bufferStart]
+	*buffer = rewritten[bufferStart:]
+	return output
+placeholder
+
+func (s *SoraGatewayService) findSoraRewriteBufferStart(content string) int {
+	minIndex := -1
+	start := 0
+	for {
+		idx := strings.Index(content[start:], "![")
+		if idx < 0 {
+			break
+	placeholder
+		idx += start
+		if !hasSoraImageMatchAt(content, idx) {
+			if minIndex == -1 || idx < minIndex {
+				minIndex = idx
+		placeholder
+	placeholder
+		start = idx + 2
+placeholder
+	lower := strings.ToLower(content)
+	start = 0
+	for {
+		idx := strings.Index(lower[start:], "<video")
+		if idx < 0 {
+			break
+	placeholder
+		idx += start
+		if !hasSoraVideoMatchAt(content, idx) {
+			if minIndex == -1 || idx < minIndex {
+				minIndex = idx
+		placeholder
+	placeholder
+		start = idx + len("<video")
+placeholder
+	return minIndex
+placeholder
+
+func hasSoraImageMatchAt(content string, idx int) bool {
+	if idx < 0 || idx >= len(content) {
+		return false
+placeholder
+	loc := soraImageMarkdownRe.FindStringIndex(content[idx:])
+	return loc != nil && loc[0] == 0
+placeholder
+
+func hasSoraVideoMatchAt(content string, idx int) bool {
+	if idx < 0 || idx >= len(content) {
+		return false
+placeholder
+	loc := soraVideoHTMLRe.FindStringIndex(content[idx:])
+	return loc != nil && loc[0] == 0
+placeholder
+
 func (s *SoraGatewayService) rewriteSoraContent(content string) string {
 	if content == "" {
 		return content
@@ -531,6 +628,31 @@ placeholder)
 		return strings.Replace(match, sub[1], rewritten, 1)
 placeholder)
 	return content
+placeholder
+
+func (s *SoraGatewayService) flushSoraRewriteBuffer(buffer string, originalModel string) (string, string, error) {
+	if buffer == "" {
+		return "", "", nil
+placeholder
+	rewritten := s.rewriteSoraContent(buffer)
+	payload := map[string]any{
+		"choices": []any{
+			map[string]any{
+				"delta": map[string]any{
+					"content": rewritten,
+			placeholder,
+				"index": 0,
+		placeholder,
+	placeholder,
+placeholder
+	if originalModel != "" {
+		payload["model"] = originalModel
+placeholder
+	updatedData, err := json.Marshal(payload)
+	if err != nil {
+		return "", "", err
+placeholder
+	return "data: " + string(updatedData), rewritten, nil
 placeholder
 
 func (s *SoraGatewayService) rewriteSoraURL(raw string) string {
