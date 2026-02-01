@@ -416,6 +416,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import Icon from '@/components/icons/Icon.vue'
 import type { AddMethod, AuthInputMethod placeholder from '@/composables/useAccountOAuth'
+import type { AccountPlatform placeholder from '@/types'
 
 interface Props {
   addMethod: AddMethod
@@ -428,7 +429,7 @@ interface Props {
   allowMultiple?: boolean
   methodLabel?: string
   showCookieOption?: boolean // Whether to show cookie auto-auth option
-  platform?: 'anthropic' | 'openai' | 'gemini' | 'antigravity' // Platform type for different UI/text
+  platform?: AccountPlatform // Platform type for different UI/text
   showProjectId?: boolean // New prop to control project ID visibility
 placeholder
 
@@ -455,11 +456,11 @@ placeholder>()
 
 const { t placeholder = useI18n()
 
-const isOpenAI = computed(() => props.platform === 'openai')
+const isOpenAI = computed(() => props.platform === 'openai' || props.platform === 'sora')
 
 // Get translation key based on platform
 const getOAuthKey = (key: string) => {
-  if (props.platform === 'openai') return `admin.accounts.oauth.openai.${keyplaceholder`
+  if (props.platform === 'openai' || props.platform === 'sora') return `admin.accounts.oauth.openai.${keyplaceholder`
   if (props.platform === 'gemini') return `admin.accounts.oauth.gemini.${keyplaceholder`
   if (props.platform === 'antigravity') return `admin.accounts.oauth.antigravity.${keyplaceholder`
   return `admin.accounts.oauth.${keyplaceholder`
@@ -478,7 +479,7 @@ const oauthAuthCode = computed(() => t(getOAuthKey('authCode')))
 const oauthAuthCodePlaceholder = computed(() => t(getOAuthKey('authCodePlaceholder')))
 const oauthAuthCodeHint = computed(() => t(getOAuthKey('authCodeHint')))
 const oauthImportantNotice = computed(() => {
-  if (props.platform === 'openai') return t('admin.accounts.oauth.openai.importantNotice')
+  if (props.platform === 'openai' || props.platform === 'sora') return t('admin.accounts.oauth.openai.importantNotice')
   if (props.platform === 'antigravity') return t('admin.accounts.oauth.antigravity.importantNotice')
   return ''
 placeholder)
@@ -510,7 +511,7 @@ placeholder)
 // Auto-extract code from callback URL (OpenAI/Gemini/Antigravity)
 // e.g., http://localhost:8085/callback?code=xxx...&state=...
 watch(authCodeInput, (newVal) => {
-  if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity') return
+  if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity' && props.platform !== 'sora') return
 
   const trimmed = newVal.trim()
   // Check if it looks like a URL with code parameter

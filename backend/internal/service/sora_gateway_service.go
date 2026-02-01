@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -39,23 +41,23 @@ type soraStreamingResult struct {
 	firstTokenMs *int
 placeholder
 
-// SoraGatewayService handles forwarding requests to sora2api.
+// SoraGatewayService handles forwarding requests to Sora upstream.
 type SoraGatewayService struct {
-	sora2api         *Sora2APIService
-	httpUpstream     HTTPUpstream
+	soraClient       SoraClient
+	mediaStorage     *SoraMediaStorage
 	rateLimitService *RateLimitService
 	cfg              *config.Config
 placeholder
 
 func NewSoraGatewayService(
-	sora2api *Sora2APIService,
-	httpUpstream HTTPUpstream,
+	soraClient SoraClient,
+	mediaStorage *SoraMediaStorage,
 	rateLimitService *RateLimitService,
 	cfg *config.Config,
 ) *SoraGatewayService {
 	return &SoraGatewayService{
-		sora2api:         sora2api,
-		httpUpstream:     httpUpstream,
+		soraClient:       soraClient,
+		mediaStorage:     mediaStorage,
 		rateLimitService: rateLimitService,
 		cfg:              cfg,
 placeholder
@@ -64,31 +66,53 @@ placeholder
 func (s *SoraGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte, clientStream bool) (*ForwardResult, error) {
 	startTime := time.Now()
 
-	if s.sora2api == nil || !s.sora2api.Enabled() {
+	if s.soraClient == nil || !s.soraClient.Enabled() {
 		if c != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
 				"error": gin.H{
 					"type":    "api_error",
-					"message": "sora2api 未配置",
+					"message": "Sora 上游未配置",
 			placeholder,
 		placeholder)
 	placeholder
-		return nil, errors.New("sora2api not configured")
+		return nil, errors.New("sora upstream not configured")
 placeholder
 
 	var reqBody map[string]any
 	if err := json.Unmarshal(body, &reqBody); err != nil {
+		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body", clientStream)
 		return nil, fmt.Errorf("parse request: %w", err)
 placeholder
 	reqModel, _ := reqBody["model"].(string)
 	reqStream, _ := reqBody["stream"].(bool)
+	if strings.TrimSpace(reqModel) == "" {
+		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "model is required", clientStream)
+		return nil, errors.New("model is required")
+placeholder
 
 	mappedModel := account.GetMappedModel(reqModel)
-	if mappedModel != reqModel && mappedModel != "" {
-		reqBody["model"] = mappedModel
-		if updated, err := json.Marshal(reqBody); err == nil {
-			body = updated
-	placeholder
+	if mappedModel != "" && mappedModel != reqModel {
+		reqModel = mappedModel
+placeholder
+
+	modelCfg, ok := GetSoraModelConfig(reqModel)
+	if !ok {
+		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "Unsupported Sora model", clientStream)
+		return nil, fmt.Errorf("unsupported model: %s", reqModel)
+placeholder
+	if modelCfg.Type == "prompt_enhance" {
+		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "Prompt-enhance 模型暂未支持", clientStream)
+		return nil, fmt.Errorf("prompt-enhance not supported")
+placeholder
+
+	prompt, imageInput, videoInput, remixTargetID := extractSoraInput(reqBody)
+	if strings.TrimSpace(prompt) == "" {
+		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "prompt is required", clientStream)
+		return nil, errors.New("prompt is required")
+placeholder
+	if strings.TrimSpace(videoInput) != "" {
+		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "Video input is not supported yet", clientStream)
+		return nil, errors.New("video input not supported")
 placeholder
 
 	reqCtx, cancel := s.withSoraTimeout(ctx, reqStream)
@@ -96,81 +120,122 @@ placeholder
 		defer cancel()
 placeholder
 
-	upstreamReq, err := s.sora2api.NewAPIRequest(reqCtx, http.MethodPost, "/v1/chat/completions", body)
-	if err != nil {
-		return nil, err
-placeholder
-	if c != nil {
-		if ua := strings.TrimSpace(c.GetHeader("User-Agent")); ua != "" {
-			upstreamReq.Header.Set("User-Agent", ua)
+	var imageData []byte
+	imageFilename := ""
+	if strings.TrimSpace(imageInput) != "" {
+		decoded, filename, err := decodeSoraImageInput(reqCtx, imageInput)
+		if err != nil {
+			s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", err.Error(), clientStream)
+			return nil, err
 	placeholder
-placeholder
-	if reqStream {
-		upstreamReq.Header.Set("Accept", "text/event-stream")
-placeholder
-
-	if c != nil {
-		c.Set(OpsUpstreamRequestBodyKey, string(body))
+		imageData = decoded
+		imageFilename = filename
 placeholder
 
-	proxyURL := ""
-	if account != nil && account.ProxyID != nil && account.Proxy != nil {
-		proxyURL = account.Proxy.URL()
+	mediaID := ""
+	if len(imageData) > 0 {
+		uploadID, err := s.soraClient.UploadImage(reqCtx, account, imageData, imageFilename)
+		if err != nil {
+			return nil, s.handleSoraRequestError(ctx, account, err, reqModel, c, clientStream)
+	placeholder
+		mediaID = uploadID
 placeholder
 
-	var resp *http.Response
-	if s.httpUpstream != nil {
-		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	taskID := ""
+	var err error
+	switch modelCfg.Type {
+	case "image":
+		taskID, err = s.soraClient.CreateImageTask(reqCtx, account, SoraImageRequest{
+			Prompt:  prompt,
+			Width:   modelCfg.Width,
+			Height:  modelCfg.Height,
+			MediaID: mediaID,
+	placeholder)
+	case "video":
+		taskID, err = s.soraClient.CreateVideoTask(reqCtx, account, SoraVideoRequest{
+			Prompt:        prompt,
+			Orientation:   modelCfg.Orientation,
+			Frames:        modelCfg.Frames,
+			Model:         modelCfg.Model,
+			Size:          modelCfg.Size,
+			MediaID:       mediaID,
+			RemixTargetID: remixTargetID,
+	placeholder)
+	default:
+		err = fmt.Errorf("unsupported model type: %s", modelCfg.Type)
+placeholder
+	if err != nil {
+		return nil, s.handleSoraRequestError(ctx, account, err, reqModel, c, clientStream)
+placeholder
+
+	if clientStream && c != nil {
+		s.prepareSoraStream(c, taskID)
+placeholder
+
+	var mediaURLs []string
+	mediaType := modelCfg.Type
+	imageCount := 0
+	imageSize := ""
+	if modelCfg.Type == "image" {
+		urls, pollErr := s.pollImageTask(reqCtx, c, account, taskID, clientStream)
+		if pollErr != nil {
+			return nil, s.handleSoraRequestError(ctx, account, pollErr, reqModel, c, clientStream)
+	placeholder
+		mediaURLs = urls
+		imageCount = len(urls)
+		imageSize = soraImageSizeFromModel(reqModel)
+placeholder else if modelCfg.Type == "video" {
+		urls, pollErr := s.pollVideoTask(reqCtx, c, account, taskID, clientStream)
+		if pollErr != nil {
+			return nil, s.handleSoraRequestError(ctx, account, pollErr, reqModel, c, clientStream)
+	placeholder
+		mediaURLs = urls
 placeholder else {
-		resp, err = http.DefaultClient.Do(upstreamReq)
+		mediaType = "prompt"
 placeholder
-	if err != nil {
-		s.setUpstreamRequestError(c, account, err)
-		return nil, fmt.Errorf("upstream request failed: %w", err)
-placeholder
-	defer func() { _ = resp.Body.Close() placeholder()
 
-	if resp.StatusCode >= 400 {
-		if s.shouldFailoverUpstreamError(resp.StatusCode) {
-			respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
-			_ = resp.Body.Close()
-			resp.Body = io.NopCloser(bytes.NewReader(respBody))
-			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
-			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
-			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
-				AccountID:          account.ID,
-				AccountName:        account.Name,
-				UpstreamStatusCode: resp.StatusCode,
-				UpstreamRequestID:  resp.Header.Get("x-request-id"),
-				Kind:               "failover",
-				Message:            upstreamMsg,
-		placeholder)
-			s.handleFailoverSideEffects(ctx, resp, account)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+	finalURLs := mediaURLs
+	if len(mediaURLs) > 0 && s.mediaStorage != nil && s.mediaStorage.Enabled() {
+		stored, storeErr := s.mediaStorage.StoreFromURLs(reqCtx, mediaType, mediaURLs)
+		if storeErr != nil {
+			return nil, s.handleSoraRequestError(ctx, account, storeErr, reqModel, c, clientStream)
 	placeholder
-		return s.handleErrorResponse(ctx, resp, c, account, reqModel)
+		finalURLs = s.normalizeSoraMediaURLs(stored)
+placeholder else {
+		finalURLs = s.normalizeSoraMediaURLs(mediaURLs)
 placeholder
 
-	streamResult, err := s.handleStreamingResponse(ctx, resp, c, account, startTime, reqModel, clientStream)
-	if err != nil {
-		return nil, err
+	content := buildSoraContent(mediaType, finalURLs)
+	var firstTokenMs *int
+	if clientStream {
+		ms, streamErr := s.writeSoraStream(c, reqModel, content, startTime)
+		if streamErr != nil {
+			return nil, streamErr
+	placeholder
+		firstTokenMs = ms
+placeholder else if c != nil {
+		response := buildSoraNonStreamResponse(content, reqModel)
+		if len(finalURLs) > 0 {
+			response["media_url"] = finalURLs[0]
+			if len(finalURLs) > 1 {
+				response["media_urls"] = finalURLs
+		placeholder
+	placeholder
+		c.JSON(http.StatusOK, response)
 placeholder
 
-	result := &ForwardResult{
-		RequestID:    resp.Header.Get("x-request-id"),
+	return &ForwardResult{
+		RequestID:    taskID,
 		Model:        reqModel,
 		Stream:       clientStream,
 		Duration:     time.Since(startTime),
-		FirstTokenMs: streamResult.firstTokenMs,
+		FirstTokenMs: firstTokenMs,
 		Usage:        ClaudeUsage{placeholder,
-		MediaType:    streamResult.mediaType,
-		MediaURL:     firstMediaURL(streamResult.mediaURLs),
-		ImageCount:   streamResult.imageCount,
-		ImageSize:    streamResult.imageSize,
-placeholder
-
-	return result, nil
+		MediaType:    mediaType,
+		MediaURL:     firstMediaURL(finalURLs),
+		ImageCount:   imageCount,
+		ImageSize:    imageSize,
+placeholder, nil
 placeholder
 
 func (s *SoraGatewayService) withSoraTimeout(ctx context.Context, stream bool) (context.Context, context.CancelFunc) {
@@ -779,4 +844,415 @@ placeholder
 		return prefix + path
 placeholder
 	return prefix + path + "?" + encoded
+placeholder
+
+func (s *SoraGatewayService) prepareSoraStream(c *gin.Context, requestID string) {
+	if c == nil {
+		return
+placeholder
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+	if strings.TrimSpace(requestID) != "" {
+		c.Header("x-request-id", requestID)
+placeholder
+placeholder
+
+func (s *SoraGatewayService) writeSoraStream(c *gin.Context, model, content string, startTime time.Time) (*int, error) {
+	if c == nil {
+		return nil, nil
+placeholder
+	writer := c.Writer
+	flusher, _ := writer.(http.Flusher)
+
+	chunk := map[string]any{
+		"id":      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
+		"object":  "chat.completion.chunk",
+		"created": time.Now().Unix(),
+		"model":   model,
+		"choices": []any{
+			map[string]any{
+				"index": 0,
+				"delta": map[string]any{
+					"content": content,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	encoded, _ := json.Marshal(chunk)
+	if _, err := fmt.Fprintf(writer, "data: %s\n\n", encoded); err != nil {
+		return nil, err
+placeholder
+	if flusher != nil {
+		flusher.Flush()
+placeholder
+	ms := int(time.Since(startTime).Milliseconds())
+	finalChunk := map[string]any{
+		"id":      chunk["id"],
+		"object":  "chat.completion.chunk",
+		"created": time.Now().Unix(),
+		"model":   model,
+		"choices": []any{
+			map[string]any{
+				"index":         0,
+				"delta":         map[string]any{placeholder,
+				"finish_reason": "stop",
+		placeholder,
+	placeholder,
+placeholder
+	finalEncoded, _ := json.Marshal(finalChunk)
+	if _, err := fmt.Fprintf(writer, "data: %s\n\n", finalEncoded); err != nil {
+		return &ms, err
+placeholder
+	if _, err := fmt.Fprint(writer, "data: [DONE]\n\n"); err != nil {
+		return &ms, err
+placeholder
+	if flusher != nil {
+		flusher.Flush()
+placeholder
+	return &ms, nil
+placeholder
+
+func (s *SoraGatewayService) writeSoraError(c *gin.Context, status int, errType, message string, stream bool) {
+	if c == nil {
+		return
+placeholder
+	if stream {
+		flusher, _ := c.Writer.(http.Flusher)
+		errorEvent := fmt.Sprintf(`event: error`+"\n"+`data: {"error": {"type": "%s", "message": "%s"placeholderplaceholder`+"\n\n", errType, message)
+		_, _ = fmt.Fprint(c.Writer, errorEvent)
+		_, _ = fmt.Fprint(c.Writer, "data: [DONE]\n\n")
+		if flusher != nil {
+			flusher.Flush()
+	placeholder
+		return
+placeholder
+	c.JSON(status, gin.H{
+		"error": gin.H{
+			"type":    errType,
+			"message": message,
+	placeholder,
+placeholder)
+placeholder
+
+func (s *SoraGatewayService) handleSoraRequestError(ctx context.Context, account *Account, err error, model string, c *gin.Context, stream bool) error {
+	if err == nil {
+		return nil
+placeholder
+	var upstreamErr *SoraUpstreamError
+	if errors.As(err, &upstreamErr) {
+		if s.rateLimitService != nil && account != nil {
+			s.rateLimitService.HandleUpstreamError(ctx, account, upstreamErr.StatusCode, upstreamErr.Headers, upstreamErr.Body)
+	placeholder
+		if s.shouldFailoverUpstreamError(upstreamErr.StatusCode) {
+			return &UpstreamFailoverError{StatusCode: upstreamErr.StatusCodeplaceholder
+	placeholder
+		msg := upstreamErr.Message
+		if override := soraProErrorMessage(model, msg); override != "" {
+			msg = override
+	placeholder
+		s.writeSoraError(c, upstreamErr.StatusCode, "upstream_error", msg, stream)
+		return err
+placeholder
+	if errors.Is(err, context.DeadlineExceeded) {
+		s.writeSoraError(c, http.StatusGatewayTimeout, "timeout_error", "Sora generation timeout", stream)
+		return err
+placeholder
+	s.writeSoraError(c, http.StatusBadGateway, "api_error", err.Error(), stream)
+	return err
+placeholder
+
+func (s *SoraGatewayService) pollImageTask(ctx context.Context, c *gin.Context, account *Account, taskID string, stream bool) ([]string, error) {
+	interval := s.pollInterval()
+	maxAttempts := s.pollMaxAttempts()
+	lastPing := time.Now()
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		status, err := s.soraClient.GetImageTask(ctx, account, taskID)
+		if err != nil {
+			return nil, err
+	placeholder
+		switch strings.ToLower(status.Status) {
+		case "succeeded", "completed":
+			return status.URLs, nil
+		case "failed":
+			if status.ErrorMsg != "" {
+				return nil, errors.New(status.ErrorMsg)
+		placeholder
+			return nil, errors.New("Sora image generation failed")
+	placeholder
+		if stream {
+			s.maybeSendPing(c, &lastPing)
+	placeholder
+		if err := sleepWithContext(ctx, interval); err != nil {
+			return nil, err
+	placeholder
+placeholder
+	return nil, errors.New("Sora image generation timeout")
+placeholder
+
+func (s *SoraGatewayService) pollVideoTask(ctx context.Context, c *gin.Context, account *Account, taskID string, stream bool) ([]string, error) {
+	interval := s.pollInterval()
+	maxAttempts := s.pollMaxAttempts()
+	lastPing := time.Now()
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		status, err := s.soraClient.GetVideoTask(ctx, account, taskID)
+		if err != nil {
+			return nil, err
+	placeholder
+		switch strings.ToLower(status.Status) {
+		case "completed", "succeeded":
+			return status.URLs, nil
+		case "failed":
+			if status.ErrorMsg != "" {
+				return nil, errors.New(status.ErrorMsg)
+		placeholder
+			return nil, errors.New("Sora video generation failed")
+	placeholder
+		if stream {
+			s.maybeSendPing(c, &lastPing)
+	placeholder
+		if err := sleepWithContext(ctx, interval); err != nil {
+			return nil, err
+	placeholder
+placeholder
+	return nil, errors.New("Sora video generation timeout")
+placeholder
+
+func (s *SoraGatewayService) pollInterval() time.Duration {
+	if s == nil || s.cfg == nil {
+		return 2 * time.Second
+placeholder
+	interval := s.cfg.Sora.Client.PollIntervalSeconds
+	if interval <= 0 {
+		interval = 2
+placeholder
+	return time.Duration(interval) * time.Second
+placeholder
+
+func (s *SoraGatewayService) pollMaxAttempts() int {
+	if s == nil || s.cfg == nil {
+		return 600
+placeholder
+	maxAttempts := s.cfg.Sora.Client.MaxPollAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 600
+placeholder
+	return maxAttempts
+placeholder
+
+func (s *SoraGatewayService) maybeSendPing(c *gin.Context, lastPing *time.Time) {
+	if c == nil {
+		return
+placeholder
+	interval := 10 * time.Second
+	if s != nil && s.cfg != nil && s.cfg.Concurrency.PingInterval > 0 {
+		interval = time.Duration(s.cfg.Concurrency.PingInterval) * time.Second
+placeholder
+	if time.Since(*lastPing) < interval {
+		return
+placeholder
+	if _, err := fmt.Fprint(c.Writer, ":\n\n"); err == nil {
+		if flusher, ok := c.Writer.(http.Flusher); ok {
+			flusher.Flush()
+	placeholder
+		*lastPing = time.Now()
+placeholder
+placeholder
+
+func (s *SoraGatewayService) normalizeSoraMediaURLs(urls []string) []string {
+	if len(urls) == 0 {
+		return urls
+placeholder
+	output := make([]string, 0, len(urls))
+	for _, raw := range urls {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+	placeholder
+		if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+			output = append(output, raw)
+			continue
+	placeholder
+		pathVal := raw
+		if !strings.HasPrefix(pathVal, "/") {
+			pathVal = "/" + pathVal
+	placeholder
+		output = append(output, s.buildSoraMediaURL(pathVal, ""))
+placeholder
+	return output
+placeholder
+
+func buildSoraContent(mediaType string, urls []string) string {
+	switch mediaType {
+	case "image":
+		parts := make([]string, 0, len(urls))
+		for _, u := range urls {
+			parts = append(parts, fmt.Sprintf("![image](%s)", u))
+	placeholder
+		return strings.Join(parts, "\n")
+	case "video":
+		if len(urls) == 0 {
+			return ""
+	placeholder
+		return fmt.Sprintf("```html\n<video src='%s' controls></video>\n```", urls[0])
+	default:
+		return ""
+placeholder
+placeholder
+
+func extractSoraInput(body map[string]any) (prompt, imageInput, videoInput, remixTargetID string) {
+	if body == nil {
+		return "", "", "", ""
+placeholder
+	if v, ok := body["remix_target_id"].(string); ok {
+		remixTargetID = v
+placeholder
+	if v, ok := body["image"].(string); ok {
+		imageInput = v
+placeholder
+	if v, ok := body["video"].(string); ok {
+		videoInput = v
+placeholder
+	if v, ok := body["prompt"].(string); ok && strings.TrimSpace(v) != "" {
+		prompt = v
+placeholder
+	if messages, ok := body["messages"].([]any); ok {
+		builder := strings.Builder{placeholder
+		for _, raw := range messages {
+			msg, ok := raw.(map[string]any)
+			if !ok {
+				continue
+		placeholder
+			role, _ := msg["role"].(string)
+			if role != "" && role != "user" {
+				continue
+		placeholder
+			content := msg["content"]
+			text, img, vid := parseSoraMessageContent(content)
+			if text != "" {
+				if builder.Len() > 0 {
+					builder.WriteString("\n")
+			placeholder
+				builder.WriteString(text)
+		placeholder
+			if imageInput == "" && img != "" {
+				imageInput = img
+		placeholder
+			if videoInput == "" && vid != "" {
+				videoInput = vid
+		placeholder
+	placeholder
+		if prompt == "" {
+			prompt = builder.String()
+	placeholder
+placeholder
+	return prompt, imageInput, videoInput, remixTargetID
+placeholder
+
+func parseSoraMessageContent(content any) (text, imageInput, videoInput string) {
+	switch val := content.(type) {
+	case string:
+		return val, "", ""
+	case []any:
+		builder := strings.Builder{placeholder
+		for _, item := range val {
+			itemMap, ok := item.(map[string]any)
+			if !ok {
+				continue
+		placeholder
+			t, _ := itemMap["type"].(string)
+			switch t {
+			case "text":
+				if txt, ok := itemMap["text"].(string); ok && strings.TrimSpace(txt) != "" {
+					if builder.Len() > 0 {
+						builder.WriteString("\n")
+				placeholder
+					builder.WriteString(txt)
+			placeholder
+			case "image_url":
+				if imageInput == "" {
+					if urlVal, ok := itemMap["image_url"].(map[string]any); ok {
+						imageInput = fmt.Sprintf("%v", urlVal["url"])
+				placeholder else if urlStr, ok := itemMap["image_url"].(string); ok {
+						imageInput = urlStr
+				placeholder
+			placeholder
+			case "video_url":
+				if videoInput == "" {
+					if urlVal, ok := itemMap["video_url"].(map[string]any); ok {
+						videoInput = fmt.Sprintf("%v", urlVal["url"])
+				placeholder else if urlStr, ok := itemMap["video_url"].(string); ok {
+						videoInput = urlStr
+				placeholder
+			placeholder
+		placeholder
+	placeholder
+		return builder.String(), imageInput, videoInput
+	default:
+		return "", "", ""
+placeholder
+placeholder
+
+func decodeSoraImageInput(ctx context.Context, input string) ([]byte, string, error) {
+	raw := strings.TrimSpace(input)
+	if raw == "" {
+		return nil, "", errors.New("empty image input")
+placeholder
+	if strings.HasPrefix(raw, "data:") {
+		parts := strings.SplitN(raw, ",", 2)
+		if len(parts) != 2 {
+			return nil, "", errors.New("invalid data url")
+	placeholder
+		meta := parts[0]
+		payload := parts[1]
+		decoded, err := base64.StdEncoding.DecodeString(payload)
+		if err != nil {
+			return nil, "", err
+	placeholder
+		ext := ""
+		if strings.HasPrefix(meta, "data:") {
+			metaParts := strings.SplitN(meta[5:], ";", 2)
+			if len(metaParts) > 0 {
+				if exts, err := mime.ExtensionsByType(metaParts[0]); err == nil && len(exts) > 0 {
+					ext = exts[0]
+			placeholder
+		placeholder
+	placeholder
+		filename := "image" + ext
+		return decoded, filename, nil
+placeholder
+	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+		return downloadSoraImageInput(ctx, raw)
+placeholder
+	decoded, err := base64.StdEncoding.DecodeString(raw)
+	if err != nil {
+		return nil, "", errors.New("invalid base64 image")
+placeholder
+	return decoded, "image.png", nil
+placeholder
+
+func downloadSoraImageInput(ctx context.Context, rawURL string) ([]byte, string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, "", err
+placeholder
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", err
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+	if resp.StatusCode != http.StatusOK {
+		return nil, "", fmt.Errorf("download image failed: %d", resp.StatusCode)
+placeholder
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 20<<20))
+	if err != nil {
+		return nil, "", err
+placeholder
+	ext := fileExtFromURL(rawURL)
+	if ext == "" {
+		ext = fileExtFromContentType(resp.Header.Get("Content-Type"))
+placeholder
+	filename := "image" + ext
+	return data, filename, nil
 placeholder
