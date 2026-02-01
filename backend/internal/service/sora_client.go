@@ -359,18 +359,43 @@ placeholder
 placeholder
 
 func (c *SoraDirectClient) GetImageTask(ctx context.Context, account *Account, taskID string) (*SoraImageTaskStatus, error) {
-	token, err := c.getAccessToken(ctx, account)
+	status, found, err := c.fetchRecentImageTask(ctx, account, taskID, c.recentTaskLimit())
 	if err != nil {
 		return nil, err
 placeholder
-	headers := c.buildBaseHeaders(token, c.defaultUserAgent())
-	respBody, _, err := c.doRequest(ctx, account, http.MethodGet, c.buildURL("/v2/recent_tasks?limit=20"), headers, nil, false)
+	if found {
+		return status, nil
+placeholder
+	maxLimit := c.recentTaskLimitMax()
+	if maxLimit > 0 && maxLimit != c.recentTaskLimit() {
+		status, found, err = c.fetchRecentImageTask(ctx, account, taskID, maxLimit)
+		if err != nil {
+			return nil, err
+	placeholder
+		if found {
+			return status, nil
+	placeholder
+placeholder
+	return &SoraImageTaskStatus{ID: taskID, Status: "processing"placeholder, nil
+placeholder
+
+func (c *SoraDirectClient) fetchRecentImageTask(ctx context.Context, account *Account, taskID string, limit int) (*SoraImageTaskStatus, bool, error) {
+	token, err := c.getAccessToken(ctx, account)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+placeholder
+	headers := c.buildBaseHeaders(token, c.defaultUserAgent())
+	if limit <= 0 {
+		limit = 20
+placeholder
+	endpoint := fmt.Sprintf("/v2/recent_tasks?limit=%d", limit)
+	respBody, _, err := c.doRequest(ctx, account, http.MethodGet, c.buildURL(endpoint), headers, nil, false)
+	if err != nil {
+		return nil, false, err
 placeholder
 	var resp map[string]any
 	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return nil, err
+		return nil, false, err
 placeholder
 	taskResponses, _ := resp["task_responses"].([]any)
 	for _, item := range taskResponses {
@@ -401,10 +426,30 @@ placeholder
 				Status:      status,
 				ProgressPct: progress,
 				URLs:        urls,
-		placeholder, nil
+		placeholder, true, nil
 	placeholder
 placeholder
-	return &SoraImageTaskStatus{ID: taskID, Status: "processing"placeholder, nil
+	return &SoraImageTaskStatus{ID: taskID, Status: "processing"placeholder, false, nil
+placeholder
+
+func (c *SoraDirectClient) recentTaskLimit() int {
+	if c == nil || c.cfg == nil {
+		return 20
+placeholder
+	if c.cfg.Sora.Client.RecentTaskLimit > 0 {
+		return c.cfg.Sora.Client.RecentTaskLimit
+placeholder
+	return 20
+placeholder
+
+func (c *SoraDirectClient) recentTaskLimitMax() int {
+	if c == nil || c.cfg == nil {
+		return 0
+placeholder
+	if c.cfg.Sora.Client.RecentTaskLimitMax > 0 {
+		return c.cfg.Sora.Client.RecentTaskLimitMax
+placeholder
+	return 0
 placeholder
 
 func (c *SoraDirectClient) GetVideoTask(ctx context.Context, account *Account, taskID string) (*SoraVideoTaskStatus, error) {

@@ -30,6 +30,8 @@ type SoraMediaStorage struct {
 	imageRoot          string
 	videoRoot          string
 	maxConcurrent      int
+	downloadTimeout    time.Duration
+	maxDownloadBytes   int64
 	fallbackToUpstream bool
 	debug              bool
 	sem                chan struct{placeholder
@@ -92,6 +94,17 @@ placeholder
 		maxConcurrent = 4
 placeholder
 	s.maxConcurrent = maxConcurrent
+	timeoutSeconds := s.cfg.Sora.Storage.DownloadTimeoutSeconds
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = 120
+placeholder
+	s.downloadTimeout = time.Duration(timeoutSeconds) * time.Second
+
+	maxBytes := s.cfg.Sora.Storage.MaxDownloadBytes
+	if maxBytes <= 0 {
+		maxBytes = 200 << 20
+placeholder
+	s.maxDownloadBytes = maxBytes
 	s.fallbackToUpstream = s.cfg.Sora.Storage.FallbackToUpstream
 	s.debug = s.cfg.Sora.Storage.Debug
 	s.sem = make(chan struct{placeholder, maxConcurrent)
@@ -180,7 +193,8 @@ func (s *SoraMediaStorage) downloadOnce(ctx context.Context, root, mediaType, ra
 	if err != nil {
 		return "", err
 placeholder
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: s.downloadTimeoutplaceholder
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 placeholder
@@ -198,6 +212,9 @@ placeholder
 	if ext == "" {
 		ext = ".bin"
 placeholder
+	if s.maxDownloadBytes > 0 && resp.ContentLength > s.maxDownloadBytes {
+		return "", fmt.Errorf("download size exceeds limit: %d", resp.ContentLength)
+placeholder
 
 	datePath := time.Now().Format("2006/01/02")
 	destDir := filepath.Join(root, filepath.FromSlash(datePath))
@@ -212,9 +229,15 @@ placeholder
 placeholder
 	defer func() { _ = out.Close() placeholder()
 
-	if _, err := io.Copy(out, resp.Body); err != nil {
+	limited := io.LimitReader(resp.Body, s.maxDownloadBytes+1)
+	written, err := io.Copy(out, limited)
+	if err != nil {
 		_ = os.Remove(destPath)
 		return "", err
+placeholder
+	if s.maxDownloadBytes > 0 && written > s.maxDownloadBytes {
+		_ = os.Remove(destPath)
+		return "", fmt.Errorf("download size exceeds limit: %d", written)
 placeholder
 
 	relative := path.Join("/", mediaType, datePath, filename)
