@@ -87,10 +87,6 @@ func (s *accountRepoStub) ListByPlatform(ctx context.Context, platform string) (
 	panic("unexpected ListByPlatform call")
 placeholder
 
-func (s *accountRepoStub) ListByPlatformAndCredentialEmails(ctx context.Context, platform string, emails []string) ([]Account, error) {
-	panic("unexpected ListByPlatformAndCredentialEmails call")
-placeholder
-
 func (s *accountRepoStub) UpdateLastUsed(ctx context.Context, id int64) error {
 	panic("unexpected UpdateLastUsed call")
 placeholder

@@ -243,7 +243,7 @@
           />
           <p class="input-hint">{{ t('admin.groups.platformHint') placeholderplaceholder</p>
         </div>
-        <div v-if="createForm.subscription_type !== 'subscription'">
+        <div>
           <label class="input-label">{{ t('admin.groups.form.rateMultiplier') placeholderplaceholder</label>
           <input
             v-model.number="createForm.rate_multiplier"
@@ -739,7 +739,7 @@
           />
           <p class="input-hint">{{ t('admin.groups.platformNotEditable') placeholderplaceholder</p>
         </div>
-        <div v-if="editForm.subscription_type !== 'subscription'">
+        <div>
           <label class="input-label">{{ t('admin.groups.form.rateMultiplier') placeholderplaceholder</label>
           <input
             v-model.number="editForm.rate_multiplier"
@@ -1225,7 +1225,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useOnboardingStore placeholder from '@/stores/onboarding'
 import { adminAPI placeholder from '@/api/admin'
-import type { Group, GroupPlatform, SubscriptionType placeholder from '@/types'
+import type { AdminGroup, GroupPlatform, SubscriptionType placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
@@ -1358,7 +1358,7 @@ const invalidRequestFallbackOptionsForEdit = computed(() => {
   return options
 placeholder)
 
-const groups = ref<Group[]>([])
+const groups = ref<AdminGroup[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const filters = reactive({
@@ -1379,8 +1379,8 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const submitting = ref(false)
-const editingGroup = ref<Group | null>(null)
-const deletingGroup = ref<Group | null>(null)
+const editingGroup = ref<AdminGroup | null>(null)
+const deletingGroup = ref<AdminGroup | null>(null)
 
 const createForm = reactive({
   name: '',
@@ -1691,7 +1691,7 @@ const handleCreateGroup = async () => {
   placeholder
 placeholder
 
-const handleEdit = async (group: Group) => {
+const handleEdit = async (group: AdminGroup) => {
   editingGroup.value = group
   editForm.name = group.name
   editForm.description = group.description || ''
@@ -1753,7 +1753,7 @@ const handleUpdateGroup = async () => {
   placeholder
 placeholder
 
-const handleDelete = (group: Group) => {
+const handleDelete = (group: AdminGroup) => {
   deletingGroup.value = group
   showDeleteDialog.value = true
 placeholder
@@ -1773,12 +1773,11 @@ const confirmDelete = async () => {
   placeholder
 placeholder
 
-// 监听 subscription_type 变化，订阅模式时重置 rate_multiplier 为 1，is_exclusive 为 true
+// 监听 subscription_type 变化，订阅模式时 is_exclusive 默认为 true
 watch(
   () => createForm.subscription_type,
   (newVal) => {
     if (newVal === 'subscription') {
-      createForm.rate_multiplier = 1.0
       createForm.is_exclusive = true
       createForm.fallback_group_id_on_invalid_request = null
     placeholder

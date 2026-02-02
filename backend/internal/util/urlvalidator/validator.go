@@ -46,7 +46,7 @@ placeholder
 	placeholder
 placeholder
 
-	return trimmed, nil
+	return strings.TrimRight(trimmed, "/"), nil
 placeholder
 
 func ValidateHTTPSURL(raw string, opts ValidationOptions) (string, error) {

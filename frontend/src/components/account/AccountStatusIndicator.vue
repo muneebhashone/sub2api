@@ -1,18 +1,32 @@
 <template>
   <div class="flex items-center gap-2">
-    <!-- Main Status Badge -->
-    <button
-      v-if="isTempUnschedulable"
-      type="button"
-      :class="['badge text-xs', statusClass, 'cursor-pointer']"
-      :title="t('admin.accounts.status.viewTempUnschedDetails')"
-      @click="handleTempUnschedClick"
-    >
-      {{ statusText placeholderplaceholder
-    </button>
-    <span v-else :class="['badge text-xs', statusClass]">
-      {{ statusText placeholderplaceholder
-    </span>
+    <!-- Rate Limit Display (429) - Two-line layout -->
+    <div v-if="isRateLimited" class="flex flex-col items-center gap-1">
+      <span class="badge text-xs badge-warning">{{ t('admin.accounts.status.rateLimited') placeholderplaceholder</span>
+      <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ rateLimitCountdown placeholderplaceholder</span>
+    </div>
+
+    <!-- Overload Display (529) - Two-line layout -->
+    <div v-else-if="isOverloaded" class="flex flex-col items-center gap-1">
+      <span class="badge text-xs badge-danger">{{ t('admin.accounts.status.overloaded') placeholderplaceholder</span>
+      <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ overloadCountdown placeholderplaceholder</span>
+    </div>
+
+    <!-- Main Status Badge (shown when not rate limited/overloaded) -->
+    <template v-else>
+      <button
+        v-if="isTempUnschedulable"
+        type="button"
+        :class="['badge text-xs', statusClass, 'cursor-pointer']"
+        :title="t('admin.accounts.status.viewTempUnschedDetails')"
+        @click="handleTempUnschedClick"
+      >
+        {{ statusText placeholderplaceholder
+      </button>
+      <span v-else :class="['badge text-xs', statusClass]">
+        {{ statusText placeholderplaceholder
+      </span>
+    </template>
 
     <!-- Error Info Indicator -->
     <div v-if="hasError && account.error_message" class="group/error relative">
@@ -42,7 +56,6 @@
         ></div>
       </div>
     </div>
-
     <!-- Rate Limit Indicator (429) -->
     <div v-if="isRateLimited" class="group relative">
       <span
@@ -108,8 +121,7 @@
 import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import type { Account placeholder from '@/types'
-import { formatTime placeholder from '@/utils/format'
-import Icon from '@/components/icons/Icon.vue'
+import { formatCountdownWithSuffix placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 
@@ -163,6 +175,16 @@ const hasError = computed(() => {
   return props.account.status === 'error'
 placeholder)
 
+// Computed: countdown text for rate limit (429)
+const rateLimitCountdown = computed(() => {
+  return formatCountdownWithSuffix(props.account.rate_limit_reset_at)
+placeholder)
+
+// Computed: countdown text for overload (529)
+const overloadCountdown = computed(() => {
+  return formatCountdownWithSuffix(props.account.overload_until)
+placeholder)
+
 // Computed: status badge class
 const statusClass = computed(() => {
   if (hasError.value) {
@@ -171,7 +193,7 @@ const statusClass = computed(() => {
   if (isTempUnschedulable.value) {
     return 'badge-warning'
   placeholder
-  if (!props.account.schedulable || isRateLimited.value || isOverloaded.value) {
+  if (!props.account.schedulable) {
     return 'badge-gray'
   placeholder
   switch (props.account.status) {
@@ -197,9 +219,6 @@ const statusText = computed(() => {
   if (!props.account.schedulable) {
     return t('admin.accounts.status.paused')
   placeholder
-  if (isRateLimited.value || isOverloaded.value) {
-    return t('admin.accounts.status.limited')
-  placeholder
   return t(`admin.accounts.status.${props.account.statusplaceholder`)
 placeholder)
 
@@ -207,5 +226,4 @@ const handleTempUnschedClick = () => {
   if (!isTempUnschedulable.value) return
   emit('show-temp-unsched', props.account)
 placeholder
-
 </script>

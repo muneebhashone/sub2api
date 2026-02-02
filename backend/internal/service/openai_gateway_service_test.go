@@ -21,19 +21,50 @@ type stubOpenAIAccountRepo struct {
 	accounts []Account
 placeholder
 
+func (r stubOpenAIAccountRepo) GetByID(ctx context.Context, id int64) (*Account, error) {
+	for i := range r.accounts {
+		if r.accounts[i].ID == id {
+			return &r.accounts[i], nil
+	placeholder
+placeholder
+	return nil, errors.New("account not found")
+placeholder
+
 func (r stubOpenAIAccountRepo) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]Account, error) {
-	return append([]Account(nil), r.accounts...), nil
+	var result []Account
+	for _, acc := range r.accounts {
+		if acc.Platform == platform {
+			result = append(result, acc)
+	placeholder
+placeholder
+	return result, nil
 placeholder
 
 func (r stubOpenAIAccountRepo) ListSchedulableByPlatform(ctx context.Context, platform string) ([]Account, error) {
-	return append([]Account(nil), r.accounts...), nil
+	var result []Account
+	for _, acc := range r.accounts {
+		if acc.Platform == platform {
+			result = append(result, acc)
+	placeholder
+placeholder
+	return result, nil
 placeholder
 
 type stubConcurrencyCache struct {
 	ConcurrencyCache
+	loadBatchErr    error
+	loadMap         map[int64]*AccountLoadInfo
+	acquireResults  map[int64]bool
+	waitCounts      map[int64]int
+	skipDefaultLoad bool
 placeholder
 
 func (c stubConcurrencyCache) AcquireAccountSlot(ctx context.Context, accountID int64, maxConcurrency int, requestID string) (bool, error) {
+	if c.acquireResults != nil {
+		if result, ok := c.acquireResults[accountID]; ok {
+			return result, nil
+	placeholder
+placeholder
 	return true, nil
 placeholder
 
@@ -42,11 +73,116 @@ func (c stubConcurrencyCache) ReleaseAccountSlot(ctx context.Context, accountID 
 placeholder
 
 func (c stubConcurrencyCache) GetAccountsLoadBatch(ctx context.Context, accounts []AccountWithConcurrency) (map[int64]*AccountLoadInfo, error) {
+	if c.loadBatchErr != nil {
+		return nil, c.loadBatchErr
+placeholder
 	out := make(map[int64]*AccountLoadInfo, len(accounts))
+	if c.skipDefaultLoad && c.loadMap != nil {
+		for _, acc := range accounts {
+			if load, ok := c.loadMap[acc.ID]; ok {
+				out[acc.ID] = load
+		placeholder
+	placeholder
+		return out, nil
+placeholder
 	for _, acc := range accounts {
+		if c.loadMap != nil {
+			if load, ok := c.loadMap[acc.ID]; ok {
+				out[acc.ID] = load
+				continue
+		placeholder
+	placeholder
 		out[acc.ID] = &AccountLoadInfo{AccountID: acc.ID, LoadRate: 0placeholder
 placeholder
 	return out, nil
+placeholder
+
+func TestOpenAIGatewayService_GenerateSessionHash_Priority(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+
+	svc := &OpenAIGatewayService{placeholder
+
+	// 1) session_id header wins
+	c.Request.Header.Set("session_id", "sess-123")
+	c.Request.Header.Set("conversation_id", "conv-456")
+	h1 := svc.GenerateSessionHash(c, map[string]any{"prompt_cache_key": "ses_aaa"placeholder)
+	if h1 == "" {
+		t.Fatalf("expected non-empty hash")
+placeholder
+
+	// 2) conversation_id used when session_id absent
+	c.Request.Header.Del("session_id")
+	h2 := svc.GenerateSessionHash(c, map[string]any{"prompt_cache_key": "ses_aaa"placeholder)
+	if h2 == "" {
+		t.Fatalf("expected non-empty hash")
+placeholder
+	if h1 == h2 {
+		t.Fatalf("expected different hashes for different keys")
+placeholder
+
+	// 3) prompt_cache_key used when both headers absent
+	c.Request.Header.Del("conversation_id")
+	h3 := svc.GenerateSessionHash(c, map[string]any{"prompt_cache_key": "ses_aaa"placeholder)
+	if h3 == "" {
+		t.Fatalf("expected non-empty hash")
+placeholder
+	if h2 == h3 {
+		t.Fatalf("expected different hashes for different keys")
+placeholder
+
+	// 4) empty when no signals
+	h4 := svc.GenerateSessionHash(c, map[string]any{placeholder)
+	if h4 != "" {
+		t.Fatalf("expected empty hash when no signals")
+placeholder
+placeholder
+
+func (c stubConcurrencyCache) GetAccountWaitingCount(ctx context.Context, accountID int64) (int, error) {
+	if c.waitCounts != nil {
+		if count, ok := c.waitCounts[accountID]; ok {
+			return count, nil
+	placeholder
+placeholder
+	return 0, nil
+placeholder
+
+type stubGatewayCache struct {
+	sessionBindings map[string]int64
+	deletedSessions map[string]int
+placeholder
+
+func (c *stubGatewayCache) GetSessionAccountID(ctx context.Context, groupID int64, sessionHash string) (int64, error) {
+	if id, ok := c.sessionBindings[sessionHash]; ok {
+		return id, nil
+placeholder
+	return 0, errors.New("not found")
+placeholder
+
+func (c *stubGatewayCache) SetSessionAccountID(ctx context.Context, groupID int64, sessionHash string, accountID int64, ttl time.Duration) error {
+	if c.sessionBindings == nil {
+		c.sessionBindings = make(map[string]int64)
+placeholder
+	c.sessionBindings[sessionHash] = accountID
+	return nil
+placeholder
+
+func (c *stubGatewayCache) RefreshSessionTTL(ctx context.Context, groupID int64, sessionHash string, ttl time.Duration) error {
+	return nil
+placeholder
+
+func (c *stubGatewayCache) DeleteSessionAccountID(ctx context.Context, groupID int64, sessionHash string) error {
+	if c.sessionBindings == nil {
+		return nil
+placeholder
+	if c.deletedSessions == nil {
+		c.deletedSessions = make(map[string]int)
+placeholder
+	c.deletedSessions[sessionHash]++
+	delete(c.sessionBindings, sessionHash)
+	return nil
 placeholder
 
 func TestOpenAISelectAccountWithLoadAwareness_FiltersUnschedulable(t *testing.T) {
@@ -136,6 +272,515 @@ placeholder
 placeholder
 	if selection.ReleaseFunc != nil {
 		selection.ReleaseFunc()
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_StickyUnschedulableClearsSession(t *testing.T) {
+	sessionHash := "session-1"
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusDisabled, Schedulable: true, Concurrency: 1placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{
+		sessionBindings: map[string]int64{"openai:" + sessionHash: 1placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, sessionHash, "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountForModelWithExclusions error: %v", err)
+placeholder
+	if acc == nil || acc.ID != 2 {
+		t.Fatalf("expected account 2, got %+v", acc)
+placeholder
+	if cache.deletedSessions["openai:"+sessionHash] != 1 {
+		t.Fatalf("expected sticky session to be deleted")
+placeholder
+	if cache.sessionBindings["openai:"+sessionHash] != 2 {
+		t.Fatalf("expected sticky session to bind to account 2")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_StickyUnschedulableClearsSession(t *testing.T) {
+	sessionHash := "session-2"
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusDisabled, Schedulable: true, Concurrency: 1placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{
+		sessionBindings: map[string]int64{"openai:" + sessionHash: 1placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(stubConcurrencyCache{placeholder),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, sessionHash, "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.Account == nil || selection.Account.ID != 2 {
+		t.Fatalf("expected account 2, got %+v", selection)
+placeholder
+	if cache.deletedSessions["openai:"+sessionHash] != 1 {
+		t.Fatalf("expected sticky session to be deleted")
+placeholder
+	if cache.sessionBindings["openai:"+sessionHash] != 2 {
+		t.Fatalf("expected sticky session to bind to account 2")
+placeholder
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_NoModelSupport(t *testing.T) {
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{
+				ID:          1,
+				Platform:    PlatformOpenAI,
+				Status:      StatusActive,
+				Schedulable: true,
+		placeholder"model_mapping": map[string]any{"gpt-3.5-turbo": "gpt-3.5-turbo"placeholderplaceholder,
+		placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, "", "gpt-4", nil)
+	if err == nil {
+		t.Fatalf("expected error for unsupported model")
+placeholder
+	if acc != nil {
+		t.Fatalf("expected nil account for unsupported model")
+placeholder
+	if !strings.Contains(err.Error(), "supporting model") {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_LoadBatchErrorFallback(t *testing.T) {
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 2placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		loadBatchErr: errors.New("load batch failed"),
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "fallback", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.Account == nil {
+		t.Fatalf("expected selection")
+placeholder
+	if selection.Account.ID != 2 {
+		t.Fatalf("expected account 2, got %d", selection.Account.ID)
+placeholder
+	if cache.sessionBindings["openai:fallback"] != 2 {
+		t.Fatalf("expected sticky session updated")
+placeholder
+	if selection.ReleaseFunc != nil {
+		selection.ReleaseFunc()
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_NoSlotFallbackWait(t *testing.T) {
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		acquireResults: map[int64]bool{1: falseplaceholder,
+		loadMap: map[int64]*AccountLoadInfo{
+			1: {AccountID: 1, LoadRate: 10placeholder,
+	placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.WaitPlan == nil {
+		t.Fatalf("expected wait plan fallback")
+placeholder
+	if selection.Account == nil || selection.Account.ID != 1 {
+		t.Fatalf("expected account 1")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_SetsStickyBinding(t *testing.T) {
+	sessionHash := "bind"
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, sessionHash, "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountForModelWithExclusions error: %v", err)
+placeholder
+	if acc == nil || acc.ID != 1 {
+		t.Fatalf("expected account 1")
+placeholder
+	if cache.sessionBindings["openai:"+sessionHash] != 1 {
+		t.Fatalf("expected sticky session binding")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_StickyWaitPlan(t *testing.T) {
+	sessionHash := "sticky-wait"
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{
+		sessionBindings: map[string]int64{"openai:" + sessionHash: 1placeholder,
+placeholder
+	concurrencyCache := stubConcurrencyCache{
+		acquireResults: map[int64]bool{1: falseplaceholder,
+		waitCounts:     map[int64]int{1: 0placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, sessionHash, "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.WaitPlan == nil {
+		t.Fatalf("expected sticky wait plan")
+placeholder
+	if selection.Account == nil || selection.Account.ID != 1 {
+		t.Fatalf("expected account 1")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_PrefersLowerLoad(t *testing.T) {
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		loadMap: map[int64]*AccountLoadInfo{
+			1: {AccountID: 1, LoadRate: 80placeholder,
+			2: {AccountID: 2, LoadRate: 10placeholder,
+	placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "load", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.Account == nil || selection.Account.ID != 2 {
+		t.Fatalf("expected account 2")
+placeholder
+	if cache.sessionBindings["openai:load"] != 2 {
+		t.Fatalf("expected sticky session updated")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_StickyExcludedFallback(t *testing.T) {
+	sessionHash := "excluded"
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 2placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{
+		sessionBindings: map[string]int64{"openai:" + sessionHash: 1placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	excluded := map[int64]struct{placeholder{1: {placeholderplaceholder
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, sessionHash, "gpt-4", excluded)
+	if err != nil {
+		t.Fatalf("SelectAccountForModelWithExclusions error: %v", err)
+placeholder
+	if acc == nil || acc.ID != 2 {
+		t.Fatalf("expected account 2")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_StickyNonOpenAI(t *testing.T) {
+	sessionHash := "non-openai"
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformAnthropic, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 2placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{
+		sessionBindings: map[string]int64{"openai:" + sessionHash: 1placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, sessionHash, "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountForModelWithExclusions error: %v", err)
+placeholder
+	if acc == nil || acc.ID != 2 {
+		t.Fatalf("expected account 2")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_NoAccounts(t *testing.T) {
+	repo := stubOpenAIAccountRepo{accounts: []Account{placeholderplaceholder
+	cache := &stubGatewayCache{placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, "", "", nil)
+	if err == nil {
+		t.Fatalf("expected error for no accounts")
+placeholder
+	if acc != nil {
+		t.Fatalf("expected nil account")
+placeholder
+	if !strings.Contains(err.Error(), "no available OpenAI accounts") {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_NoCandidates(t *testing.T) {
+	groupID := int64(1)
+	resetAt := time.Now().Add(1 * time.Hour)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1, RateLimitResetAt: &resetAtplaceholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "", "gpt-4", nil)
+	if err == nil {
+		t.Fatalf("expected error for no candidates")
+placeholder
+	if selection != nil {
+		t.Fatalf("expected nil selection")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_AllFullWaitPlan(t *testing.T) {
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		loadMap: map[int64]*AccountLoadInfo{
+			1: {AccountID: 1, LoadRate: 100placeholder,
+	placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.WaitPlan == nil {
+		t.Fatalf("expected wait plan")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_LoadBatchErrorNoAcquire(t *testing.T) {
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		loadBatchErr:   errors.New("load batch failed"),
+		acquireResults: map[int64]bool{1: falseplaceholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.WaitPlan == nil {
+		t.Fatalf("expected wait plan")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_MissingLoadInfo(t *testing.T) {
+	groupID := int64(1)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		loadMap: map[int64]*AccountLoadInfo{
+			1: {AccountID: 1, LoadRate: 50placeholder,
+	placeholder,
+		skipDefaultLoad: true,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.Account == nil || selection.Account.ID != 2 {
+		t.Fatalf("expected account 2")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountForModelWithExclusions_LeastRecentlyUsed(t *testing.T) {
+	oldTime := time.Now().Add(-2 * time.Hour)
+	newTime := time.Now().Add(-1 * time.Hour)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Priority: 1, LastUsedAt: &newTimeplaceholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Priority: 1, LastUsedAt: &oldTimeplaceholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo: repo,
+		cache:       cache,
+placeholder
+
+	acc, err := svc.SelectAccountForModelWithExclusions(context.Background(), nil, "", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountForModelWithExclusions error: %v", err)
+placeholder
+	if acc == nil || acc.ID != 2 {
+		t.Fatalf("expected account 2")
+placeholder
+placeholder
+
+func TestOpenAISelectAccountWithLoadAwareness_PreferNeverUsed(t *testing.T) {
+	groupID := int64(1)
+	lastUsed := time.Now().Add(-1 * time.Hour)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{ID: 1, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1, LastUsedAt: &lastUsedplaceholder,
+			{ID: 2, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 1placeholder,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	concurrencyCache := stubConcurrencyCache{
+		loadMap: map[int64]*AccountLoadInfo{
+			1: {AccountID: 1, LoadRate: 10placeholder,
+			2: {AccountID: 2, LoadRate: 10placeholder,
+	placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{
+		accountRepo:        repo,
+		cache:              cache,
+		concurrencyService: NewConcurrencyService(concurrencyCache),
+placeholder
+
+	selection, err := svc.SelectAccountWithLoadAwareness(context.Background(), &groupID, "", "gpt-4", nil)
+	if err != nil {
+		t.Fatalf("SelectAccountWithLoadAwareness error: %v", err)
+placeholder
+	if selection == nil || selection.Account == nil || selection.Account.ID != 2 {
+		t.Fatalf("expected account 2")
 placeholder
 placeholder
 

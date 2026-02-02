@@ -58,7 +58,9 @@ placeholder
 		return nil, false, err
 placeholder
 	if len(ids) == 0 {
-		return []*service.Account{placeholder, true, nil
+		// 空快照视为缓存未命中，触发数据库回退查询
+		// 这解决了新分组创建后立即绑定账号时的竞态条件问题
+		return nil, false, nil
 placeholder
 
 	keys := make([]string, 0, len(ids))

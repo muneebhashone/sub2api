@@ -98,9 +98,9 @@ placeholder
 		return
 placeholder
 
-	outGroups := make([]dto.Group, 0, len(groups))
+	outGroups := make([]dto.AdminGroup, 0, len(groups))
 	for i := range groups {
-		outGroups = append(outGroups, *dto.GroupFromService(&groups[i]))
+		outGroups = append(outGroups, *dto.GroupFromServiceAdmin(&groups[i]))
 placeholder
 	response.Paginated(c, outGroups, total, page, pageSize)
 placeholder
@@ -124,9 +124,9 @@ placeholder
 		return
 placeholder
 
-	outGroups := make([]dto.Group, 0, len(groups))
+	outGroups := make([]dto.AdminGroup, 0, len(groups))
 	for i := range groups {
-		outGroups = append(outGroups, *dto.GroupFromService(&groups[i]))
+		outGroups = append(outGroups, *dto.GroupFromServiceAdmin(&groups[i]))
 placeholder
 	response.Success(c, outGroups)
 placeholder
@@ -146,7 +146,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.GroupFromService(group))
+	response.Success(c, dto.GroupFromServiceAdmin(group))
 placeholder
 
 // Create handles creating a new group
@@ -183,7 +183,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.GroupFromService(group))
+	response.Success(c, dto.GroupFromServiceAdmin(group))
 placeholder
 
 // Update handles updating a group
@@ -227,7 +227,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.GroupFromService(group))
+	response.Success(c, dto.GroupFromServiceAdmin(group))
 placeholder
 
 // Delete handles deleting a group

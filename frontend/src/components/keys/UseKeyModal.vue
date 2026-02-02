@@ -443,7 +443,7 @@ $env:ANTHROPIC_AUTH_TOKEN="${apiKeyplaceholder"`
 placeholder
 
 function generateGeminiCliContent(baseUrl: string, apiKey: string): FileConfig {
-  const model = 'gemini-2.5-pro'
+  const model = 'gemini-2.0-flash'
   const modelComment = t('keys.useKeyModal.gemini.modelComment')
   let path: string
   let content: string
@@ -548,14 +548,22 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     placeholder
   placeholder
   const geminiModels = {
-    'gemini-3-pro-high': { name: 'Gemini 3 Pro High' placeholder,
-    'gemini-3-pro-low': { name: 'Gemini 3 Pro Low' placeholder,
-    'gemini-3-pro-preview': { name: 'Gemini 3 Pro Preview' placeholder,
-    'gemini-3-pro-image': { name: 'Gemini 3 Pro Image' placeholder,
-    'gemini-3-flash': { name: 'Gemini 3 Flash' placeholder,
-    'gemini-2.5-flash-thinking': { name: 'Gemini 2.5 Flash Thinking' placeholder,
+    'gemini-2.0-flash': { name: 'Gemini 2.0 Flash' placeholder,
     'gemini-2.5-flash': { name: 'Gemini 2.5 Flash' placeholder,
-    'gemini-2.5-flash-lite': { name: 'Gemini 2.5 Flash Lite' placeholder
+    'gemini-2.5-pro': { name: 'Gemini 2.5 Pro' placeholder,
+    'gemini-3-flash-preview': { name: 'Gemini 3 Flash Preview' placeholder,
+    'gemini-3-pro-preview': { name: 'Gemini 3 Pro Preview' placeholder
+  placeholder
+
+  const antigravityGeminiModels = {
+    'gemini-2.5-flash': { name: 'Gemini 2.5 Flash' placeholder,
+    'gemini-2.5-flash-lite': { name: 'Gemini 2.5 Flash Lite' placeholder,
+    'gemini-2.5-flash-thinking': { name: 'Gemini 2.5 Flash Thinking' placeholder,
+    'gemini-3-flash': { name: 'Gemini 3 Flash' placeholder,
+    'gemini-3-pro-low': { name: 'Gemini 3 Pro Low' placeholder,
+    'gemini-3-pro-high': { name: 'Gemini 3 Pro High' placeholder,
+    'gemini-3-pro-preview': { name: 'Gemini 3 Pro Preview' placeholder,
+    'gemini-3-pro-image': { name: 'Gemini 3 Pro Image' placeholder
   placeholder
   const claudeModels = {
     'claude-opus-4-5-thinking': { name: 'Claude Opus 4.5 Thinking' placeholder,
@@ -575,7 +583,7 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
   placeholder else if (platform === 'antigravity-gemini') {
     provider[platform].npm = '@ai-sdk/google'
     provider[platform].name = 'Antigravity (Gemini)'
-    provider[platform].models = geminiModels
+    provider[platform].models = antigravityGeminiModels
   placeholder else if (platform === 'openai') {
     provider[platform].models = openaiModels
   placeholder
