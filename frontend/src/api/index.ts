@@ -16,6 +16,7 @@ export { userAPI placeholder from './user'
 export { redeemAPI, type RedeemHistoryItem placeholder from './redeem'
 export { userGroupsAPI placeholder from './groups'
 export { totpAPI placeholder from './totp'
+export { default as announcementsAPI placeholder from './announcements'
 
 // Admin APIs
 export { adminAPI placeholder from './admin'
