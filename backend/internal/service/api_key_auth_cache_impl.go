@@ -241,6 +241,7 @@ placeholder
 			ModelRouting:                    apiKey.Group.ModelRouting,
 			ModelRoutingEnabled:             apiKey.Group.ModelRoutingEnabled,
 			MCPXMLInject:                    apiKey.Group.MCPXMLInject,
+			SupportedModelScopes:            apiKey.Group.SupportedModelScopes,
 	placeholder
 placeholder
 	return snapshot
@@ -287,6 +288,7 @@ placeholder
 			ModelRouting:                    snapshot.Group.ModelRouting,
 			ModelRoutingEnabled:             snapshot.Group.ModelRoutingEnabled,
 			MCPXMLInject:                    snapshot.Group.MCPXMLInject,
+			SupportedModelScopes:            snapshot.Group.SupportedModelScopes,
 	placeholder
 placeholder
 	return apiKey

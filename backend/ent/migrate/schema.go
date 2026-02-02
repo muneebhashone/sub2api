@@ -322,6 +322,7 @@ placeholder
 		{Name: "model_routing", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "model_routing_enabled", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "mcp_xml_inject", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "supported_model_scopes", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{

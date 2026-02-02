@@ -113,6 +113,8 @@ type CreateGroupInput struct {
 	ModelRouting        map[string][]int64
 	ModelRoutingEnabled bool // 是否启用模型路由
 	MCPXMLInject        *bool
+	// 支持的模型系列（仅 antigravity 平台使用）
+	SupportedModelScopes []string
 placeholder
 
 type UpdateGroupInput struct {
@@ -138,6 +140,8 @@ type UpdateGroupInput struct {
 	ModelRouting        map[string][]int64
 	ModelRoutingEnabled *bool // 是否启用模型路由
 	MCPXMLInject        *bool
+	// 支持的模型系列（仅 antigravity 平台使用）
+	SupportedModelScopes *[]string
 placeholder
 
 type CreateAccountInput struct {
@@ -613,6 +617,7 @@ placeholder
 		FallbackGroupIDOnInvalidRequest: fallbackOnInvalidRequest,
 		ModelRouting:                    input.ModelRouting,
 		MCPXMLInject:                    mcpXMLInject,
+		SupportedModelScopes:            input.SupportedModelScopes,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
@@ -795,6 +800,11 @@ placeholder
 placeholder
 	if input.MCPXMLInject != nil {
 		group.MCPXMLInject = *input.MCPXMLInject
+placeholder
+
+	// 支持的模型系列（仅 antigravity 平台使用）
+	if input.SupportedModelScopes != nil {
+		group.SupportedModelScopes = *input.SupportedModelScopes
 placeholder
 
 	if err := s.groupRepo.Update(ctx, group); err != nil {
