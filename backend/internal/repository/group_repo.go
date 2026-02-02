@@ -440,7 +440,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	var accountIDs []int64
 	for rows.Next() {
