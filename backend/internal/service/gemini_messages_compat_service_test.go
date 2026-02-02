@@ -1,6 +1,8 @@
 package service
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -124,5 +126,80 @@ placeholder
 					tt.description, expectedFuncCount, len(funcDecls))
 		placeholder
 	placeholder)
+placeholder
+placeholder
+
+func TestConvertClaudeMessagesToGeminiGenerateContent_AddsThoughtSignatureForToolUse(t *testing.T) {
+	claudeReq := map[string]any{
+		"model":      "placeholder",
+		"max_tokens": 10,
+		"messages": []any{
+			map[string]any{
+				"role": "user",
+				"content": []any{
+					map[string]any{"type": "text", "text": "hi"placeholder,
+			placeholder,
+		placeholder,
+			map[string]any{
+				"role": "assistant",
+				"content": []any{
+					map[string]any{"type": "text", "text": "ok"placeholder,
+					map[string]any{
+						"type":  "tool_use",
+						"id":    "toolu_123",
+						"name":  "default_api:write_file",
+						"input": map[string]any{"path": "a.txt", "content": "x"placeholder,
+						// no signature on purpose
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+		"tools": []any{
+			map[string]any{
+				"name":        "default_api:write_file",
+				"description": "write file",
+				"input_schema": map[string]any{
+					"type":       "object",
+					"properties": map[string]any{"path": map[string]any{"type": "string"placeholderplaceholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	b, _ := json.Marshal(claudeReq)
+
+	out, err := convertClaudeMessagesToGeminiGenerateContent(b)
+	if err != nil {
+		t.Fatalf("convert failed: %v", err)
+placeholder
+	s := string(out)
+	if !strings.Contains(s, "\"functionCall\"") {
+		t.Fatalf("expected functionCall in output, got: %s", s)
+placeholder
+	if !strings.Contains(s, "\"thoughtSignature\":\""+geminiDummyThoughtSignature+"\"") {
+		t.Fatalf("expected injected thoughtSignature %q, got: %s", geminiDummyThoughtSignature, s)
+placeholder
+placeholder
+
+func TestEnsureGeminiFunctionCallThoughtSignatures_InsertsWhenMissing(t *testing.T) {
+	geminiReq := map[string]any{
+		"contents": []any{
+			map[string]any{
+				"role": "user",
+				"parts": []any{
+					map[string]any{
+						"functionCall": map[string]any{
+							"name": "default_api:write_file",
+							"args": map[string]any{"path": "a.txt"placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	b, _ := json.Marshal(geminiReq)
+	out := ensureGeminiFunctionCallThoughtSignatures(b)
+	s := string(out)
+	if !strings.Contains(s, "\"thoughtSignature\":\""+geminiDummyThoughtSignature+"\"") {
+		t.Fatalf("expected injected thoughtSignature %q, got: %s", geminiDummyThoughtSignature, s)
 placeholder
 placeholder
