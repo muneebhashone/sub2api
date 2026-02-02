@@ -202,6 +202,57 @@ placeholder
 	return redeemCodeEntitiesToService(codes), nil
 placeholder
 
+// ListByUserPaginated returns paginated balance/concurrency history for a user.
+// Supports optional type filter (e.g. "balance", "admin_balance", "concurrency", "admin_concurrency", "subscription").
+func (r *redeemCodeRepository) ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]service.RedeemCode, *pagination.PaginationResult, error) {
+	q := r.client.RedeemCode.Query().
+		Where(redeemcode.UsedByEQ(userID))
+
+	// Optional type filter
+	if codeType != "" {
+		q = q.Where(redeemcode.TypeEQ(codeType))
+placeholder
+
+	total, err := q.Count(ctx)
+	if err != nil {
+		return nil, nil, err
+placeholder
+
+	codes, err := q.
+		WithGroup().
+		Offset(params.Offset()).
+		Limit(params.Limit()).
+		Order(dbent.Desc(redeemcode.FieldUsedAt)).
+		All(ctx)
+	if err != nil {
+		return nil, nil, err
+placeholder
+
+	return redeemCodeEntitiesToService(codes), paginationResultFromTotal(int64(total), params), nil
+placeholder
+
+// SumPositiveBalanceByUser returns total recharged amount (sum of value > 0 where type is balance/admin_balance).
+func (r *redeemCodeRepository) SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error) {
+	var result []struct {
+		Sum float64 `json:"sum"`
+placeholder
+	err := r.client.RedeemCode.Query().
+		Where(
+			redeemcode.UsedByEQ(userID),
+			redeemcode.ValueGT(0),
+			redeemcode.TypeIn("balance", "admin_balance"),
+		).
+		Aggregate(dbent.As(dbent.Sum(redeemcode.FieldValue), "sum")).
+		Scan(ctx, &result)
+	if err != nil {
+		return 0, err
+placeholder
+	if len(result) == 0 {
+		return 0, nil
+placeholder
+	return result[0].Sum, nil
+placeholder
+
 func redeemCodeEntityToService(m *dbent.RedeemCode) *service.RedeemCode {
 	if m == nil {
 		return nil
