@@ -433,7 +433,6 @@ placeholder
 const userNavItems = computed(() => {
   const items = [
     { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
-    { path: '/announcements', label: t('nav.announcements'), icon: BellIcon placeholder,
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
@@ -456,7 +455,6 @@ placeholder)
 // Personal navigation items (for admin's "My Account" section, without Dashboard)
 const personalNavItems = computed(() => {
   const items = [
-    { path: '/announcements', label: t('nav.announcements'), icon: BellIcon placeholder,
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,

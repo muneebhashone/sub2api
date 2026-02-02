@@ -187,18 +187,6 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'purchase.description'
     placeholder
   placeholder,
-  {
-    path: '/announcements',
-    name: 'Announcements',
-    component: () => import('@/views/user/AnnouncementsView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'Announcements',
-      titleKey: 'announcements.title',
-      descriptionKey: 'announcements.description'
-    placeholder
-  placeholder,
 
   // ==================== Admin Routes ====================
   {
