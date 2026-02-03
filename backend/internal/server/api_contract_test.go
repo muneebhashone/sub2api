@@ -83,6 +83,9 @@ placeholder{
 					"status": "active",
 					"ip_whitelist": null,
 					"ip_blacklist": null,
+					"quota": 0,
+					"quota_used": 0,
+					"expires_at": null,
 					"created_at": "2025-01-02T03:04:05Z",
 					"updated_at": "2025-01-02T03:04:05Z"
 			placeholder
@@ -119,6 +122,9 @@ placeholder{
 							"status": "active",
 							"ip_whitelist": null,
 							"ip_blacklist": null,
+							"quota": 0,
+							"quota_used": 0,
+							"expires_at": null,
 							"created_at": "2025-01-02T03:04:05Z",
 							"updated_at": "2025-01-02T03:04:05Z"
 					placeholder
@@ -1151,6 +1157,14 @@ placeholder
 	return append([]service.RedeemCode(nil), codes...), nil
 placeholder
 
+func (stubRedeemCodeRepo) ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]service.RedeemCode, *pagination.PaginationResult, error) {
+	return nil, nil, errors.New("not implemented")
+placeholder
+
+func (stubRedeemCodeRepo) SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error) {
+	return 0, errors.New("not implemented")
+placeholder
+
 type stubUserSubscriptionRepo struct {
 	byUser       map[int64][]service.UserSubscription
 	activeByUser map[int64][]service.UserSubscription
@@ -1433,6 +1447,10 @@ placeholder
 
 func (r *stubApiKeyRepo) ListKeysByGroupID(ctx context.Context, groupID int64) ([]string, error) {
 	return nil, errors.New("not implemented")
+placeholder
+
+func (r *stubApiKeyRepo) IncrementQuotaUsed(ctx context.Context, id int64, amount float64) (float64, error) {
+	return 0, errors.New("not implemented")
 placeholder
 
 type stubUsageLogRepo struct {

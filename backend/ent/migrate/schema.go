@@ -20,6 +20,9 @@ var (
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "ip_whitelist", Type: field.TypeJSON, Nullable: trueplaceholder,
 		{Name: "ip_blacklist", Type: field.TypeJSON, Nullable: trueplaceholder,
+		{Name: "quota", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "quota_used", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "expires_at", Type: field.TypeTime, Nullable: trueplaceholder,
 		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "user_id", Type: field.TypeInt64placeholder,
 placeholder
@@ -31,13 +34,13 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "api_keys_groups_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[9]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[12]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[10]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[13]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
@@ -46,12 +49,12 @@ placeholder
 			{
 				Name:    "apikey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[10]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[13]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[9]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[12]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_status",
@@ -62,6 +65,16 @@ placeholder
 				Name:    "apikey_deleted_at",
 				Unique:  false,
 				Columns: []*schema.Column{APIKeysColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "apikey_quota_quota_used",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[9], APIKeysColumns[10]placeholder,
+		placeholder,
+			{
+				Name:    "apikey_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[11]placeholder,
 		placeholder,
 	placeholder,
 placeholder
