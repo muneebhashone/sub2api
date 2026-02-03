@@ -100,9 +100,26 @@ func TestBuildParts_ToolUseSignatureHandling(t *testing.T) {
 		{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "ls"placeholder, "signature": "sig_tool_abc"placeholder
 	]`
 
-	t.Run("Gemini uses dummy tool_use signature", func(t *testing.T) {
+	t.Run("Gemini preserves provided tool_use signature", func(t *testing.T) {
 		toolIDToName := make(map[string]string)
 		parts, _, err := buildParts(json.RawMessage(content), toolIDToName, true)
+		if err != nil {
+			t.Fatalf("buildParts() error = %v", err)
+	placeholder
+		if len(parts) != 1 || parts[0].FunctionCall == nil {
+			t.Fatalf("expected 1 functionCall part, got %+v", parts)
+	placeholder
+		if parts[0].ThoughtSignature != "sig_tool_abc" {
+			t.Fatalf("expected preserved tool signature %q, got %q", "sig_tool_abc", parts[0].ThoughtSignature)
+	placeholder
+placeholder)
+
+	t.Run("Gemini falls back to dummy tool_use signature when missing", func(t *testing.T) {
+		contentNoSig := `[
+			{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "ls"placeholderplaceholder
+		]`
+		toolIDToName := make(map[string]string)
+		parts, _, err := buildParts(json.RawMessage(contentNoSig), toolIDToName, true)
 		if err != nil {
 			t.Fatalf("buildParts() error = %v", err)
 	placeholder

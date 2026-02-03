@@ -157,6 +157,12 @@
             <span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span>
           </template>
 
+          <template #cell-reasoning_effort="{ row placeholder">
+            <span class="text-sm text-gray-900 dark:text-white">
+              {{ formatReasoningEffort(row.reasoning_effort) placeholderplaceholder
+            </span>
+          </template>
+
           <template #cell-stream="{ row placeholder">
             <span
               class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
@@ -438,12 +444,12 @@ import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
-import Select from '@/components/common/Select.vue'
-import DateRangePicker from '@/components/common/DateRangePicker.vue'
-import Icon from '@/components/icons/Icon.vue'
-import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse placeholder from '@/types'
-import type { Column placeholder from '@/components/common/types'
-import { formatDateTime placeholder from '@/utils/format'
+  import Select from '@/components/common/Select.vue'
+  import DateRangePicker from '@/components/common/DateRangePicker.vue'
+  import Icon from '@/components/icons/Icon.vue'
+  import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse placeholder from '@/types'
+  import type { Column placeholder from '@/components/common/types'
+  import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -466,6 +472,7 @@ const usageStats = ref<UsageStatsResponse | null>(null)
 const columns = computed<Column[]>(() => [
   { key: 'api_key', label: t('usage.apiKeyFilter'), sortable: false placeholder,
   { key: 'model', label: t('usage.model'), sortable: true placeholder,
+  { key: 'reasoning_effort', label: t('usage.reasoningEffort'), sortable: false placeholder,
   { key: 'stream', label: t('usage.type'), sortable: false placeholder,
   { key: 'tokens', label: t('usage.tokens'), sortable: false placeholder,
   { key: 'cost', label: t('usage.cost'), sortable: false placeholder,
@@ -723,6 +730,7 @@ const exportToCSV = async () => {
       'Time',
       'API Key Name',
       'Model',
+      'Reasoning Effort',
       'Type',
       'Input Tokens',
       'Output Tokens',
@@ -739,6 +747,7 @@ const exportToCSV = async () => {
         log.created_at,
         log.api_key?.name || '',
         log.model,
+        formatReasoningEffort(log.reasoning_effort),
         log.stream ? 'Stream' : 'Sync',
         log.input_tokens,
         log.output_tokens,
