@@ -40,6 +40,12 @@ type APIKey struct {
 	IPWhitelist []string `json:"ip_whitelist,omitempty"`
 	// Blocked IPs/CIDRs
 	IPBlacklist []string `json:"ip_blacklist,omitempty"`
+	// Quota limit in USD for this API key (0 = unlimited)
+	Quota float64 `json:"quota,omitempty"`
+	// Used quota amount in USD
+	QuotaUsed float64 `json:"quota_used,omitempty"`
+	// Expiration time for this API key (null = never expires)
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the APIKeyQuery when eager-loading is set.
 	Edges        APIKeyEdges `json:"edges"`
@@ -97,11 +103,13 @@ func (*APIKey) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case apikey.FieldIPWhitelist, apikey.FieldIPBlacklist:
 			values[i] = new([]byte)
+		case apikey.FieldQuota, apikey.FieldQuotaUsed:
+			values[i] = new(sql.NullFloat64)
 		case apikey.FieldID, apikey.FieldUserID, apikey.FieldGroupID:
 			values[i] = new(sql.NullInt64)
 		case apikey.FieldKey, apikey.FieldName, apikey.FieldStatus:
 			values[i] = new(sql.NullString)
-		case apikey.FieldCreatedAt, apikey.FieldUpdatedAt, apikey.FieldDeletedAt:
+		case apikey.FieldCreatedAt, apikey.FieldUpdatedAt, apikey.FieldDeletedAt, apikey.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -190,6 +198,25 @@ placeholder
 					return fmt.Errorf("unmarshal field ip_blacklist: %w", err)
 			placeholder
 		placeholder
+		case apikey.FieldQuota:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota", values[i])
+		placeholder else if value.Valid {
+				_m.Quota = value.Float64
+		placeholder
+		case apikey.FieldQuotaUsed:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_used", values[i])
+		placeholder else if value.Valid {
+				_m.QuotaUsed = value.Float64
+		placeholder
+		case apikey.FieldExpiresAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field expires_at", values[i])
+		placeholder else if value.Valid {
+				_m.ExpiresAt = new(time.Time)
+				*_m.ExpiresAt = value.Time
+		placeholder
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 	placeholder
@@ -274,6 +301,17 @@ placeholder
 	builder.WriteString(", ")
 	builder.WriteString("ip_blacklist=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IPBlacklist))
+	builder.WriteString(", ")
+	builder.WriteString("quota=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Quota))
+	builder.WriteString(", ")
+	builder.WriteString("quota_used=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaUsed))
+	builder.WriteString(", ")
+	if v := _m.ExpiresAt; v != nil {
+		builder.WriteString("expires_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+placeholder
 	builder.WriteByte(')')
 	return builder.String()
 placeholder
