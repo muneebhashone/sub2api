@@ -42,13 +42,13 @@
 import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import GroupBadge from './GroupBadge.vue'
-import type { Group, GroupPlatform placeholder from '@/types'
+import type { AdminGroup, GroupPlatform placeholder from '@/types'
 
 const { t placeholder = useI18n()
 
 interface Props {
   modelValue: number[]
-  groups: Group[]
+  groups: AdminGroup[]
   platform?: GroupPlatform // Optional platform filter
   mixedScheduling?: boolean // For antigravity accounts: allow anthropic/gemini groups
 placeholder

@@ -190,7 +190,7 @@ placeholder
 	return userSubscriptionEntitiesToService(subs), paginationResultFromTotal(int64(total), params), nil
 placeholder
 
-func (r *userSubscriptionRepository) List(ctx context.Context, params pagination.PaginationParams, userID, groupID *int64, status string) ([]service.UserSubscription, *pagination.PaginationResult, error) {
+func (r *userSubscriptionRepository) List(ctx context.Context, params pagination.PaginationParams, userID, groupID *int64, status, sortBy, sortOrder string) ([]service.UserSubscription, *pagination.PaginationResult, error) {
 	client := clientFromContext(ctx, r.client)
 	q := client.UserSubscription.Query()
 	if userID != nil {
@@ -199,7 +199,31 @@ placeholder
 	if groupID != nil {
 		q = q.Where(usersubscription.GroupIDEQ(*groupID))
 placeholder
-	if status != "" {
+
+	// Status filtering with real-time expiration check
+	now := time.Now()
+	switch status {
+	case service.SubscriptionStatusActive:
+		// Active: status is active AND not yet expired
+		q = q.Where(
+			usersubscription.StatusEQ(service.SubscriptionStatusActive),
+			usersubscription.ExpiresAtGT(now),
+		)
+	case service.SubscriptionStatusExpired:
+		// Expired: status is expired OR (status is active but already expired)
+		q = q.Where(
+			usersubscription.Or(
+				usersubscription.StatusEQ(service.SubscriptionStatusExpired),
+				usersubscription.And(
+					usersubscription.StatusEQ(service.SubscriptionStatusActive),
+					usersubscription.ExpiresAtLTE(now),
+				),
+			),
+		)
+	case "":
+		// No filter
+	default:
+		// Other status (e.g., revoked)
 		q = q.Where(usersubscription.StatusEQ(status))
 placeholder
 
@@ -208,11 +232,28 @@ placeholder
 		return nil, nil, err
 placeholder
 
+	// Apply sorting
+	q = q.WithUser().WithGroup().WithAssignedByUser()
+
+	// Determine sort field
+	var field string
+	switch sortBy {
+	case "expires_at":
+		field = usersubscription.FieldExpiresAt
+	case "status":
+		field = usersubscription.FieldStatus
+	default:
+		field = usersubscription.FieldCreatedAt
+placeholder
+
+	// Determine sort order (default: desc)
+	if sortOrder == "asc" && sortBy != "" {
+		q = q.Order(dbent.Asc(field))
+placeholder else {
+		q = q.Order(dbent.Desc(field))
+placeholder
+
 	subs, err := q.
-		WithUser().
-		WithGroup().
-		WithAssignedByUser().
-		Order(dbent.Desc(usersubscription.FieldCreatedAt)).
 		Offset(params.Offset()).
 		Limit(params.Limit()).
 		All(ctx)

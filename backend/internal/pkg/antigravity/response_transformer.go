@@ -3,6 +3,8 @@ package antigravity
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
 )
 
 // TransformGeminiToClaude 将 Gemini 响应转换为 Claude 格式（非流式）
@@ -14,6 +16,15 @@ func TransformGeminiToClaude(geminiResp []byte, originalModel string) ([]byte, *
 		var directResp GeminiResponse
 		if err2 := json.Unmarshal(geminiResp, &directResp); err2 != nil {
 			return nil, nil, fmt.Errorf("parse gemini response: %w", err)
+	placeholder
+		v1Resp.Response = directResp
+		v1Resp.ResponseID = directResp.ResponseID
+		v1Resp.ModelVersion = directResp.ModelVersion
+placeholder else if len(v1Resp.Response.Candidates) == 0 {
+		// 第一次解析成功但 candidates 为空，说明是直接的 GeminiResponse 格式
+		var directResp GeminiResponse
+		if err2 := json.Unmarshal(geminiResp, &directResp); err2 != nil {
+			return nil, nil, fmt.Errorf("parse gemini response as direct: %w", err2)
 	placeholder
 		v1Resp.Response = directResp
 		v1Resp.ResponseID = directResp.ResponseID
@@ -61,6 +72,12 @@ placeholder
 	// 处理所有 parts
 	for _, part := range parts {
 		p.processPart(&part)
+placeholder
+
+	if len(geminiResp.Candidates) > 0 {
+		if grounding := geminiResp.Candidates[0].GroundingMetadata; grounding != nil {
+			p.processGrounding(grounding)
+	placeholder
 placeholder
 
 	// 刷新剩余内容
@@ -166,16 +183,20 @@ placeholder
 				p.trailingSignature = ""
 		placeholder
 
-			p.textBuilder += part.Text
-
-			// 非空 text 带签名 - 立即刷新并输出空 thinking 块
+			// 非空 text 带签名 - 特殊处理：先输出 text，再输出空 thinking 块
 			if signature != "" {
-				p.flushText()
+				p.contentBlocks = append(p.contentBlocks, ClaudeContentItem{
+					Type: "text",
+					Text: part.Text,
+			placeholder)
 				p.contentBlocks = append(p.contentBlocks, ClaudeContentItem{
 					Type:      "thinking",
 					Thinking:  "",
 					Signature: signature,
 			placeholder)
+		placeholder else {
+				// 普通 text (无签名) - 累积到 builder
+				p.textBuilder += part.Text
 		placeholder
 	placeholder
 placeholder
@@ -188,6 +209,18 @@ placeholder
 		p.textBuilder += markdownImg
 		p.flushText()
 placeholder
+placeholder
+
+func (p *NonStreamingProcessor) processGrounding(grounding *GeminiGroundingMetadata) {
+	groundingText := buildGroundingText(grounding)
+	if groundingText == "" {
+		return
+placeholder
+
+	p.flushThinking()
+	p.flushText()
+	p.textBuilder += groundingText
+	p.flushText()
 placeholder
 
 // flushText 刷新 text builder
@@ -223,6 +256,14 @@ func (p *NonStreamingProcessor) buildResponse(geminiResp *GeminiResponse, respon
 	var finishReason string
 	if len(geminiResp.Candidates) > 0 {
 		finishReason = geminiResp.Candidates[0].FinishReason
+		if finishReason == "MALFORMED_FUNCTION_CALL" {
+			log.Printf("[Antigravity] MALFORMED_FUNCTION_CALL detected in response for model %s", originalModel)
+			if geminiResp.Candidates[0].Content != nil {
+				if b, err := json.Marshal(geminiResp.Candidates[0].Content); err == nil {
+					log.Printf("[Antigravity] Malformed content: %s", string(b))
+			placeholder
+		placeholder
+	placeholder
 placeholder
 
 	stopReason := "end_turn"
@@ -260,6 +301,44 @@ placeholder
 		StopReason: stopReason,
 		Usage:      usage,
 placeholder
+placeholder
+
+func buildGroundingText(grounding *GeminiGroundingMetadata) string {
+	if grounding == nil {
+		return ""
+placeholder
+
+	var builder strings.Builder
+
+	if len(grounding.WebSearchQueries) > 0 {
+		_, _ = builder.WriteString("\n\n---\nWeb search queries: ")
+		_, _ = builder.WriteString(strings.Join(grounding.WebSearchQueries, ", "))
+placeholder
+
+	if len(grounding.GroundingChunks) > 0 {
+		var links []string
+		for i, chunk := range grounding.GroundingChunks {
+			if chunk.Web == nil {
+				continue
+		placeholder
+			title := strings.TrimSpace(chunk.Web.Title)
+			if title == "" {
+				title = "Source"
+		placeholder
+			uri := strings.TrimSpace(chunk.Web.URI)
+			if uri == "" {
+				uri = "#"
+		placeholder
+			links = append(links, fmt.Sprintf("[%d] [%s](%s)", i+1, title, uri))
+	placeholder
+
+		if len(links) > 0 {
+			_, _ = builder.WriteString("\n\nSources:\n")
+			_, _ = builder.WriteString(strings.Join(links, "\n"))
+	placeholder
+placeholder
+
+	return builder.String()
 placeholder
 
 // generateRandomID 生成随机 ID

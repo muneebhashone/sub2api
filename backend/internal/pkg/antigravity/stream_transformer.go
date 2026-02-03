@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -27,6 +28,8 @@ type StreamingProcessor struct {
 	pendingSignature  string
 	trailingSignature string
 	originalModel     string
+	webSearchQueries  []string
+	groundingChunks   []GeminiGroundingChunk
 
 	// 累计 usage
 	inputTokens     int
@@ -93,9 +96,21 @@ placeholder
 	placeholder
 placeholder
 
+	if len(geminiResp.Candidates) > 0 {
+		p.captureGrounding(geminiResp.Candidates[0].GroundingMetadata)
+placeholder
+
 	// 检查是否结束
 	if len(geminiResp.Candidates) > 0 {
 		finishReason := geminiResp.Candidates[0].FinishReason
+		if finishReason == "MALFORMED_FUNCTION_CALL" {
+			log.Printf("[Antigravity] MALFORMED_FUNCTION_CALL detected in stream for model %s", p.originalModel)
+			if geminiResp.Candidates[0].Content != nil {
+				if b, err := json.Marshal(geminiResp.Candidates[0].Content); err == nil {
+					log.Printf("[Antigravity] Malformed content: %s", string(b))
+			placeholder
+		placeholder
+	placeholder
 		if finishReason != "" {
 			_, _ = result.Write(p.emitFinish(finishReason))
 	placeholder
@@ -198,6 +213,20 @@ placeholder
 placeholder
 
 	return result.Bytes()
+placeholder
+
+func (p *StreamingProcessor) captureGrounding(grounding *GeminiGroundingMetadata) {
+	if grounding == nil {
+		return
+placeholder
+
+	if len(grounding.WebSearchQueries) > 0 && len(p.webSearchQueries) == 0 {
+		p.webSearchQueries = append([]string(nil), grounding.WebSearchQueries...)
+placeholder
+
+	if len(grounding.GroundingChunks) > 0 && len(p.groundingChunks) == 0 {
+		p.groundingChunks = append([]GeminiGroundingChunk(nil), grounding.GroundingChunks...)
+placeholder
 placeholder
 
 // processThinking 处理 thinking
@@ -415,6 +444,23 @@ func (p *StreamingProcessor) emitFinish(finishReason string) []byte {
 	if p.trailingSignature != "" {
 		_, _ = result.Write(p.emitEmptyThinkingWithSignature(p.trailingSignature))
 		p.trailingSignature = ""
+placeholder
+
+	if len(p.webSearchQueries) > 0 || len(p.groundingChunks) > 0 {
+		groundingText := buildGroundingText(&GeminiGroundingMetadata{
+			WebSearchQueries: p.webSearchQueries,
+			GroundingChunks:  p.groundingChunks,
+	placeholder)
+		if groundingText != "" {
+			_, _ = result.Write(p.startBlock(BlockTypeText, map[string]any{
+				"type": "text",
+				"text": "",
+		placeholder))
+			_, _ = result.Write(p.emitDelta("text_delta", map[string]any{
+				"text": groundingText,
+		placeholder))
+			_, _ = result.Write(p.endBlock())
+	placeholder
 placeholder
 
 	// 确定 stop_reason

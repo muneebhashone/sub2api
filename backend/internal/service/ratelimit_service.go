@@ -73,10 +73,14 @@ func (s *RateLimitService) HandleUpstreamError(ctx context.Context, account *Acc
 		return false
 placeholder
 
-	tempMatched := false
+	// 先尝试临时不可调度规则（401除外）
+	// 如果匹配成功，直接返回，不执行后续禁用逻辑
 	if statusCode != 401 {
-		tempMatched = s.tryTempUnschedulable(ctx, account, statusCode, responseBody)
+		if s.tryTempUnschedulable(ctx, account, statusCode, responseBody) {
+			return true
+	placeholder
 placeholder
+
 	upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(responseBody))
 	upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 	if upstreamMsg != "" {
@@ -84,6 +88,14 @@ placeholder
 placeholder
 
 	switch statusCode {
+	case 400:
+		// 只有当错误信息包含 "organization has been disabled" 时才禁用
+		if strings.Contains(strings.ToLower(upstreamMsg), "organization has been disabled") {
+			msg := "Organization disabled (400): " + upstreamMsg
+			s.handleAuthError(ctx, account, msg)
+			shouldDisable = true
+	placeholder
+		// 其他 400 错误（如参数问题）不处理，不禁用账号
 	case 401:
 		// 对所有 OAuth 账号在 401 错误时调用缓存失效并强制下次刷新
 		if account.Type == AccountTypeOAuth {
@@ -148,9 +160,6 @@ placeholder
 	placeholder
 placeholder
 
-	if tempMatched {
-		return true
-placeholder
 	return shouldDisable
 placeholder
 
@@ -190,7 +199,7 @@ placeholder
 			start := geminiDailyWindowStart(now)
 			totals, ok := s.getGeminiUsageTotals(account.ID, start, now)
 			if !ok {
-				stats, err := s.usageRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID, 0, nil)
+				stats, err := s.usageRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID, 0, nil, nil)
 				if err != nil {
 					return true, err
 			placeholder
@@ -237,7 +246,7 @@ placeholder
 
 		if limit > 0 {
 			start := now.Truncate(time.Minute)
-			stats, err := s.usageRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID, 0, nil)
+			stats, err := s.usageRepo.GetModelStatsWithFilters(ctx, start, now, 0, 0, account.ID, 0, nil, nil)
 			if err != nil {
 				return true, err
 		placeholder
@@ -334,9 +343,48 @@ placeholder
 // handle429 处理429限流错误
 // 解析响应头获取重置时间，标记账号为限流状态
 func (s *RateLimitService) handle429(ctx context.Context, account *Account, headers http.Header, responseBody []byte) {
-	// 解析重置时间戳
+	// 1. OpenAI 平台：优先尝试解析 x-codex-* 响应头（用于 rate_limit_exceeded）
+	if account.Platform == PlatformOpenAI {
+		if resetAt := s.calculateOpenAI429ResetTime(headers); resetAt != nil {
+			if err := s.accountRepo.SetRateLimited(ctx, account.ID, *resetAt); err != nil {
+				slog.Warn("rate_limit_set_failed", "account_id", account.ID, "error", err)
+				return
+		placeholder
+			slog.Info("openai_account_rate_limited", "account_id", account.ID, "reset_at", *resetAt)
+			return
+	placeholder
+placeholder
+
+	// 2. 尝试从响应头解析重置时间（Anthropic）
 	resetTimestamp := headers.Get("anthropic-ratelimit-unified-reset")
+
+	// 3. 如果响应头没有，尝试从响应体解析（OpenAI usage_limit_reached, Gemini）
 	if resetTimestamp == "" {
+		switch account.Platform {
+		case PlatformOpenAI:
+			// 尝试解析 OpenAI 的 usage_limit_reached 错误
+			if resetAt := parseOpenAIRateLimitResetTime(responseBody); resetAt != nil {
+				resetTime := time.Unix(*resetAt, 0)
+				if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetTime); err != nil {
+					slog.Warn("rate_limit_set_failed", "account_id", account.ID, "error", err)
+					return
+			placeholder
+				slog.Info("account_rate_limited", "account_id", account.ID, "platform", account.Platform, "reset_at", resetTime, "reset_in", time.Until(resetTime).Truncate(time.Second))
+				return
+		placeholder
+		case PlatformGemini, PlatformAntigravity:
+			// 尝试解析 Gemini 格式（用于其他平台）
+			if resetAt := ParseGeminiRateLimitResetTime(responseBody); resetAt != nil {
+				resetTime := time.Unix(*resetAt, 0)
+				if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetTime); err != nil {
+					slog.Warn("rate_limit_set_failed", "account_id", account.ID, "error", err)
+					return
+			placeholder
+				slog.Info("account_rate_limited", "account_id", account.ID, "platform", account.Platform, "reset_at", resetTime, "reset_in", time.Until(resetTime).Truncate(time.Second))
+				return
+		placeholder
+	placeholder
+
 		// 没有重置时间，使用默认5分钟
 		resetAt := time.Now().Add(5 * time.Minute)
 		if s.shouldScopeClaudeSonnetRateLimit(account, responseBody) {
@@ -347,6 +395,7 @@ func (s *RateLimitService) handle429(ctx context.Context, account *Account, head
 		placeholder
 			return
 	placeholder
+		slog.Warn("rate_limit_no_reset_time", "account_id", account.ID, "platform", account.Platform, "using_default", "5m")
 		if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
 			slog.Warn("rate_limit_set_failed", "account_id", account.ID, "error", err)
 	placeholder
@@ -408,6 +457,108 @@ placeholder
 		return false
 placeholder
 	return strings.Contains(msg, "sonnet")
+placeholder
+
+// calculateOpenAI429ResetTime 从 OpenAI 429 响应头计算正确的重置时间
+// 返回 nil 表示无法从响应头中确定重置时间
+func (s *RateLimitService) calculateOpenAI429ResetTime(headers http.Header) *time.Time {
+	snapshot := ParseCodexRateLimitHeaders(headers)
+	if snapshot == nil {
+		return nil
+placeholder
+
+	normalized := snapshot.Normalize()
+	if normalized == nil {
+		return nil
+placeholder
+
+	now := time.Now()
+
+	// 判断哪个限制被触发（used_percent >= 100）
+	is7dExhausted := normalized.Used7dPercent != nil && *normalized.Used7dPercent >= 100
+	is5hExhausted := normalized.Used5hPercent != nil && *normalized.Used5hPercent >= 100
+
+	// 优先使用被触发限制的重置时间
+	if is7dExhausted && normalized.Reset7dSeconds != nil {
+		resetAt := now.Add(time.Duration(*normalized.Reset7dSeconds) * time.Second)
+		slog.Info("openai_429_7d_limit_exhausted", "reset_after_seconds", *normalized.Reset7dSeconds, "reset_at", resetAt)
+		return &resetAt
+placeholder
+	if is5hExhausted && normalized.Reset5hSeconds != nil {
+		resetAt := now.Add(time.Duration(*normalized.Reset5hSeconds) * time.Second)
+		slog.Info("openai_429_5h_limit_exhausted", "reset_after_seconds", *normalized.Reset5hSeconds, "reset_at", resetAt)
+		return &resetAt
+placeholder
+
+	// 都未达到100%但收到429，使用较长的重置时间
+	var maxResetSecs int
+	if normalized.Reset7dSeconds != nil && *normalized.Reset7dSeconds > maxResetSecs {
+		maxResetSecs = *normalized.Reset7dSeconds
+placeholder
+	if normalized.Reset5hSeconds != nil && *normalized.Reset5hSeconds > maxResetSecs {
+		maxResetSecs = *normalized.Reset5hSeconds
+placeholder
+	if maxResetSecs > 0 {
+		resetAt := now.Add(time.Duration(maxResetSecs) * time.Second)
+		slog.Info("openai_429_using_max_reset", "max_reset_seconds", maxResetSecs, "reset_at", resetAt)
+		return &resetAt
+placeholder
+
+	return nil
+placeholder
+
+// parseOpenAIRateLimitResetTime 解析 OpenAI 格式的 429 响应，返回重置时间的 Unix 时间戳
+// OpenAI 的 usage_limit_reached 错误格式：
+//
+//	{
+//	  "error": {
+//	    "message": "The usage limit has been reached",
+//	    "type": "usage_limit_reached",
+//	    "resets_at": 1769404154,
+//	    "resets_in_seconds": 133107
+//	  placeholder
+//placeholder
+func parseOpenAIRateLimitResetTime(body []byte) *int64 {
+	var parsed map[string]any
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return nil
+placeholder
+
+	errObj, ok := parsed["error"].(map[string]any)
+	if !ok {
+		return nil
+placeholder
+
+	// 检查是否为 usage_limit_reached 或 rate_limit_exceeded 类型
+	errType, _ := errObj["type"].(string)
+	if errType != "usage_limit_reached" && errType != "rate_limit_exceeded" {
+		return nil
+placeholder
+
+	// 优先使用 resets_at（Unix 时间戳）
+	if resetsAt, ok := errObj["resets_at"].(float64); ok {
+		ts := int64(resetsAt)
+		return &ts
+placeholder
+	if resetsAt, ok := errObj["resets_at"].(string); ok {
+		if ts, err := strconv.ParseInt(resetsAt, 10, 64); err == nil {
+			return &ts
+	placeholder
+placeholder
+
+	// 如果没有 resets_at，尝试使用 resets_in_seconds
+	if resetsInSeconds, ok := errObj["resets_in_seconds"].(float64); ok {
+		ts := time.Now().Unix() + int64(resetsInSeconds)
+		return &ts
+placeholder
+	if resetsInSeconds, ok := errObj["resets_in_seconds"].(string); ok {
+		if sec, err := strconv.ParseInt(resetsInSeconds, 10, 64); err == nil {
+			ts := time.Now().Unix() + sec
+			return &ts
+	placeholder
+placeholder
+
+	return nil
 placeholder
 
 // handle529 处理529过载错误

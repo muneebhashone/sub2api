@@ -394,19 +394,35 @@ placeholder
 placeholder
 
 	modified := false
-	for idx, tool := range tools {
+	validTools := make([]any, 0, len(tools))
+
+	for _, tool := range tools {
 		toolMap, ok := tool.(map[string]any)
 		if !ok {
+			// Keep unknown structure as-is to avoid breaking upstream behavior.
+			validTools = append(validTools, tool)
 			continue
 	placeholder
 
 		toolType, _ := toolMap["type"].(string)
-		if strings.TrimSpace(toolType) != "function" {
+		toolType = strings.TrimSpace(toolType)
+		if toolType != "function" {
+			validTools = append(validTools, toolMap)
 			continue
 	placeholder
 
-		function, ok := toolMap["function"].(map[string]any)
-		if !ok {
+		// OpenAI Responses-style tools use top-level name/parameters.
+		if name, ok := toolMap["name"].(string); ok && strings.TrimSpace(name) != "" {
+			validTools = append(validTools, toolMap)
+			continue
+	placeholder
+
+		// ChatCompletions-style tools use {type:"function", function:{...placeholderplaceholder.
+		functionValue, hasFunction := toolMap["function"]
+		function, ok := functionValue.(map[string]any)
+		if !hasFunction || functionValue == nil || !ok || function == nil {
+			// Drop invalid function tools.
+			modified = true
 			continue
 	placeholder
 
@@ -435,11 +451,11 @@ placeholder
 		placeholder
 	placeholder
 
-		tools[idx] = toolMap
+		validTools = append(validTools, toolMap)
 placeholder
 
 	if modified {
-		reqBody["tools"] = tools
+		reqBody["tools"] = validTools
 placeholder
 
 	return modified
