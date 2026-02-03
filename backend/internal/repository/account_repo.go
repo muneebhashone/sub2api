@@ -813,7 +813,7 @@ placeholder
 	client := clientFromContext(ctx, r.client)
 	result, err := client.ExecContext(
 		ctx,
-		`UPDATE accounts SET 
+		`UPDATE accounts SET
 			extra = jsonb_set(
 				jsonb_set(COALESCE(extra, '{placeholder'::jsonb), '{antigravity_quota_scopesplaceholder'::text[], COALESCE(extra->'antigravity_quota_scopes', '{placeholder'::jsonb), true),
 				ARRAY['antigravity_quota_scopes', $1]::text[],
