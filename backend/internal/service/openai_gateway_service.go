@@ -156,12 +156,15 @@ placeholder
 
 // OpenAIForwardResult represents the result of forwarding
 type OpenAIForwardResult struct {
-	RequestID    string
-	Usage        OpenAIUsage
-	Model        string
-	Stream       bool
-	Duration     time.Duration
-	FirstTokenMs *int
+	RequestID string
+	Usage     OpenAIUsage
+	Model     string
+	// ReasoningEffort is extracted from request body (reasoning.effort) or derived from model suffix.
+	// Stored for usage records display; nil means not provided / not applicable.
+	ReasoningEffort *string
+	Stream          bool
+	Duration        time.Duration
+	FirstTokenMs    *int
 placeholder
 
 // OpenAIGatewayService handles OpenAI API gateway operations
@@ -958,13 +961,16 @@ placeholder
 	placeholder
 placeholder
 
+	reasoningEffort := extractOpenAIReasoningEffort(reqBody, originalModel)
+
 	return &OpenAIForwardResult{
-		RequestID:    resp.Header.Get("x-request-id"),
-		Usage:        *usage,
-		Model:        originalModel,
-		Stream:       reqStream,
-		Duration:     time.Since(startTime),
-		FirstTokenMs: firstTokenMs,
+		RequestID:       resp.Header.Get("x-request-id"),
+		Usage:           *usage,
+		Model:           originalModel,
+		ReasoningEffort: reasoningEffort,
+		Stream:          reqStream,
+		Duration:        time.Since(startTime),
+		FirstTokenMs:    firstTokenMs,
 placeholder, nil
 placeholder
 
@@ -1687,6 +1693,7 @@ placeholder
 		AccountID:             account.ID,
 		RequestID:             result.RequestID,
 		Model:                 result.Model,
+		ReasoningEffort:       result.ReasoningEffort,
 		InputTokens:           actualInputTokens,
 		OutputTokens:          result.Usage.OutputTokens,
 		CacheCreationTokens:   result.Usage.CacheCreationInputTokens,
@@ -1880,4 +1887,87 @@ placeholder
 		defer cancel()
 		_ = s.accountRepo.UpdateExtra(updateCtx, accountID, updates)
 placeholder()
+placeholder
+
+func getOpenAIReasoningEffortFromReqBody(reqBody map[string]any) (value string, present bool) {
+	if reqBody == nil {
+		return "", false
+placeholder
+
+	// Primary: reasoning.effort
+	if reasoning, ok := reqBody["reasoning"].(map[string]any); ok {
+		if effort, ok := reasoning["effort"].(string); ok {
+			return normalizeOpenAIReasoningEffort(effort), true
+	placeholder
+placeholder
+
+	// Fallback: some clients may use a flat field.
+	if effort, ok := reqBody["reasoning_effort"].(string); ok {
+		return normalizeOpenAIReasoningEffort(effort), true
+placeholder
+
+	return "", false
+placeholder
+
+func deriveOpenAIReasoningEffortFromModel(model string) string {
+	if strings.TrimSpace(model) == "" {
+		return ""
+placeholder
+
+	modelID := strings.TrimSpace(model)
+	if strings.Contains(modelID, "/") {
+		parts := strings.Split(modelID, "/")
+		modelID = parts[len(parts)-1]
+placeholder
+
+	parts := strings.FieldsFunc(strings.ToLower(modelID), func(r rune) bool {
+		switch r {
+		case '-', '_', ' ':
+			return true
+		default:
+			return false
+	placeholder
+placeholder)
+	if len(parts) == 0 {
+		return ""
+placeholder
+
+	return normalizeOpenAIReasoningEffort(parts[len(parts)-1])
+placeholder
+
+func extractOpenAIReasoningEffort(reqBody map[string]any, requestedModel string) *string {
+	if value, present := getOpenAIReasoningEffortFromReqBody(reqBody); present {
+		if value == "" {
+			return nil
+	placeholder
+		return &value
+placeholder
+
+	value := deriveOpenAIReasoningEffortFromModel(requestedModel)
+	if value == "" {
+		return nil
+placeholder
+	return &value
+placeholder
+
+func normalizeOpenAIReasoningEffort(raw string) string {
+	value := strings.ToLower(strings.TrimSpace(raw))
+	if value == "" {
+		return ""
+placeholder
+
+	// Normalize separators for "x-high"/"x_high" variants.
+	value = strings.NewReplacer("-", "", "_", "", " ", "").Replace(value)
+
+	switch value {
+	case "none", "minimal":
+		return ""
+	case "low", "medium", "high":
+		return value
+	case "xhigh", "extrahigh":
+		return "xhigh"
+	default:
+		// Only store known effort levels for now to keep UI consistent.
+		return ""
+placeholder
 placeholder
