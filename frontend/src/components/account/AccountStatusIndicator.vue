@@ -121,7 +121,7 @@
 import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import type { Account placeholder from '@/types'
-import { formatCountdownWithSuffix placeholder from '@/utils/format'
+import { formatCountdownWithSuffix, formatTime placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
 
