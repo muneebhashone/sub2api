@@ -164,6 +164,14 @@ func (s *groupRepoStub) DeleteAccountGroupsByGroupID(ctx context.Context, groupI
 	panic("unexpected DeleteAccountGroupsByGroupID call")
 placeholder
 
+func (s *groupRepoStub) BindAccountsToGroup(ctx context.Context, groupID int64, accountIDs []int64) error {
+	panic("unexpected BindAccountsToGroup call")
+placeholder
+
+func (s *groupRepoStub) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []int64) ([]int64, error) {
+	panic("unexpected GetAccountIDsByGroupIDs call")
+placeholder
+
 type proxyRepoStub struct {
 	deleteErr    error
 	countErr     error
