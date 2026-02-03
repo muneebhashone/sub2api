@@ -282,6 +282,14 @@ func (s *redeemRepoStub) ListByUser(ctx context.Context, userID int64, limit int
 	panic("unexpected ListByUser call")
 placeholder
 
+func (s *redeemRepoStub) ListByUserPaginated(ctx context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]RedeemCode, *pagination.PaginationResult, error) {
+	panic("unexpected ListByUserPaginated call")
+placeholder
+
+func (s *redeemRepoStub) SumPositiveBalanceByUser(ctx context.Context, userID int64) (float64, error) {
+	panic("unexpected SumPositiveBalanceByUser call")
+placeholder
+
 type subscriptionInvalidateCall struct {
 	userID  int64
 	groupID int64
