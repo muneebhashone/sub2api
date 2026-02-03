@@ -134,12 +134,12 @@ placeholder{
 			expected:       "claude-sonnet-4-5",
 	placeholder,
 
-		// 3. Gemini 透传
+		// 3. Gemini 2.5 → 3 映射
 		{
-			name:           "Gemini透传 - gemini-2.5-flash",
+			name:           "Gemini映射 - gemini-2.5-flash → gemini-3-flash",
 			requestedModel: "gemini-2.5-flash",
 			accountMapping: nil,
-			expected:       "gemini-2.5-flash",
+			expected:       "gemini-3-flash",
 	placeholder,
 		{
 			name:           "Gemini映射 - gemini-2.5-pro → gemini-3-pro-high",
