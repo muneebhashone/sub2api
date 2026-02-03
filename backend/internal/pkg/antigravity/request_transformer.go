@@ -314,7 +314,7 @@ func buildContents(messages []ClaudeMessage, toolIDToName map[string]string, isT
 				parts = append([]GeminiPart{{
 					Text:             "Thinking...",
 					Thought:          true,
-					ThoughtSignature: dummyThoughtSignature,
+					ThoughtSignature: DummyThoughtSignature,
 		placeholder parts...)
 		placeholder
 	placeholder
@@ -332,9 +332,10 @@ placeholder
 	return contents, strippedThinking, nil
 placeholder
 
-// dummyThoughtSignature 用于跳过 Gemini 3 thought_signature 验证
+// DummyThoughtSignature 用于跳过 Gemini 3 thought_signature 验证
 // 参考: https://ai.google.dev/gemini-api/docs/thought-signatures
-const dummyThoughtSignature = "skip_thought_signature_validator"
+// 导出供跨包使用（如 gemini_native_signature_cleaner 跨账号修复）
+const DummyThoughtSignature = "skip_thought_signature_validator"
 
 // buildParts 构建消息的 parts
 // allowDummyThought: 只有 Gemini 模型支持 dummy thought signature
@@ -372,7 +373,7 @@ placeholder
 			// signature 处理：
 			// - Claude 模型（allowDummyThought=false）：必须是上游返回的真实 signature（dummy 视为缺失）
 			// - Gemini 模型（allowDummyThought=true）：优先透传真实 signature，缺失时使用 dummy signature
-			if block.Signature != "" && (allowDummyThought || block.Signature != dummyThoughtSignature) {
+			if block.Signature != "" && (allowDummyThought || block.Signature != DummyThoughtSignature) {
 				part.ThoughtSignature = block.Signature
 		placeholder else if !allowDummyThought {
 				// Claude 模型需要有效 signature；在缺失时降级为普通文本，并在上层禁用 thinking mode。
@@ -383,7 +384,7 @@ placeholder
 				continue
 		placeholder else {
 				// Gemini 模型使用 dummy signature
-				part.ThoughtSignature = dummyThoughtSignature
+				part.ThoughtSignature = DummyThoughtSignature
 		placeholder
 			parts = append(parts, part)
 
@@ -413,10 +414,10 @@ placeholder
 			// tool_use 的 signature 处理：
 			// - Claude 模型（allowDummyThought=false）：必须是上游返回的真实 signature（dummy 视为缺失）
 			// - Gemini 模型（allowDummyThought=true）：优先透传真实 signature，缺失时使用 dummy signature
-			if block.Signature != "" && (allowDummyThought || block.Signature != dummyThoughtSignature) {
+			if block.Signature != "" && (allowDummyThought || block.Signature != DummyThoughtSignature) {
 				part.ThoughtSignature = block.Signature
 		placeholder else if allowDummyThought {
-				part.ThoughtSignature = dummyThoughtSignature
+				part.ThoughtSignature = DummyThoughtSignature
 		placeholder
 			parts = append(parts, part)
 
