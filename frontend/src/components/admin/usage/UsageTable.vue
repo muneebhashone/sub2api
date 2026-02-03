@@ -21,6 +21,12 @@
           <span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span>
         </template>
 
+        <template #cell-reasoning_effort="{ row placeholder">
+          <span class="text-sm text-gray-900 dark:text-white">
+            {{ formatReasoningEffort(row.reasoning_effort) placeholderplaceholder
+          </span>
+        </template>
+
         <template #cell-group="{ row placeholder">
           <span v-if="row.group" class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
             {{ row.group.name placeholderplaceholder
@@ -235,7 +241,7 @@
 <script setup lang="ts">
 import { ref, computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import { formatDateTime placeholder from '@/utils/format'
+import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -259,6 +265,7 @@ const cols = computed(() => [
   { key: 'api_key', label: t('usage.apiKeyFilter'), sortable: false placeholder,
   { key: 'account', label: t('admin.usage.account'), sortable: false placeholder,
   { key: 'model', label: t('usage.model'), sortable: true placeholder,
+  { key: 'reasoning_effort', label: t('usage.reasoningEffort'), sortable: false placeholder,
   { key: 'group', label: t('admin.usage.group'), sortable: false placeholder,
   { key: 'stream', label: t('usage.type'), sortable: false placeholder,
   { key: 'tokens', label: t('usage.tokens'), sortable: false placeholder,

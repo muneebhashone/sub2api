@@ -37,6 +37,7 @@ import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { saveAs placeholder from 'file-saver'
 import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'; import { adminUsageAPI placeholder from '@/api/admin/usage'
+import { formatReasoningEffort placeholder from '@/utils/format'
 import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination from '@/components/common/Pagination.vue'; import Select from '@/components/common/Select.vue'
 import UsageStatsCards from '@/components/admin/usage/UsageStatsCards.vue'; import UsageFilters from '@/components/admin/usage/UsageFilters.vue'
 import UsageTable from '@/components/admin/usage/UsageTable.vue'; import UsageExportProgress from '@/components/admin/usage/UsageExportProgress.vue'
@@ -104,7 +105,7 @@ const exportToExcel = async () => {
       const XLSX = await import('xlsx')
       const headers = [
         t('usage.time'), t('admin.usage.user'), t('usage.apiKeyFilter'),
-        t('admin.usage.account'), t('usage.model'), t('admin.usage.group'),
+        t('admin.usage.account'), t('usage.model'), t('usage.reasoningEffort'), t('admin.usage.group'),
         t('usage.type'),
         t('admin.usage.inputTokens'), t('admin.usage.outputTokens'),
         t('admin.usage.cacheReadTokens'), t('admin.usage.cacheCreationTokens'),
@@ -120,6 +121,7 @@ const exportToExcel = async () => {
         log.api_key?.name || '',
         log.account?.name || '',
         log.model,
+        formatReasoningEffort(log.reasoning_effort),
         log.group?.name || '',
         log.stream ? t('usage.stream') : t('usage.sync'),
         log.input_tokens,

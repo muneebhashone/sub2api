@@ -126,7 +126,8 @@ func (s *RedeemService) GenerateCodes(ctx context.Context, req GenerateCodesRequ
 		return nil, errors.New("count must be greater than 0")
 placeholder
 
-	if req.Value <= 0 {
+	// 邀请码类型不需要数值，其他类型需要
+	if req.Type != RedeemTypeInvitation && req.Value <= 0 {
 		return nil, errors.New("value must be greater than 0")
 placeholder
 
@@ -139,6 +140,12 @@ placeholder
 		codeType = RedeemTypeBalance
 placeholder
 
+	// 邀请码类型的 value 设为 0
+	value := req.Value
+	if codeType == RedeemTypeInvitation {
+		value = 0
+placeholder
+
 	codes := make([]RedeemCode, 0, req.Count)
 	for i := 0; i < req.Count; i++ {
 		code, err := s.GenerateRandomCode()
@@ -149,7 +156,7 @@ placeholder
 		codes = append(codes, RedeemCode{
 			Code:   code,
 			Type:   codeType,
-			Value:  req.Value,
+			Value:  value,
 			Status: StatusUnused,
 	placeholder)
 placeholder
