@@ -152,6 +152,14 @@ placeholder
 	return s.listWithFiltersCodes, result, nil
 placeholder
 
+func (s *redeemRepoStubForAdminList) ListByUserPaginated(_ context.Context, userID int64, params pagination.PaginationParams, codeType string) ([]RedeemCode, *pagination.PaginationResult, error) {
+	panic("unexpected ListByUserPaginated call")
+placeholder
+
+func (s *redeemRepoStubForAdminList) SumPositiveBalanceByUser(_ context.Context, userID int64) (float64, error) {
+	panic("unexpected SumPositiveBalanceByUser call")
+placeholder
+
 func TestAdminService_ListAccounts_WithSearch(t *testing.T) {
 	t.Run("search 参数正常传递到 repository 层", func(t *testing.T) {
 		repo := &accountRepoStubForAdminList{

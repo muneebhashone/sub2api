@@ -5,8 +5,8 @@
 
 import { defineStore placeholder from 'pinia'
 import { ref, computed, readonly placeholder from 'vue'
-import { authAPI placeholder from '@/api'
-import type { User, LoginRequest, RegisterRequest placeholder from '@/types'
+import { authAPI, isTotp2FARequired, type LoginResponse placeholder from '@/api'
+import type { User, LoginRequest, RegisterRequest, AuthResponse placeholder from '@/types'
 
 const AUTH_TOKEN_KEY = 'auth_token'
 const AUTH_USER_KEY = 'auth_user'
@@ -91,37 +91,69 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * User login
-   * @param credentials - Login credentials (username and password)
-   * @returns Promise resolving to the authenticated user
+   * @param credentials - Login credentials (email and password)
+   * @returns Promise resolving to the login response (may require 2FA)
    * @throws Error if login fails
    */
-  async function login(credentials: LoginRequest): Promise<User> {
+  async function login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
       const response = await authAPI.login(credentials)
 
-      // Store token and user
-      token.value = response.access_token
-
-      // Extract run_mode if present
-      if (response.user.run_mode) {
-        runMode.value = response.user.run_mode
+      // If 2FA is required, return the response without setting auth state
+      if (isTotp2FARequired(response)) {
+        return response
       placeholder
-      const { run_mode: _run_mode, ...userData placeholder = response.user
-      user.value = userData
 
-      // Persist to localStorage
-      localStorage.setItem(AUTH_TOKEN_KEY, response.access_token)
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData))
+      // Set auth state from the response
+      setAuthFromResponse(response)
 
-      // Start auto-refresh interval
-      startAutoRefresh()
-
-      return userData
+      return response
     placeholder catch (error) {
       // Clear any partial state on error
       clearAuth()
       throw error
     placeholder
+  placeholder
+
+  /**
+   * Complete login with 2FA code
+   * @param tempToken - Temporary token from initial login
+   * @param totpCode - 6-digit TOTP code
+   * @returns Promise resolving to the authenticated user
+   * @throws Error if 2FA verification fails
+   */
+  async function login2FA(tempToken: string, totpCode: string): Promise<User> {
+    try {
+      const response = await authAPI.login2FA({ temp_token: tempToken, totp_code: totpCode placeholder)
+      setAuthFromResponse(response)
+      return user.value!
+    placeholder catch (error) {
+      clearAuth()
+      throw error
+    placeholder
+  placeholder
+
+  /**
+   * Set auth state from an AuthResponse
+   * Internal helper function
+   */
+  function setAuthFromResponse(response: AuthResponse): void {
+    // Store token and user
+    token.value = response.access_token
+
+    // Extract run_mode if present
+    if (response.user.run_mode) {
+      runMode.value = response.user.run_mode
+    placeholder
+    const { run_mode: _run_mode, ...userData placeholder = response.user
+    user.value = userData
+
+    // Persist to localStorage
+    localStorage.setItem(AUTH_TOKEN_KEY, response.access_token)
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userData))
+
+    // Start auto-refresh interval
+    startAutoRefresh()
   placeholder
 
   /**
@@ -253,6 +285,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Actions
     login,
+    login2FA,
     register,
     setToken,
     logout,

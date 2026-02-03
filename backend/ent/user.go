@@ -39,6 +39,12 @@ type User struct {
 	Username string `json:"username,omitempty"`
 	// Notes holds the value of the "notes" field.
 	Notes string `json:"notes,omitempty"`
+	// TotpSecretEncrypted holds the value of the "totp_secret_encrypted" field.
+	TotpSecretEncrypted *string `json:"totp_secret_encrypted,omitempty"`
+	// TotpEnabled holds the value of the "totp_enabled" field.
+	TotpEnabled bool `json:"totp_enabled,omitempty"`
+	// TotpEnabledAt holds the value of the "totp_enabled_at" field.
+	TotpEnabledAt *time.Time `json:"totp_enabled_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -55,6 +61,8 @@ type UserEdges struct {
 	Subscriptions []*UserSubscription `json:"subscriptions,omitempty"`
 	// AssignedSubscriptions holds the value of the assigned_subscriptions edge.
 	AssignedSubscriptions []*UserSubscription `json:"assigned_subscriptions,omitempty"`
+	// AnnouncementReads holds the value of the announcement_reads edge.
+	AnnouncementReads []*AnnouncementRead `json:"announcement_reads,omitempty"`
 	// AllowedGroups holds the value of the allowed_groups edge.
 	AllowedGroups []*Group `json:"allowed_groups,omitempty"`
 	// UsageLogs holds the value of the usage_logs edge.
@@ -67,7 +75,7 @@ type UserEdges struct {
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [10]bool
 placeholder
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -106,10 +114,19 @@ placeholder
 	return nil, &NotLoadedError{edge: "assigned_subscriptions"placeholder
 placeholder
 
+// AnnouncementReadsOrErr returns the AnnouncementReads value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) AnnouncementReadsOrErr() ([]*AnnouncementRead, error) {
+	if e.loadedTypes[4] {
+		return e.AnnouncementReads, nil
+placeholder
+	return nil, &NotLoadedError{edge: "announcement_reads"placeholder
+placeholder
+
 // AllowedGroupsOrErr returns the AllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) AllowedGroupsOrErr() ([]*Group, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.AllowedGroups, nil
 placeholder
 	return nil, &NotLoadedError{edge: "allowed_groups"placeholder
@@ -118,7 +135,7 @@ placeholder
 // UsageLogsOrErr returns the UsageLogs value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UsageLogsOrErr() ([]*UsageLog, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.UsageLogs, nil
 placeholder
 	return nil, &NotLoadedError{edge: "usage_logs"placeholder
@@ -127,7 +144,7 @@ placeholder
 // AttributeValuesOrErr returns the AttributeValues value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) AttributeValuesOrErr() ([]*UserAttributeValue, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.AttributeValues, nil
 placeholder
 	return nil, &NotLoadedError{edge: "attribute_values"placeholder
@@ -136,7 +153,7 @@ placeholder
 // PromoCodeUsagesOrErr returns the PromoCodeUsages value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) PromoCodeUsagesOrErr() ([]*PromoCodeUsage, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.PromoCodeUsages, nil
 placeholder
 	return nil, &NotLoadedError{edge: "promo_code_usages"placeholder
@@ -145,7 +162,7 @@ placeholder
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[8] {
+	if e.loadedTypes[9] {
 		return e.UserAllowedGroups, nil
 placeholder
 	return nil, &NotLoadedError{edge: "user_allowed_groups"placeholder
@@ -156,13 +173,15 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case user.FieldTotpEnabled:
+			values[i] = new(sql.NullBool)
 		case user.FieldBalance:
 			values[i] = new(sql.NullFloat64)
 		case user.FieldID, user.FieldConcurrency:
 			values[i] = new(sql.NullInt64)
-		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes:
+		case user.FieldEmail, user.FieldPasswordHash, user.FieldRole, user.FieldStatus, user.FieldUsername, user.FieldNotes, user.FieldTotpSecretEncrypted:
 			values[i] = new(sql.NullString)
-		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt:
+		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt, user.FieldTotpEnabledAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -252,6 +271,26 @@ placeholder
 		placeholder else if value.Valid {
 				_m.Notes = value.String
 		placeholder
+		case user.FieldTotpSecretEncrypted:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field totp_secret_encrypted", values[i])
+		placeholder else if value.Valid {
+				_m.TotpSecretEncrypted = new(string)
+				*_m.TotpSecretEncrypted = value.String
+		placeholder
+		case user.FieldTotpEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field totp_enabled", values[i])
+		placeholder else if value.Valid {
+				_m.TotpEnabled = value.Bool
+		placeholder
+		case user.FieldTotpEnabledAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field totp_enabled_at", values[i])
+		placeholder else if value.Valid {
+				_m.TotpEnabledAt = new(time.Time)
+				*_m.TotpEnabledAt = value.Time
+		placeholder
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 	placeholder
@@ -283,6 +322,11 @@ placeholder
 // QueryAssignedSubscriptions queries the "assigned_subscriptions" edge of the User entity.
 func (_m *User) QueryAssignedSubscriptions() *UserSubscriptionQuery {
 	return NewUserClient(_m.config).QueryAssignedSubscriptions(_m)
+placeholder
+
+// QueryAnnouncementReads queries the "announcement_reads" edge of the User entity.
+func (_m *User) QueryAnnouncementReads() *AnnouncementReadQuery {
+	return NewUserClient(_m.config).QueryAnnouncementReads(_m)
 placeholder
 
 // QueryAllowedGroups queries the "allowed_groups" edge of the User entity.
@@ -367,6 +411,19 @@ placeholder
 	builder.WriteString(", ")
 	builder.WriteString("notes=")
 	builder.WriteString(_m.Notes)
+	builder.WriteString(", ")
+	if v := _m.TotpSecretEncrypted; v != nil {
+		builder.WriteString("totp_secret_encrypted=")
+		builder.WriteString(*v)
+placeholder
+	builder.WriteString(", ")
+	builder.WriteString("totp_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TotpEnabled))
+	builder.WriteString(", ")
+	if v := _m.TotpEnabledAt; v != nil {
+		builder.WriteString("totp_enabled_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+placeholder
 	builder.WriteByte(')')
 	return builder.String()
 placeholder
