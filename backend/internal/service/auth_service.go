@@ -185,7 +185,6 @@ placeholder
 			log.Printf("[Auth] Failed to mark invitation code as used for user %d: %v", user.ID, err)
 	placeholder
 placeholder
-
 	// 应用优惠码（如果提供且功能已启用）
 	if promoCode != "" && s.promoService != nil && s.settingService != nil && s.settingService.IsPromoCodeEnabled(ctx) {
 		if err := s.promoService.ApplyPromoCode(ctx, user.ID, promoCode); err != nil {

@@ -5753,61 +5753,66 @@ placeholder
 // GroupMutation represents an operation that mutates the Group nodes in the graph.
 type GroupMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *int64
-	created_at               *time.Time
-	updated_at               *time.Time
-	deleted_at               *time.Time
-	name                     *string
-	description              *string
-	rate_multiplier          *float64
-	addrate_multiplier       *float64
-	is_exclusive             *bool
-	status                   *string
-	platform                 *string
-	subscription_type        *string
-	daily_limit_usd          *float64
-	adddaily_limit_usd       *float64
-	weekly_limit_usd         *float64
-	addweekly_limit_usd      *float64
-	monthly_limit_usd        *float64
-	addmonthly_limit_usd     *float64
-	default_validity_days    *int
-	adddefault_validity_days *int
-	image_price_1k           *float64
-	addimage_price_1k        *float64
-	image_price_2k           *float64
-	addimage_price_2k        *float64
-	image_price_4k           *float64
-	addimage_price_4k        *float64
-	claude_code_only         *bool
-	fallback_group_id        *int64
-	addfallback_group_id     *int64
-	model_routing            *map[string][]int64
-	model_routing_enabled    *bool
-	clearedFields            map[string]struct{placeholder
-	api_keys                 map[int64]struct{placeholder
-	removedapi_keys          map[int64]struct{placeholder
-	clearedapi_keys          bool
-	redeem_codes             map[int64]struct{placeholder
-	removedredeem_codes      map[int64]struct{placeholder
-	clearedredeem_codes      bool
-	subscriptions            map[int64]struct{placeholder
-	removedsubscriptions     map[int64]struct{placeholder
-	clearedsubscriptions     bool
-	usage_logs               map[int64]struct{placeholder
-	removedusage_logs        map[int64]struct{placeholder
-	clearedusage_logs        bool
-	accounts                 map[int64]struct{placeholder
-	removedaccounts          map[int64]struct{placeholder
-	clearedaccounts          bool
-	allowed_users            map[int64]struct{placeholder
-	removedallowed_users     map[int64]struct{placeholder
-	clearedallowed_users     bool
-	done                     bool
-	oldValue                 func(context.Context) (*Group, error)
-	predicates               []predicate.Group
+	op                                      Op
+	typ                                     string
+	id                                      *int64
+	created_at                              *time.Time
+	updated_at                              *time.Time
+	deleted_at                              *time.Time
+	name                                    *string
+	description                             *string
+	rate_multiplier                         *float64
+	addrate_multiplier                      *float64
+	is_exclusive                            *bool
+	status                                  *string
+	platform                                *string
+	subscription_type                       *string
+	daily_limit_usd                         *float64
+	adddaily_limit_usd                      *float64
+	weekly_limit_usd                        *float64
+	addweekly_limit_usd                     *float64
+	monthly_limit_usd                       *float64
+	addmonthly_limit_usd                    *float64
+	default_validity_days                   *int
+	adddefault_validity_days                *int
+	image_price_1k                          *float64
+	addimage_price_1k                       *float64
+	image_price_2k                          *float64
+	addimage_price_2k                       *float64
+	image_price_4k                          *float64
+	addimage_price_4k                       *float64
+	claude_code_only                        *bool
+	fallback_group_id                       *int64
+	addfallback_group_id                    *int64
+	fallback_group_id_on_invalid_request    *int64
+	addfallback_group_id_on_invalid_request *int64
+	model_routing                           *map[string][]int64
+	model_routing_enabled                   *bool
+	mcp_xml_inject                          *bool
+	supported_model_scopes                  *[]string
+	appendsupported_model_scopes            []string
+	clearedFields                           map[string]struct{placeholder
+	api_keys                                map[int64]struct{placeholder
+	removedapi_keys                         map[int64]struct{placeholder
+	clearedapi_keys                         bool
+	redeem_codes                            map[int64]struct{placeholder
+	removedredeem_codes                     map[int64]struct{placeholder
+	clearedredeem_codes                     bool
+	subscriptions                           map[int64]struct{placeholder
+	removedsubscriptions                    map[int64]struct{placeholder
+	clearedsubscriptions                    bool
+	usage_logs                              map[int64]struct{placeholder
+	removedusage_logs                       map[int64]struct{placeholder
+	clearedusage_logs                       bool
+	accounts                                map[int64]struct{placeholder
+	removedaccounts                         map[int64]struct{placeholder
+	clearedaccounts                         bool
+	allowed_users                           map[int64]struct{placeholder
+	removedallowed_users                    map[int64]struct{placeholder
+	clearedallowed_users                    bool
+	done                                    bool
+	oldValue                                func(context.Context) (*Group, error)
+	predicates                              []predicate.Group
 placeholder
 
 var _ ent.Mutation = (*GroupMutation)(nil)
@@ -6896,6 +6901,76 @@ func (m *GroupMutation) ResetFallbackGroupID() {
 	delete(m.clearedFields, group.FieldFallbackGroupID)
 placeholder
 
+// SetFallbackGroupIDOnInvalidRequest sets the "fallback_group_id_on_invalid_request" field.
+func (m *GroupMutation) SetFallbackGroupIDOnInvalidRequest(i int64) {
+	m.fallback_group_id_on_invalid_request = &i
+	m.addfallback_group_id_on_invalid_request = nil
+placeholder
+
+// FallbackGroupIDOnInvalidRequest returns the value of the "fallback_group_id_on_invalid_request" field in the mutation.
+func (m *GroupMutation) FallbackGroupIDOnInvalidRequest() (r int64, exists bool) {
+	v := m.fallback_group_id_on_invalid_request
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldFallbackGroupIDOnInvalidRequest returns the old "fallback_group_id_on_invalid_request" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldFallbackGroupIDOnInvalidRequest(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFallbackGroupIDOnInvalidRequest is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFallbackGroupIDOnInvalidRequest requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFallbackGroupIDOnInvalidRequest: %w", err)
+placeholder
+	return oldValue.FallbackGroupIDOnInvalidRequest, nil
+placeholder
+
+// AddFallbackGroupIDOnInvalidRequest adds i to the "fallback_group_id_on_invalid_request" field.
+func (m *GroupMutation) AddFallbackGroupIDOnInvalidRequest(i int64) {
+	if m.addfallback_group_id_on_invalid_request != nil {
+		*m.addfallback_group_id_on_invalid_request += i
+placeholder else {
+		m.addfallback_group_id_on_invalid_request = &i
+placeholder
+placeholder
+
+// AddedFallbackGroupIDOnInvalidRequest returns the value that was added to the "fallback_group_id_on_invalid_request" field in this mutation.
+func (m *GroupMutation) AddedFallbackGroupIDOnInvalidRequest() (r int64, exists bool) {
+	v := m.addfallback_group_id_on_invalid_request
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearFallbackGroupIDOnInvalidRequest clears the value of the "fallback_group_id_on_invalid_request" field.
+func (m *GroupMutation) ClearFallbackGroupIDOnInvalidRequest() {
+	m.fallback_group_id_on_invalid_request = nil
+	m.addfallback_group_id_on_invalid_request = nil
+	m.clearedFields[group.FieldFallbackGroupIDOnInvalidRequest] = struct{placeholder{placeholder
+placeholder
+
+// FallbackGroupIDOnInvalidRequestCleared returns if the "fallback_group_id_on_invalid_request" field was cleared in this mutation.
+func (m *GroupMutation) FallbackGroupIDOnInvalidRequestCleared() bool {
+	_, ok := m.clearedFields[group.FieldFallbackGroupIDOnInvalidRequest]
+	return ok
+placeholder
+
+// ResetFallbackGroupIDOnInvalidRequest resets all changes to the "fallback_group_id_on_invalid_request" field.
+func (m *GroupMutation) ResetFallbackGroupIDOnInvalidRequest() {
+	m.fallback_group_id_on_invalid_request = nil
+	m.addfallback_group_id_on_invalid_request = nil
+	delete(m.clearedFields, group.FieldFallbackGroupIDOnInvalidRequest)
+placeholder
+
 // SetModelRouting sets the "model_routing" field.
 func (m *GroupMutation) SetModelRouting(value map[string][]int64) {
 	m.model_routing = &value
@@ -6979,6 +7054,93 @@ placeholder
 // ResetModelRoutingEnabled resets all changes to the "model_routing_enabled" field.
 func (m *GroupMutation) ResetModelRoutingEnabled() {
 	m.model_routing_enabled = nil
+placeholder
+
+// SetMcpXMLInject sets the "mcp_xml_inject" field.
+func (m *GroupMutation) SetMcpXMLInject(b bool) {
+	m.mcp_xml_inject = &b
+placeholder
+
+// McpXMLInject returns the value of the "mcp_xml_inject" field in the mutation.
+func (m *GroupMutation) McpXMLInject() (r bool, exists bool) {
+	v := m.mcp_xml_inject
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldMcpXMLInject returns the old "mcp_xml_inject" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldMcpXMLInject(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMcpXMLInject is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMcpXMLInject requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMcpXMLInject: %w", err)
+placeholder
+	return oldValue.McpXMLInject, nil
+placeholder
+
+// ResetMcpXMLInject resets all changes to the "mcp_xml_inject" field.
+func (m *GroupMutation) ResetMcpXMLInject() {
+	m.mcp_xml_inject = nil
+placeholder
+
+// SetSupportedModelScopes sets the "supported_model_scopes" field.
+func (m *GroupMutation) SetSupportedModelScopes(s []string) {
+	m.supported_model_scopes = &s
+	m.appendsupported_model_scopes = nil
+placeholder
+
+// SupportedModelScopes returns the value of the "supported_model_scopes" field in the mutation.
+func (m *GroupMutation) SupportedModelScopes() (r []string, exists bool) {
+	v := m.supported_model_scopes
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldSupportedModelScopes returns the old "supported_model_scopes" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldSupportedModelScopes(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSupportedModelScopes is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSupportedModelScopes requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSupportedModelScopes: %w", err)
+placeholder
+	return oldValue.SupportedModelScopes, nil
+placeholder
+
+// AppendSupportedModelScopes adds s to the "supported_model_scopes" field.
+func (m *GroupMutation) AppendSupportedModelScopes(s []string) {
+	m.appendsupported_model_scopes = append(m.appendsupported_model_scopes, s...)
+placeholder
+
+// AppendedSupportedModelScopes returns the list of values that were appended to the "supported_model_scopes" field in this mutation.
+func (m *GroupMutation) AppendedSupportedModelScopes() ([]string, bool) {
+	if len(m.appendsupported_model_scopes) == 0 {
+		return nil, false
+placeholder
+	return m.appendsupported_model_scopes, true
+placeholder
+
+// ResetSupportedModelScopes resets all changes to the "supported_model_scopes" field.
+func (m *GroupMutation) ResetSupportedModelScopes() {
+	m.supported_model_scopes = nil
+	m.appendsupported_model_scopes = nil
 placeholder
 
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
@@ -7339,7 +7501,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 24)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 placeholder
@@ -7397,11 +7559,20 @@ placeholder
 	if m.fallback_group_id != nil {
 		fields = append(fields, group.FieldFallbackGroupID)
 placeholder
+	if m.fallback_group_id_on_invalid_request != nil {
+		fields = append(fields, group.FieldFallbackGroupIDOnInvalidRequest)
+placeholder
 	if m.model_routing != nil {
 		fields = append(fields, group.FieldModelRouting)
 placeholder
 	if m.model_routing_enabled != nil {
 		fields = append(fields, group.FieldModelRoutingEnabled)
+placeholder
+	if m.mcp_xml_inject != nil {
+		fields = append(fields, group.FieldMcpXMLInject)
+placeholder
+	if m.supported_model_scopes != nil {
+		fields = append(fields, group.FieldSupportedModelScopes)
 placeholder
 	return fields
 placeholder
@@ -7449,10 +7620,16 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.ClaudeCodeOnly()
 	case group.FieldFallbackGroupID:
 		return m.FallbackGroupID()
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		return m.FallbackGroupIDOnInvalidRequest()
 	case group.FieldModelRouting:
 		return m.ModelRouting()
 	case group.FieldModelRoutingEnabled:
 		return m.ModelRoutingEnabled()
+	case group.FieldMcpXMLInject:
+		return m.McpXMLInject()
+	case group.FieldSupportedModelScopes:
+		return m.SupportedModelScopes()
 placeholder
 	return nil, false
 placeholder
@@ -7500,10 +7677,16 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldClaudeCodeOnly(ctx)
 	case group.FieldFallbackGroupID:
 		return m.OldFallbackGroupID(ctx)
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		return m.OldFallbackGroupIDOnInvalidRequest(ctx)
 	case group.FieldModelRouting:
 		return m.OldModelRouting(ctx)
 	case group.FieldModelRoutingEnabled:
 		return m.OldModelRoutingEnabled(ctx)
+	case group.FieldMcpXMLInject:
+		return m.OldMcpXMLInject(ctx)
+	case group.FieldSupportedModelScopes:
+		return m.OldSupportedModelScopes(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -7646,6 +7829,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetFallbackGroupID(v)
 		return nil
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetFallbackGroupIDOnInvalidRequest(v)
+		return nil
 	case group.FieldModelRouting:
 		v, ok := value.(map[string][]int64)
 		if !ok {
@@ -7659,6 +7849,20 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 	placeholder
 		m.SetModelRoutingEnabled(v)
+		return nil
+	case group.FieldMcpXMLInject:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetMcpXMLInject(v)
+		return nil
+	case group.FieldSupportedModelScopes:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetSupportedModelScopes(v)
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
@@ -7695,6 +7899,9 @@ placeholder
 	if m.addfallback_group_id != nil {
 		fields = append(fields, group.FieldFallbackGroupID)
 placeholder
+	if m.addfallback_group_id_on_invalid_request != nil {
+		fields = append(fields, group.FieldFallbackGroupIDOnInvalidRequest)
+placeholder
 	return fields
 placeholder
 
@@ -7721,6 +7928,8 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedImagePrice4k()
 	case group.FieldFallbackGroupID:
 		return m.AddedFallbackGroupID()
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		return m.AddedFallbackGroupIDOnInvalidRequest()
 placeholder
 	return nil, false
 placeholder
@@ -7793,6 +8002,13 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 	placeholder
 		m.AddFallbackGroupID(v)
 		return nil
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddFallbackGroupIDOnInvalidRequest(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown Group numeric field %s", name)
 placeholder
@@ -7827,6 +8043,9 @@ placeholder
 placeholder
 	if m.FieldCleared(group.FieldFallbackGroupID) {
 		fields = append(fields, group.FieldFallbackGroupID)
+placeholder
+	if m.FieldCleared(group.FieldFallbackGroupIDOnInvalidRequest) {
+		fields = append(fields, group.FieldFallbackGroupIDOnInvalidRequest)
 placeholder
 	if m.FieldCleared(group.FieldModelRouting) {
 		fields = append(fields, group.FieldModelRouting)
@@ -7871,6 +8090,9 @@ func (m *GroupMutation) ClearField(name string) error {
 		return nil
 	case group.FieldFallbackGroupID:
 		m.ClearFallbackGroupID()
+		return nil
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		m.ClearFallbackGroupIDOnInvalidRequest()
 		return nil
 	case group.FieldModelRouting:
 		m.ClearModelRouting()
@@ -7940,11 +8162,20 @@ func (m *GroupMutation) ResetField(name string) error {
 	case group.FieldFallbackGroupID:
 		m.ResetFallbackGroupID()
 		return nil
+	case group.FieldFallbackGroupIDOnInvalidRequest:
+		m.ResetFallbackGroupIDOnInvalidRequest()
+		return nil
 	case group.FieldModelRouting:
 		m.ResetModelRouting()
 		return nil
 	case group.FieldModelRoutingEnabled:
 		m.ResetModelRoutingEnabled()
+		return nil
+	case group.FieldMcpXMLInject:
+		m.ResetMcpXMLInject()
+		return nil
+	case group.FieldSupportedModelScopes:
+		m.ResetSupportedModelScopes()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
