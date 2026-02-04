@@ -238,14 +238,14 @@
   </Teleport>
 </template>
 
-  <script setup lang="ts">
-  import { ref, computed placeholder from 'vue'
-  import { useI18n placeholder from 'vue-i18n'
-  import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
-  import DataTable from '@/components/common/DataTable.vue'
-  import EmptyState from '@/components/common/EmptyState.vue'
-  import Icon from '@/components/icons/Icon.vue'
-  import type { AdminUsageLog placeholder from '@/types'
+<script setup lang="ts">
+import { ref, computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
+import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
+import DataTable from '@/components/common/DataTable.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import Icon from '@/components/icons/Icon.vue'
+import type { AdminUsageLog placeholder from '@/types'
 
 defineProps(['data', 'loading'])
 const { t placeholder = useI18n()
