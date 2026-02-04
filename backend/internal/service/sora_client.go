@@ -672,10 +672,7 @@ placeholder
 placeholder
 
 func (c *SoraDirectClient) doHTTP(req *http.Request, proxyURL string, account *Account) (*http.Response, error) {
-	enableTLS := false
-	if c != nil && c.cfg != nil && c.cfg.Gateway.TLSFingerprint.Enabled && !c.cfg.Sora.Client.DisableTLSFingerprint {
-		enableTLS = true
-placeholder
+	enableTLS := c != nil && c.cfg != nil && c.cfg.Gateway.TLSFingerprint.Enabled && !c.cfg.Sora.Client.DisableTLSFingerprint
 	if c.httpUpstream != nil {
 		accountID := int64(0)
 		accountConcurrency := 0
