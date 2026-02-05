@@ -9,7 +9,8 @@ import type {
   ProxyAccountSummary,
   CreateProxyRequest,
   UpdateProxyRequest,
-  PaginatedResponse
+  PaginatedResponse,
+  AdminDataPayload
 placeholder from '@/types'
 
 /**
@@ -208,6 +209,17 @@ placeholder> {
   return data
 placeholder
 
+export async function exportData(filters?: {
+  protocol?: string
+  status?: 'active' | 'inactive'
+  search?: string
+placeholder): Promise<AdminDataPayload> {
+  const { data placeholder = await apiClient.get<AdminDataPayload>('/admin/proxies/data', {
+    params: filters
+  placeholder)
+  return data
+placeholder
+
 export const proxiesAPI = {
   list,
   getAll,
@@ -221,7 +233,8 @@ export const proxiesAPI = {
   getStats,
   getProxyAccounts,
   batchCreate,
-  batchDelete
+  batchDelete,
+  exportData
 placeholder
 
 export default proxiesAPI
