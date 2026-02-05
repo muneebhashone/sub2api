@@ -318,24 +318,6 @@ placeholder
 	response.Success(c, result)
 placeholder
 
-func (h *AccountHandler) listAllAccounts(ctx context.Context) ([]service.Account, error) {
-	page := 1
-	pageSize := dataPageCap
-	var out []service.Account
-	for {
-		items, total, err := h.adminService.ListAccounts(ctx, page, pageSize, "", "", "", "")
-		if err != nil {
-			return nil, err
-	placeholder
-		out = append(out, items...)
-		if len(out) >= int(total) || len(items) == 0 {
-			break
-	placeholder
-		page++
-placeholder
-	return out, nil
-placeholder
-
 func (h *AccountHandler) listAllProxies(ctx context.Context) ([]service.Proxy, error) {
 	page := 1
 	pageSize := dataPageCap
