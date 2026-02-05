@@ -393,8 +393,31 @@ placeholder
 placeholder
 
 func (h *AccountHandler) resolveExportProxies(ctx context.Context, accounts []service.Account) ([]service.Proxy, error) {
-	_ = accounts
-	return h.listAllProxies(ctx)
+	if len(accounts) == 0 {
+		return []service.Proxy{placeholder, nil
+placeholder
+
+	seen := make(map[int64]struct{placeholder)
+	ids := make([]int64, 0)
+	for i := range accounts {
+		if accounts[i].ProxyID == nil {
+			continue
+	placeholder
+		id := *accounts[i].ProxyID
+		if id <= 0 {
+			continue
+	placeholder
+		if _, ok := seen[id]; ok {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		ids = append(ids, id)
+placeholder
+	if len(ids) == 0 {
+		return []service.Proxy{placeholder, nil
+placeholder
+
+	return h.adminService.GetProxiesByIDs(ctx, ids)
 placeholder
 
 func parseAccountIDs(c *gin.Context) ([]int64, error) {
