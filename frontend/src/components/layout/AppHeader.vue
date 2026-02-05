@@ -283,7 +283,12 @@ placeholder
 
 async function handleLogout() {
   closeDropdown()
-  authStore.logout()
+  try {
+    await authStore.logout()
+  placeholder catch (error) {
+    // Ignore logout errors - still redirect to login
+    console.error('Logout error:', error)
+  placeholder
   await router.push('/login')
 placeholder
 
