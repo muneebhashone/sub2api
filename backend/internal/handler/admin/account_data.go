@@ -21,8 +21,8 @@ const (
 )
 
 type DataPayload struct {
-	Type       string        `json:"type"`
-	Version    int           `json:"version"`
+	Type       string        `json:"type,omitempty"`
+	Version    int           `json:"version,omitempty"`
 	ExportedAt string        `json:"exported_at"`
 	Proxies    []DataProxy   `json:"proxies"`
 	Accounts   []DataAccount `json:"accounts"`
@@ -160,8 +160,6 @@ placeholder
 placeholder
 
 	payload := DataPayload{
-		Type:       dataType,
-		Version:    dataVersion,
 		ExportedAt: time.Now().UTC().Format(time.RFC3339),
 		Proxies:    dataProxies,
 		Accounts:   dataAccounts,
@@ -218,9 +216,17 @@ placeholder
 		placeholder)
 			continue
 	placeholder
+		normalizedStatus := normalizeProxyStatus(item.Status)
 		if existingID, ok := proxyKeyToID[key]; ok {
 			proxyKeyToID[key] = existingID
 			result.ProxyReused++
+			if normalizedStatus != "" {
+				if proxy, err := h.adminService.GetProxy(c.Request.Context(), existingID); err == nil && proxy != nil && proxy.Status != normalizedStatus {
+					_, _ = h.adminService.UpdateProxy(c.Request.Context(), existingID, &service.UpdateProxyInput{
+						Status: normalizedStatus,
+				placeholder)
+			placeholder
+		placeholder
 			continue
 	placeholder
 
@@ -245,9 +251,9 @@ placeholder
 		proxyKeyToID[key] = created.ID
 		result.ProxyCreated++
 
-		if item.Status != "" && item.Status != created.Status {
+		if normalizedStatus != "" && normalizedStatus != created.Status {
 			_, _ = h.adminService.UpdateProxy(c.Request.Context(), created.ID, &service.UpdateProxyInput{
-				Status: item.Status,
+				Status: normalizedStatus,
 		placeholder)
 	placeholder
 placeholder
@@ -465,14 +471,17 @@ placeholder
 placeholder
 
 func validateDataHeader(payload DataPayload) error {
-	if payload.Type == "" {
-		return errors.New("data type is required")
-placeholder
-	if payload.Type != dataType && payload.Type != legacyDataType {
+	if payload.Type != "" && payload.Type != dataType && payload.Type != legacyDataType {
 		return fmt.Errorf("unsupported data type: %s", payload.Type)
 placeholder
-	if payload.Version != dataVersion {
+	if payload.Version != 0 && payload.Version != dataVersion {
 		return fmt.Errorf("unsupported data version: %d", payload.Version)
+placeholder
+	if payload.Proxies == nil {
+		return errors.New("proxies is required")
+placeholder
+	if payload.Accounts == nil {
+		return errors.New("accounts is required")
 placeholder
 	return nil
 placeholder
@@ -493,9 +502,8 @@ placeholder
 		return fmt.Errorf("proxy protocol is invalid: %s", item.Protocol)
 placeholder
 	if item.Status != "" {
-		switch item.Status {
-		case service.StatusActive, service.StatusDisabled, "inactive":
-		default:
+		normalizedStatus := normalizeProxyStatus(item.Status)
+		if normalizedStatus != service.StatusActive && normalizedStatus != "inactive" {
 			return fmt.Errorf("proxy status is invalid: %s", item.Status)
 	placeholder
 placeholder
@@ -537,4 +545,18 @@ func defaultProxyName(name string) string {
 		return "imported-proxy"
 placeholder
 	return name
+placeholder
+
+func normalizeProxyStatus(status string) string {
+	normalized := strings.TrimSpace(strings.ToLower(status))
+	switch normalized {
+	case "":
+		return ""
+	case service.StatusActive:
+		return service.StatusActive
+	case "inactive", service.StatusDisabled:
+		return "inactive"
+	default:
+		return normalized
+placeholder
 placeholder
