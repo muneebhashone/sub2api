@@ -469,6 +469,13 @@ placeholder
 	default:
 		return fmt.Errorf("proxy protocol is invalid: %s", item.Protocol)
 placeholder
+	if item.Status != "" {
+		switch item.Status {
+		case service.StatusActive, service.StatusDisabled, "inactive":
+		default:
+			return fmt.Errorf("proxy status is invalid: %s", item.Status)
+	placeholder
+placeholder
 	return nil
 placeholder
 

@@ -54,6 +54,120 @@ placeholder
 	response.Success(c, payload)
 placeholder
 
+// ImportData imports proxy-only data for migration.
+func (h *ProxyHandler) ImportData(c *gin.Context) {
+	type ProxyImportRequest struct {
+		Data DataPayload `json:"data"`
+placeholder
+
+	var req ProxyImportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	if err := validateDataHeader(req.Data); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+
+	ctx := c.Request.Context()
+	result := DataImportResult{placeholder
+
+	existingProxies, err := h.listProxiesFiltered(ctx, "", "", "")
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	proxyByKey := make(map[string]service.Proxy, len(existingProxies))
+	for i := range existingProxies {
+		p := existingProxies[i]
+		key := buildProxyKey(p.Protocol, p.Host, p.Port, p.Username, p.Password)
+		proxyByKey[key] = p
+placeholder
+
+	latencyProbeIDs := make([]int64, 0, len(req.Data.Proxies))
+	for i := range req.Data.Proxies {
+		item := req.Data.Proxies[i]
+		key := item.ProxyKey
+		if key == "" {
+			key = buildProxyKey(item.Protocol, item.Host, item.Port, item.Username, item.Password)
+	placeholder
+
+		if err := validateDataProxy(item); err != nil {
+			result.ProxyFailed++
+			result.Errors = append(result.Errors, DataImportError{
+				Kind:     "proxy",
+				Name:     item.Name,
+				ProxyKey: key,
+				Message:  err.Error(),
+		placeholder)
+			continue
+	placeholder
+
+		if existing, ok := proxyByKey[key]; ok {
+			result.ProxyReused++
+			if item.Status != "" && item.Status != existing.Status {
+				if _, err := h.adminService.UpdateProxy(ctx, existing.ID, &service.UpdateProxyInput{Status: item.Statusplaceholder); err != nil {
+					result.Errors = append(result.Errors, DataImportError{
+						Kind:     "proxy",
+						Name:     item.Name,
+						ProxyKey: key,
+						Message:  "update status failed: " + err.Error(),
+				placeholder)
+			placeholder
+		placeholder
+			latencyProbeIDs = append(latencyProbeIDs, existing.ID)
+			continue
+	placeholder
+
+		created, err := h.adminService.CreateProxy(ctx, &service.CreateProxyInput{
+			Name:     defaultProxyName(item.Name),
+			Protocol: item.Protocol,
+			Host:     item.Host,
+			Port:     item.Port,
+			Username: item.Username,
+			Password: item.Password,
+	placeholder)
+		if err != nil {
+			result.ProxyFailed++
+			result.Errors = append(result.Errors, DataImportError{
+				Kind:     "proxy",
+				Name:     item.Name,
+				ProxyKey: key,
+				Message:  err.Error(),
+		placeholder)
+			continue
+	placeholder
+		result.ProxyCreated++
+		proxyByKey[key] = *created
+
+		if item.Status != "" && item.Status != created.Status {
+			if _, err := h.adminService.UpdateProxy(ctx, created.ID, &service.UpdateProxyInput{Status: item.Statusplaceholder); err != nil {
+				result.Errors = append(result.Errors, DataImportError{
+					Kind:     "proxy",
+					Name:     item.Name,
+					ProxyKey: key,
+					Message:  "update status failed: " + err.Error(),
+			placeholder)
+		placeholder
+	placeholder
+		latencyProbeIDs = append(latencyProbeIDs, created.ID)
+placeholder
+
+	if len(latencyProbeIDs) > 0 {
+		ids := append([]int64(nil), latencyProbeIDs...)
+		go func() {
+			for _, id := range ids {
+				_, _ = h.adminService.TestProxy(context.Background(), id)
+		placeholder
+	placeholder()
+placeholder
+
+	response.Success(c, result)
+placeholder
+
 func (h *ProxyHandler) listProxiesFiltered(ctx context.Context, protocol, status, search string) ([]service.Proxy, error) {
 	page := 1
 	pageSize := dataPageCap
