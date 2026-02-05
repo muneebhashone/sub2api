@@ -17,6 +17,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/announcement"
 	"github.com/Wei-Shaw/sub2api/ent/announcementread"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
+	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
@@ -48,6 +49,7 @@ const (
 	TypeAccountGroup            = "AccountGroup"
 	TypeAnnouncement            = "Announcement"
 	TypeAnnouncementRead        = "AnnouncementRead"
+	TypeErrorPassthroughRule    = "ErrorPassthroughRule"
 	TypeGroup                   = "Group"
 	TypePromoCode               = "PromoCode"
 	TypePromoCodeUsage          = "PromoCodeUsage"
@@ -5748,6 +5750,1272 @@ func (m *AnnouncementReadMutation) ResetEdge(name string) error {
 		return nil
 placeholder
 	return fmt.Errorf("unknown AnnouncementRead edge %s", name)
+placeholder
+
+// ErrorPassthroughRuleMutation represents an operation that mutates the ErrorPassthroughRule nodes in the graph.
+type ErrorPassthroughRuleMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *int64
+	created_at        *time.Time
+	updated_at        *time.Time
+	name              *string
+	enabled           *bool
+	priority          *int
+	addpriority       *int
+	error_codes       *[]int
+	appenderror_codes []int
+	keywords          *[]string
+	appendkeywords    []string
+	match_mode        *string
+	platforms         *[]string
+	appendplatforms   []string
+	passthrough_code  *bool
+	response_code     *int
+	addresponse_code  *int
+	passthrough_body  *bool
+	custom_message    *string
+	description       *string
+	clearedFields     map[string]struct{placeholder
+	done              bool
+	oldValue          func(context.Context) (*ErrorPassthroughRule, error)
+	predicates        []predicate.ErrorPassthroughRule
+placeholder
+
+var _ ent.Mutation = (*ErrorPassthroughRuleMutation)(nil)
+
+// errorpassthroughruleOption allows management of the mutation configuration using functional options.
+type errorpassthroughruleOption func(*ErrorPassthroughRuleMutation)
+
+// newErrorPassthroughRuleMutation creates new mutation for the ErrorPassthroughRule entity.
+func newErrorPassthroughRuleMutation(c config, op Op, opts ...errorpassthroughruleOption) *ErrorPassthroughRuleMutation {
+	m := &ErrorPassthroughRuleMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeErrorPassthroughRule,
+		clearedFields: make(map[string]struct{placeholder),
+placeholder
+	for _, opt := range opts {
+		opt(m)
+placeholder
+	return m
+placeholder
+
+// withErrorPassthroughRuleID sets the ID field of the mutation.
+func withErrorPassthroughRuleID(id int64) errorpassthroughruleOption {
+	return func(m *ErrorPassthroughRuleMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ErrorPassthroughRule
+		)
+		m.oldValue = func(ctx context.Context) (*ErrorPassthroughRule, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+			placeholder else {
+					value, err = m.Client().ErrorPassthroughRule.Get(ctx, id)
+			placeholder
+		placeholder)
+			return value, err
+	placeholder
+		m.id = &id
+placeholder
+placeholder
+
+// withErrorPassthroughRule sets the old ErrorPassthroughRule of the mutation.
+func withErrorPassthroughRule(node *ErrorPassthroughRule) errorpassthroughruleOption {
+	return func(m *ErrorPassthroughRuleMutation) {
+		m.oldValue = func(context.Context) (*ErrorPassthroughRule, error) {
+			return node, nil
+	placeholder
+		m.id = &node.ID
+placeholder
+placeholder
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ErrorPassthroughRuleMutation) Client() *Client {
+	client := &Client{config: m.configplaceholder
+	client.init()
+	return client
+placeholder
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ErrorPassthroughRuleMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+placeholder
+	tx := &Tx{config: m.configplaceholder
+	tx.init()
+	return tx, nil
+placeholder
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ErrorPassthroughRuleMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+placeholder
+	return *m.id, true
+placeholder
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ErrorPassthroughRuleMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{idplaceholder, nil
+	placeholder
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ErrorPassthroughRule.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+placeholder
+placeholder
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ErrorPassthroughRuleMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+placeholder
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCreatedAt returns the old "created_at" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+placeholder
+	return oldValue.CreatedAt, nil
+placeholder
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ErrorPassthroughRuleMutation) ResetCreatedAt() {
+	m.created_at = nil
+placeholder
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ErrorPassthroughRuleMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+placeholder
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+placeholder
+	return oldValue.UpdatedAt, nil
+placeholder
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ErrorPassthroughRuleMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+placeholder
+
+// SetName sets the "name" field.
+func (m *ErrorPassthroughRuleMutation) SetName(s string) {
+	m.name = &s
+placeholder
+
+// Name returns the value of the "name" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldName returns the old "name" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+placeholder
+	return oldValue.Name, nil
+placeholder
+
+// ResetName resets all changes to the "name" field.
+func (m *ErrorPassthroughRuleMutation) ResetName() {
+	m.name = nil
+placeholder
+
+// SetEnabled sets the "enabled" field.
+func (m *ErrorPassthroughRuleMutation) SetEnabled(b bool) {
+	m.enabled = &b
+placeholder
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldEnabled returns the old "enabled" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+placeholder
+	return oldValue.Enabled, nil
+placeholder
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *ErrorPassthroughRuleMutation) ResetEnabled() {
+	m.enabled = nil
+placeholder
+
+// SetPriority sets the "priority" field.
+func (m *ErrorPassthroughRuleMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+placeholder
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPriority returns the old "priority" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+placeholder
+	return oldValue.Priority, nil
+placeholder
+
+// AddPriority adds i to the "priority" field.
+func (m *ErrorPassthroughRuleMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+placeholder else {
+		m.addpriority = &i
+placeholder
+placeholder
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *ErrorPassthroughRuleMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *ErrorPassthroughRuleMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+placeholder
+
+// SetErrorCodes sets the "error_codes" field.
+func (m *ErrorPassthroughRuleMutation) SetErrorCodes(i []int) {
+	m.error_codes = &i
+	m.appenderror_codes = nil
+placeholder
+
+// ErrorCodes returns the value of the "error_codes" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) ErrorCodes() (r []int, exists bool) {
+	v := m.error_codes
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldErrorCodes returns the old "error_codes" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldErrorCodes(ctx context.Context) (v []int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorCodes is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorCodes requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorCodes: %w", err)
+placeholder
+	return oldValue.ErrorCodes, nil
+placeholder
+
+// AppendErrorCodes adds i to the "error_codes" field.
+func (m *ErrorPassthroughRuleMutation) AppendErrorCodes(i []int) {
+	m.appenderror_codes = append(m.appenderror_codes, i...)
+placeholder
+
+// AppendedErrorCodes returns the list of values that were appended to the "error_codes" field in this mutation.
+func (m *ErrorPassthroughRuleMutation) AppendedErrorCodes() ([]int, bool) {
+	if len(m.appenderror_codes) == 0 {
+		return nil, false
+placeholder
+	return m.appenderror_codes, true
+placeholder
+
+// ClearErrorCodes clears the value of the "error_codes" field.
+func (m *ErrorPassthroughRuleMutation) ClearErrorCodes() {
+	m.error_codes = nil
+	m.appenderror_codes = nil
+	m.clearedFields[errorpassthroughrule.FieldErrorCodes] = struct{placeholder{placeholder
+placeholder
+
+// ErrorCodesCleared returns if the "error_codes" field was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) ErrorCodesCleared() bool {
+	_, ok := m.clearedFields[errorpassthroughrule.FieldErrorCodes]
+	return ok
+placeholder
+
+// ResetErrorCodes resets all changes to the "error_codes" field.
+func (m *ErrorPassthroughRuleMutation) ResetErrorCodes() {
+	m.error_codes = nil
+	m.appenderror_codes = nil
+	delete(m.clearedFields, errorpassthroughrule.FieldErrorCodes)
+placeholder
+
+// SetKeywords sets the "keywords" field.
+func (m *ErrorPassthroughRuleMutation) SetKeywords(s []string) {
+	m.keywords = &s
+	m.appendkeywords = nil
+placeholder
+
+// Keywords returns the value of the "keywords" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) Keywords() (r []string, exists bool) {
+	v := m.keywords
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldKeywords returns the old "keywords" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldKeywords(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKeywords is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKeywords requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKeywords: %w", err)
+placeholder
+	return oldValue.Keywords, nil
+placeholder
+
+// AppendKeywords adds s to the "keywords" field.
+func (m *ErrorPassthroughRuleMutation) AppendKeywords(s []string) {
+	m.appendkeywords = append(m.appendkeywords, s...)
+placeholder
+
+// AppendedKeywords returns the list of values that were appended to the "keywords" field in this mutation.
+func (m *ErrorPassthroughRuleMutation) AppendedKeywords() ([]string, bool) {
+	if len(m.appendkeywords) == 0 {
+		return nil, false
+placeholder
+	return m.appendkeywords, true
+placeholder
+
+// ClearKeywords clears the value of the "keywords" field.
+func (m *ErrorPassthroughRuleMutation) ClearKeywords() {
+	m.keywords = nil
+	m.appendkeywords = nil
+	m.clearedFields[errorpassthroughrule.FieldKeywords] = struct{placeholder{placeholder
+placeholder
+
+// KeywordsCleared returns if the "keywords" field was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) KeywordsCleared() bool {
+	_, ok := m.clearedFields[errorpassthroughrule.FieldKeywords]
+	return ok
+placeholder
+
+// ResetKeywords resets all changes to the "keywords" field.
+func (m *ErrorPassthroughRuleMutation) ResetKeywords() {
+	m.keywords = nil
+	m.appendkeywords = nil
+	delete(m.clearedFields, errorpassthroughrule.FieldKeywords)
+placeholder
+
+// SetMatchMode sets the "match_mode" field.
+func (m *ErrorPassthroughRuleMutation) SetMatchMode(s string) {
+	m.match_mode = &s
+placeholder
+
+// MatchMode returns the value of the "match_mode" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) MatchMode() (r string, exists bool) {
+	v := m.match_mode
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldMatchMode returns the old "match_mode" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldMatchMode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMatchMode is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMatchMode requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMatchMode: %w", err)
+placeholder
+	return oldValue.MatchMode, nil
+placeholder
+
+// ResetMatchMode resets all changes to the "match_mode" field.
+func (m *ErrorPassthroughRuleMutation) ResetMatchMode() {
+	m.match_mode = nil
+placeholder
+
+// SetPlatforms sets the "platforms" field.
+func (m *ErrorPassthroughRuleMutation) SetPlatforms(s []string) {
+	m.platforms = &s
+	m.appendplatforms = nil
+placeholder
+
+// Platforms returns the value of the "platforms" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) Platforms() (r []string, exists bool) {
+	v := m.platforms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPlatforms returns the old "platforms" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldPlatforms(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPlatforms is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPlatforms requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlatforms: %w", err)
+placeholder
+	return oldValue.Platforms, nil
+placeholder
+
+// AppendPlatforms adds s to the "platforms" field.
+func (m *ErrorPassthroughRuleMutation) AppendPlatforms(s []string) {
+	m.appendplatforms = append(m.appendplatforms, s...)
+placeholder
+
+// AppendedPlatforms returns the list of values that were appended to the "platforms" field in this mutation.
+func (m *ErrorPassthroughRuleMutation) AppendedPlatforms() ([]string, bool) {
+	if len(m.appendplatforms) == 0 {
+		return nil, false
+placeholder
+	return m.appendplatforms, true
+placeholder
+
+// ClearPlatforms clears the value of the "platforms" field.
+func (m *ErrorPassthroughRuleMutation) ClearPlatforms() {
+	m.platforms = nil
+	m.appendplatforms = nil
+	m.clearedFields[errorpassthroughrule.FieldPlatforms] = struct{placeholder{placeholder
+placeholder
+
+// PlatformsCleared returns if the "platforms" field was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) PlatformsCleared() bool {
+	_, ok := m.clearedFields[errorpassthroughrule.FieldPlatforms]
+	return ok
+placeholder
+
+// ResetPlatforms resets all changes to the "platforms" field.
+func (m *ErrorPassthroughRuleMutation) ResetPlatforms() {
+	m.platforms = nil
+	m.appendplatforms = nil
+	delete(m.clearedFields, errorpassthroughrule.FieldPlatforms)
+placeholder
+
+// SetPassthroughCode sets the "passthrough_code" field.
+func (m *ErrorPassthroughRuleMutation) SetPassthroughCode(b bool) {
+	m.passthrough_code = &b
+placeholder
+
+// PassthroughCode returns the value of the "passthrough_code" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) PassthroughCode() (r bool, exists bool) {
+	v := m.passthrough_code
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPassthroughCode returns the old "passthrough_code" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldPassthroughCode(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPassthroughCode is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPassthroughCode requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPassthroughCode: %w", err)
+placeholder
+	return oldValue.PassthroughCode, nil
+placeholder
+
+// ResetPassthroughCode resets all changes to the "passthrough_code" field.
+func (m *ErrorPassthroughRuleMutation) ResetPassthroughCode() {
+	m.passthrough_code = nil
+placeholder
+
+// SetResponseCode sets the "response_code" field.
+func (m *ErrorPassthroughRuleMutation) SetResponseCode(i int) {
+	m.response_code = &i
+	m.addresponse_code = nil
+placeholder
+
+// ResponseCode returns the value of the "response_code" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) ResponseCode() (r int, exists bool) {
+	v := m.response_code
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldResponseCode returns the old "response_code" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldResponseCode(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResponseCode is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResponseCode requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResponseCode: %w", err)
+placeholder
+	return oldValue.ResponseCode, nil
+placeholder
+
+// AddResponseCode adds i to the "response_code" field.
+func (m *ErrorPassthroughRuleMutation) AddResponseCode(i int) {
+	if m.addresponse_code != nil {
+		*m.addresponse_code += i
+placeholder else {
+		m.addresponse_code = &i
+placeholder
+placeholder
+
+// AddedResponseCode returns the value that was added to the "response_code" field in this mutation.
+func (m *ErrorPassthroughRuleMutation) AddedResponseCode() (r int, exists bool) {
+	v := m.addresponse_code
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearResponseCode clears the value of the "response_code" field.
+func (m *ErrorPassthroughRuleMutation) ClearResponseCode() {
+	m.response_code = nil
+	m.addresponse_code = nil
+	m.clearedFields[errorpassthroughrule.FieldResponseCode] = struct{placeholder{placeholder
+placeholder
+
+// ResponseCodeCleared returns if the "response_code" field was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) ResponseCodeCleared() bool {
+	_, ok := m.clearedFields[errorpassthroughrule.FieldResponseCode]
+	return ok
+placeholder
+
+// ResetResponseCode resets all changes to the "response_code" field.
+func (m *ErrorPassthroughRuleMutation) ResetResponseCode() {
+	m.response_code = nil
+	m.addresponse_code = nil
+	delete(m.clearedFields, errorpassthroughrule.FieldResponseCode)
+placeholder
+
+// SetPassthroughBody sets the "passthrough_body" field.
+func (m *ErrorPassthroughRuleMutation) SetPassthroughBody(b bool) {
+	m.passthrough_body = &b
+placeholder
+
+// PassthroughBody returns the value of the "passthrough_body" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) PassthroughBody() (r bool, exists bool) {
+	v := m.passthrough_body
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPassthroughBody returns the old "passthrough_body" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldPassthroughBody(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPassthroughBody is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPassthroughBody requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPassthroughBody: %w", err)
+placeholder
+	return oldValue.PassthroughBody, nil
+placeholder
+
+// ResetPassthroughBody resets all changes to the "passthrough_body" field.
+func (m *ErrorPassthroughRuleMutation) ResetPassthroughBody() {
+	m.passthrough_body = nil
+placeholder
+
+// SetCustomMessage sets the "custom_message" field.
+func (m *ErrorPassthroughRuleMutation) SetCustomMessage(s string) {
+	m.custom_message = &s
+placeholder
+
+// CustomMessage returns the value of the "custom_message" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) CustomMessage() (r string, exists bool) {
+	v := m.custom_message
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCustomMessage returns the old "custom_message" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldCustomMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomMessage is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomMessage requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomMessage: %w", err)
+placeholder
+	return oldValue.CustomMessage, nil
+placeholder
+
+// ClearCustomMessage clears the value of the "custom_message" field.
+func (m *ErrorPassthroughRuleMutation) ClearCustomMessage() {
+	m.custom_message = nil
+	m.clearedFields[errorpassthroughrule.FieldCustomMessage] = struct{placeholder{placeholder
+placeholder
+
+// CustomMessageCleared returns if the "custom_message" field was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) CustomMessageCleared() bool {
+	_, ok := m.clearedFields[errorpassthroughrule.FieldCustomMessage]
+	return ok
+placeholder
+
+// ResetCustomMessage resets all changes to the "custom_message" field.
+func (m *ErrorPassthroughRuleMutation) ResetCustomMessage() {
+	m.custom_message = nil
+	delete(m.clearedFields, errorpassthroughrule.FieldCustomMessage)
+placeholder
+
+// SetDescription sets the "description" field.
+func (m *ErrorPassthroughRuleMutation) SetDescription(s string) {
+	m.description = &s
+placeholder
+
+// Description returns the value of the "description" field in the mutation.
+func (m *ErrorPassthroughRuleMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldDescription returns the old "description" field's value of the ErrorPassthroughRule entity.
+// If the ErrorPassthroughRule object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ErrorPassthroughRuleMutation) OldDescription(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+placeholder
+	return oldValue.Description, nil
+placeholder
+
+// ClearDescription clears the value of the "description" field.
+func (m *ErrorPassthroughRuleMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[errorpassthroughrule.FieldDescription] = struct{placeholder{placeholder
+placeholder
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[errorpassthroughrule.FieldDescription]
+	return ok
+placeholder
+
+// ResetDescription resets all changes to the "description" field.
+func (m *ErrorPassthroughRuleMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, errorpassthroughrule.FieldDescription)
+placeholder
+
+// Where appends a list predicates to the ErrorPassthroughRuleMutation builder.
+func (m *ErrorPassthroughRuleMutation) Where(ps ...predicate.ErrorPassthroughRule) {
+	m.predicates = append(m.predicates, ps...)
+placeholder
+
+// WhereP appends storage-level predicates to the ErrorPassthroughRuleMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ErrorPassthroughRuleMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ErrorPassthroughRule, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+placeholder
+	m.Where(p...)
+placeholder
+
+// Op returns the operation name.
+func (m *ErrorPassthroughRuleMutation) Op() Op {
+	return m.op
+placeholder
+
+// SetOp allows setting the mutation operation.
+func (m *ErrorPassthroughRuleMutation) SetOp(op Op) {
+	m.op = op
+placeholder
+
+// Type returns the node type of this mutation (ErrorPassthroughRule).
+func (m *ErrorPassthroughRuleMutation) Type() string {
+	return m.typ
+placeholder
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ErrorPassthroughRuleMutation) Fields() []string {
+	fields := make([]string, 0, 14)
+	if m.created_at != nil {
+		fields = append(fields, errorpassthroughrule.FieldCreatedAt)
+placeholder
+	if m.updated_at != nil {
+		fields = append(fields, errorpassthroughrule.FieldUpdatedAt)
+placeholder
+	if m.name != nil {
+		fields = append(fields, errorpassthroughrule.FieldName)
+placeholder
+	if m.enabled != nil {
+		fields = append(fields, errorpassthroughrule.FieldEnabled)
+placeholder
+	if m.priority != nil {
+		fields = append(fields, errorpassthroughrule.FieldPriority)
+placeholder
+	if m.error_codes != nil {
+		fields = append(fields, errorpassthroughrule.FieldErrorCodes)
+placeholder
+	if m.keywords != nil {
+		fields = append(fields, errorpassthroughrule.FieldKeywords)
+placeholder
+	if m.match_mode != nil {
+		fields = append(fields, errorpassthroughrule.FieldMatchMode)
+placeholder
+	if m.platforms != nil {
+		fields = append(fields, errorpassthroughrule.FieldPlatforms)
+placeholder
+	if m.passthrough_code != nil {
+		fields = append(fields, errorpassthroughrule.FieldPassthroughCode)
+placeholder
+	if m.response_code != nil {
+		fields = append(fields, errorpassthroughrule.FieldResponseCode)
+placeholder
+	if m.passthrough_body != nil {
+		fields = append(fields, errorpassthroughrule.FieldPassthroughBody)
+placeholder
+	if m.custom_message != nil {
+		fields = append(fields, errorpassthroughrule.FieldCustomMessage)
+placeholder
+	if m.description != nil {
+		fields = append(fields, errorpassthroughrule.FieldDescription)
+placeholder
+	return fields
+placeholder
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ErrorPassthroughRuleMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case errorpassthroughrule.FieldCreatedAt:
+		return m.CreatedAt()
+	case errorpassthroughrule.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case errorpassthroughrule.FieldName:
+		return m.Name()
+	case errorpassthroughrule.FieldEnabled:
+		return m.Enabled()
+	case errorpassthroughrule.FieldPriority:
+		return m.Priority()
+	case errorpassthroughrule.FieldErrorCodes:
+		return m.ErrorCodes()
+	case errorpassthroughrule.FieldKeywords:
+		return m.Keywords()
+	case errorpassthroughrule.FieldMatchMode:
+		return m.MatchMode()
+	case errorpassthroughrule.FieldPlatforms:
+		return m.Platforms()
+	case errorpassthroughrule.FieldPassthroughCode:
+		return m.PassthroughCode()
+	case errorpassthroughrule.FieldResponseCode:
+		return m.ResponseCode()
+	case errorpassthroughrule.FieldPassthroughBody:
+		return m.PassthroughBody()
+	case errorpassthroughrule.FieldCustomMessage:
+		return m.CustomMessage()
+	case errorpassthroughrule.FieldDescription:
+		return m.Description()
+placeholder
+	return nil, false
+placeholder
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ErrorPassthroughRuleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case errorpassthroughrule.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case errorpassthroughrule.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case errorpassthroughrule.FieldName:
+		return m.OldName(ctx)
+	case errorpassthroughrule.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case errorpassthroughrule.FieldPriority:
+		return m.OldPriority(ctx)
+	case errorpassthroughrule.FieldErrorCodes:
+		return m.OldErrorCodes(ctx)
+	case errorpassthroughrule.FieldKeywords:
+		return m.OldKeywords(ctx)
+	case errorpassthroughrule.FieldMatchMode:
+		return m.OldMatchMode(ctx)
+	case errorpassthroughrule.FieldPlatforms:
+		return m.OldPlatforms(ctx)
+	case errorpassthroughrule.FieldPassthroughCode:
+		return m.OldPassthroughCode(ctx)
+	case errorpassthroughrule.FieldResponseCode:
+		return m.OldResponseCode(ctx)
+	case errorpassthroughrule.FieldPassthroughBody:
+		return m.OldPassthroughBody(ctx)
+	case errorpassthroughrule.FieldCustomMessage:
+		return m.OldCustomMessage(ctx)
+	case errorpassthroughrule.FieldDescription:
+		return m.OldDescription(ctx)
+placeholder
+	return nil, fmt.Errorf("unknown ErrorPassthroughRule field %s", name)
+placeholder
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ErrorPassthroughRuleMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case errorpassthroughrule.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCreatedAt(v)
+		return nil
+	case errorpassthroughrule.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetUpdatedAt(v)
+		return nil
+	case errorpassthroughrule.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetName(v)
+		return nil
+	case errorpassthroughrule.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetEnabled(v)
+		return nil
+	case errorpassthroughrule.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPriority(v)
+		return nil
+	case errorpassthroughrule.FieldErrorCodes:
+		v, ok := value.([]int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetErrorCodes(v)
+		return nil
+	case errorpassthroughrule.FieldKeywords:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetKeywords(v)
+		return nil
+	case errorpassthroughrule.FieldMatchMode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetMatchMode(v)
+		return nil
+	case errorpassthroughrule.FieldPlatforms:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPlatforms(v)
+		return nil
+	case errorpassthroughrule.FieldPassthroughCode:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPassthroughCode(v)
+		return nil
+	case errorpassthroughrule.FieldResponseCode:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetResponseCode(v)
+		return nil
+	case errorpassthroughrule.FieldPassthroughBody:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPassthroughBody(v)
+		return nil
+	case errorpassthroughrule.FieldCustomMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCustomMessage(v)
+		return nil
+	case errorpassthroughrule.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetDescription(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown ErrorPassthroughRule field %s", name)
+placeholder
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ErrorPassthroughRuleMutation) AddedFields() []string {
+	var fields []string
+	if m.addpriority != nil {
+		fields = append(fields, errorpassthroughrule.FieldPriority)
+placeholder
+	if m.addresponse_code != nil {
+		fields = append(fields, errorpassthroughrule.FieldResponseCode)
+placeholder
+	return fields
+placeholder
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ErrorPassthroughRuleMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case errorpassthroughrule.FieldPriority:
+		return m.AddedPriority()
+	case errorpassthroughrule.FieldResponseCode:
+		return m.AddedResponseCode()
+placeholder
+	return nil, false
+placeholder
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ErrorPassthroughRuleMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case errorpassthroughrule.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddPriority(v)
+		return nil
+	case errorpassthroughrule.FieldResponseCode:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddResponseCode(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown ErrorPassthroughRule numeric field %s", name)
+placeholder
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ErrorPassthroughRuleMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(errorpassthroughrule.FieldErrorCodes) {
+		fields = append(fields, errorpassthroughrule.FieldErrorCodes)
+placeholder
+	if m.FieldCleared(errorpassthroughrule.FieldKeywords) {
+		fields = append(fields, errorpassthroughrule.FieldKeywords)
+placeholder
+	if m.FieldCleared(errorpassthroughrule.FieldPlatforms) {
+		fields = append(fields, errorpassthroughrule.FieldPlatforms)
+placeholder
+	if m.FieldCleared(errorpassthroughrule.FieldResponseCode) {
+		fields = append(fields, errorpassthroughrule.FieldResponseCode)
+placeholder
+	if m.FieldCleared(errorpassthroughrule.FieldCustomMessage) {
+		fields = append(fields, errorpassthroughrule.FieldCustomMessage)
+placeholder
+	if m.FieldCleared(errorpassthroughrule.FieldDescription) {
+		fields = append(fields, errorpassthroughrule.FieldDescription)
+placeholder
+	return fields
+placeholder
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+placeholder
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ErrorPassthroughRuleMutation) ClearField(name string) error {
+	switch name {
+	case errorpassthroughrule.FieldErrorCodes:
+		m.ClearErrorCodes()
+		return nil
+	case errorpassthroughrule.FieldKeywords:
+		m.ClearKeywords()
+		return nil
+	case errorpassthroughrule.FieldPlatforms:
+		m.ClearPlatforms()
+		return nil
+	case errorpassthroughrule.FieldResponseCode:
+		m.ClearResponseCode()
+		return nil
+	case errorpassthroughrule.FieldCustomMessage:
+		m.ClearCustomMessage()
+		return nil
+	case errorpassthroughrule.FieldDescription:
+		m.ClearDescription()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ErrorPassthroughRule nullable field %s", name)
+placeholder
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ErrorPassthroughRuleMutation) ResetField(name string) error {
+	switch name {
+	case errorpassthroughrule.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case errorpassthroughrule.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case errorpassthroughrule.FieldName:
+		m.ResetName()
+		return nil
+	case errorpassthroughrule.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case errorpassthroughrule.FieldPriority:
+		m.ResetPriority()
+		return nil
+	case errorpassthroughrule.FieldErrorCodes:
+		m.ResetErrorCodes()
+		return nil
+	case errorpassthroughrule.FieldKeywords:
+		m.ResetKeywords()
+		return nil
+	case errorpassthroughrule.FieldMatchMode:
+		m.ResetMatchMode()
+		return nil
+	case errorpassthroughrule.FieldPlatforms:
+		m.ResetPlatforms()
+		return nil
+	case errorpassthroughrule.FieldPassthroughCode:
+		m.ResetPassthroughCode()
+		return nil
+	case errorpassthroughrule.FieldResponseCode:
+		m.ResetResponseCode()
+		return nil
+	case errorpassthroughrule.FieldPassthroughBody:
+		m.ResetPassthroughBody()
+		return nil
+	case errorpassthroughrule.FieldCustomMessage:
+		m.ResetCustomMessage()
+		return nil
+	case errorpassthroughrule.FieldDescription:
+		m.ResetDescription()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ErrorPassthroughRule field %s", name)
+placeholder
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ErrorPassthroughRuleMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+placeholder
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ErrorPassthroughRuleMutation) AddedIDs(name string) []ent.Value {
+	return nil
+placeholder
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ErrorPassthroughRuleMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+placeholder
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ErrorPassthroughRuleMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+placeholder
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+placeholder
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ErrorPassthroughRuleMutation) EdgeCleared(name string) bool {
+	return false
+placeholder
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ErrorPassthroughRuleMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ErrorPassthroughRule unique edge %s", name)
+placeholder
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ErrorPassthroughRuleMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ErrorPassthroughRule edge %s", name)
 placeholder
 
 // GroupMutation represents an operation that mutates the Group nodes in the graph.

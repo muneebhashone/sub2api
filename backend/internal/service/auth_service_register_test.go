@@ -116,6 +116,7 @@ placeholder
 	return NewAuthService(
 		repo,
 		nil, // redeemRepo
+		nil, // refreshTokenCache
 		cfg,
 		settingService,
 		emailService,
