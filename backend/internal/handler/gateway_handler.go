@@ -33,6 +33,7 @@ type GatewayHandler struct {
 	billingCacheService       *service.BillingCacheService
 	usageService              *service.UsageService
 	apiKeyService             *service.APIKeyService
+	errorPassthroughService   *service.ErrorPassthroughService
 	concurrencyHelper         *ConcurrencyHelper
 	maxAccountSwitches        int
 	maxAccountSwitchesGemini  int
@@ -48,6 +49,7 @@ func NewGatewayHandler(
 	billingCacheService *service.BillingCacheService,
 	usageService *service.UsageService,
 	apiKeyService *service.APIKeyService,
+	errorPassthroughService *service.ErrorPassthroughService,
 	cfg *config.Config,
 ) *GatewayHandler {
 	pingInterval := time.Duration(0)
@@ -70,6 +72,7 @@ placeholder
 		billingCacheService:       billingCacheService,
 		usageService:              usageService,
 		apiKeyService:             apiKeyService,
+		errorPassthroughService:   errorPassthroughService,
 		concurrencyHelper:         NewConcurrencyHelper(concurrencyService, SSEPingFormatClaude, pingInterval),
 		maxAccountSwitches:        maxAccountSwitches,
 		maxAccountSwitchesGemini:  maxAccountSwitchesGemini,
@@ -201,7 +204,7 @@ placeholder
 		maxAccountSwitches := h.maxAccountSwitchesGemini
 		switchCount := 0
 		failedAccountIDs := make(map[int64]struct{placeholder)
-		lastFailoverStatus := 0
+		var lastFailoverErr *service.UpstreamFailoverError
 
 		for {
 			selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionKey, reqModel, failedAccountIDs, "") // Gemini 不使用会话限制
@@ -210,7 +213,11 @@ placeholder
 					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
 					return
 			placeholder
-				h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+				if lastFailoverErr != nil {
+					h.handleFailoverExhausted(c, lastFailoverErr, service.PlatformGemini, streamStarted)
+			placeholder else {
+					h.handleFailoverExhaustedSimple(c, 502, streamStarted)
+			placeholder
 				return
 		placeholder
 			account := selection.Account
@@ -301,9 +308,9 @@ placeholder
 				var failoverErr *service.UpstreamFailoverError
 				if errors.As(err, &failoverErr) {
 					failedAccountIDs[account.ID] = struct{placeholder{placeholder
-					lastFailoverStatus = failoverErr.StatusCode
+					lastFailoverErr = failoverErr
 					if switchCount >= maxAccountSwitches {
-						h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+						h.handleFailoverExhausted(c, failoverErr, service.PlatformGemini, streamStarted)
 						return
 				placeholder
 					switchCount++
@@ -352,7 +359,7 @@ placeholder
 		maxAccountSwitches := h.maxAccountSwitches
 		switchCount := 0
 		failedAccountIDs := make(map[int64]struct{placeholder)
-		lastFailoverStatus := 0
+		var lastFailoverErr *service.UpstreamFailoverError
 		retryWithFallback := false
 
 		for {
@@ -363,7 +370,11 @@ placeholder
 					h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
 					return
 			placeholder
-				h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+				if lastFailoverErr != nil {
+					h.handleFailoverExhausted(c, lastFailoverErr, platform, streamStarted)
+			placeholder else {
+					h.handleFailoverExhaustedSimple(c, 502, streamStarted)
+			placeholder
 				return
 		placeholder
 			account := selection.Account
@@ -487,9 +498,9 @@ placeholder
 				var failoverErr *service.UpstreamFailoverError
 				if errors.As(err, &failoverErr) {
 					failedAccountIDs[account.ID] = struct{placeholder{placeholder
-					lastFailoverStatus = failoverErr.StatusCode
+					lastFailoverErr = failoverErr
 					if switchCount >= maxAccountSwitches {
-						h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+						h.handleFailoverExhausted(c, failoverErr, account.Platform, streamStarted)
 						return
 				placeholder
 					switchCount++
@@ -755,7 +766,37 @@ func (h *GatewayHandler) handleConcurrencyError(c *gin.Context, err error, slotT
 		fmt.Sprintf("Concurrency limit exceeded for %s, please retry later", slotType), streamStarted)
 placeholder
 
-func (h *GatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, streamStarted bool) {
+func (h *GatewayHandler) handleFailoverExhausted(c *gin.Context, failoverErr *service.UpstreamFailoverError, platform string, streamStarted bool) {
+	statusCode := failoverErr.StatusCode
+	responseBody := failoverErr.ResponseBody
+
+	// 先检查透传规则
+	if h.errorPassthroughService != nil && len(responseBody) > 0 {
+		if rule := h.errorPassthroughService.MatchRule(platform, statusCode, responseBody); rule != nil {
+			// 确定响应状态码
+			respCode := statusCode
+			if !rule.PassthroughCode && rule.ResponseCode != nil {
+				respCode = *rule.ResponseCode
+		placeholder
+
+			// 确定响应消息
+			msg := service.ExtractUpstreamErrorMessage(responseBody)
+			if !rule.PassthroughBody && rule.CustomMessage != nil {
+				msg = *rule.CustomMessage
+		placeholder
+
+			h.handleStreamingAwareError(c, respCode, "upstream_error", msg, streamStarted)
+			return
+	placeholder
+placeholder
+
+	// 使用默认的错误映射
+	status, errType, errMsg := h.mapUpstreamError(statusCode)
+	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
+placeholder
+
+// handleFailoverExhaustedSimple 简化版本，用于没有响应体的情况
+func (h *GatewayHandler) handleFailoverExhaustedSimple(c *gin.Context, statusCode int, streamStarted bool) {
 	status, errType, errMsg := h.mapUpstreamError(statusCode)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
 placeholder

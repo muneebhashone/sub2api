@@ -370,7 +370,8 @@ placeholder
 
 // UpstreamFailoverError indicates an upstream error that should trigger account failover.
 type UpstreamFailoverError struct {
-	StatusCode int
+	StatusCode   int
+	ResponseBody []byte // 上游响应体，用于错误透传规则匹配
 placeholder
 
 func (e *UpstreamFailoverError) Error() string {
@@ -3284,7 +3285,7 @@ placeholder
 					return ""
 			placeholder(),
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		return s.handleRetryExhaustedError(ctx, resp, c, account)
 placeholder
@@ -3314,10 +3315,8 @@ placeholder
 				return ""
 		placeholder(),
 	placeholder)
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 placeholder
-
-	// 处理错误响应（不可重试的错误）
 	if resp.StatusCode >= 400 {
 		// 可选：对部分 400 触发 failover（默认关闭以保持语义）
 		if resp.StatusCode == 400 && s.cfg != nil && s.cfg.Gateway.FailoverOn400 {
@@ -3361,7 +3360,7 @@ placeholder
 					log.Printf("Account %d: 400 error, attempting failover", account.ID)
 			placeholder
 				s.handleFailoverSideEffects(ctx, resp, account)
-				return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+				return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 		placeholder
 	placeholder
 		return s.handleErrorResponse(ctx, resp, c, account)
@@ -3758,6 +3757,12 @@ placeholder
 	return false
 placeholder
 
+// ExtractUpstreamErrorMessage 从上游响应体中提取错误消息
+// 支持 Claude 风格的错误格式：{"type":"error","error":{"type":"...","message":"..."placeholderplaceholder
+func ExtractUpstreamErrorMessage(body []byte) string {
+	return extractUpstreamErrorMessage(body)
+placeholder
+
 func extractUpstreamErrorMessage(body []byte) string {
 	// Claude 风格：{"type":"error","error":{"type":"...","message":"..."placeholderplaceholder
 	if m := gjson.GetBytes(body, "error.message").String(); strings.TrimSpace(m) != "" {
@@ -3825,7 +3830,7 @@ placeholder)
 		shouldDisable = s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
 placeholder
 	if shouldDisable {
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: bodyplaceholder
 placeholder
 
 	// 记录上游错误响应体摘要便于排障（可选：由配置控制；不回显到客户端）
