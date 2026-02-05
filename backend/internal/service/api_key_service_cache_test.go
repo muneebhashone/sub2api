@@ -167,7 +167,7 @@ placeholder
 			NegativeTTLSeconds: 30,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 
 	groupID := int64(9)
 	cacheEntry := &APIKeyAuthCacheEntry{
@@ -223,7 +223,7 @@ placeholder
 			NegativeTTLSeconds: 30,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 	cache.getAuthCache = func(ctx context.Context, key string) (*APIKeyAuthCacheEntry, error) {
 		return &APIKeyAuthCacheEntry{NotFound: trueplaceholder, nil
 placeholder
@@ -256,7 +256,7 @@ placeholder
 			NegativeTTLSeconds: 30,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 	cache.getAuthCache = func(ctx context.Context, key string) (*APIKeyAuthCacheEntry, error) {
 		return nil, redis.Nil
 placeholder
@@ -293,7 +293,7 @@ placeholder
 			L1TTLSeconds: 60,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 	require.NotNil(t, svc.authCacheL1)
 
 	_, err := svc.GetByKey(context.Background(), "k-l1")
@@ -320,7 +320,7 @@ placeholder
 			NegativeTTLSeconds: 30,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 
 	svc.InvalidateAuthCacheByUserID(context.Background(), 7)
 	require.Len(t, cache.deleteAuthKeys, 2)
@@ -338,7 +338,7 @@ placeholder
 			L2TTLSeconds: 60,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 
 	svc.InvalidateAuthCacheByGroupID(context.Background(), 9)
 	require.Len(t, cache.deleteAuthKeys, 2)
@@ -356,7 +356,7 @@ placeholder
 			L2TTLSeconds: 60,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 
 	svc.InvalidateAuthCacheByKey(context.Background(), "k1")
 	require.Len(t, cache.deleteAuthKeys, 1)
@@ -375,7 +375,7 @@ placeholder
 			NegativeTTLSeconds: 30,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 	cache.getAuthCache = func(ctx context.Context, key string) (*APIKeyAuthCacheEntry, error) {
 		return nil, redis.Nil
 placeholder
@@ -411,7 +411,7 @@ placeholder
 			Singleflight: true,
 	placeholder,
 placeholder
-	svc := NewAPIKeyService(repo, nil, nil, nil, cache, cfg)
+	svc := NewAPIKeyService(repo, nil, nil, nil, nil, cache, cfg)
 
 	start := make(chan struct{placeholder)
 	wg := sync.WaitGroup{placeholder

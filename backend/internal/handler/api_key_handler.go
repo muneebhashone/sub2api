@@ -243,3 +243,21 @@ placeholder
 placeholder
 	response.Success(c, out)
 placeholder
+
+// GetUserGroupRates 获取当前用户的专属分组倍率配置
+// GET /api/v1/groups/rates
+func (h *APIKeyHandler) GetUserGroupRates(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+
+	rates, err := h.apiKeyService.GetUserGroupRates(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, rates)
+placeholder

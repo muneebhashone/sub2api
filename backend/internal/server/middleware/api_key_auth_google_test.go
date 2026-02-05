@@ -93,6 +93,7 @@ func newTestAPIKeyService(repo service.APIKeyRepository) *service.APIKeyService 
 		nil, // userRepo (unused in GetByKey)
 		nil, // groupRepo
 		nil, // userSubRepo
+		nil, // userGroupRateRepo
 		nil, // cache
 		&config.Config{placeholder,
 	)
@@ -183,6 +184,7 @@ placeholder
 				return &clone, nil
 		placeholder,
 	placeholder,
+		nil,
 		nil,
 		nil,
 		nil,
