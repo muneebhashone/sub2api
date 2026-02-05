@@ -210,14 +210,24 @@ placeholder> {
   return data
 placeholder
 
-export async function exportData(filters?: {
-  protocol?: string
-  status?: 'active' | 'inactive'
-  search?: string
+export async function exportData(options?: {
+  ids?: number[]
+  filters?: {
+    protocol?: string
+    status?: 'active' | 'inactive'
+    search?: string
+  placeholder
 placeholder): Promise<AdminDataPayload> {
-  const { data placeholder = await apiClient.get<AdminDataPayload>('/admin/proxies/data', {
-    params: filters
-  placeholder)
+  const params: Record<string, string> = {placeholder
+  if (options?.ids && options.ids.length > 0) {
+    params.ids = options.ids.join(',')
+  placeholder else if (options?.filters) {
+    const { protocol, status, search placeholder = options.filters
+    if (protocol) params.protocol = protocol
+    if (status) params.status = status
+    if (search) params.search = search
+  placeholder
+  const { data placeholder = await apiClient.get<AdminDataPayload>('/admin/proxies/data', { params placeholder)
   return data
 placeholder
 
