@@ -102,8 +102,10 @@ placeholder`
 placeholder
 
 	// 验证 cache_read_input_tokens 已被填充
-	msg := event["message"].(map[string]any)
-	usage := msg["usage"].(map[string]any)
+	msg, ok := event["message"].(map[string]any)
+	require.True(t, ok)
+	usage, ok := msg["usage"].(map[string]any)
+	require.True(t, ok)
 	assert.Equal(t, float64(23), usage["cache_read_input_tokens"])
 
 	// 验证重新序列化后 JSON 也包含正确值
@@ -134,8 +136,10 @@ placeholder`
 	placeholder
 placeholder
 
-	msg := event["message"].(map[string]any)
-	usage := msg["usage"].(map[string]any)
+	msg, ok := event["message"].(map[string]any)
+	require.True(t, ok)
+	usage, ok := msg["usage"].(map[string]any)
+	require.True(t, ok)
 	assert.Equal(t, float64(30), usage["cache_read_input_tokens"])
 placeholder
 
@@ -159,11 +163,9 @@ placeholder`
 	require.Equal(t, "message_delta", eventType)
 
 	// 模拟 processSSEEvent 中的 reconcile 逻辑
-	if u, ok := event["usage"].(map[string]any); ok {
-		reconcileCachedTokens(u)
-placeholder
-
-	usage := event["usage"].(map[string]any)
+	usage, ok := event["usage"].(map[string]any)
+	require.True(t, ok)
+	reconcileCachedTokens(usage)
 	assert.Equal(t, float64(15), usage["cache_read_input_tokens"])
 placeholder
 
@@ -179,11 +181,9 @@ placeholder`
 	var event map[string]any
 	require.NoError(t, json.Unmarshal([]byte(eventJSON), &event))
 
-	if u, ok := event["usage"].(map[string]any); ok {
-		reconcileCachedTokens(u)
-placeholder
-
-	usage := event["usage"].(map[string]any)
+	usage, ok := event["usage"].(map[string]any)
+	require.True(t, ok)
+	reconcileCachedTokens(usage)
 	_, hasCacheRead := usage["cache_read_input_tokens"]
 	assert.False(t, hasCacheRead, "不应为原生 Claude 响应注入 cache_read_input_tokens")
 placeholder
@@ -251,20 +251,8 @@ placeholder`)
 placeholder
 	require.NoError(t, json.Unmarshal(body, &response))
 
-	originalBody := make([]byte, len(body))
-	copy(originalBody, body)
-
-	if response.Usage.CacheReadInputTokens == 0 {
-		cachedTokens := gjson.GetBytes(body, "usage.cached_tokens").Int()
-		if cachedTokens > 0 {
-			response.Usage.CacheReadInputTokens = int(cachedTokens)
-			if newBody, err := sjson.SetBytes(body, "usage.cache_read_input_tokens", cachedTokens); err == nil {
-				body = newBody
-		placeholder
-	placeholder
-placeholder
-
-	// 不应修改
+	// CacheReadInputTokens == 30，条件不成立，整个 reconcile 分支不会执行
+	assert.NotZero(t, response.Usage.CacheReadInputTokens)
 	assert.Equal(t, 30, response.Usage.CacheReadInputTokens)
 placeholder
 
