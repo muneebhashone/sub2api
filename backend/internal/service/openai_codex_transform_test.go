@@ -176,6 +176,19 @@ placeholder
 	require.Len(t, input, 0)
 placeholder
 
+func TestNormalizeCodexModel_Gpt53(t *testing.T) {
+	cases := map[string]string{
+		"gpt-5.3":             "gpt-5.3",
+		"gpt-5.3-codex":       "gpt-5.3-codex",
+		"gpt-5.3-codex-xhigh": "gpt-5.3-codex",
+		"gpt 5.3 codex":       "gpt-5.3-codex",
+placeholder
+
+	for input, expected := range cases {
+		require.Equal(t, expected, normalizeCodexModel(input))
+placeholder
+placeholder
+
 func setupCodexCache(t *testing.T) {
 placeholder
 
