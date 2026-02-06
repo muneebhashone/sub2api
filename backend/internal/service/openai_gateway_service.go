@@ -940,7 +940,7 @@ placeholder
 		placeholder)
 
 			s.handleFailoverSideEffects(ctx, resp, account)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		return s.handleErrorResponse(ctx, resp, c, account)
 placeholder
@@ -1131,7 +1131,7 @@ placeholder
 		Detail:             upstreamDetail,
 placeholder)
 	if shouldDisable {
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: bodyplaceholder
 placeholder
 
 	// Return appropriate error response

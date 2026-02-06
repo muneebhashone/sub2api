@@ -309,6 +309,42 @@ placeholder
 		placeholder,
 	placeholder,
 placeholder
+	// ErrorPassthroughRulesColumns holds the columns for the "error_passthrough_rules" table.
+	ErrorPassthroughRulesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "priority", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "error_codes", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "keywords", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "match_mode", Type: field.TypeString, Size: 10, Default: "any"placeholder,
+		{Name: "platforms", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "passthrough_code", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "response_code", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "passthrough_body", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "custom_message", Type: field.TypeString, Nullable: true, Size: 2147483647placeholder,
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647placeholder,
+placeholder
+	// ErrorPassthroughRulesTable holds the schema information for the "error_passthrough_rules" table.
+	ErrorPassthroughRulesTable = &schema.Table{
+		Name:       "error_passthrough_rules",
+		Columns:    ErrorPassthroughRulesColumns,
+		PrimaryKey: []*schema.Column{ErrorPassthroughRulesColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "errorpassthroughrule_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{ErrorPassthroughRulesColumns[4]placeholder,
+		placeholder,
+			{
+				Name:    "errorpassthroughrule_priority",
+				Unique:  false,
+				Columns: []*schema.Column{ErrorPassthroughRulesColumns[5]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// GroupsColumns holds the columns for the "groups" table.
 	GroupsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -950,6 +986,7 @@ placeholder
 		AccountGroupsTable,
 		AnnouncementsTable,
 		AnnouncementReadsTable,
+		ErrorPassthroughRulesTable,
 		GroupsTable,
 		PromoCodesTable,
 		PromoCodeUsagesTable,
@@ -988,6 +1025,9 @@ placeholder
 	AnnouncementReadsTable.ForeignKeys[1].RefTable = UsersTable
 	AnnouncementReadsTable.Annotation = &entsql.Annotation{
 		Table: "announcement_reads",
+placeholder
+	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
+		Table: "error_passthrough_rules",
 placeholder
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",

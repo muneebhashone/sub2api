@@ -370,7 +370,8 @@ placeholder
 
 // UpstreamFailoverError indicates an upstream error that should trigger account failover.
 type UpstreamFailoverError struct {
-	StatusCode int
+	StatusCode   int
+	ResponseBody []byte // 上游响应体，用于错误透传规则匹配
 placeholder
 
 func (e *UpstreamFailoverError) Error() string {
@@ -384,6 +385,7 @@ type GatewayService struct {
 	usageLogRepo        UsageLogRepository
 	userRepo            UserRepository
 	userSubRepo         UserSubscriptionRepository
+	userGroupRateRepo   UserGroupRateRepository
 	cache               GatewayCache
 	cfg                 *config.Config
 	schedulerSnapshot   *SchedulerSnapshotService
@@ -405,6 +407,7 @@ func NewGatewayService(
 	usageLogRepo UsageLogRepository,
 	userRepo UserRepository,
 	userSubRepo UserSubscriptionRepository,
+	userGroupRateRepo UserGroupRateRepository,
 	cache GatewayCache,
 	cfg *config.Config,
 	schedulerSnapshot *SchedulerSnapshotService,
@@ -424,6 +427,7 @@ func NewGatewayService(
 		usageLogRepo:        usageLogRepo,
 		userRepo:            userRepo,
 		userSubRepo:         userSubRepo,
+		userGroupRateRepo:   userGroupRateRepo,
 		cache:               cache,
 		cfg:                 cfg,
 		schedulerSnapshot:   schedulerSnapshot,
@@ -3281,7 +3285,7 @@ placeholder
 					return ""
 			placeholder(),
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		return s.handleRetryExhaustedError(ctx, resp, c, account)
 placeholder
@@ -3311,10 +3315,8 @@ placeholder
 				return ""
 		placeholder(),
 	placeholder)
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 placeholder
-
-	// 处理错误响应（不可重试的错误）
 	if resp.StatusCode >= 400 {
 		// 可选：对部分 400 触发 failover（默认关闭以保持语义）
 		if resp.StatusCode == 400 && s.cfg != nil && s.cfg.Gateway.FailoverOn400 {
@@ -3358,7 +3360,7 @@ placeholder
 					log.Printf("Account %d: 400 error, attempting failover", account.ID)
 			placeholder
 				s.handleFailoverSideEffects(ctx, resp, account)
-				return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+				return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 		placeholder
 	placeholder
 		return s.handleErrorResponse(ctx, resp, c, account)
@@ -3755,6 +3757,12 @@ placeholder
 	return false
 placeholder
 
+// ExtractUpstreamErrorMessage 从上游响应体中提取错误消息
+// 支持 Claude 风格的错误格式：{"type":"error","error":{"type":"...","message":"..."placeholderplaceholder
+func ExtractUpstreamErrorMessage(body []byte) string {
+	return extractUpstreamErrorMessage(body)
+placeholder
+
 func extractUpstreamErrorMessage(body []byte) string {
 	// Claude 风格：{"type":"error","error":{"type":"...","message":"..."placeholderplaceholder
 	if m := gjson.GetBytes(body, "error.message").String(); strings.TrimSpace(m) != "" {
@@ -3822,7 +3830,7 @@ placeholder)
 		shouldDisable = s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
 placeholder
 	if shouldDisable {
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: bodyplaceholder
 placeholder
 
 	// 记录上游错误响应体摘要便于排障（可选：由配置控制；不回显到客户端）
@@ -4166,6 +4174,20 @@ placeholder
 		eventType, _ := event["type"].(string)
 		if eventName == "" {
 			eventName = eventType
+	placeholder
+
+		// 兼容 Kimi cached_tokens → cache_read_input_tokens
+		if eventType == "message_start" {
+			if msg, ok := event["message"].(map[string]any); ok {
+				if u, ok := msg["usage"].(map[string]any); ok {
+					reconcileCachedTokens(u)
+			placeholder
+		placeholder
+	placeholder
+		if eventType == "message_delta" {
+			if u, ok := event["usage"].(map[string]any); ok {
+				reconcileCachedTokens(u)
+		placeholder
 	placeholder
 
 		if needModelReplace {
@@ -4518,6 +4540,17 @@ placeholder
 		return nil, fmt.Errorf("parse response: %w", err)
 placeholder
 
+	// 兼容 Kimi cached_tokens → cache_read_input_tokens
+	if response.Usage.CacheReadInputTokens == 0 {
+		cachedTokens := gjson.GetBytes(body, "usage.cached_tokens").Int()
+		if cachedTokens > 0 {
+			response.Usage.CacheReadInputTokens = int(cachedTokens)
+			if newBody, err := sjson.SetBytes(body, "usage.cache_read_input_tokens", cachedTokens); err == nil {
+				body = newBody
+		placeholder
+	placeholder
+placeholder
+
 	// 如果有模型映射，替换响应中的model字段
 	if originalModel != mappedModel {
 		body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
@@ -4609,10 +4642,17 @@ func (s *GatewayService) RecordUsage(ctx context.Context, input *RecordUsageInpu
 	account := input.Account
 	subscription := input.Subscription
 
-	// 获取费率倍数
+	// 获取费率倍数（优先级：用户专属 > 分组默认 > 系统默认）
 	multiplier := s.cfg.Default.RateMultiplier
 	if apiKey.GroupID != nil && apiKey.Group != nil {
 		multiplier = apiKey.Group.RateMultiplier
+
+		// 检查用户专属倍率
+		if s.userGroupRateRepo != nil {
+			if userRate, err := s.userGroupRateRepo.GetByUserAndGroup(ctx, user.ID, *apiKey.GroupID); err == nil && userRate != nil {
+				multiplier = *userRate
+		placeholder
+	placeholder
 placeholder
 
 	var cost *CostBreakdown
@@ -4773,10 +4813,17 @@ func (s *GatewayService) RecordUsageWithLongContext(ctx context.Context, input *
 	account := input.Account
 	subscription := input.Subscription
 
-	// 获取费率倍数
+	// 获取费率倍数（优先级：用户专属 > 分组默认 > 系统默认）
 	multiplier := s.cfg.Default.RateMultiplier
 	if apiKey.GroupID != nil && apiKey.Group != nil {
 		multiplier = apiKey.Group.RateMultiplier
+
+		// 检查用户专属倍率
+		if s.userGroupRateRepo != nil {
+			if userRate, err := s.userGroupRateRepo.GetByUserAndGroup(ctx, user.ID, *apiKey.GroupID); err == nil && userRate != nil {
+				multiplier = *userRate
+		placeholder
+	placeholder
 placeholder
 
 	var cost *CostBreakdown
@@ -5288,4 +5335,22 @@ placeholder
 placeholder
 
 	return models
+placeholder
+
+// reconcileCachedTokens 兼容 Kimi 等上游：
+// 将 OpenAI 风格的 cached_tokens 映射到 Claude 标准的 cache_read_input_tokens
+func reconcileCachedTokens(usage map[string]any) bool {
+	if usage == nil {
+		return false
+placeholder
+	cacheRead, _ := usage["cache_read_input_tokens"].(float64)
+	if cacheRead > 0 {
+		return false // 已有标准字段，无需处理
+placeholder
+	cached, _ := usage["cached_tokens"].(float64)
+	if cached <= 0 {
+		return false
+placeholder
+	usage["cache_read_input_tokens"] = cached
+	return true
 placeholder

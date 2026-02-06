@@ -58,8 +58,9 @@ placeholder
 		return nil
 placeholder
 	return &AdminUser{
-		User:  *base,
-		Notes: u.Notes,
+		User:       *base,
+		Notes:      u.Notes,
+		GroupRates: u.GroupRates,
 placeholder
 placeholder
 

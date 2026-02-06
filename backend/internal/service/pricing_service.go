@@ -579,6 +579,7 @@ placeholder
 func (s *PricingService) matchByModelFamily(model string) *LiteLLMModelPricing {
 	// Claude模型系列匹配规则
 	familyPatterns := map[string][]string{
+		"opus-4.6":   {"claude-opus-4.6", "claude-opus-4-6"placeholder,
 		"opus-4.5":   {"claude-opus-4.5", "claude-opus-4-5"placeholder,
 		"opus-4":     {"claude-opus-4", "claude-3-opus"placeholder,
 		"sonnet-4.5": {"claude-sonnet-4.5", "claude-sonnet-4-5"placeholder,
@@ -651,7 +652,8 @@ placeholder
 // 回退顺序：
 // 1. gpt-5.2-codex -> gpt-5.2（去掉后缀如 -codex, -mini, -max 等）
 // 2. gpt-5.2-20251222 -> gpt-5.2（去掉日期版本号）
-// 3. 最终回退到 DefaultTestModel (gpt-5.1-codex)
+// 3. gpt-5.3-codex -> gpt-5.2-codex
+// 4. 最终回退到 DefaultTestModel (gpt-5.1-codex)
 func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 	// 尝试的回退变体
 	variants := s.generateOpenAIModelVariants(model, openAIModelDatePattern)
@@ -659,6 +661,13 @@ func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 	for _, variant := range variants {
 		if pricing, ok := s.pricingData[variant]; ok {
 			log.Printf("[Pricing] OpenAI fallback matched %s -> %s", model, variant)
+			return pricing
+	placeholder
+placeholder
+
+	if strings.HasPrefix(model, "gpt-5.3-codex") {
+		if pricing, ok := s.pricingData["gpt-5.2-codex"]; ok {
+			log.Printf("[Pricing] OpenAI fallback matched %s -> %s", model, "gpt-5.2-codex")
 			return pricing
 	placeholder
 placeholder

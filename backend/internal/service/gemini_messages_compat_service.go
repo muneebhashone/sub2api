@@ -864,7 +864,7 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
 			upstreamReqID := resp.Header.Get(requestIDHeader)
@@ -891,7 +891,7 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		upstreamReqID := resp.Header.Get(requestIDHeader)
 		if upstreamReqID == "" {
@@ -1301,7 +1301,7 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		if s.shouldFailoverGeminiUpstreamError(resp.StatusCode) {
 			evBody := unwrapIfNeeded(isOAuth, respBody)
@@ -1325,7 +1325,7 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCodeplaceholder
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: evBodyplaceholder
 	placeholder
 
 		respBody = unwrapIfNeeded(isOAuth, respBody)
