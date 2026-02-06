@@ -1209,7 +1209,8 @@ placeholder
 	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
 		maxLineSize = s.cfg.Gateway.MaxLineSize
 placeholder
-	scanner.Buffer(make([]byte, 64*1024), maxLineSize)
+	scanBuf := getSSEScannerBuf64K()
+	scanner.Buffer(scanBuf[:0], maxLineSize)
 
 	type scanEvent struct {
 		line string
@@ -1228,7 +1229,8 @@ placeholder
 placeholder
 	var lastReadAt int64
 	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
-	go func() {
+	go func(scanBuf *sseScannerBuf64K) {
+		defer putSSEScannerBuf64K(scanBuf)
 		defer close(events)
 		for scanner.Scan() {
 			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
@@ -1239,7 +1241,7 @@ placeholder
 		if err := scanner.Err(); err != nil {
 			_ = sendEvent(scanEvent{err: errplaceholder)
 	placeholder
-placeholder()
+placeholder(scanBuf)
 	defer close(done)
 
 	streamInterval := time.Duration(0)
