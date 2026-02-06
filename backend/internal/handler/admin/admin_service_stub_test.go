@@ -2,19 +2,27 @@ package admin
 
 import (
 	"context"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
 type stubAdminService struct {
-	users       []service.User
-	apiKeys     []service.APIKey
-	groups      []service.Group
-	accounts    []service.Account
-	proxies     []service.Proxy
-	proxyCounts []service.ProxyWithAccountCount
-	redeems     []service.RedeemCode
+	users           []service.User
+	apiKeys         []service.APIKey
+	groups          []service.Group
+	accounts        []service.Account
+	proxies         []service.Proxy
+	proxyCounts     []service.ProxyWithAccountCount
+	redeems         []service.RedeemCode
+	createdAccounts []*service.CreateAccountInput
+	createdProxies  []*service.CreateProxyInput
+	updatedProxyIDs []int64
+	updatedProxies  []*service.UpdateProxyInput
+	testedProxyIDs  []int64
+	mu              sync.Mutex
 placeholder
 
 func newStubAdminService() *stubAdminService {
@@ -177,6 +185,9 @@ placeholder
 placeholder
 
 func (s *stubAdminService) CreateAccount(ctx context.Context, input *service.CreateAccountInput) (*service.Account, error) {
+	s.mu.Lock()
+	s.createdAccounts = append(s.createdAccounts, input)
+	s.mu.Unlock()
 	account := service.Account{ID: 300, Name: input.Name, Status: service.StatusActiveplaceholder
 	return &account, nil
 placeholder
@@ -214,7 +225,25 @@ func (s *stubAdminService) BulkUpdateAccounts(ctx context.Context, input *servic
 placeholder
 
 func (s *stubAdminService) ListProxies(ctx context.Context, page, pageSize int, protocol, status, search string) ([]service.Proxy, int64, error) {
-	return s.proxies, int64(len(s.proxies)), nil
+	search = strings.TrimSpace(strings.ToLower(search))
+	filtered := make([]service.Proxy, 0, len(s.proxies))
+	for _, proxy := range s.proxies {
+		if protocol != "" && proxy.Protocol != protocol {
+			continue
+	placeholder
+		if status != "" && proxy.Status != status {
+			continue
+	placeholder
+		if search != "" {
+			name := strings.ToLower(proxy.Name)
+			host := strings.ToLower(proxy.Host)
+			if !strings.Contains(name, search) && !strings.Contains(host, search) {
+				continue
+		placeholder
+	placeholder
+		filtered = append(filtered, proxy)
+placeholder
+	return filtered, int64(len(filtered)), nil
 placeholder
 
 func (s *stubAdminService) ListProxiesWithAccountCount(ctx context.Context, page, pageSize int, protocol, status, search string) ([]service.ProxyWithAccountCount, int64, error) {
@@ -230,16 +259,47 @@ func (s *stubAdminService) GetAllProxiesWithAccountCount(ctx context.Context) ([
 placeholder
 
 func (s *stubAdminService) GetProxy(ctx context.Context, id int64) (*service.Proxy, error) {
+	for i := range s.proxies {
+		proxy := s.proxies[i]
+		if proxy.ID == id {
+			return &proxy, nil
+	placeholder
+placeholder
 	proxy := service.Proxy{ID: id, Name: "proxy", Status: service.StatusActiveplaceholder
 	return &proxy, nil
 placeholder
 
+func (s *stubAdminService) GetProxiesByIDs(ctx context.Context, ids []int64) ([]service.Proxy, error) {
+	if len(ids) == 0 {
+		return []service.Proxy{placeholder, nil
+placeholder
+	out := make([]service.Proxy, 0, len(ids))
+	seen := make(map[int64]struct{placeholder, len(ids))
+	for _, id := range ids {
+		seen[id] = struct{placeholder{placeholder
+placeholder
+	for i := range s.proxies {
+		proxy := s.proxies[i]
+		if _, ok := seen[proxy.ID]; ok {
+			out = append(out, proxy)
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
 func (s *stubAdminService) CreateProxy(ctx context.Context, input *service.CreateProxyInput) (*service.Proxy, error) {
+	s.mu.Lock()
+	s.createdProxies = append(s.createdProxies, input)
+	s.mu.Unlock()
 	proxy := service.Proxy{ID: 400, Name: input.Name, Status: service.StatusActiveplaceholder
 	return &proxy, nil
 placeholder
 
 func (s *stubAdminService) UpdateProxy(ctx context.Context, id int64, input *service.UpdateProxyInput) (*service.Proxy, error) {
+	s.mu.Lock()
+	s.updatedProxyIDs = append(s.updatedProxyIDs, id)
+	s.updatedProxies = append(s.updatedProxies, input)
+	s.mu.Unlock()
 	proxy := service.Proxy{ID: id, Name: input.Name, Status: service.StatusActiveplaceholder
 	return &proxy, nil
 placeholder
@@ -261,6 +321,9 @@ func (s *stubAdminService) CheckProxyExists(ctx context.Context, host string, po
 placeholder
 
 func (s *stubAdminService) TestProxy(ctx context.Context, id int64) (*service.ProxyTestResult, error) {
+	s.mu.Lock()
+	s.testedProxyIDs = append(s.testedProxyIDs, id)
+	s.mu.Unlock()
 	return &service.ProxyTestResult{Success: true, Message: "ok"placeholder, nil
 placeholder
 

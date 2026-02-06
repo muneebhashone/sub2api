@@ -1059,6 +1059,10 @@ func (stubProxyRepo) GetByID(ctx context.Context, id int64) (*service.Proxy, err
 	return nil, service.ErrProxyNotFound
 placeholder
 
+func (stubProxyRepo) ListByIDs(ctx context.Context, ids []int64) ([]service.Proxy, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
 func (stubProxyRepo) Update(ctx context.Context, proxy *service.Proxy) error {
 	return errors.New("not implemented")
 placeholder

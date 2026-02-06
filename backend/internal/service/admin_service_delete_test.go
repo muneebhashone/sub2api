@@ -187,6 +187,10 @@ func (s *proxyRepoStub) GetByID(ctx context.Context, id int64) (*Proxy, error) {
 	panic("unexpected GetByID call")
 placeholder
 
+func (s *proxyRepoStub) ListByIDs(ctx context.Context, ids []int64) ([]Proxy, error) {
+	panic("unexpected ListByIDs call")
+placeholder
+
 func (s *proxyRepoStub) Update(ctx context.Context, proxy *Proxy) error {
 	panic("unexpected Update call")
 placeholder
