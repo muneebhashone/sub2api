@@ -48,6 +48,10 @@ services:
       - DATABASE_PASSWORD=${DATABASE_PASSWORD:?DATABASE_PASSWORD is requiredplaceholder
       - DATABASE_DBNAME=${DATABASE_DBNAME:-sub2apiplaceholder
       - DATABASE_SSLMODE=${DATABASE_SSLMODE:-disableplaceholder
+      - DATABASE_MAX_OPEN_CONNS=${DATABASE_MAX_OPEN_CONNS:-50placeholder
+      - DATABASE_MAX_IDLE_CONNS=${DATABASE_MAX_IDLE_CONNS:-10placeholder
+      - DATABASE_CONN_MAX_LIFETIME_MINUTES=${DATABASE_CONN_MAX_LIFETIME_MINUTES:-30placeholder
+      - DATABASE_CONN_MAX_IDLE_TIME_MINUTES=${DATABASE_CONN_MAX_IDLE_TIME_MINUTES:-5placeholder
 
       # =======================================================================
       # Redis Configuration - Required
@@ -56,6 +60,8 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379placeholder
       - REDIS_PASSWORD=${REDIS_PASSWORD:-placeholder
       - REDIS_DB=${REDIS_DB:-0placeholder
+      - REDIS_POOL_SIZE=${REDIS_POOL_SIZE:-placeholder
+      - REDIS_MIN_IDLE_CONNS=${REDIS_MIN_IDLE_CONNS:-10placeholder
       - REDIS_ENABLE_TLS=${REDIS_ENABLE_TLS:-falseplaceholder
 
       # =======================================================================
