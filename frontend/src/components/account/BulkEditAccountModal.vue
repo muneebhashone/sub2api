@@ -707,6 +707,7 @@ const groupIds = ref<number[]>([])
 
 // All models list (combined Anthropic + OpenAI)
 const allModels = [
+  { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' placeholder,
   { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' placeholder,
   { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' placeholder,
   { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' placeholder,
@@ -743,6 +744,13 @@ const presetMappings = [
     label: 'Opus 4.5',
     from: 'claude-opus-4-5-20251101',
     to: 'claude-opus-4-5-20251101',
+    color:
+      'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
+  placeholder,
+  {
+    label: 'Opus 4.6',
+    from: 'claude-opus-4-6',
+    to: 'claude-opus-4-6',
     color:
       'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
   placeholder,
