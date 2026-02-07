@@ -969,6 +969,10 @@ placeholder
 	placeholder
 placeholder
 
+	if usage == nil {
+		usage = &OpenAIUsage{placeholder
+placeholder
+
 	reasoningEffort := extractOpenAIReasoningEffort(reqBody, originalModel)
 
 	return &OpenAIForwardResult{
