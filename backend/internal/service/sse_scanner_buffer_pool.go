@@ -13,7 +13,12 @@ placeholder,
 placeholder
 
 func getSSEScannerBuf64K() *sseScannerBuf64K {
-	return sseScannerBuf64KPool.Get().(*sseScannerBuf64K)
+	v := sseScannerBuf64KPool.Get()
+	buf, ok := v.(*sseScannerBuf64K)
+	if !ok || buf == nil {
+		return new(sseScannerBuf64K)
+placeholder
+	return buf
 placeholder
 
 func putSSEScannerBuf64K(buf *sseScannerBuf64K) {
