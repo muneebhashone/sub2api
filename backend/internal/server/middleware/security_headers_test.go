@@ -19,7 +19,8 @@ placeholder
 
 func TestGenerateNonce(t *testing.T) {
 	t.Run("generates_valid_base64_string", func(t *testing.T) {
-		nonce := GenerateNonce()
+		nonce, err := GenerateNonce()
+	placeholder
 
 		// Should be valid base64
 		decoded, err := base64.StdEncoding.DecodeString(nonce)
@@ -32,14 +33,16 @@ placeholder)
 	t.Run("generates_unique_nonces", func(t *testing.T) {
 		nonces := make(map[string]bool)
 		for i := 0; i < 100; i++ {
-			nonce := GenerateNonce()
+			nonce, err := GenerateNonce()
+		placeholder
 			assert.False(t, nonces[nonce], "nonce should be unique")
 			nonces[nonce] = true
 	placeholder
 placeholder)
 
 	t.Run("nonce_has_expected_length", func(t *testing.T) {
-		nonce := GenerateNonce()
+		nonce, err := GenerateNonce()
+	placeholder
 		// 16 bytes -> 24 chars in base64 (with padding)
 		assert.Len(t, nonce, 24)
 placeholder)
@@ -344,7 +347,7 @@ placeholder
 // Benchmark tests
 func BenchmarkGenerateNonce(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		GenerateNonce()
+		_, _ = GenerateNonce()
 placeholder
 placeholder
 
