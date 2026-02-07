@@ -524,8 +524,8 @@ placeholder
 placeholder
 
 func TestShouldTriggerAntigravitySmartRetry(t *testing.T) {
-	oauthAccount := &Account{Type: AccountTypeOAuthplaceholder
-	setupTokenAccount := &Account{Type: AccountTypeSetupTokenplaceholder
+	oauthAccount := &Account{Type: AccountTypeOAuth, Platform: PlatformAntigravityplaceholder
+	setupTokenAccount := &Account{Type: AccountTypeSetupToken, Platform: PlatformAntigravityplaceholder
 	apiKeyAccount := &Account{Type: AccountTypeAPIKeyplaceholder
 
 	tests := []struct {
