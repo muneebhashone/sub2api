@@ -957,6 +957,16 @@ func (c *Config) Validate() error {
 		if err := ValidateAbsoluteHTTPURL(c.Server.FrontendURL); err != nil {
 			return fmt.Errorf("server.frontend_url invalid: %w", err)
 	placeholder
+		u, err := url.Parse(strings.TrimSpace(c.Server.FrontendURL))
+		if err != nil {
+			return fmt.Errorf("server.frontend_url invalid: %w", err)
+	placeholder
+		if u.RawQuery != "" || u.ForceQuery {
+			return fmt.Errorf("server.frontend_url invalid: must not include query")
+	placeholder
+		if u.User != nil {
+			return fmt.Errorf("server.frontend_url invalid: must not include userinfo")
+	placeholder
 		warnIfInsecureURL("server.frontend_url", c.Server.FrontendURL)
 placeholder
 	if c.JWT.ExpireHour <= 0 {

@@ -437,6 +437,21 @@ placeholder
 		t.Fatalf("Validate() frontend_url valid error: %v", err)
 placeholder
 
+	cfg.Server.FrontendURL = "https://example.com/path"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() frontend_url with path valid error: %v", err)
+placeholder
+
+	cfg.Server.FrontendURL = "https://example.com?utm=1"
+	if err := cfg.Validate(); err == nil {
+		t.Fatalf("Validate() should reject server.frontend_url with query")
+placeholder
+
+	cfg.Server.FrontendURL = "https://user:pass@example.com"
+	if err := cfg.Validate(); err == nil {
+		t.Fatalf("Validate() should reject server.frontend_url with userinfo")
+placeholder
+
 	cfg.Server.FrontendURL = "/relative"
 	if err := cfg.Validate(); err == nil {
 		t.Fatalf("Validate() should reject relative server.frontend_url")
