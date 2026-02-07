@@ -114,6 +114,10 @@ placeholder
     @apply rounded-lg px-3 py-1.5 text-xs;
   placeholder
 
+  .btn-md {
+    @apply rounded-xl px-4 py-2 text-sm;
+  placeholder
+
   .btn-lg {
     @apply rounded-2xl px-6 py-3 text-base;
   placeholder

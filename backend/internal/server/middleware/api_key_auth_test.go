@@ -60,7 +60,7 @@ placeholder
 	t.Run("simple_mode_bypasses_quota_check", func(t *testing.T) {
 		cfg := &config.Config{RunMode: config.RunModeSimpleplaceholder
 		apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, nil, nil, nil, cfg)
-		subscriptionService := service.NewSubscriptionService(nil, &stubUserSubscriptionRepo{placeholder, nil)
+		subscriptionService := service.NewSubscriptionService(nil, &stubUserSubscriptionRepo{placeholder, nil, cfg)
 		router := newAuthTestRouter(apiKeyService, subscriptionService, cfg)
 
 		w := httptest.NewRecorder()
@@ -99,7 +99,7 @@ placeholder)
 			resetWeekly:    func(ctx context.Context, id int64, start time.Time) error { return nil placeholder,
 			resetMonthly:   func(ctx context.Context, id int64, start time.Time) error { return nil placeholder,
 	placeholder
-		subscriptionService := service.NewSubscriptionService(nil, subscriptionRepo, nil)
+		subscriptionService := service.NewSubscriptionService(nil, subscriptionRepo, nil, cfg)
 		router := newAuthTestRouter(apiKeyService, subscriptionService, cfg)
 
 		w := httptest.NewRecorder()

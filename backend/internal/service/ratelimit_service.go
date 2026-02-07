@@ -387,14 +387,6 @@ placeholder
 
 		// 没有重置时间，使用默认5分钟
 		resetAt := time.Now().Add(5 * time.Minute)
-		if s.shouldScopeClaudeSonnetRateLimit(account, responseBody) {
-			if err := s.accountRepo.SetModelRateLimit(ctx, account.ID, modelRateLimitScopeClaudeSonnet, resetAt); err != nil {
-				slog.Warn("model_rate_limit_set_failed", "account_id", account.ID, "scope", modelRateLimitScopeClaudeSonnet, "error", err)
-		placeholder else {
-				slog.Info("account_model_rate_limited", "account_id", account.ID, "scope", modelRateLimitScopeClaudeSonnet, "reset_at", resetAt)
-		placeholder
-			return
-	placeholder
 		slog.Warn("rate_limit_no_reset_time", "account_id", account.ID, "platform", account.Platform, "using_default", "5m")
 		if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
 			slog.Warn("rate_limit_set_failed", "account_id", account.ID, "error", err)
@@ -407,14 +399,6 @@ placeholder
 	if err != nil {
 		slog.Warn("rate_limit_reset_parse_failed", "reset_timestamp", resetTimestamp, "error", err)
 		resetAt := time.Now().Add(5 * time.Minute)
-		if s.shouldScopeClaudeSonnetRateLimit(account, responseBody) {
-			if err := s.accountRepo.SetModelRateLimit(ctx, account.ID, modelRateLimitScopeClaudeSonnet, resetAt); err != nil {
-				slog.Warn("model_rate_limit_set_failed", "account_id", account.ID, "scope", modelRateLimitScopeClaudeSonnet, "error", err)
-		placeholder else {
-				slog.Info("account_model_rate_limited", "account_id", account.ID, "scope", modelRateLimitScopeClaudeSonnet, "reset_at", resetAt)
-		placeholder
-			return
-	placeholder
 		if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
 			slog.Warn("rate_limit_set_failed", "account_id", account.ID, "error", err)
 	placeholder
@@ -422,15 +406,6 @@ placeholder
 placeholder
 
 	resetAt := time.Unix(ts, 0)
-
-	if s.shouldScopeClaudeSonnetRateLimit(account, responseBody) {
-		if err := s.accountRepo.SetModelRateLimit(ctx, account.ID, modelRateLimitScopeClaudeSonnet, resetAt); err != nil {
-			slog.Warn("model_rate_limit_set_failed", "account_id", account.ID, "scope", modelRateLimitScopeClaudeSonnet, "error", err)
-			return
-	placeholder
-		slog.Info("account_model_rate_limited", "account_id", account.ID, "scope", modelRateLimitScopeClaudeSonnet, "reset_at", resetAt)
-		return
-placeholder
 
 	// 标记限流状态
 	if err := s.accountRepo.SetRateLimited(ctx, account.ID, resetAt); err != nil {
@@ -446,17 +421,6 @@ placeholder
 placeholder
 
 	slog.Info("account_rate_limited", "account_id", account.ID, "reset_at", resetAt)
-placeholder
-
-func (s *RateLimitService) shouldScopeClaudeSonnetRateLimit(account *Account, responseBody []byte) bool {
-	if account == nil || account.Platform != PlatformAnthropic {
-		return false
-placeholder
-	msg := strings.ToLower(strings.TrimSpace(extractUpstreamErrorMessage(responseBody)))
-	if msg == "" {
-		return false
-placeholder
-	return strings.Contains(msg, "sonnet")
 placeholder
 
 // calculateOpenAI429ResetTime 从 OpenAI 429 响应头计算正确的重置时间

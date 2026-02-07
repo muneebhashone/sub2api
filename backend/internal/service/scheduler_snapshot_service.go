@@ -151,6 +151,14 @@ placeholder
 	return s.accountRepo.GetByID(fallbackCtx, accountID)
 placeholder
 
+// UpdateAccountInCache 立即更新 Redis 中单个账号的数据（用于模型限流后立即生效）
+func (s *SchedulerSnapshotService) UpdateAccountInCache(ctx context.Context, account *Account) error {
+	if s.cache == nil || account == nil {
+		return nil
+placeholder
+	return s.cache.SetAccount(ctx, account)
+placeholder
+
 func (s *SchedulerSnapshotService) runInitialRebuild() {
 	if s.cache == nil {
 		return

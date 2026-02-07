@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -14,14 +15,81 @@ import (
 
 // mockErrorPassthroughRepo 用于测试的 mock repository
 type mockErrorPassthroughRepo struct {
-	rules []*model.ErrorPassthroughRule
+	rules     []*model.ErrorPassthroughRule
+	listErr   error
+	getErr    error
+	createErr error
+	updateErr error
+	deleteErr error
+placeholder
+
+type mockErrorPassthroughCache struct {
+	rules            []*model.ErrorPassthroughRule
+	hasData          bool
+	getCalled        int
+	setCalled        int
+	invalidateCalled int
+	notifyCalled     int
+placeholder
+
+func newMockErrorPassthroughCache(rules []*model.ErrorPassthroughRule, hasData bool) *mockErrorPassthroughCache {
+	return &mockErrorPassthroughCache{
+		rules:   cloneRules(rules),
+		hasData: hasData,
+placeholder
+placeholder
+
+func (m *mockErrorPassthroughCache) Get(ctx context.Context) ([]*model.ErrorPassthroughRule, bool) {
+	m.getCalled++
+	if !m.hasData {
+		return nil, false
+placeholder
+	return cloneRules(m.rules), true
+placeholder
+
+func (m *mockErrorPassthroughCache) Set(ctx context.Context, rules []*model.ErrorPassthroughRule) error {
+	m.setCalled++
+	m.rules = cloneRules(rules)
+	m.hasData = true
+	return nil
+placeholder
+
+func (m *mockErrorPassthroughCache) Invalidate(ctx context.Context) error {
+	m.invalidateCalled++
+	m.rules = nil
+	m.hasData = false
+	return nil
+placeholder
+
+func (m *mockErrorPassthroughCache) NotifyUpdate(ctx context.Context) error {
+	m.notifyCalled++
+	return nil
+placeholder
+
+func (m *mockErrorPassthroughCache) SubscribeUpdates(ctx context.Context, handler func()) {
+	// 单测中无需订阅行为
+placeholder
+
+func cloneRules(rules []*model.ErrorPassthroughRule) []*model.ErrorPassthroughRule {
+	if rules == nil {
+		return nil
+placeholder
+	out := make([]*model.ErrorPassthroughRule, len(rules))
+	copy(out, rules)
+	return out
 placeholder
 
 func (m *mockErrorPassthroughRepo) List(ctx context.Context) ([]*model.ErrorPassthroughRule, error) {
+	if m.listErr != nil {
+		return nil, m.listErr
+placeholder
 	return m.rules, nil
 placeholder
 
 func (m *mockErrorPassthroughRepo) GetByID(ctx context.Context, id int64) (*model.ErrorPassthroughRule, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+placeholder
 	for _, r := range m.rules {
 		if r.ID == id {
 			return r, nil
@@ -31,12 +99,18 @@ placeholder
 placeholder
 
 func (m *mockErrorPassthroughRepo) Create(ctx context.Context, rule *model.ErrorPassthroughRule) (*model.ErrorPassthroughRule, error) {
+	if m.createErr != nil {
+		return nil, m.createErr
+placeholder
 	rule.ID = int64(len(m.rules) + 1)
 	m.rules = append(m.rules, rule)
 	return rule, nil
 placeholder
 
 func (m *mockErrorPassthroughRepo) Update(ctx context.Context, rule *model.ErrorPassthroughRule) (*model.ErrorPassthroughRule, error) {
+	if m.updateErr != nil {
+		return nil, m.updateErr
+placeholder
 	for i, r := range m.rules {
 		if r.ID == rule.ID {
 			m.rules[i] = rule
@@ -47,6 +121,9 @@ placeholder
 placeholder
 
 func (m *mockErrorPassthroughRepo) Delete(ctx context.Context, id int64) error {
+	if m.deleteErr != nil {
+		return m.deleteErr
+placeholder
 	for i, r := range m.rules {
 		if r.ID == id {
 			m.rules = append(m.rules[:i], m.rules[i+1:]...)
@@ -748,6 +825,158 @@ placeholder
 		placeholder
 	placeholder)
 placeholder
+placeholder
+
+// =============================================================================
+// 测试写路径缓存刷新（Create/Update/Delete）
+// =============================================================================
+
+func TestCreate_ForceRefreshCacheAfterWrite(t *testing.T) {
+	ctx := context.Background()
+
+	staleRule := newPassthroughRuleForWritePathTest(99, "service temporarily unavailable after multiple", "旧缓存消息")
+	repo := &mockErrorPassthroughRepo{rules: []*model.ErrorPassthroughRule{placeholderplaceholder
+	cache := newMockErrorPassthroughCache([]*model.ErrorPassthroughRule{staleRuleplaceholder, true)
+
+	svc := &ErrorPassthroughService{repo: repo, cache: cacheplaceholder
+	svc.setLocalCache([]*model.ErrorPassthroughRule{staleRuleplaceholder)
+
+	newRule := newPassthroughRuleForWritePathTest(0, "service temporarily unavailable after multiple", "上游请求失败")
+	created, err := svc.Create(ctx, newRule)
+placeholder
+	require.NotNil(t, created)
+
+	body := []byte(`{"message":"Service temporarily unavailable after multiple retries, please try again later"placeholder`)
+	matched := svc.MatchRule("anthropic", 503, body)
+	require.NotNil(t, matched)
+	assert.Equal(t, created.ID, matched.ID)
+	if assert.NotNil(t, matched.CustomMessage) {
+		assert.Equal(t, "上游请求失败", *matched.CustomMessage)
+placeholder
+
+	assert.Equal(t, 0, cache.getCalled, "写路径刷新不应依赖 cache.Get")
+	assert.Equal(t, 1, cache.invalidateCalled)
+	assert.Equal(t, 1, cache.setCalled)
+	assert.Equal(t, 1, cache.notifyCalled)
+placeholder
+
+func TestUpdate_ForceRefreshCacheAfterWrite(t *testing.T) {
+	ctx := context.Background()
+
+	originalRule := newPassthroughRuleForWritePathTest(1, "old keyword", "旧消息")
+	repo := &mockErrorPassthroughRepo{rules: []*model.ErrorPassthroughRule{originalRuleplaceholderplaceholder
+	cache := newMockErrorPassthroughCache([]*model.ErrorPassthroughRule{originalRuleplaceholder, true)
+
+	svc := &ErrorPassthroughService{repo: repo, cache: cacheplaceholder
+	svc.setLocalCache([]*model.ErrorPassthroughRule{originalRuleplaceholder)
+
+	updatedRule := newPassthroughRuleForWritePathTest(1, "new keyword", "新消息")
+	_, err := svc.Update(ctx, updatedRule)
+placeholder
+
+	oldBody := []byte(`{"message":"old keyword"placeholder`)
+	oldMatched := svc.MatchRule("anthropic", 503, oldBody)
+	assert.Nil(t, oldMatched, "更新后旧关键词不应继续命中")
+
+	newBody := []byte(`{"message":"new keyword"placeholder`)
+	newMatched := svc.MatchRule("anthropic", 503, newBody)
+	require.NotNil(t, newMatched)
+	if assert.NotNil(t, newMatched.CustomMessage) {
+		assert.Equal(t, "新消息", *newMatched.CustomMessage)
+placeholder
+
+	assert.Equal(t, 0, cache.getCalled, "写路径刷新不应依赖 cache.Get")
+	assert.Equal(t, 1, cache.invalidateCalled)
+	assert.Equal(t, 1, cache.setCalled)
+	assert.Equal(t, 1, cache.notifyCalled)
+placeholder
+
+func TestDelete_ForceRefreshCacheAfterWrite(t *testing.T) {
+	ctx := context.Background()
+
+	rule := newPassthroughRuleForWritePathTest(1, "to be deleted", "删除前消息")
+	repo := &mockErrorPassthroughRepo{rules: []*model.ErrorPassthroughRule{ruleplaceholderplaceholder
+	cache := newMockErrorPassthroughCache([]*model.ErrorPassthroughRule{ruleplaceholder, true)
+
+	svc := &ErrorPassthroughService{repo: repo, cache: cacheplaceholder
+	svc.setLocalCache([]*model.ErrorPassthroughRule{ruleplaceholder)
+
+	err := svc.Delete(ctx, 1)
+placeholder
+
+	body := []byte(`{"message":"to be deleted"placeholder`)
+	matched := svc.MatchRule("anthropic", 503, body)
+	assert.Nil(t, matched, "删除后规则不应再命中")
+
+	assert.Equal(t, 0, cache.getCalled, "写路径刷新不应依赖 cache.Get")
+	assert.Equal(t, 1, cache.invalidateCalled)
+	assert.Equal(t, 1, cache.setCalled)
+	assert.Equal(t, 1, cache.notifyCalled)
+placeholder
+
+func TestNewService_StartupReloadFromDBToHealStaleCache(t *testing.T) {
+	staleRule := newPassthroughRuleForWritePathTest(99, "stale keyword", "旧缓存消息")
+	latestRule := newPassthroughRuleForWritePathTest(1, "fresh keyword", "最新消息")
+
+	repo := &mockErrorPassthroughRepo{rules: []*model.ErrorPassthroughRule{latestRuleplaceholderplaceholder
+	cache := newMockErrorPassthroughCache([]*model.ErrorPassthroughRule{staleRuleplaceholder, true)
+
+	svc := NewErrorPassthroughService(repo, cache)
+
+	matchedFresh := svc.MatchRule("anthropic", 503, []byte(`{"message":"fresh keyword"placeholder`))
+	require.NotNil(t, matchedFresh)
+	assert.Equal(t, int64(1), matchedFresh.ID)
+
+	matchedStale := svc.MatchRule("anthropic", 503, []byte(`{"message":"stale keyword"placeholder`))
+	assert.Nil(t, matchedStale, "启动后应以 DB 最新规则覆盖旧缓存")
+
+	assert.Equal(t, 0, cache.getCalled, "启动强制 DB 刷新不应依赖 cache.Get")
+	assert.Equal(t, 1, cache.setCalled, "启动后应回写缓存，覆盖陈旧缓存")
+placeholder
+
+func TestUpdate_RefreshFailureShouldNotKeepStaleEnabledRule(t *testing.T) {
+	ctx := context.Background()
+
+	staleRule := newPassthroughRuleForWritePathTest(1, "service temporarily unavailable after multiple", "旧缓存消息")
+	repo := &mockErrorPassthroughRepo{
+		rules:   []*model.ErrorPassthroughRule{staleRuleplaceholder,
+		listErr: errors.New("db list failed"),
+placeholder
+	cache := newMockErrorPassthroughCache([]*model.ErrorPassthroughRule{staleRuleplaceholder, true)
+
+	svc := &ErrorPassthroughService{repo: repo, cache: cacheplaceholder
+	svc.setLocalCache([]*model.ErrorPassthroughRule{staleRuleplaceholder)
+
+	disabledRule := *staleRule
+	disabledRule.Enabled = false
+	_, err := svc.Update(ctx, &disabledRule)
+placeholder
+
+	body := []byte(`{"message":"Service temporarily unavailable after multiple retries, please try again later"placeholder`)
+	matched := svc.MatchRule("anthropic", 503, body)
+	assert.Nil(t, matched, "刷新失败时不应继续命中旧的启用规则")
+
+	svc.localCacheMu.RLock()
+	assert.Nil(t, svc.localCache, "刷新失败后应清空本地缓存，避免误命中")
+	svc.localCacheMu.RUnlock()
+placeholder
+
+func newPassthroughRuleForWritePathTest(id int64, keyword, customMsg string) *model.ErrorPassthroughRule {
+	responseCode := 503
+	rule := &model.ErrorPassthroughRule{
+		ID:              id,
+		Name:            "write-path-cache-refresh",
+		Enabled:         true,
+		Priority:        1,
+		ErrorCodes:      []int{503placeholder,
+		Keywords:        []string{keywordplaceholder,
+		MatchMode:       model.MatchModeAll,
+		PassthroughCode: false,
+		ResponseCode:    &responseCode,
+		PassthroughBody: false,
+		CustomMessage:   &customMsg,
+placeholder
+	return rule
 placeholder
 
 // Helper functions

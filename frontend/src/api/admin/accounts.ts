@@ -13,7 +13,9 @@ import type {
   WindowStats,
   ClaudeModel,
   AccountUsageStatsResponse,
-  TempUnschedulableStatus
+  TempUnschedulableStatus,
+  AdminDataPayload,
+  AdminDataImportResult
 placeholder from '@/types'
 
 /**
@@ -347,6 +349,55 @@ placeholder> {
   return data
 placeholder
 
+export async function exportData(options?: {
+  ids?: number[]
+  filters?: {
+    platform?: string
+    type?: string
+    status?: string
+    search?: string
+  placeholder
+  includeProxies?: boolean
+placeholder): Promise<AdminDataPayload> {
+  const params: Record<string, string> = {placeholder
+  if (options?.ids && options.ids.length > 0) {
+    params.ids = options.ids.join(',')
+  placeholder else if (options?.filters) {
+    const { platform, type, status, search placeholder = options.filters
+    if (platform) params.platform = platform
+    if (type) params.type = type
+    if (status) params.status = status
+    if (search) params.search = search
+  placeholder
+  if (options?.includeProxies === false) {
+    params.include_proxies = 'false'
+  placeholder
+  const { data placeholder = await apiClient.get<AdminDataPayload>('/admin/accounts/data', { params placeholder)
+  return data
+placeholder
+
+export async function importData(payload: {
+  data: AdminDataPayload
+  skip_default_group_bind?: boolean
+placeholder): Promise<AdminDataImportResult> {
+  const { data placeholder = await apiClient.post<AdminDataImportResult>('/admin/accounts/data', {
+    data: payload.data,
+    skip_default_group_bind: payload.skip_default_group_bind
+  placeholder)
+  return data
+placeholder
+
+/**
+ * Get Antigravity default model mapping from backend
+ * @returns Default model mapping (from -> to)
+ */
+export async function getAntigravityDefaultModelMapping(): Promise<Record<string, string>> {
+  const { data placeholder = await apiClient.get<Record<string, string>>(
+    '/admin/accounts/antigravity/default-model-mapping'
+  )
+  return data
+placeholder
+
 export const accountsAPI = {
   list,
   getById,
@@ -370,7 +421,10 @@ export const accountsAPI = {
   batchCreate,
   batchUpdateCredentials,
   bulkUpdate,
-  syncFromCrs
+  syncFromCrs,
+  exportData,
+  importData,
+  getAntigravityDefaultModelMapping
 placeholder
 
 export default accountsAPI

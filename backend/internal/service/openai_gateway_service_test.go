@@ -14,6 +14,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
 type stubOpenAIAccountRepo struct {
@@ -201,6 +202,22 @@ placeholder
 placeholder
 	c.deletedSessions[sessionHash]++
 	delete(c.sessionBindings, sessionHash)
+	return nil
+placeholder
+
+func (c *stubGatewayCache) IncrModelCallCount(ctx context.Context, accountID int64, model string) (int64, error) {
+	return 0, nil
+placeholder
+
+func (c *stubGatewayCache) GetModelLoadBatch(ctx context.Context, accountIDs []int64, model string) (map[int64]*ModelLoadInfo, error) {
+	return nil, nil
+placeholder
+
+func (c *stubGatewayCache) FindGeminiSession(ctx context.Context, groupID int64, prefixHash, digestChain string) (uuid string, accountID int64, found bool) {
+	return "", 0, false
+placeholder
+
+func (c *stubGatewayCache) SaveGeminiSession(ctx context.Context, groupID int64, prefixHash, digestChain, uuid string, accountID int64) error {
 	return nil
 placeholder
 
@@ -1066,6 +1083,43 @@ placeholder
 placeholder
 placeholder
 
+func TestOpenAIStreamingReuseScannerBufferAndStillWorks(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	pr, pw := io.Pipe()
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       pr,
+		Header:     http.Header{placeholder,
+placeholder
+
+	go func() {
+		defer func() { _ = pw.Close() placeholder()
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":1,\"output_tokens\":2,\"input_tokens_details\":{\"cached_tokens\":3placeholderplaceholderplaceholderplaceholder\n\n"))
+placeholder()
+
+	result, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model")
+	_ = pr.Close()
+placeholder
+	require.NotNil(t, result)
+	require.NotNil(t, result.usage)
+	require.Equal(t, 1, result.usage.InputTokens)
+	require.Equal(t, 2, result.usage.OutputTokens)
+	require.Equal(t, 3, result.usage.CacheReadInputTokens)
+placeholder
+
 func TestOpenAIInvalidBaseURLWhenAllowlistDisabled(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := &config.Config{
@@ -1147,5 +1201,228 @@ placeholder
 placeholder
 	if _, err := svc.validateUpstreamBaseURL("https://evil.com"); err == nil {
 		t.Fatalf("expected non-allowlisted host to fail")
+placeholder
+placeholder
+
+// ==================== P1-08 修复：model 替换性能优化测试 ====================
+
+func TestReplaceModelInSSELine(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+
+	tests := []struct {
+		name     string
+		line     string
+		from     string
+		to       string
+		expected string
+placeholder{
+		{
+			name:     "顶层 model 字段替换",
+			line:     `data: {"id":"chatcmpl-123","model":"gpt-4o","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "my-custom-model",
+			expected: `data: {"id":"chatcmpl-123","model":"my-custom-model","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "嵌套 response.model 替换",
+			line:     `data: {"type":"response","response":{"id":"resp-1","model":"gpt-4o","output":[]placeholderplaceholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"type":"response","response":{"id":"resp-1","model":"my-model","output":[]placeholderplaceholder`,
+	placeholder,
+		{
+			name:     "model 不匹配时不替换",
+			line:     `data: {"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "无 model 字段时不替换",
+			line:     `data: {"id":"chatcmpl-123","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"id":"chatcmpl-123","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "空 data 行",
+			line:     `data: `,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: `,
+	placeholder,
+		{
+			name:     "[DONE] 行",
+			line:     `data: [DONE]`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: [DONE]`,
+	placeholder,
+		{
+			name:     "非 data: 前缀行",
+			line:     `event: message`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `event: message`,
+	placeholder,
+		{
+			name:     "非法 JSON 不替换",
+			line:     `data: {invalid jsonplaceholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {invalid jsonplaceholder`,
+	placeholder,
+		{
+			name:     "无空格 data: 格式",
+			line:     `data:{"id":"x","model":"gpt-4o"placeholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"id":"x","model":"my-model"placeholder`,
+	placeholder,
+		{
+			name:     "model 名含特殊字符",
+			line:     `data: {"model":"org/model-v2.1-beta"placeholder`,
+			from:     "org/model-v2.1-beta",
+			to:       "custom/alias",
+			expected: `data: {"model":"custom/alias"placeholder`,
+	placeholder,
+		{
+			name:     "空行",
+			line:     "",
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: "",
+	placeholder,
+		{
+			name:     "保持其他字段不变",
+			line:     `data: {"id":"abc","object":"chat.completion.chunk","model":"gpt-4o","created":1234567890,"choices":[{"index":0,"delta":{"content":"hi"placeholderplaceholder]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `data: {"id":"abc","object":"chat.completion.chunk","model":"alias","created":1234567890,"choices":[{"index":0,"delta":{"content":"hi"placeholderplaceholder]placeholder`,
+	placeholder,
+		{
+			name:     "顶层优先于嵌套：同时存在两个 model",
+			line:     `data: {"model":"gpt-4o","response":{"model":"gpt-4o"placeholderplaceholder`,
+			from:     "gpt-4o",
+			to:       "replaced",
+			expected: `data: {"model":"replaced","response":{"model":"gpt-4o"placeholderplaceholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.replaceModelInSSELine(tt.line, tt.from, tt.to)
+			require.Equal(t, tt.expected, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestReplaceModelInSSEBody(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+
+	tests := []struct {
+		name     string
+		body     string
+		from     string
+		to       string
+		expected string
+placeholder{
+		{
+			name:     "多行 SSE body 替换",
+			body:     "data: {\"model\":\"gpt-4o\",\"choices\":[]placeholder\n\ndata: {\"model\":\"gpt-4o\",\"choices\":[{\"delta\":{\"content\":\"hi\"placeholderplaceholder]placeholder\n\ndata: [DONE]\n",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "data: {\"model\":\"alias\",\"choices\":[]placeholder\n\ndata: {\"model\":\"alias\",\"choices\":[{\"delta\":{\"content\":\"hi\"placeholderplaceholder]placeholder\n\ndata: [DONE]\n",
+	placeholder,
+		{
+			name:     "无需替换的 body",
+			body:     "data: {\"model\":\"gpt-3.5-turbo\"placeholder\n\ndata: [DONE]\n",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "data: {\"model\":\"gpt-3.5-turbo\"placeholder\n\ndata: [DONE]\n",
+	placeholder,
+		{
+			name:     "混合 event 和 data 行",
+			body:     "event: message\ndata: {\"model\":\"gpt-4o\"placeholder\n\n",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "event: message\ndata: {\"model\":\"alias\"placeholder\n\n",
+	placeholder,
+		{
+			name:     "空 body",
+			body:     "",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.replaceModelInSSEBody(tt.body, tt.from, tt.to)
+			require.Equal(t, tt.expected, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestReplaceModelInResponseBody(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+
+	tests := []struct {
+		name     string
+		body     string
+		from     string
+		to       string
+		expected string
+placeholder{
+		{
+			name:     "替换顶层 model",
+			body:     `{"id":"chatcmpl-123","model":"gpt-4o","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"id":"chatcmpl-123","model":"alias","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "model 不匹配不替换",
+			body:     `{"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "无 model 字段不替换",
+			body:     `{"id":"chatcmpl-123","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"id":"chatcmpl-123","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "非法 JSON 返回原值",
+			body:     `not json`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `not json`,
+	placeholder,
+		{
+			name:     "空 body 返回原值",
+			body:     ``,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: ``,
+	placeholder,
+		{
+			name:     "保持嵌套结构不变",
+			body:     `{"model":"gpt-4o","usage":{"prompt_tokens":10,"completion_tokens":20placeholder,"choices":[{"message":{"role":"assistant","content":"hello"placeholderplaceholder]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"model":"alias","usage":{"prompt_tokens":10,"completion_tokens":20placeholder,"choices":[{"message":{"role":"assistant","content":"hello"placeholderplaceholder]placeholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.replaceModelInResponseBody([]byte(tt.body), tt.from, tt.to)
+			require.Equal(t, tt.expected, string(got))
+	placeholder)
 placeholder
 placeholder
