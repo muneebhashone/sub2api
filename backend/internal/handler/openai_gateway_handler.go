@@ -28,6 +28,7 @@ type OpenAIGatewayHandler struct {
 	errorPassthroughService *service.ErrorPassthroughService
 	concurrencyHelper       *ConcurrencyHelper
 	maxAccountSwitches      int
+	cfg                     *config.Config
 placeholder
 
 // NewOpenAIGatewayHandler creates a new OpenAIGatewayHandler
@@ -54,6 +55,7 @@ placeholder
 		errorPassthroughService: errorPassthroughService,
 		concurrencyHelper:       NewConcurrencyHelper(concurrencyService, SSEPingFormatComment, pingInterval),
 		maxAccountSwitches:      maxAccountSwitches,
+		cfg:                     cfg,
 placeholder
 placeholder
 
@@ -109,7 +111,8 @@ placeholder
 placeholder
 
 	userAgent := c.GetHeader("User-Agent")
-	if !openai.IsCodexCLIRequest(userAgent) {
+	isCodexCLI := openai.IsCodexCLIRequest(userAgent) || (h.cfg != nil && h.cfg.Gateway.ForceCodexCLI)
+	if !isCodexCLI {
 		existingInstructions, _ := reqBody["instructions"].(string)
 		if strings.TrimSpace(existingInstructions) == "" {
 			if instructions := strings.TrimSpace(service.GetOpenCodeInstructions()); instructions != "" {
@@ -218,7 +221,8 @@ placeholder
 		if err != nil {
 			log.Printf("[OpenAI Handler] SelectAccount failed: %v", err)
 			if len(failedAccountIDs) == 0 {
-				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
+				log.Printf("[OpenAI Gateway] SelectAccount failed: %v", err)
+				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "Service temporarily unavailable", streamStarted)
 				return
 		placeholder
 			if lastFailoverErr != nil {
@@ -251,11 +255,12 @@ placeholder
 			if err == nil && canWait {
 				accountWaitCounted = true
 		placeholder
-			defer func() {
+			releaseWait := func() {
 				if accountWaitCounted {
 					h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+					accountWaitCounted = false
 			placeholder
-		placeholder()
+		placeholder
 
 			accountReleaseFunc, err = h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
 				c,
@@ -267,13 +272,12 @@ placeholder
 			)
 			if err != nil {
 				log.Printf("Account concurrency acquire failed: %v", err)
+				releaseWait()
 				h.handleConcurrencyError(c, err, "account", streamStarted)
 				return
 		placeholder
-			if accountWaitCounted {
-				h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
-				accountWaitCounted = false
-		placeholder
+			// Slot acquired: no longer waiting in queue.
+			releaseWait()
 			if err := h.gatewayService.BindStickySession(c.Request.Context(), apiKey.GroupID, sessionHash, account.ID); err != nil {
 				log.Printf("Bind sticky session failed: %v", err)
 		placeholder

@@ -47,6 +47,7 @@ placeholder
 type SessionStore struct {
 	mu       sync.RWMutex
 	sessions map[string]*OAuthSession
+	stopOnce sync.Once
 	stopCh   chan struct{placeholder
 placeholder
 
@@ -92,7 +93,9 @@ placeholder
 
 // Stop stops the cleanup goroutine
 func (s *SessionStore) Stop() {
-	close(s.stopCh)
+	s.stopOnce.Do(func() {
+		close(s.stopCh)
+placeholder)
 placeholder
 
 // cleanup removes expired sessions periodically

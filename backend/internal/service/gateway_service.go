@@ -4145,7 +4145,8 @@ placeholder
 	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
 		maxLineSize = s.cfg.Gateway.MaxLineSize
 placeholder
-	scanner.Buffer(make([]byte, 64*1024), maxLineSize)
+	scanBuf := getSSEScannerBuf64K()
+	scanner.Buffer(scanBuf[:0], maxLineSize)
 
 	type scanEvent struct {
 		line string
@@ -4164,7 +4165,8 @@ placeholder
 placeholder
 	var lastReadAt int64
 	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
-	go func() {
+	go func(scanBuf *sseScannerBuf64K) {
+		defer putSSEScannerBuf64K(scanBuf)
 		defer close(events)
 		for scanner.Scan() {
 			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
@@ -4175,7 +4177,7 @@ placeholder
 		if err := scanner.Err(); err != nil {
 			_ = sendEvent(scanEvent{err: errplaceholder)
 	placeholder
-placeholder()
+placeholder(scanBuf)
 	defer close(done)
 
 	streamInterval := time.Duration(0)
@@ -4481,24 +4483,16 @@ placeholder
 placeholder
 
 // replaceModelInResponseBody 替换响应体中的model字段
+// 使用 gjson/sjson 精确替换，避免全量 JSON 反序列化
 func (s *GatewayService) replaceModelInResponseBody(body []byte, fromModel, toModel string) []byte {
-	var resp map[string]any
-	if err := json.Unmarshal(body, &resp); err != nil {
-		return body
+	if m := gjson.GetBytes(body, "model"); m.Exists() && m.Str == fromModel {
+		newBody, err := sjson.SetBytes(body, "model", toModel)
+		if err != nil {
+			return body
+	placeholder
+		return newBody
 placeholder
-
-	model, ok := resp["model"].(string)
-	if !ok || model != fromModel {
-		return body
-placeholder
-
-	resp["model"] = toModel
-	newBody, err := json.Marshal(resp)
-	if err != nil {
-		return body
-placeholder
-
-	return newBody
+	return body
 placeholder
 
 // RecordUsageInput 记录使用量的输入参数

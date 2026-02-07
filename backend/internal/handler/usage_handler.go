@@ -392,7 +392,7 @@ placeholder
 		return
 placeholder
 
-	stats, err := h.usageService.GetBatchAPIKeyUsageStats(c.Request.Context(), validAPIKeyIDs)
+	stats, err := h.usageService.GetBatchAPIKeyUsageStats(c.Request.Context(), validAPIKeyIDs, time.Time{placeholder, time.Time{placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
