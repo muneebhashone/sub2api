@@ -1980,7 +1980,7 @@ import {
   getModelsByPlatform,
   commonErrorCodes,
   buildModelMappingObject,
-  antigravityDefaultMappings,
+  fetchAntigravityDefaultMappings,
   isValidWildcardPattern
 placeholder from '@/composables/useModelWhitelist'
 import { useAuthStore placeholder from '@/stores/auth'
@@ -2270,7 +2270,9 @@ watch(
       // Antigravity: 默认使用映射模式并填充默认映射
       if (form.platform === 'antigravity') {
         antigravityModelRestrictionMode.value = 'mapping'
-        antigravityModelMappings.value = [...antigravityDefaultMappings]
+        fetchAntigravityDefaultMappings().then(mappings => {
+          antigravityModelMappings.value = [...mappings]
+        placeholder)
         antigravityWhitelistModels.value = []
       placeholder else {
         antigravityWhitelistModels.value = []
@@ -2318,7 +2320,9 @@ watch(
     // Antigravity: 默认使用映射模式并填充默认映射
     if (newPlatform === 'antigravity') {
       antigravityModelRestrictionMode.value = 'mapping'
-      antigravityModelMappings.value = [...antigravityDefaultMappings]
+      fetchAntigravityDefaultMappings().then(mappings => {
+        antigravityModelMappings.value = [...mappings]
+      placeholder)
       antigravityWhitelistModels.value = []
       accountCategory.value = 'oauth-based'
       antigravityAccountType.value = 'oauth'
@@ -2576,7 +2580,9 @@ const resetForm = () => {
 
   antigravityModelRestrictionMode.value = 'mapping'
   antigravityWhitelistModels.value = []
-  antigravityModelMappings.value = [...antigravityDefaultMappings]
+  fetchAntigravityDefaultMappings().then(mappings => {
+    antigravityModelMappings.value = [...mappings]
+  placeholder)
   customErrorCodesEnabled.value = false
   selectedErrorCodes.value = []
   customErrorCodeInput.value = null

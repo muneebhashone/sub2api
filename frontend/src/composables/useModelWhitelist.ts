@@ -273,39 +273,25 @@ const antigravityPresetMappings = [
   { label: 'Opus 4.5', from: 'claude-opus-4-5-thinking', to: 'claude-opus-4-5-thinking', color: 'bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-400' placeholder
 ]
 
-// Antigravity 默认映射（与迁移脚本 049 保持一致）
-// 基于官方 API 返回的模型列表，只支持 Claude 4.5+ 和 Gemini 2.5+
-// 精确匹配，无通配符
-export const antigravityDefaultMappings: { from: string; to: string placeholder[] = [
-  // Claude 白名单
-  { from: 'claude-opus-4-6', to: 'claude-opus-4-6' placeholder,
-  { from: 'claude-opus-4-5-thinking', to: 'claude-opus-4-5-thinking' placeholder,
-  { from: 'claude-sonnet-4-5', to: 'claude-sonnet-4-5' placeholder,
-  { from: 'claude-sonnet-4-5-thinking', to: 'claude-sonnet-4-5-thinking' placeholder,
-  // Claude 详细版本 ID 映射
-  { from: 'claude-opus-4-5-20251101', to: 'claude-opus-4-5-thinking' placeholder,
-  { from: 'claude-sonnet-4-5-20250929', to: 'claude-sonnet-4-5' placeholder,
-  // Claude Haiku → Sonnet（无 Haiku 支持）
-  { from: 'claude-haiku-4-5', to: 'claude-sonnet-4-5' placeholder,
-  { from: 'placeholder', to: 'claude-sonnet-4-5' placeholder,
-  // Gemini 2.5 白名单
-  { from: 'gemini-2.5-flash', to: 'gemini-2.5-flash' placeholder,
-  { from: 'gemini-2.5-flash-lite', to: 'gemini-2.5-flash-lite' placeholder,
-  { from: 'gemini-2.5-flash-thinking', to: 'gemini-2.5-flash-thinking' placeholder,
-  { from: 'gemini-2.5-pro', to: 'gemini-2.5-pro' placeholder,
-  // Gemini 3 白名单
-  { from: 'gemini-3-flash', to: 'gemini-3-flash' placeholder,
-  { from: 'gemini-3-pro-high', to: 'gemini-3-pro-high' placeholder,
-  { from: 'gemini-3-pro-low', to: 'gemini-3-pro-low' placeholder,
-  { from: 'gemini-3-pro-image', to: 'gemini-3-pro-image' placeholder,
-  // Gemini 3 preview 映射
-  { from: 'gemini-3-flash-preview', to: 'gemini-3-flash' placeholder,
-  { from: 'gemini-3-pro-preview', to: 'gemini-3-pro-high' placeholder,
-  { from: 'gemini-3-pro-image-preview', to: 'gemini-3-pro-image' placeholder,
-  // 其他官方模型
-  { from: 'gpt-oss-120b-medium', to: 'gpt-oss-120b-medium' placeholder,
-  { from: 'tab_flash_lite_preview', to: 'tab_flash_lite_preview' placeholder
-]
+// Antigravity 默认映射（从后端 API 获取，与 constants.go 保持一致）
+// 使用 fetchAntigravityDefaultMappings() 异步获取
+import { getAntigravityDefaultModelMapping placeholder from '@/api/admin/accounts'
+
+let _antigravityDefaultMappingsCache: { from: string; to: string placeholder[] | null = null
+
+export async function fetchAntigravityDefaultMappings(): Promise<{ from: string; to: string placeholder[]> {
+  if (_antigravityDefaultMappingsCache !== null) {
+    return _antigravityDefaultMappingsCache
+  placeholder
+  try {
+    const mapping = await getAntigravityDefaultModelMapping()
+    _antigravityDefaultMappingsCache = Object.entries(mapping).map(([from, to]) => ({ from, to placeholder))
+  placeholder catch (e) {
+    console.warn('[fetchAntigravityDefaultMappings] API failed, using empty fallback', e)
+    _antigravityDefaultMappingsCache = []
+  placeholder
+  return _antigravityDefaultMappingsCache
+placeholder
 
 // =====================
 // 常用错误码
