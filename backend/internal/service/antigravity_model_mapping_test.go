@@ -265,3 +265,58 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+// TestMapAntigravityModel_WildcardTargetEqualsRequest 测试通配符映射目标恰好等于请求模型名的 edge case
+// 例如 {"claude-*": "claude-sonnet-4-5"placeholder，请求 "claude-sonnet-4-5" 时应该通过
+func TestMapAntigravityModel_WildcardTargetEqualsRequest(t *testing.T) {
+	tests := []struct {
+		name           string
+		modelMapping   map[string]any
+		requestedModel string
+		expected       string
+placeholder{
+		{
+			name:           "wildcard target equals request model",
+			modelMapping:   map[string]any{"claude-*": "claude-sonnet-4-5"placeholder,
+			requestedModel: "claude-sonnet-4-5",
+			expected:       "claude-sonnet-4-5",
+	placeholder,
+		{
+			name:           "wildcard target differs from request model",
+			modelMapping:   map[string]any{"claude-*": "claude-sonnet-4-5"placeholder,
+			requestedModel: "claude-opus-4-6",
+			expected:       "claude-sonnet-4-5",
+	placeholder,
+		{
+			name:           "wildcard no match",
+			modelMapping:   map[string]any{"claude-*": "claude-sonnet-4-5"placeholder,
+			requestedModel: "gpt-4o",
+			expected:       "",
+	placeholder,
+		{
+			name:           "explicit passthrough same name",
+			modelMapping:   map[string]any{"claude-sonnet-4-5": "claude-sonnet-4-5"placeholder,
+			requestedModel: "claude-sonnet-4-5",
+			expected:       "claude-sonnet-4-5",
+	placeholder,
+		{
+			name:           "multiple wildcards target equals one request",
+			modelMapping:   map[string]any{"claude-*": "claude-sonnet-4-5", "gemini-*": "gemini-2.5-flash"placeholder,
+			requestedModel: "gemini-2.5-flash",
+			expected:       "gemini-2.5-flash",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := &Account{
+				Platform: PlatformAntigravity,
+		placeholder
+					"model_mapping": tt.modelMapping,
+			placeholder,
+		placeholder
+			got := mapAntigravityModel(account, tt.requestedModel)
+			require.Equal(t, tt.expected, got, "mapAntigravityModel(%q) = %q, want %q", tt.requestedModel, got, tt.expected)
+	placeholder)
+placeholder
+placeholder

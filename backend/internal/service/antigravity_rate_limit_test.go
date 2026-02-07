@@ -526,6 +526,7 @@ placeholder
 func TestShouldTriggerAntigravitySmartRetry(t *testing.T) {
 	oauthAccount := &Account{Type: AccountTypeOAuth, Platform: PlatformAntigravityplaceholder
 	setupTokenAccount := &Account{Type: AccountTypeSetupToken, Platform: PlatformAntigravityplaceholder
+	upstreamAccount := &Account{Type: AccountTypeUpstream, Platform: PlatformAntigravityplaceholder
 	apiKeyAccount := &Account{Type: AccountTypeAPIKeyplaceholder
 
 	tests := []struct {
@@ -585,6 +586,23 @@ placeholder{
 		placeholder`,
 			expectedShouldRetry:     false,
 			expectedShouldRateLimit: true,
+			modelName:               "claude-sonnet-4-5",
+	placeholder,
+		{
+			name:    "Upstream account with short delay - smart retry",
+			account: upstreamAccount,
+			body: `{
+				"error": {
+					"status": "RESOURCE_EXHAUSTED",
+					"details": [
+						{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "metadata": {"model": "claude-sonnet-4-5"placeholder, "reason": "RATE_LIMIT_EXCEEDED"placeholder,
+						{"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "2s"placeholder
+					]
+			placeholder
+		placeholder`,
+			expectedShouldRetry:     true,
+			expectedShouldRateLimit: false,
+			minWait:                 2 * time.Second,
 			modelName:               "claude-sonnet-4-5",
 	placeholder,
 		{
