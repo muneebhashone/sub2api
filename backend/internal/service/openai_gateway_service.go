@@ -332,7 +332,7 @@ placeholder
 
 	// 检查账号是否需要清理粘性会话
 	// Check if sticky session should be cleared
-	if shouldClearStickySession(account) {
+	if shouldClearStickySession(account, requestedModel) {
 		_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), cacheKey)
 		return nil
 placeholder
@@ -498,7 +498,7 @@ placeholder
 		if err == nil && accountID > 0 && !isExcluded(accountID) {
 			account, err := s.getSchedulableAccount(ctx, accountID)
 			if err == nil {
-				clearSticky := shouldClearStickySession(account)
+				clearSticky := shouldClearStickySession(account, requestedModel)
 				if clearSticky {
 					_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), "openai:"+sessionHash)
 			placeholder
@@ -1085,30 +1085,6 @@ placeholder
 			account.Type,
 			truncateForLog(body, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes),
 		)
-placeholder
-
-	if status, errType, errMsg, matched := applyErrorPassthroughRule(
-		c,
-		PlatformOpenAI,
-		resp.StatusCode,
-		body,
-		http.StatusBadGateway,
-		"upstream_error",
-		"Upstream request failed",
-	); matched {
-		c.JSON(status, gin.H{
-			"error": gin.H{
-				"type":    errType,
-				"message": errMsg,
-		placeholder,
-	placeholder)
-		if upstreamMsg == "" {
-			upstreamMsg = errMsg
-	placeholder
-		if upstreamMsg == "" {
-			return nil, fmt.Errorf("upstream error: %d (passthrough rule matched)", resp.StatusCode)
-	placeholder
-		return nil, fmt.Errorf("upstream error: %d (passthrough rule matched) message=%s", resp.StatusCode, upstreamMsg)
 placeholder
 
 	// Check custom error codes

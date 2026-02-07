@@ -17,6 +17,15 @@ placeholder
 	require.True(t, parsed.HasSystem)
 	require.NotNil(t, parsed.System)
 	require.Len(t, parsed.Messages, 1)
+	require.False(t, parsed.ThinkingEnabled)
+placeholder
+
+func TestParseGatewayRequest_ThinkingEnabled(t *testing.T) {
+	body := []byte(`{"model":"claude-sonnet-4-5","thinking":{"type":"enabled"placeholder,"messages":[{"content":"hi"placeholder]placeholder`)
+	parsed, err := ParseGatewayRequest(body)
+placeholder
+	require.Equal(t, "claude-sonnet-4-5", parsed.Model)
+	require.True(t, parsed.ThinkingEnabled)
 placeholder
 
 func TestParseGatewayRequest_SystemNull(t *testing.T) {

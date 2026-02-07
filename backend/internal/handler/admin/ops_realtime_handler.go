@@ -63,6 +63,43 @@ placeholder
 	response.Success(c, payload)
 placeholder
 
+// GetUserConcurrencyStats returns real-time concurrency usage for all active users.
+// GET /api/v1/admin/ops/user-concurrency
+func (h *OpsHandler) GetUserConcurrencyStats(c *gin.Context) {
+	if h.opsService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Ops service not available")
+		return
+placeholder
+	if err := h.opsService.RequireMonitoringEnabled(c.Request.Context()); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	if !h.opsService.IsRealtimeMonitoringEnabled(c.Request.Context()) {
+		response.Success(c, gin.H{
+			"enabled":   false,
+			"user":      map[int64]*service.UserConcurrencyInfo{placeholder,
+			"timestamp": time.Now().UTC(),
+	placeholder)
+		return
+placeholder
+
+	users, collectedAt, err := h.opsService.GetUserConcurrencyStats(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	payload := gin.H{
+		"enabled": true,
+		"user":    users,
+placeholder
+	if collectedAt != nil {
+		payload["timestamp"] = collectedAt.UTC()
+placeholder
+	response.Success(c, payload)
+placeholder
+
 // GetAccountAvailability returns account availability statistics.
 // GET /api/v1/admin/ops/account-availability
 //
