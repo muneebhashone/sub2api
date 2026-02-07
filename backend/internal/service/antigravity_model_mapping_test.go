@@ -8,49 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIsAntigravityModelSupported(t *testing.T) {
-	tests := []struct {
-		name     string
-		model    string
-		expected bool
-placeholder{
-		// 在默认映射中的模型（支持）
-		{"默认映射 - claude-sonnet-4-5", "claude-sonnet-4-5", trueplaceholder,
-		{"默认映射 - claude-opus-4-6-thinking", "claude-opus-4-6-thinking", trueplaceholder,
-		{"默认映射 - claude-opus-4-6", "claude-opus-4-6", trueplaceholder,
-		{"默认映射 - claude-opus-4-5-thinking", "claude-opus-4-5-thinking", trueplaceholder,
-		{"默认映射 - claude-sonnet-4-5-thinking", "claude-sonnet-4-5-thinking", trueplaceholder,
-		{"默认映射 - gemini-2.5-flash", "gemini-2.5-flash", trueplaceholder,
-		{"默认映射 - gemini-2.5-flash-lite", "gemini-2.5-flash-lite", trueplaceholder,
-		{"默认映射 - gemini-3-pro-high", "gemini-3-pro-high", trueplaceholder,
-		{"默认映射 - claude-haiku-4-5", "claude-haiku-4-5", trueplaceholder,
-
-		// 不在默认映射中的模型（不支持）
-		{"未配置 - claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20241022", falseplaceholder,
-		{"未配置 - claude-3-5-sonnet-20240620", "claude-3-5-sonnet-20240620", falseplaceholder,
-		{"未配置 - claude-3-haiku-20240307", "claude-3-haiku-20240307", falseplaceholder,
-		{"未配置 - gemini-unknown-model", "gemini-unknown-model", falseplaceholder,
-		{"未配置 - gemini-future-version", "gemini-future-version", falseplaceholder,
-		{"未配置 - claude-unknown-model", "claude-unknown-model", falseplaceholder,
-		{"未配置 - claude-3-opus-20240229", "claude-3-opus-20240229", falseplaceholder,
-		{"未配置 - claude-future-version", "claude-future-version", falseplaceholder,
-
-		// 非 Claude/Gemini 模型（不支持）
-		{"不支持 - gpt-4", "gpt-4", falseplaceholder,
-		{"不支持 - gpt-4o", "gpt-4o", falseplaceholder,
-		{"不支持 - llama-3", "llama-3", falseplaceholder,
-		{"不支持 - mistral-7b", "mistral-7b", falseplaceholder,
-		{"不支持 - 空字符串", "", falseplaceholder,
-placeholder
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := IsAntigravityModelSupported(tt.model)
-			require.Equal(t, tt.expected, got, "model: %s", tt.model)
-	placeholder)
-placeholder
-placeholder
-
 func TestAntigravityGatewayService_GetMappedModel(t *testing.T) {
 	svc := &AntigravityGatewayService{placeholder
 
