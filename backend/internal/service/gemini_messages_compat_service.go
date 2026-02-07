@@ -362,7 +362,10 @@ placeholder
 // isModelSupportedByAccount 根据账户平台检查模型支持
 func (s *GeminiMessagesCompatService) isModelSupportedByAccount(account *Account, requestedModel string) bool {
 	if account.Platform == PlatformAntigravity {
-		return IsAntigravityModelSupported(requestedModel)
+		if strings.TrimSpace(requestedModel) == "" {
+			return true
+	placeholder
+		return mapAntigravityModel(account, requestedModel) != ""
 placeholder
 	return account.IsModelSupported(requestedModel)
 placeholder
@@ -1496,6 +1499,28 @@ placeholder)
 
 	if s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
 		log.Printf("[Gemini] upstream error %d: %s", upstreamStatus, truncateForLog(body, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes))
+placeholder
+
+	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+		c,
+		PlatformGemini,
+		upstreamStatus,
+		body,
+		http.StatusBadGateway,
+		"upstream_error",
+		"Upstream request failed",
+	); matched {
+		c.JSON(status, gin.H{
+			"type":  "error",
+			"error": gin.H{"type": errType, "message": errMsgplaceholder,
+	placeholder)
+		if upstreamMsg == "" {
+			upstreamMsg = errMsg
+	placeholder
+		if upstreamMsg == "" {
+			return fmt.Errorf("upstream error: %d (passthrough rule matched)", upstreamStatus)
+	placeholder
+		return fmt.Errorf("upstream error: %d (passthrough rule matched) message=%s", upstreamStatus, upstreamMsg)
 placeholder
 
 	var statusCode int

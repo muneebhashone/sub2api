@@ -2576,24 +2576,20 @@ placeholder
 // 对于 Antigravity 平台，会先获取映射后的最终模型名（包括 thinking 后缀）再检查支持
 func (s *GatewayService) isModelSupportedByAccountWithContext(ctx context.Context, account *Account, requestedModel string) bool {
 	if account.Platform == PlatformAntigravity {
-		// Antigravity 平台使用专门的模型支持检查
 		if strings.TrimSpace(requestedModel) == "" {
 			return true
 	placeholder
-		if !IsAntigravityModelSupported(requestedModel) {
+		// 使用与转发阶段一致的映射逻辑：自定义映射优先 → 默认映射兜底
+		mapped := mapAntigravityModel(account, requestedModel)
+		if mapped == "" {
 			return false
 	placeholder
-		// 先用默认映射获取基础模型名，再应用 thinking 后缀
-		defaultMapped, exists := domain.DefaultAntigravityModelMapping[requestedModel]
-		if !exists || defaultMapped == "" {
-			return false
-	placeholder
-		finalModel := defaultMapped
+		// 应用 thinking 后缀后检查最终模型是否在账号映射中
 		if enabled, ok := ctx.Value(ctxkey.ThinkingEnabled).(bool); ok {
-			finalModel = applyThinkingModelSuffix(finalModel, enabled)
+			finalModel := applyThinkingModelSuffix(mapped, enabled)
+			return account.IsModelSupported(finalModel)
 	placeholder
-		// 使用最终模型名检查 model_mapping 支持
-		return account.IsModelSupported(finalModel)
+		return true
 placeholder
 	return s.isModelSupportedByAccount(account, requestedModel)
 placeholder
@@ -2601,15 +2597,10 @@ placeholder
 // isModelSupportedByAccount 根据账户平台检查模型支持（无 context，用于非 Antigravity 平台）
 func (s *GatewayService) isModelSupportedByAccount(account *Account, requestedModel string) bool {
 	if account.Platform == PlatformAntigravity {
-		// Antigravity 应使用 isModelSupportedByAccountWithContext
-		// 这里作为兼容保留，使用原始模型名检查
 		if strings.TrimSpace(requestedModel) == "" {
 			return true
 	placeholder
-		if !IsAntigravityModelSupported(requestedModel) {
-			return false
-	placeholder
-		return account.IsModelSupported(requestedModel)
+		return mapAntigravityModel(account, requestedModel) != ""
 placeholder
 	// OAuth/SetupToken 账号使用 Anthropic 标准映射（短ID → 长ID）
 	if account.Platform == PlatformAnthropic && account.Type != AccountTypeAPIKey {
@@ -3919,6 +3910,34 @@ placeholder
 		)
 placeholder
 
+	// 非 failover 错误也支持错误透传规则匹配。
+	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+		c,
+		account.Platform,
+		resp.StatusCode,
+		body,
+		http.StatusBadGateway,
+		"upstream_error",
+		"Upstream request failed",
+	); matched {
+		c.JSON(status, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    errType,
+				"message": errMsg,
+		placeholder,
+	placeholder)
+
+		summary := upstreamMsg
+		if summary == "" {
+			summary = errMsg
+	placeholder
+		if summary == "" {
+			return nil, fmt.Errorf("upstream error: %d (passthrough rule matched)", resp.StatusCode)
+	placeholder
+		return nil, fmt.Errorf("upstream error: %d (passthrough rule matched) message=%s", resp.StatusCode, summary)
+placeholder
+
 	// 根据状态码返回适当的自定义错误响应（不透传上游详细信息）
 	var errType, errMsg string
 	var statusCode int
@@ -4048,6 +4067,33 @@ placeholder)
 			account.Type,
 			truncateForLog(respBody, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes),
 		)
+placeholder
+
+	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+		c,
+		account.Platform,
+		resp.StatusCode,
+		respBody,
+		http.StatusBadGateway,
+		"upstream_error",
+		"Upstream request failed after retries",
+	); matched {
+		c.JSON(status, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    errType,
+				"message": errMsg,
+		placeholder,
+	placeholder)
+
+		summary := upstreamMsg
+		if summary == "" {
+			summary = errMsg
+	placeholder
+		if summary == "" {
+			return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched)", resp.StatusCode)
+	placeholder
+		return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched) message=%s", resp.StatusCode, summary)
 placeholder
 
 	// 返回统一的重试耗尽错误响应
