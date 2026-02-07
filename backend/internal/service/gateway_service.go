@@ -3563,6 +3563,34 @@ placeholder
 		)
 placeholder
 
+	// 非 failover 错误也支持错误透传规则匹配。
+	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+		c,
+		account.Platform,
+		resp.StatusCode,
+		body,
+		http.StatusBadGateway,
+		"upstream_error",
+		"Upstream request failed",
+	); matched {
+		c.JSON(status, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    errType,
+				"message": errMsg,
+		placeholder,
+	placeholder)
+
+		summary := upstreamMsg
+		if summary == "" {
+			summary = errMsg
+	placeholder
+		if summary == "" {
+			return nil, fmt.Errorf("upstream error: %d (passthrough rule matched)", resp.StatusCode)
+	placeholder
+		return nil, fmt.Errorf("upstream error: %d (passthrough rule matched) message=%s", resp.StatusCode, summary)
+placeholder
+
 	// 根据状态码返回适当的自定义错误响应（不透传上游详细信息）
 	var errType, errMsg string
 	var statusCode int
@@ -3692,6 +3720,33 @@ placeholder)
 			account.Type,
 			truncateForLog(respBody, s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes),
 		)
+placeholder
+
+	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+		c,
+		account.Platform,
+		resp.StatusCode,
+		respBody,
+		http.StatusBadGateway,
+		"upstream_error",
+		"Upstream request failed after retries",
+	); matched {
+		c.JSON(status, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    errType,
+				"message": errMsg,
+		placeholder,
+	placeholder)
+
+		summary := upstreamMsg
+		if summary == "" {
+			summary = errMsg
+	placeholder
+		if summary == "" {
+			return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched)", resp.StatusCode)
+	placeholder
+		return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched) message=%s", resp.StatusCode, summary)
 placeholder
 
 	// 返回统一的重试耗尽错误响应
