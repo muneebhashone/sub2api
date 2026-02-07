@@ -183,7 +183,7 @@ placeholder
 		q = q.Where(group.IsExclusiveEQ(*isExclusive))
 placeholder
 
-	total, err := q.Count(ctx)
+	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, nil, err
 placeholder

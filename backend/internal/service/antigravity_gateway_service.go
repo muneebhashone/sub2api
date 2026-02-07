@@ -1687,7 +1687,7 @@ placeholder
 			Usage:        ClaudeUsage{placeholder,
 			Model:        originalModel,
 			Stream:       false,
-			Duration:     time.Since(time.Now()),
+			Duration:     time.Since(startTime),
 			FirstTokenMs: nil,
 	placeholder, nil
 	default:

@@ -39,7 +39,7 @@ placeholder
 			return &clone, nil
 	placeholder,
 placeholder
-	userService := service.NewUserService(userRepo, nil)
+	userService := service.NewUserService(userRepo, nil, nil)
 
 	router := gin.New()
 	router.Use(gin.HandlerFunc(NewAdminAuthMiddleware(authService, userService, nil)))
