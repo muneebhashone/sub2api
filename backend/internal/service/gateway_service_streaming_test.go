@@ -42,7 +42,7 @@ placeholder
 		_, _ = pw.Write([]byte("data: [DONE]\n\n"))
 placeholder()
 
-	result, err := svc.handleStreamingResponse(context.Background(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model", nil, false)
+	result, err := svc.handleStreamingResponse(context.Background(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model", false)
 	_ = pr.Close()
 placeholder
 	require.NotNil(t, result)
