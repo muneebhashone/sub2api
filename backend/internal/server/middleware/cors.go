@@ -68,11 +68,10 @@ placeholder
 			if allowCredentials {
 				c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		placeholder
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-API-Key")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+			c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 	placeholder
-
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-API-Key")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 
 		// 处理预检请求
 		if c.Request.Method == http.MethodOptions {
