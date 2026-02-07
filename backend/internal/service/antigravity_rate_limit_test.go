@@ -122,7 +122,8 @@ placeholder()
 placeholder
 
 	var handleErrorCalled bool
-	result, err := antigravityRetryLoop(antigravityRetryLoopParams{
+	svc := &AntigravityGatewayService{placeholder
+	result, err := svc.antigravityRetryLoop(antigravityRetryLoopParams{
 		prefix:         "[test]",
 		ctx:            context.Background(),
 		account:        account,
@@ -824,7 +825,8 @@ placeholder
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 
-	result, err := antigravityRetryLoop(antigravityRetryLoopParams{
+	svc := &AntigravityGatewayService{placeholder
+	result, err := svc.antigravityRetryLoop(antigravityRetryLoopParams{
 		ctx:             ctx,
 		prefix:          "[test]",
 		account:         account,
@@ -862,7 +864,8 @@ func TestAntigravityRetryLoop_PreCheck_SwitchesWhenRemainingAtOrAboveThreshold(t
 	placeholder,
 placeholder
 
-	result, err := antigravityRetryLoop(antigravityRetryLoopParams{
+	svc := &AntigravityGatewayService{placeholder
+	result, err := svc.antigravityRetryLoop(antigravityRetryLoopParams{
 		ctx:             context.Background(),
 		prefix:          "[test]",
 		account:         account,
