@@ -2616,7 +2616,6 @@ placeholder
 	return account.IsModelSupported(requestedModel)
 placeholder
 
-
 // GetAccessToken 获取账号凭证
 func (s *GatewayService) GetAccessToken(ctx context.Context, account *Account) (string, string, error) {
 	switch account.Type {
