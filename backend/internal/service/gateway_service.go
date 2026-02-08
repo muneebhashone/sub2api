@@ -313,6 +313,14 @@ type GatewayCache interface {
 	// SaveGeminiSession 保存 Gemini 会话
 	// Save Gemini session binding
 	SaveGeminiSession(ctx context.Context, groupID int64, prefixHash, digestChain, uuid string, accountID int64) error
+
+	// FindAnthropicSession 查找 Anthropic 会话（Trie 匹配）
+	// Find Anthropic session using Trie matching
+	FindAnthropicSession(ctx context.Context, groupID int64, prefixHash, digestChain string) (uuid string, accountID int64, found bool)
+
+	// SaveAnthropicSession 保存 Anthropic 会话
+	// Save Anthropic session binding
+	SaveAnthropicSession(ctx context.Context, groupID int64, prefixHash, digestChain, uuid string, accountID int64) error
 placeholder
 
 // derefGroupID safely dereferences *int64 to int64, returning 0 if nil
@@ -323,21 +331,15 @@ placeholder
 	return *groupID
 placeholder
 
-// stickySessionRateLimitThreshold 定义清除粘性会话的限流时间阈值。
-// 当账号限流剩余时间超过此阈值时，清除粘性会话以便切换到其他账号。
-// 低于此阈值时保持粘性会话，等待短暂限流结束。
-const stickySessionRateLimitThreshold = 10 * time.Second
-
 // shouldClearStickySession 检查账号是否处于不可调度状态，需要清理粘性会话绑定。
 // 当账号状态为错误、禁用、不可调度、处于临时不可调度期间，
-// 或模型限流剩余时间超过 stickySessionRateLimitThreshold 时，返回 true。
+// 或请求的模型处于限流状态时，返回 true。
 // 这确保后续请求不会继续使用不可用的账号。
 //
 // shouldClearStickySession checks if an account is in an unschedulable state
 // and the sticky session binding should be cleared.
 // Returns true when account status is error/disabled, schedulable is false,
-// within temporary unschedulable period, or model rate limit remaining time
-// exceeds stickySessionRateLimitThreshold.
+// within temporary unschedulable period, or the requested model is rate-limited.
 // This ensures subsequent requests won't continue using unavailable accounts.
 func shouldClearStickySession(account *Account, requestedModel string) bool {
 	if account == nil {
@@ -349,8 +351,8 @@ placeholder
 	if account.TempUnschedulableUntil != nil && time.Now().Before(*account.TempUnschedulableUntil) {
 		return true
 placeholder
-	// 检查模型限流和 scope 限流，只在超过阈值时清除粘性会话
-	if remaining := account.GetRateLimitRemainingTimeWithContext(context.Background(), requestedModel); remaining > stickySessionRateLimitThreshold {
+	// 检查模型限流和 scope 限流，有限流即清除粘性会话
+	if remaining := account.GetRateLimitRemainingTimeWithContext(context.Background(), requestedModel); remaining > 0 {
 		return true
 placeholder
 	return false
@@ -488,22 +490,24 @@ placeholder
 		return s.hashContent(cacheableContent)
 placeholder
 
-	// 3. Fallback: 使用 system 内容
+	// 3. 最后 fallback: 使用 system + 所有消息的完整摘要串
+	var combined strings.Builder
 	if parsed.System != nil {
 		systemText := s.extractTextFromSystem(parsed.System)
 		if systemText != "" {
-			return s.hashContent(systemText)
+			_, _ = combined.WriteString(systemText)
 	placeholder
 placeholder
-
-	// 4. 最后 fallback: 使用第一条消息
-	if len(parsed.Messages) > 0 {
-		if firstMsg, ok := parsed.Messages[0].(map[string]any); ok {
-			msgText := s.extractTextFromContent(firstMsg["content"])
+	for _, msg := range parsed.Messages {
+		if m, ok := msg.(map[string]any); ok {
+			msgText := s.extractTextFromContent(m["content"])
 			if msgText != "" {
-				return s.hashContent(msgText)
+				_, _ = combined.WriteString(msgText)
 		placeholder
 	placeholder
+placeholder
+	if combined.Len() > 0 {
+		return s.hashContent(combined.String())
 placeholder
 
 	return ""
@@ -545,6 +549,22 @@ func (s *GatewayService) SaveGeminiSession(ctx context.Context, groupID int64, p
 		return nil
 placeholder
 	return s.cache.SaveGeminiSession(ctx, groupID, prefixHash, digestChain, uuid, accountID)
+placeholder
+
+// FindAnthropicSession 查找 Anthropic 会话（基于内容摘要链的 Fallback 匹配）
+func (s *GatewayService) FindAnthropicSession(ctx context.Context, groupID int64, prefixHash, digestChain string) (uuid string, accountID int64, found bool) {
+	if digestChain == "" || s.cache == nil {
+		return "", 0, false
+placeholder
+	return s.cache.FindAnthropicSession(ctx, groupID, prefixHash, digestChain)
+placeholder
+
+// SaveAnthropicSession 保存 Anthropic 会话
+func (s *GatewayService) SaveAnthropicSession(ctx context.Context, groupID int64, prefixHash, digestChain, uuid string, accountID int64) error {
+	if digestChain == "" || s.cache == nil {
+		return nil
+placeholder
+	return s.cache.SaveAnthropicSession(ctx, groupID, prefixHash, digestChain, uuid, accountID)
 placeholder
 
 func (s *GatewayService) extractCacheableContent(parsed *ParsedRequest) string {
@@ -1110,7 +1130,6 @@ placeholder
 									result.ReleaseFunc() // 释放槽位
 									// 继续到负载感知选择
 							placeholder else {
-									_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL)
 									if s.debugModelRoutingEnabled() {
 										log.Printf("[ModelRoutingDebug] routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), stickyAccountID)
 								placeholder
@@ -1264,7 +1283,6 @@ placeholder
 						if !s.checkAndRegisterSession(ctx, account, sessionHash) {
 							result.ReleaseFunc() // 释放槽位，继续到 Layer 2
 					placeholder else {
-							_ = s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL)
 							return &AccountSelectionResult{
 								Account:     account,
 								Acquired:    true,
@@ -2169,9 +2187,6 @@ placeholder
 							_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 					placeholder
 						if !clearSticky && s.isAccountInGroup(account, groupID) && account.Platform == platform && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && account.IsSchedulableForModelWithContext(ctx, requestedModel) {
-							if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-								log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
-						placeholder
 							if s.debugModelRoutingEnabled() {
 								log.Printf("[ModelRoutingDebug] legacy routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
 						placeholder
@@ -2272,9 +2287,6 @@ placeholder
 						_ = s.cache.DeleteSessionAccountID(ctx, derefGroupID(groupID), sessionHash)
 				placeholder
 					if !clearSticky && s.isAccountInGroup(account, groupID) && account.Platform == platform && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && account.IsSchedulableForModelWithContext(ctx, requestedModel) {
-						if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-							log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
-					placeholder
 						return account, nil
 				placeholder
 			placeholder
@@ -2383,9 +2395,6 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 					placeholder
 						if !clearSticky && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && account.IsSchedulableForModelWithContext(ctx, requestedModel) {
 							if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
-								if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-									log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
-							placeholder
 								if s.debugModelRoutingEnabled() {
 									log.Printf("[ModelRoutingDebug] legacy mixed routed sticky hit: group_id=%v model=%s session=%s account=%d", derefGroupID(groupID), requestedModel, shortSessionHash(sessionHash), accountID)
 							placeholder
@@ -2488,9 +2497,6 @@ placeholder
 				placeholder
 					if !clearSticky && s.isAccountInGroup(account, groupID) && (requestedModel == "" || s.isModelSupportedByAccountWithContext(ctx, account, requestedModel)) && account.IsSchedulableForModelWithContext(ctx, requestedModel) {
 						if account.Platform == nativePlatform || (account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled()) {
-							if err := s.cache.RefreshSessionTTL(ctx, derefGroupID(groupID), sessionHash, stickySessionTTL); err != nil {
-								log.Printf("refresh session ttl failed: session=%s err=%v", sessionHash, err)
-						placeholder
 							return account, nil
 					placeholder
 				placeholder

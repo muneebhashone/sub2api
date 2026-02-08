@@ -238,3 +238,41 @@ placeholder
 
 	return c.rdb.Eval(ctx, geminiTrieSaveScript, []string{trieKeyplaceholder, digestChain, value, ttlSeconds).Err()
 placeholder
+
+// ============ Anthropic 会话 Fallback 方法 (复用 Trie 实现) ============
+
+// FindAnthropicSession 查找 Anthropic 会话（复用 Gemini Trie Lua 脚本）
+func (c *gatewayCache) FindAnthropicSession(ctx context.Context, groupID int64, prefixHash, digestChain string) (uuid string, accountID int64, found bool) {
+	if digestChain == "" {
+		return "", 0, false
+placeholder
+
+	trieKey := service.BuildAnthropicTrieKey(groupID, prefixHash)
+	ttlSeconds := int(service.AnthropicSessionTTL().Seconds())
+
+	result, err := c.rdb.Eval(ctx, geminiTrieFindScript, []string{trieKeyplaceholder, digestChain, ttlSeconds).Result()
+	if err != nil || result == nil {
+		return "", 0, false
+placeholder
+
+	value, ok := result.(string)
+	if !ok || value == "" {
+		return "", 0, false
+placeholder
+
+	uuid, accountID, ok = service.ParseGeminiSessionValue(value)
+	return uuid, accountID, ok
+placeholder
+
+// SaveAnthropicSession 保存 Anthropic 会话（复用 Gemini Trie Lua 脚本）
+func (c *gatewayCache) SaveAnthropicSession(ctx context.Context, groupID int64, prefixHash, digestChain, uuid string, accountID int64) error {
+	if digestChain == "" {
+		return nil
+placeholder
+
+	trieKey := service.BuildAnthropicTrieKey(groupID, prefixHash)
+	value := service.FormatGeminiSessionValue(uuid, accountID)
+	ttlSeconds := int(service.AnthropicSessionTTL().Seconds())
+
+	return c.rdb.Eval(ctx, geminiTrieSaveScript, []string{trieKeyplaceholder, digestChain, value, ttlSeconds).Err()
+placeholder
