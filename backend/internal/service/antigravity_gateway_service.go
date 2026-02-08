@@ -3530,39 +3530,30 @@ placeholder
 		return nil, s.writeMappedClaudeError(c, account, resp.StatusCode, resp.Header.Get("x-request-id"), respBody)
 placeholder
 
-	// 成功响应
+	// 成功响应：透传 response header + body
 	requestID := resp.Header.Get("x-request-id")
-	if requestID != "" {
-		c.Header("x-request-id", requestID)
+
+	// 透传上游响应头（排除 hop-by-hop）
+	for key, values := range resp.Header {
+		if upstreamHopByHopHeaders[strings.ToLower(key)] {
+			continue
+	placeholder
+		for _, v := range values {
+			c.Header(key, v)
+	placeholder
 placeholder
 
-	var usage *ClaudeUsage
-	var firstTokenMs *int
-	if claudeReq.Stream {
-		streamRes, err := s.handleClaudeStreamingResponse(c, resp, startTime, originalModel)
-		if err != nil {
-			log.Printf("%s status=stream_error error=%v", prefix, err)
-			return nil, err
-	placeholder
-		usage = streamRes.usage
-		firstTokenMs = streamRes.firstTokenMs
-placeholder else {
-		streamRes, err := s.handleClaudeStreamToNonStreaming(c, resp, startTime, originalModel)
-		if err != nil {
-			log.Printf("%s status=stream_collect_error error=%v", prefix, err)
-			return nil, err
-	placeholder
-		usage = streamRes.usage
-		firstTokenMs = streamRes.firstTokenMs
+	c.Status(resp.StatusCode)
+	_, copyErr := io.Copy(c.Writer, resp.Body)
+	if copyErr != nil {
+		log.Printf("%s status=copy_error error=%v", prefix, copyErr)
 placeholder
 
 	return &ForwardResult{
-		RequestID:    requestID,
-		Usage:        *usage,
-		Model:        originalModel,
-		Stream:       claudeReq.Stream,
-		Duration:     time.Since(startTime),
-		FirstTokenMs: firstTokenMs,
+		RequestID: requestID,
+		Model:     originalModel,
+		Stream:    claudeReq.Stream,
+		Duration:  time.Since(startTime),
 placeholder, nil
 placeholder
 
@@ -3712,35 +3703,23 @@ placeholder
 		return nil, fmt.Errorf("antigravity upstream error: %d", resp.StatusCode)
 placeholder
 
-	// 成功响应
+	// 成功响应：透传 response header + body
 	requestID := resp.Header.Get("x-request-id")
-	if requestID != "" {
-		c.Header("x-request-id", requestID)
+
+	// 透传上游响应头（排除 hop-by-hop）
+	for key, values := range resp.Header {
+		if upstreamHopByHopHeaders[strings.ToLower(key)] {
+			continue
+	placeholder
+		for _, v := range values {
+			c.Header(key, v)
+	placeholder
 placeholder
 
-	var usage *ClaudeUsage
-	var firstTokenMs *int
-
-	if stream {
-		streamRes, err := s.handleGeminiStreamingResponse(c, resp, startTime)
-		if err != nil {
-			log.Printf("%s status=stream_error error=%v", prefix, err)
-			return nil, err
-	placeholder
-		usage = streamRes.usage
-		firstTokenMs = streamRes.firstTokenMs
-placeholder else {
-		streamRes, err := s.handleGeminiStreamToNonStreaming(c, resp, startTime)
-		if err != nil {
-			log.Printf("%s status=stream_collect_error error=%v", prefix, err)
-			return nil, err
-	placeholder
-		usage = streamRes.usage
-		firstTokenMs = streamRes.firstTokenMs
-placeholder
-
-	if usage == nil {
-		usage = &ClaudeUsage{placeholder
+	c.Status(resp.StatusCode)
+	_, copyErr := io.Copy(c.Writer, resp.Body)
+	if copyErr != nil {
+		log.Printf("%s status=copy_error error=%v", prefix, copyErr)
 placeholder
 
 	imageCount := 0
@@ -3749,13 +3728,11 @@ placeholder
 placeholder
 
 	return &ForwardResult{
-		RequestID:    requestID,
-		Usage:        *usage,
-		Model:        originalModel,
-		Stream:       stream,
-		Duration:     time.Since(startTime),
-		FirstTokenMs: firstTokenMs,
-		ImageCount:   imageCount,
-		ImageSize:    imageSize,
+		RequestID:  requestID,
+		Model:      originalModel,
+		Stream:     stream,
+		Duration:   time.Since(startTime),
+		ImageCount: imageCount,
+		ImageSize:  imageSize,
 placeholder, nil
 placeholder
