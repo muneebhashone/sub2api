@@ -115,6 +115,7 @@ placeholder
 		MCPXMLInject:         g.MCPXMLInject,
 		SupportedModelScopes: g.SupportedModelScopes,
 		AccountCount:         g.AccountCount,
+		SortOrder:            g.SortOrder,
 placeholder
 	if len(g.AccountGroups) > 0 {
 		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))

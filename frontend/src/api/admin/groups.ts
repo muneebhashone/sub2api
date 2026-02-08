@@ -153,6 +153,20 @@ export async function getGroupApiKeys(
   return data
 placeholder
 
+/**
+ * Update group sort orders
+ * @param updates - Array of { id, sort_order placeholder objects
+ * @returns Success confirmation
+ */
+export async function updateSortOrder(
+  updates: Array<{ id: number; sort_order: number placeholder>
+): Promise<{ message: string placeholder> {
+  const { data placeholder = await apiClient.put<{ message: string placeholder>('/admin/groups/sort-order', {
+    updates
+  placeholder)
+  return data
+placeholder
+
 export const groupsAPI = {
   list,
   getAll,
@@ -163,7 +177,8 @@ export const groupsAPI = {
   delete: deleteGroup,
   toggleStatus,
   getStats,
-  getGroupApiKeys
+  getGroupApiKeys,
+  updateSortOrder
 placeholder
 
 export default groupsAPI
