@@ -410,7 +410,7 @@ placeholder
 		if switchCount > 0 {
 			requestCtx = context.WithValue(requestCtx, ctxkey.AccountSwitchCount, switchCount)
 	placeholder
-		if account.Platform == service.PlatformAntigravity {
+		if account.Platform == service.PlatformAntigravity && account.Type != service.AccountTypeAPIKey {
 			result, err = h.antigravityGatewayService.ForwardGemini(requestCtx, c, account, modelName, action, stream, body, hasBoundSession)
 	placeholder else {
 			result, err = h.geminiCompatService.ForwardNative(requestCtx, c, account, modelName, action, stream, body)
