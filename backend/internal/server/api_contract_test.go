@@ -896,6 +896,10 @@ func (stubGroupRepo) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []int
 	return nil, errors.New("not implemented")
 placeholder
 
+func (stubGroupRepo) UpdateSortOrders(ctx context.Context, updates []service.GroupSortOrderUpdate) error {
+	return nil
+placeholder
+
 type stubAccountRepo struct {
 	bulkUpdateIDs []int64
 placeholder

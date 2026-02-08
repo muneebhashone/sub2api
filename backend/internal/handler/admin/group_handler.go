@@ -302,3 +302,36 @@ placeholder
 placeholder
 	response.Paginated(c, outKeys, total, page, pageSize)
 placeholder
+
+// UpdateSortOrderRequest represents the request to update group sort orders
+type UpdateSortOrderRequest struct {
+	Updates []struct {
+		ID        int64 `json:"id" binding:"required"`
+		SortOrder int   `json:"sort_order"`
+placeholder `json:"updates" binding:"required,min=1"`
+placeholder
+
+// UpdateSortOrder handles updating group sort orders
+// PUT /api/v1/admin/groups/sort-order
+func (h *GroupHandler) UpdateSortOrder(c *gin.Context) {
+	var req UpdateSortOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	updates := make([]service.GroupSortOrderUpdate, 0, len(req.Updates))
+	for _, u := range req.Updates {
+		updates = append(updates, service.GroupSortOrderUpdate{
+			ID:        u.ID,
+			SortOrder: u.SortOrder,
+	placeholder)
+placeholder
+
+	if err := h.adminService.UpdateGroupSortOrders(c.Request.Context(), updates); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{"message": "Sort order updated successfully"placeholder)
+placeholder
