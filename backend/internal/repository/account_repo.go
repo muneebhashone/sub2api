@@ -282,6 +282,34 @@ placeholder
 	return &accounts[0], nil
 placeholder
 
+func (r *accountRepository) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
+	rows, err := r.sql.QueryContext(ctx, `
+		SELECT id, extra->>'crs_account_id'
+		FROM accounts
+		WHERE deleted_at IS NULL
+			AND extra->>'crs_account_id' IS NOT NULL
+			AND extra->>'crs_account_id' != ''
+	`)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	result := make(map[string]int64)
+	for rows.Next() {
+		var id int64
+		var crsID string
+		if err := rows.Scan(&id, &crsID); err != nil {
+			return nil, err
+	placeholder
+		result[crsID] = id
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
+	return result, nil
+placeholder
+
 func (r *accountRepository) Update(ctx context.Context, account *service.Account) error {
 	if account == nil {
 		return nil
