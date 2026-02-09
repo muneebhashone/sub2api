@@ -18,14 +18,21 @@ type githubReleaseClient struct {
 	downloadHTTPClient *http.Client
 placeholder
 
+type githubReleaseClientError struct {
+	err error
+placeholder
+
 // NewGitHubReleaseClient 创建 GitHub Release 客户端
 // proxyURL 为空时直连 GitHub，支持 http/https/socks5/socks5h 协议
-func NewGitHubReleaseClient(proxyURL string) service.GitHubReleaseClient {
+func NewGitHubReleaseClient(proxyURL string, allowDirectOnProxyError bool) service.GitHubReleaseClient {
 	sharedClient, err := httpclient.GetClient(httpclient.Options{
 		Timeout:  30 * time.Second,
 		ProxyURL: proxyURL,
 placeholder)
 	if err != nil {
+		if proxyURL != "" && !allowDirectOnProxyError {
+			return &githubReleaseClientError{err: fmt.Errorf("proxy client init failed and direct fallback is disabled; set security.proxy_fallback.allow_direct_on_error=true to allow fallback: %w", err)placeholder
+	placeholder
 		sharedClient = &http.Client{Timeout: 30 * time.Secondplaceholder
 placeholder
 
@@ -35,6 +42,9 @@ placeholder
 		ProxyURL: proxyURL,
 placeholder)
 	if err != nil {
+		if proxyURL != "" && !allowDirectOnProxyError {
+			return &githubReleaseClientError{err: fmt.Errorf("proxy client init failed and direct fallback is disabled; set security.proxy_fallback.allow_direct_on_error=true to allow fallback: %w", err)placeholder
+	placeholder
 		downloadClient = &http.Client{Timeout: 10 * time.Minuteplaceholder
 placeholder
 
@@ -42,6 +52,18 @@ placeholder
 		httpClient:         sharedClient,
 		downloadHTTPClient: downloadClient,
 placeholder
+placeholder
+
+func (c *githubReleaseClientError) FetchLatestRelease(ctx context.Context, repo string) (*service.GitHubRelease, error) {
+	return nil, c.err
+placeholder
+
+func (c *githubReleaseClientError) DownloadFile(ctx context.Context, url, dest string, maxSize int64) error {
+	return c.err
+placeholder
+
+func (c *githubReleaseClientError) FetchChecksumFile(ctx context.Context, url string) ([]byte, error) {
+	return nil, c.err
 placeholder
 
 func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo string) (*service.GitHubRelease, error) {
