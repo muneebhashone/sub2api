@@ -84,6 +84,28 @@ placeholder
 	require.Equal(t, "user", body["role"])
 placeholder
 
+func TestJWTAuth_ValidToken_LowercaseBearer(t *testing.T) {
+	user := &service.User{
+		ID:           1,
+		Email:        "test@example.com",
+		Role:         "user",
+		Status:       service.StatusActive,
+		Concurrency:  5,
+		TokenVersion: 1,
+placeholder
+	router, authSvc := newJWTTestEnv(map[int64]*service.User{1: userplaceholder)
+
+	token, err := authSvc.GenerateToken(user)
+placeholder
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "bearer "+token)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+placeholder
+
 func TestJWTAuth_MissingAuthorizationHeader(t *testing.T) {
 	router, _ := newJWTTestEnv(nil)
 
