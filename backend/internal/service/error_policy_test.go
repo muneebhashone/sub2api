@@ -158,6 +158,7 @@ func TestApplyErrorPolicy(t *testing.T) {
 		statusCode        int
 		body              []byte
 		expectedHandled   bool
+		expectedStatus    int  // expected outStatus
 		expectedSwitchErr bool // expect *AntigravityAccountSwitchError
 		handleErrorCalls  int
 placeholder{
@@ -171,6 +172,7 @@ placeholder{
 			statusCode:       500,
 			body:             []byte(`"error"`),
 			expectedHandled:  false,
+			expectedStatus:   500, // passthrough
 			handleErrorCalls: 0,
 	placeholder,
 		{
@@ -187,6 +189,7 @@ placeholder{
 			statusCode:       500, // not in custom codes
 			body:             []byte(`"error"`),
 			expectedHandled:  true,
+			expectedStatus:   http.StatusInternalServerError, // skipped → 500
 			handleErrorCalls: 0,
 	placeholder,
 		{
@@ -203,6 +206,7 @@ placeholder{
 			statusCode:       500,
 			body:             []byte(`"error"`),
 			expectedHandled:  true,
+			expectedStatus:   500, // matched → original status
 			handleErrorCalls: 1,
 	placeholder,
 		{
@@ -225,6 +229,7 @@ placeholder{
 			statusCode:        503,
 			body:              []byte(`overloaded`),
 			expectedHandled:   true,
+			expectedStatus:    503, // temp_unscheduled → original status
 			expectedSwitchErr: true,
 			handleErrorCalls:  0,
 	placeholder,
@@ -250,9 +255,10 @@ placeholder
 				isStickySession: true,
 		placeholder
 
-			handled, retErr := svc.applyErrorPolicy(p, tt.statusCode, http.Header{placeholder, tt.body)
+			handled, outStatus, retErr := svc.applyErrorPolicy(p, tt.statusCode, http.Header{placeholder, tt.body)
 
 			require.Equal(t, tt.expectedHandled, handled, "handled mismatch")
+			require.Equal(t, tt.expectedStatus, outStatus, "outStatus mismatch")
 			require.Equal(t, tt.handleErrorCalls, handleErrorCount, "handleError call count mismatch")
 
 			if tt.expectedSwitchErr {
