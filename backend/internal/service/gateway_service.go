@@ -1683,6 +1683,17 @@ placeholder
 	return accounts, useMixed, nil
 placeholder
 
+// IsSingleAntigravityAccountGroup 检查指定分组是否只有一个 antigravity 平台的可调度账号。
+// 用于 Handler 层在首次请求时提前设置 SingleAccountRetry context，
+// 避免单账号分组收到 503 时错误地设置模型限流标记导致后续请求连续快速失败。
+func (s *GatewayService) IsSingleAntigravityAccountGroup(ctx context.Context, groupID *int64) bool {
+	accounts, _, err := s.listSchedulableAccounts(ctx, groupID, PlatformAntigravity, true)
+	if err != nil {
+		return false
+placeholder
+	return len(accounts) == 1
+placeholder
+
 func (s *GatewayService) isAccountAllowedForPlatform(account *Account, platform string, useMixed bool) bool {
 	if account == nil {
 		return false
