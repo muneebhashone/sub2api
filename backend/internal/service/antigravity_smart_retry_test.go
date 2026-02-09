@@ -363,9 +363,9 @@ placeholder
 placeholder
 
 // TestHandleSmartRetry_503_ModelCapacityExhausted_LongDelay_SwitchAccount
-// 503 MODEL_CAPACITY_EXHAUSTED + retryDelay >= 20s → 每 20s 重试最多 5 次，全失败后切换账号
+// 503 MODEL_CAPACITY_EXHAUSTED + retryDelay >= 20s → 等待 20s 后重试 1 次，仍失败则切换账号
 func TestHandleSmartRetry_503_ModelCapacityExhausted_LongDelay_SwitchAccount(t *testing.T) {
-	// 构造 5 个仍然容量不足的重试响应
+	// 重试仍然返回容量不足
 	capacityBody := `{
 		"error": {
 			"code": 503,
@@ -376,19 +376,15 @@ func TestHandleSmartRetry_503_ModelCapacityExhausted_LongDelay_SwitchAccount(t *
 			]
 	placeholder
 placeholder`
-	var responses []*http.Response
-	var errs []error
-	for i := 0; i < 5; i++ {
-		responses = append(responses, &http.Response{
-			StatusCode: http.StatusServiceUnavailable,
-			Header:     http.Header{placeholder,
-			Body:       io.NopCloser(strings.NewReader(capacityBody)),
-	placeholder)
-		errs = append(errs, nil)
-placeholder
 	upstream := &mockSmartRetryUpstream{
-		responses: responses,
-		errors:    errs,
+		responses: []*http.Response{
+			{
+				StatusCode: 503,
+				Header:     http.Header{placeholder,
+				Body:       io.NopCloser(strings.NewReader(capacityBody)),
+		placeholder,
+	placeholder,
+		errors: []error{nilplaceholder,
 placeholder
 
 	repo := &stubAntigravityAccountRepo{placeholder
@@ -412,12 +408,12 @@ placeholder
 	placeholder
 placeholder`)
 	resp := &http.Response{
-		StatusCode: http.StatusServiceUnavailable,
+		StatusCode: 503,
 		Header:     http.Header{placeholder,
 		Body:       io.NopCloser(bytes.NewReader(respBody)),
 placeholder
 
-	// 使用可取消的 context 避免测试真的等待 5×20s
+	// context 超时短于 20s 等待，验证 context 取消时正确返回
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -443,8 +439,7 @@ placeholder
 
 	require.NotNil(t, result)
 	require.Equal(t, smartRetryActionBreakWithResp, result.action)
-	// context 超时会导致提前返回，switchError 可能为 nil（context canceled）
-	// 验证不设置模型限流
+	// context 超时会导致提前返回
 	require.Empty(t, repo.modelRateLimitCalls, "should not set model rate limit for capacity exhausted")
 placeholder
 
