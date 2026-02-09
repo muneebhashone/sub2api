@@ -39,7 +39,9 @@
                 ? 'https://api.openai.com'
                 : account.platform === 'gemini'
                   ? 'https://generativelanguage.googleapis.com'
-                  : 'https://api.anthropic.com'
+                  : account.platform === 'antigravity'
+                    ? 'https://cloudcode-pa.googleapis.com'
+                    : 'https://api.anthropic.com'
             "
           />
           <p class="input-hint">{{ baseUrlHint placeholderplaceholder</p>
@@ -55,14 +57,16 @@
                 ? 'sk-proj-...'
                 : account.platform === 'gemini'
                   ? 'AIza...'
-                  : 'sk-ant-...'
+                  : account.platform === 'antigravity'
+                    ? 'sk-...'
+                    : 'sk-ant-...'
             "
           />
           <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') placeholderplaceholder</p>
         </div>
 
-        <!-- Model Restriction Section (不适用于 Gemini) -->
-        <div v-if="account.platform !== 'gemini'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <!-- Model Restriction Section (不适用于 Gemini 和 Antigravity) -->
+        <div v-if="account.platform !== 'gemini' && account.platform !== 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
           <label class="input-label">{{ t('admin.accounts.modelRestriction') placeholderplaceholder</label>
 
           <!-- Mode Toggle -->
@@ -372,7 +376,7 @@
             v-model="editBaseUrl"
             type="text"
             class="input"
-            placeholder="https://s.konstants.xyz"
+            placeholder="https://cloudcode-pa.googleapis.com"
           />
           <p class="input-hint">{{ t('admin.accounts.upstream.baseUrlHint') placeholderplaceholder</p>
         </div>
