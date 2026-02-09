@@ -152,61 +152,6 @@ placeholder
 placeholder
 placeholder
 
-func TestGenerateDigestChainPrefixes(t *testing.T) {
-	tests := []struct {
-		name    string
-		chain   string
-		want    []string
-		wantLen int
-placeholder{
-		{
-			name:    "empty",
-			chain:   "",
-			wantLen: 0,
-	placeholder,
-		{
-			name:    "single part",
-			chain:   "u:abc123",
-			want:    []string{"u:abc123"placeholder,
-			wantLen: 1,
-	placeholder,
-		{
-			name:    "two parts",
-			chain:   "s:xyz-u:abc",
-			want:    []string{"s:xyz-u:abc", "s:xyz"placeholder,
-			wantLen: 2,
-	placeholder,
-		{
-			name:    "four parts",
-			chain:   "s:a-u:b-m:c-u:d",
-			want:    []string{"s:a-u:b-m:c-u:d", "s:a-u:b-m:c", "s:a-u:b", "s:a"placeholder,
-			wantLen: 4,
-	placeholder,
-placeholder
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GenerateDigestChainPrefixes(tt.chain)
-
-			if len(result) != tt.wantLen {
-				t.Errorf("expected %d prefixes, got %d: %v", tt.wantLen, len(result), result)
-		placeholder
-
-			if tt.want != nil {
-				for i, want := range tt.want {
-					if i >= len(result) {
-						t.Errorf("missing prefix at index %d", i)
-						continue
-				placeholder
-					if result[i] != want {
-						t.Errorf("prefix[%d]: expected %s, got %s", i, want, result[i])
-				placeholder
-			placeholder
-		placeholder
-	placeholder)
-placeholder
-placeholder
-
 func TestParseGeminiSessionValue(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -441,41 +386,4 @@ placeholder)
 			t.Errorf("Different UUIDs should produce different session keys: %s vs %s", result1, result2)
 	placeholder
 placeholder)
-placeholder
-
-func TestBuildGeminiTrieKey(t *testing.T) {
-	tests := []struct {
-		name       string
-		groupID    int64
-		prefixHash string
-		want       string
-placeholder{
-		{
-			name:       "normal",
-			groupID:    123,
-			prefixHash: "abcdef12",
-			want:       "gemini:trie:123:abcdef12",
-	placeholder,
-		{
-			name:       "zero group",
-			groupID:    0,
-			prefixHash: "xyz",
-			want:       "gemini:trie:0:xyz",
-	placeholder,
-		{
-			name:       "empty prefix",
-			groupID:    1,
-			prefixHash: "",
-			want:       "gemini:trie:1:",
-	placeholder,
-placeholder
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := BuildGeminiTrieKey(tt.groupID, tt.prefixHash)
-			if got != tt.want {
-				t.Errorf("BuildGeminiTrieKey(%d, %q) = %q, want %q", tt.groupID, tt.prefixHash, got, tt.want)
-		placeholder
-	placeholder)
-placeholder
 placeholder

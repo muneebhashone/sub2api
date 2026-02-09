@@ -66,7 +66,6 @@ placeholder
 	placeholder
 
 		isAvailable := acc.Status == StatusActive && acc.Schedulable && !isRateLimited && !isOverloaded && !isTempUnsched
-		scopeRateLimits := acc.GetAntigravityScopeRateLimits()
 
 		if acc.Platform != "" {
 			if _, ok := platform[acc.Platform]; !ok {
@@ -84,14 +83,6 @@ placeholder
 		placeholder
 			if hasError {
 				p.ErrorCount++
-		placeholder
-			if len(scopeRateLimits) > 0 {
-				if p.ScopeRateLimitCount == nil {
-					p.ScopeRateLimitCount = make(map[string]int64)
-			placeholder
-				for scope := range scopeRateLimits {
-					p.ScopeRateLimitCount[scope]++
-			placeholder
 		placeholder
 	placeholder
 
@@ -116,14 +107,6 @@ placeholder
 		placeholder
 			if hasError {
 				g.ErrorCount++
-		placeholder
-			if len(scopeRateLimits) > 0 {
-				if g.ScopeRateLimitCount == nil {
-					g.ScopeRateLimitCount = make(map[string]int64)
-			placeholder
-				for scope := range scopeRateLimits {
-					g.ScopeRateLimitCount[scope]++
-			placeholder
 		placeholder
 	placeholder
 
@@ -156,9 +139,6 @@ placeholder
 			if remainingSec > 0 {
 				item.RateLimitRemainingSec = &remainingSec
 		placeholder
-	placeholder
-		if len(scopeRateLimits) > 0 {
-			item.ScopeRateLimits = scopeRateLimits
 	placeholder
 		if isOverloaded && acc.OverloadUntil != nil {
 			item.OverloadUntil = acc.OverloadUntil

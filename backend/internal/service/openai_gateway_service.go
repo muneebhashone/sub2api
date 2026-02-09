@@ -580,10 +580,6 @@ placeholder
 		placeholder
 	placeholder
 placeholder else {
-		type accountWithLoad struct {
-			account  *Account
-			loadInfo *AccountLoadInfo
-	placeholder
 		var available []accountWithLoad
 		for _, acc := range candidates {
 			loadInfo := loadMap[acc.ID]
@@ -618,6 +614,7 @@ placeholder else {
 					return a.account.LastUsedAt.Before(*b.account.LastUsedAt)
 			placeholder
 		placeholder)
+			shuffleWithinSortGroups(available)
 
 			for _, item := range available {
 				result, err := s.tryAcquireAccountSlot(ctx, item.account.ID, item.account.Concurrency)
