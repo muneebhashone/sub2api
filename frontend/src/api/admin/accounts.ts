@@ -327,11 +327,34 @@ export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
   return data
 placeholder
 
+export interface CRSPreviewAccount {
+  crs_account_id: string
+  kind: string
+  name: string
+  platform: string
+  type: string
+placeholder
+
+export interface PreviewFromCRSResult {
+  new_accounts: CRSPreviewAccount[]
+  existing_accounts: CRSPreviewAccount[]
+placeholder
+
+export async function previewFromCrs(params: {
+  base_url: string
+  username: string
+  password: string
+placeholder): Promise<PreviewFromCRSResult> {
+  const { data placeholder = await apiClient.post<PreviewFromCRSResult>('/admin/accounts/sync/crs/preview', params)
+  return data
+placeholder
+
 export async function syncFromCrs(params: {
   base_url: string
   username: string
   password: string
   sync_proxies?: boolean
+  selected_account_ids?: string[]
 placeholder): Promise<{
   created: number
   updated: number
@@ -345,7 +368,19 @@ placeholder): Promise<{
     error?: string
   placeholder>
 placeholder> {
-  const { data placeholder = await apiClient.post('/admin/accounts/sync/crs', params)
+  const { data placeholder = await apiClient.post<{
+    created: number
+    updated: number
+    skipped: number
+    failed: number
+    items: Array<{
+      crs_account_id: string
+      kind: string
+      name: string
+      action: string
+      error?: string
+    placeholder>
+  placeholder>('/admin/accounts/sync/crs', params)
   return data
 placeholder
 
@@ -442,6 +477,7 @@ export const accountsAPI = {
   batchCreate,
   batchUpdateCredentials,
   bulkUpdate,
+  previewFromCrs,
   syncFromCrs,
   exportData,
   importData,

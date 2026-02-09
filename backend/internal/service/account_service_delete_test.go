@@ -54,6 +54,10 @@ func (s *accountRepoStub) GetByCRSAccountID(ctx context.Context, crsAccountID st
 	panic("unexpected GetByCRSAccountID call")
 placeholder
 
+func (s *accountRepoStub) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
+	panic("unexpected ListCRSAccountIDs call")
+placeholder
+
 func (s *accountRepoStub) Update(ctx context.Context, account *Account) error {
 	panic("unexpected Update call")
 placeholder
