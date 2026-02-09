@@ -1038,10 +1038,7 @@
         </div>
 
         <!-- Custom Error Codes Section -->
-        <div
-          v-if="form.platform !== 'gemini'"
-          class="border-t border-gray-200 pt-4 dark:border-dark-600"
-        >
+        <div class="border-t border-gray-200 pt-4 dark:border-dark-600">
           <div class="mb-3 flex items-center justify-between">
             <div>
               <label class="input-label mb-0">{{ t('admin.accounts.customErrorCodes') placeholderplaceholder</label>
@@ -1676,10 +1673,12 @@
         :show-proxy-warning="form.platform !== 'openai' && !!form.proxy_id"
         :allow-multiple="form.platform === 'anthropic'"
         :show-cookie-option="form.platform === 'anthropic'"
+        :show-refresh-token-option="form.platform === 'openai'"
         :platform="form.platform"
         :show-project-id="geminiOAuthType === 'code_assist'"
         @generate-url="handleGenerateUrl"
         @cookie-auth="handleCookieAuth"
+        @validate-refresh-token="handleOpenAIValidateRT"
       />
 
     </div>
@@ -2036,6 +2035,7 @@ interface OAuthFlowExposed {
   oauthState: string
   projectId: string
   sessionKey: string
+  refreshToken: string
   inputMethod: AuthInputMethod
   reset: () => void
 placeholder
@@ -2316,9 +2316,9 @@ watch(
 watch(
   [accountCategory, addMethod, antigravityAccountType],
   ([category, method, agType]) => {
-    // Antigravity upstream 类型
+    // Antigravity upstream 类型（实际创建为 apikey）
     if (form.platform === 'antigravity' && agType === 'upstream') {
-      form.type = 'upstream'
+      form.type = 'apikey'
       return
     placeholder
     if (category === 'oauth-based') {
@@ -2742,7 +2742,8 @@ const handleSubmit = async () => {
 
     submitting.value = true
     try {
-      await createAccountAndFinish(form.platform, 'upstream', credentials)
+      const extra = mixedScheduling.value ? { mixed_scheduling: true placeholder : undefined
+      await createAccountAndFinish(form.platform, 'apikey', credentials, extra)
     placeholder catch (error: any) {
       appStore.showError(error.response?.data?.detail || t('admin.accounts.failedToCreate'))
     placeholder finally {
@@ -2948,6 +2949,95 @@ const handleOpenAIExchange = async (authCode: string) => {
   placeholder catch (error: any) {
     openaiOAuth.error.value = error.response?.data?.detail || t('admin.accounts.oauth.authFailed')
     appStore.showError(openaiOAuth.error.value)
+  placeholder finally {
+    openaiOAuth.loading.value = false
+  placeholder
+placeholder
+
+// OpenAI 手动 RT 批量验证和创建
+const handleOpenAIValidateRT = async (refreshTokenInput: string) => {
+  if (!refreshTokenInput.trim()) return
+
+  // Parse multiple refresh tokens (one per line)
+  const refreshTokens = refreshTokenInput
+    .split('\n')
+    .map((rt) => rt.trim())
+    .filter((rt) => rt)
+
+  if (refreshTokens.length === 0) {
+    openaiOAuth.error.value = t('admin.accounts.oauth.openai.pleaseEnterRefreshToken')
+    return
+  placeholder
+
+  openaiOAuth.loading.value = true
+  openaiOAuth.error.value = ''
+
+  let successCount = 0
+  let failedCount = 0
+  const errors: string[] = []
+
+  try {
+    for (let i = 0; i < refreshTokens.length; i++) {
+      try {
+        const tokenInfo = await openaiOAuth.validateRefreshToken(
+          refreshTokens[i],
+          form.proxy_id
+        )
+        if (!tokenInfo) {
+          failedCount++
+          errors.push(`#${i + 1placeholder: ${openaiOAuth.error.value || 'Validation failed'placeholder`)
+          openaiOAuth.error.value = ''
+          continue
+        placeholder
+
+        const credentials = openaiOAuth.buildCredentials(tokenInfo)
+        const extra = openaiOAuth.buildExtraInfo(tokenInfo)
+
+        // Generate account name with index for batch
+        const accountName = refreshTokens.length > 1 ? `${form.nameplaceholder #${i + 1placeholder` : form.name
+
+        await adminAPI.accounts.create({
+          name: accountName,
+          notes: form.notes,
+          platform: 'openai',
+          type: 'oauth',
+          credentials,
+          extra,
+          proxy_id: form.proxy_id,
+          concurrency: form.concurrency,
+          priority: form.priority,
+          rate_multiplier: form.rate_multiplier,
+          group_ids: form.group_ids,
+          expires_at: form.expires_at,
+          auto_pause_on_expired: autoPauseOnExpired.value
+        placeholder)
+        successCount++
+      placeholder catch (error: any) {
+        failedCount++
+        const errMsg = error.response?.data?.detail || error.message || 'Unknown error'
+        errors.push(`#${i + 1placeholder: ${errMsgplaceholder`)
+      placeholder
+    placeholder
+
+    // Show results
+    if (successCount > 0 && failedCount === 0) {
+      appStore.showSuccess(
+        refreshTokens.length > 1
+          ? t('admin.accounts.oauth.batchSuccess', { count: successCount placeholder)
+          : t('admin.accounts.accountCreated')
+      )
+      emit('created')
+      handleClose()
+    placeholder else if (successCount > 0 && failedCount > 0) {
+      appStore.showWarning(
+        t('admin.accounts.oauth.batchPartialSuccess', { success: successCount, failed: failedCount placeholder)
+      )
+      openaiOAuth.error.value = errors.join('\n')
+      emit('created')
+    placeholder else {
+      openaiOAuth.error.value = errors.join('\n')
+      appStore.showError(t('admin.accounts.oauth.batchFailed'))
+    placeholder
   placeholder finally {
     openaiOAuth.loading.value = false
   placeholder

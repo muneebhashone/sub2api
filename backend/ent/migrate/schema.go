@@ -376,6 +376,7 @@ placeholder
 		{Name: "model_routing_enabled", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "mcp_xml_inject", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "supported_model_scopes", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "sort_order", Type: field.TypeInt, Default: 0placeholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
@@ -407,6 +408,11 @@ placeholder
 				Name:    "group_deleted_at",
 				Unique:  false,
 				Columns: []*schema.Column{GroupsColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "group_sort_order",
+				Unique:  false,
+				Columns: []*schema.Column{GroupsColumns[29]placeholder,
 		placeholder,
 	placeholder,
 placeholder

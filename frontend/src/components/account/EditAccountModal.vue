@@ -364,6 +364,30 @@
         </div>
       </div>
 
+      <!-- Upstream fields (only for upstream type) -->
+      <div v-if="account.type === 'upstream'" class="space-y-4">
+        <div>
+          <label class="input-label">{{ t('admin.accounts.upstream.baseUrl') placeholderplaceholder</label>
+          <input
+            v-model="editBaseUrl"
+            type="text"
+            class="input"
+            placeholder="https://s.konstants.xyz"
+          />
+          <p class="input-hint">{{ t('admin.accounts.upstream.baseUrlHint') placeholderplaceholder</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.upstream.apiKey') placeholderplaceholder</label>
+          <input
+            v-model="editApiKey"
+            type="password"
+            class="input font-mono"
+            placeholder="sk-..."
+          />
+          <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') placeholderplaceholder</p>
+        </div>
+      </div>
+
       <!-- Antigravity model restriction (applies to all antigravity types) -->
       <!-- Antigravity 只支持模型映射模式，不支持白名单模式 -->
       <div v-if="account.platform === 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
@@ -1244,6 +1268,9 @@ watch(
         placeholder else {
           selectedErrorCodes.value = []
         placeholder
+      placeholder else if (newAccount.type === 'upstream' && newAccount.credentials) {
+        const credentials = newAccount.credentials as Record<string, unknown>
+        editBaseUrl.value = (credentials.base_url as string) || ''
       placeholder else {
         const platformDefaultUrl =
           newAccount.platform === 'openai'
@@ -1579,6 +1606,22 @@ const handleSubmit = async () => {
       if (interceptWarmupRequests.value) {
         newCredentials.intercept_warmup_requests = true
       placeholder
+      if (!applyTempUnschedConfig(newCredentials)) {
+        submitting.value = false
+        return
+      placeholder
+
+      updatePayload.credentials = newCredentials
+    placeholder else if (props.account.type === 'upstream') {
+      const currentCredentials = (props.account.credentials as Record<string, unknown>) || {placeholder
+      const newCredentials: Record<string, unknown> = { ...currentCredentials placeholder
+
+      newCredentials.base_url = editBaseUrl.value.trim()
+
+      if (editApiKey.value.trim()) {
+        newCredentials.api_key = editApiKey.value.trim()
+      placeholder
+
       if (!applyTempUnschedConfig(newCredentials)) {
         submitting.value = false
         return

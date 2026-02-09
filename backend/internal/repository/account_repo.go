@@ -282,6 +282,34 @@ placeholder
 	return &accounts[0], nil
 placeholder
 
+func (r *accountRepository) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
+	rows, err := r.sql.QueryContext(ctx, `
+		SELECT id, extra->>'crs_account_id'
+		FROM accounts
+		WHERE deleted_at IS NULL
+			AND extra->>'crs_account_id' IS NOT NULL
+			AND extra->>'crs_account_id' != ''
+	`)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	result := make(map[string]int64)
+	for rows.Next() {
+		var id int64
+		var crsID string
+		if err := rows.Scan(&id, &crsID); err != nil {
+			return nil, err
+	placeholder
+		result[crsID] = id
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
+	return result, nil
+placeholder
+
 func (r *accountRepository) Update(ctx context.Context, account *service.Account) error {
 	if account == nil {
 		return nil
@@ -794,53 +822,6 @@ func (r *accountRepository) SetRateLimited(ctx context.Context, id int64, resetA
 placeholder
 	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
 		log.Printf("[SchedulerOutbox] enqueue rate limit failed: account=%d err=%v", id, err)
-placeholder
-	return nil
-placeholder
-
-func (r *accountRepository) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope service.AntigravityQuotaScope, resetAt time.Time) error {
-	now := time.Now().UTC()
-	payload := map[string]string{
-		"rate_limited_at":     now.Format(time.RFC3339),
-		"rate_limit_reset_at": resetAt.UTC().Format(time.RFC3339),
-placeholder
-	raw, err := json.Marshal(payload)
-	if err != nil {
-		return err
-placeholder
-
-	scopeKey := string(scope)
-	client := clientFromContext(ctx, r.client)
-	result, err := client.ExecContext(
-		ctx,
-		`UPDATE accounts SET
-			extra = jsonb_set(
-				jsonb_set(COALESCE(extra, '{placeholder'::jsonb), '{antigravity_quota_scopesplaceholder'::text[], COALESCE(extra->'antigravity_quota_scopes', '{placeholder'::jsonb), true),
-				ARRAY['antigravity_quota_scopes', $1]::text[],
-				$2::jsonb,
-				true
-			),
-			updated_at = NOW(),
-			last_used_at = NOW()
-		WHERE id = $3 AND deleted_at IS NULL`,
-		scopeKey,
-		raw,
-		id,
-	)
-	if err != nil {
-		return err
-placeholder
-
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-placeholder
-	if affected == 0 {
-		return service.ErrAccountNotFound
-placeholder
-
-	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
-		log.Printf("[SchedulerOutbox] enqueue quota scope failed: account=%d err=%v", id, err)
 placeholder
 	return nil
 placeholder

@@ -54,8 +54,12 @@ func (s *accountRepoStub) GetByCRSAccountID(ctx context.Context, crsAccountID st
 	panic("unexpected GetByCRSAccountID call")
 placeholder
 
-func (s *accountRepoStub) FindByExtraField(ctx context.Context, key string, value interface{placeholder) ([]Account, error) {
+func (s *accountRepoStub) FindByExtraField(ctx context.Context, key string, value any) ([]Account, error) {
 	panic("unexpected FindByExtraField call")
+placeholder
+
+func (s *accountRepoStub) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
+	panic("unexpected ListCRSAccountIDs call")
 placeholder
 
 func (s *accountRepoStub) Update(ctx context.Context, account *Account) error {
@@ -145,10 +149,6 @@ placeholder
 
 func (s *accountRepoStub) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	panic("unexpected SetRateLimited call")
-placeholder
-
-func (s *accountRepoStub) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope AntigravityQuotaScope, resetAt time.Time) error {
-	panic("unexpected SetAntigravityQuotaScopeLimit call")
 placeholder
 
 func (s *accountRepoStub) SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error {
