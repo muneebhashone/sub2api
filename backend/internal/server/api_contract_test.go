@@ -896,6 +896,10 @@ func (stubGroupRepo) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []int
 	return nil, errors.New("not implemented")
 placeholder
 
+func (stubGroupRepo) UpdateSortOrders(ctx context.Context, updates []service.GroupSortOrderUpdate) error {
+	return nil
+placeholder
+
 type stubAccountRepo struct {
 	bulkUpdateIDs []int64
 placeholder
@@ -1004,10 +1008,6 @@ func (s *stubAccountRepo) SetRateLimited(ctx context.Context, id int64, resetAt 
 	return errors.New("not implemented")
 placeholder
 
-func (s *stubAccountRepo) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope service.AntigravityQuotaScope, resetAt time.Time) error {
-	return errors.New("not implemented")
-placeholder
-
 func (s *stubAccountRepo) SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error {
 	return errors.New("not implemented")
 placeholder
@@ -1047,6 +1047,10 @@ placeholder
 func (s *stubAccountRepo) BulkUpdate(ctx context.Context, ids []int64, updates service.AccountBulkUpdate) (int64, error) {
 	s.bulkUpdateIDs = append([]int64{placeholder, ids...)
 	return int64(len(ids)), nil
+placeholder
+
+func (s *stubAccountRepo) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
+	return nil, errors.New("not implemented")
 placeholder
 
 type stubProxyRepo struct{placeholder

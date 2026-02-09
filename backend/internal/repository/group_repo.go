@@ -191,7 +191,7 @@ placeholder
 	groups, err := q.
 		Offset(params.Offset()).
 		Limit(params.Limit()).
-		Order(dbent.Asc(group.FieldID)).
+		Order(dbent.Asc(group.FieldSortOrder), dbent.Asc(group.FieldID)).
 		All(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -218,7 +218,7 @@ placeholder
 func (r *groupRepository) ListActive(ctx context.Context) ([]service.Group, error) {
 	groups, err := r.client.Group.Query().
 		Where(group.StatusEQ(service.StatusActive)).
-		Order(dbent.Asc(group.FieldID)).
+		Order(dbent.Asc(group.FieldSortOrder), dbent.Asc(group.FieldID)).
 		All(ctx)
 	if err != nil {
 		return nil, err
@@ -245,7 +245,7 @@ placeholder
 func (r *groupRepository) ListActiveByPlatform(ctx context.Context, platform string) ([]service.Group, error) {
 	groups, err := r.client.Group.Query().
 		Where(group.StatusEQ(service.StatusActive), group.PlatformEQ(platform)).
-		Order(dbent.Asc(group.FieldID)).
+		Order(dbent.Asc(group.FieldSortOrder), dbent.Asc(group.FieldID)).
 		All(ctx)
 	if err != nil {
 		return nil, err
@@ -493,6 +493,32 @@ placeholder
 	// 发送调度器事件
 	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventGroupChanged, nil, &groupID, nil); err != nil {
 		log.Printf("[SchedulerOutbox] enqueue bind accounts to group failed: group=%d err=%v", groupID, err)
+placeholder
+
+	return nil
+placeholder
+
+// UpdateSortOrders 批量更新分组排序
+func (r *groupRepository) UpdateSortOrders(ctx context.Context, updates []service.GroupSortOrderUpdate) error {
+	if len(updates) == 0 {
+		return nil
+placeholder
+
+	// 使用事务批量更新
+	tx, err := r.client.Tx(ctx)
+	if err != nil {
+		return err
+placeholder
+	defer func() { _ = tx.Rollback() placeholder()
+
+	for _, u := range updates {
+		if _, err := tx.Group.UpdateOneID(u.ID).SetSortOrder(u.SortOrder).Save(ctx); err != nil {
+			return translatePersistenceError(err, service.ErrGroupNotFound, nil)
+	placeholder
+placeholder
+
+	if err := tx.Commit(); err != nil {
+		return err
 placeholder
 
 	return nil
