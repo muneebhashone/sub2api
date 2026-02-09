@@ -424,10 +424,17 @@ type TestAccountRequest struct {
 placeholder
 
 type SyncFromCRSRequest struct {
-	BaseURL     string `json:"base_url" binding:"required"`
-	Username    string `json:"username" binding:"required"`
-	Password    string `json:"password" binding:"required"`
-	SyncProxies *bool  `json:"sync_proxies"`
+	BaseURL            string   `json:"base_url" binding:"required"`
+	Username           string   `json:"username" binding:"required"`
+	Password           string   `json:"password" binding:"required"`
+	SyncProxies        *bool    `json:"sync_proxies"`
+	SelectedAccountIDs []string `json:"selected_account_ids"`
+placeholder
+
+type PreviewFromCRSRequest struct {
+	BaseURL  string `json:"base_url" binding:"required"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 placeholder
 
 // Test handles testing account connectivity with SSE streaming
@@ -466,14 +473,37 @@ placeholder
 placeholder
 
 	result, err := h.crsSyncService.SyncFromCRS(c.Request.Context(), service.SyncFromCRSInput{
-		BaseURL:     req.BaseURL,
-		Username:    req.Username,
-		Password:    req.Password,
-		SyncProxies: syncProxies,
+		BaseURL:            req.BaseURL,
+		Username:           req.Username,
+		Password:           req.Password,
+		SyncProxies:        syncProxies,
+		SelectedAccountIDs: req.SelectedAccountIDs,
 placeholder)
 	if err != nil {
 		// Provide detailed error message for CRS sync failures
 		response.InternalError(c, "CRS sync failed: "+err.Error())
+		return
+placeholder
+
+	response.Success(c, result)
+placeholder
+
+// PreviewFromCRS handles previewing accounts from CRS before sync
+// POST /api/v1/admin/accounts/sync/crs/preview
+func (h *AccountHandler) PreviewFromCRS(c *gin.Context) {
+	var req PreviewFromCRSRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	result, err := h.crsSyncService.PreviewFromCRS(c.Request.Context(), service.SyncFromCRSInput{
+		BaseURL:  req.BaseURL,
+		Username: req.Username,
+		Password: req.Password,
+placeholder)
+	if err != nil {
+		response.InternalError(c, "CRS preview failed: "+err.Error())
 		return
 placeholder
 
