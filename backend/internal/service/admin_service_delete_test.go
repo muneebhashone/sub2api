@@ -172,6 +172,10 @@ func (s *groupRepoStub) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []
 	panic("unexpected GetAccountIDsByGroupIDs call")
 placeholder
 
+func (s *groupRepoStub) UpdateSortOrders(ctx context.Context, updates []GroupSortOrderUpdate) error {
+	return nil
+placeholder
+
 type proxyRepoStub struct {
 	deleteErr    error
 	countErr     error

@@ -140,6 +140,7 @@ const isRateLimited = computed(() => {
   return new Date(props.account.rate_limit_reset_at) > new Date()
 placeholder)
 
+
 // Computed: active model rate limits (Antigravity OAuth Smart Retry)
 const activeModelRateLimits = computed(() => {
   const modelLimits = (props.account.extra as Record<string, unknown> | undefined)?.model_rate_limits as
