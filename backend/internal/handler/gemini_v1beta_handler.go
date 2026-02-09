@@ -323,6 +323,7 @@ placeholder
 
 	maxAccountSwitches := h.maxAccountSwitchesGemini
 	switchCount := 0
+	antigravityExtraCount := 0
 	failedAccountIDs := make(map[int64]struct{placeholder)
 	var lastFailoverErr *service.UpstreamFailoverError
 	var forceCacheBilling bool // 粘性会话切换时的缓存计费标记
@@ -339,6 +340,15 @@ placeholder
 	placeholder
 		account := selection.Account
 		setOpsSelectedAccount(c, account.ID)
+
+		// 额外重试阶段：跳过非 Antigravity 账号
+		if switchCount >= maxAccountSwitches && account.Platform != service.PlatformAntigravity {
+			failedAccountIDs[account.ID] = struct{placeholder{placeholder
+			if selection.Acquired && selection.ReleaseFunc != nil {
+				selection.ReleaseFunc()
+		placeholder
+			continue
+	placeholder
 
 		// 检测账号切换：如果粘性会话绑定的账号与当前选择的账号不同，清除 thoughtSignature
 		// 注意：Gemini 原生 API 的 thoughtSignature 与具体上游账号强相关；跨账号透传会导致 400。
@@ -424,15 +434,23 @@ placeholder
 			var failoverErr *service.UpstreamFailoverError
 			if errors.As(err, &failoverErr) {
 				failedAccountIDs[account.ID] = struct{placeholder{placeholder
+				lastFailoverErr = failoverErr
 				if needForceCacheBilling(hasBoundSession, failoverErr) {
 					forceCacheBilling = true
 			placeholder
 				if switchCount >= maxAccountSwitches {
-					lastFailoverErr = failoverErr
-					h.handleGeminiFailoverExhausted(c, lastFailoverErr)
-					return
+					// 默认重试用完，进入 Antigravity 额外重试
+					antigravityExtraCount++
+					if antigravityExtraCount > h.antigravityExtraRetries {
+						h.handleGeminiFailoverExhausted(c, failoverErr)
+						return
+				placeholder
+					log.Printf("Gemini account %d: antigravity extra retry %d/%d", account.ID, antigravityExtraCount, h.antigravityExtraRetries)
+					if !sleepFixedDelay(c.Request.Context(), antigravityExtraRetryDelay) {
+						return
+				placeholder
+					continue
 			placeholder
-				lastFailoverErr = failoverErr
 				switchCount++
 				log.Printf("Gemini account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
 				if account.Platform == service.PlatformAntigravity {

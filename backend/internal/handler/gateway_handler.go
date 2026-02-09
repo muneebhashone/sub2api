@@ -39,6 +39,7 @@ type GatewayHandler struct {
 	concurrencyHelper         *ConcurrencyHelper
 	maxAccountSwitches        int
 	maxAccountSwitchesGemini  int
+	antigravityExtraRetries   int
 placeholder
 
 // NewGatewayHandler creates a new GatewayHandler
@@ -57,6 +58,7 @@ func NewGatewayHandler(
 	pingInterval := time.Duration(0)
 	maxAccountSwitches := 10
 	maxAccountSwitchesGemini := 3
+	antigravityExtraRetries := 10
 	if cfg != nil {
 		pingInterval = time.Duration(cfg.Concurrency.PingInterval) * time.Second
 		if cfg.Gateway.MaxAccountSwitches > 0 {
@@ -65,6 +67,7 @@ func NewGatewayHandler(
 		if cfg.Gateway.MaxAccountSwitchesGemini > 0 {
 			maxAccountSwitchesGemini = cfg.Gateway.MaxAccountSwitchesGemini
 	placeholder
+		antigravityExtraRetries = cfg.Gateway.AntigravityExtraRetries
 placeholder
 	return &GatewayHandler{
 		gatewayService:            gatewayService,
@@ -78,6 +81,7 @@ placeholder
 		concurrencyHelper:         NewConcurrencyHelper(concurrencyService, SSEPingFormatClaude, pingInterval),
 		maxAccountSwitches:        maxAccountSwitches,
 		maxAccountSwitchesGemini:  maxAccountSwitchesGemini,
+		antigravityExtraRetries:   antigravityExtraRetries,
 placeholder
 placeholder
 
@@ -234,6 +238,7 @@ placeholder
 	if platform == service.PlatformGemini {
 		maxAccountSwitches := h.maxAccountSwitchesGemini
 		switchCount := 0
+		antigravityExtraCount := 0
 		failedAccountIDs := make(map[int64]struct{placeholder)
 		var lastFailoverErr *service.UpstreamFailoverError
 		var forceCacheBilling bool // 粘性会话切换时的缓存计费标记
@@ -254,6 +259,15 @@ placeholder
 		placeholder
 			account := selection.Account
 			setOpsSelectedAccount(c, account.ID)
+
+			// 额外重试阶段：跳过非 Antigravity 账号
+			if switchCount >= maxAccountSwitches && account.Platform != service.PlatformAntigravity {
+				failedAccountIDs[account.ID] = struct{placeholder{placeholder
+				if selection.Acquired && selection.ReleaseFunc != nil {
+					selection.ReleaseFunc()
+			placeholder
+				continue
+		placeholder
 
 			// 检查请求拦截（预热请求、SUGGESTION MODE等）
 			if account.IsInterceptWarmupEnabled() {
@@ -345,8 +359,17 @@ placeholder
 						forceCacheBilling = true
 				placeholder
 					if switchCount >= maxAccountSwitches {
-						h.handleFailoverExhausted(c, failoverErr, service.PlatformGemini, streamStarted)
-						return
+						// 默认重试用完，进入 Antigravity 额外重试
+						antigravityExtraCount++
+						if antigravityExtraCount > h.antigravityExtraRetries {
+							h.handleFailoverExhausted(c, failoverErr, service.PlatformGemini, streamStarted)
+							return
+					placeholder
+						log.Printf("Account %d: antigravity extra retry %d/%d", account.ID, antigravityExtraCount, h.antigravityExtraRetries)
+						if !sleepFixedDelay(c.Request.Context(), antigravityExtraRetryDelay) {
+							return
+					placeholder
+						continue
 				placeholder
 					switchCount++
 					log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
@@ -399,6 +422,7 @@ placeholder
 	for {
 		maxAccountSwitches := h.maxAccountSwitches
 		switchCount := 0
+		antigravityExtraCount := 0
 		failedAccountIDs := make(map[int64]struct{placeholder)
 		var lastFailoverErr *service.UpstreamFailoverError
 		retryWithFallback := false
@@ -421,6 +445,15 @@ placeholder
 		placeholder
 			account := selection.Account
 			setOpsSelectedAccount(c, account.ID)
+
+			// 额外重试阶段：跳过非 Antigravity 账号
+			if switchCount >= maxAccountSwitches && account.Platform != service.PlatformAntigravity {
+				failedAccountIDs[account.ID] = struct{placeholder{placeholder
+				if selection.Acquired && selection.ReleaseFunc != nil {
+					selection.ReleaseFunc()
+			placeholder
+				continue
+		placeholder
 
 			// 检查请求拦截（预热请求、SUGGESTION MODE等）
 			if account.IsInterceptWarmupEnabled() {
@@ -545,8 +578,17 @@ placeholder
 						forceCacheBilling = true
 				placeholder
 					if switchCount >= maxAccountSwitches {
-						h.handleFailoverExhausted(c, failoverErr, account.Platform, streamStarted)
-						return
+						// 默认重试用完，进入 Antigravity 额外重试
+						antigravityExtraCount++
+						if antigravityExtraCount > h.antigravityExtraRetries {
+							h.handleFailoverExhausted(c, failoverErr, account.Platform, streamStarted)
+							return
+					placeholder
+						log.Printf("Account %d: antigravity extra retry %d/%d", account.ID, antigravityExtraCount, h.antigravityExtraRetries)
+						if !sleepFixedDelay(c.Request.Context(), antigravityExtraRetryDelay) {
+							return
+					placeholder
+						continue
 				placeholder
 					switchCount++
 					log.Printf("Account %d: upstream error %d, switching account %d/%d", account.ID, failoverErr.StatusCode, switchCount, maxAccountSwitches)
@@ -827,6 +869,21 @@ placeholder
 // 返回 false 表示 context 已取消。
 func sleepFailoverDelay(ctx context.Context, switchCount int) bool {
 	delay := time.Duration(switchCount-1) * time.Second
+	if delay <= 0 {
+		return true
+placeholder
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(delay):
+		return true
+placeholder
+placeholder
+
+const antigravityExtraRetryDelay = 500 * time.Millisecond
+
+// sleepFixedDelay 固定延时等待，返回 false 表示 context 已取消。
+func sleepFixedDelay(ctx context.Context, delay time.Duration) bool {
 	if delay <= 0 {
 		return true
 placeholder
