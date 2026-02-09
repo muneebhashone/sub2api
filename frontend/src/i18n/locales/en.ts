@@ -1360,7 +1360,6 @@ export default {
         overloaded: 'Overloaded',
         tempUnschedulable: 'Temp Unschedulable',
         rateLimitedUntil: 'Rate limited until {timeplaceholder',
-        scopeRateLimitedUntil: '{scopeplaceholder rate limited until {timeplaceholder',
         modelRateLimitedUntil: '{modelplaceholder rate limited until {timeplaceholder',
         overloadedUntil: 'Overloaded until {timeplaceholder',
         viewTempUnschedDetails: 'View temp unschedulable details'
@@ -3063,7 +3062,6 @@ export default {
         empty: 'No data',
         queued: 'Queue {countplaceholder',
         rateLimited: 'Rate-limited {countplaceholder',
-        scopeRateLimitedTooltip: '{scopeplaceholder rate-limited ({countplaceholder accounts)',
         errorAccounts: 'Errors {countplaceholder',
         loadFailed: 'Failed to load concurrency data'
       placeholder,

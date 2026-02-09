@@ -142,9 +142,6 @@ placeholder
 func (m *mockAccountRepoForPlatform) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	return nil
 placeholder
-func (m *mockAccountRepoForPlatform) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope AntigravityQuotaScope, resetAt time.Time) error {
-	return nil
-placeholder
 func (m *mockAccountRepoForPlatform) SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error {
 	return nil
 placeholder
@@ -216,14 +213,6 @@ placeholder
 	return nil
 placeholder
 
-func (m *mockGatewayCacheForPlatform) IncrModelCallCount(ctx context.Context, accountID int64, model string) (int64, error) {
-	return 0, nil
-placeholder
-
-func (m *mockGatewayCacheForPlatform) GetModelLoadBatch(ctx context.Context, accountIDs []int64, model string) (map[int64]*ModelLoadInfo, error) {
-	return nil, nil
-placeholder
-
 type mockGroupRepoForGateway struct {
 	groups           map[int64]*Group
 	getByIDCalls     int
@@ -280,10 +269,6 @@ placeholder
 
 func (m *mockGroupRepoForGateway) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []int64) ([]int64, error) {
 	return nil, nil
-placeholder
-
-func (m *mockGroupRepoForGateway) UpdateSortOrders(ctx context.Context, updates []GroupSortOrderUpdate) error {
-	return nil
 placeholder
 
 func ptr[T any](v T) *T {
