@@ -78,6 +78,9 @@ placeholder
 func (r *stubAccountRepo) FindByExtraField(ctx context.Context, key string, value any) ([]service.Account, error) {
 	return nil, nil
 placeholder
+func (r *stubAccountRepo) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
+	return map[string]int64{placeholder, nil
+placeholder
 func (r *stubAccountRepo) Update(ctx context.Context, account *service.Account) error { return nil placeholder
 func (r *stubAccountRepo) Delete(ctx context.Context, id int64) error                 { return nil placeholder
 func (r *stubAccountRepo) List(ctx context.Context, params pagination.PaginationParams) ([]service.Account, *pagination.PaginationResult, error) {
@@ -136,9 +139,6 @@ func (r *stubAccountRepo) ListSchedulableByGroupIDAndPlatforms(ctx context.Conte
 	return r.ListSchedulableByPlatforms(ctx, platforms)
 placeholder
 func (r *stubAccountRepo) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
-	return nil
-placeholder
-func (r *stubAccountRepo) SetAntigravityQuotaScopeLimit(ctx context.Context, id int64, scope service.AntigravityQuotaScope, resetAt time.Time) error {
 	return nil
 placeholder
 func (r *stubAccountRepo) SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error {
@@ -225,6 +225,9 @@ func (r *stubGroupRepo) GetAccountIDsByGroupIDs(ctx context.Context, groupIDs []
 	return nil, nil
 placeholder
 func (r *stubGroupRepo) BindAccountsToGroup(ctx context.Context, groupID int64, accountIDs []int64) error {
+	return nil
+placeholder
+func (r *stubGroupRepo) UpdateSortOrders(ctx context.Context, updates []service.GroupSortOrderUpdate) error {
 	return nil
 placeholder
 
@@ -367,7 +370,7 @@ placeholder)
 		nil,
 		nil,
 		nil,
-		nil,
+		testutil.StubGatewayCache{placeholder,
 		cfg,
 		nil,
 		concurrencyService,
@@ -378,6 +381,7 @@ placeholder)
 		nil,
 		deferredService,
 		nil,
+		testutil.StubSessionLimitCache{placeholder,
 		nil,
 	)
 
