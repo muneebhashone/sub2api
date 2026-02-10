@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +22,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 // SoraGatewayHandler handles Sora chat completions requests
@@ -105,36 +106,29 @@ placeholder
 
 	setOpsRequestContext(c, "", false, body)
 
-	var reqBody map[string]any
-	if err := json.Unmarshal(body, &reqBody); err != nil {
-		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
-		return
-placeholder
-
-	reqModel, _ := reqBody["model"].(string)
+	// 使用 gjson 只读提取字段做校验，避免完整 Unmarshal
+	reqModel := gjson.GetBytes(body, "model").String()
 	if reqModel == "" {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
 		return
 placeholder
-	reqMessages, _ := reqBody["messages"].([]any)
-	if len(reqMessages) == 0 {
+	if !gjson.GetBytes(body, "messages").Exists() || gjson.GetBytes(body, "messages").Type != gjson.JSON {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "messages is required")
 		return
 placeholder
 
-	clientStream, _ := reqBody["stream"].(bool)
+	clientStream := gjson.GetBytes(body, "stream").Bool()
 	if !clientStream {
 		if h.streamMode == "error" {
 			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Sora requires stream=true")
 			return
 	placeholder
-		reqBody["stream"] = true
-		updated, err := json.Marshal(reqBody)
+		var err error
+		body, err = sjson.SetBytes(body, "stream", true)
 		if err != nil {
 			h.errorResponse(c, http.StatusInternalServerError, "api_error", "Failed to process request")
 			return
 	placeholder
-		body = updated
 placeholder
 
 	setOpsRequestContext(c, reqModel, clientStream, body)
@@ -193,7 +187,7 @@ placeholder
 		return
 placeholder
 
-	sessionHash := generateOpenAISessionHash(c, reqBody)
+	sessionHash := generateOpenAISessionHash(c, body)
 
 	maxAccountSwitches := h.maxAccountSwitches
 	switchCount := 0
@@ -302,7 +296,7 @@ placeholder
 placeholder
 placeholder
 
-func generateOpenAISessionHash(c *gin.Context, reqBody map[string]any) string {
+func generateOpenAISessionHash(c *gin.Context, body []byte) string {
 	if c == nil {
 		return ""
 placeholder
@@ -310,10 +304,8 @@ placeholder
 	if sessionID == "" {
 		sessionID = strings.TrimSpace(c.GetHeader("conversation_id"))
 placeholder
-	if sessionID == "" && reqBody != nil {
-		if v, ok := reqBody["prompt_cache_key"].(string); ok {
-			sessionID = strings.TrimSpace(v)
-	placeholder
+	if sessionID == "" && len(body) > 0 {
+		sessionID = strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String())
 placeholder
 	if sessionID == "" {
 		return ""
