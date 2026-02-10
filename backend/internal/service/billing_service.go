@@ -297,7 +297,7 @@ placeholder
 placeholder
 	outRangeCost, err := s.CalculateCost(model, outRangeTokens, rateMultiplier*extraMultiplier)
 	if err != nil {
-		return inRangeCost, nil // 出错时返回范围内成本
+		return inRangeCost, fmt.Errorf("out-range cost: %w", err)
 placeholder
 
 	// 合并成本
