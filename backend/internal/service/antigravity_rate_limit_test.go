@@ -915,6 +915,22 @@ placeholder
 placeholder
 placeholder
 
+func TestResolveAntigravityForwardBaseURL_DefaultDaily(t *testing.T) {
+	t.Setenv(antigravityForwardBaseURLEnv, "")
+
+	oldBaseURLs := append([]string(nil), antigravity.BaseURLs...)
+	defer func() {
+		antigravity.BaseURLs = oldBaseURLs
+placeholder()
+
+	prodURL := "https://prod.test"
+	dailyURL := "https://daily.test"
+	antigravity.BaseURLs = []string{dailyURL, prodURLplaceholder
+
+	resolved := resolveAntigravityForwardBaseURL()
+	require.Equal(t, dailyURL, resolved)
+placeholder
+
 func TestAntigravityAccountSwitchError_Error(t *testing.T) {
 	err := &AntigravityAccountSwitchError{
 		OriginalAccountID: 789,
