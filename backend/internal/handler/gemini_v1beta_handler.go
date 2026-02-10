@@ -542,6 +542,10 @@ placeholder
 				msg = *rule.CustomMessage
 		placeholder
 
+			if rule.SkipMonitoring {
+				c.Set(service.OpsSkipPassthroughKey, true)
+		placeholder
+
 			googleError(c, respCode, msg)
 			return
 	placeholder

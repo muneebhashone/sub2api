@@ -896,6 +896,10 @@ func (h *GatewayHandler) handleFailoverExhausted(c *gin.Context, failoverErr *se
 				msg = *rule.CustomMessage
 		placeholder
 
+			if rule.SkipMonitoring {
+				c.Set(service.OpsSkipPassthroughKey, true)
+		placeholder
+
 			h.handleStreamingAwareError(c, respCode, "upstream_error", msg, streamStarted)
 			return
 	placeholder
