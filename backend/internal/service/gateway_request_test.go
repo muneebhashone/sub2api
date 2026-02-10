@@ -450,9 +450,9 @@ placeholder{
 			errSubstr: "invalid model field type",
 	placeholder,
 		{
-			name:    "model 为 null — gjson Null 类型触发类型校验错误",
-			body:    `{"model":nullplaceholder`,
-			wantErr: true, // gjson: Exists()=true, Type=Null != String → 返回错误
+			name:      "model 为 null — gjson Null 类型触发类型校验错误",
+			body:      `{"model":nullplaceholder`,
+			wantErr:   true, // gjson: Exists()=true, Type=Null != String → 返回错误
 			errSubstr: "invalid model field type",
 	placeholder,
 		{
@@ -468,9 +468,9 @@ placeholder{
 			errSubstr: "invalid stream field type",
 	placeholder,
 		{
-			name:    "stream 为 null — gjson Null 类型触发类型校验错误",
-			body:    `{"stream":nullplaceholder`,
-			wantErr: true, // gjson: Exists()=true, Type=Null != True && != False → 返回错误
+			name:      "stream 为 null — gjson Null 类型触发类型校验错误",
+			body:      `{"stream":nullplaceholder`,
+			wantErr:   true, // gjson: Exists()=true, Type=Null != True && != False → 返回错误
 			errSubstr: "invalid stream field type",
 	placeholder,
 		{
@@ -499,16 +499,16 @@ placeholder
 // Task 7.2 — 可选字段缺失测试
 func TestParseGatewayRequest_OptionalFieldsMissing(t *testing.T) {
 	tests := []struct {
-		name             string
-		body             string
-		wantModel        string
-		wantStream       bool
-		wantMetadataUID  string
-		wantHasSystem    bool
-		wantThinking     bool
-		wantMaxTokens    int
-		wantMessagesNil  bool
-		wantMessagesLen  int
+		name            string
+		body            string
+		wantModel       string
+		wantStream      bool
+		wantMetadataUID string
+		wantHasSystem   bool
+		wantThinking    bool
+		wantMaxTokens   int
+		wantMessagesNil bool
+		wantMessagesLen int
 placeholder{
 		{
 			name:            "完全空 JSON — 所有字段零值",
