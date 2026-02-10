@@ -32,6 +32,7 @@ type CreateErrorPassthroughRuleRequest struct {
 	ResponseCode    *int     `json:"response_code"`
 	PassthroughBody *bool    `json:"passthrough_body"`
 	CustomMessage   *string  `json:"custom_message"`
+	SkipMonitoring  *bool    `json:"skip_monitoring"`
 	Description     *string  `json:"description"`
 placeholder
 
@@ -48,6 +49,7 @@ type UpdateErrorPassthroughRuleRequest struct {
 	ResponseCode    *int     `json:"response_code"`
 	PassthroughBody *bool    `json:"passthrough_body"`
 	CustomMessage   *string  `json:"custom_message"`
+	SkipMonitoring  *bool    `json:"skip_monitoring"`
 	Description     *string  `json:"description"`
 placeholder
 
@@ -122,6 +124,9 @@ placeholder
 placeholder else {
 		rule.PassthroughBody = true
 placeholder
+	if req.SkipMonitoring != nil {
+		rule.SkipMonitoring = *req.SkipMonitoring
+placeholder
 	rule.ResponseCode = req.ResponseCode
 	rule.CustomMessage = req.CustomMessage
 	rule.Description = req.Description
@@ -190,6 +195,7 @@ placeholder
 		ResponseCode:    existing.ResponseCode,
 		PassthroughBody: existing.PassthroughBody,
 		CustomMessage:   existing.CustomMessage,
+		SkipMonitoring:  existing.SkipMonitoring,
 		Description:     existing.Description,
 placeholder
 
@@ -229,6 +235,9 @@ placeholder
 placeholder
 	if req.Description != nil {
 		rule.Description = req.Description
+placeholder
+	if req.SkipMonitoring != nil {
+		rule.SkipMonitoring = *req.SkipMonitoring
 placeholder
 
 	// 确保切片不为 nil
