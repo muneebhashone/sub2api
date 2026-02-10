@@ -53,4 +53,18 @@ export async function exchangeCode(
   return data
 placeholder
 
-export default { generateAuthUrl, exchangeCode placeholder
+export async function refreshAntigravityToken(
+  refreshToken: string,
+  proxyId?: number | null
+): Promise<AntigravityTokenInfo> {
+  const payload: Record<string, any> = { refresh_token: refreshToken placeholder
+  if (proxyId) payload.proxy_id = proxyId
+  
+  const { data placeholder = await apiClient.post<AntigravityTokenInfo>(
+    '/admin/antigravity/oauth/refresh-token',
+    payload
+  )
+  return data
+placeholder
+
+export default { generateAuthUrl, exchangeCode, refreshAntigravityToken placeholder
