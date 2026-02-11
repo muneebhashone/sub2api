@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestConvertClaudeToolsToGeminiTools_CustomType 测试custom类型工具转换
@@ -201,5 +203,72 @@ placeholder
 	s := string(out)
 	if !strings.Contains(s, "\"thoughtSignature\":\""+geminiDummyThoughtSignature+"\"") {
 		t.Fatalf("expected injected thoughtSignature %q, got: %s", geminiDummyThoughtSignature, s)
+placeholder
+placeholder
+
+func TestExtractGeminiUsage_ThoughtsTokenCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		resp          map[string]any
+		wantInput     int
+		wantOutput    int
+		wantCacheRead int
+		wantNil       bool
+placeholder{
+		{
+			name: "with thoughtsTokenCount",
+			resp: map[string]any{
+				"usageMetadata": map[string]any{
+					"promptTokenCount":     float64(100),
+					"candidatesTokenCount": float64(20),
+					"thoughtsTokenCount":   float64(50),
+			placeholder,
+		placeholder,
+			wantInput:  100,
+			wantOutput: 70,
+	placeholder,
+		{
+			name: "with thoughtsTokenCount and cache",
+			resp: map[string]any{
+				"usageMetadata": map[string]any{
+					"promptTokenCount":        float64(100),
+					"candidatesTokenCount":    float64(20),
+					"cachedContentTokenCount": float64(30),
+					"thoughtsTokenCount":      float64(50),
+			placeholder,
+		placeholder,
+			wantInput:     70,
+			wantOutput:    70,
+			wantCacheRead: 30,
+	placeholder,
+		{
+			name: "without thoughtsTokenCount (old model)",
+			resp: map[string]any{
+				"usageMetadata": map[string]any{
+					"promptTokenCount":     float64(100),
+					"candidatesTokenCount": float64(20),
+			placeholder,
+		placeholder,
+			wantInput:  100,
+			wantOutput: 20,
+	placeholder,
+		{
+			name:    "no usageMetadata",
+			resp:    map[string]any{placeholder,
+			wantNil: true,
+	placeholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usage := extractGeminiUsage(tt.resp)
+			if tt.wantNil {
+				require.Nil(t, usage)
+				return
+		placeholder
+			require.NotNil(t, usage)
+			require.Equal(t, tt.wantInput, usage.InputTokens)
+			require.Equal(t, tt.wantOutput, usage.OutputTokens)
+			require.Equal(t, tt.wantCacheRead, usage.CacheReadInputTokens)
+	placeholder)
 placeholder
 placeholder
