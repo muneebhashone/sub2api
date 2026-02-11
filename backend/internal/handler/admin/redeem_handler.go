@@ -202,7 +202,7 @@ placeholder
 	writer := csv.NewWriter(&buf)
 
 	// Write header
-	if err := writer.Write([]string{"id", "code", "type", "value", "status", "used_by", "used_at", "created_at"placeholder); err != nil {
+	if err := writer.Write([]string{"id", "code", "type", "value", "status", "used_by", "used_by_email", "used_at", "created_at"placeholder); err != nil {
 		response.InternalError(c, "Failed to export redeem codes: "+err.Error())
 		return
 placeholder
@@ -212,6 +212,10 @@ placeholder
 		usedBy := ""
 		if code.UsedBy != nil {
 			usedBy = fmt.Sprintf("%d", *code.UsedBy)
+	placeholder
+		usedByEmail := ""
+		if code.User != nil {
+			usedByEmail = code.User.Email
 	placeholder
 		usedAt := ""
 		if code.UsedAt != nil {
@@ -224,6 +228,7 @@ placeholder
 			fmt.Sprintf("%.2f", code.Value),
 			code.Status,
 			usedBy,
+			usedByEmail,
 			usedAt,
 			code.CreatedAt.Format("2006-01-02 15:04:05"),
 	placeholder); err != nil {
