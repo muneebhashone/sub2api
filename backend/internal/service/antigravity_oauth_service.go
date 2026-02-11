@@ -273,10 +273,19 @@ func (s *AntigravityOAuthService) loadProjectIDWithRetry(ctx context.Context, ac
 	placeholder
 
 		client := antigravity.NewClient(proxyURL)
-		loadResp, _, err := client.LoadCodeAssist(ctx, accessToken)
+		loadResp, loadRaw, err := client.LoadCodeAssist(ctx, accessToken)
 
 		if err == nil && loadResp != nil && loadResp.CloudAICompanionProject != "" {
 			return loadResp.CloudAICompanionProject, nil
+	placeholder
+
+		if err == nil {
+			if projectID, onboardErr := tryOnboardProjectID(ctx, client, accessToken, loadRaw); onboardErr == nil && projectID != "" {
+				return projectID, nil
+		placeholder else if onboardErr != nil {
+				lastErr = onboardErr
+				continue
+		placeholder
 	placeholder
 
 		// 记录错误
@@ -290,6 +299,65 @@ func (s *AntigravityOAuthService) loadProjectIDWithRetry(ctx context.Context, ac
 placeholder
 
 	return "", fmt.Errorf("获取 project_id 失败 (重试 %d 次后): %w", maxRetries, lastErr)
+placeholder
+
+func tryOnboardProjectID(ctx context.Context, client *antigravity.Client, accessToken string, loadRaw map[string]any) (string, error) {
+	tierID := resolveDefaultTierID(loadRaw)
+	if tierID == "" {
+		return "", fmt.Errorf("loadCodeAssist 未返回可用的默认 tier")
+placeholder
+
+	projectID, err := client.OnboardUser(ctx, accessToken, tierID)
+	if err != nil {
+		return "", fmt.Errorf("onboardUser 失败 (tier=%s): %w", tierID, err)
+placeholder
+	return projectID, nil
+placeholder
+
+func resolveDefaultTierID(loadRaw map[string]any) string {
+	if len(loadRaw) == 0 {
+		return ""
+placeholder
+
+	rawTiers, ok := loadRaw["allowedTiers"]
+	if !ok {
+		return ""
+placeholder
+
+	tiers, ok := rawTiers.([]any)
+	if !ok {
+		return ""
+placeholder
+
+	for _, rawTier := range tiers {
+		tier, ok := rawTier.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		if isDefault, _ := tier["isDefault"].(bool); !isDefault {
+			continue
+	placeholder
+		if id, ok := tier["id"].(string); ok {
+			id = strings.TrimSpace(id)
+			if id != "" {
+				return id
+		placeholder
+	placeholder
+placeholder
+
+	return ""
+placeholder
+
+// FillProjectID 仅获取 project_id，不刷新 OAuth token
+func (s *AntigravityOAuthService) FillProjectID(ctx context.Context, account *Account, accessToken string) (string, error) {
+	var proxyURL string
+	if account.ProxyID != nil {
+		proxy, err := s.proxyRepo.GetByID(ctx, *account.ProxyID)
+		if err == nil && proxy != nil {
+			proxyURL = proxy.URL()
+	placeholder
+placeholder
+	return s.loadProjectIDWithRetry(ctx, accessToken, proxyURL, 3)
 placeholder
 
 // BuildAccountCredentials 构建账户凭证
