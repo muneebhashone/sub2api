@@ -284,6 +284,7 @@ func (s *AntigravityOAuthService) loadProjectIDWithRetry(ctx context.Context, ac
 				return projectID, nil
 		placeholder else if onboardErr != nil {
 				lastErr = onboardErr
+				continue
 		placeholder
 	placeholder
 
