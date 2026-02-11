@@ -326,7 +326,7 @@ placeholder
 	var lastErr error
 	for urlIdx, baseURL := range availableURLs {
 		apiURL := baseURL + "/v1internal:loadCodeAssist"
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, strings.NewReader(string(bodyBytes)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
 		if err != nil {
 			lastErr = fmt.Errorf("创建请求失败: %w", err)
 			continue
@@ -405,7 +405,7 @@ placeholder
 		apiURL := baseURL + "/v1internal:onboardUser"
 
 		for attempt := 1; attempt <= 5; attempt++ {
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, strings.NewReader(string(bodyBytes)))
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
 			if err != nil {
 				lastErr = fmt.Errorf("创建请求失败: %w", err)
 				break
@@ -456,7 +456,11 @@ placeholder
 		placeholder
 
 			// done=false 时等待后重试（与 CLIProxyAPI 行为一致）
-			time.Sleep(2 * time.Second)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(2 * time.Second):
+		placeholder
 	placeholder
 placeholder
 
@@ -521,7 +525,7 @@ placeholder
 	var lastErr error
 	for urlIdx, baseURL := range availableURLs {
 		apiURL := baseURL + "/v1internal:fetchAvailableModels"
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, strings.NewReader(string(bodyBytes)))
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
 		if err != nil {
 			lastErr = fmt.Errorf("创建请求失败: %w", err)
 			continue
