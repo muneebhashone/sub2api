@@ -1183,7 +1183,10 @@ func isOpenAIPassthroughBlockedRequestHeader(lowerKey string) bool {
 	case "connection", "transfer-encoding", "keep-alive", "proxy-connection", "upgrade", "te", "trailer":
 		return true
 	// 入站鉴权与潜在泄露
-	case "authorization", "x-api-key", "x-goog-api-key", "cookie":
+	case "authorization", "x-api-key", "x-goog-api-key", "cookie", "proxy-authorization":
+		return true
+	// 由 Go http client 自动协商压缩；透传模式需避免上游返回压缩体影响 SSE/usage 解析
+	case "accept-encoding":
 		return true
 	// 由 HTTP 库管理
 	case "host", "content-length":
@@ -1224,6 +1227,7 @@ placeholder
 
 	usage := &OpenAIUsage{placeholder
 	var firstTokenMs *int
+	clientDisconnected := false
 
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
@@ -1245,13 +1249,20 @@ placeholder
 			s.parseSSEUsage(data, usage)
 	placeholder
 
-		if _, err := fmt.Fprintln(w, line); err != nil {
-			// 客户端断开时停止写入
-			break
+		if !clientDisconnected {
+			if _, err := fmt.Fprintln(w, line); err != nil {
+				clientDisconnected = true
+				log.Printf("[OpenAI passthrough] Client disconnected during streaming, continue draining upstream for usage: account=%d", account.ID)
+		placeholder else {
+				flusher.Flush()
+		placeholder
 	placeholder
-		flusher.Flush()
 placeholder
 	if err := scanner.Err(); err != nil {
+		if clientDisconnected {
+			log.Printf("[OpenAI passthrough] Upstream read error after client disconnect: account=%d err=%v", account.ID, err)
+			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
+	placeholder
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
 	placeholder
