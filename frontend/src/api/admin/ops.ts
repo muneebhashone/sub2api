@@ -850,6 +850,77 @@ export interface OpsAggregationSettings {
   aggregation_enabled: boolean
 placeholder
 
+export interface OpsRuntimeLogConfig {
+  level: 'debug' | 'info' | 'warn' | 'error'
+  enable_sampling: boolean
+  sampling_initial: number
+  sampling_thereafter: number
+  caller: boolean
+  stacktrace_level: 'none' | 'error' | 'fatal'
+  retention_days: number
+  source?: string
+  updated_at?: string
+  updated_by_user_id?: number
+placeholder
+
+export interface OpsSystemLog {
+  id: number
+  created_at: string
+  level: string
+  component: string
+  message: string
+  request_id?: string
+  client_request_id?: string
+  user_id?: number | null
+  account_id?: number | null
+  platform?: string
+  model?: string
+  extra?: Record<string, any>
+placeholder
+
+export type OpsSystemLogListResponse = PaginatedResponse<OpsSystemLog>
+
+export interface OpsSystemLogQuery {
+  page?: number
+  page_size?: number
+  time_range?: '5m' | '30m' | '1h' | '6h' | '24h' | '7d' | '30d'
+  start_time?: string
+  end_time?: string
+  level?: string
+  component?: string
+  request_id?: string
+  client_request_id?: string
+  user_id?: number | null
+  account_id?: number | null
+  platform?: string
+  model?: string
+  q?: string
+placeholder
+
+export interface OpsSystemLogCleanupRequest {
+  start_time?: string
+  end_time?: string
+  level?: string
+  component?: string
+  request_id?: string
+  client_request_id?: string
+  user_id?: number | null
+  account_id?: number | null
+  platform?: string
+  model?: string
+  q?: string
+placeholder
+
+export interface OpsSystemLogSinkHealth {
+  queue_depth: number
+  queue_capacity: number
+  dropped_count: number
+  write_failed_count: number
+  written_count: number
+  avg_write_delay_ms: number
+  last_error?: string
+placeholder
+
 export interface OpsErrorLog {
   id: number
   created_at: string
@@ -1205,6 +1276,36 @@ export async function updateAlertRuntimeSettings(config: OpsAlertRuntimeSettings
   return data
 placeholder
 
+export async function getRuntimeLogConfig(): Promise<OpsRuntimeLogConfig> {
+  const { data placeholder = await apiClient.get<OpsRuntimeLogConfig>('/admin/ops/runtime/logging')
+  return data
+placeholder
+
+export async function updateRuntimeLogConfig(config: OpsRuntimeLogConfig): Promise<OpsRuntimeLogConfig> {
+  const { data placeholder = await apiClient.put<OpsRuntimeLogConfig>('/admin/ops/runtime/logging', config)
+  return data
+placeholder
+
+export async function resetRuntimeLogConfig(): Promise<OpsRuntimeLogConfig> {
+  const { data placeholder = await apiClient.post<OpsRuntimeLogConfig>('/admin/ops/runtime/logging/reset')
+  return data
+placeholder
+
+export async function listSystemLogs(params: OpsSystemLogQuery): Promise<OpsSystemLogListResponse> {
+  const { data placeholder = await apiClient.get<OpsSystemLogListResponse>('/admin/ops/system-logs', { params placeholder)
+  return data
+placeholder
+
+export async function cleanupSystemLogs(payload: OpsSystemLogCleanupRequest): Promise<{ deleted: number placeholder> {
+  const { data placeholder = await apiClient.post<{ deleted: number placeholder>('/admin/ops/system-logs/cleanup', payload)
+  return data
+placeholder
+
+export async function getSystemLogSinkHealth(): Promise<OpsSystemLogSinkHealth> {
+  const { data placeholder = await apiClient.get<OpsSystemLogSinkHealth>('/admin/ops/system-logs/health')
+  return data
+placeholder
+
 // Advanced settings (DB-backed)
 export async function getAdvancedSettings(): Promise<OpsAdvancedSettings> {
   const { data placeholder = await apiClient.get<OpsAdvancedSettings>('/admin/ops/advanced-settings')
@@ -1272,10 +1373,16 @@ export const opsAPI = {
   updateEmailNotificationConfig,
   getAlertRuntimeSettings,
   updateAlertRuntimeSettings,
+  getRuntimeLogConfig,
+  updateRuntimeLogConfig,
+  resetRuntimeLogConfig,
   getAdvancedSettings,
   updateAdvancedSettings,
   getMetricThresholds,
-  updateMetricThresholds
+  updateMetricThresholds,
+  listSystemLogs,
+  cleanupSystemLogs,
+  getSystemLogSinkHealth
 placeholder
 
 export default opsAPI

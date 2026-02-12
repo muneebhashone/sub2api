@@ -2,10 +2,10 @@ package service
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/zeromicro/go-zero/core/collection"
 )
 
@@ -34,21 +34,21 @@ placeholder
 
 // Start starts the timing wheel
 func (s *TimingWheelService) Start() {
-	log.Println("[TimingWheel] Started (auto-start by go-zero)")
+	logger.LegacyPrintf("service.timing_wheel", "%s", "[TimingWheel] Started (auto-start by go-zero)")
 placeholder
 
 // Stop stops the timing wheel
 func (s *TimingWheelService) Stop() {
 	s.stopOnce.Do(func() {
 		s.tw.Stop()
-		log.Println("[TimingWheel] Stopped")
+		logger.LegacyPrintf("service.timing_wheel", "%s", "[TimingWheel] Stopped")
 placeholder)
 placeholder
 
 // Schedule schedules a one-time task
 func (s *TimingWheelService) Schedule(name string, delay time.Duration, fn func()) {
 	if err := s.tw.SetTimer(name, fn, delay); err != nil {
-		log.Printf("[TimingWheel] SetTimer failed for %q: %v", name, err)
+		logger.LegacyPrintf("service.timing_wheel", "[TimingWheel] SetTimer failed for %q: %v", name, err)
 placeholder
 placeholder
 
@@ -58,11 +58,11 @@ func (s *TimingWheelService) ScheduleRecurring(name string, interval time.Durati
 	schedule = func() {
 		fn()
 		if err := s.tw.SetTimer(name, schedule, interval); err != nil {
-			log.Printf("[TimingWheel] recurring SetTimer failed for %q: %v", name, err)
+			logger.LegacyPrintf("service.timing_wheel", "[TimingWheel] recurring SetTimer failed for %q: %v", name, err)
 	placeholder
 placeholder
 	if err := s.tw.SetTimer(name, schedule, interval); err != nil {
-		log.Printf("[TimingWheel] initial SetTimer failed for %q: %v", name, err)
+		logger.LegacyPrintf("service.timing_wheel", "[TimingWheel] initial SetTimer failed for %q: %v", name, err)
 placeholder
 placeholder
 
