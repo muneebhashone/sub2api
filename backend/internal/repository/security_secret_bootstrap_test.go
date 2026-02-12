@@ -124,6 +124,7 @@ placeholder
 	stored, err := client.SecuritySecret.Query().Where(securitysecret.KeyEQ(securitySecretKeyJWT)).Only(context.Background())
 placeholder
 	require.Equal(t, "existing-jwt-secret-32bytes-long!!!!", stored.Value)
+	require.Equal(t, "existing-jwt-secret-32bytes-long!!!!", cfg.JWT.Secret)
 placeholder
 
 func TestGetOrCreateGeneratedSecuritySecretTrimmedExistingValue(t *testing.T) {
@@ -215,15 +216,17 @@ placeholder
 func TestCreateSecuritySecretIfAbsent(t *testing.T) {
 	client := newSecuritySecretTestClient(t)
 
-	err := createSecuritySecretIfAbsent(context.Background(), client, "abc", "short")
+	_, err := createSecuritySecretIfAbsent(context.Background(), client, "abc", "short")
 placeholder
 	require.Contains(t, err.Error(), "at least 32 bytes")
 
-	err = createSecuritySecretIfAbsent(context.Background(), client, "abc", "valid-jwt-secret-value-32bytes-long")
+	stored, err := createSecuritySecretIfAbsent(context.Background(), client, "abc", "valid-jwt-secret-value-32bytes-long")
 placeholder
+	require.Equal(t, "valid-jwt-secret-value-32bytes-long", stored)
 
-	err = createSecuritySecretIfAbsent(context.Background(), client, "abc", "another-valid-secret-value-32bytes")
+	stored, err = createSecuritySecretIfAbsent(context.Background(), client, "abc", "another-valid-secret-value-32bytes")
 placeholder
+	require.Equal(t, "valid-jwt-secret-value-32bytes-long", stored)
 
 	count, err := client.SecuritySecret.Query().Where(securitysecret.KeyEQ("abc")).Count(context.Background())
 placeholder
@@ -232,13 +235,75 @@ placeholder
 
 func TestCreateSecuritySecretIfAbsentValidationError(t *testing.T) {
 	client := newSecuritySecretTestClient(t)
-	err := createSecuritySecretIfAbsent(
+	_, err := createSecuritySecretIfAbsent(
 		context.Background(),
 		client,
 		strings.Repeat("k", 101),
 		"valid-jwt-secret-value-32bytes-long",
 	)
 placeholder
+placeholder
+
+func TestCreateSecuritySecretIfAbsentExecError(t *testing.T) {
+	client := newSecuritySecretTestClient(t)
+	require.NoError(t, client.Close())
+
+	_, err := createSecuritySecretIfAbsent(context.Background(), client, "closed-client-key", "valid-jwt-secret-value-32bytes-long")
+placeholder
+placeholder
+
+func TestQuerySecuritySecretWithRetrySuccess(t *testing.T) {
+	client := newSecuritySecretTestClient(t)
+	created, err := client.SecuritySecret.Create().
+		SetKey("retry_success_key").
+		SetValue("retry-success-jwt-secret-value-32!!").
+		Save(context.Background())
+placeholder
+
+	got, err := querySecuritySecretWithRetry(context.Background(), client, "retry_success_key")
+placeholder
+	require.Equal(t, created.ID, got.ID)
+	require.Equal(t, "retry-success-jwt-secret-value-32!!", got.Value)
+placeholder
+
+func TestQuerySecuritySecretWithRetryExhausted(t *testing.T) {
+	client := newSecuritySecretTestClient(t)
+
+	_, err := querySecuritySecretWithRetry(context.Background(), client, "retry_missing_key")
+placeholder
+	require.True(t, isSecretNotFoundError(err))
+placeholder
+
+func TestQuerySecuritySecretWithRetryContextCanceled(t *testing.T) {
+	client := newSecuritySecretTestClient(t)
+	ctx, cancel := context.WithTimeout(context.Background(), securitySecretReadRetryWait/2)
+	defer cancel()
+
+	_, err := querySecuritySecretWithRetry(ctx, client, "retry_ctx_cancel_key")
+placeholder
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+placeholder
+
+func TestQuerySecuritySecretWithRetryNonNotFoundError(t *testing.T) {
+	client := newSecuritySecretTestClient(t)
+	require.NoError(t, client.Close())
+
+	_, err := querySecuritySecretWithRetry(context.Background(), client, "retry_closed_client_key")
+placeholder
+	require.False(t, isSecretNotFoundError(err))
+placeholder
+
+func TestSecretNotFoundHelpers(t *testing.T) {
+	require.False(t, isSecretNotFoundError(nil))
+	require.False(t, isSQLNoRowsError(nil))
+
+	require.True(t, isSQLNoRowsError(sql.ErrNoRows))
+	require.True(t, isSQLNoRowsError(fmt.Errorf("wrapped: %w", sql.ErrNoRows)))
+	require.True(t, isSQLNoRowsError(errors.New("sql: no rows in result set")))
+
+	require.True(t, isSecretNotFoundError(sql.ErrNoRows))
+	require.True(t, isSecretNotFoundError(errors.New("sql: no rows in result set")))
+	require.False(t, isSecretNotFoundError(errors.New("some other error")))
 placeholder
 
 func TestGenerateHexSecretReadError(t *testing.T) {
