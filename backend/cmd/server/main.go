@@ -137,7 +137,7 @@ placeholder
 placeholder
 
 func runMainServer() {
-	cfg, err := config.Load()
+	cfg, err := config.LoadForBootstrap()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 placeholder
