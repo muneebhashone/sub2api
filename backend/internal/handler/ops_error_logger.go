@@ -507,6 +507,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 				RetryCount:  0,
 				CreatedAt:   time.Now(),
 		placeholder
+			applyOpsLatencyFieldsFromContext(c, entry)
 
 			if apiKey != nil {
 				entry.APIKeyID = &apiKey.ID
@@ -618,6 +619,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 			RetryCount:  0,
 			CreatedAt:   time.Now(),
 	placeholder
+		applyOpsLatencyFieldsFromContext(c, entry)
 
 		// Capture upstream error context set by gateway services (if present).
 		// This does NOT affect the client response; it enriches Ops troubleshooting data.
@@ -744,6 +746,44 @@ placeholder
 placeholder
 	s := string(raw)
 	return &s
+placeholder
+
+func applyOpsLatencyFieldsFromContext(c *gin.Context, entry *service.OpsInsertErrorLogInput) {
+	if c == nil || entry == nil {
+		return
+placeholder
+	entry.AuthLatencyMs = getContextLatencyMs(c, service.OpsAuthLatencyMsKey)
+	entry.RoutingLatencyMs = getContextLatencyMs(c, service.OpsRoutingLatencyMsKey)
+	entry.UpstreamLatencyMs = getContextLatencyMs(c, service.OpsUpstreamLatencyMsKey)
+	entry.ResponseLatencyMs = getContextLatencyMs(c, service.OpsResponseLatencyMsKey)
+	entry.TimeToFirstTokenMs = getContextLatencyMs(c, service.OpsTimeToFirstTokenMsKey)
+placeholder
+
+func getContextLatencyMs(c *gin.Context, key string) *int64 {
+	if c == nil || strings.TrimSpace(key) == "" {
+		return nil
+placeholder
+	v, ok := c.Get(key)
+	if !ok {
+		return nil
+placeholder
+	var ms int64
+	switch t := v.(type) {
+	case int:
+		ms = int64(t)
+	case int32:
+		ms = int64(t)
+	case int64:
+		ms = t
+	case float64:
+		ms = int64(t)
+	default:
+		return nil
+placeholder
+	if ms < 0 {
+		return nil
+placeholder
+	return &ms
 placeholder
 
 type parsedOpsError struct {

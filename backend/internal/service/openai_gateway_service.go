@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,11 +33,10 @@ const (
 	// OpenAI Platform API for API Key accounts (fallback)
 	openaiPlatformAPIURL   = "https://api.openai.com/v1/responses"
 	openaiStickySessionTTL = time.Hour // 粘性会话TTL
-)
 
-// openaiSSEDataRe matches SSE data lines with optional whitespace after colon.
-// Some upstream APIs return non-standard "data:" without space (should be "data: ").
-var openaiSSEDataRe = regexp.MustCompile(`^data:\s*`)
+	// OpenAIParsedRequestBodyKey 缓存 handler 侧已解析的请求体，避免重复解析。
+	OpenAIParsedRequestBodyKey = "openai_parsed_request_body"
+)
 
 // OpenAI allowed headers whitelist (for non-OAuth accounts)
 var openaiAllowedHeaders = map[string]bool{
@@ -745,32 +743,37 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 	startTime := time.Now()
 
 	originalBody := body
+	reqModel, reqStream, promptCacheKey := extractOpenAIRequestMetaFromBody(body)
+	originalModel := reqModel
 
-	// Parse request body once (avoid multiple parse/serialize cycles)
-	var reqBody map[string]any
-	if err := json.Unmarshal(body, &reqBody); err != nil {
-		return nil, fmt.Errorf("parse request: %w", err)
+	isCodexCLI := openai.IsCodexCLIRequest(c.GetHeader("User-Agent")) || (s.cfg != nil && s.cfg.Gateway.ForceCodexCLI)
+	passthroughEnabled := account.Type == AccountTypeOAuth && account.IsOpenAIOAuthPassthroughEnabled() && isCodexCLI
+	if passthroughEnabled {
+		// 透传分支只需要轻量提取字段，避免热路径全量 Unmarshal。
+		reasoningEffort := extractOpenAIReasoningEffortFromBody(body, reqModel)
+		return s.forwardOAuthPassthrough(ctx, c, account, originalBody, reqModel, reasoningEffort, reqStream, startTime)
 placeholder
 
-	// Extract model and stream from parsed body
-	reqModel, _ := reqBody["model"].(string)
-	reqStream, _ := reqBody["stream"].(bool)
-	promptCacheKey := ""
-	if v, ok := reqBody["prompt_cache_key"].(string); ok {
-		promptCacheKey = strings.TrimSpace(v)
+	reqBody, err := getOpenAIRequestBodyMap(c, body)
+	if err != nil {
+		return nil, err
+placeholder
+
+	if v, ok := reqBody["model"].(string); ok {
+		reqModel = v
+		originalModel = reqModel
+placeholder
+	if v, ok := reqBody["stream"].(bool); ok {
+		reqStream = v
+placeholder
+	if promptCacheKey == "" {
+		if v, ok := reqBody["prompt_cache_key"].(string); ok {
+			promptCacheKey = strings.TrimSpace(v)
+	placeholder
 placeholder
 
 	// Track if body needs re-serialization
 	bodyModified := false
-	originalModel := reqModel
-
-	isCodexCLI := openai.IsCodexCLIRequest(c.GetHeader("User-Agent")) || (s.cfg != nil && s.cfg.Gateway.ForceCodexCLI)
-
-	passthroughEnabled := account.Type == AccountTypeOAuth && account.IsOpenAIOAuthPassthroughEnabled() && isCodexCLI
-	if passthroughEnabled {
-		reasoningEffort := extractOpenAIReasoningEffort(reqBody, reqModel)
-		return s.forwardOAuthPassthrough(ctx, c, account, originalBody, reqModel, reasoningEffort, reqStream, startTime)
-placeholder
 
 	// 对所有请求执行模型映射（包含 Codex CLI）。
 	mappedModel := account.GetMappedModel(reqModel)
@@ -888,12 +891,12 @@ placeholder
 placeholder
 
 	// Capture upstream request body for ops retry of this attempt.
-	if c != nil {
-		c.Set(OpsUpstreamRequestBodyKey, string(body))
-placeholder
+	setOpsUpstreamRequestBody(c, body)
 
 	// Send request
+	upstreamStart := time.Now()
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
 	if err != nil {
 		// Ensure the client receives an error response (handlers assume Forward writes on non-failover errors).
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
@@ -1019,12 +1022,14 @@ placeholder
 		proxyURL = account.Proxy.URL()
 placeholder
 
+	setOpsUpstreamRequestBody(c, body)
 	if c != nil {
-		c.Set(OpsUpstreamRequestBodyKey, string(body))
 		c.Set("openai_passthrough", true)
 placeholder
 
+	upstreamStart := time.Now()
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
 	if err != nil {
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		setOpsUpstreamError(c, 0, safeErr, "")
@@ -1183,7 +1188,10 @@ func isOpenAIPassthroughBlockedRequestHeader(lowerKey string) bool {
 	case "connection", "transfer-encoding", "keep-alive", "proxy-connection", "upgrade", "te", "trailer":
 		return true
 	// 入站鉴权与潜在泄露
-	case "authorization", "x-api-key", "x-goog-api-key", "cookie":
+	case "authorization", "x-api-key", "x-goog-api-key", "cookie", "proxy-authorization":
+		return true
+	// 由 Go http client 自动协商压缩；透传模式需避免上游返回压缩体影响 SSE/usage 解析
+	case "accept-encoding":
 		return true
 	// 由 HTTP 库管理
 	case "host", "content-length":
@@ -1224,6 +1232,7 @@ placeholder
 
 	usage := &OpenAIUsage{placeholder
 	var firstTokenMs *int
+	clientDisconnected := false
 
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
@@ -1236,8 +1245,7 @@ placeholder
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if openaiSSEDataRe.MatchString(line) {
-			data := openaiSSEDataRe.ReplaceAllString(line, "")
+		if data, ok := extractOpenAISSEDataLine(line); ok {
 			if firstTokenMs == nil && strings.TrimSpace(data) != "" {
 				ms := int(time.Since(startTime).Milliseconds())
 				firstTokenMs = &ms
@@ -1245,13 +1253,20 @@ placeholder
 			s.parseSSEUsage(data, usage)
 	placeholder
 
-		if _, err := fmt.Fprintln(w, line); err != nil {
-			// 客户端断开时停止写入
-			break
+		if !clientDisconnected {
+			if _, err := fmt.Fprintln(w, line); err != nil {
+				clientDisconnected = true
+				log.Printf("[OpenAI passthrough] Client disconnected during streaming, continue draining upstream for usage: account=%d", account.ID)
+		placeholder else {
+				flusher.Flush()
+		placeholder
 	placeholder
-		flusher.Flush()
 placeholder
 	if err := scanner.Err(); err != nil {
+		if clientDisconnected {
+			log.Printf("[OpenAI passthrough] Upstream read error after client disconnect: account=%d err=%v", account.ID, err)
+			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
+	placeholder
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
 	placeholder
@@ -1739,8 +1754,7 @@ placeholder
 			lastDataAt = time.Now()
 
 			// Extract data from SSE line (supports both "data: " and "data:" formats)
-			if openaiSSEDataRe.MatchString(line) {
-				data := openaiSSEDataRe.ReplaceAllString(line, "")
+			if data, ok := extractOpenAISSEDataLine(line); ok {
 
 				// Replace model in response if needed
 				if needModelReplace {
@@ -1816,11 +1830,27 @@ placeholder
 
 placeholder
 
+// extractOpenAISSEDataLine 低开销提取 SSE `data:` 行内容。
+// 兼容 `data: xxx` 与 `data:xxx` 两种格式。
+func extractOpenAISSEDataLine(line string) (string, bool) {
+	if !strings.HasPrefix(line, "data:") {
+		return "", false
+placeholder
+	start := len("data:")
+	for start < len(line) {
+		if line[start] != ' ' && line[start] != '	' {
+			break
+	placeholder
+		start++
+placeholder
+	return line[start:], true
+placeholder
+
 func (s *OpenAIGatewayService) replaceModelInSSELine(line, fromModel, toModel string) string {
-	if !openaiSSEDataRe.MatchString(line) {
+	data, ok := extractOpenAISSEDataLine(line)
+	if !ok {
 		return line
 placeholder
-	data := openaiSSEDataRe.ReplaceAllString(line, "")
 	if data == "" || data == "[DONE]" {
 		return line
 placeholder
@@ -1861,25 +1891,20 @@ placeholder
 placeholder
 
 func (s *OpenAIGatewayService) parseSSEUsage(data string, usage *OpenAIUsage) {
-	// Parse response.completed event for usage (OpenAI Responses format)
-	var event struct {
-		Type     string `json:"type"`
-		Response struct {
-			Usage struct {
-				InputTokens       int `json:"input_tokens"`
-				OutputTokens      int `json:"output_tokens"`
-				InputTokenDetails struct {
-					CachedTokens int `json:"cached_tokens"`
-			placeholder `json:"input_tokens_details"`
-		placeholder `json:"usage"`
-	placeholder `json:"response"`
+	if usage == nil || data == "" || data == "[DONE]" {
+		return
+placeholder
+	// 选择性解析：仅在数据中包含 completed 事件标识时才进入字段提取。
+	if !strings.Contains(data, `"response.completed"`) {
+		return
+placeholder
+	if gjson.Get(data, "type").String() != "response.completed" {
+		return
 placeholder
 
-	if json.Unmarshal([]byte(data), &event) == nil && event.Type == "response.completed" {
-		usage.InputTokens = event.Response.Usage.InputTokens
-		usage.OutputTokens = event.Response.Usage.OutputTokens
-		usage.CacheReadInputTokens = event.Response.Usage.InputTokenDetails.CachedTokens
-placeholder
+	usage.InputTokens = int(gjson.Get(data, "response.usage.input_tokens").Int())
+	usage.OutputTokens = int(gjson.Get(data, "response.usage.output_tokens").Int())
+	usage.CacheReadInputTokens = int(gjson.Get(data, "response.usage.input_tokens_details.cached_tokens").Int())
 placeholder
 
 func (s *OpenAIGatewayService) handleNonStreamingResponse(ctx context.Context, resp *http.Response, c *gin.Context, account *Account, originalModel, mappedModel string) (*OpenAIUsage, error) {
@@ -1990,10 +2015,10 @@ placeholder
 func extractCodexFinalResponse(body string) ([]byte, bool) {
 	lines := strings.Split(body, "\n")
 	for _, line := range lines {
-		if !openaiSSEDataRe.MatchString(line) {
+		data, ok := extractOpenAISSEDataLine(line)
+		if !ok {
 			continue
 	placeholder
-		data := openaiSSEDataRe.ReplaceAllString(line, "")
 		if data == "" || data == "[DONE]" {
 			continue
 	placeholder
@@ -2017,10 +2042,10 @@ func (s *OpenAIGatewayService) parseSSEUsageFromBody(body string) *OpenAIUsage {
 	usage := &OpenAIUsage{placeholder
 	lines := strings.Split(body, "\n")
 	for _, line := range lines {
-		if !openaiSSEDataRe.MatchString(line) {
+		data, ok := extractOpenAISSEDataLine(line)
+		if !ok {
 			continue
 	placeholder
-		data := openaiSSEDataRe.ReplaceAllString(line, "")
 		if data == "" || data == "[DONE]" {
 			continue
 	placeholder
@@ -2032,7 +2057,7 @@ placeholder
 func (s *OpenAIGatewayService) replaceModelInSSEBody(body, fromModel, toModel string) string {
 	lines := strings.Split(body, "\n")
 	for i, line := range lines {
-		if !openaiSSEDataRe.MatchString(line) {
+		if _, ok := extractOpenAISSEDataLine(line); !ok {
 			continue
 	placeholder
 		lines[i] = s.replaceModelInSSELine(line, fromModel, toModel)
@@ -2383,6 +2408,53 @@ placeholder)
 placeholder
 
 	return normalizeOpenAIReasoningEffort(parts[len(parts)-1])
+placeholder
+
+func extractOpenAIRequestMetaFromBody(body []byte) (model string, stream bool, promptCacheKey string) {
+	if len(body) == 0 {
+		return "", false, ""
+placeholder
+
+	model = strings.TrimSpace(gjson.GetBytes(body, "model").String())
+	stream = gjson.GetBytes(body, "stream").Bool()
+	promptCacheKey = strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String())
+	return model, stream, promptCacheKey
+placeholder
+
+func extractOpenAIReasoningEffortFromBody(body []byte, requestedModel string) *string {
+	reasoningEffort := strings.TrimSpace(gjson.GetBytes(body, "reasoning.effort").String())
+	if reasoningEffort == "" {
+		reasoningEffort = strings.TrimSpace(gjson.GetBytes(body, "reasoning_effort").String())
+placeholder
+	if reasoningEffort != "" {
+		normalized := normalizeOpenAIReasoningEffort(reasoningEffort)
+		if normalized == "" {
+			return nil
+	placeholder
+		return &normalized
+placeholder
+
+	value := deriveOpenAIReasoningEffortFromModel(requestedModel)
+	if value == "" {
+		return nil
+placeholder
+	return &value
+placeholder
+
+func getOpenAIRequestBodyMap(c *gin.Context, body []byte) (map[string]any, error) {
+	if c != nil {
+		if cached, ok := c.Get(OpenAIParsedRequestBodyKey); ok {
+			if reqBody, ok := cached.(map[string]any); ok && reqBody != nil {
+				return reqBody, nil
+		placeholder
+	placeholder
+placeholder
+
+	var reqBody map[string]any
+	if err := json.Unmarshal(body, &reqBody); err != nil {
+		return nil, fmt.Errorf("parse request: %w", err)
+placeholder
+	return reqBody, nil
 placeholder
 
 func extractOpenAIReasoningEffort(reqBody map[string]any, requestedModel string) *string {
