@@ -27,7 +27,7 @@ placeholder
 
 // ThinkingConfig Thinking 配置
 type ThinkingConfig struct {
-	Type         string `json:"type"`                    // "enabled" or "disabled"
+	Type         string `json:"type"`                    // "enabled" / "adaptive" / "disabled"
 	BudgetTokens int    `json:"budget_tokens,omitempty"` // thinking budget
 placeholder
 
