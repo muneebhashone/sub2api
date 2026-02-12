@@ -1932,7 +1932,7 @@
   <ConfirmDialog
     :show="showMixedChannelWarning"
     :title="t('admin.accounts.mixedChannelWarningTitle')"
-    :message="mixedChannelWarningDetails ? t('admin.accounts.mixedChannelWarning', mixedChannelWarningDetails) : ''"
+    :message="mixedChannelWarningMessageText"
     :confirm-text="t('common.confirm')"
     :cancel-text="t('common.cancel')"
     :danger="true"
@@ -1964,8 +1964,14 @@ placeholder from '@/composables/useAccountOAuth'
 import { useOpenAIOAuth placeholder from '@/composables/useOpenAIOAuth'
 import { useGeminiOAuth placeholder from '@/composables/useGeminiOAuth'
 import { useAntigravityOAuth placeholder from '@/composables/useAntigravityOAuth'
-import { useMixedChannelWarning placeholder from '@/composables/useMixedChannelWarning'
-import type { Proxy, AdminGroup, AccountPlatform, AccountType placeholder from '@/types'
+import type {
+  Proxy,
+  AdminGroup,
+  AccountPlatform,
+  AccountType,
+  CheckMixedChannelResponse,
+  CreateAccountRequest
+placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -2103,9 +2109,13 @@ const tempUnschedRules = ref<TempUnschedRuleForm[]>([])
 const geminiOAuthType = ref<'code_assist' | 'google_one' | 'ai_studio'>('google_one')
 const geminiAIStudioOAuthEnabled = ref(false)
 
-const mixedChannelWarning = useMixedChannelWarning()
-const showMixedChannelWarning = mixedChannelWarning.show
-const mixedChannelWarningDetails = mixedChannelWarning.details
+const showMixedChannelWarning = ref(false)
+const mixedChannelWarningDetails = ref<{ groupName: string; currentPlatform: string; otherPlatform: string placeholder | null>(
+  null
+)
+const mixedChannelWarningRawMessage = ref('')
+const mixedChannelWarningAction = ref<(() => Promise<void>) | null>(null)
+const antigravityMixedChannelConfirmed = ref(false)
 const showAdvancedOAuth = ref(false)
 const showGeminiHelpDialog = ref(false)
 
@@ -2135,6 +2145,13 @@ const geminiSelectedTier = computed(() => {
     default:
       return geminiTierAIStudio.value
   placeholder
+placeholder)
+
+const mixedChannelWarningMessageText = computed(() => {
+  if (mixedChannelWarningDetails.value) {
+    return t('admin.accounts.mixedChannelWarning', mixedChannelWarningDetails.value)
+  placeholder
+  return mixedChannelWarningRawMessage.value
 placeholder)
 
 const geminiQuotaDocs = {
@@ -2528,6 +2545,105 @@ const splitTempUnschedKeywords = (value: string) => {
     .filter((item) => item.length > 0)
 placeholder
 
+const isAntigravityAccount = (platform: AccountPlatform) => platform === 'antigravity'
+
+const buildMixedChannelDetails = (resp?: CheckMixedChannelResponse) => {
+  const details = resp?.details
+  if (!details) {
+    return null
+  placeholder
+  return {
+    groupName: details.group_name || 'Unknown',
+    currentPlatform: details.current_platform || 'Unknown',
+    otherPlatform: details.other_platform || 'Unknown'
+  placeholder
+placeholder
+
+const clearMixedChannelDialog = () => {
+  showMixedChannelWarning.value = false
+  mixedChannelWarningDetails.value = null
+  mixedChannelWarningRawMessage.value = ''
+  mixedChannelWarningAction.value = null
+placeholder
+
+const openMixedChannelDialog = (opts: {
+  response?: CheckMixedChannelResponse
+  message?: string
+  onConfirm: () => Promise<void>
+placeholder) => {
+  mixedChannelWarningDetails.value = buildMixedChannelDetails(opts.response)
+  mixedChannelWarningRawMessage.value =
+    opts.message || opts.response?.message || t('admin.accounts.failedToCreate')
+  mixedChannelWarningAction.value = opts.onConfirm
+  showMixedChannelWarning.value = true
+placeholder
+
+const withAntigravityConfirmFlag = (payload: CreateAccountRequest): CreateAccountRequest => {
+  if (isAntigravityAccount(payload.platform) && antigravityMixedChannelConfirmed.value) {
+    return {
+      ...payload,
+      confirm_mixed_channel_risk: true
+    placeholder
+  placeholder
+  const cloned = { ...payload placeholder
+  delete cloned.confirm_mixed_channel_risk
+  return cloned
+placeholder
+
+const ensureAntigravityMixedChannelConfirmed = async (onConfirm: () => Promise<void>): Promise<boolean> => {
+  if (!isAntigravityAccount(form.platform)) {
+    return true
+  placeholder
+  if (antigravityMixedChannelConfirmed.value) {
+    return true
+  placeholder
+
+  try {
+    const result = await adminAPI.accounts.checkMixedChannelRisk({
+      platform: form.platform,
+      group_ids: form.group_ids
+    placeholder)
+    if (!result.has_risk) {
+      return true
+    placeholder
+    openMixedChannelDialog({
+      response: result,
+      onConfirm: async () => {
+        antigravityMixedChannelConfirmed.value = true
+        await onConfirm()
+      placeholder
+    placeholder)
+    return false
+  placeholder catch (error: any) {
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToCreate'))
+    return false
+  placeholder
+placeholder
+
+const submitCreateAccount = async (payload: CreateAccountRequest) => {
+  submitting.value = true
+  try {
+    await adminAPI.accounts.create(withAntigravityConfirmFlag(payload))
+    appStore.showSuccess(t('admin.accounts.accountCreated'))
+    emit('created')
+    handleClose()
+  placeholder catch (error: any) {
+    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning' && isAntigravityAccount(form.platform)) {
+      openMixedChannelDialog({
+        message: error.response?.data?.message,
+        onConfirm: async () => {
+          antigravityMixedChannelConfirmed.value = true
+          await submitCreateAccount(payload)
+        placeholder
+      placeholder)
+      return
+    placeholder
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToCreate'))
+  placeholder finally {
+    submitting.value = false
+  placeholder
+placeholder
+
 // Methods
 const resetForm = () => {
   step.value = 1
@@ -2583,45 +2699,45 @@ const resetForm = () => {
   geminiOAuth.resetState()
   antigravityOAuth.resetState()
   oauthFlowRef.value?.reset()
-  mixedChannelWarning.cancel()
+  antigravityMixedChannelConfirmed.value = false
+  clearMixedChannelDialog()
 placeholder
 
 const handleClose = () => {
-  mixedChannelWarning.cancel()
+  antigravityMixedChannelConfirmed.value = false
+  clearMixedChannelDialog()
   emit('close')
 placeholder
 
 // Helper function to create account with mixed channel warning handling
-const doCreateAccount = async (payload: any) => {
-  submitting.value = true
-  try {
-    await mixedChannelWarning.tryRequest(payload, (p) => adminAPI.accounts.create(p), {
-      onSuccess: () => {
-        appStore.showSuccess(t('admin.accounts.accountCreated'))
-        emit('created')
-        handleClose()
-      placeholder,
-      onError: (error: any) => {
-        appStore.showError(error.response?.data?.detail || t('admin.accounts.failedToCreate'))
-      placeholder
-    placeholder)
-  placeholder finally {
-    submitting.value = false
+const doCreateAccount = async (payload: CreateAccountRequest) => {
+  const canContinue = await ensureAntigravityMixedChannelConfirmed(async () => {
+    await submitCreateAccount(payload)
+  placeholder)
+  if (!canContinue) {
+    return
   placeholder
+  await submitCreateAccount(payload)
 placeholder
 
 // Handle mixed channel warning confirmation
 const handleMixedChannelConfirm = async () => {
+  const action = mixedChannelWarningAction.value
+  if (!action) {
+    clearMixedChannelDialog()
+    return
+  placeholder
+  clearMixedChannelDialog()
   submitting.value = true
   try {
-    await mixedChannelWarning.confirm()
+    await action()
   placeholder finally {
     submitting.value = false
   placeholder
 placeholder
 
 const handleMixedChannelCancel = () => {
-  mixedChannelWarning.cancel()
+  clearMixedChannelDialog()
 placeholder
 
 const handleSubmit = async () => {
@@ -2629,6 +2745,12 @@ const handleSubmit = async () => {
   if (isOAuthFlow.value) {
     if (!form.name.trim()) {
       appStore.showError(t('admin.accounts.pleaseEnterAccountName'))
+      return
+    placeholder
+    const canContinue = await ensureAntigravityMixedChannelConfirmed(async () => {
+      step.value = 2
+    placeholder)
+    if (!canContinue) {
       return
     placeholder
     step.value = 2
@@ -2666,15 +2788,8 @@ const handleSubmit = async () => {
       credentials.model_mapping = antigravityModelMapping
     placeholder
 
-    submitting.value = true
-    try {
-      const extra = mixedScheduling.value ? { mixed_scheduling: true placeholder : undefined
-      await createAccountAndFinish(form.platform, 'apikey', credentials, extra)
-    placeholder catch (error: any) {
-      appStore.showError(error.response?.data?.detail || t('admin.accounts.failedToCreate'))
-    placeholder finally {
-      submitting.value = false
-    placeholder
+    const extra = mixedScheduling.value ? { mixed_scheduling: true placeholder : undefined
+    await createAccountAndFinish(form.platform, 'apikey', credentials, extra)
     return
   placeholder
 
@@ -2951,7 +3066,7 @@ const handleAntigravityValidateRT = async (refreshTokenInput: string) => {
         const accountName = refreshTokens.length > 1 ? `${form.nameplaceholder #${i + 1placeholder` : form.name
 
         // Note: Antigravity doesn't have buildExtraInfo, so we pass empty extra or rely on credentials
-        await adminAPI.accounts.create({
+        const createPayload = withAntigravityConfirmFlag({
           name: accountName,
           notes: form.notes,
           platform: 'antigravity',
@@ -2966,6 +3081,7 @@ const handleAntigravityValidateRT = async (refreshTokenInput: string) => {
           expires_at: form.expires_at,
           auto_pause_on_expired: autoPauseOnExpired.value
         placeholder)
+        await adminAPI.accounts.create(createPayload)
         successCount++
       placeholder catch (error: any) {
         failedCount++
