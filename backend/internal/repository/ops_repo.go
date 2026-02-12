@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -938,6 +939,243 @@ placeholder
 	return err
 placeholder
 
+func (r *opsRepository) BatchInsertSystemLogs(ctx context.Context, inputs []*service.OpsInsertSystemLogInput) (int64, error) {
+	if r == nil || r.db == nil {
+		return 0, fmt.Errorf("nil ops repository")
+placeholder
+	if len(inputs) == 0 {
+		return 0, nil
+placeholder
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+placeholder
+	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
+		"ops_system_logs",
+		"created_at",
+		"level",
+		"component",
+		"message",
+		"request_id",
+		"client_request_id",
+		"user_id",
+		"account_id",
+		"platform",
+		"model",
+		"extra",
+	))
+	if err != nil {
+		_ = tx.Rollback()
+		return 0, err
+placeholder
+
+	var inserted int64
+	for _, input := range inputs {
+		if input == nil {
+			continue
+	placeholder
+		createdAt := input.CreatedAt
+		if createdAt.IsZero() {
+			createdAt = time.Now().UTC()
+	placeholder
+		component := strings.TrimSpace(input.Component)
+		level := strings.ToLower(strings.TrimSpace(input.Level))
+		message := strings.TrimSpace(input.Message)
+		if level == "" || message == "" {
+			continue
+	placeholder
+		if component == "" {
+			component = "app"
+	placeholder
+		extra := strings.TrimSpace(input.ExtraJSON)
+		if extra == "" {
+			extra = "{placeholder"
+	placeholder
+		if _, err := stmt.ExecContext(
+			ctx,
+			createdAt.UTC(),
+			level,
+			component,
+			message,
+			opsNullString(input.RequestID),
+			opsNullString(input.ClientRequestID),
+			opsNullInt64(input.UserID),
+			opsNullInt64(input.AccountID),
+			opsNullString(input.Platform),
+			opsNullString(input.Model),
+			extra,
+		); err != nil {
+			_ = stmt.Close()
+			_ = tx.Rollback()
+			return inserted, err
+	placeholder
+		inserted++
+placeholder
+
+	if _, err := stmt.ExecContext(ctx); err != nil {
+		_ = stmt.Close()
+		_ = tx.Rollback()
+		return inserted, err
+placeholder
+	if err := stmt.Close(); err != nil {
+		_ = tx.Rollback()
+		return inserted, err
+placeholder
+	if err := tx.Commit(); err != nil {
+		return inserted, err
+placeholder
+	return inserted, nil
+placeholder
+
+func (r *opsRepository) ListSystemLogs(ctx context.Context, filter *service.OpsSystemLogFilter) (*service.OpsSystemLogList, error) {
+	if r == nil || r.db == nil {
+		return nil, fmt.Errorf("nil ops repository")
+placeholder
+	if filter == nil {
+		filter = &service.OpsSystemLogFilter{placeholder
+placeholder
+
+	page := filter.Page
+	if page <= 0 {
+		page = 1
+placeholder
+	pageSize := filter.PageSize
+	if pageSize <= 0 {
+		pageSize = 50
+placeholder
+	if pageSize > 200 {
+		pageSize = 200
+placeholder
+
+	where, args, _ := buildOpsSystemLogsWhere(filter)
+	countSQL := "SELECT COUNT(*) FROM ops_system_logs l " + where
+	var total int
+	if err := r.db.QueryRowContext(ctx, countSQL, args...).Scan(&total); err != nil {
+		return nil, err
+placeholder
+
+	offset := (page - 1) * pageSize
+	argsWithLimit := append(args, pageSize, offset)
+	query := `
+SELECT
+  l.id,
+  l.created_at,
+  l.level,
+  COALESCE(l.component, ''),
+  COALESCE(l.message, ''),
+  COALESCE(l.request_id, ''),
+  COALESCE(l.client_request_id, ''),
+  l.user_id,
+  l.account_id,
+  COALESCE(l.platform, ''),
+  COALESCE(l.model, ''),
+  COALESCE(l.extra::text, '{placeholder')
+FROM ops_system_logs l
+` + where + `
+ORDER BY l.created_at DESC, l.id DESC
+LIMIT $` + itoa(len(args)+1) + ` OFFSET $` + itoa(len(args)+2)
+
+	rows, err := r.db.QueryContext(ctx, query, argsWithLimit...)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	logs := make([]*service.OpsSystemLog, 0, pageSize)
+	for rows.Next() {
+		item := &service.OpsSystemLog{placeholder
+		var userID sql.NullInt64
+		var accountID sql.NullInt64
+		var extraRaw string
+		if err := rows.Scan(
+			&item.ID,
+			&item.CreatedAt,
+			&item.Level,
+			&item.Component,
+			&item.Message,
+			&item.RequestID,
+			&item.ClientRequestID,
+			&userID,
+			&accountID,
+			&item.Platform,
+			&item.Model,
+			&extraRaw,
+		); err != nil {
+			return nil, err
+	placeholder
+		if userID.Valid {
+			v := userID.Int64
+			item.UserID = &v
+	placeholder
+		if accountID.Valid {
+			v := accountID.Int64
+			item.AccountID = &v
+	placeholder
+		extraRaw = strings.TrimSpace(extraRaw)
+		if extraRaw != "" && extraRaw != "null" && extraRaw != "{placeholder" {
+			extra := make(map[string]any)
+			if err := json.Unmarshal([]byte(extraRaw), &extra); err == nil {
+				item.Extra = extra
+		placeholder
+	placeholder
+		logs = append(logs, item)
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
+
+	return &service.OpsSystemLogList{
+		Logs:     logs,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+placeholder, nil
+placeholder
+
+func (r *opsRepository) DeleteSystemLogs(ctx context.Context, filter *service.OpsSystemLogCleanupFilter) (int64, error) {
+	if r == nil || r.db == nil {
+		return 0, fmt.Errorf("nil ops repository")
+placeholder
+	if filter == nil {
+		filter = &service.OpsSystemLogCleanupFilter{placeholder
+placeholder
+
+	where, args, hasConstraint := buildOpsSystemLogsCleanupWhere(filter)
+	if !hasConstraint {
+		return 0, fmt.Errorf("cleanup requires at least one filter condition")
+placeholder
+
+	query := "DELETE FROM ops_system_logs l " + where
+	res, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, err
+placeholder
+	return res.RowsAffected()
+placeholder
+
+func (r *opsRepository) InsertSystemLogCleanupAudit(ctx context.Context, input *service.OpsSystemLogCleanupAudit) error {
+	if r == nil || r.db == nil {
+		return fmt.Errorf("nil ops repository")
+placeholder
+	if input == nil {
+		return fmt.Errorf("nil input")
+placeholder
+	createdAt := input.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now().UTC()
+placeholder
+	_, err := r.db.ExecContext(ctx, `
+INSERT INTO ops_system_log_cleanup_audits (
+  created_at,
+  operator_id,
+  conditions,
+  deleted_rows
+) VALUES ($1,$2,$3,$4)
+`, createdAt.UTC(), input.OperatorID, input.Conditions, input.DeletedRows)
+	return err
+placeholder
+
 func buildOpsErrorLogsWhere(filter *service.OpsErrorLogFilter) (string, []any) {
 	clauses := make([]string, 0, 12)
 	args := make([]any, 0, 12)
@@ -1051,6 +1289,95 @@ placeholder
 placeholder
 
 	return "WHERE " + strings.Join(clauses, " AND "), args
+placeholder
+
+func buildOpsSystemLogsWhere(filter *service.OpsSystemLogFilter) (string, []any, bool) {
+	clauses := make([]string, 0, 10)
+	args := make([]any, 0, 10)
+	clauses = append(clauses, "1=1")
+	hasConstraint := false
+
+	if filter != nil && filter.StartTime != nil && !filter.StartTime.IsZero() {
+		args = append(args, filter.StartTime.UTC())
+		clauses = append(clauses, "l.created_at >= $"+itoa(len(args)))
+		hasConstraint = true
+placeholder
+	if filter != nil && filter.EndTime != nil && !filter.EndTime.IsZero() {
+		args = append(args, filter.EndTime.UTC())
+		clauses = append(clauses, "l.created_at < $"+itoa(len(args)))
+		hasConstraint = true
+placeholder
+	if filter != nil {
+		if v := strings.ToLower(strings.TrimSpace(filter.Level)); v != "" {
+			args = append(args, v)
+			clauses = append(clauses, "LOWER(COALESCE(l.level,'')) = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if v := strings.TrimSpace(filter.Component); v != "" {
+			args = append(args, v)
+			clauses = append(clauses, "COALESCE(l.component,'') = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if v := strings.TrimSpace(filter.RequestID); v != "" {
+			args = append(args, v)
+			clauses = append(clauses, "COALESCE(l.request_id,'') = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if v := strings.TrimSpace(filter.ClientRequestID); v != "" {
+			args = append(args, v)
+			clauses = append(clauses, "COALESCE(l.client_request_id,'') = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if filter.UserID != nil && *filter.UserID > 0 {
+			args = append(args, *filter.UserID)
+			clauses = append(clauses, "l.user_id = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if filter.AccountID != nil && *filter.AccountID > 0 {
+			args = append(args, *filter.AccountID)
+			clauses = append(clauses, "l.account_id = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if v := strings.TrimSpace(filter.Platform); v != "" {
+			args = append(args, v)
+			clauses = append(clauses, "COALESCE(l.platform,'') = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if v := strings.TrimSpace(filter.Model); v != "" {
+			args = append(args, v)
+			clauses = append(clauses, "COALESCE(l.model,'') = $"+itoa(len(args)))
+			hasConstraint = true
+	placeholder
+		if v := strings.TrimSpace(filter.Query); v != "" {
+			like := "%" + v + "%"
+			args = append(args, like)
+			n := itoa(len(args))
+			clauses = append(clauses, "(l.message ILIKE $"+n+" OR COALESCE(l.request_id,'') ILIKE $"+n+" OR COALESCE(l.client_request_id,'') ILIKE $"+n+" OR COALESCE(l.extra::text,'') ILIKE $"+n+")")
+			hasConstraint = true
+	placeholder
+placeholder
+
+	return "WHERE " + strings.Join(clauses, " AND "), args, hasConstraint
+placeholder
+
+func buildOpsSystemLogsCleanupWhere(filter *service.OpsSystemLogCleanupFilter) (string, []any, bool) {
+	if filter == nil {
+		filter = &service.OpsSystemLogCleanupFilter{placeholder
+placeholder
+	listFilter := &service.OpsSystemLogFilter{
+		StartTime:       filter.StartTime,
+		EndTime:         filter.EndTime,
+		Level:           filter.Level,
+		Component:       filter.Component,
+		RequestID:       filter.RequestID,
+		ClientRequestID: filter.ClientRequestID,
+		UserID:          filter.UserID,
+		AccountID:       filter.AccountID,
+		Platform:        filter.Platform,
+		Model:           filter.Model,
+		Query:           filter.Query,
+placeholder
+	return buildOpsSystemLogsWhere(listFilter)
 placeholder
 
 // Helpers for nullable args
