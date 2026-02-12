@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,6 +44,27 @@ placeholder
 
 func (u *httpUpstreamRecorder) DoWithTLS(req *http.Request, proxyURL string, accountID int64, accountConcurrency int, enableTLSFingerprint bool) (*http.Response, error) {
 	return u.Do(req, proxyURL, accountID, accountConcurrency)
+placeholder
+
+var stdLogCaptureMu sync.Mutex
+
+func captureStdLog(t *testing.T) (*bytes.Buffer, func()) {
+placeholder
+	stdLogCaptureMu.Lock()
+	buf := &bytes.Buffer{placeholder
+	prevWriter := log.Writer()
+	prevFlags := log.Flags()
+	log.SetFlags(0)
+	log.SetOutput(buf)
+	return buf, func() {
+		log.SetOutput(prevWriter)
+		log.SetFlags(prevFlags)
+		// 防御性恢复，避免其他测试改动了底层 writer。
+		if prevWriter == nil {
+			log.SetOutput(os.Stderr)
+	placeholder
+		stdLogCaptureMu.Unlock()
+placeholder
 placeholder
 
 func TestOpenAIGatewayService_OAuthPassthrough_StreamKeepsToolNameAndBodyUnchanged(t *testing.T) {
@@ -457,5 +481,172 @@ placeholder
 	require.Equal(t, "https://api.openai.com/v1/responses", upstream.lastReq.URL.String())
 	require.Equal(t, "Bearer sk-api-key", upstream.lastReq.Header.Get("Authorization"))
 	require.Equal(t, "curl/8.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_WarnOnTimeoutHeadersForStream(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logBuf, restore := captureStdLog(t)
+	defer restore()
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.1.0")
+	c.Request.Header.Set("x-stainless-timeout", "10000")
+
+	originalBody := []byte(`{"model":"gpt-5.2","stream":true,"input":[{"type":"text","text":"hi"placeholder]placeholder`)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "X-Request-Id": []string{"rid-timeout"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: [DONE]\n\n")),
+placeholder
+	upstream := &httpUpstreamRecorder{resp: respplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{ForceCodexCLI: falseplaceholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID:             321,
+		Name:           "acc",
+		Platform:       PlatformOpenAI,
+		Type:           AccountTypeOAuth,
+		Concurrency:    1,
+		Credentials:    map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Extra:          map[string]any{"openai_passthrough": trueplaceholder,
+		Status:         StatusActive,
+		Schedulable:    true,
+		RateMultiplier: f64p(1),
+placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, originalBody)
+placeholder
+	require.Contains(t, logBuf.String(), "检测到超时相关请求头，将按配置过滤以降低断流风险")
+	require.Contains(t, logBuf.String(), "x-stainless-timeout=10000")
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_WarnWhenStreamEndsWithoutDone(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logBuf, restore := captureStdLog(t)
+	defer restore()
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.1.0")
+
+	originalBody := []byte(`{"model":"gpt-5.2","stream":true,"input":[{"type":"text","text":"hi"placeholder]placeholder`)
+	// 注意：刻意不发送 [DONE]，模拟上游中途断流。
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "X-Request-Id": []string{"rid-truncate"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: {\"type\":\"response.output_text.delta\",\"delta\":\"h\"placeholder\n\n")),
+placeholder
+	upstream := &httpUpstreamRecorder{resp: respplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{ForceCodexCLI: falseplaceholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID:             654,
+		Name:           "acc",
+		Platform:       PlatformOpenAI,
+		Type:           AccountTypeOAuth,
+		Concurrency:    1,
+		Credentials:    map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Extra:          map[string]any{"openai_passthrough": trueplaceholder,
+		Status:         StatusActive,
+		Schedulable:    true,
+		RateMultiplier: f64p(1),
+placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, originalBody)
+placeholder
+	require.Contains(t, logBuf.String(), "上游流在未收到 [DONE] 时结束，疑似断流")
+	require.Contains(t, logBuf.String(), "rid-truncate")
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_DefaultFiltersTimeoutHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.1.0")
+	c.Request.Header.Set("x-stainless-timeout", "120000")
+	c.Request.Header.Set("X-Test", "keep")
+
+	originalBody := []byte(`{"model":"gpt-5.2","stream":false,"input":[{"type":"text","text":"hi"placeholder]placeholder`)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "X-Request-Id": []string{"rid-filter-default"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"output":[],"usage":{"input_tokens":1,"output_tokens":1,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholder`)),
+placeholder
+	upstream := &httpUpstreamRecorder{resp: respplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{ForceCodexCLI: falseplaceholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID:             111,
+		Name:           "acc",
+		Platform:       PlatformOpenAI,
+		Type:           AccountTypeOAuth,
+		Concurrency:    1,
+		Credentials:    map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Extra:          map[string]any{"openai_passthrough": trueplaceholder,
+		Status:         StatusActive,
+		Schedulable:    true,
+		RateMultiplier: f64p(1),
+placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, originalBody)
+placeholder
+	require.NotNil(t, upstream.lastReq)
+	require.Empty(t, upstream.lastReq.Header.Get("x-stainless-timeout"))
+	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_AllowTimeoutHeadersWhenConfigured(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.1.0")
+	c.Request.Header.Set("x-stainless-timeout", "120000")
+	c.Request.Header.Set("X-Test", "keep")
+
+	originalBody := []byte(`{"model":"gpt-5.2","stream":false,"input":[{"type":"text","text":"hi"placeholder]placeholder`)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "X-Request-Id": []string{"rid-filter-allow"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"output":[],"usage":{"input_tokens":1,"output_tokens":1,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholder`)),
+placeholder
+	upstream := &httpUpstreamRecorder{resp: respplaceholder
+	svc := &OpenAIGatewayService{
+		cfg: &config.Config{Gateway: config.GatewayConfig{
+			ForceCodexCLI:                        false,
+			OpenAIPassthroughAllowTimeoutHeaders: true,
+placeholder
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID:             222,
+		Name:           "acc",
+		Platform:       PlatformOpenAI,
+		Type:           AccountTypeOAuth,
+		Concurrency:    1,
+		Credentials:    map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Extra:          map[string]any{"openai_passthrough": trueplaceholder,
+		Status:         StatusActive,
+		Schedulable:    true,
+		RateMultiplier: f64p(1),
+placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, originalBody)
+placeholder
+	require.NotNil(t, upstream.lastReq)
+	require.Equal(t, "120000", upstream.lastReq.Header.Get("x-stainless-timeout"))
 	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
 placeholder
