@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -186,7 +186,7 @@ placeholder
 	rules, err := s.opsRepo.ListAlertRules(ctx)
 	if err != nil {
 		s.recordHeartbeatError(runAt, time.Since(startedAt), err)
-		log.Printf("[OpsAlertEvaluator] list rules failed: %v", err)
+		logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] list rules failed: %v", err)
 		return
 placeholder
 
@@ -236,7 +236,7 @@ placeholder
 
 		activeEvent, err := s.opsRepo.GetActiveAlertEvent(ctx, rule.ID)
 		if err != nil {
-			log.Printf("[OpsAlertEvaluator] get active event failed (rule=%d): %v", rule.ID, err)
+			logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] get active event failed (rule=%d): %v", rule.ID, err)
 			continue
 	placeholder
 
@@ -258,7 +258,7 @@ placeholder
 
 			latestEvent, err := s.opsRepo.GetLatestAlertEvent(ctx, rule.ID)
 			if err != nil {
-				log.Printf("[OpsAlertEvaluator] get latest event failed (rule=%d): %v", rule.ID, err)
+				logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] get latest event failed (rule=%d): %v", rule.ID, err)
 				continue
 		placeholder
 			if latestEvent != nil && rule.CooldownMinutes > 0 {
@@ -283,7 +283,7 @@ placeholder
 
 			created, err := s.opsRepo.CreateAlertEvent(ctx, firedEvent)
 			if err != nil {
-				log.Printf("[OpsAlertEvaluator] create event failed (rule=%d): %v", rule.ID, err)
+				logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] create event failed (rule=%d): %v", rule.ID, err)
 				continue
 		placeholder
 
@@ -300,7 +300,7 @@ placeholder
 		if activeEvent != nil {
 			resolvedAt := now
 			if err := s.opsRepo.UpdateAlertEventStatus(ctx, activeEvent.ID, OpsAlertStatusResolved, &resolvedAt); err != nil {
-				log.Printf("[OpsAlertEvaluator] resolve event failed (event=%d): %v", activeEvent.ID, err)
+				logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] resolve event failed (event=%d): %v", activeEvent.ID, err)
 		placeholder else {
 				eventsResolved++
 		placeholder
@@ -779,7 +779,7 @@ func (s *OpsAlertEvaluatorService) tryAcquireLeaderLock(ctx context.Context, loc
 placeholder
 	if s.redisClient == nil {
 		s.warnNoRedisOnce.Do(func() {
-			log.Printf("[OpsAlertEvaluator] redis not configured; running without distributed lock")
+			logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] redis not configured; running without distributed lock")
 	placeholder)
 		return nil, true
 placeholder
@@ -797,7 +797,7 @@ placeholder
 		// Prefer fail-closed to avoid duplicate evaluators stampeding the DB when Redis is flaky.
 		// Single-node deployments can disable the distributed lock via runtime settings.
 		s.warnNoRedisOnce.Do(func() {
-			log.Printf("[OpsAlertEvaluator] leader lock SetNX failed; skipping this cycle: %v", err)
+			logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] leader lock SetNX failed; skipping this cycle: %v", err)
 	placeholder)
 		return nil, false
 placeholder
@@ -819,7 +819,7 @@ func (s *OpsAlertEvaluatorService) maybeLogSkip(key string) {
 		return
 placeholder
 	s.skipLogAt = now
-	log.Printf("[OpsAlertEvaluator] leader lock held by another instance; skipping (key=%q)", key)
+	logger.LegacyPrintf("service.ops_alert_evaluator", "[OpsAlertEvaluator] leader lock held by another instance; skipping (key=%q)", key)
 placeholder
 
 func (s *OpsAlertEvaluatorService) recordHeartbeatSuccess(runAt time.Time, duration time.Duration, result string) {
