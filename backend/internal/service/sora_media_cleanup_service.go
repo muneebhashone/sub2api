@@ -1,7 +1,6 @@
 package service
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/robfig/cron/v3"
 )
 
@@ -37,18 +37,18 @@ func (s *SoraMediaCleanupService) Start() {
 		return
 placeholder
 	if !s.cfg.Sora.Storage.Cleanup.Enabled {
-		log.Printf("[SoraCleanup] not started (disabled)")
+		logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] not started (disabled)")
 		return
 placeholder
 	if s.storage == nil || !s.storage.Enabled() {
-		log.Printf("[SoraCleanup] not started (storage disabled)")
+		logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] not started (storage disabled)")
 		return
 placeholder
 
 	s.startOnce.Do(func() {
 		schedule := strings.TrimSpace(s.cfg.Sora.Storage.Cleanup.Schedule)
 		if schedule == "" {
-			log.Printf("[SoraCleanup] not started (empty schedule)")
+			logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] not started (empty schedule)")
 			return
 	placeholder
 		loc := time.Local
@@ -59,12 +59,12 @@ placeholder
 	placeholder
 		c := cron.New(cron.WithParser(soraCleanupCronParser), cron.WithLocation(loc))
 		if _, err := c.AddFunc(schedule, func() { s.runCleanup() placeholder); err != nil {
-			log.Printf("[SoraCleanup] not started (invalid schedule=%q): %v", schedule, err)
+			logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] not started (invalid schedule=%q): %v", schedule, err)
 			return
 	placeholder
 		s.cron = c
 		s.cron.Start()
-		log.Printf("[SoraCleanup] started (schedule=%q tz=%s)", schedule, loc.String())
+		logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] started (schedule=%q tz=%s)", schedule, loc.String())
 placeholder)
 placeholder
 
@@ -78,7 +78,7 @@ placeholder
 			select {
 			case <-ctx.Done():
 			case <-time.After(3 * time.Second):
-				log.Printf("[SoraCleanup] cron stop timed out")
+				logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] cron stop timed out")
 		placeholder
 	placeholder
 placeholder)
@@ -90,7 +90,7 @@ func (s *SoraMediaCleanupService) runCleanup() {
 placeholder
 	retention := s.cfg.Sora.Storage.Cleanup.RetentionDays
 	if retention <= 0 {
-		log.Printf("[SoraCleanup] skipped (retention_days=%d)", retention)
+		logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] skipped (retention_days=%d)", retention)
 		return
 placeholder
 	cutoff := time.Now().AddDate(0, 0, -retention)
@@ -116,5 +116,5 @@ placeholder
 			return nil
 	placeholder)
 placeholder
-	log.Printf("[SoraCleanup] cleanup finished, deleted=%d", deleted)
+	logger.LegacyPrintf("service.sora_media_cleanup", "[SoraCleanup] cleanup finished, deleted=%d", deleted)
 placeholder

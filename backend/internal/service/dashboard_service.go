@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 )
 
@@ -113,7 +113,7 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*usagestats.D
 			return cached, nil
 	placeholder
 		if err != nil && !errors.Is(err, ErrDashboardStatsCacheMiss) {
-			log.Printf("[Dashboard] 仪表盘缓存读取失败: %v", err)
+			logger.LegacyPrintf("service.dashboard", "[Dashboard] 仪表盘缓存读取失败: %v", err)
 	placeholder
 placeholder
 
@@ -188,7 +188,7 @@ placeholder
 
 		stats, err := s.fetchDashboardStats(ctx)
 		if err != nil {
-			log.Printf("[Dashboard] 仪表盘缓存异步刷新失败: %v", err)
+			logger.LegacyPrintf("service.dashboard", "[Dashboard] 仪表盘缓存异步刷新失败: %v", err)
 			return
 	placeholder
 		s.applyAggregationStatus(ctx, stats)
@@ -220,12 +220,12 @@ placeholder
 placeholder
 	data, err := json.Marshal(entry)
 	if err != nil {
-		log.Printf("[Dashboard] 仪表盘缓存序列化失败: %v", err)
+		logger.LegacyPrintf("service.dashboard", "[Dashboard] 仪表盘缓存序列化失败: %v", err)
 		return
 placeholder
 
 	if err := s.cache.SetDashboardStats(ctx, string(data), s.cacheTTL); err != nil {
-		log.Printf("[Dashboard] 仪表盘缓存写入失败: %v", err)
+		logger.LegacyPrintf("service.dashboard", "[Dashboard] 仪表盘缓存写入失败: %v", err)
 placeholder
 placeholder
 
@@ -237,10 +237,10 @@ placeholder
 	defer cancel()
 
 	if err := s.cache.DeleteDashboardStats(cacheCtx); err != nil {
-		log.Printf("[Dashboard] 仪表盘缓存清理失败: %v", err)
+		logger.LegacyPrintf("service.dashboard", "[Dashboard] 仪表盘缓存清理失败: %v", err)
 placeholder
 	if reason != nil {
-		log.Printf("[Dashboard] 仪表盘缓存异常，已清理: %v", reason)
+		logger.LegacyPrintf("service.dashboard", "[Dashboard] 仪表盘缓存异常，已清理: %v", reason)
 placeholder
 placeholder
 
@@ -271,7 +271,7 @@ func (s *DashboardService) fetchAggregationUpdatedAt(ctx context.Context) time.T
 placeholder
 	updatedAt, err := s.aggRepo.GetAggregationWatermark(ctx)
 	if err != nil {
-		log.Printf("[Dashboard] 读取聚合水位失败: %v", err)
+		logger.LegacyPrintf("service.dashboard", "[Dashboard] 读取聚合水位失败: %v", err)
 		return time.Unix(0, 0).UTC()
 placeholder
 	if updatedAt.IsZero() {

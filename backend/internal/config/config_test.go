@@ -966,6 +966,37 @@ placeholder{
 			wantErr: "gateway.scheduling.outbox_lag_rebuild_seconds",
 	placeholder,
 		{
+			name:    "log level invalid",
+			mutate:  func(c *Config) { c.Log.Level = "trace" placeholder,
+			wantErr: "log.level",
+	placeholder,
+		{
+			name:    "log format invalid",
+			mutate:  func(c *Config) { c.Log.Format = "plain" placeholder,
+			wantErr: "log.format",
+	placeholder,
+		{
+			name: "log output disabled",
+			mutate: func(c *Config) {
+				c.Log.Output.ToStdout = false
+				c.Log.Output.ToFile = false
+		placeholder,
+			wantErr: "log.output.to_stdout and log.output.to_file cannot both be false",
+	placeholder,
+		{
+			name:    "log rotation size",
+			mutate:  func(c *Config) { c.Log.Rotation.MaxSizeMB = 0 placeholder,
+			wantErr: "log.rotation.max_size_mb",
+	placeholder,
+		{
+			name: "log sampling enabled invalid",
+			mutate: func(c *Config) {
+				c.Log.Sampling.Enabled = true
+				c.Log.Sampling.Initial = 0
+		placeholder,
+			wantErr: "log.sampling.initial",
+	placeholder,
+		{
 			name:    "ops metrics collector ttl",
 			mutate:  func(c *Config) { c.Ops.MetricsCollectorCache.TTL = -1 placeholder,
 			wantErr: "ops.metrics_collector_cache.ttl",
