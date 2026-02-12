@@ -2587,6 +2587,7 @@ const resetForm = () => {
 placeholder
 
 const handleClose = () => {
+  mixedChannelWarning.cancel()
   emit('close')
 placeholder
 
