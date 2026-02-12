@@ -190,8 +190,8 @@ placeholder
 
 	svc := &AntigravityGatewayService{
 		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
-		tokenProvider: &AntigravityTokenProvider{placeholder,
-		httpUpstream:  &httpUpstreamStub{resp: respplaceholder,
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
 placeholder
 
 	account := &Account{
@@ -477,8 +477,8 @@ placeholder
 
 	svc := &AntigravityGatewayService{
 		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
-		tokenProvider: &AntigravityTokenProvider{placeholder,
-		httpUpstream:  &httpUpstreamStub{resp: respplaceholder,
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
 placeholder
 
 	const mappedModel = "gemini-3-pro-high"
@@ -529,8 +529,8 @@ placeholder
 
 	svc := &AntigravityGatewayService{
 		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
-		tokenProvider: &AntigravityTokenProvider{placeholder,
-		httpUpstream:  &httpUpstreamStub{resp: respplaceholder,
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
 placeholder
 
 	const mappedModel = "gemini-3-pro-high"
