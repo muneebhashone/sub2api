@@ -79,6 +79,13 @@ func (s *OpsSystemLogSink) WriteLogEvent(event *logger.LogEvent) {
 	if s == nil || event == nil || !s.shouldIndex(event) {
 		return
 placeholder
+	if s.ctx != nil {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+	placeholder
+placeholder
 
 	select {
 	case s.queue <- event:
@@ -95,6 +102,12 @@ func (s *OpsSystemLogSink) shouldIndex(event *logger.LogEvent) bool {
 placeholder
 
 	component := strings.ToLower(strings.TrimSpace(event.Component))
+	// zap 的 LoggerName 往往为空或不等于业务组件名；业务组件名通常以字段 component 透传。
+	if event.Fields != nil {
+		if fc := strings.ToLower(strings.TrimSpace(asString(event.Fields["component"]))); fc != "" {
+			component = fc
+	placeholder
+placeholder
 	if strings.Contains(component, "http.access") {
 		return true
 placeholder
@@ -111,12 +124,12 @@ func (s *OpsSystemLogSink) run() {
 	defer ticker.Stop()
 
 	batch := make([]*logger.LogEvent, 0, s.batchSize)
-	flush := func() {
+	flush := func(baseCtx context.Context) {
 		if len(batch) == 0 {
 			return
 	placeholder
 		started := time.Now()
-		inserted, err := s.flushBatch(batch)
+		inserted, err := s.flushBatch(baseCtx, batch)
 		delay := time.Since(started)
 		if err != nil {
 			atomic.AddUint64(&s.writeFailed, uint64(len(batch)))
@@ -131,11 +144,28 @@ func (s *OpsSystemLogSink) run() {
 	placeholder
 		batch = batch[:0]
 placeholder
+	drainAndFlush := func() {
+		for {
+			select {
+			case item := <-s.queue:
+				if item == nil {
+					continue
+			placeholder
+				batch = append(batch, item)
+				if len(batch) >= s.batchSize {
+					flush(context.Background())
+			placeholder
+			default:
+				flush(context.Background())
+				return
+		placeholder
+	placeholder
+placeholder
 
 	for {
 		select {
 		case <-s.ctx.Done():
-			flush()
+			drainAndFlush()
 			return
 		case item := <-s.queue:
 			if item == nil {
@@ -143,15 +173,15 @@ placeholder
 		placeholder
 			batch = append(batch, item)
 			if len(batch) >= s.batchSize {
-				flush()
+				flush(s.ctx)
 		placeholder
 		case <-ticker.C:
-			flush()
+			flush(s.ctx)
 	placeholder
 placeholder
 placeholder
 
-func (s *OpsSystemLogSink) flushBatch(batch []*logger.LogEvent) (int, error) {
+func (s *OpsSystemLogSink) flushBatch(baseCtx context.Context, batch []*logger.LogEvent) (int, error) {
 	inputs := make([]*OpsInsertSystemLogInput, 0, len(batch))
 	for _, event := range batch {
 		if event == nil {
@@ -205,7 +235,10 @@ placeholder
 	if len(inputs) == 0 {
 		return 0, nil
 placeholder
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	if baseCtx == nil || baseCtx.Err() != nil {
+		baseCtx = context.Background()
+placeholder
+	ctx, cancel := context.WithTimeout(baseCtx, 5*time.Second)
 	defer cancel()
 	inserted, err := s.opsRepo.BatchInsertSystemLogs(ctx, inputs)
 	if err != nil {

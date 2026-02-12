@@ -37,9 +37,27 @@ placeholder{
 			want:  true,
 	placeholder,
 		{
+			name: "access component from fields (real zap path)",
+			event: &logger.LogEvent{
+				Level:     "info",
+				Component: "",
+				Fields:    map[string]any{"component": "http.access"placeholder,
+		placeholder,
+			want: true,
+	placeholder,
+		{
 			name:  "audit component",
 			event: &logger.LogEvent{Level: "info", Component: "audit.log_config_change"placeholder,
 			want:  true,
+	placeholder,
+		{
+			name: "audit component from fields (real zap path)",
+			event: &logger.LogEvent{
+				Level:     "info",
+				Component: "",
+				Fields:    map[string]any{"component": "audit.log_config_change"placeholder,
+		placeholder,
+			want: true,
 	placeholder,
 		{
 			name:  "plain info",
@@ -203,6 +221,47 @@ placeholder)
 		time.Sleep(20 * time.Millisecond)
 placeholder
 	t.Fatalf("write_failed_count not updated")
+placeholder
+
+func TestOpsSystemLogSink_StopFlushUsesActiveContextAndDrainsQueue(t *testing.T) {
+	var inserted int64
+	var canceledCtxCalls int64
+	repo := &opsRepoMock{
+		BatchInsertSystemLogsFn: func(ctx context.Context, inputs []*OpsInsertSystemLogInput) (int64, error) {
+			if err := ctx.Err(); err != nil {
+				atomic.AddInt64(&canceledCtxCalls, 1)
+				return 0, err
+		placeholder
+			atomic.AddInt64(&inserted, int64(len(inputs)))
+			return int64(len(inputs)), nil
+	placeholder,
+placeholder
+
+	sink := NewOpsSystemLogSink(repo)
+	sink.batchSize = 200
+	sink.flushInterval = time.Hour
+	sink.Start()
+
+	sink.WriteLogEvent(&logger.LogEvent{
+		Time:      time.Now().UTC(),
+		Level:     "warn",
+		Component: "app",
+		Message:   "pending-on-shutdown",
+		Fields:    map[string]any{"component": "http.access"placeholder,
+placeholder)
+
+	sink.Stop()
+
+	if got := atomic.LoadInt64(&inserted); got != 1 {
+		t.Fatalf("inserted = %d, want 1", got)
+placeholder
+	if got := atomic.LoadInt64(&canceledCtxCalls); got != 0 {
+		t.Fatalf("canceled ctx calls = %d, want 0", got)
+placeholder
+	health := sink.Health()
+	if health.WrittenCount != 1 {
+		t.Fatalf("written_count = %d, want 1", health.WrittenCount)
+placeholder
 placeholder
 
 type stringerValue string
