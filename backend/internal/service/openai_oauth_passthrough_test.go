@@ -189,7 +189,7 @@ placeholder
 	require.Empty(t, upstream.lastReq.Header.Get("X-Goog-Api-Key"))
 	require.Empty(t, upstream.lastReq.Header.Get("Accept-Encoding"))
 	require.Empty(t, upstream.lastReq.Header.Get("Proxy-Authorization"))
-	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
+	require.Empty(t, upstream.lastReq.Header.Get("X-Test"))
 
 	// 3) required OAuth headers are present
 	require.Equal(t, "chatgpt.com", upstream.lastReq.Host)
@@ -344,7 +344,7 @@ placeholder
 	require.True(t, arr[len(arr)-1].Passthrough)
 placeholder
 
-func TestOpenAIGatewayService_OAuthPassthrough_NonCodexUAStillPassthroughWhenEnabled(t *testing.T) {
+func TestOpenAIGatewayService_OAuthPassthrough_NonCodexUAFallbackToCodexUA(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	rec := httptest.NewRecorder()
@@ -383,7 +383,7 @@ placeholder
 	_, err := svc.Forward(context.Background(), c, account, inputBody)
 placeholder
 	require.Equal(t, inputBody, upstream.lastBody)
-	require.Equal(t, "curl/8.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "codex_cli_rs/0.98.0", upstream.lastReq.Header.Get("User-Agent"))
 placeholder
 
 func TestOpenAIGatewayService_OAuthPassthrough_StreamingSetsFirstTokenMs(t *testing.T) {
@@ -533,7 +533,7 @@ placeholder
 	require.Equal(t, "https://api.openai.com/v1/responses", upstream.lastReq.URL.String())
 	require.Equal(t, "Bearer sk-api-key", upstream.lastReq.Header.Get("Authorization"))
 	require.Equal(t, "curl/8.0", upstream.lastReq.Header.Get("User-Agent"))
-	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
+	require.Empty(t, upstream.lastReq.Header.Get("X-Test"))
 placeholder
 
 func TestOpenAIGatewayService_OAuthPassthrough_WarnOnTimeoutHeadersForStream(t *testing.T) {
@@ -656,7 +656,7 @@ placeholder
 placeholder
 	require.NotNil(t, upstream.lastReq)
 	require.Empty(t, upstream.lastReq.Header.Get("x-stainless-timeout"))
-	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
+	require.Empty(t, upstream.lastReq.Header.Get("X-Test"))
 placeholder
 
 func TestOpenAIGatewayService_OAuthPassthrough_AllowTimeoutHeadersWhenConfigured(t *testing.T) {
@@ -700,5 +700,5 @@ placeholder
 placeholder
 	require.NotNil(t, upstream.lastReq)
 	require.Equal(t, "120000", upstream.lastReq.Header.Get("x-stainless-timeout"))
-	require.Equal(t, "keep", upstream.lastReq.Header.Get("X-Test"))
+	require.Empty(t, upstream.lastReq.Header.Get("X-Test"))
 placeholder
