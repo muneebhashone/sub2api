@@ -28,7 +28,6 @@ type OpenAIGatewayHandler struct {
 	errorPassthroughService *service.ErrorPassthroughService
 	concurrencyHelper       *ConcurrencyHelper
 	maxAccountSwitches      int
-	cfg                     *config.Config
 placeholder
 
 // NewOpenAIGatewayHandler creates a new OpenAIGatewayHandler
@@ -55,7 +54,6 @@ placeholder
 		errorPassthroughService: errorPassthroughService,
 		concurrencyHelper:       NewConcurrencyHelper(concurrencyService, SSEPingFormatComment, pingInterval),
 		maxAccountSwitches:      maxAccountSwitches,
-		cfg:                     cfg,
 placeholder
 placeholder
 
