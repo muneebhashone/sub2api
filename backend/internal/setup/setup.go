@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/repository"
@@ -101,6 +102,36 @@ placeholder
 type JWTConfig struct {
 	Secret     string `json:"secret" yaml:"secret"`
 	ExpireHour int    `json:"expire_hour" yaml:"expire_hour"`
+placeholder
+
+const (
+	adminBootstrapReasonEmptyDatabase          = "empty_database"
+	adminBootstrapReasonAdminExists            = "admin_exists"
+	adminBootstrapReasonUsersExistWithoutAdmin = "users_exist_without_admin"
+)
+
+type adminBootstrapDecision struct {
+	shouldCreate bool
+	reason       string
+placeholder
+
+func decideAdminBootstrap(totalUsers, adminUsers int64) adminBootstrapDecision {
+	if adminUsers > 0 {
+		return adminBootstrapDecision{
+			shouldCreate: false,
+			reason:       adminBootstrapReasonAdminExists,
+	placeholder
+placeholder
+	if totalUsers > 0 {
+		return adminBootstrapDecision{
+			shouldCreate: false,
+			reason:       adminBootstrapReasonUsersExistWithoutAdmin,
+	placeholder
+placeholder
+	return adminBootstrapDecision{
+		shouldCreate: true,
+		reason:       adminBootstrapReasonEmptyDatabase,
+placeholder
 placeholder
 
 // NeedsSetup checks if the system needs initial setup
@@ -262,8 +293,8 @@ placeholder
 		return fmt.Errorf("database initialization failed: %w", err)
 placeholder
 
-	// Create admin user
-	if err := createAdminUser(cfg); err != nil {
+	// Create admin user (only when database is empty and no admin exists).
+	if _, _, err := createAdminUser(cfg); err != nil {
 		return fmt.Errorf("admin user creation failed: %w", err)
 placeholder
 
@@ -309,7 +340,7 @@ placeholder()
 	return repository.ApplyMigrations(migrationCtx, db)
 placeholder
 
-func createAdminUser(cfg *SetupConfig) error {
+func createAdminUser(cfg *SetupConfig) (bool, string, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host, cfg.Database.Port, cfg.Database.User,
@@ -318,7 +349,7 @@ func createAdminUser(cfg *SetupConfig) error {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return err
+		return false, "", err
 placeholder
 
 	defer func() {
@@ -331,13 +362,27 @@ placeholder()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Check if admin already exists
-	var count int64
-	if err := db.QueryRowContext(ctx, "SELECT COUNT(1) FROM users WHERE role = $1", service.RoleAdmin).Scan(&count); err != nil {
-		return err
+	var totalUsers int64
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(1) FROM users").Scan(&totalUsers); err != nil {
+		return false, "", err
 placeholder
-	if count > 0 {
-		return nil // Admin already exists
+	var adminUsers int64
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(1) FROM users WHERE role = $1", service.RoleAdmin).Scan(&adminUsers); err != nil {
+		return false, "", err
+placeholder
+	decision := decideAdminBootstrap(totalUsers, adminUsers)
+	if !decision.shouldCreate {
+		return false, decision.reason, nil
+placeholder
+
+	if strings.TrimSpace(cfg.Admin.Password) == "" {
+		password, genErr := generateSecret(16)
+		if genErr != nil {
+			return false, "", fmt.Errorf("failed to generate admin password: %w", genErr)
+	placeholder
+		cfg.Admin.Password = password
+		fmt.Printf("Generated admin password (one-time): %s\n", cfg.Admin.Password)
+		fmt.Println("IMPORTANT: Save this password! It will not be shown again.")
 placeholder
 
 	admin := &service.User{
@@ -351,7 +396,7 @@ placeholder
 placeholder
 
 	if err := admin.SetPassword(cfg.Admin.Password); err != nil {
-		return err
+		return false, "", err
 placeholder
 
 	_, err = db.ExecContext(
@@ -367,7 +412,10 @@ placeholder
 		admin.CreatedAt,
 		admin.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		return false, "", err
+placeholder
+	return true, decision.reason, nil
 placeholder
 
 func writeConfigFile(cfg *SetupConfig) error {
@@ -528,17 +576,6 @@ placeholder
 		log.Println("Warning: JWT secret auto-generated. Consider setting a fixed secret for production.")
 placeholder
 
-	// Generate admin password if not provided
-	if cfg.Admin.Password == "" {
-		password, err := generateSecret(16)
-		if err != nil {
-			return fmt.Errorf("failed to generate admin password: %w", err)
-	placeholder
-		cfg.Admin.Password = password
-		fmt.Printf("Generated admin password (one-time): %s\n", cfg.Admin.Password)
-		fmt.Println("IMPORTANT: Save this password! It will not be shown again.")
-placeholder
-
 	// Test database connection
 	log.Println("Testing database connection...")
 	if err := TestDatabaseConnection(&cfg.Database); err != nil {
@@ -562,10 +599,22 @@ placeholder
 
 	// Create admin user
 	log.Println("Creating admin user...")
-	if err := createAdminUser(cfg); err != nil {
+	created, reason, err := createAdminUser(cfg)
+	if err != nil {
 		return fmt.Errorf("admin user creation failed: %w", err)
 placeholder
-	log.Printf("Admin user created: %s", cfg.Admin.Email)
+	if created {
+		log.Printf("Admin user created: %s", cfg.Admin.Email)
+placeholder else {
+		switch reason {
+		case adminBootstrapReasonAdminExists:
+			log.Println("Admin user already exists, skipping admin bootstrap")
+		case adminBootstrapReasonUsersExistWithoutAdmin:
+			log.Println("Database already has user data; skipping auto admin bootstrap to avoid password overwrite")
+		default:
+			log.Println("Admin bootstrap skipped")
+	placeholder
+placeholder
 
 	// Write config file
 	log.Println("Writing configuration file...")
