@@ -3,17 +3,24 @@ package repository
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 )
 
-const securitySecretKeyJWT = "jwt_secret"
+const (
+	securitySecretKeyJWT        = "jwt_secret"
+	securitySecretReadRetryMax  = 5
+	securitySecretReadRetryWait = 10 * time.Millisecond
+)
 
 var readRandomBytes = rand.Read
 
@@ -27,9 +34,14 @@ placeholder
 
 	cfg.JWT.Secret = strings.TrimSpace(cfg.JWT.Secret)
 	if cfg.JWT.Secret != "" {
-		if err := createSecuritySecretIfAbsent(ctx, client, securitySecretKeyJWT, cfg.JWT.Secret); err != nil {
+		storedSecret, err := createSecuritySecretIfAbsent(ctx, client, securitySecretKeyJWT, cfg.JWT.Secret)
+		if err != nil {
 			return fmt.Errorf("persist jwt secret: %w", err)
 	placeholder
+		if storedSecret != cfg.JWT.Secret {
+			log.Println("Warning: configured JWT secret mismatches persisted value; using persisted secret for cross-instance consistency.")
+	placeholder
+		cfg.JWT.Secret = storedSecret
 		return nil
 placeholder
 
@@ -69,10 +81,12 @@ placeholder
 		OnConflictColumns(securitysecret.FieldKey).
 		DoNothing().
 		Exec(ctx); err != nil {
-		return "", false, err
+		if !isSQLNoRowsError(err) {
+			return "", false, err
+	placeholder
 placeholder
 
-	stored, err := client.SecuritySecret.Query().Where(securitysecret.KeyEQ(key)).Only(ctx)
+	stored, err := querySecuritySecretWithRetry(ctx, client, key)
 	if err != nil {
 		return "", false, err
 placeholder
@@ -83,17 +97,72 @@ placeholder
 	return value, value == generated, nil
 placeholder
 
-func createSecuritySecretIfAbsent(ctx context.Context, client *ent.Client, key, value string) error {
+func createSecuritySecretIfAbsent(ctx context.Context, client *ent.Client, key, value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if len([]byte(value)) < 32 {
-		return fmt.Errorf("secret %q must be at least 32 bytes", key)
+		return "", fmt.Errorf("secret %q must be at least 32 bytes", key)
 placeholder
 
-	_, err := client.SecuritySecret.Create().SetKey(key).SetValue(value).Save(ctx)
-	if err == nil || ent.IsConstraintError(err) {
-		return nil
+	if err := client.SecuritySecret.Create().
+		SetKey(key).
+		SetValue(value).
+		OnConflictColumns(securitysecret.FieldKey).
+		DoNothing().
+		Exec(ctx); err != nil {
+		if !isSQLNoRowsError(err) {
+			return "", err
+	placeholder
 placeholder
-	return err
+
+	stored, err := querySecuritySecretWithRetry(ctx, client, key)
+	if err != nil {
+		return "", err
+placeholder
+	storedValue := strings.TrimSpace(stored.Value)
+	if len([]byte(storedValue)) < 32 {
+		return "", fmt.Errorf("stored secret %q must be at least 32 bytes", key)
+placeholder
+	return storedValue, nil
+placeholder
+
+func querySecuritySecretWithRetry(ctx context.Context, client *ent.Client, key string) (*ent.SecuritySecret, error) {
+	var lastErr error
+	for attempt := 0; attempt <= securitySecretReadRetryMax; attempt++ {
+		stored, err := client.SecuritySecret.Query().Where(securitysecret.KeyEQ(key)).Only(ctx)
+		if err == nil {
+			return stored, nil
+	placeholder
+		if !isSecretNotFoundError(err) {
+			return nil, err
+	placeholder
+		lastErr = err
+		if attempt == securitySecretReadRetryMax {
+			break
+	placeholder
+
+		timer := time.NewTimer(securitySecretReadRetryWait)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+	placeholder
+placeholder
+	return nil, lastErr
+placeholder
+
+func isSecretNotFoundError(err error) bool {
+	if err == nil {
+		return false
+placeholder
+	return ent.IsNotFound(err) || isSQLNoRowsError(err)
+placeholder
+
+func isSQLNoRowsError(err error) bool {
+	if err == nil {
+		return false
+placeholder
+	return errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "no rows in result set")
 placeholder
 
 func generateHexSecret(byteLength int) (string, error) {
