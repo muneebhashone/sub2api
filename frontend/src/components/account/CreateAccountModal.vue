@@ -1964,6 +1964,7 @@ placeholder from '@/composables/useAccountOAuth'
 import { useOpenAIOAuth placeholder from '@/composables/useOpenAIOAuth'
 import { useGeminiOAuth placeholder from '@/composables/useGeminiOAuth'
 import { useAntigravityOAuth placeholder from '@/composables/useAntigravityOAuth'
+import { useMixedChannelWarning placeholder from '@/composables/useMixedChannelWarning'
 import type { Proxy, AdminGroup, AccountPlatform, AccountType placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -2102,10 +2103,9 @@ const tempUnschedRules = ref<TempUnschedRuleForm[]>([])
 const geminiOAuthType = ref<'code_assist' | 'google_one' | 'ai_studio'>('google_one')
 const geminiAIStudioOAuthEnabled = ref(false)
 
-// Mixed channel warning dialog state
-const showMixedChannelWarning = ref(false)
-const mixedChannelWarningDetails = ref<{ groupName: string; currentPlatform: string; otherPlatform: string placeholder | null>(null)
-const pendingCreatePayload = ref<any>(null)
+const mixedChannelWarning = useMixedChannelWarning()
+const showMixedChannelWarning = mixedChannelWarning.show
+const mixedChannelWarningDetails = mixedChannelWarning.details
 const showAdvancedOAuth = ref(false)
 const showGeminiHelpDialog = ref(false)
 
@@ -2583,6 +2583,7 @@ const resetForm = () => {
   geminiOAuth.resetState()
   antigravityOAuth.resetState()
   oauthFlowRef.value?.reset()
+  mixedChannelWarning.cancel()
 placeholder
 
 const handleClose = () => {
@@ -2593,24 +2594,16 @@ placeholder
 const doCreateAccount = async (payload: any) => {
   submitting.value = true
   try {
-    await adminAPI.accounts.create(payload)
-    appStore.showSuccess(t('admin.accounts.accountCreated'))
-    emit('created')
-    handleClose()
-  placeholder catch (error: any) {
-    // Handle 409 mixed_channel_warning - show confirmation dialog
-    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning') {
-      const details = error.response.data.details || {placeholder
-      mixedChannelWarningDetails.value = {
-        groupName: details.group_name || 'Unknown',
-        currentPlatform: details.current_platform || 'Unknown',
-        otherPlatform: details.other_platform || 'Unknown'
+    await mixedChannelWarning.tryRequest(payload, (p) => adminAPI.accounts.create(p), {
+      onSuccess: () => {
+        appStore.showSuccess(t('admin.accounts.accountCreated'))
+        emit('created')
+        handleClose()
+      placeholder,
+      onError: (error: any) => {
+        appStore.showError(error.response?.data?.detail || t('admin.accounts.failedToCreate'))
       placeholder
-      pendingCreatePayload.value = payload
-      showMixedChannelWarning.value = true
-    placeholder else {
-      appStore.showError(error.response?.data?.detail || t('admin.accounts.failedToCreate'))
-    placeholder
+    placeholder)
   placeholder finally {
     submitting.value = false
   placeholder
@@ -2618,28 +2611,16 @@ placeholder
 
 // Handle mixed channel warning confirmation
 const handleMixedChannelConfirm = async () => {
-  showMixedChannelWarning.value = false
-  if (pendingCreatePayload.value) {
-    pendingCreatePayload.value.confirm_mixed_channel_risk = true
-    submitting.value = true
-    try {
-      await adminAPI.accounts.create(pendingCreatePayload.value)
-      appStore.showSuccess(t('admin.accounts.accountCreated'))
-      emit('created')
-      handleClose()
-    placeholder catch (error: any) {
-      appStore.showError(error.response?.data?.detail || t('admin.accounts.failedToCreate'))
-    placeholder finally {
-      submitting.value = false
-      pendingCreatePayload.value = null
-    placeholder
+  submitting.value = true
+  try {
+    await mixedChannelWarning.confirm()
+  placeholder finally {
+    submitting.value = false
   placeholder
 placeholder
 
 const handleMixedChannelCancel = () => {
-  showMixedChannelWarning.value = false
-  pendingCreatePayload.value = null
-  mixedChannelWarningDetails.value = null
+  mixedChannelWarning.cancel()
 placeholder
 
 const handleSubmit = async () => {
@@ -2795,7 +2776,7 @@ const createAccountAndFinish = async (
   if (!applyTempUnschedConfig(credentials)) {
     return
   placeholder
-  const payload: any = {
+  await doCreateAccount({
     name: form.name,
     notes: form.notes,
     platform,
@@ -2809,31 +2790,7 @@ const createAccountAndFinish = async (
     group_ids: form.group_ids,
     expires_at: form.expires_at,
     auto_pause_on_expired: autoPauseOnExpired.value
-  placeholder
-
-  try {
-    await adminAPI.accounts.create(payload)
-  placeholder catch (error: any) {
-    // Handle 409 mixed_channel_warning - show confirmation dialog
-    // Note: upstream Antigravity create path uses createAccountAndFinish directly, so mixed warning
-    // must be handled here as well (otherwise user only sees a generic "failed" toast).
-    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning') {
-      const details = error.response.data.details || {placeholder
-      mixedChannelWarningDetails.value = {
-        groupName: details.group_name || 'Unknown',
-        currentPlatform: details.current_platform || 'Unknown',
-        otherPlatform: details.other_platform || 'Unknown'
-      placeholder
-      pendingCreatePayload.value = payload
-      showMixedChannelWarning.value = true
-      return
-    placeholder
-    throw error
-  placeholder
-
-  appStore.showSuccess(t('admin.accounts.accountCreated'))
-  emit('created')
-  handleClose()
+  placeholder)
 placeholder
 
 // OpenAI OAuth 授权码兑换
