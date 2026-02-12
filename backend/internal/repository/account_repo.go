@@ -448,7 +448,12 @@ placeholder
 		q = q.Where(dbaccount.TypeEQ(accountType))
 placeholder
 	if status != "" {
-		q = q.Where(dbaccount.StatusEQ(status))
+		switch status {
+		case "rate_limited":
+			q = q.Where(dbaccount.RateLimitResetAtGT(time.Now()))
+		default:
+			q = q.Where(dbaccount.StatusEQ(status))
+	placeholder
 placeholder
 	if search != "" {
 		q = q.Where(dbaccount.NameContainsFold(search))

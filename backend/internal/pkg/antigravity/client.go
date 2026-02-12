@@ -115,6 +115,23 @@ type LoadCodeAssistResponse struct {
 	IneligibleTiers         []*IneligibleTier `json:"ineligibleTiers,omitempty"`
 placeholder
 
+// OnboardUserRequest onboardUser 请求
+type OnboardUserRequest struct {
+	TierID   string `json:"tierId"`
+	Metadata struct {
+		IDEType    string `json:"ideType"`
+		Platform   string `json:"platform,omitempty"`
+		PluginType string `json:"pluginType,omitempty"`
+placeholder `json:"metadata"`
+placeholder
+
+// OnboardUserResponse onboardUser 响应
+type OnboardUserResponse struct {
+	Name     string         `json:"name,omitempty"`
+	Done     bool           `json:"done"`
+	Response map[string]any `json:"response,omitempty"`
+placeholder
+
 // GetTier 获取账户类型
 // 优先返回 paidTier（付费订阅级别），否则返回 currentTier
 func (r *LoadCodeAssistResponse) GetTier() string {
@@ -369,6 +386,117 @@ placeholder
 placeholder
 
 	return nil, nil, lastErr
+placeholder
+
+// OnboardUser 触发账号 onboarding，并返回 project_id
+// 说明：
+// 1) 部分账号 loadCodeAssist 不会立即返回 cloudaicompanionProject；
+// 2) 这时需要调用 onboardUser 完成初始化，之后才能拿到 project_id。
+func (c *Client) OnboardUser(ctx context.Context, accessToken, tierID string) (string, error) {
+	tierID = strings.TrimSpace(tierID)
+	if tierID == "" {
+		return "", fmt.Errorf("tier_id 为空")
+placeholder
+
+	reqBody := OnboardUserRequest{TierID: tierIDplaceholder
+	reqBody.Metadata.IDEType = "ANTIGRAVITY"
+	reqBody.Metadata.Platform = "PLATFORM_UNSPECIFIED"
+	reqBody.Metadata.PluginType = "GEMINI"
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", fmt.Errorf("序列化请求失败: %w", err)
+placeholder
+
+	availableURLs := BaseURLs
+	var lastErr error
+
+	for urlIdx, baseURL := range availableURLs {
+		apiURL := baseURL + "/v1internal:onboardUser"
+
+		for attempt := 1; attempt <= 5; attempt++ {
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
+			if err != nil {
+				lastErr = fmt.Errorf("创建请求失败: %w", err)
+				break
+		placeholder
+			req.Header.Set("Authorization", "Bearer "+accessToken)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("User-Agent", UserAgent)
+
+			resp, err := c.httpClient.Do(req)
+			if err != nil {
+				lastErr = fmt.Errorf("onboardUser 请求失败: %w", err)
+				if shouldFallbackToNextURL(err, 0) && urlIdx < len(availableURLs)-1 {
+					log.Printf("[antigravity] onboardUser URL fallback: %s -> %s", baseURL, availableURLs[urlIdx+1])
+					break
+			placeholder
+				return "", lastErr
+		placeholder
+
+			respBodyBytes, err := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if err != nil {
+				return "", fmt.Errorf("读取响应失败: %w", err)
+		placeholder
+
+			if shouldFallbackToNextURL(nil, resp.StatusCode) && urlIdx < len(availableURLs)-1 {
+				log.Printf("[antigravity] onboardUser URL fallback (HTTP %d): %s -> %s", resp.StatusCode, baseURL, availableURLs[urlIdx+1])
+				break
+		placeholder
+
+			if resp.StatusCode != http.StatusOK {
+				lastErr = fmt.Errorf("onboardUser 失败 (HTTP %d): %s", resp.StatusCode, string(respBodyBytes))
+				return "", lastErr
+		placeholder
+
+			var onboardResp OnboardUserResponse
+			if err := json.Unmarshal(respBodyBytes, &onboardResp); err != nil {
+				lastErr = fmt.Errorf("onboardUser 响应解析失败: %w", err)
+				return "", lastErr
+		placeholder
+
+			if onboardResp.Done {
+				if projectID := extractProjectIDFromOnboardResponse(onboardResp.Response); projectID != "" {
+					DefaultURLAvailability.MarkSuccess(baseURL)
+					return projectID, nil
+			placeholder
+				lastErr = fmt.Errorf("onboardUser 完成但未返回 project_id")
+				return "", lastErr
+		placeholder
+
+			// done=false 时等待后重试（与 CLIProxyAPI 行为一致）
+			select {
+			case <-time.After(2 * time.Second):
+			case <-ctx.Done():
+				return "", ctx.Err()
+		placeholder
+	placeholder
+placeholder
+
+	if lastErr != nil {
+		return "", lastErr
+placeholder
+	return "", fmt.Errorf("onboardUser 未返回 project_id")
+placeholder
+
+func extractProjectIDFromOnboardResponse(resp map[string]any) string {
+	if len(resp) == 0 {
+		return ""
+placeholder
+
+	if v, ok := resp["cloudaicompanionProject"]; ok {
+		switch project := v.(type) {
+		case string:
+			return strings.TrimSpace(project)
+		case map[string]any:
+			if id, ok := project["id"].(string); ok {
+				return strings.TrimSpace(id)
+		placeholder
+	placeholder
+placeholder
+
+	return ""
 placeholder
 
 // ModelQuotaInfo 模型配额信息

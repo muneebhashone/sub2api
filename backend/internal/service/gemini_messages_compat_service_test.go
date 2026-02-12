@@ -299,6 +299,26 @@ placeholder{
 		placeholder,
 	placeholder,
 		{
+			name:    "包含 thoughtsTokenCount",
+			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":20,"thoughtsTokenCount":50placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          100,
+				OutputTokens:         70,
+				CacheReadInputTokens: 0,
+		placeholder,
+	placeholder,
+		{
+			name:    "包含 thoughtsTokenCount 与缓存",
+			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":20,"cachedContentTokenCount":30,"thoughtsTokenCount":50placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          70,
+				OutputTokens:         70,
+				CacheReadInputTokens: 30,
+		placeholder,
+	placeholder,
+		{
 			name:    "缺失 cachedContentTokenCount",
 			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":50placeholderplaceholder`,
 			wantNil: false,
