@@ -292,7 +292,7 @@ placeholder
 placeholder
 	log := logger.FromContext(ctx).With(fields...)
 	if result.Matched {
-		log.Info("OpenAI codex_cli_only 检测通过")
+		log.Warn("OpenAI codex_cli_only 允许官方客户端请求")
 		return
 placeholder
 	log.Warn("OpenAI codex_cli_only 拒绝非官方客户端请求")
