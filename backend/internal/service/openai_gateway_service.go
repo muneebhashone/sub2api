@@ -313,7 +313,6 @@ placeholder
 placeholder
 	log := logger.FromContext(ctx).With(fields...)
 	if result.Matched {
-		log.Warn("OpenAI codex_cli_only 允许官方客户端请求")
 		return
 placeholder
 	log.Warn("OpenAI codex_cli_only 拒绝非官方客户端请求")
@@ -333,7 +332,7 @@ placeholder
 		zap.String("request_host", strings.TrimSpace(req.Host)),
 		zap.String("request_client_ip", strings.TrimSpace(c.ClientIP())),
 		zap.String("request_remote_addr", strings.TrimSpace(req.RemoteAddr)),
-		zap.String("request_user_agent", strings.TrimSpace(req.Header.Get("User-Agent"))),
+		zap.String("request_user_agent", buildDetailedUserAgent(req.Header.Values("User-Agent"))),
 		zap.String("request_content_type", strings.TrimSpace(req.Header.Get("Content-Type"))),
 		zap.Int64("request_content_length", req.ContentLength),
 		zap.Bool("request_stream", requestStream),
@@ -350,6 +349,21 @@ placeholder
 placeholder
 	fields = append(fields, zap.Int("request_body_size", len(body)))
 	return fields
+placeholder
+
+func buildDetailedUserAgent(values []string) string {
+	if len(values) == 0 {
+		return ""
+placeholder
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		v := strings.TrimSpace(value)
+		if v == "" {
+			continue
+	placeholder
+		result = append(result, v)
+placeholder
+	return strings.Join(result, " | ")
 placeholder
 
 func snapshotCodexCLIOnlyHeaders(header http.Header) map[string]string {
