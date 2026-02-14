@@ -65,8 +65,8 @@
           <p class="input-hint">{{ t('admin.accounts.leaveEmptyToKeep') placeholderplaceholder</p>
         </div>
 
-        <!-- Model Restriction Section (不适用于 Gemini 和 Antigravity) -->
-        <div v-if="account.platform !== 'gemini' && account.platform !== 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
+        <!-- Model Restriction Section (不适用于 Antigravity) -->
+        <div v-if="account.platform !== 'antigravity'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
           <label class="input-label">{{ t('admin.accounts.modelRestriction') placeholderplaceholder</label>
 
           <!-- Mode Toggle -->
@@ -338,34 +338,6 @@
           </div>
         </div>
 
-        <!-- Gemini 模型说明 -->
-        <div v-if="account.platform === 'gemini'" class="border-t border-gray-200 pt-4 dark:border-dark-600">
-          <div class="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-            <div class="flex items-start gap-3">
-              <svg
-                class="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div>
-                <p class="text-sm font-medium text-blue-800 dark:text-blue-300">
-                  {{ t('admin.accounts.gemini.modelPassthrough') placeholderplaceholder
-                </p>
-                <p class="mt-1 text-xs text-blue-700 dark:text-blue-400">
-                  {{ t('admin.accounts.gemini.modelPassthroughDesc') placeholderplaceholder
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Upstream fields (only for upstream type) -->
@@ -630,9 +602,9 @@
         </div>
       </div>
 
-      <!-- Intercept Warmup Requests (Anthropic only) -->
+      <!-- Intercept Warmup Requests (Anthropic/Antigravity) -->
       <div
-        v-if="account?.platform === 'anthropic'"
+        v-if="account?.platform === 'anthropic' || account?.platform === 'antigravity'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
         <div class="flex items-center justify-between">
@@ -998,7 +970,7 @@
   <ConfirmDialog
     :show="showMixedChannelWarning"
     :title="t('admin.accounts.mixedChannelWarningTitle')"
-    :message="mixedChannelWarningDetails ? t('admin.accounts.mixedChannelWarning', mixedChannelWarningDetails) : ''"
+    :message="mixedChannelWarningMessageText"
     :confirm-text="t('common.confirm')"
     :cancel-text="t('common.cancel')"
     :danger="true"
@@ -1013,7 +985,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
 import { adminAPI placeholder from '@/api/admin'
-import type { Account, Proxy, AdminGroup placeholder from '@/types'
+import type { Account, Proxy, AdminGroup, CheckMixedChannelResponse placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
@@ -1088,10 +1060,13 @@ const antigravityModelMappings = ref<ModelMapping[]>([])
 const tempUnschedEnabled = ref(false)
 const tempUnschedRules = ref<TempUnschedRuleForm[]>([])
 
-// Mixed channel warning dialog state
 const showMixedChannelWarning = ref(false)
-const mixedChannelWarningDetails = ref<{ groupName: string; currentPlatform: string; otherPlatform: string placeholder | null>(null)
-const pendingUpdatePayload = ref<Record<string, unknown> | null>(null)
+const mixedChannelWarningDetails = ref<{ groupName: string; currentPlatform: string; otherPlatform: string placeholder | null>(
+  null
+)
+const mixedChannelWarningRawMessage = ref('')
+const mixedChannelWarningAction = ref<(() => Promise<void>) | null>(null)
+const antigravityMixedChannelConfirmed = ref(false)
 
 // Quota control state (Anthropic OAuth/SetupToken only)
 const windowCostEnabled = ref(false)
@@ -1142,6 +1117,13 @@ const defaultBaseUrl = computed(() => {
   return 'https://api.anthropic.com'
 placeholder)
 
+const mixedChannelWarningMessageText = computed(() => {
+  if (mixedChannelWarningDetails.value) {
+    return t('admin.accounts.mixedChannelWarning', mixedChannelWarningDetails.value)
+  placeholder
+  return mixedChannelWarningRawMessage.value
+placeholder)
+
 const form = reactive({
   name: '',
   notes: '',
@@ -1171,6 +1153,11 @@ watch(
   () => props.account,
   (newAccount) => {
     if (newAccount) {
+      antigravityMixedChannelConfirmed.value = false
+      showMixedChannelWarning.value = false
+      mixedChannelWarningDetails.value = null
+      mixedChannelWarningRawMessage.value = ''
+      mixedChannelWarningAction.value = null
       form.name = newAccount.name
       form.notes = newAccount.notes || ''
       form.proxy_id = newAccount.proxy_id
@@ -1548,18 +1535,123 @@ function toPositiveNumber(value: unknown) {
   return Math.trunc(num)
 placeholder
 
+const needsMixedChannelCheck = () => props.account?.platform === 'antigravity' || props.account?.platform === 'anthropic'
+
+const buildMixedChannelDetails = (resp?: CheckMixedChannelResponse) => {
+  const details = resp?.details
+  if (!details) {
+    return null
+  placeholder
+  return {
+    groupName: details.group_name || 'Unknown',
+    currentPlatform: details.current_platform || 'Unknown',
+    otherPlatform: details.other_platform || 'Unknown'
+  placeholder
+placeholder
+
+const clearMixedChannelDialog = () => {
+  showMixedChannelWarning.value = false
+  mixedChannelWarningDetails.value = null
+  mixedChannelWarningRawMessage.value = ''
+  mixedChannelWarningAction.value = null
+placeholder
+
+const openMixedChannelDialog = (opts: {
+  response?: CheckMixedChannelResponse
+  message?: string
+  onConfirm: () => Promise<void>
+placeholder) => {
+  mixedChannelWarningDetails.value = buildMixedChannelDetails(opts.response)
+  mixedChannelWarningRawMessage.value =
+    opts.message || opts.response?.message || t('admin.accounts.failedToUpdate')
+  mixedChannelWarningAction.value = opts.onConfirm
+  showMixedChannelWarning.value = true
+placeholder
+
+const withAntigravityConfirmFlag = (payload: Record<string, unknown>) => {
+  if (needsMixedChannelCheck() && antigravityMixedChannelConfirmed.value) {
+    return {
+      ...payload,
+      confirm_mixed_channel_risk: true
+    placeholder
+  placeholder
+  const cloned = { ...payload placeholder
+  delete cloned.confirm_mixed_channel_risk
+  return cloned
+placeholder
+
+const ensureAntigravityMixedChannelConfirmed = async (onConfirm: () => Promise<void>): Promise<boolean> => {
+  if (!needsMixedChannelCheck()) {
+    return true
+  placeholder
+  if (antigravityMixedChannelConfirmed.value) {
+    return true
+  placeholder
+  if (!props.account) {
+    return false
+  placeholder
+
+  try {
+    const result = await adminAPI.accounts.checkMixedChannelRisk({
+      platform: props.account.platform,
+      group_ids: form.group_ids,
+      account_id: props.account.id
+    placeholder)
+    if (!result.has_risk) {
+      return true
+    placeholder
+    openMixedChannelDialog({
+      response: result,
+      onConfirm: async () => {
+        antigravityMixedChannelConfirmed.value = true
+        await onConfirm()
+      placeholder
+    placeholder)
+    return false
+  placeholder catch (error: any) {
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
+    return false
+  placeholder
+placeholder
+
 const formatDateTimeLocal = formatDateTimeLocalInput
 const parseDateTimeLocal = parseDateTimeLocalInput
 
 // Methods
 const handleClose = () => {
+  antigravityMixedChannelConfirmed.value = false
+  clearMixedChannelDialog()
   emit('close')
+placeholder
+
+const submitUpdateAccount = async (accountID: number, updatePayload: Record<string, unknown>) => {
+  submitting.value = true
+  try {
+    await adminAPI.accounts.update(accountID, withAntigravityConfirmFlag(updatePayload))
+    appStore.showSuccess(t('admin.accounts.accountUpdated'))
+    emit('updated')
+    handleClose()
+  placeholder catch (error: any) {
+    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning' && needsMixedChannelCheck()) {
+      openMixedChannelDialog({
+        message: error.response?.data?.message,
+        onConfirm: async () => {
+          antigravityMixedChannelConfirmed.value = true
+          await submitUpdateAccount(accountID, updatePayload)
+        placeholder
+      placeholder)
+      return
+    placeholder
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
+  placeholder finally {
+    submitting.value = false
+  placeholder
 placeholder
 
 const handleSubmit = async () => {
   if (!props.account) return
+  const accountID = props.account.id
 
-  submitting.value = true
   const updatePayload: Record<string, unknown> = { ...form placeholder
   try {
     // 后端期望 proxy_id: 0 表示清除代理，而不是 null
@@ -1591,7 +1683,6 @@ const handleSubmit = async () => {
         newCredentials.api_key = currentCredentials.api_key
       placeholder else {
         appStore.showError(t('admin.accounts.apiKeyIsRequired'))
-        submitting.value = false
         return
       placeholder
 
@@ -1611,7 +1702,6 @@ const handleSubmit = async () => {
         newCredentials.intercept_warmup_requests = true
       placeholder
       if (!applyTempUnschedConfig(newCredentials)) {
-        submitting.value = false
         return
       placeholder
 
@@ -1627,7 +1717,6 @@ const handleSubmit = async () => {
       placeholder
 
       if (!applyTempUnschedConfig(newCredentials)) {
-        submitting.value = false
         return
       placeholder
 
@@ -1643,7 +1732,6 @@ const handleSubmit = async () => {
         delete newCredentials.intercept_warmup_requests
       placeholder
       if (!applyTempUnschedConfig(newCredentials)) {
-        submitting.value = false
         return
       placeholder
 
@@ -1726,52 +1814,36 @@ const handleSubmit = async () => {
       updatePayload.extra = newExtra
     placeholder
 
-    await adminAPI.accounts.update(props.account.id, updatePayload)
-    appStore.showSuccess(t('admin.accounts.accountUpdated'))
-    emit('updated')
-    handleClose()
-  placeholder catch (error: any) {
-    // Handle 409 mixed_channel_warning - show confirmation dialog
-    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning') {
-      const details = error.response.data.details || {placeholder
-      mixedChannelWarningDetails.value = {
-        groupName: details.group_name || 'Unknown',
-        currentPlatform: details.current_platform || 'Unknown',
-        otherPlatform: details.other_platform || 'Unknown'
-      placeholder
-      pendingUpdatePayload.value = updatePayload
-      showMixedChannelWarning.value = true
-    placeholder else {
-      appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
+    const canContinue = await ensureAntigravityMixedChannelConfirmed(async () => {
+      await submitUpdateAccount(accountID, updatePayload)
+    placeholder)
+    if (!canContinue) {
+      return
     placeholder
-  placeholder finally {
-    submitting.value = false
+
+    await submitUpdateAccount(accountID, updatePayload)
+  placeholder catch (error: any) {
+    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
   placeholder
 placeholder
 
 // Handle mixed channel warning confirmation
 const handleMixedChannelConfirm = async () => {
-  showMixedChannelWarning.value = false
-  if (pendingUpdatePayload.value && props.account) {
-    pendingUpdatePayload.value.confirm_mixed_channel_risk = true
-    submitting.value = true
-    try {
-      await adminAPI.accounts.update(props.account.id, pendingUpdatePayload.value)
-      appStore.showSuccess(t('admin.accounts.accountUpdated'))
-      emit('updated')
-      handleClose()
-    placeholder catch (error: any) {
-      appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
-    placeholder finally {
-      submitting.value = false
-      pendingUpdatePayload.value = null
-    placeholder
+  const action = mixedChannelWarningAction.value
+  if (!action) {
+    clearMixedChannelDialog()
+    return
+  placeholder
+  clearMixedChannelDialog()
+  submitting.value = true
+  try {
+    await action()
+  placeholder finally {
+    submitting.value = false
   placeholder
 placeholder
 
 const handleMixedChannelCancel = () => {
-  showMixedChannelWarning.value = false
-  pendingUpdatePayload.value = null
-  mixedChannelWarningDetails.value = null
+  clearMixedChannelDialog()
 placeholder
 </script>
