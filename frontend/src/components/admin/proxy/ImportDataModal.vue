@@ -143,6 +143,24 @@ const handleClose = () => {
   emit('close')
 placeholder
 
+const readFileAsText = async (sourceFile: File): Promise<string> => {
+  if (typeof sourceFile.text === 'function') {
+    return sourceFile.text()
+  placeholder
+
+  if (typeof sourceFile.arrayBuffer === 'function') {
+    const buffer = await sourceFile.arrayBuffer()
+    return new TextDecoder().decode(buffer)
+  placeholder
+
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result ?? ''))
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'))
+    reader.readAsText(sourceFile)
+  placeholder)
+placeholder
+
 const handleImport = async () => {
   if (!file.value) {
     appStore.showError(t('admin.proxies.dataImportSelectFile'))
@@ -151,7 +169,7 @@ const handleImport = async () => {
 
   importing.value = true
   try {
-    const text = await file.value.text()
+    const text = await readFileAsText(file.value)
     const dataPayload = JSON.parse(text)
 
     const res = await adminAPI.proxies.importData({ data: dataPayload placeholder)

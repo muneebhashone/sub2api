@@ -39,16 +39,6 @@ watch(
   { immediate: true placeholder
 )
 
-watch(
-  () => appStore.siteName,
-  (newName) => {
-    if (newName) {
-      document.title = `${newNameplaceholder - AI API Gateway`
-    placeholder
-  placeholder,
-  { immediate: true placeholder
-)
-
 // Watch for authentication state and manage subscription data
 watch(
   () => authStore.isAuthenticated,
