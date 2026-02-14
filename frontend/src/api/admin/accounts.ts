@@ -49,6 +49,58 @@ export async function list(
   return data
 placeholder
 
+export interface AccountListWithEtagResult {
+  notModified: boolean
+  etag: string | null
+  data: PaginatedResponse<Account> | null
+placeholder
+
+export async function listWithEtag(
+  page: number = 1,
+  pageSize: number = 20,
+  filters?: {
+    platform?: string
+    type?: string
+    status?: string
+    search?: string
+  placeholder,
+  options?: {
+    signal?: AbortSignal
+    etag?: string | null
+  placeholder
+): Promise<AccountListWithEtagResult> {
+  const headers: Record<string, string> = {placeholder
+  if (options?.etag) {
+    headers['If-None-Match'] = options.etag
+  placeholder
+
+  const response = await apiClient.get<PaginatedResponse<Account>>('/admin/accounts', {
+    params: {
+      page,
+      page_size: pageSize,
+      ...filters
+    placeholder,
+    headers,
+    signal: options?.signal,
+    validateStatus: (status) => (status >= 200 && status < 300) || status === 304
+  placeholder)
+
+  const etagHeader = typeof response.headers?.etag === 'string' ? response.headers.etag : null
+  if (response.status === 304) {
+    return {
+      notModified: true,
+      etag: etagHeader,
+      data: null
+    placeholder
+  placeholder
+
+  return {
+    notModified: false,
+    etag: etagHeader,
+    data: response.data
+  placeholder
+placeholder
+
 /**
  * Get account by ID
  * @param id - Account ID
@@ -455,6 +507,7 @@ placeholder
 
 export const accountsAPI = {
   list,
+  listWithEtag,
   getById,
   create,
   update,
