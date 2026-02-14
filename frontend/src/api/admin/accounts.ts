@@ -164,10 +164,10 @@ placeholder
 /**
  * Clear account rate limit status
  * @param id - Account ID
- * @returns Success confirmation
+ * @returns Updated account
  */
-export async function clearRateLimit(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.post<{ message: string placeholder>(
+export async function clearRateLimit(id: number): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(
     `/admin/accounts/${idplaceholder/clear-rate-limit`
   )
   return data

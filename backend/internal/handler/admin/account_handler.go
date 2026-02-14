@@ -1106,7 +1106,13 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, gin.H{"message": "Rate limit cleared successfully"placeholder)
+	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.AccountFromService(account))
 placeholder
 
 // GetTempUnschedulable handles getting temporary unschedulable status
