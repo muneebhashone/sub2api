@@ -41,7 +41,7 @@
         >
           <div class="mb-2 flex items-center justify-between">
             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {{ t('admin.accounts.allGroups', { count: groups.length placeholder) placeholderplaceholder
+              {{ t('admin.accounts.groupCountTotal', { count: groups.length placeholder) placeholderplaceholder
             </span>
             <button
               @click="showPopover = false"

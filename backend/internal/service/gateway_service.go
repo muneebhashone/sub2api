@@ -349,6 +349,8 @@ type ClaudeUsage struct {
 	OutputTokens             int `json:"output_tokens"`
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
 	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+	CacheCreation5mTokens    int // 5分钟缓存创建token（来自嵌套 cache_creation 对象）
+	CacheCreation1hTokens    int // 1小时缓存创建token（来自嵌套 cache_creation 对象）
 placeholder
 
 // ForwardResult 转发结果
@@ -4403,6 +4405,14 @@ placeholder
 		usage.InputTokens = msgStart.Message.Usage.InputTokens
 		usage.CacheCreationInputTokens = msgStart.Message.Usage.CacheCreationInputTokens
 		usage.CacheReadInputTokens = msgStart.Message.Usage.CacheReadInputTokens
+
+		// 解析嵌套的 cache_creation 对象中的 5m/1h 明细
+		cc5m := gjson.Get(data, "message.usage.cache_creation.ephemeral_5m_input_tokens")
+		cc1h := gjson.Get(data, "message.usage.cache_creation.ephemeral_1h_input_tokens")
+		if cc5m.Exists() || cc1h.Exists() {
+			usage.CacheCreation5mTokens = int(cc5m.Int())
+			usage.CacheCreation1hTokens = int(cc1h.Int())
+	placeholder
 placeholder
 
 	// 解析message_delta获取tokens（兼容GLM等把所有usage放在delta中的API）
@@ -4431,6 +4441,14 @@ placeholder
 		if msgDelta.Usage.CacheReadInputTokens > 0 {
 			usage.CacheReadInputTokens = msgDelta.Usage.CacheReadInputTokens
 	placeholder
+
+		// 解析嵌套的 cache_creation 对象中的 5m/1h 明细
+		cc5m := gjson.Get(data, "usage.cache_creation.ephemeral_5m_input_tokens")
+		cc1h := gjson.Get(data, "usage.cache_creation.ephemeral_1h_input_tokens")
+		if cc5m.Exists() || cc1h.Exists() {
+			usage.CacheCreation5mTokens = int(cc5m.Int())
+			usage.CacheCreation1hTokens = int(cc1h.Int())
+	placeholder
 placeholder
 placeholder
 
@@ -4449,6 +4467,14 @@ placeholder
 placeholder
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("parse response: %w", err)
+placeholder
+
+	// 解析嵌套的 cache_creation 对象中的 5m/1h 明细
+	cc5m := gjson.GetBytes(body, "usage.cache_creation.ephemeral_5m_input_tokens")
+	cc1h := gjson.GetBytes(body, "usage.cache_creation.ephemeral_1h_input_tokens")
+	if cc5m.Exists() || cc1h.Exists() {
+		response.Usage.CacheCreation5mTokens = int(cc5m.Int())
+		response.Usage.CacheCreation1hTokens = int(cc1h.Int())
 placeholder
 
 	// 兼容 Kimi cached_tokens → cache_read_input_tokens
@@ -4560,10 +4586,12 @@ placeholder
 placeholder else {
 		// Token 计费
 		tokens := UsageTokens{
-			InputTokens:         result.Usage.InputTokens,
-			OutputTokens:        result.Usage.OutputTokens,
-			CacheCreationTokens: result.Usage.CacheCreationInputTokens,
-			CacheReadTokens:     result.Usage.CacheReadInputTokens,
+			InputTokens:           result.Usage.InputTokens,
+			OutputTokens:          result.Usage.OutputTokens,
+			CacheCreationTokens:   result.Usage.CacheCreationInputTokens,
+			CacheReadTokens:       result.Usage.CacheReadInputTokens,
+			CacheCreation5mTokens: result.Usage.CacheCreation5mTokens,
+			CacheCreation1hTokens: result.Usage.CacheCreation1hTokens,
 	placeholder
 		var err error
 		cost, err = s.billingService.CalculateCost(result.Model, tokens, multiplier)
@@ -4597,6 +4625,8 @@ placeholder
 		OutputTokens:          result.Usage.OutputTokens,
 		CacheCreationTokens:   result.Usage.CacheCreationInputTokens,
 		CacheReadTokens:       result.Usage.CacheReadInputTokens,
+		CacheCreation5mTokens: result.Usage.CacheCreation5mTokens,
+		CacheCreation1hTokens: result.Usage.CacheCreation1hTokens,
 		InputCost:             cost.InputCost,
 		OutputCost:            cost.OutputCost,
 		CacheCreationCost:     cost.CacheCreationCost,
@@ -4741,10 +4771,12 @@ placeholder
 placeholder else {
 		// Token 计费（使用长上下文计费方法）
 		tokens := UsageTokens{
-			InputTokens:         result.Usage.InputTokens,
-			OutputTokens:        result.Usage.OutputTokens,
-			CacheCreationTokens: result.Usage.CacheCreationInputTokens,
-			CacheReadTokens:     result.Usage.CacheReadInputTokens,
+			InputTokens:           result.Usage.InputTokens,
+			OutputTokens:          result.Usage.OutputTokens,
+			CacheCreationTokens:   result.Usage.CacheCreationInputTokens,
+			CacheReadTokens:       result.Usage.CacheReadInputTokens,
+			CacheCreation5mTokens: result.Usage.CacheCreation5mTokens,
+			CacheCreation1hTokens: result.Usage.CacheCreation1hTokens,
 	placeholder
 		var err error
 		cost, err = s.billingService.CalculateCostWithLongContext(result.Model, tokens, multiplier, input.LongContextThreshold, input.LongContextMultiplier)
@@ -4778,6 +4810,8 @@ placeholder
 		OutputTokens:          result.Usage.OutputTokens,
 		CacheCreationTokens:   result.Usage.CacheCreationInputTokens,
 		CacheReadTokens:       result.Usage.CacheReadInputTokens,
+		CacheCreation5mTokens: result.Usage.CacheCreation5mTokens,
+		CacheCreation1hTokens: result.Usage.CacheCreation1hTokens,
 		InputCost:             cost.InputCost,
 		OutputCost:            cost.OutputCost,
 		CacheCreationCost:     cost.CacheCreationCost,
