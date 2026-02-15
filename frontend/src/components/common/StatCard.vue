@@ -6,7 +6,7 @@
     <div class="min-w-0 flex-1">
       <p class="stat-label truncate">{{ title placeholderplaceholder</p>
       <div class="mt-1 flex items-baseline gap-2">
-        <p class="stat-value">{{ formattedValue placeholderplaceholder</p>
+        <p class="stat-value" :title="String(formattedValue)">{{ formattedValue placeholderplaceholder</p>
         <span v-if="change !== undefined" :class="['stat-trend', trendClass]">
           <Icon
             v-if="changeType !== 'neutral'"
