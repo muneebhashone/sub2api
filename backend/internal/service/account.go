@@ -752,6 +752,38 @@ placeholder
 	return false
 placeholder
 
+// IsCacheTTLOverrideEnabled 检查是否启用缓存 TTL 强制替换
+// 仅适用于 Anthropic OAuth/SetupToken 类型账号
+// 启用后将所有 cache creation tokens 归入指定的 TTL 类型（5m 或 1h）
+func (a *Account) IsCacheTTLOverrideEnabled() bool {
+	if !a.IsAnthropicOAuthOrSetupToken() {
+		return false
+placeholder
+	if a.Extra == nil {
+		return false
+placeholder
+	if v, ok := a.Extra["cache_ttl_override_enabled"]; ok {
+		if enabled, ok := v.(bool); ok {
+			return enabled
+	placeholder
+placeholder
+	return false
+placeholder
+
+// GetCacheTTLOverrideTarget 获取缓存 TTL 强制替换的目标类型
+// 返回 "5m" 或 "1h"，默认 "5m"
+func (a *Account) GetCacheTTLOverrideTarget() string {
+	if a.Extra == nil {
+		return "5m"
+placeholder
+	if v, ok := a.Extra["cache_ttl_override_target"]; ok {
+		if target, ok := v.(string); ok && (target == "5m" || target == "1h") {
+			return target
+	placeholder
+placeholder
+	return "5m"
+placeholder
+
 // GetWindowCostLimit 获取 5h 窗口费用阈值（美元）
 // 返回 0 表示未启用
 func (a *Account) GetWindowCostLimit() float64 {
