@@ -650,6 +650,7 @@ placeholder
 		{Name: "ip_address", Type: field.TypeString, Nullable: true, Size: 45placeholder,
 		{Name: "image_count", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "image_size", Type: field.TypeString, Nullable: true, Size: 10placeholder,
+		{Name: "cache_ttl_overridden", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "api_key_id", Type: field.TypeInt64placeholder,
 		{Name: "account_id", Type: field.TypeInt64placeholder,
@@ -665,31 +666,31 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[26]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[27]placeholder,
 				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[27]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[28]placeholder,
 				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[28]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[29]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[29]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[30]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[30]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[31]placeholder,
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -698,32 +699,32 @@ placeholder
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[29]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[30]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[27]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[27]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[28]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[28]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[29]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[30]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[31]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[25]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[26]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_model",
@@ -738,12 +739,12 @@ placeholder
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[29], UsageLogsColumns[25]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[30], UsageLogsColumns[26]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[25]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[27], UsageLogsColumns[26]placeholder,
 		placeholder,
 	placeholder,
 placeholder
