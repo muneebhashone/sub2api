@@ -85,7 +85,6 @@ var (
 )
 
 const (
-	antigravityBillingModelEnv    = "GATEWAY_ANTIGRAVITY_BILL_WITH_MAPPED_MODEL"
 	antigravityForwardBaseURLEnv  = "GATEWAY_ANTIGRAVITY_FORWARD_BASE_URL"
 	antigravityFallbackSecondsEnv = "GATEWAY_ANTIGRAVITY_FALLBACK_COOLDOWN_SECONDS"
 )
@@ -1311,6 +1310,7 @@ placeholder
 	// 应用 thinking 模式自动后缀：如果 thinking 开启且目标是 claude-sonnet-4-5，自动改为 thinking 版本
 	thinkingEnabled := claudeReq.Thinking != nil && (claudeReq.Thinking.Type == "enabled" || claudeReq.Thinking.Type == "adaptive")
 	mappedModel = applyThinkingModelSuffix(mappedModel, thinkingEnabled)
+	billingModel := mappedModel
 
 	// 获取 access_token
 	if s.tokenProvider == nil {
@@ -1371,6 +1371,10 @@ placeholder)
 				StatusCode:        http.StatusServiceUnavailable,
 				ForceCacheBilling: switchErr.IsStickySession,
 		placeholder
+	placeholder
+		// 区分客户端取消和真正的上游失败，返回更准确的错误消息
+		if c.Request.Context().Err() != nil {
+			return nil, s.writeClaudeError(c, http.StatusBadGateway, "client_disconnected", "Client disconnected before upstream response")
 	placeholder
 		return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed after retries")
 placeholder
@@ -1620,7 +1624,7 @@ placeholder
 	return &ForwardResult{
 		RequestID:        requestID,
 		Usage:            *usage,
-		Model:            originalModel, // 使用原始模型用于计费和日志
+		Model:            billingModel, // 使用映射模型用于计费和日志
 		Stream:           claudeReq.Stream,
 		Duration:         time.Since(startTime),
 		FirstTokenMs:     firstTokenMs,
@@ -1974,6 +1978,7 @@ placeholder
 	if mappedModel == "" {
 		return nil, s.writeGoogleError(c, http.StatusForbidden, fmt.Sprintf("model %s not in whitelist", originalModel))
 placeholder
+	billingModel := mappedModel
 
 	// 获取 access_token
 	if s.tokenProvider == nil {
@@ -2043,6 +2048,10 @@ placeholder)
 				StatusCode:        http.StatusServiceUnavailable,
 				ForceCacheBilling: switchErr.IsStickySession,
 		placeholder
+	placeholder
+		// 区分客户端取消和真正的上游失败，返回更准确的错误消息
+		if c.Request.Context().Err() != nil {
+			return nil, s.writeGoogleError(c, http.StatusBadGateway, "Client disconnected before upstream response")
 	placeholder
 		return nil, s.writeGoogleError(c, http.StatusBadGateway, "Upstream request failed after retries")
 placeholder
@@ -2199,7 +2208,7 @@ placeholder
 	return &ForwardResult{
 		RequestID:        requestID,
 		Usage:            *usage,
-		Model:            originalModel,
+		Model:            billingModel,
 		Stream:           stream,
 		Duration:         time.Since(startTime),
 		FirstTokenMs:     firstTokenMs,
@@ -2644,7 +2653,16 @@ placeholder
 		defaultDur := s.getDefaultRateLimitDuration()
 
 		// 尝试解析模型 key 并设置模型级限流
-		modelKey := resolveAntigravityModelKey(requestedModel)
+		//
+		// 注意：requestedModel 可能是“映射前”的请求模型名（例如 claude-opus-4-6），
+		// 调度与限流判定使用的是 Antigravity 最终模型名（包含映射与 thinking 后缀）。
+		// 因此这里必须写入最终模型 key，确保后续调度能正确避开已限流模型。
+		modelKey := resolveFinalAntigravityModelKey(ctx, account, requestedModel)
+		if strings.TrimSpace(modelKey) == "" {
+			// 极少数情况下无法映射（理论上不应发生：能转发成功说明映射已通过），
+			// 保持旧行为作为兜底，避免完全丢失模型级限流记录。
+			modelKey = resolveAntigravityModelKey(requestedModel)
+	placeholder
 		if modelKey != "" {
 			ra := s.resolveResetTime(resetAt, defaultDur)
 			if err := s.accountRepo.SetModelRateLimit(ctx, account.ID, modelKey, ra); err != nil {
@@ -3875,7 +3893,6 @@ placeholder
 		return nil, fmt.Errorf("missing model")
 placeholder
 	originalModel := claudeReq.Model
-	billingModel := originalModel
 
 	// 构建上游请求 URL
 	upstreamURL := baseURL + "/v1/messages"
@@ -3928,7 +3945,7 @@ placeholder
 		_, _ = c.Writer.Write(respBody)
 
 		return &ForwardResult{
-			Model: billingModel,
+			Model: originalModel,
 	placeholder, nil
 placeholder
 
@@ -3969,7 +3986,7 @@ placeholder
 	log.Printf("%s status=success duration_ms=%d", prefix, duration.Milliseconds())
 
 	return &ForwardResult{
-		Model:            billingModel,
+		Model:            originalModel,
 		Stream:           claudeReq.Stream,
 		Duration:         duration,
 		FirstTokenMs:     firstTokenMs,

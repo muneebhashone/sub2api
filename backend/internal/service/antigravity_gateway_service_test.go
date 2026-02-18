@@ -133,6 +133,36 @@ func (s *httpUpstreamStub) DoWithTLS(_ *http.Request, _ string, _ int64, _ int, 
 	return s.resp, s.err
 placeholder
 
+type antigravitySettingRepoStub struct{placeholder
+
+func (s *antigravitySettingRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
+	panic("unexpected Get call")
+placeholder
+
+func (s *antigravitySettingRepoStub) GetValue(ctx context.Context, key string) (string, error) {
+	return "", ErrSettingNotFound
+placeholder
+
+func (s *antigravitySettingRepoStub) Set(ctx context.Context, key, value string) error {
+	panic("unexpected Set call")
+placeholder
+
+func (s *antigravitySettingRepoStub) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
+	panic("unexpected GetMultiple call")
+placeholder
+
+func (s *antigravitySettingRepoStub) SetMultiple(ctx context.Context, settings map[string]string) error {
+	panic("unexpected SetMultiple call")
+placeholder
+
+func (s *antigravitySettingRepoStub) GetAll(ctx context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+placeholder
+
+func (s *antigravitySettingRepoStub) Delete(ctx context.Context, key string) error {
+	panic("unexpected Delete call")
+placeholder
+
 func TestAntigravityGatewayService_Forward_PromptTooLong(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	writer := httptest.NewRecorder()
@@ -159,8 +189,9 @@ placeholder
 placeholder
 
 	svc := &AntigravityGatewayService{
-		tokenProvider: &AntigravityTokenProvider{placeholder,
-		httpUpstream:  &httpUpstreamStub{resp: respplaceholder,
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
 placeholder
 
 	account := &Account{
@@ -415,6 +446,113 @@ placeholder
 	require.ErrorAs(t, err, &failoverErr, "error should be UpstreamFailoverError to trigger account switch")
 	require.Equal(t, http.StatusServiceUnavailable, failoverErr.StatusCode)
 	require.True(t, failoverErr.ForceCacheBilling, "ForceCacheBilling should be true for sticky session switch")
+placeholder
+
+// TestAntigravityGatewayService_Forward_BillsWithMappedModel
+// 验证：Antigravity Claude 转发返回的计费模型使用映射后的模型
+func TestAntigravityGatewayService_Forward_BillsWithMappedModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"model": "claude-sonnet-4-5",
+		"messages": []map[string]any{
+			{"role": "user", "content": "hello"placeholder,
+	placeholder,
+		"max_tokens": 16,
+		"stream":     true,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request = req
+
+	upstreamBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":3placeholderplaceholderplaceholder\n\n")
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Request-Id": []string{"req-bill-1"placeholderplaceholder,
+		Body:       io.NopCloser(bytes.NewReader(upstreamBody)),
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
+placeholder
+
+	const mappedModel = "gemini-3-pro-high"
+	account := &Account{
+		ID:          5,
+		Name:        "acc-forward-billing",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				"claude-sonnet-4-5": mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, mappedModel, result.Model)
+placeholder
+
+// TestAntigravityGatewayService_ForwardGemini_BillsWithMappedModel
+// 验证：Antigravity Gemini 转发返回的计费模型使用映射后的模型
+func TestAntigravityGatewayService_ForwardGemini_BillsWithMappedModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-2.5-flash:generateContent", bytes.NewReader(body))
+	c.Request = req
+
+	upstreamBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":3placeholderplaceholderplaceholder\n\n")
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Request-Id": []string{"req-bill-2"placeholderplaceholder,
+		Body:       io.NopCloser(bytes.NewReader(upstreamBody)),
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
+placeholder
+
+	const mappedModel = "gemini-3-pro-high"
+	account := &Account{
+		ID:          6,
+		Name:        "acc-gemini-billing",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				"gemini-2.5-flash": mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "generateContent", true, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, mappedModel, result.Model)
 placeholder
 
 // --- 流式 happy path 测试 ---
