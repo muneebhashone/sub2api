@@ -3553,12 +3553,12 @@ placeholder
 			// messages requests typically use only oauth + interleaved-thinking.
 			// Also drop claude-code beta if a downstream client added it.
 			requiredBetas := []string{claude.BetaOAuth, claude.BetaInterleavedThinkingplaceholder
-			drop := map[string]struct{placeholder{claude.BetaClaudeCode: {placeholderplaceholder
+			drop := map[string]struct{placeholder{claude.BetaClaudeCode: {placeholder, claude.BetaContext1M: {placeholderplaceholder
 			req.Header.Set("anthropic-beta", mergeAnthropicBetaDropping(requiredBetas, incomingBeta, drop))
 	placeholder else {
 			// Claude Code 客户端：尽量透传原始 header，仅补齐 oauth beta
 			clientBetaHeader := req.Header.Get("anthropic-beta")
-			req.Header.Set("anthropic-beta", s.getBetaHeader(modelID, clientBetaHeader))
+			req.Header.Set("anthropic-beta", stripBetaToken(s.getBetaHeader(modelID, clientBetaHeader), claude.BetaContext1M))
 	placeholder
 placeholder else if s.cfg != nil && s.cfg.Gateway.InjectBetaForAPIKey && req.Header.Get("anthropic-beta") == "" {
 		// API-key：仅在请求显式使用 beta 特性且客户端未提供时，按需补齐（默认关闭）
@@ -3705,6 +3705,23 @@ placeholder
 			continue
 	placeholder
 		if _, ok := drop[p]; ok {
+			continue
+	placeholder
+		out = append(out, p)
+placeholder
+	return strings.Join(out, ",")
+placeholder
+
+// stripBetaToken removes a single beta token from a comma-separated header value.
+// It short-circuits when the token is not present to avoid unnecessary allocations.
+func stripBetaToken(header, token string) string {
+	if !strings.Contains(header, token) {
+		return header
+placeholder
+	out := make([]string, 0, 8)
+	for _, p := range strings.Split(header, ",") {
+		p = strings.TrimSpace(p)
+		if p == "" || p == token {
 			continue
 	placeholder
 		out = append(out, p)
@@ -5236,7 +5253,8 @@ placeholder
 
 			incomingBeta := req.Header.Get("anthropic-beta")
 			requiredBetas := []string{claude.BetaClaudeCode, claude.BetaOAuth, claude.BetaInterleavedThinking, claude.BetaTokenCountingplaceholder
-			req.Header.Set("anthropic-beta", mergeAnthropicBeta(requiredBetas, incomingBeta))
+			drop := map[string]struct{placeholder{claude.BetaContext1M: {placeholderplaceholder
+			req.Header.Set("anthropic-beta", mergeAnthropicBetaDropping(requiredBetas, incomingBeta, drop))
 	placeholder else {
 			clientBetaHeader := req.Header.Get("anthropic-beta")
 			if clientBetaHeader == "" {
@@ -5246,7 +5264,7 @@ placeholder
 				if !strings.Contains(beta, claude.BetaTokenCounting) {
 					beta = beta + "," + claude.BetaTokenCounting
 			placeholder
-				req.Header.Set("anthropic-beta", beta)
+				req.Header.Set("anthropic-beta", stripBetaToken(beta, claude.BetaContext1M))
 		placeholder
 	placeholder
 placeholder else if s.cfg != nil && s.cfg.Gateway.InjectBetaForAPIKey && req.Header.Get("anthropic-beta") == "" {
