@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,8 @@ import (
 	"github.com/tidwall/sjson"
 	"go.uber.org/zap"
 )
+
+var soraCloudflareRayPattern = regexp.MustCompile(`(?i)cf-ray[:\s=]+([a-z0-9-]+)`)
 
 // SoraGatewayHandler handles Sora chat completions requests
 type SoraGatewayHandler struct {
@@ -214,6 +217,7 @@ placeholder
 	failedAccountIDs := make(map[int64]struct{placeholder)
 	lastFailoverStatus := 0
 	var lastFailoverBody []byte
+	var lastFailoverHeaders http.Header
 
 	for {
 		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel, failedAccountIDs, "")
@@ -226,7 +230,7 @@ placeholder
 				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
 				return
 		placeholder
-			h.handleFailoverExhausted(c, lastFailoverStatus, lastFailoverBody, streamStarted)
+			h.handleFailoverExhausted(c, lastFailoverStatus, lastFailoverHeaders, lastFailoverBody, streamStarted)
 			return
 	placeholder
 		account := selection.Account
@@ -289,11 +293,13 @@ placeholder
 				failedAccountIDs[account.ID] = struct{placeholder{placeholder
 				if switchCount >= maxAccountSwitches {
 					lastFailoverStatus = failoverErr.StatusCode
+					lastFailoverHeaders = failoverErr.ResponseHeaders
 					lastFailoverBody = failoverErr.ResponseBody
-					h.handleFailoverExhausted(c, lastFailoverStatus, lastFailoverBody, streamStarted)
+					h.handleFailoverExhausted(c, lastFailoverStatus, lastFailoverHeaders, lastFailoverBody, streamStarted)
 					return
 			placeholder
 				lastFailoverStatus = failoverErr.StatusCode
+				lastFailoverHeaders = failoverErr.ResponseHeaders
 				lastFailoverBody = failoverErr.ResponseBody
 				switchCount++
 				upstreamErrCode, upstreamErrMsg := extractUpstreamErrorCodeAndMessage(lastFailoverBody)
@@ -367,14 +373,19 @@ func (h *SoraGatewayHandler) handleConcurrencyError(c *gin.Context, err error, s
 		fmt.Sprintf("Concurrency limit exceeded for %s, please retry later", slotType), streamStarted)
 placeholder
 
-func (h *SoraGatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, responseBody []byte, streamStarted bool) {
-	status, errType, errMsg := h.mapUpstreamError(statusCode, responseBody)
+func (h *SoraGatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, responseHeaders http.Header, responseBody []byte, streamStarted bool) {
+	status, errType, errMsg := h.mapUpstreamError(statusCode, responseHeaders, responseBody)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
 placeholder
 
-func (h *SoraGatewayHandler) mapUpstreamError(statusCode int, responseBody []byte) (int, string, string) {
+func (h *SoraGatewayHandler) mapUpstreamError(statusCode int, responseHeaders http.Header, responseBody []byte) (int, string, string) {
+	if isSoraCloudflareChallengeResponse(statusCode, responseHeaders, responseBody) {
+		baseMsg := fmt.Sprintf("Sora request blocked by Cloudflare challenge (HTTP %d). Please switch to a clean proxy/network and retry.", statusCode)
+		return http.StatusBadGateway, "upstream_error", formatSoraCloudflareChallengeMessage(baseMsg, responseHeaders, responseBody)
+placeholder
+
 	upstreamCode, upstreamMessage := extractUpstreamErrorCodeAndMessage(responseBody)
-	if upstreamMessage != "" {
+	if shouldPassthroughSoraUpstreamMessage(statusCode, upstreamMessage) {
 		switch statusCode {
 		case 401, 403, 404, 500, 502, 503, 504:
 			return http.StatusBadGateway, "upstream_error", upstreamMessage
@@ -402,6 +413,71 @@ placeholder
 	default:
 		return http.StatusBadGateway, "upstream_error", "Upstream request failed"
 placeholder
+placeholder
+
+func isSoraCloudflareChallengeResponse(statusCode int, headers http.Header, body []byte) bool {
+	if statusCode != http.StatusForbidden && statusCode != http.StatusTooManyRequests {
+		return false
+placeholder
+	if strings.EqualFold(strings.TrimSpace(headers.Get("cf-mitigated")), "challenge") {
+		return true
+placeholder
+	preview := strings.ToLower(truncateSoraErrorBody(body, 4096))
+	if strings.Contains(preview, "window._cf_chl_opt") ||
+		strings.Contains(preview, "just a moment") ||
+		strings.Contains(preview, "enable javascript and cookies to continue") ||
+		strings.Contains(preview, "__cf_chl_") ||
+		strings.Contains(preview, "challenge-platform") {
+		return true
+placeholder
+	contentType := strings.ToLower(strings.TrimSpace(headers.Get("content-type")))
+	if strings.Contains(contentType, "text/html") &&
+		(strings.Contains(preview, "<html") || strings.Contains(preview, "<!doctype html")) &&
+		(strings.Contains(preview, "cloudflare") || strings.Contains(preview, "challenge")) {
+		return true
+placeholder
+	return false
+placeholder
+
+func shouldPassthroughSoraUpstreamMessage(statusCode int, message string) bool {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		return false
+placeholder
+	if statusCode == http.StatusForbidden || statusCode == http.StatusTooManyRequests {
+		lower := strings.ToLower(message)
+		if strings.Contains(lower, "<html") || strings.Contains(lower, "<!doctype html") || strings.Contains(lower, "window._cf_chl_opt") {
+			return false
+	placeholder
+placeholder
+	return true
+placeholder
+
+func formatSoraCloudflareChallengeMessage(base string, headers http.Header, body []byte) string {
+	rayID := extractSoraCloudflareRayID(headers, body)
+	if rayID == "" {
+		return base
+placeholder
+	return fmt.Sprintf("%s (cf-ray: %s)", base, rayID)
+placeholder
+
+func extractSoraCloudflareRayID(headers http.Header, body []byte) string {
+	if headers != nil {
+		rayID := strings.TrimSpace(headers.Get("cf-ray"))
+		if rayID != "" {
+			return rayID
+	placeholder
+		rayID = strings.TrimSpace(headers.Get("Cf-Ray"))
+		if rayID != "" {
+			return rayID
+	placeholder
+placeholder
+	preview := truncateSoraErrorBody(body, 8192)
+	matches := soraCloudflareRayPattern.FindStringSubmatch(preview)
+	if len(matches) >= 2 {
+		return strings.TrimSpace(matches[1])
+placeholder
+	return ""
 placeholder
 
 func extractUpstreamErrorCodeAndMessage(body []byte) (string, string) {
@@ -437,6 +513,17 @@ placeholder
 		return s
 placeholder
 	return s[:maxLen] + "...(truncated)"
+placeholder
+
+func truncateSoraErrorBody(body []byte, maxLen int) string {
+	if maxLen <= 0 {
+		maxLen = 512
+placeholder
+	raw := strings.TrimSpace(string(body))
+	if len(raw) <= maxLen {
+		return raw
+placeholder
+	return raw[:maxLen] + "...(truncated)"
 placeholder
 
 func (h *SoraGatewayHandler) handleStreamingAwareError(c *gin.Context, status int, errType, message string, streamStarted bool) {
