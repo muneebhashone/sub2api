@@ -781,9 +781,9 @@ placeholder
 
 func (s *AccountTestService) shouldEnableSoraTLSFingerprint() bool {
 	if s == nil || s.cfg == nil {
-		return false
+		return true
 placeholder
-	return s.cfg.Gateway.TLSFingerprint.Enabled && !s.cfg.Sora.Client.DisableTLSFingerprint
+	return !s.cfg.Sora.Client.DisableTLSFingerprint
 placeholder
 
 func isCloudflareChallengeResponse(statusCode int, body []byte) bool {
