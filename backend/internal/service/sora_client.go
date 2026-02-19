@@ -17,12 +17,15 @@ import (
 	"net/textproto"
 	"net/url"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	openaioauth "github.com/Wei-Shaw/sub2api/internal/pkg/openai"
+	"github.com/Wei-Shaw/sub2api/internal/util/logredact"
 	"github.com/google/uuid"
 	"github.com/tidwall/gjson"
 	"golang.org/x/crypto/sha3"
@@ -32,6 +35,11 @@ const (
 	soraChatGPTBaseURL   = "https://chatgpt.com"
 	soraSentinelFlow     = "sora_2_create_task"
 	soraDefaultUserAgent = "Sora/1.2026.007 (Android 15; 24122RKC7C; build 2600700)"
+)
+
+var (
+	soraSessionAuthURL = "https://sora.chatgpt.com/api/auth/session"
+	soraOAuthTokenURL  = "https://auth.openai.com/oauth/token"
 )
 
 const (
@@ -96,6 +104,7 @@ type SoraClient interface {
 	UploadImage(ctx context.Context, account *Account, data []byte, filename string) (string, error)
 	CreateImageTask(ctx context.Context, account *Account, req SoraImageRequest) (string, error)
 	CreateVideoTask(ctx context.Context, account *Account, req SoraVideoRequest) (string, error)
+	EnhancePrompt(ctx context.Context, account *Account, prompt, expansionLevel string, durationS int) (string, error)
 	GetImageTask(ctx context.Context, account *Account, taskID string) (*SoraImageTaskStatus, error)
 	GetVideoTask(ctx context.Context, account *Account, taskID string) (*SoraVideoTaskStatus, error)
 placeholder
@@ -157,26 +166,94 @@ placeholder
 
 // SoraDirectClient 直连 Sora 实现
 type SoraDirectClient struct {
-	cfg           *config.Config
-	httpUpstream  HTTPUpstream
-	tokenProvider *OpenAITokenProvider
+	cfg             *config.Config
+	httpUpstream    HTTPUpstream
+	tokenProvider   *OpenAITokenProvider
+	accountRepo     AccountRepository
+	soraAccountRepo SoraAccountRepository
+	baseURL         string
 placeholder
 
 // NewSoraDirectClient 创建 Sora 直连客户端
 func NewSoraDirectClient(cfg *config.Config, httpUpstream HTTPUpstream, tokenProvider *OpenAITokenProvider) *SoraDirectClient {
+	baseURL := ""
+	if cfg != nil {
+		rawBaseURL := strings.TrimRight(strings.TrimSpace(cfg.Sora.Client.BaseURL), "/")
+		baseURL = normalizeSoraBaseURL(rawBaseURL)
+		if rawBaseURL != "" && baseURL != rawBaseURL {
+			log.Printf("[SoraClient] normalized base_url from %s to %s", sanitizeSoraLogURL(rawBaseURL), sanitizeSoraLogURL(baseURL))
+	placeholder
+placeholder
 	return &SoraDirectClient{
 		cfg:           cfg,
 		httpUpstream:  httpUpstream,
 		tokenProvider: tokenProvider,
+		baseURL:       baseURL,
 placeholder
+placeholder
+
+func (c *SoraDirectClient) SetAccountRepositories(accountRepo AccountRepository, soraAccountRepo SoraAccountRepository) {
+	if c == nil {
+		return
+placeholder
+	c.accountRepo = accountRepo
+	c.soraAccountRepo = soraAccountRepo
 placeholder
 
 // Enabled 判断是否启用 Sora 直连
 func (c *SoraDirectClient) Enabled() bool {
-	if c == nil || c.cfg == nil {
+	if c == nil {
 		return false
 placeholder
-	return strings.TrimSpace(c.cfg.Sora.Client.BaseURL) != ""
+	if strings.TrimSpace(c.baseURL) != "" {
+		return true
+placeholder
+	if c.cfg == nil {
+		return false
+placeholder
+	return strings.TrimSpace(normalizeSoraBaseURL(c.cfg.Sora.Client.BaseURL)) != ""
+placeholder
+
+// PreflightCheck 在创建任务前执行账号能力预检。
+// 当前仅对视频模型执行 /nf/check 预检，用于提前识别额度耗尽或能力缺失。
+func (c *SoraDirectClient) PreflightCheck(ctx context.Context, account *Account, requestedModel string, modelCfg SoraModelConfig) error {
+	if modelCfg.Type != "video" {
+		return nil
+placeholder
+	token, err := c.getAccessToken(ctx, account)
+	if err != nil {
+		return err
+placeholder
+	headers := c.buildBaseHeaders(token, c.defaultUserAgent())
+	headers.Set("Accept", "application/json")
+	body, _, err := c.doRequest(ctx, account, http.MethodGet, c.buildURL("/nf/check"), headers, nil, false)
+	if err != nil {
+		var upstreamErr *SoraUpstreamError
+		if errors.As(err, &upstreamErr) && upstreamErr.StatusCode == http.StatusNotFound {
+			return &SoraUpstreamError{
+				StatusCode: http.StatusForbidden,
+				Message:    "当前账号未开通 Sora2 能力或无可用配额",
+				Headers:    upstreamErr.Headers,
+				Body:       upstreamErr.Body,
+		placeholder
+	placeholder
+		return err
+placeholder
+
+	rateLimitReached := gjson.GetBytes(body, "rate_limit_and_credit_balance.rate_limit_reached").Bool()
+	remaining := gjson.GetBytes(body, "rate_limit_and_credit_balance.estimated_num_videos_remaining")
+	if rateLimitReached || (remaining.Exists() && remaining.Int() <= 0) {
+		msg := "当前账号 Sora2 可用配额不足"
+		if requestedModel != "" {
+			msg = fmt.Sprintf("当前账号 %s 可用配额不足", requestedModel)
+	placeholder
+		return &SoraUpstreamError{
+			StatusCode: http.StatusTooManyRequests,
+			Message:    msg,
+			Headers:    http.Header{placeholder,
+	placeholder
+placeholder
+	return nil
 placeholder
 
 func (c *SoraDirectClient) UploadImage(ctx context.Context, account *Account, data []byte, filename string) (string, error) {
@@ -347,6 +424,45 @@ placeholder
 	return taskID, nil
 placeholder
 
+func (c *SoraDirectClient) EnhancePrompt(ctx context.Context, account *Account, prompt, expansionLevel string, durationS int) (string, error) {
+	token, err := c.getAccessToken(ctx, account)
+	if err != nil {
+		return "", err
+placeholder
+	if strings.TrimSpace(expansionLevel) == "" {
+		expansionLevel = "medium"
+placeholder
+	if durationS <= 0 {
+		durationS = 10
+placeholder
+
+	payload := map[string]any{
+		"prompt":          prompt,
+		"expansion_level": expansionLevel,
+		"duration_s":      durationS,
+placeholder
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+placeholder
+
+	headers := c.buildBaseHeaders(token, c.defaultUserAgent())
+	headers.Set("Content-Type", "application/json")
+	headers.Set("Accept", "application/json")
+	headers.Set("Origin", "https://sora.chatgpt.com")
+	headers.Set("Referer", "https://sora.chatgpt.com/")
+
+	respBody, _, err := c.doRequest(ctx, account, http.MethodPost, c.buildURL("/editor/enhance_prompt"), headers, bytes.NewReader(body), false)
+	if err != nil {
+		return "", err
+placeholder
+	enhancedPrompt := strings.TrimSpace(gjson.GetBytes(respBody, "enhanced_prompt").String())
+	if enhancedPrompt == "" {
+		return "", errors.New("enhance_prompt response missing enhanced_prompt")
+placeholder
+	return enhancedPrompt, nil
+placeholder
+
 func (c *SoraDirectClient) GetImageTask(ctx context.Context, account *Account, taskID string) (*SoraImageTaskStatus, error) {
 	status, found, err := c.fetchRecentImageTask(ctx, account, taskID, c.recentTaskLimit())
 	if err != nil {
@@ -512,9 +628,10 @@ placeholder
 placeholder
 
 func (c *SoraDirectClient) buildURL(endpoint string) string {
-	base := ""
-	if c != nil && c.cfg != nil {
-		base = strings.TrimRight(strings.TrimSpace(c.cfg.Sora.Client.BaseURL), "/")
+	base := strings.TrimRight(strings.TrimSpace(c.baseURL), "/")
+	if base == "" && c != nil && c.cfg != nil {
+		base = normalizeSoraBaseURL(c.cfg.Sora.Client.BaseURL)
+		c.baseURL = base
 placeholder
 	if base == "" {
 		return endpoint
@@ -540,14 +657,257 @@ func (c *SoraDirectClient) getAccessToken(ctx context.Context, account *Account)
 	if account == nil {
 		return "", errors.New("account is nil")
 placeholder
-	if c.tokenProvider != nil {
-		return c.tokenProvider.GetAccessToken(ctx, account)
+
+	allowProvider := c.allowOpenAITokenProvider(account)
+	var providerErr error
+	if allowProvider && c.tokenProvider != nil {
+		token, err := c.tokenProvider.GetAccessToken(ctx, account)
+		if err == nil && strings.TrimSpace(token) != "" {
+			c.logTokenSource(account, "openai_token_provider")
+			return token, nil
+	placeholder
+		providerErr = err
+		if err != nil && c.debugEnabled() {
+			c.debugLogf(
+				"token_provider_failed account_id=%d platform=%s err=%s",
+				account.ID,
+				account.Platform,
+				logredact.RedactText(err.Error()),
+			)
+	placeholder
 placeholder
 	token := strings.TrimSpace(account.GetCredential("access_token"))
-	if token == "" {
-		return "", errors.New("access_token not found")
+	if token != "" {
+		expiresAt := account.GetCredentialAsTime("expires_at")
+		if expiresAt != nil && time.Until(*expiresAt) <= 2*time.Minute {
+			refreshed, refreshErr := c.recoverAccessToken(ctx, account, "access_token_expiring")
+			if refreshErr == nil && strings.TrimSpace(refreshed) != "" {
+				c.logTokenSource(account, "refresh_token_recovered")
+				return refreshed, nil
+		placeholder
+			if refreshErr != nil && c.debugEnabled() {
+				c.debugLogf("token_refresh_before_use_failed account_id=%d err=%s", account.ID, logredact.RedactText(refreshErr.Error()))
+		placeholder
+	placeholder
+		c.logTokenSource(account, "account_credentials")
+		return token, nil
 placeholder
-	return token, nil
+
+	recovered, recoverErr := c.recoverAccessToken(ctx, account, "access_token_missing")
+	if recoverErr == nil && strings.TrimSpace(recovered) != "" {
+		c.logTokenSource(account, "session_or_refresh_recovered")
+		return recovered, nil
+placeholder
+	if recoverErr != nil && c.debugEnabled() {
+		c.debugLogf("token_recover_failed account_id=%d platform=%s err=%s", account.ID, account.Platform, logredact.RedactText(recoverErr.Error()))
+placeholder
+	if providerErr != nil {
+		return "", providerErr
+placeholder
+	if c.tokenProvider != nil && !allowProvider {
+		c.logTokenSource(account, "account_credentials(provider_disabled)")
+placeholder
+	return "", errors.New("access_token not found")
+placeholder
+
+func (c *SoraDirectClient) recoverAccessToken(ctx context.Context, account *Account, reason string) (string, error) {
+	if account == nil {
+		return "", errors.New("account is nil")
+placeholder
+
+	if sessionToken := strings.TrimSpace(account.GetCredential("session_token")); sessionToken != "" {
+		accessToken, expiresAt, err := c.exchangeSessionToken(ctx, account, sessionToken)
+		if err == nil && strings.TrimSpace(accessToken) != "" {
+			c.applyRecoveredToken(ctx, account, accessToken, "", expiresAt, sessionToken)
+			c.logTokenRecover(account, "session_token", reason, true, nil)
+			return accessToken, nil
+	placeholder
+		c.logTokenRecover(account, "session_token", reason, false, err)
+placeholder
+
+	refreshToken := strings.TrimSpace(account.GetCredential("refresh_token"))
+	if refreshToken == "" {
+		return "", errors.New("session_token/refresh_token not found")
+placeholder
+	accessToken, newRefreshToken, expiresAt, err := c.exchangeRefreshToken(ctx, account, refreshToken)
+	if err != nil {
+		c.logTokenRecover(account, "refresh_token", reason, false, err)
+		return "", err
+placeholder
+	if strings.TrimSpace(accessToken) == "" {
+		return "", errors.New("refreshed access_token is empty")
+placeholder
+	c.applyRecoveredToken(ctx, account, accessToken, newRefreshToken, expiresAt, "")
+	c.logTokenRecover(account, "refresh_token", reason, true, nil)
+	return accessToken, nil
+placeholder
+
+func (c *SoraDirectClient) exchangeSessionToken(ctx context.Context, account *Account, sessionToken string) (string, string, error) {
+	headers := http.Header{placeholder
+	headers.Set("Cookie", "__Secure-next-auth.session-token="+sessionToken)
+	headers.Set("Accept", "application/json")
+	headers.Set("Origin", "https://sora.chatgpt.com")
+	headers.Set("Referer", "https://sora.chatgpt.com/")
+	headers.Set("User-Agent", c.defaultUserAgent())
+	body, _, err := c.doRequest(ctx, account, http.MethodGet, soraSessionAuthURL, headers, nil, false)
+	if err != nil {
+		return "", "", err
+placeholder
+	accessToken := strings.TrimSpace(gjson.GetBytes(body, "accessToken").String())
+	if accessToken == "" {
+		return "", "", errors.New("session exchange missing accessToken")
+placeholder
+	expiresAt := strings.TrimSpace(gjson.GetBytes(body, "expires").String())
+	return accessToken, expiresAt, nil
+placeholder
+
+func (c *SoraDirectClient) exchangeRefreshToken(ctx context.Context, account *Account, refreshToken string) (string, string, string, error) {
+	clientIDs := []string{
+		strings.TrimSpace(account.GetCredential("client_id")),
+		openaioauth.SoraClientID,
+		openaioauth.ClientID,
+placeholder
+	tried := make(map[string]struct{placeholder, len(clientIDs))
+	var lastErr error
+
+	for _, clientID := range clientIDs {
+		if clientID == "" {
+			continue
+	placeholder
+		if _, ok := tried[clientID]; ok {
+			continue
+	placeholder
+		tried[clientID] = struct{placeholder{placeholder
+
+		payload := map[string]any{
+			"client_id":     clientID,
+			"grant_type":    "refresh_token",
+			"refresh_token": refreshToken,
+			"redirect_uri":  "com.openai.chat://auth0.openai.com/ios/com.openai.chat/callback",
+	placeholder
+		bodyBytes, err := json.Marshal(payload)
+		if err != nil {
+			return "", "", "", err
+	placeholder
+		headers := http.Header{placeholder
+		headers.Set("Accept", "application/json")
+		headers.Set("Content-Type", "application/json")
+		headers.Set("User-Agent", c.defaultUserAgent())
+
+		respBody, _, err := c.doRequest(ctx, account, http.MethodPost, soraOAuthTokenURL, headers, bytes.NewReader(bodyBytes), false)
+		if err != nil {
+			lastErr = err
+			if c.debugEnabled() {
+				c.debugLogf("refresh_token_exchange_failed account_id=%d client_id=%s err=%s", account.ID, clientID, logredact.RedactText(err.Error()))
+		placeholder
+			continue
+	placeholder
+		accessToken := strings.TrimSpace(gjson.GetBytes(respBody, "access_token").String())
+		if accessToken == "" {
+			lastErr = errors.New("oauth refresh response missing access_token")
+			continue
+	placeholder
+		newRefreshToken := strings.TrimSpace(gjson.GetBytes(respBody, "refresh_token").String())
+		expiresIn := gjson.GetBytes(respBody, "expires_in").Int()
+		expiresAt := ""
+		if expiresIn > 0 {
+			expiresAt = time.Now().Add(time.Duration(expiresIn) * time.Second).Format(time.RFC3339)
+	placeholder
+		return accessToken, newRefreshToken, expiresAt, nil
+placeholder
+
+	if lastErr != nil {
+		return "", "", "", lastErr
+placeholder
+	return "", "", "", errors.New("no available client_id for refresh_token exchange")
+placeholder
+
+func (c *SoraDirectClient) applyRecoveredToken(ctx context.Context, account *Account, accessToken, refreshToken, expiresAt, sessionToken string) {
+	if account == nil {
+		return
+placeholder
+	if account.Credentials == nil {
+		account.Credentials = make(map[string]any)
+placeholder
+	if strings.TrimSpace(accessToken) != "" {
+		account.Credentials["access_token"] = accessToken
+placeholder
+	if strings.TrimSpace(refreshToken) != "" {
+		account.Credentials["refresh_token"] = refreshToken
+placeholder
+	if strings.TrimSpace(expiresAt) != "" {
+		account.Credentials["expires_at"] = expiresAt
+placeholder
+	if strings.TrimSpace(sessionToken) != "" {
+		account.Credentials["session_token"] = sessionToken
+placeholder
+
+	if c.accountRepo != nil {
+		if err := c.accountRepo.Update(ctx, account); err != nil {
+			if c.debugEnabled() {
+				c.debugLogf("persist_recovered_token_failed account_id=%d err=%s", account.ID, logredact.RedactText(err.Error()))
+		placeholder
+	placeholder
+placeholder
+	c.updateSoraAccountExtension(ctx, account, accessToken, refreshToken, sessionToken)
+placeholder
+
+func (c *SoraDirectClient) updateSoraAccountExtension(ctx context.Context, account *Account, accessToken, refreshToken, sessionToken string) {
+	if c == nil || c.soraAccountRepo == nil || account == nil || account.ID <= 0 {
+		return
+placeholder
+	updates := make(map[string]any)
+	if strings.TrimSpace(accessToken) != "" && strings.TrimSpace(refreshToken) != "" {
+		updates["access_token"] = accessToken
+		updates["refresh_token"] = refreshToken
+placeholder
+	if strings.TrimSpace(sessionToken) != "" {
+		updates["session_token"] = sessionToken
+placeholder
+	if len(updates) == 0 {
+		return
+placeholder
+	if err := c.soraAccountRepo.Upsert(ctx, account.ID, updates); err != nil && c.debugEnabled() {
+		c.debugLogf("persist_sora_extension_failed account_id=%d err=%s", account.ID, logredact.RedactText(err.Error()))
+placeholder
+placeholder
+
+func (c *SoraDirectClient) logTokenRecover(account *Account, source, reason string, success bool, err error) {
+	if !c.debugEnabled() || account == nil {
+		return
+placeholder
+	if success {
+		c.debugLogf("token_recover_success account_id=%d platform=%s source=%s reason=%s", account.ID, account.Platform, source, reason)
+		return
+placeholder
+	if err == nil {
+		c.debugLogf("token_recover_failed account_id=%d platform=%s source=%s reason=%s", account.ID, account.Platform, source, reason)
+		return
+placeholder
+	c.debugLogf("token_recover_failed account_id=%d platform=%s source=%s reason=%s err=%s", account.ID, account.Platform, source, reason, logredact.RedactText(err.Error()))
+placeholder
+
+func (c *SoraDirectClient) allowOpenAITokenProvider(account *Account) bool {
+	if c == nil || c.tokenProvider == nil {
+		return false
+placeholder
+	if account != nil && account.Platform == PlatformSora {
+		return c.cfg != nil && c.cfg.Sora.Client.UseOpenAITokenProvider
+placeholder
+	return true
+placeholder
+
+func (c *SoraDirectClient) logTokenSource(account *Account, source string) {
+	if !c.debugEnabled() || account == nil {
+		return
+placeholder
+	c.debugLogf(
+		"token_selected account_id=%d platform=%s account_type=%s source=%s",
+		account.ID,
+		account.Platform,
+		account.Type,
+		source,
+	)
 placeholder
 
 func (c *SoraDirectClient) buildBaseHeaders(token, userAgent string) http.Header {
@@ -600,7 +960,24 @@ placeholder
 placeholder
 
 	attempts := maxRetries + 1
+	authRecovered := false
+	authRecoverExtraAttemptGranted := false
+	var lastErr error
 	for attempt := 1; attempt <= attempts; attempt++ {
+		if c.debugEnabled() {
+			c.debugLogf(
+				"request_start method=%s url=%s attempt=%d/%d timeout_s=%d body_bytes=%d proxy_bound=%t headers=%s",
+				method,
+				sanitizeSoraLogURL(urlStr),
+				attempt,
+				attempts,
+				timeout,
+				len(bodyBytes),
+				account != nil && account.ProxyID != nil && account.Proxy != nil,
+				formatSoraHeaders(headers),
+			)
+	placeholder
+
 		var reader io.Reader
 		if bodyBytes != nil {
 			reader = bytes.NewReader(bodyBytes)
@@ -618,7 +995,21 @@ placeholder
 	placeholder
 		resp, err := c.doHTTP(req, proxyURL, account)
 		if err != nil {
+			lastErr = err
+			if c.debugEnabled() {
+				c.debugLogf(
+					"request_transport_error method=%s url=%s attempt=%d/%d err=%s",
+					method,
+					sanitizeSoraLogURL(urlStr),
+					attempt,
+					attempts,
+					logredact.RedactText(err.Error()),
+				)
+		placeholder
 			if attempt < attempts && allowRetry {
+				if c.debugEnabled() {
+					c.debugLogf("request_retry_scheduled method=%s url=%s reason=transport_error next_attempt=%d/%d", method, sanitizeSoraLogURL(urlStr), attempt+1, attempts)
+			placeholder
 				c.sleepRetry(attempt)
 				continue
 		placeholder
@@ -632,12 +1023,53 @@ placeholder
 	placeholder
 
 		if c.cfg != nil && c.cfg.Sora.Client.Debug {
-			log.Printf("[SoraClient] %s %s status=%d cost=%s", method, sanitizeSoraLogURL(urlStr), resp.StatusCode, time.Since(start))
+			c.debugLogf(
+				"response_received method=%s url=%s attempt=%d/%d status=%d cost=%s resp_bytes=%d resp_headers=%s",
+				method,
+				sanitizeSoraLogURL(urlStr),
+				attempt,
+				attempts,
+				resp.StatusCode,
+				time.Since(start),
+				len(respBody),
+				formatSoraHeaders(resp.Header),
+			)
 	placeholder
 
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-			upstreamErr := c.buildUpstreamError(resp.StatusCode, resp.Header, respBody)
+			if !authRecovered && shouldAttemptSoraTokenRecover(resp.StatusCode, urlStr) && account != nil {
+				if recovered, recoverErr := c.recoverAccessToken(ctx, account, fmt.Sprintf("upstream_status_%d", resp.StatusCode)); recoverErr == nil && strings.TrimSpace(recovered) != "" {
+					headers.Set("Authorization", "Bearer "+recovered)
+					authRecovered = true
+					if attempt == attempts && !authRecoverExtraAttemptGranted {
+						attempts++
+						authRecoverExtraAttemptGranted = true
+				placeholder
+					if c.debugEnabled() {
+						c.debugLogf("request_retry_with_recovered_token method=%s url=%s status=%d", method, sanitizeSoraLogURL(urlStr), resp.StatusCode)
+				placeholder
+					continue
+			placeholder else if recoverErr != nil && c.debugEnabled() {
+					c.debugLogf("request_recover_token_failed method=%s url=%s status=%d err=%s", method, sanitizeSoraLogURL(urlStr), resp.StatusCode, logredact.RedactText(recoverErr.Error()))
+			placeholder
+		placeholder
+			if c.debugEnabled() {
+				c.debugLogf(
+					"response_non_success method=%s url=%s attempt=%d/%d status=%d body=%s",
+					method,
+					sanitizeSoraLogURL(urlStr),
+					attempt,
+					attempts,
+					resp.StatusCode,
+					summarizeSoraResponseBody(respBody, 512),
+				)
+		placeholder
+			upstreamErr := c.buildUpstreamError(resp.StatusCode, resp.Header, respBody, urlStr)
+			lastErr = upstreamErr
 			if allowRetry && attempt < attempts && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500) {
+				if c.debugEnabled() {
+					c.debugLogf("request_retry_scheduled method=%s url=%s reason=status_%d next_attempt=%d/%d", method, sanitizeSoraLogURL(urlStr), resp.StatusCode, attempt+1, attempts)
+			placeholder
 				c.sleepRetry(attempt)
 				continue
 		placeholder
@@ -645,7 +1077,32 @@ placeholder
 	placeholder
 		return respBody, resp.Header, nil
 placeholder
+	if lastErr != nil {
+		return nil, nil, lastErr
+placeholder
 	return nil, nil, errors.New("upstream retries exhausted")
+placeholder
+
+func shouldAttemptSoraTokenRecover(statusCode int, rawURL string) bool {
+	switch statusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		parsed, err := url.Parse(strings.TrimSpace(rawURL))
+		if err != nil {
+			return false
+	placeholder
+		host := strings.ToLower(parsed.Hostname())
+		if host != "sora.chatgpt.com" && host != "chatgpt.com" {
+			return false
+	placeholder
+		// 避免在 ST->AT 转换接口上递归触发 token 恢复导致死循环。
+		path := strings.ToLower(strings.TrimSpace(parsed.Path))
+		if path == "/api/auth/session" {
+			return false
+	placeholder
+		return true
+	default:
+		return false
+placeholder
 placeholder
 
 func (c *SoraDirectClient) doHTTP(req *http.Request, proxyURL string, account *Account) (*http.Response, error) {
@@ -670,9 +1127,14 @@ placeholder
 	time.Sleep(backoff)
 placeholder
 
-func (c *SoraDirectClient) buildUpstreamError(status int, headers http.Header, body []byte) error {
+func (c *SoraDirectClient) buildUpstreamError(status int, headers http.Header, body []byte, requestURL string) error {
 	msg := strings.TrimSpace(extractUpstreamErrorMessage(body))
 	msg = sanitizeUpstreamErrorMessage(msg)
+	if status == http.StatusNotFound && strings.Contains(strings.ToLower(msg), "not found") {
+		if hint := soraBaseURLNotFoundHint(requestURL); hint != "" {
+			msg = strings.TrimSpace(msg + " " + hint)
+	placeholder
+placeholder
 	if msg == "" {
 		msg = truncateForLog(body, 256)
 placeholder
@@ -682,6 +1144,45 @@ placeholder
 		Headers:    headers,
 		Body:       body,
 placeholder
+placeholder
+
+func normalizeSoraBaseURL(raw string) string {
+	trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if trimmed == "" {
+		return ""
+placeholder
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return trimmed
+placeholder
+	host := strings.ToLower(parsed.Hostname())
+	if host != "sora.chatgpt.com" && host != "chatgpt.com" {
+		return trimmed
+placeholder
+	pathVal := strings.TrimRight(strings.TrimSpace(parsed.Path), "/")
+	switch pathVal {
+	case "", "/":
+		parsed.Path = "/backend"
+	case "/backend-api":
+		parsed.Path = "/backend"
+placeholder
+	return strings.TrimRight(parsed.String(), "/")
+placeholder
+
+func soraBaseURLNotFoundHint(requestURL string) string {
+	parsed, err := url.Parse(strings.TrimSpace(requestURL))
+	if err != nil || parsed.Host == "" {
+		return ""
+placeholder
+	host := strings.ToLower(parsed.Hostname())
+	if host != "sora.chatgpt.com" && host != "chatgpt.com" {
+		return ""
+placeholder
+	pathVal := strings.TrimSpace(parsed.Path)
+	if strings.HasPrefix(pathVal, "/backend/") || pathVal == "/backend" {
+		return ""
+placeholder
+	return "(请检查 sora.client.base_url，建议配置为 https://sora.chatgpt.com/backend)"
 placeholder
 
 func (c *SoraDirectClient) generateSentinelToken(ctx context.Context, account *Account, accessToken string) (string, error) {
@@ -900,4 +1401,71 @@ placeholder
 	q.Del("expires")
 	parsed.RawQuery = q.Encode()
 	return parsed.String()
+placeholder
+
+func (c *SoraDirectClient) debugEnabled() bool {
+	return c != nil && c.cfg != nil && c.cfg.Sora.Client.Debug
+placeholder
+
+func (c *SoraDirectClient) debugLogf(format string, args ...any) {
+	if !c.debugEnabled() {
+		return
+placeholder
+	log.Printf("[SoraClient] "+format, args...)
+placeholder
+
+func formatSoraHeaders(headers http.Header) string {
+	if len(headers) == 0 {
+		return "{placeholder"
+placeholder
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+placeholder
+	sort.Strings(keys)
+	out := make(map[string]string, len(keys))
+	for _, key := range keys {
+		values := headers.Values(key)
+		if len(values) == 0 {
+			continue
+	placeholder
+		val := strings.Join(values, ",")
+		if isSensitiveHeader(key) {
+			out[key] = "***"
+			continue
+	placeholder
+		out[key] = truncateForLog([]byte(logredact.RedactText(val)), 160)
+placeholder
+	encoded, err := json.Marshal(out)
+	if err != nil {
+		return "{placeholder"
+placeholder
+	return string(encoded)
+placeholder
+
+func isSensitiveHeader(key string) bool {
+	k := strings.ToLower(strings.TrimSpace(key))
+	switch k {
+	case "authorization", "openai-sentinel-token", "cookie", "set-cookie", "x-api-key":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func summarizeSoraResponseBody(body []byte, maxLen int) string {
+	if len(body) == 0 {
+		return ""
+placeholder
+	var text string
+	if json.Valid(body) {
+		text = logredact.RedactJSON(body)
+placeholder else {
+		text = logredact.RedactText(string(body))
+placeholder
+	text = strings.TrimSpace(text)
+	if maxLen <= 0 || len(text) <= maxLen {
+		return text
+placeholder
+	return text[:maxLen] + "...(truncated)"
 placeholder

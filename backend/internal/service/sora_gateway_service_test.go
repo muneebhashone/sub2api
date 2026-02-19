@@ -18,6 +18,8 @@ type stubSoraClientForPoll struct {
 	videoStatus *SoraVideoTaskStatus
 	imageCalls  int
 	videoCalls  int
+	enhanced    string
+	enhanceErr  error
 placeholder
 
 func (s *stubSoraClientForPoll) Enabled() bool { return true placeholder
@@ -29,6 +31,12 @@ func (s *stubSoraClientForPoll) CreateImageTask(ctx context.Context, account *Ac
 placeholder
 func (s *stubSoraClientForPoll) CreateVideoTask(ctx context.Context, account *Account, req SoraVideoRequest) (string, error) {
 	return "task-video", nil
+placeholder
+func (s *stubSoraClientForPoll) EnhancePrompt(ctx context.Context, account *Account, prompt, expansionLevel string, durationS int) (string, error) {
+	if s.enhanced != "" {
+		return s.enhanced, s.enhanceErr
+placeholder
+	return "enhanced prompt", s.enhanceErr
 placeholder
 func (s *stubSoraClientForPoll) GetImageTask(ctx context.Context, account *Account, taskID string) (*SoraImageTaskStatus, error) {
 	s.imageCalls++
@@ -60,6 +68,33 @@ placeholder
 placeholder
 	require.Equal(t, []string{"https://example.com/a.png"placeholder, urls)
 	require.Equal(t, 1, client.imageCalls)
+placeholder
+
+func TestSoraGatewayService_ForwardPromptEnhance(t *testing.T) {
+	client := &stubSoraClientForPoll{
+		enhanced: "cinematic prompt",
+placeholder
+	cfg := &config.Config{
+		Sora: config.SoraConfig{
+			Client: config.SoraClientConfig{
+				PollIntervalSeconds: 1,
+				MaxPollAttempts:     1,
+		placeholder,
+	placeholder,
+placeholder
+	svc := NewSoraGatewayService(client, nil, nil, cfg)
+	account := &Account{
+		ID:       1,
+		Platform: PlatformSora,
+		Status:   StatusActive,
+placeholder
+	body := []byte(`{"model":"prompt-enhance-short-10s","messages":[{"role":"user","content":"cat running"placeholder],"stream":falseplaceholder`)
+
+	result, err := svc.Forward(context.Background(), nil, account, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, "prompt", result.MediaType)
+	require.Equal(t, "prompt-enhance-short-10s", result.Model)
 placeholder
 
 func TestSoraGatewayService_PollVideoTaskFailed(t *testing.T) {
@@ -178,6 +213,7 @@ placeholder
 func TestShouldFailoverUpstreamError(t *testing.T) {
 	svc := NewSoraGatewayService(nil, nil, nil, &config.Config{placeholder)
 	require.True(t, svc.shouldFailoverUpstreamError(401))
+	require.True(t, svc.shouldFailoverUpstreamError(404))
 	require.True(t, svc.shouldFailoverUpstreamError(429))
 	require.True(t, svc.shouldFailoverUpstreamError(500))
 	require.True(t, svc.shouldFailoverUpstreamError(502))
