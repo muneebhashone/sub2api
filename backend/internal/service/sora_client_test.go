@@ -693,10 +693,11 @@ placeholder))
 			Client: config.SoraClientConfig{
 				BaseURL: "https://sora.chatgpt.com/backend",
 				CurlCFFISidecar: config.SoraCurlCFFISidecarConfig{
-					Enabled:        true,
-					BaseURL:        sidecar.URL,
-					Impersonate:    "chrome131",
-					TimeoutSeconds: 15,
+					Enabled:             true,
+					BaseURL:             sidecar.URL,
+					Impersonate:         "chrome131",
+					TimeoutSeconds:      15,
+					SessionReuseEnabled: true,
 			placeholder,
 		placeholder,
 	placeholder,
@@ -715,6 +716,7 @@ placeholder
 	require.JSONEq(t, `{"ok":trueplaceholder`, string(body))
 	require.Equal(t, int32(0), atomic.LoadInt32(&upstream.doWithTLSCalls))
 	require.Equal(t, "http://127.0.0.1:18080", captured.ProxyURL)
+	require.NotEmpty(t, captured.SessionKey)
 	require.Equal(t, "chrome131", captured.Impersonate)
 	require.Equal(t, "https://sora.chatgpt.com/backend/me", captured.URL)
 	decodedReqBody, err := base64.StdEncoding.DecodeString(captured.BodyBase64)
@@ -780,4 +782,189 @@ placeholder
 func TestConvertSidecarHeaderValue_NilAndSlice(t *testing.T) {
 	require.Nil(t, convertSidecarHeaderValue(nil))
 	require.Equal(t, []string{"a", "b"placeholder, convertSidecarHeaderValue([]any{"a", " ", "b"placeholder))
+placeholder
+
+func TestSoraDirectClient_DoHTTP_SidecarSessionKeyStableForSameAccountProxy(t *testing.T) {
+	var captured []soraCurlCFFISidecarRequest
+	sidecar := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+	placeholder
+		var reqPayload soraCurlCFFISidecarRequest
+		require.NoError(t, json.Unmarshal(raw, &reqPayload))
+		captured = append(captured, reqPayload)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status_code": http.StatusOK,
+			"headers": map[string]any{
+				"Content-Type": "application/json",
+		placeholder,
+			"body": `{"ok":trueplaceholder`,
+	placeholder)
+placeholder))
+	defer sidecar.Close()
+
+	cfg := &config.Config{
+		Sora: config.SoraConfig{
+			Client: config.SoraClientConfig{
+				BaseURL: "https://sora.chatgpt.com/backend",
+				CurlCFFISidecar: config.SoraCurlCFFISidecarConfig{
+					Enabled:             true,
+					BaseURL:             sidecar.URL,
+					SessionReuseEnabled: true,
+					SessionTTLSeconds:   3600,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	client := NewSoraDirectClient(cfg, nil, nil)
+	account := &Account{ID: 1001placeholder
+
+	req1, err := http.NewRequest(http.MethodGet, "https://sora.chatgpt.com/backend/me", nil)
+placeholder
+	_, err = client.doHTTP(req1, "http://127.0.0.1:18080", account)
+placeholder
+
+	req2, err := http.NewRequest(http.MethodGet, "https://sora.chatgpt.com/backend/me", nil)
+placeholder
+	_, err = client.doHTTP(req2, "http://127.0.0.1:18080", account)
+placeholder
+
+	require.Len(t, captured, 2)
+	require.NotEmpty(t, captured[0].SessionKey)
+	require.Equal(t, captured[0].SessionKey, captured[1].SessionKey)
+placeholder
+
+func TestSoraDirectClient_DoRequestWithProxy_CloudflareChallengeSetsCooldownAndSkipsRetry(t *testing.T) {
+	var sidecarCalls int32
+	sidecar := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&sidecarCalls, 1)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status_code": http.StatusForbidden,
+			"headers": map[string]any{
+				"cf-ray":       "9d05d73dec4d8c8e-GRU",
+				"content-type": "text/html",
+		placeholder,
+			"body": `<!DOCTYPE html><html><head><title>Just a moment...</title></head><body><script>window._cf_chl_opt={placeholder;</script></body></html>`,
+	placeholder)
+placeholder))
+	defer sidecar.Close()
+
+	cfg := &config.Config{
+		Sora: config.SoraConfig{
+			Client: config.SoraClientConfig{
+				BaseURL:                            "https://sora.chatgpt.com/backend",
+				MaxRetries:                         3,
+				CloudflareChallengeCooldownSeconds: 60,
+				CurlCFFISidecar: config.SoraCurlCFFISidecarConfig{
+					Enabled:     true,
+					BaseURL:     sidecar.URL,
+					Impersonate: "chrome131",
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	client := NewSoraDirectClient(cfg, nil, nil)
+	headers := http.Header{placeholder
+
+	_, _, err := client.doRequestWithProxy(
+		context.Background(),
+		&Account{ID: 99placeholder,
+		"http://127.0.0.1:18080",
+		http.MethodGet,
+		"https://sora.chatgpt.com/backend/me",
+		headers,
+		nil,
+		true,
+	)
+placeholder
+	var upstreamErr *SoraUpstreamError
+	require.ErrorAs(t, err, &upstreamErr)
+	require.Equal(t, http.StatusForbidden, upstreamErr.StatusCode)
+	require.Equal(t, int32(1), atomic.LoadInt32(&sidecarCalls), "challenge should not trigger retry loop")
+
+	_, _, err = client.doRequestWithProxy(
+		context.Background(),
+		&Account{ID: 99placeholder,
+		"http://127.0.0.1:18080",
+		http.MethodGet,
+		"https://sora.chatgpt.com/backend/me",
+		headers,
+		nil,
+		true,
+	)
+placeholder
+	require.ErrorAs(t, err, &upstreamErr)
+	require.Equal(t, http.StatusTooManyRequests, upstreamErr.StatusCode)
+	require.Contains(t, upstreamErr.Message, "cooling down")
+	require.Contains(t, upstreamErr.Message, "cf-ray")
+	require.Equal(t, int32(1), atomic.LoadInt32(&sidecarCalls), "cooldown should block outbound request")
+placeholder
+
+func TestSoraDirectClient_SidecarSessionKey_SkipsWhenAccountMissing(t *testing.T) {
+	cfg := &config.Config{
+		Sora: config.SoraConfig{
+			Client: config.SoraClientConfig{
+				CurlCFFISidecar: config.SoraCurlCFFISidecarConfig{
+					Enabled:             true,
+					SessionReuseEnabled: true,
+					SessionTTLSeconds:   3600,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	client := NewSoraDirectClient(cfg, nil, nil)
+	require.Equal(t, "", client.sidecarSessionKey(nil, "http://127.0.0.1:18080"))
+	require.Empty(t, client.sidecarSessions)
+placeholder
+
+func TestSoraDirectClient_SidecarSessionKey_PrunesExpiredAndRecreates(t *testing.T) {
+	cfg := &config.Config{
+		Sora: config.SoraConfig{
+			Client: config.SoraClientConfig{
+				CurlCFFISidecar: config.SoraCurlCFFISidecarConfig{
+					Enabled:             true,
+					SessionReuseEnabled: true,
+					SessionTTLSeconds:   3600,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	client := NewSoraDirectClient(cfg, nil, nil)
+	account := &Account{ID: placeholder
+	key := soraAccountProxyKey(account, "http://127.0.0.1:18080")
+	client.sidecarSessions[key] = soraSidecarSessionEntry{
+		SessionKey: "sora-expired",
+		ExpiresAt:  time.Now().Add(-time.Minute),
+		LastUsedAt: time.Now().Add(-2 * time.Minute),
+placeholder
+
+	sessionKey := client.sidecarSessionKey(account, "http://127.0.0.1:18080")
+	require.NotEmpty(t, sessionKey)
+	require.NotEqual(t, "sora-expired", sessionKey)
+	require.Len(t, client.sidecarSessions, 1)
+placeholder
+
+func TestSoraDirectClient_SidecarSessionKey_TTLZeroKeepsLongLivedSession(t *testing.T) {
+	cfg := &config.Config{
+		Sora: config.SoraConfig{
+			Client: config.SoraClientConfig{
+				CurlCFFISidecar: config.SoraCurlCFFISidecarConfig{
+					Enabled:             true,
+					SessionReuseEnabled: true,
+					SessionTTLSeconds:   0,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	client := NewSoraDirectClient(cfg, nil, nil)
+	account := &Account{ID: 456placeholder
+
+	first := client.sidecarSessionKey(account, "http://127.0.0.1:18080")
+	second := client.sidecarSessionKey(account, "http://127.0.0.1:18080")
+	require.NotEmpty(t, first)
+	require.Equal(t, first, second)
+
+	key := soraAccountProxyKey(account, "http://127.0.0.1:18080")
+	entry, ok := client.sidecarSessions[key]
+	require.True(t, ok)
+	require.True(t, entry.ExpiresAt.After(time.Now().Add(300*24*time.Hour)))
 placeholder

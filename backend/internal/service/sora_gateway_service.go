@@ -906,10 +906,14 @@ placeholder
 			s.rateLimitService.HandleUpstreamError(ctx, account, upstreamErr.StatusCode, upstreamErr.Headers, upstreamErr.Body)
 	placeholder
 		if s.shouldFailoverUpstreamError(upstreamErr.StatusCode) {
+			var responseHeaders http.Header
+			if upstreamErr.Headers != nil {
+				responseHeaders = upstreamErr.Headers.Clone()
+		placeholder
 			return &UpstreamFailoverError{
 				StatusCode:      upstreamErr.StatusCode,
 				ResponseBody:    upstreamErr.Body,
-				ResponseHeaders: upstreamErr.Headers,
+				ResponseHeaders: responseHeaders,
 		placeholder
 	placeholder
 		msg := upstreamErr.Message
