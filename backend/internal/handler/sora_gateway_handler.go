@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/Wei-Shaw/sub2api/internal/util/soraerror"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
@@ -35,6 +37,7 @@ type SoraGatewayHandler struct {
 	concurrencyHelper   *ConcurrencyHelper
 	maxAccountSwitches  int
 	streamMode          string
+	soraTLSEnabled      bool
 	soraMediaSigningKey string
 	soraMediaRoot       string
 placeholder
@@ -50,6 +53,7 @@ func NewSoraGatewayHandler(
 	pingInterval := time.Duration(0)
 	maxAccountSwitches := 3
 	streamMode := "force"
+	soraTLSEnabled := true
 	signKey := ""
 	mediaRoot := "/app/data/sora"
 	if cfg != nil {
@@ -60,6 +64,7 @@ func NewSoraGatewayHandler(
 		if mode := strings.TrimSpace(cfg.Gateway.SoraStreamMode); mode != "" {
 			streamMode = mode
 	placeholder
+		soraTLSEnabled = !cfg.Sora.Client.DisableTLSFingerprint
 		signKey = strings.TrimSpace(cfg.Gateway.SoraMediaSigningKey)
 		if root := strings.TrimSpace(cfg.Sora.Storage.LocalPath); root != "" {
 			mediaRoot = root
@@ -72,6 +77,7 @@ placeholder
 		concurrencyHelper:   NewConcurrencyHelper(concurrencyService, SSEPingFormatComment, pingInterval),
 		maxAccountSwitches:  maxAccountSwitches,
 		streamMode:          strings.ToLower(streamMode),
+		soraTLSEnabled:      soraTLSEnabled,
 		soraMediaSigningKey: signKey,
 		soraMediaRoot:       mediaRoot,
 placeholder
@@ -212,6 +218,8 @@ placeholder
 	switchCount := 0
 	failedAccountIDs := make(map[int64]struct{placeholder)
 	lastFailoverStatus := 0
+	var lastFailoverBody []byte
+	var lastFailoverHeaders http.Header
 
 	for {
 		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel, failedAccountIDs, "")
@@ -224,11 +232,31 @@ placeholder
 				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error(), streamStarted)
 				return
 		placeholder
-			h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+			rayID, mitigated, contentType := extractSoraFailoverHeaderInsights(lastFailoverHeaders, lastFailoverBody)
+			fields := []zap.Field{
+				zap.Int("last_upstream_status", lastFailoverStatus),
+		placeholder
+			if rayID != "" {
+				fields = append(fields, zap.String("last_upstream_cf_ray", rayID))
+		placeholder
+			if mitigated != "" {
+				fields = append(fields, zap.String("last_upstream_cf_mitigated", mitigated))
+		placeholder
+			if contentType != "" {
+				fields = append(fields, zap.String("last_upstream_content_type", contentType))
+		placeholder
+			reqLog.Warn("sora.failover_exhausted_no_available_accounts", fields...)
+			h.handleFailoverExhausted(c, lastFailoverStatus, lastFailoverHeaders, lastFailoverBody, streamStarted)
 			return
 	placeholder
 		account := selection.Account
 		setOpsSelectedAccount(c, account.ID, account.Platform)
+		proxyBound := account.ProxyID != nil
+		proxyID := int64(0)
+		if account.ProxyID != nil {
+			proxyID = *account.ProxyID
+	placeholder
+		tlsFingerprintEnabled := h.soraTLSEnabled
 
 		accountReleaseFunc := selection.ReleaseFunc
 		if !selection.Acquired {
@@ -239,10 +267,19 @@ placeholder
 			accountWaitCounted := false
 			canWait, err := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selection.WaitPlan.MaxWaiting)
 			if err != nil {
-				reqLog.Warn("sora.account_wait_counter_increment_failed", zap.Int64("account_id", account.ID), zap.Error(err))
+				reqLog.Warn("sora.account_wait_counter_increment_failed",
+					zap.Int64("account_id", account.ID),
+					zap.Int64("proxy_id", proxyID),
+					zap.Bool("proxy_bound", proxyBound),
+					zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
+					zap.Error(err),
+				)
 		placeholder else if !canWait {
 				reqLog.Info("sora.account_wait_queue_full",
 					zap.Int64("account_id", account.ID),
+					zap.Int64("proxy_id", proxyID),
+					zap.Bool("proxy_bound", proxyBound),
+					zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
 					zap.Int("max_waiting", selection.WaitPlan.MaxWaiting),
 				)
 				h.handleStreamingAwareError(c, http.StatusTooManyRequests, "rate_limit_error", "Too many pending requests, please retry later", streamStarted)
@@ -266,7 +303,13 @@ placeholder
 				&streamStarted,
 			)
 			if err != nil {
-				reqLog.Warn("sora.account_slot_acquire_failed", zap.Int64("account_id", account.ID), zap.Error(err))
+				reqLog.Warn("sora.account_slot_acquire_failed",
+					zap.Int64("account_id", account.ID),
+					zap.Int64("proxy_id", proxyID),
+					zap.Bool("proxy_bound", proxyBound),
+					zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
+					zap.Error(err),
+				)
 				h.handleConcurrencyError(c, err, "account", streamStarted)
 				return
 		placeholder
@@ -287,20 +330,67 @@ placeholder
 				failedAccountIDs[account.ID] = struct{placeholder{placeholder
 				if switchCount >= maxAccountSwitches {
 					lastFailoverStatus = failoverErr.StatusCode
-					h.handleFailoverExhausted(c, lastFailoverStatus, streamStarted)
+					lastFailoverHeaders = cloneHTTPHeaders(failoverErr.ResponseHeaders)
+					lastFailoverBody = failoverErr.ResponseBody
+					rayID, mitigated, contentType := extractSoraFailoverHeaderInsights(lastFailoverHeaders, lastFailoverBody)
+					fields := []zap.Field{
+						zap.Int64("account_id", account.ID),
+						zap.Int64("proxy_id", proxyID),
+						zap.Bool("proxy_bound", proxyBound),
+						zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
+						zap.Int("upstream_status", failoverErr.StatusCode),
+						zap.Int("switch_count", switchCount),
+						zap.Int("max_switches", maxAccountSwitches),
+				placeholder
+					if rayID != "" {
+						fields = append(fields, zap.String("upstream_cf_ray", rayID))
+				placeholder
+					if mitigated != "" {
+						fields = append(fields, zap.String("upstream_cf_mitigated", mitigated))
+				placeholder
+					if contentType != "" {
+						fields = append(fields, zap.String("upstream_content_type", contentType))
+				placeholder
+					reqLog.Warn("sora.upstream_failover_exhausted", fields...)
+					h.handleFailoverExhausted(c, lastFailoverStatus, lastFailoverHeaders, lastFailoverBody, streamStarted)
 					return
 			placeholder
 				lastFailoverStatus = failoverErr.StatusCode
+				lastFailoverHeaders = cloneHTTPHeaders(failoverErr.ResponseHeaders)
+				lastFailoverBody = failoverErr.ResponseBody
 				switchCount++
-				reqLog.Warn("sora.upstream_failover_switching",
+				upstreamErrCode, upstreamErrMsg := extractUpstreamErrorCodeAndMessage(lastFailoverBody)
+				rayID, mitigated, contentType := extractSoraFailoverHeaderInsights(lastFailoverHeaders, lastFailoverBody)
+				fields := []zap.Field{
 					zap.Int64("account_id", account.ID),
+					zap.Int64("proxy_id", proxyID),
+					zap.Bool("proxy_bound", proxyBound),
+					zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
 					zap.Int("upstream_status", failoverErr.StatusCode),
+					zap.String("upstream_error_code", upstreamErrCode),
+					zap.String("upstream_error_message", upstreamErrMsg),
 					zap.Int("switch_count", switchCount),
 					zap.Int("max_switches", maxAccountSwitches),
-				)
+			placeholder
+				if rayID != "" {
+					fields = append(fields, zap.String("upstream_cf_ray", rayID))
+			placeholder
+				if mitigated != "" {
+					fields = append(fields, zap.String("upstream_cf_mitigated", mitigated))
+			placeholder
+				if contentType != "" {
+					fields = append(fields, zap.String("upstream_content_type", contentType))
+			placeholder
+				reqLog.Warn("sora.upstream_failover_switching", fields...)
 				continue
 		placeholder
-			reqLog.Error("sora.forward_failed", zap.Int64("account_id", account.ID), zap.Error(err))
+			reqLog.Error("sora.forward_failed",
+				zap.Int64("account_id", account.ID),
+				zap.Int64("proxy_id", proxyID),
+				zap.Bool("proxy_bound", proxyBound),
+				zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
+				zap.Error(err),
+			)
 			return
 	placeholder
 
@@ -331,6 +421,9 @@ placeholder
 	placeholder(result, account, userAgent, clientIP)
 		reqLog.Debug("sora.request_completed",
 			zap.Int64("account_id", account.ID),
+			zap.Int64("proxy_id", proxyID),
+			zap.Bool("proxy_bound", proxyBound),
+			zap.Bool("tls_fingerprint_enabled", tlsFingerprintEnabled),
 			zap.Int("switch_count", switchCount),
 		)
 		return
@@ -360,17 +453,41 @@ func (h *SoraGatewayHandler) handleConcurrencyError(c *gin.Context, err error, s
 		fmt.Sprintf("Concurrency limit exceeded for %s, please retry later", slotType), streamStarted)
 placeholder
 
-func (h *SoraGatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, streamStarted bool) {
-	status, errType, errMsg := h.mapUpstreamError(statusCode)
+func (h *SoraGatewayHandler) handleFailoverExhausted(c *gin.Context, statusCode int, responseHeaders http.Header, responseBody []byte, streamStarted bool) {
+	status, errType, errMsg := h.mapUpstreamError(statusCode, responseHeaders, responseBody)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
 placeholder
 
-func (h *SoraGatewayHandler) mapUpstreamError(statusCode int) (int, string, string) {
+func (h *SoraGatewayHandler) mapUpstreamError(statusCode int, responseHeaders http.Header, responseBody []byte) (int, string, string) {
+	if isSoraCloudflareChallengeResponse(statusCode, responseHeaders, responseBody) {
+		baseMsg := fmt.Sprintf("Sora request blocked by Cloudflare challenge (HTTP %d). Please switch to a clean proxy/network and retry.", statusCode)
+		return http.StatusBadGateway, "upstream_error", formatSoraCloudflareChallengeMessage(baseMsg, responseHeaders, responseBody)
+placeholder
+
+	upstreamCode, upstreamMessage := extractUpstreamErrorCodeAndMessage(responseBody)
+	if strings.EqualFold(upstreamCode, "cf_shield_429") {
+		baseMsg := "Sora request blocked by Cloudflare shield (429). Please switch to a clean proxy/network and retry."
+		return http.StatusTooManyRequests, "rate_limit_error", formatSoraCloudflareChallengeMessage(baseMsg, responseHeaders, responseBody)
+placeholder
+	if shouldPassthroughSoraUpstreamMessage(statusCode, upstreamMessage) {
+		switch statusCode {
+		case 401, 403, 404, 500, 502, 503, 504:
+			return http.StatusBadGateway, "upstream_error", upstreamMessage
+		case 429:
+			return http.StatusTooManyRequests, "rate_limit_error", upstreamMessage
+	placeholder
+placeholder
+
 	switch statusCode {
 	case 401:
 		return http.StatusBadGateway, "upstream_error", "Upstream authentication failed, please contact administrator"
 	case 403:
 		return http.StatusBadGateway, "upstream_error", "Upstream access forbidden, please contact administrator"
+	case 404:
+		if strings.EqualFold(upstreamCode, "unsupported_country_code") {
+			return http.StatusBadGateway, "upstream_error", "Upstream region capability unavailable for this account, please contact administrator"
+	placeholder
+		return http.StatusBadGateway, "upstream_error", "Upstream capability unavailable for this account, please contact administrator"
 	case 429:
 		return http.StatusTooManyRequests, "rate_limit_error", "Upstream rate limit exceeded, please retry later"
 	case 529:
@@ -382,11 +499,67 @@ func (h *SoraGatewayHandler) mapUpstreamError(statusCode int) (int, string, stri
 placeholder
 placeholder
 
+func cloneHTTPHeaders(headers http.Header) http.Header {
+	if headers == nil {
+		return nil
+placeholder
+	return headers.Clone()
+placeholder
+
+func extractSoraFailoverHeaderInsights(headers http.Header, body []byte) (rayID, mitigated, contentType string) {
+	if headers != nil {
+		mitigated = strings.TrimSpace(headers.Get("cf-mitigated"))
+		contentType = strings.TrimSpace(headers.Get("content-type"))
+		if contentType == "" {
+			contentType = strings.TrimSpace(headers.Get("Content-Type"))
+	placeholder
+placeholder
+	rayID = soraerror.ExtractCloudflareRayID(headers, body)
+	return rayID, mitigated, contentType
+placeholder
+
+func isSoraCloudflareChallengeResponse(statusCode int, headers http.Header, body []byte) bool {
+	return soraerror.IsCloudflareChallengeResponse(statusCode, headers, body)
+placeholder
+
+func shouldPassthroughSoraUpstreamMessage(statusCode int, message string) bool {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		return false
+placeholder
+	if statusCode == http.StatusForbidden || statusCode == http.StatusTooManyRequests {
+		lower := strings.ToLower(message)
+		if strings.Contains(lower, "<html") || strings.Contains(lower, "<!doctype html") || strings.Contains(lower, "window._cf_chl_opt") {
+			return false
+	placeholder
+placeholder
+	return true
+placeholder
+
+func formatSoraCloudflareChallengeMessage(base string, headers http.Header, body []byte) string {
+	return soraerror.FormatCloudflareChallengeMessage(base, headers, body)
+placeholder
+
+func extractUpstreamErrorCodeAndMessage(body []byte) (string, string) {
+	return soraerror.ExtractUpstreamErrorCodeAndMessage(body)
+placeholder
+
 func (h *SoraGatewayHandler) handleStreamingAwareError(c *gin.Context, status int, errType, message string, streamStarted bool) {
 	if streamStarted {
 		flusher, ok := c.Writer.(http.Flusher)
 		if ok {
-			errorEvent := fmt.Sprintf(`event: error`+"\n"+`data: {"error": {"type": "%s", "message": "%s"placeholderplaceholder`+"\n\n", errType, message)
+			errorData := map[string]any{
+				"error": map[string]string{
+					"type":    errType,
+					"message": message,
+			placeholder,
+		placeholder
+			jsonBytes, err := json.Marshal(errorData)
+			if err != nil {
+				_ = c.Error(err)
+				return
+		placeholder
+			errorEvent := fmt.Sprintf("event: error\ndata: %s\n\n", string(jsonBytes))
 			if _, err := fmt.Fprint(c.Writer, errorEvent); err != nil {
 				_ = c.Error(err)
 		placeholder

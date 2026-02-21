@@ -214,6 +214,13 @@ placeholder
 			enabled := true
 			out.EnableSessionIDMasking = &enabled
 	placeholder
+		// 缓存 TTL 强制替换
+		if a.IsCacheTTLOverrideEnabled() {
+			enabled := true
+			out.CacheTTLOverrideEnabled = &enabled
+			target := a.GetCacheTTLOverrideTarget()
+			out.CacheTTLOverrideTarget = &target
+	placeholder
 placeholder
 
 	return out
@@ -296,6 +303,11 @@ placeholder
 		CountryCode:    p.CountryCode,
 		Region:         p.Region,
 		City:           p.City,
+		QualityStatus:  p.QualityStatus,
+		QualityScore:   p.QualityScore,
+		QualityGrade:   p.QualityGrade,
+		QualitySummary: p.QualitySummary,
+		QualityChecked: p.QualityChecked,
 placeholder
 placeholder
 
@@ -402,6 +414,7 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		ImageSize:             l.ImageSize,
 		MediaType:             l.MediaType,
 		UserAgent:             l.UserAgent,
+		CacheTTLOverridden:    l.CacheTTLOverridden,
 		CreatedAt:             l.CreatedAt,
 		User:                  UserFromServiceShallow(l.User),
 		APIKey:                APIKeyFromService(l.APIKey),
