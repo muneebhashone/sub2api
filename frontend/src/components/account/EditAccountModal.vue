@@ -1033,6 +1033,7 @@ import Icon from '@/components/icons/Icon.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
+import { applyInterceptWarmup placeholder from '@/components/account/credentialsBuilder'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput placeholder from '@/utils/format'
 import {
   getPresetMappingsByPlatform,
@@ -1748,9 +1749,7 @@ const handleSubmit = async () => {
       placeholder
 
       // Add intercept warmup requests setting
-      if (interceptWarmupRequests.value) {
-        newCredentials.intercept_warmup_requests = true
-      placeholder
+      applyInterceptWarmup(newCredentials, interceptWarmupRequests.value, 'edit')
       if (!applyTempUnschedConfig(newCredentials)) {
         return
       placeholder
@@ -1766,6 +1765,9 @@ const handleSubmit = async () => {
         newCredentials.api_key = editApiKey.value.trim()
       placeholder
 
+      // Add intercept warmup requests setting
+      applyInterceptWarmup(newCredentials, interceptWarmupRequests.value, 'edit')
+
       if (!applyTempUnschedConfig(newCredentials)) {
         return
       placeholder
@@ -1776,11 +1778,7 @@ const handleSubmit = async () => {
       const currentCredentials = (props.account.credentials as Record<string, unknown>) || {placeholder
       const newCredentials: Record<string, unknown> = { ...currentCredentials placeholder
 
-      if (interceptWarmupRequests.value) {
-        newCredentials.intercept_warmup_requests = true
-      placeholder else {
-        delete newCredentials.intercept_warmup_requests
-      placeholder
+      applyInterceptWarmup(newCredentials, interceptWarmupRequests.value, 'edit')
       if (!applyTempUnschedConfig(newCredentials)) {
         return
       placeholder
