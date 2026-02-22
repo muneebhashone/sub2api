@@ -34,6 +34,7 @@ func (r *apiKeyRepository) Create(ctx context.Context, key *service.APIKey) erro
 		SetName(key.Name).
 		SetStatus(key.Status).
 		SetNillableGroupID(key.GroupID).
+		SetNillableLastUsedAt(key.LastUsedAt).
 		SetQuota(key.Quota).
 		SetQuotaUsed(key.QuotaUsed).
 		SetNillableExpiresAt(key.ExpiresAt)
@@ -48,6 +49,7 @@ placeholder
 	created, err := builder.Save(ctx)
 	if err == nil {
 		key.ID = created.ID
+		key.LastUsedAt = created.LastUsedAt
 		key.CreatedAt = created.CreatedAt
 		key.UpdatedAt = created.UpdatedAt
 placeholder
@@ -394,6 +396,21 @@ placeholder
 	return updated.QuotaUsed, nil
 placeholder
 
+func (r *apiKeyRepository) UpdateLastUsed(ctx context.Context, id int64, usedAt time.Time) error {
+	affected, err := r.client.APIKey.Update().
+		Where(apikey.IDEQ(id), apikey.DeletedAtIsNil()).
+		SetLastUsedAt(usedAt).
+		SetUpdatedAt(usedAt).
+		Save(ctx)
+	if err != nil {
+		return err
+placeholder
+	if affected == 0 {
+		return service.ErrAPIKeyNotFound
+placeholder
+	return nil
+placeholder
+
 func apiKeyEntityToService(m *dbent.APIKey) *service.APIKey {
 	if m == nil {
 		return nil
@@ -406,6 +423,7 @@ placeholder
 		Status:      m.Status,
 		IPWhitelist: m.IPWhitelist,
 		IPBlacklist: m.IPBlacklist,
+		LastUsedAt:  m.LastUsedAt,
 		CreatedAt:   m.CreatedAt,
 		UpdatedAt:   m.UpdatedAt,
 		GroupID:     m.GroupID,
