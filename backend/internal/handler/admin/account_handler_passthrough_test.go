@@ -64,4 +64,3 @@ placeholder
 	require.NotNil(t, created.Extra)
 	require.Equal(t, true, created.Extra["anthropic_passthrough"])
 placeholder
-

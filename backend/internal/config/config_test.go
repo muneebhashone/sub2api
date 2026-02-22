@@ -1011,6 +1011,16 @@ placeholder{
 			wantErr: "gateway.usage_record.auto_scale_check_interval_seconds",
 	placeholder,
 		{
+			name:    "gateway user group rate cache ttl",
+			mutate:  func(c *Config) { c.Gateway.UserGroupRateCacheTTLSeconds = 0 placeholder,
+			wantErr: "gateway.user_group_rate_cache_ttl_seconds",
+	placeholder,
+		{
+			name:    "gateway models list cache ttl range",
+			mutate:  func(c *Config) { c.Gateway.ModelsListCacheTTLSeconds = 31 placeholder,
+			wantErr: "gateway.models_list_cache_ttl_seconds",
+	placeholder,
+		{
 			name:    "gateway scheduling sticky waiting",
 			mutate:  func(c *Config) { c.Gateway.Scheduling.StickySessionMaxWaiting = 0 placeholder,
 			wantErr: "gateway.scheduling.sticky_session_max_waiting",
