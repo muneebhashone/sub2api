@@ -432,7 +432,7 @@ placeholder)
 	soraClient := &stubSoraClient{imageURLs: []string{"https://example.com/a.png"placeholderplaceholder
 	soraGatewayService := service.NewSoraGatewayService(soraClient, nil, nil, cfg)
 
-	handler := NewSoraGatewayHandler(gatewayService, soraGatewayService, concurrencyService, billingCacheService, cfg)
+	handler := NewSoraGatewayHandler(gatewayService, soraGatewayService, concurrencyService, billingCacheService, nil, cfg)
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
