@@ -2796,19 +2796,41 @@ placeholder
 	return snapshot
 placeholder
 
-// updateCodexUsageSnapshot saves the Codex usage snapshot to account's Extra field
-func (s *OpenAIGatewayService) updateCodexUsageSnapshot(ctx context.Context, accountID int64, snapshot *OpenAICodexUsageSnapshot) {
+func codexSnapshotBaseTime(snapshot *OpenAICodexUsageSnapshot, fallback time.Time) time.Time {
 	if snapshot == nil {
-		return
+		return fallback
 placeholder
-	if s == nil || s.accountRepo == nil {
-		return
+	if snapshot.UpdatedAt == "" {
+		return fallback
+placeholder
+	base, err := time.Parse(time.RFC3339, snapshot.UpdatedAt)
+	if err != nil {
+		return fallback
+placeholder
+	return base
 placeholder
 
-	// Convert snapshot to map for merging into Extra
+func codexResetAtRFC3339(base time.Time, resetAfterSeconds *int) *string {
+	if resetAfterSeconds == nil {
+		return nil
+placeholder
+	sec := *resetAfterSeconds
+	if sec < 0 {
+		sec = 0
+placeholder
+	resetAt := base.Add(time.Duration(sec) * time.Second).Format(time.RFC3339)
+	return &resetAt
+placeholder
+
+func buildCodexUsageExtraUpdates(snapshot *OpenAICodexUsageSnapshot, fallbackNow time.Time) map[string]any {
+	if snapshot == nil {
+		return nil
+placeholder
+
+	baseTime := codexSnapshotBaseTime(snapshot, fallbackNow)
 	updates := make(map[string]any)
 
-	// Save raw primary/secondary fields for debugging/tracing
+	// 保存原始 primary/secondary 字段，便于排查问题
 	if snapshot.PrimaryUsedPercent != nil {
 		updates["codex_primary_used_percent"] = *snapshot.PrimaryUsedPercent
 placeholder
@@ -2830,9 +2852,9 @@ placeholder
 	if snapshot.PrimaryOverSecondaryPercent != nil {
 		updates["codex_primary_over_secondary_percent"] = *snapshot.PrimaryOverSecondaryPercent
 placeholder
-	updates["codex_usage_updated_at"] = snapshot.UpdatedAt
+	updates["codex_usage_updated_at"] = baseTime.Format(time.RFC3339)
 
-	// Normalize to canonical 5h/7d fields
+	// 归一化到 5h/7d 规范字段
 	if normalized := snapshot.Normalize(); normalized != nil {
 		if normalized.Used5hPercent != nil {
 			updates["codex_5h_used_percent"] = *normalized.Used5hPercent
@@ -2852,6 +2874,29 @@ placeholder
 		if normalized.Window7dMinutes != nil {
 			updates["codex_7d_window_minutes"] = *normalized.Window7dMinutes
 	placeholder
+		if reset5hAt := codexResetAtRFC3339(baseTime, normalized.Reset5hSeconds); reset5hAt != nil {
+			updates["codex_5h_reset_at"] = *reset5hAt
+	placeholder
+		if reset7dAt := codexResetAtRFC3339(baseTime, normalized.Reset7dSeconds); reset7dAt != nil {
+			updates["codex_7d_reset_at"] = *reset7dAt
+	placeholder
+placeholder
+
+	return updates
+placeholder
+
+// updateCodexUsageSnapshot saves the Codex usage snapshot to account's Extra field
+func (s *OpenAIGatewayService) updateCodexUsageSnapshot(ctx context.Context, accountID int64, snapshot *OpenAICodexUsageSnapshot) {
+	if snapshot == nil {
+		return
+placeholder
+	if s == nil || s.accountRepo == nil {
+		return
+placeholder
+
+	updates := buildCodexUsageExtraUpdates(snapshot, time.Now())
+	if len(updates) == 0 {
+		return
 placeholder
 
 	// Update account's Extra field asynchronously
