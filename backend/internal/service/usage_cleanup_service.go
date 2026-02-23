@@ -320,6 +320,10 @@ placeholder
 		return err
 placeholder
 	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task requested: task=%d operator=%d status=%s", taskID, canceledBy, status)
+	if status == UsageCleanupStatusCanceled {
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task idempotent hit: task=%d operator=%d", taskID, canceledBy)
+		return nil
+placeholder
 	if status != UsageCleanupStatusPending && status != UsageCleanupStatusRunning {
 		return infraerrors.New(http.StatusConflict, "USAGE_CLEANUP_CANCEL_CONFLICT", "cleanup task cannot be canceled in current status")
 placeholder
@@ -329,6 +333,11 @@ placeholder
 placeholder
 	if !ok {
 		// 状态可能并发改变
+		currentStatus, getErr := s.repo.GetTaskStatus(ctx, taskID)
+		if getErr == nil && currentStatus == UsageCleanupStatusCanceled {
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task idempotent race hit: task=%d operator=%d", taskID, canceledBy)
+			return nil
+	placeholder
 		return infraerrors.New(http.StatusConflict, "USAGE_CLEANUP_CANCEL_CONFLICT", "cleanup task cannot be canceled in current status")
 placeholder
 	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task done: task=%d operator=%d", taskID, canceledBy)

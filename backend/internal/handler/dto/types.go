@@ -395,9 +395,12 @@ placeholder
 
 type BulkAssignResult struct {
 	SuccessCount  int                     `json:"success_count"`
+	CreatedCount  int                     `json:"created_count"`
+	ReusedCount   int                     `json:"reused_count"`
 	FailedCount   int                     `json:"failed_count"`
 	Subscriptions []AdminUserSubscription `json:"subscriptions"`
 	Errors        []string                `json:"errors"`
+	Statuses      map[string]string       `json:"statuses,omitempty"`
 placeholder
 
 // PromoCode 注册优惠码

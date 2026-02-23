@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
@@ -130,20 +131,20 @@ func (h *ProxyHandler) Create(c *gin.Context) {
 		return
 placeholder
 
-	proxy, err := h.adminService.CreateProxy(c.Request.Context(), &service.CreateProxyInput{
-		Name:     strings.TrimSpace(req.Name),
-		Protocol: strings.TrimSpace(req.Protocol),
-		Host:     strings.TrimSpace(req.Host),
-		Port:     req.Port,
-		Username: strings.TrimSpace(req.Username),
-		Password: strings.TrimSpace(req.Password),
+	executeAdminIdempotentJSON(c, "admin.proxies.create", req, service.DefaultWriteIdempotencyTTL(), func(ctx context.Context) (any, error) {
+		proxy, err := h.adminService.CreateProxy(ctx, &service.CreateProxyInput{
+			Name:     strings.TrimSpace(req.Name),
+			Protocol: strings.TrimSpace(req.Protocol),
+			Host:     strings.TrimSpace(req.Host),
+			Port:     req.Port,
+			Username: strings.TrimSpace(req.Username),
+			Password: strings.TrimSpace(req.Password),
+	placeholder)
+		if err != nil {
+			return nil, err
+	placeholder
+		return dto.ProxyFromService(proxy), nil
 placeholder)
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-placeholder
-
-	response.Success(c, dto.ProxyFromService(proxy))
 placeholder
 
 // Update handles updating a proxy
