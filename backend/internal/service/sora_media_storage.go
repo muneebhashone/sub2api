@@ -84,6 +84,12 @@ placeholder
 	if root == "" {
 		root = soraStorageDefaultRoot
 placeholder
+	root = filepath.Clean(root)
+	if !filepath.IsAbs(root) {
+		if absRoot, err := filepath.Abs(root); err == nil {
+			root = absRoot
+	placeholder
+placeholder
 	s.root = root
 	s.imageRoot = filepath.Join(root, "image")
 	s.videoRoot = filepath.Join(root, "video")
@@ -203,9 +209,9 @@ placeholder
 		return "", fmt.Errorf("download failed: %d %s", resp.StatusCode, string(body))
 placeholder
 
-	ext := fileExtFromURL(rawURL)
+	ext := normalizeSoraFileExt(fileExtFromURL(rawURL))
 	if ext == "" {
-		ext = fileExtFromContentType(resp.Header.Get("Content-Type"))
+		ext = normalizeSoraFileExt(fileExtFromContentType(resp.Header.Get("Content-Type")))
 placeholder
 	if ext == "" {
 		ext = ".bin"
@@ -220,8 +226,11 @@ placeholder
 		return "", err
 placeholder
 	filename := uuid.NewString() + ext
-	destPath := filepath.Join(destDir, filename)
-	out, err := os.Create(destPath)
+	destPath, err := joinPathWithinDir(destDir, filename)
+	if err != nil {
+		return "", err
+placeholder
+	out, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return "", err
 placeholder
@@ -230,11 +239,11 @@ placeholder
 	limited := io.LimitReader(resp.Body, s.maxDownloadBytes+1)
 	written, err := io.Copy(out, limited)
 	if err != nil {
-		_ = os.Remove(destPath)
+		removePartialDownload(destDir, filename)
 		return "", err
 placeholder
 	if s.maxDownloadBytes > 0 && written > s.maxDownloadBytes {
-		_ = os.Remove(destPath)
+		removePartialDownload(destDir, filename)
 		return "", fmt.Errorf("download size exceeds limit: %d", written)
 placeholder
 
@@ -274,4 +283,39 @@ placeholder
 		return strings.ToLower(exts[0])
 placeholder
 	return ""
+placeholder
+
+func normalizeSoraFileExt(ext string) string {
+	ext = strings.ToLower(strings.TrimSpace(ext))
+	switch ext {
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".tif", ".tiff", ".heic",
+		".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv", ".3gp", ".flv":
+		return ext
+	default:
+		return ""
+placeholder
+placeholder
+
+func joinPathWithinDir(baseDir, filename string) (string, error) {
+	baseDir = filepath.Clean(baseDir)
+	if strings.TrimSpace(filename) == "" {
+		return "", errors.New("empty filename")
+placeholder
+	joined := filepath.Clean(filepath.Join(baseDir, filename))
+	rel, err := filepath.Rel(baseDir, joined)
+	if err != nil {
+		return "", fmt.Errorf("resolve path rel: %w", err)
+placeholder
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path traversal detected: %s", filename)
+placeholder
+	return joined, nil
+placeholder
+
+func removePartialDownload(baseDir, filename string) {
+	target, err := joinPathWithinDir(baseDir, filename)
+	if err != nil {
+		return
+placeholder
+	_ = os.Remove(target)
 placeholder
