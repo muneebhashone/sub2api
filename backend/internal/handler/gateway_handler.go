@@ -650,11 +650,6 @@ placeholder
 					).Error("gateway.record_usage_failed", zap.Error(err))
 			placeholder
 		placeholder)
-			reqLog.Debug("gateway.request_completed",
-				zap.Int64("account_id", account.ID),
-				zap.Int("switch_count", fs.SwitchCount),
-				zap.Bool("fallback_used", fallbackUsed),
-			)
 			return
 	placeholder
 		if !retryWithFallback {
