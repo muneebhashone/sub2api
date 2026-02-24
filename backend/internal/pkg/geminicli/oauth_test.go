@@ -408,11 +408,10 @@ placeholder
 placeholder
 placeholder
 
-func TestBuildAuthorizationURL_OAuthConfigError(t *testing.T) {
-	// 不设置环境变量，也不提供 client 凭据，EffectiveOAuthConfig 应该报错
+func TestBuildAuthorizationURL_UsesBuiltinSecretFallback(t *testing.T) {
 	t.Setenv(GeminiCLIOAuthClientSecretEnv, "")
 
-	_, err := BuildAuthorizationURL(
+	authURL, err := BuildAuthorizationURL(
 		OAuthConfig{placeholder,
 		"test-state",
 		"test-challenge",
@@ -420,8 +419,11 @@ func TestBuildAuthorizationURL_OAuthConfigError(t *testing.T) {
 		"",
 		"code_assist",
 	)
-	if err == nil {
-		t.Error("当 EffectiveOAuthConfig 失败时，BuildAuthorizationURL 应该返回错误")
+	if err != nil {
+		t.Fatalf("BuildAuthorizationURL() 不应报错: %v", err)
+placeholder
+	if !strings.Contains(authURL, "client_id="+GeminiCLIOAuthClientID) {
+		t.Errorf("应使用内置 Gemini CLI client_id，实际 URL: %s", authURL)
 placeholder
 placeholder
 
@@ -685,15 +687,17 @@ placeholder
 placeholder
 
 func TestEffectiveOAuthConfig_NoEnvSecret(t *testing.T) {
-	// 不设置环境变量且不提供凭据，应该报错
 	t.Setenv(GeminiCLIOAuthClientSecretEnv, "")
 
-	_, err := EffectiveOAuthConfig(OAuthConfig{placeholder, "code_assist")
-	if err == nil {
-		t.Error("没有内置 secret 且未提供凭据时应该报错")
+	cfg, err := EffectiveOAuthConfig(OAuthConfig{placeholder, "code_assist")
+	if err != nil {
+		t.Fatalf("不设置环境变量时应回退到内置 secret，实际报错: %v", err)
 placeholder
-	if !strings.Contains(err.Error(), GeminiCLIOAuthClientSecretEnv) {
-		t.Errorf("错误消息应提及环境变量 %s，实际: %v", GeminiCLIOAuthClientSecretEnv, err)
+	if strings.TrimSpace(cfg.ClientSecret) == "" {
+		t.Error("ClientSecret 不应为空")
+placeholder
+	if cfg.ClientID != GeminiCLIOAuthClientID {
+		t.Errorf("ClientID 应回退为内置客户端 ID，实际: %q", cfg.ClientID)
 placeholder
 placeholder
 
