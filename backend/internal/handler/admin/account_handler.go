@@ -139,6 +139,13 @@ type BulkUpdateAccountsRequest struct {
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
 placeholder
 
+// CheckMixedChannelRequest represents check mixed channel risk request
+type CheckMixedChannelRequest struct {
+	Platform  string  `json:"platform" binding:"required"`
+	GroupIDs  []int64 `json:"group_ids"`
+	AccountID *int64  `json:"account_id"`
+placeholder
+
 // AccountWithConcurrency extends Account with real-time concurrency info
 type AccountWithConcurrency struct {
 	*dto.Account
@@ -389,6 +396,50 @@ placeholder
 	response.Success(c, h.buildAccountResponseWithRuntime(c.Request.Context(), account))
 placeholder
 
+// CheckMixedChannel handles checking mixed channel risk for account-group binding.
+// POST /api/v1/admin/accounts/check-mixed-channel
+func (h *AccountHandler) CheckMixedChannel(c *gin.Context) {
+	var req CheckMixedChannelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	if len(req.GroupIDs) == 0 {
+		response.Success(c, gin.H{"has_risk": falseplaceholder)
+		return
+placeholder
+
+	accountID := int64(0)
+	if req.AccountID != nil {
+		accountID = *req.AccountID
+placeholder
+
+	err := h.adminService.CheckMixedChannelRisk(c.Request.Context(), accountID, req.Platform, req.GroupIDs)
+	if err != nil {
+		var mixedErr *service.MixedChannelError
+		if errors.As(err, &mixedErr) {
+			response.Success(c, gin.H{
+				"has_risk": true,
+				"error":    "mixed_channel_warning",
+				"message":  mixedErr.Error(),
+				"details": gin.H{
+					"group_id":         mixedErr.GroupID,
+					"group_name":       mixedErr.GroupName,
+					"current_platform": mixedErr.CurrentPlatform,
+					"other_platform":   mixedErr.OtherPlatform,
+			placeholder,
+		placeholder)
+			return
+	placeholder
+
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{"has_risk": falseplaceholder)
+placeholder
+
 // Create handles creating a new account
 // POST /api/v1/admin/accounts
 func (h *AccountHandler) Create(c *gin.Context) {
@@ -431,17 +482,10 @@ placeholder)
 		// 检查是否为混合渠道错误
 		var mixedErr *service.MixedChannelError
 		if errors.As(err, &mixedErr) {
-			// 返回特殊错误码要求确认
+			// 创建接口仅返回最小必要字段，详细信息由专门检查接口提供
 			c.JSON(409, gin.H{
 				"error":   "mixed_channel_warning",
 				"message": mixedErr.Error(),
-				"details": gin.H{
-					"group_id":         mixedErr.GroupID,
-					"group_name":       mixedErr.GroupName,
-					"current_platform": mixedErr.CurrentPlatform,
-					"other_platform":   mixedErr.OtherPlatform,
-			placeholder,
-				"require_confirmation": true,
 		placeholder)
 			return
 	placeholder
@@ -501,17 +545,10 @@ placeholder)
 		// 检查是否为混合渠道错误
 		var mixedErr *service.MixedChannelError
 		if errors.As(err, &mixedErr) {
-			// 返回特殊错误码要求确认
+			// 更新接口仅返回最小必要字段，详细信息由专门检查接口提供
 			c.JSON(409, gin.H{
 				"error":   "mixed_channel_warning",
 				"message": mixedErr.Error(),
-				"details": gin.H{
-					"group_id":         mixedErr.GroupID,
-					"group_name":       mixedErr.GroupName,
-					"current_platform": mixedErr.CurrentPlatform,
-					"other_platform":   mixedErr.OtherPlatform,
-			placeholder,
-				"require_confirmation": true,
 		placeholder)
 			return
 	placeholder
