@@ -206,6 +206,7 @@ placeholder
 var modelInfoMap = map[string]modelInfo{
 	"claude-opus-4-5":   {DisplayName: "Claude Opus 4.5", CanonicalID: "claude-opus-4-5-20250929"placeholder,
 	"claude-opus-4-6":   {DisplayName: "Claude Opus 4.6", CanonicalID: "claude-opus-4-6"placeholder,
+	"claude-sonnet-4-6": {DisplayName: "Claude Sonnet 4.6", CanonicalID: "claude-sonnet-4-6"placeholder,
 	"claude-sonnet-4-5": {DisplayName: "Claude Sonnet 4.5", CanonicalID: "claude-sonnet-4-5-20250929"placeholder,
 	"claude-haiku-4-5":  {DisplayName: "Claude Haiku 4.5", CanonicalID: "placeholder"placeholder,
 placeholder
