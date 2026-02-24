@@ -139,6 +139,3 @@ placeholder
 	require.Nil(t, got.LockedUntil)
 placeholder
 
-func ptrTime(v time.Time) *time.Time {
-	return &v
-placeholder
