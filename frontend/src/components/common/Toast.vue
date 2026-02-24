@@ -66,8 +66,8 @@
           <!-- Progress bar -->
           <div v-if="toast.duration" class="h-1 bg-gray-100 dark:bg-dark-700">
             <div
-              :class="['h-full transition-all', getProgressBarColor(toast.type)]"
-              :style="{ width: `${getProgress(toast)placeholder%` placeholder"
+              :class="['h-full toast-progress', getProgressBarColor(toast.type)]"
+              :style="{ animationDuration: `${toast.durationplaceholderms` placeholder"
             ></div>
           </div>
         </div>
@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted placeholder from 'vue'
+import { computed placeholder from 'vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useAppStore placeholder from '@/stores/app'
 
@@ -129,36 +129,25 @@ const getProgressBarColor = (type: string): string => {
   return colors[type] || colors.info
 placeholder
 
-const getProgress = (toast: any): number => {
-  if (!toast.duration || !toast.startTime) return 100
-  const elapsed = Date.now() - toast.startTime
-  const progress = Math.max(0, 100 - (elapsed / toast.duration) * 100)
-  return progress
-placeholder
-
 const removeToast = (id: string) => {
   appStore.hideToast(id)
 placeholder
-
-let intervalId: number | undefined
-
-onMounted(() => {
-  // Check for expired toasts every 100ms
-  intervalId = window.setInterval(() => {
-    const now = Date.now()
-    toasts.value.forEach((toast) => {
-      if (toast.duration && toast.startTime) {
-        if (now - toast.startTime >= toast.duration) {
-          removeToast(toast.id)
-        placeholder
-      placeholder
-    placeholder)
-  placeholder, 100)
-placeholder)
-
-onUnmounted(() => {
-  if (intervalId !== undefined) {
-    clearInterval(intervalId)
-  placeholder
-placeholder)
 </script>
+
+<style scoped>
+.toast-progress {
+  width: 100%;
+  animation-name: toast-progress-shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+placeholder
+
+@keyframes toast-progress-shrink {
+  from {
+    width: 100%;
+  placeholder
+  to {
+    width: 0%;
+  placeholder
+placeholder
+</style>

@@ -226,3 +226,43 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestOpenAITokenRefresher_CanRefresh(t *testing.T) {
+	refresher := &OpenAITokenRefresher{placeholder
+
+	tests := []struct {
+		name     string
+		platform string
+		accType  string
+		want     bool
+placeholder{
+		{
+			name:     "openai oauth - can refresh",
+			platform: PlatformOpenAI,
+			accType:  AccountTypeOAuth,
+			want:     true,
+	placeholder,
+		{
+			name:     "sora oauth - cannot refresh directly",
+			platform: PlatformSora,
+			accType:  AccountTypeOAuth,
+			want:     false,
+	placeholder,
+		{
+			name:     "openai apikey - cannot refresh",
+			platform: PlatformOpenAI,
+			accType:  AccountTypeAPIKey,
+			want:     false,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := &Account{
+				Platform: tt.platform,
+				Type:     tt.accType,
+		placeholder
+			require.Equal(t, tt.want, refresher.CanRefresh(account))
+	placeholder)
+placeholder
+placeholder

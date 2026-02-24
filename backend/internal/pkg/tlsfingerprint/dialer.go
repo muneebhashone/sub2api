@@ -286,7 +286,7 @@ placeholder, utls.HelloCustom)
 		return nil, fmt.Errorf("apply TLS preset: %w", err)
 placeholder
 
-	if err := tlsConn.Handshake(); err != nil {
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		slog.Debug("tls_fingerprint_socks5_handshake_failed", "error", err)
 		_ = conn.Close()
 		return nil, fmt.Errorf("TLS handshake failed: %w", err)

@@ -58,12 +58,16 @@ describe('Proxy ImportDataModal', () => {
 
     const input = wrapper.find('input[type="file"]')
     const file = new File(['invalid json'], 'data.json', { type: 'application/json' placeholder)
+    Object.defineProperty(file, 'text', {
+      value: () => Promise.resolve('invalid json')
+    placeholder)
     Object.defineProperty(input.element, 'files', {
       value: [file]
     placeholder)
 
     await input.trigger('change')
     await wrapper.find('form').trigger('submit')
+    await Promise.resolve()
 
     expect(showError).toHaveBeenCalledWith('admin.proxies.dataImportParseFailed')
   placeholder)
