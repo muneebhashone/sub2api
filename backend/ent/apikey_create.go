@@ -113,6 +113,20 @@ placeholder
 	return _c
 placeholder
 
+// SetLastUsedAt sets the "last_used_at" field.
+func (_c *APIKeyCreate) SetLastUsedAt(v time.Time) *APIKeyCreate {
+	_c.mutation.SetLastUsedAt(v)
+	return _c
+placeholder
+
+// SetNillableLastUsedAt sets the "last_used_at" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableLastUsedAt(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetLastUsedAt(*v)
+placeholder
+	return _c
+placeholder
+
 // SetIPWhitelist sets the "ip_whitelist" field.
 func (_c *APIKeyCreate) SetIPWhitelist(v []string) *APIKeyCreate {
 	_c.mutation.SetIPWhitelist(v)
@@ -353,6 +367,10 @@ placeholder
 		_spec.SetField(apikey.FieldStatus, field.TypeString, value)
 		_node.Status = value
 placeholder
+	if value, ok := _c.mutation.LastUsedAt(); ok {
+		_spec.SetField(apikey.FieldLastUsedAt, field.TypeTime, value)
+		_node.LastUsedAt = &value
+placeholder
 	if value, ok := _c.mutation.IPWhitelist(); ok {
 		_spec.SetField(apikey.FieldIPWhitelist, field.TypeJSON, value)
 		_node.IPWhitelist = value
@@ -568,6 +586,24 @@ placeholder
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *APIKeyUpsert) UpdateStatus() *APIKeyUpsert {
 	u.SetExcluded(apikey.FieldStatus)
+	return u
+placeholder
+
+// SetLastUsedAt sets the "last_used_at" field.
+func (u *APIKeyUpsert) SetLastUsedAt(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldLastUsedAt, v)
+	return u
+placeholder
+
+// UpdateLastUsedAt sets the "last_used_at" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateLastUsedAt() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldLastUsedAt)
+	return u
+placeholder
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (u *APIKeyUpsert) ClearLastUsedAt() *APIKeyUpsert {
+	u.SetNull(apikey.FieldLastUsedAt)
 	return u
 placeholder
 
@@ -815,6 +851,27 @@ placeholder
 func (u *APIKeyUpsertOne) UpdateStatus() *APIKeyUpsertOne {
 	return u.Update(func(s *APIKeyUpsert) {
 		s.UpdateStatus()
+placeholder)
+placeholder
+
+// SetLastUsedAt sets the "last_used_at" field.
+func (u *APIKeyUpsertOne) SetLastUsedAt(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetLastUsedAt(v)
+placeholder)
+placeholder
+
+// UpdateLastUsedAt sets the "last_used_at" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateLastUsedAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateLastUsedAt()
+placeholder)
+placeholder
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (u *APIKeyUpsertOne) ClearLastUsedAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearLastUsedAt()
 placeholder)
 placeholder
 
@@ -1243,6 +1300,27 @@ placeholder
 func (u *APIKeyUpsertBulk) UpdateStatus() *APIKeyUpsertBulk {
 	return u.Update(func(s *APIKeyUpsert) {
 		s.UpdateStatus()
+placeholder)
+placeholder
+
+// SetLastUsedAt sets the "last_used_at" field.
+func (u *APIKeyUpsertBulk) SetLastUsedAt(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetLastUsedAt(v)
+placeholder)
+placeholder
+
+// UpdateLastUsedAt sets the "last_used_at" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateLastUsedAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateLastUsedAt()
+placeholder)
+placeholder
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (u *APIKeyUpsertBulk) ClearLastUsedAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearLastUsedAt()
 placeholder)
 placeholder
 

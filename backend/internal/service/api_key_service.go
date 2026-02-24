@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -32,6 +34,9 @@ var (
 
 const (
 	apiKeyMaxErrorsPerHour = 20
+	apiKeyLastUsedMinTouch = 30 * time.Second
+	// DB 写失败后的短退避，避免请求路径持续同步重试造成写风暴与高延迟。
+	apiKeyLastUsedFailBackoff = 5 * time.Second
 )
 
 type APIKeyRepository interface {
@@ -58,6 +63,7 @@ type APIKeyRepository interface {
 
 	// Quota methods
 	IncrementQuotaUsed(ctx context.Context, id int64, amount float64) (float64, error)
+	UpdateLastUsed(ctx context.Context, id int64, usedAt time.Time) error
 placeholder
 
 // APIKeyCache defines cache operations for API key service
@@ -125,6 +131,8 @@ type APIKeyService struct {
 	authCacheL1       *ristretto.Cache
 	authCfg           apiKeyAuthCacheConfig
 	authGroup         singleflight.Group
+	lastUsedTouchL1   sync.Map // keyID -> nextAllowedAt(time.Time)
+	lastUsedTouchSF   singleflight.Group
 placeholder
 
 // NewAPIKeyService 创建API Key服务实例
@@ -527,6 +535,7 @@ placeholder
 	if err := s.apiKeyRepo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("delete api key: %w", err)
 placeholder
+	s.lastUsedTouchL1.Delete(id)
 
 	return nil
 placeholder
@@ -556,6 +565,38 @@ placeholder
 placeholder
 
 	return apiKey, user, nil
+placeholder
+
+// TouchLastUsed 通过防抖更新 api_keys.last_used_at，减少高频写放大。
+// 该操作为尽力而为，不应阻塞主请求链路。
+func (s *APIKeyService) TouchLastUsed(ctx context.Context, keyID int64) error {
+	if keyID <= 0 {
+		return nil
+placeholder
+
+	now := time.Now()
+	if v, ok := s.lastUsedTouchL1.Load(keyID); ok {
+		if nextAllowedAt, ok := v.(time.Time); ok && now.Before(nextAllowedAt) {
+			return nil
+	placeholder
+placeholder
+
+	_, err, _ := s.lastUsedTouchSF.Do(strconv.FormatInt(keyID, 10), func() (any, error) {
+		latest := time.Now()
+		if v, ok := s.lastUsedTouchL1.Load(keyID); ok {
+			if nextAllowedAt, ok := v.(time.Time); ok && latest.Before(nextAllowedAt) {
+				return nil, nil
+		placeholder
+	placeholder
+
+		if err := s.apiKeyRepo.UpdateLastUsed(ctx, keyID, latest); err != nil {
+			s.lastUsedTouchL1.Store(keyID, latest.Add(apiKeyLastUsedFailBackoff))
+			return nil, fmt.Errorf("touch api key last used: %w", err)
+	placeholder
+		s.lastUsedTouchL1.Store(keyID, latest.Add(apiKeyLastUsedMinTouch))
+		return nil, nil
+placeholder)
+	return err
 placeholder
 
 // IncrementUsage 增加API Key使用次数（可选：用于统计）

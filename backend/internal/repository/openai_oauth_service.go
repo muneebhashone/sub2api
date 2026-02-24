@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -56,12 +57,49 @@ placeholder
 placeholder
 
 func (s *openaiOAuthService) RefreshToken(ctx context.Context, refreshToken, proxyURL string) (*openai.TokenResponse, error) {
+	return s.RefreshTokenWithClientID(ctx, refreshToken, proxyURL, "")
+placeholder
+
+func (s *openaiOAuthService) RefreshTokenWithClientID(ctx context.Context, refreshToken, proxyURL string, clientID string) (*openai.TokenResponse, error) {
+	if strings.TrimSpace(clientID) != "" {
+		return s.refreshTokenWithClientID(ctx, refreshToken, proxyURL, strings.TrimSpace(clientID))
+placeholder
+
+	clientIDs := []string{
+		openai.ClientID,
+		openai.SoraClientID,
+placeholder
+	seen := make(map[string]struct{placeholder, len(clientIDs))
+	var lastErr error
+	for _, clientID := range clientIDs {
+		clientID = strings.TrimSpace(clientID)
+		if clientID == "" {
+			continue
+	placeholder
+		if _, ok := seen[clientID]; ok {
+			continue
+	placeholder
+		seen[clientID] = struct{placeholder{placeholder
+
+		tokenResp, err := s.refreshTokenWithClientID(ctx, refreshToken, proxyURL, clientID)
+		if err == nil {
+			return tokenResp, nil
+	placeholder
+		lastErr = err
+placeholder
+	if lastErr != nil {
+		return nil, lastErr
+placeholder
+	return nil, infraerrors.New(http.StatusBadGateway, "OPENAI_OAUTH_TOKEN_REFRESH_FAILED", "token refresh failed")
+placeholder
+
+func (s *openaiOAuthService) refreshTokenWithClientID(ctx context.Context, refreshToken, proxyURL, clientID string) (*openai.TokenResponse, error) {
 	client := createOpenAIReqClient(proxyURL)
 
 	formData := url.Values{placeholder
 	formData.Set("grant_type", "refresh_token")
 	formData.Set("refresh_token", refreshToken)
-	formData.Set("client_id", openai.ClientID)
+	formData.Set("client_id", clientID)
 	formData.Set("scope", openai.RefreshScopes)
 
 	var tokenResp openai.TokenResponse

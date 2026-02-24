@@ -125,13 +125,13 @@ placeholder
 // ============ shuffleWithinPriorityAndLastUsed 测试 ============
 
 func TestShuffleWithinPriorityAndLastUsed_Empty(t *testing.T) {
-	shuffleWithinPriorityAndLastUsed(nil)
-	shuffleWithinPriorityAndLastUsed([]*Account{placeholder)
+	shuffleWithinPriorityAndLastUsed(nil, false)
+	shuffleWithinPriorityAndLastUsed([]*Account{placeholder, false)
 placeholder
 
 func TestShuffleWithinPriorityAndLastUsed_SingleElement(t *testing.T) {
 	accounts := []*Account{{ID: 1, Priority: 1placeholderplaceholder
-	shuffleWithinPriorityAndLastUsed(accounts)
+	shuffleWithinPriorityAndLastUsed(accounts, false)
 	require.Equal(t, int64(1), accounts[0].ID)
 placeholder
 
@@ -146,7 +146,7 @@ placeholder
 	for i := 0; i < 100; i++ {
 		cpy := make([]*Account, len(accounts))
 		copy(cpy, accounts)
-		shuffleWithinPriorityAndLastUsed(cpy)
+		shuffleWithinPriorityAndLastUsed(cpy, false)
 		seen[cpy[0].ID] = true
 placeholder
 	require.GreaterOrEqual(t, len(seen), 2, "same group should be shuffled")
@@ -162,7 +162,7 @@ placeholder
 	for i := 0; i < 20; i++ {
 		cpy := make([]*Account, len(accounts))
 		copy(cpy, accounts)
-		shuffleWithinPriorityAndLastUsed(cpy)
+		shuffleWithinPriorityAndLastUsed(cpy, false)
 		require.Equal(t, int64(1), cpy[0].ID)
 		require.Equal(t, int64(2), cpy[1].ID)
 		require.Equal(t, int64(3), cpy[2].ID)
@@ -182,7 +182,7 @@ placeholder
 	for i := 0; i < 20; i++ {
 		cpy := make([]*Account, len(accounts))
 		copy(cpy, accounts)
-		shuffleWithinPriorityAndLastUsed(cpy)
+		shuffleWithinPriorityAndLastUsed(cpy, false)
 		require.Equal(t, int64(1), cpy[0].ID)
 		require.Equal(t, int64(2), cpy[1].ID)
 		require.Equal(t, int64(3), cpy[2].ID)
