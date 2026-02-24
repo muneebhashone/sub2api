@@ -895,6 +895,55 @@ placeholder
 	require.Equal(t, int64(2), acc.ID)
 placeholder
 
+func TestGatewayService_SelectAccountForModelWithPlatform_GeminiAPIKeyModelMappingFilter(t *testing.T) {
+	ctx := context.Background()
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{
+				ID:          1,
+				Platform:    PlatformGemini,
+				Type:        AccountTypeAPIKey,
+				Priority:    1,
+				Status:      StatusActive,
+				Schedulable: true,
+		placeholder"model_mapping": map[string]any{"gemini-2.5-pro": "gemini-2.5-pro"placeholderplaceholder,
+		placeholder,
+			{
+				ID:          2,
+				Platform:    PlatformGemini,
+				Type:        AccountTypeAPIKey,
+				Priority:    2,
+				Status:      StatusActive,
+				Schedulable: true,
+		placeholder"model_mapping": map[string]any{"gemini-2.5-flash": "gemini-2.5-flash"placeholderplaceholder,
+		placeholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	cache := &mockGatewayCacheForPlatform{placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		cache:       cache,
+		cfg:         testConfig(),
+placeholder
+
+	acc, err := svc.selectAccountForModelWithPlatform(ctx, nil, "", "gemini-2.5-flash", nil, PlatformGemini)
+placeholder
+	require.NotNil(t, acc)
+	require.Equal(t, int64(2), acc.ID, "应过滤不支持请求模型的 APIKey 账号")
+
+	acc, err = svc.selectAccountForModelWithPlatform(ctx, nil, "", "gemini-3-pro-preview", nil, PlatformGemini)
+placeholder
+	require.Nil(t, acc)
+	require.Contains(t, err.Error(), "supporting model")
+placeholder
+
 func TestGatewayService_SelectAccountForModelWithPlatform_StickyInGroup(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(50)
@@ -1068,6 +1117,36 @@ placeholder{
 		placeholder"model_mapping": map[string]any{"claude-3-5-sonnet-20241022": "x"placeholderplaceholder,
 		placeholder,
 			model:    "claude-3-5-sonnet-20241022",
+			expected: true,
+	placeholder,
+		{
+			name:     "Gemini平台-无映射配置-支持所有模型",
+			account:  &Account{Platform: PlatformGemini, Type: AccountTypeAPIKeyplaceholder,
+			model:    "gemini-2.5-flash",
+			expected: true,
+	placeholder,
+		{
+			name: "Gemini平台-有映射配置-只支持配置的模型",
+			account: &Account{
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder
+					"model_mapping": map[string]any{"gemini-2.5-pro": "gemini-2.5-pro"placeholder,
+			placeholder,
+		placeholder,
+			model:    "gemini-2.5-flash",
+			expected: false,
+	placeholder,
+		{
+			name: "Gemini平台-有映射配置-支持配置的模型",
+			account: &Account{
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder
+					"model_mapping": map[string]any{"gemini-2.5-pro": "gemini-2.5-pro"placeholder,
+			placeholder,
+		placeholder,
+			model:    "gemini-2.5-pro",
 			expected: true,
 	placeholder,
 placeholder
