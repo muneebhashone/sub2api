@@ -1,17 +1,12 @@
 import { defineConfig placeholder from 'vitest/config'
-import vue from '@vitejs/plugin-vue'
 import { resolve placeholder from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
       'vue-i18n': 'vue-i18n/dist/vue-i18n.runtime.esm-bundler.js'
     placeholder
-  placeholder,
-  define: {
-    __INTLIFY_JIT_COMPILATION__: true
   placeholder,
   test: {
     globals: true,
@@ -37,8 +32,6 @@ export default defineConfig({
           lines: 80
         placeholder
       placeholder
-    placeholder,
-    setupFiles: ['./src/__tests__/setup.ts'],
-    testTimeout: 10000
+    placeholder
   placeholder
 placeholder)
