@@ -534,8 +534,104 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     placeholder
   placeholder
   const openaiModels = {
+    'gpt-5-codex': {
+      name: 'GPT-5 Codex',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.1-codex': {
+      name: 'GPT-5.1 Codex',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.1-codex-max': {
+      name: 'GPT-5.1 Codex Max',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.1-codex-mini': {
+      name: 'GPT-5.1 Codex Mini',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.2': {
+      name: 'GPT-5.2',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
     'gpt-5.3-codex-spark': {
       name: 'GPT-5.3 Codex Spark',
+      limit: {
+        context: 128000,
+        output: 32000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.3-codex': {
+      name: 'GPT-5.3 Codex',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
       options: {
         store: false
       placeholder,
@@ -548,6 +644,10 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     placeholder,
     'gpt-5.2-codex': {
       name: 'GPT-5.2 Codex',
+      limit: {
+        context: 400000,
+        output: 128000
+      placeholder,
       options: {
         store: false
       placeholder,
@@ -556,6 +656,21 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         medium: {placeholder,
         high: {placeholder,
         xhigh: {placeholder
+      placeholder
+    placeholder,
+    'codex-mini-latest': {
+      name: 'Codex Mini',
+      limit: {
+        context: 200000,
+        output: 100000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder
       placeholder
     placeholder
   placeholder
