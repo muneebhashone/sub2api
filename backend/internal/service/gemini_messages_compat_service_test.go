@@ -2,9 +2,16 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -131,6 +138,38 @@ placeholder
 placeholder
 placeholder
 
+func TestGeminiHandleNativeNonStreamingResponse_DebugDisabledDoesNotEmitHeaderLogs(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logSink, restore := captureStructuredLog(t)
+	defer restore()
+
+	svc := &GeminiMessagesCompatService{
+		cfg: &config.Config{
+			Gateway: config.GatewayConfig{
+				GeminiDebugResponseHeaders: false,
+		placeholder,
+	placeholder,
+placeholder
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":      []string{"application/json"placeholder,
+			"X-RateLimit-Limit": []string{"60"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(`{"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":2placeholderplaceholder`)),
+placeholder
+
+	usage, err := svc.handleNativeNonStreamingResponse(c, resp, false)
+placeholder
+	require.NotNil(t, usage)
+	require.False(t, logSink.ContainsMessage("[GeminiAPI]"), "debug 关闭时不应输出 Gemini 响应头日志")
+placeholder
+
 func TestConvertClaudeMessagesToGeminiGenerateContent_AddsThoughtSignatureForToolUse(t *testing.T) {
 	claudeReq := map[string]any{
 		"model":      "placeholder",
@@ -206,69 +245,323 @@ placeholder
 placeholder
 placeholder
 
-func TestExtractGeminiUsage_ThoughtsTokenCount(t *testing.T) {
+// TestUnwrapGeminiResponse 测试 unwrapGeminiResponse 的各种输入场景
+// 关键区别：只有 response 为 JSON 对象/数组时才解包
+func TestUnwrapGeminiResponse(t *testing.T) {
+	// 构造 >50KB 的大型 JSON 对象
+	largePadding := strings.Repeat("x", 50*1024)
+	largeInput := []byte(fmt.Sprintf(`{"response":{"id":"big","pad":"%s"placeholderplaceholder`, largePadding))
+	largeExpected := fmt.Sprintf(`{"id":"big","pad":"%s"placeholder`, largePadding)
+
 	tests := []struct {
-		name          string
-		resp          map[string]any
-		wantInput     int
-		wantOutput    int
-		wantCacheRead int
-		wantNil       bool
+		name     string
+		input    []byte
+		expected string
+		wantErr  bool
 placeholder{
 		{
-			name: "with thoughtsTokenCount",
-			resp: map[string]any{
-				"usageMetadata": map[string]any{
-					"promptTokenCount":     float64(100),
-					"candidatesTokenCount": float64(20),
-					"thoughtsTokenCount":   float64(50),
-			placeholder,
-		placeholder,
-			wantInput:  100,
-			wantOutput: 70,
+			name:     "正常 response 包装（JSON 对象）",
+			input:    []byte(`{"response":{"key":"val"placeholderplaceholder`),
+			expected: `{"key":"val"placeholder`,
 	placeholder,
 		{
-			name: "with thoughtsTokenCount and cache",
-			resp: map[string]any{
-				"usageMetadata": map[string]any{
-					"promptTokenCount":        float64(100),
-					"candidatesTokenCount":    float64(20),
-					"cachedContentTokenCount": float64(30),
-					"thoughtsTokenCount":      float64(50),
-			placeholder,
-		placeholder,
-			wantInput:     70,
-			wantOutput:    70,
-			wantCacheRead: 30,
+			name:     "无包装直接返回",
+			input:    []byte(`{"key":"val"placeholder`),
+			expected: `{"key":"val"placeholder`,
 	placeholder,
 		{
-			name: "without thoughtsTokenCount (old model)",
-			resp: map[string]any{
-				"usageMetadata": map[string]any{
-					"promptTokenCount":     float64(100),
-					"candidatesTokenCount": float64(20),
-			placeholder,
-		placeholder,
-			wantInput:  100,
-			wantOutput: 20,
+			name:     "空 JSON",
+			input:    []byte(`{placeholder`),
+			expected: `{placeholder`,
 	placeholder,
 		{
-			name:    "no usageMetadata",
-			resp:    map[string]any{placeholder,
-			wantNil: true,
+			name:     "null response 返回原始 body",
+			input:    []byte(`{"response":nullplaceholder`),
+			expected: `{"response":nullplaceholder`,
+	placeholder,
+		{
+			name:     "非法 JSON 返回原始 body",
+			input:    []byte(`not json`),
+			expected: `not json`,
+	placeholder,
+		{
+			name:     "response 为基础类型 string 返回原始 body",
+			input:    []byte(`{"response":"hello"placeholder`),
+			expected: `{"response":"hello"placeholder`,
+	placeholder,
+		{
+			name:     "嵌套 response 只解一层",
+			input:    []byte(`{"response":{"response":{"inner":trueplaceholderplaceholderplaceholder`),
+			expected: `{"response":{"inner":trueplaceholderplaceholder`,
+	placeholder,
+		{
+			name:     "大型 JSON >50KB",
+			input:    largeInput,
+			expected: largeExpected,
 	placeholder,
 placeholder
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			usage := extractGeminiUsage(tt.resp)
-			if tt.wantNil {
-				require.Nil(t, usage)
+			got, err := unwrapGeminiResponse(tt.input)
+			if tt.wantErr {
+			placeholder
 				return
 		placeholder
-			require.NotNil(t, usage)
-			require.Equal(t, tt.wantInput, usage.InputTokens)
-			require.Equal(t, tt.wantOutput, usage.OutputTokens)
-			require.Equal(t, tt.wantCacheRead, usage.CacheReadInputTokens)
+		placeholder
+			require.Equal(t, tt.expected, strings.TrimSpace(string(got)))
+	placeholder)
+placeholder
+placeholder
+
+// ---------------------------------------------------------------------------
+// Task 8.1 — extractGeminiUsage 测试
+// ---------------------------------------------------------------------------
+
+func TestExtractGeminiUsage(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantNil   bool
+		wantUsage *ClaudeUsage
+placeholder{
+		{
+			name:    "完整 usageMetadata",
+			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":50,"cachedContentTokenCount":20placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          80,
+				OutputTokens:         50,
+				CacheReadInputTokens: 20,
+		placeholder,
+	placeholder,
+		{
+			name:    "包含 thoughtsTokenCount",
+			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":20,"thoughtsTokenCount":50placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          100,
+				OutputTokens:         70,
+				CacheReadInputTokens: 0,
+		placeholder,
+	placeholder,
+		{
+			name:    "包含 thoughtsTokenCount 与缓存",
+			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":20,"cachedContentTokenCount":30,"thoughtsTokenCount":50placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          70,
+				OutputTokens:         70,
+				CacheReadInputTokens: 30,
+		placeholder,
+	placeholder,
+		{
+			name:    "缺失 cachedContentTokenCount",
+			input:   `{"usageMetadata":{"promptTokenCount":100,"candidatesTokenCount":50placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          100,
+				OutputTokens:         50,
+				CacheReadInputTokens: 0,
+		placeholder,
+	placeholder,
+		{
+			name:    "无 usageMetadata",
+			input:   `{"candidates":[]placeholder`,
+			wantNil: true,
+	placeholder,
+		{
+			// gjson 对 null 返回 Exists()=true，因此函数不会返回 nil，
+			// 而是返回全零的 ClaudeUsage。
+			name:    "null usageMetadata — gjson Exists 为 true",
+			input:   `{"usageMetadata":nullplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          0,
+				OutputTokens:         0,
+				CacheReadInputTokens: 0,
+		placeholder,
+	placeholder,
+		{
+			name:    "零值字段",
+			input:   `{"usageMetadata":{"promptTokenCount":0,"candidatesTokenCount":0,"cachedContentTokenCount":0placeholderplaceholder`,
+			wantNil: false,
+			wantUsage: &ClaudeUsage{
+				InputTokens:          0,
+				OutputTokens:         0,
+				CacheReadInputTokens: 0,
+		placeholder,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractGeminiUsage([]byte(tt.input))
+			if tt.wantNil {
+				if got != nil {
+					t.Fatalf("期望返回 nil，实际返回 %+v", got)
+			placeholder
+				return
+		placeholder
+			if got == nil {
+				t.Fatalf("期望返回非 nil，实际返回 nil")
+		placeholder
+			if got.InputTokens != tt.wantUsage.InputTokens {
+				t.Errorf("InputTokens: 期望 %d，实际 %d", tt.wantUsage.InputTokens, got.InputTokens)
+		placeholder
+			if got.OutputTokens != tt.wantUsage.OutputTokens {
+				t.Errorf("OutputTokens: 期望 %d，实际 %d", tt.wantUsage.OutputTokens, got.OutputTokens)
+		placeholder
+			if got.CacheReadInputTokens != tt.wantUsage.CacheReadInputTokens {
+				t.Errorf("CacheReadInputTokens: 期望 %d，实际 %d", tt.wantUsage.CacheReadInputTokens, got.CacheReadInputTokens)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+// ---------------------------------------------------------------------------
+// Task 8.2 — estimateGeminiCountTokens 测试
+// ---------------------------------------------------------------------------
+
+func TestEstimateGeminiCountTokens(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantGt0   bool // 期望结果 > 0
+		wantExact *int // 如果非 nil，期望精确匹配
+placeholder{
+		{
+			name: "含 systemInstruction 和 contents",
+			input: `{
+				"systemInstruction":{"parts":[{"text":"You are a helpful assistant."placeholder]placeholder,
+				"contents":[{"parts":[{"text":"Hello, how are you?"placeholder]placeholder]
+		placeholder`,
+			wantGt0: true,
+	placeholder,
+		{
+			name: "仅 contents，无 systemInstruction",
+			input: `{
+				"contents":[{"parts":[{"text":"Hello, how are you?"placeholder]placeholder]
+		placeholder`,
+			wantGt0: true,
+	placeholder,
+		{
+			name:      "空 parts",
+			input:     `{"contents":[{"parts":[]placeholder]placeholder`,
+			wantGt0:   false,
+			wantExact: intPtr(0),
+	placeholder,
+		{
+			name:      "非文本 parts（inlineData）",
+			input:     `{"contents":[{"parts":[{"inlineData":{"mimeType":"image/png"placeholderplaceholder]placeholder]placeholder`,
+			wantGt0:   false,
+			wantExact: intPtr(0),
+	placeholder,
+		{
+			name:      "空白文本",
+			input:     `{"contents":[{"parts":[{"text":"   "placeholder]placeholder]placeholder`,
+			wantGt0:   false,
+			wantExact: intPtr(0),
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := estimateGeminiCountTokens([]byte(tt.input))
+			if tt.wantExact != nil {
+				if got != *tt.wantExact {
+					t.Errorf("期望精确值 %d，实际 %d", *tt.wantExact, got)
+			placeholder
+				return
+		placeholder
+			if tt.wantGt0 && got <= 0 {
+				t.Errorf("期望返回 > 0，实际 %d", got)
+		placeholder
+			if !tt.wantGt0 && got != 0 {
+				t.Errorf("期望返回 0，实际 %d", got)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+// ---------------------------------------------------------------------------
+// Task 8.3 — ParseGeminiRateLimitResetTime 测试
+// ---------------------------------------------------------------------------
+
+func TestParseGeminiRateLimitResetTime(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		wantNil     bool
+		approxDelta int64 // 预期的 (返回值 - now) 大约是多少秒
+placeholder{
+		{
+			name:        "正常 quotaResetDelay",
+			input:       `{"error":{"details":[{"metadata":{"quotaResetDelay":"12.345s"placeholderplaceholder]placeholderplaceholder`,
+			wantNil:     false,
+			approxDelta: 13, // 向上取整 12.345 -> 13
+	placeholder,
+		{
+			name:        "daily quota",
+			input:       `{"error":{"message":"quota per day exceeded"placeholderplaceholder`,
+			wantNil:     false,
+			approxDelta: -1, // 不检查精确 delta，仅检查非 nil
+	placeholder,
+		{
+			name:    "无 details 且无 regex 匹配",
+			input:   `{"error":{"message":"rate limit"placeholderplaceholder`,
+			wantNil: true,
+	placeholder,
+		{
+			name:        "regex 回退匹配",
+			input:       `Please retry in 30s`,
+			wantNil:     false,
+			approxDelta: 30,
+	placeholder,
+		{
+			name:    "完全无匹配",
+			input:   `{"error":{"code":429placeholderplaceholder`,
+			wantNil: true,
+	placeholder,
+		{
+			name:        "非法 JSON 但 regex 回退仍工作",
+			input:       `not json but Please retry in 10s`,
+			wantNil:     false,
+			approxDelta: 10,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := time.Now().Unix()
+			got := ParseGeminiRateLimitResetTime([]byte(tt.input))
+
+			if tt.wantNil {
+				if got != nil {
+					t.Fatalf("期望返回 nil，实际返回 %d", *got)
+			placeholder
+				return
+		placeholder
+
+			if got == nil {
+				t.Fatalf("期望返回非 nil，实际返回 nil")
+		placeholder
+
+			// approxDelta == -1 表示只检查非 nil，不检查具体值（如 daily quota 场景）
+			if tt.approxDelta == -1 {
+				// 仅验证返回的时间戳在合理范围内（未来的某个时间）
+				if *got < now {
+					t.Errorf("期望返回的时间戳 >= now(%d)，实际 %d", now, *got)
+			placeholder
+				return
+		placeholder
+
+			// 使用 +/-2 秒容差进行范围检查
+			delta := *got - now
+			if delta < tt.approxDelta-2 || delta > tt.approxDelta+2 {
+				t.Errorf("期望 delta 约为 %d 秒（+/-2），实际 delta = %d 秒（返回值=%d, now=%d）",
+					tt.approxDelta, delta, *got, now)
+		placeholder
 	placeholder)
 placeholder
 placeholder

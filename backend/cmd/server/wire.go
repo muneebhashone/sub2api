@@ -67,14 +67,19 @@ func provideCleanup(
 	opsAlertEvaluator *service.OpsAlertEvaluatorService,
 	opsCleanup *service.OpsCleanupService,
 	opsScheduledReport *service.OpsScheduledReportService,
+	opsSystemLogSink *service.OpsSystemLogSink,
+	soraMediaCleanup *service.SoraMediaCleanupService,
 	schedulerSnapshot *service.SchedulerSnapshotService,
 	tokenRefresh *service.TokenRefreshService,
 	accountExpiry *service.AccountExpiryService,
 	subscriptionExpiry *service.SubscriptionExpiryService,
 	usageCleanup *service.UsageCleanupService,
+	idempotencyCleanup *service.IdempotencyCleanupService,
 	pricing *service.PricingService,
 	emailQueue *service.EmailQueueService,
 	billingCache *service.BillingCacheService,
+	usageRecordWorkerPool *service.UsageRecordWorkerPool,
+	subscriptionService *service.SubscriptionService,
 	oauth *service.OAuthService,
 	openaiOAuth *service.OpenAIOAuthService,
 	geminiOAuth *service.GeminiOAuthService,
@@ -98,6 +103,18 @@ func provideCleanup(
 			{"OpsCleanupService", func() error {
 				if opsCleanup != nil {
 					opsCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"OpsSystemLogSink", func() error {
+				if opsSystemLogSink != nil {
+					opsSystemLogSink.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"SoraMediaCleanupService", func() error {
+				if soraMediaCleanup != nil {
+					soraMediaCleanup.Stop()
 			placeholder
 				return nil
 	placeholder
@@ -131,6 +148,12 @@ func provideCleanup(
 			placeholder
 				return nil
 	placeholder
+			{"IdempotencyCleanupService", func() error {
+				if idempotencyCleanup != nil {
+					idempotencyCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
 			{"TokenRefreshService", func() error {
 				tokenRefresh.Stop()
 				return nil
@@ -143,6 +166,12 @@ func provideCleanup(
 				subscriptionExpiry.Stop()
 				return nil
 	placeholder
+			{"SubscriptionService", func() error {
+				if subscriptionService != nil {
+					subscriptionService.Stop()
+			placeholder
+				return nil
+	placeholder
 			{"PricingService", func() error {
 				pricing.Stop()
 				return nil
@@ -153,6 +182,12 @@ func provideCleanup(
 	placeholder
 			{"BillingCacheService", func() error {
 				billingCache.Stop()
+				return nil
+	placeholder
+			{"UsageRecordWorkerPool", func() error {
+				if usageRecordWorkerPool != nil {
+					usageRecordWorkerPool.Stop()
+			placeholder
 				return nil
 	placeholder
 			{"OAuthService", func() error {

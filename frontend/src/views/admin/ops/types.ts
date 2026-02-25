@@ -17,5 +17,8 @@ export type {
   OpsMetricThresholds,
   OpsAdvancedSettings,
   OpsDataRetentionSettings,
-  OpsAggregationSettings
+  OpsAggregationSettings,
+  OpsRuntimeLogConfig,
+  OpsSystemLog,
+  OpsSystemLogSinkHealth
 placeholder from '@/api/admin/ops'

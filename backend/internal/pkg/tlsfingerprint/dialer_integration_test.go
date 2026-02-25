@@ -30,7 +30,8 @@ placeholder
 			strings.Contains(errStr, "connection refused") ||
 			strings.Contains(errStr, "no such host") ||
 			strings.Contains(errStr, "network is unreachable") ||
-			strings.Contains(errStr, "timeout") {
+			strings.Contains(errStr, "timeout") ||
+			strings.Contains(errStr, "deadline exceeded") {
 			t.Skipf("skipping test: external service unavailable: %v", err)
 	placeholder
 		t.Fatalf("failed to get fingerprint: %v", err)

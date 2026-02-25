@@ -133,6 +133,18 @@ placeholder
 		CacheReadPricePerToken:     0.03e-6, // $0.03 per MTok
 		SupportsCacheBreakdown:     false,
 placeholder
+
+	// Claude 4.6 Opus (与4.5同价)
+	s.fallbackPrices["claude-opus-4.6"] = s.fallbackPrices["claude-opus-4.5"]
+
+	// Gemini 3.1 Pro
+	s.fallbackPrices["gemini-3.1-pro"] = &ModelPricing{
+		InputPricePerToken:         2e-6,   // $2 per MTok
+		OutputPricePerToken:        12e-6,  // $12 per MTok
+		CacheCreationPricePerToken: 2e-6,   // $2 per MTok
+		CacheReadPricePerToken:     0.2e-6, // $0.20 per MTok
+		SupportsCacheBreakdown:     false,
+placeholder
 placeholder
 
 // getFallbackPricing 根据模型系列获取回退价格
@@ -141,6 +153,9 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 
 	// 按模型系列匹配
 	if strings.Contains(modelLower, "opus") {
+		if strings.Contains(modelLower, "4.6") || strings.Contains(modelLower, "4-6") {
+			return s.fallbackPrices["claude-opus-4.6"]
+	placeholder
 		if strings.Contains(modelLower, "4.5") || strings.Contains(modelLower, "4-5") {
 			return s.fallbackPrices["claude-opus-4.5"]
 	placeholder
@@ -157,6 +172,9 @@ placeholder
 			return s.fallbackPrices["claude-3-5-haiku"]
 	placeholder
 		return s.fallbackPrices["claude-3-haiku"]
+placeholder
+	if strings.Contains(modelLower, "gemini-3.1-pro") || strings.Contains(modelLower, "gemini-3-1-pro") {
+		return s.fallbackPrices["gemini-3.1-pro"]
 placeholder
 
 	// 默认使用Sonnet价格
@@ -312,7 +330,7 @@ placeholder
 placeholder
 	outRangeCost, err := s.CalculateCost(model, outRangeTokens, rateMultiplier*extraMultiplier)
 	if err != nil {
-		return inRangeCost, nil // 出错时返回范围内成本
+		return inRangeCost, fmt.Errorf("out-range cost: %w", err)
 placeholder
 
 	// 合并成本
@@ -388,6 +406,14 @@ type ImagePriceConfig struct {
 	Price4K *float64 // 4K 尺寸价格（nil 表示使用默认值）
 placeholder
 
+// SoraPriceConfig Sora 按次计费配置
+type SoraPriceConfig struct {
+	ImagePrice360          *float64
+	ImagePrice540          *float64
+	VideoPricePerRequest   *float64
+	VideoPricePerRequestHD *float64
+placeholder
+
 // CalculateImageCost 计算图片生成费用
 // model: 请求的模型名称（用于获取 LiteLLM 默认价格）
 // imageSize: 图片尺寸 "1K", "2K", "4K"
@@ -406,6 +432,65 @@ placeholder
 	totalCost := unitPrice * float64(imageCount)
 
 	// 应用倍率
+	if rateMultiplier <= 0 {
+		rateMultiplier = 1.0
+placeholder
+	actualCost := totalCost * rateMultiplier
+
+	return &CostBreakdown{
+		TotalCost:  totalCost,
+		ActualCost: actualCost,
+placeholder
+placeholder
+
+// CalculateSoraImageCost 计算 Sora 图片按次费用
+func (s *BillingService) CalculateSoraImageCost(imageSize string, imageCount int, groupConfig *SoraPriceConfig, rateMultiplier float64) *CostBreakdown {
+	if imageCount <= 0 {
+		return &CostBreakdown{placeholder
+placeholder
+
+	unitPrice := 0.0
+	if groupConfig != nil {
+		switch imageSize {
+		case "540":
+			if groupConfig.ImagePrice540 != nil {
+				unitPrice = *groupConfig.ImagePrice540
+		placeholder
+		default:
+			if groupConfig.ImagePrice360 != nil {
+				unitPrice = *groupConfig.ImagePrice360
+		placeholder
+	placeholder
+placeholder
+
+	totalCost := unitPrice * float64(imageCount)
+	if rateMultiplier <= 0 {
+		rateMultiplier = 1.0
+placeholder
+	actualCost := totalCost * rateMultiplier
+
+	return &CostBreakdown{
+		TotalCost:  totalCost,
+		ActualCost: actualCost,
+placeholder
+placeholder
+
+// CalculateSoraVideoCost 计算 Sora 视频按次费用
+func (s *BillingService) CalculateSoraVideoCost(model string, groupConfig *SoraPriceConfig, rateMultiplier float64) *CostBreakdown {
+	unitPrice := 0.0
+	if groupConfig != nil {
+		modelLower := strings.ToLower(model)
+		if strings.Contains(modelLower, "sora2pro-hd") {
+			if groupConfig.VideoPricePerRequestHD != nil {
+				unitPrice = *groupConfig.VideoPricePerRequestHD
+		placeholder
+	placeholder
+		if unitPrice <= 0 && groupConfig.VideoPricePerRequest != nil {
+			unitPrice = *groupConfig.VideoPricePerRequest
+	placeholder
+placeholder
+
+	totalCost := unitPrice
 	if rateMultiplier <= 0 {
 		rateMultiplier = 1.0
 placeholder

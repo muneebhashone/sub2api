@@ -534,6 +534,18 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     placeholder
   placeholder
   const openaiModels = {
+    'gpt-5.3-codex-spark': {
+      name: 'GPT-5.3 Codex Spark',
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
     'gpt-5.2-codex': {
       name: 'GPT-5.2 Codex',
       options: {

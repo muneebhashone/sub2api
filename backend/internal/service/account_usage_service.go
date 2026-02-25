@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,8 +37,8 @@ type UsageLogRepository interface {
 	GetModelStatsWithFilters(ctx context.Context, startTime, endTime time.Time, userID, apiKeyID, accountID, groupID int64, stream *bool, billingType *int8) ([]usagestats.ModelStat, error)
 	GetAPIKeyUsageTrend(ctx context.Context, startTime, endTime time.Time, granularity string, limit int) ([]usagestats.APIKeyUsageTrendPoint, error)
 	GetUserUsageTrend(ctx context.Context, startTime, endTime time.Time, granularity string, limit int) ([]usagestats.UserUsageTrendPoint, error)
-	GetBatchUserUsageStats(ctx context.Context, userIDs []int64) (map[int64]*usagestats.BatchUserUsageStats, error)
-	GetBatchAPIKeyUsageStats(ctx context.Context, apiKeyIDs []int64) (map[int64]*usagestats.BatchAPIKeyUsageStats, error)
+	GetBatchUserUsageStats(ctx context.Context, userIDs []int64, startTime, endTime time.Time) (map[int64]*usagestats.BatchUserUsageStats, error)
+	GetBatchAPIKeyUsageStats(ctx context.Context, apiKeyIDs []int64, startTime, endTime time.Time) (map[int64]*usagestats.BatchAPIKeyUsageStats, error)
 
 	// User dashboard stats
 	GetUserDashboardStats(ctx context.Context, userID int64) (*usagestats.UserDashboardStats, error)
@@ -217,12 +218,20 @@ func (s *AccountUsageService) GetUsage(ctx context.Context, accountID int64) (*U
 placeholder
 
 	if account.Platform == PlatformGemini {
-		return s.getGeminiUsage(ctx, account)
+		usage, err := s.getGeminiUsage(ctx, account)
+		if err == nil {
+			s.tryClearRecoverableAccountError(ctx, account)
+	placeholder
+		return usage, err
 placeholder
 
 	// Antigravity 平台：使用 AntigravityQuotaFetcher 获取额度
 	if account.Platform == PlatformAntigravity {
-		return s.getAntigravityUsage(ctx, account)
+		usage, err := s.getAntigravityUsage(ctx, account)
+		if err == nil {
+			s.tryClearRecoverableAccountError(ctx, account)
+	placeholder
+		return usage, err
 placeholder
 
 	// 只有oauth类型账号可以通过API获取usage（有profile scope）
@@ -256,6 +265,7 @@ placeholder
 		// 4. 添加窗口统计（有独立缓存，1 分钟）
 		s.addWindowStats(ctx, account, usage)
 
+		s.tryClearRecoverableAccountError(ctx, account)
 		return usage, nil
 placeholder
 
@@ -484,6 +494,32 @@ placeholder
 	placeholder
 placeholder
 	return time.Time{placeholder, fmt.Errorf("unable to parse time: %s", s)
+placeholder
+
+func (s *AccountUsageService) tryClearRecoverableAccountError(ctx context.Context, account *Account) {
+	if account == nil || account.Status != StatusError {
+		return
+placeholder
+
+	msg := strings.ToLower(strings.TrimSpace(account.ErrorMessage))
+	if msg == "" {
+		return
+placeholder
+
+	if !strings.Contains(msg, "token refresh failed") &&
+		!strings.Contains(msg, "invalid_client") &&
+		!strings.Contains(msg, "missing_project_id") &&
+		!strings.Contains(msg, "unauthenticated") {
+		return
+placeholder
+
+	if err := s.accountRepo.ClearError(ctx, account.ID); err != nil {
+		log.Printf("[usage] failed to clear recoverable account error for account %d: %v", account.ID, err)
+		return
+placeholder
+
+	account.Status = StatusActive
+	account.ErrorMessage = ""
 placeholder
 
 // buildUsageInfo 构建UsageInfo

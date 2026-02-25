@@ -258,6 +258,62 @@ placeholder
 	return _c
 placeholder
 
+// SetSoraImagePrice360 sets the "sora_image_price_360" field.
+func (_c *GroupCreate) SetSoraImagePrice360(v float64) *GroupCreate {
+	_c.mutation.SetSoraImagePrice360(v)
+	return _c
+placeholder
+
+// SetNillableSoraImagePrice360 sets the "sora_image_price_360" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableSoraImagePrice360(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetSoraImagePrice360(*v)
+placeholder
+	return _c
+placeholder
+
+// SetSoraImagePrice540 sets the "sora_image_price_540" field.
+func (_c *GroupCreate) SetSoraImagePrice540(v float64) *GroupCreate {
+	_c.mutation.SetSoraImagePrice540(v)
+	return _c
+placeholder
+
+// SetNillableSoraImagePrice540 sets the "sora_image_price_540" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableSoraImagePrice540(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetSoraImagePrice540(*v)
+placeholder
+	return _c
+placeholder
+
+// SetSoraVideoPricePerRequest sets the "sora_video_price_per_request" field.
+func (_c *GroupCreate) SetSoraVideoPricePerRequest(v float64) *GroupCreate {
+	_c.mutation.SetSoraVideoPricePerRequest(v)
+	return _c
+placeholder
+
+// SetNillableSoraVideoPricePerRequest sets the "sora_video_price_per_request" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableSoraVideoPricePerRequest(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetSoraVideoPricePerRequest(*v)
+placeholder
+	return _c
+placeholder
+
+// SetSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field.
+func (_c *GroupCreate) SetSoraVideoPricePerRequestHd(v float64) *GroupCreate {
+	_c.mutation.SetSoraVideoPricePerRequestHd(v)
+	return _c
+placeholder
+
+// SetNillableSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableSoraVideoPricePerRequestHd(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetSoraVideoPricePerRequestHd(*v)
+placeholder
+	return _c
+placeholder
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_c *GroupCreate) SetClaudeCodeOnly(v bool) *GroupCreate {
 	_c.mutation.SetClaudeCodeOnly(v)
@@ -700,6 +756,22 @@ placeholder
 	if value, ok := _c.mutation.ImagePrice4k(); ok {
 		_spec.SetField(group.FieldImagePrice4k, field.TypeFloat64, value)
 		_node.ImagePrice4k = &value
+placeholder
+	if value, ok := _c.mutation.SoraImagePrice360(); ok {
+		_spec.SetField(group.FieldSoraImagePrice360, field.TypeFloat64, value)
+		_node.SoraImagePrice360 = &value
+placeholder
+	if value, ok := _c.mutation.SoraImagePrice540(); ok {
+		_spec.SetField(group.FieldSoraImagePrice540, field.TypeFloat64, value)
+		_node.SoraImagePrice540 = &value
+placeholder
+	if value, ok := _c.mutation.SoraVideoPricePerRequest(); ok {
+		_spec.SetField(group.FieldSoraVideoPricePerRequest, field.TypeFloat64, value)
+		_node.SoraVideoPricePerRequest = &value
+placeholder
+	if value, ok := _c.mutation.SoraVideoPricePerRequestHd(); ok {
+		_spec.SetField(group.FieldSoraVideoPricePerRequestHd, field.TypeFloat64, value)
+		_node.SoraVideoPricePerRequestHd = &value
 placeholder
 	if value, ok := _c.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
@@ -1174,6 +1246,102 @@ placeholder
 // ClearImagePrice4k clears the value of the "image_price_4k" field.
 func (u *GroupUpsert) ClearImagePrice4k() *GroupUpsert {
 	u.SetNull(group.FieldImagePrice4k)
+	return u
+placeholder
+
+// SetSoraImagePrice360 sets the "sora_image_price_360" field.
+func (u *GroupUpsert) SetSoraImagePrice360(v float64) *GroupUpsert {
+	u.Set(group.FieldSoraImagePrice360, v)
+	return u
+placeholder
+
+// UpdateSoraImagePrice360 sets the "sora_image_price_360" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateSoraImagePrice360() *GroupUpsert {
+	u.SetExcluded(group.FieldSoraImagePrice360)
+	return u
+placeholder
+
+// AddSoraImagePrice360 adds v to the "sora_image_price_360" field.
+func (u *GroupUpsert) AddSoraImagePrice360(v float64) *GroupUpsert {
+	u.Add(group.FieldSoraImagePrice360, v)
+	return u
+placeholder
+
+// ClearSoraImagePrice360 clears the value of the "sora_image_price_360" field.
+func (u *GroupUpsert) ClearSoraImagePrice360() *GroupUpsert {
+	u.SetNull(group.FieldSoraImagePrice360)
+	return u
+placeholder
+
+// SetSoraImagePrice540 sets the "sora_image_price_540" field.
+func (u *GroupUpsert) SetSoraImagePrice540(v float64) *GroupUpsert {
+	u.Set(group.FieldSoraImagePrice540, v)
+	return u
+placeholder
+
+// UpdateSoraImagePrice540 sets the "sora_image_price_540" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateSoraImagePrice540() *GroupUpsert {
+	u.SetExcluded(group.FieldSoraImagePrice540)
+	return u
+placeholder
+
+// AddSoraImagePrice540 adds v to the "sora_image_price_540" field.
+func (u *GroupUpsert) AddSoraImagePrice540(v float64) *GroupUpsert {
+	u.Add(group.FieldSoraImagePrice540, v)
+	return u
+placeholder
+
+// ClearSoraImagePrice540 clears the value of the "sora_image_price_540" field.
+func (u *GroupUpsert) ClearSoraImagePrice540() *GroupUpsert {
+	u.SetNull(group.FieldSoraImagePrice540)
+	return u
+placeholder
+
+// SetSoraVideoPricePerRequest sets the "sora_video_price_per_request" field.
+func (u *GroupUpsert) SetSoraVideoPricePerRequest(v float64) *GroupUpsert {
+	u.Set(group.FieldSoraVideoPricePerRequest, v)
+	return u
+placeholder
+
+// UpdateSoraVideoPricePerRequest sets the "sora_video_price_per_request" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateSoraVideoPricePerRequest() *GroupUpsert {
+	u.SetExcluded(group.FieldSoraVideoPricePerRequest)
+	return u
+placeholder
+
+// AddSoraVideoPricePerRequest adds v to the "sora_video_price_per_request" field.
+func (u *GroupUpsert) AddSoraVideoPricePerRequest(v float64) *GroupUpsert {
+	u.Add(group.FieldSoraVideoPricePerRequest, v)
+	return u
+placeholder
+
+// ClearSoraVideoPricePerRequest clears the value of the "sora_video_price_per_request" field.
+func (u *GroupUpsert) ClearSoraVideoPricePerRequest() *GroupUpsert {
+	u.SetNull(group.FieldSoraVideoPricePerRequest)
+	return u
+placeholder
+
+// SetSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsert) SetSoraVideoPricePerRequestHd(v float64) *GroupUpsert {
+	u.Set(group.FieldSoraVideoPricePerRequestHd, v)
+	return u
+placeholder
+
+// UpdateSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateSoraVideoPricePerRequestHd() *GroupUpsert {
+	u.SetExcluded(group.FieldSoraVideoPricePerRequestHd)
+	return u
+placeholder
+
+// AddSoraVideoPricePerRequestHd adds v to the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsert) AddSoraVideoPricePerRequestHd(v float64) *GroupUpsert {
+	u.Add(group.FieldSoraVideoPricePerRequestHd, v)
+	return u
+placeholder
+
+// ClearSoraVideoPricePerRequestHd clears the value of the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsert) ClearSoraVideoPricePerRequestHd() *GroupUpsert {
+	u.SetNull(group.FieldSoraVideoPricePerRequestHd)
 	return u
 placeholder
 
@@ -1687,6 +1855,118 @@ placeholder
 func (u *GroupUpsertOne) ClearImagePrice4k() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearImagePrice4k()
+placeholder)
+placeholder
+
+// SetSoraImagePrice360 sets the "sora_image_price_360" field.
+func (u *GroupUpsertOne) SetSoraImagePrice360(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraImagePrice360(v)
+placeholder)
+placeholder
+
+// AddSoraImagePrice360 adds v to the "sora_image_price_360" field.
+func (u *GroupUpsertOne) AddSoraImagePrice360(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraImagePrice360(v)
+placeholder)
+placeholder
+
+// UpdateSoraImagePrice360 sets the "sora_image_price_360" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateSoraImagePrice360() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraImagePrice360()
+placeholder)
+placeholder
+
+// ClearSoraImagePrice360 clears the value of the "sora_image_price_360" field.
+func (u *GroupUpsertOne) ClearSoraImagePrice360() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraImagePrice360()
+placeholder)
+placeholder
+
+// SetSoraImagePrice540 sets the "sora_image_price_540" field.
+func (u *GroupUpsertOne) SetSoraImagePrice540(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraImagePrice540(v)
+placeholder)
+placeholder
+
+// AddSoraImagePrice540 adds v to the "sora_image_price_540" field.
+func (u *GroupUpsertOne) AddSoraImagePrice540(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraImagePrice540(v)
+placeholder)
+placeholder
+
+// UpdateSoraImagePrice540 sets the "sora_image_price_540" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateSoraImagePrice540() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraImagePrice540()
+placeholder)
+placeholder
+
+// ClearSoraImagePrice540 clears the value of the "sora_image_price_540" field.
+func (u *GroupUpsertOne) ClearSoraImagePrice540() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraImagePrice540()
+placeholder)
+placeholder
+
+// SetSoraVideoPricePerRequest sets the "sora_video_price_per_request" field.
+func (u *GroupUpsertOne) SetSoraVideoPricePerRequest(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraVideoPricePerRequest(v)
+placeholder)
+placeholder
+
+// AddSoraVideoPricePerRequest adds v to the "sora_video_price_per_request" field.
+func (u *GroupUpsertOne) AddSoraVideoPricePerRequest(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraVideoPricePerRequest(v)
+placeholder)
+placeholder
+
+// UpdateSoraVideoPricePerRequest sets the "sora_video_price_per_request" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateSoraVideoPricePerRequest() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraVideoPricePerRequest()
+placeholder)
+placeholder
+
+// ClearSoraVideoPricePerRequest clears the value of the "sora_video_price_per_request" field.
+func (u *GroupUpsertOne) ClearSoraVideoPricePerRequest() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraVideoPricePerRequest()
+placeholder)
+placeholder
+
+// SetSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsertOne) SetSoraVideoPricePerRequestHd(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraVideoPricePerRequestHd(v)
+placeholder)
+placeholder
+
+// AddSoraVideoPricePerRequestHd adds v to the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsertOne) AddSoraVideoPricePerRequestHd(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraVideoPricePerRequestHd(v)
+placeholder)
+placeholder
+
+// UpdateSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateSoraVideoPricePerRequestHd() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraVideoPricePerRequestHd()
+placeholder)
+placeholder
+
+// ClearSoraVideoPricePerRequestHd clears the value of the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsertOne) ClearSoraVideoPricePerRequestHd() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraVideoPricePerRequestHd()
 placeholder)
 placeholder
 
@@ -2388,6 +2668,118 @@ placeholder
 func (u *GroupUpsertBulk) ClearImagePrice4k() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearImagePrice4k()
+placeholder)
+placeholder
+
+// SetSoraImagePrice360 sets the "sora_image_price_360" field.
+func (u *GroupUpsertBulk) SetSoraImagePrice360(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraImagePrice360(v)
+placeholder)
+placeholder
+
+// AddSoraImagePrice360 adds v to the "sora_image_price_360" field.
+func (u *GroupUpsertBulk) AddSoraImagePrice360(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraImagePrice360(v)
+placeholder)
+placeholder
+
+// UpdateSoraImagePrice360 sets the "sora_image_price_360" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateSoraImagePrice360() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraImagePrice360()
+placeholder)
+placeholder
+
+// ClearSoraImagePrice360 clears the value of the "sora_image_price_360" field.
+func (u *GroupUpsertBulk) ClearSoraImagePrice360() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraImagePrice360()
+placeholder)
+placeholder
+
+// SetSoraImagePrice540 sets the "sora_image_price_540" field.
+func (u *GroupUpsertBulk) SetSoraImagePrice540(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraImagePrice540(v)
+placeholder)
+placeholder
+
+// AddSoraImagePrice540 adds v to the "sora_image_price_540" field.
+func (u *GroupUpsertBulk) AddSoraImagePrice540(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraImagePrice540(v)
+placeholder)
+placeholder
+
+// UpdateSoraImagePrice540 sets the "sora_image_price_540" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateSoraImagePrice540() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraImagePrice540()
+placeholder)
+placeholder
+
+// ClearSoraImagePrice540 clears the value of the "sora_image_price_540" field.
+func (u *GroupUpsertBulk) ClearSoraImagePrice540() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraImagePrice540()
+placeholder)
+placeholder
+
+// SetSoraVideoPricePerRequest sets the "sora_video_price_per_request" field.
+func (u *GroupUpsertBulk) SetSoraVideoPricePerRequest(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraVideoPricePerRequest(v)
+placeholder)
+placeholder
+
+// AddSoraVideoPricePerRequest adds v to the "sora_video_price_per_request" field.
+func (u *GroupUpsertBulk) AddSoraVideoPricePerRequest(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraVideoPricePerRequest(v)
+placeholder)
+placeholder
+
+// UpdateSoraVideoPricePerRequest sets the "sora_video_price_per_request" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateSoraVideoPricePerRequest() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraVideoPricePerRequest()
+placeholder)
+placeholder
+
+// ClearSoraVideoPricePerRequest clears the value of the "sora_video_price_per_request" field.
+func (u *GroupUpsertBulk) ClearSoraVideoPricePerRequest() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraVideoPricePerRequest()
+placeholder)
+placeholder
+
+// SetSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsertBulk) SetSoraVideoPricePerRequestHd(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSoraVideoPricePerRequestHd(v)
+placeholder)
+placeholder
+
+// AddSoraVideoPricePerRequestHd adds v to the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsertBulk) AddSoraVideoPricePerRequestHd(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddSoraVideoPricePerRequestHd(v)
+placeholder)
+placeholder
+
+// UpdateSoraVideoPricePerRequestHd sets the "sora_video_price_per_request_hd" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateSoraVideoPricePerRequestHd() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSoraVideoPricePerRequestHd()
+placeholder)
+placeholder
+
+// ClearSoraVideoPricePerRequestHd clears the value of the "sora_video_price_per_request_hd" field.
+func (u *GroupUpsertBulk) ClearSoraVideoPricePerRequestHd() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearSoraVideoPricePerRequestHd()
 placeholder)
 placeholder
 
