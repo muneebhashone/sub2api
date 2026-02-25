@@ -423,7 +423,7 @@ placeholder
 						zap.Int64("account_id", account.ID),
 					).Error("gateway.record_usage_failed", zap.Error(err))
 			placeholder
-		placeholder(result, account, userAgent, clientIP, fs.ForceCacheBilling)
+		placeholder)
 			return
 	placeholder
 placeholder
@@ -649,7 +649,7 @@ placeholder
 						zap.Int64("account_id", account.ID),
 					).Error("gateway.record_usage_failed", zap.Error(err))
 			placeholder
-		placeholder(result, account, userAgent, clientIP, fs.ForceCacheBilling)
+		placeholder)
 			return
 	placeholder
 		if !retryWithFallback {
