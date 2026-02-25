@@ -268,7 +268,7 @@ placeholder
 placeholder
 placeholder
 
-func TestAccountGetModelMapping_AntigravityEnsuresGemini3FlashPassthrough(t *testing.T) {
+func TestAccountGetModelMapping_AntigravityEnsuresGeminiDefaultPassthroughs(t *testing.T) {
 	account := &Account{
 		Platform: PlatformAntigravity,
 placeholder
@@ -281,6 +281,12 @@ placeholder
 	mapping := account.GetModelMapping()
 	if mapping["gemini-3-flash"] != "gemini-3-flash" {
 		t.Fatalf("expected gemini-3-flash passthrough to be auto-filled, got: %q", mapping["gemini-3-flash"])
+placeholder
+	if mapping["gemini-3.1-pro-high"] != "gemini-3.1-pro-high" {
+		t.Fatalf("expected gemini-3.1-pro-high passthrough to be auto-filled, got: %q", mapping["gemini-3.1-pro-high"])
+placeholder
+	if mapping["gemini-3.1-pro-low"] != "gemini-3.1-pro-low" {
+		t.Fatalf("expected gemini-3.1-pro-low passthrough to be auto-filled, got: %q", mapping["gemini-3.1-pro-low"])
 placeholder
 placeholder
 
@@ -297,6 +303,12 @@ placeholder
 	mapping := account.GetModelMapping()
 	if _, exists := mapping["gemini-3-flash"]; exists {
 		t.Fatalf("did not expect explicit gemini-3-flash passthrough when wildcard already exists")
+placeholder
+	if _, exists := mapping["gemini-3.1-pro-high"]; exists {
+		t.Fatalf("did not expect explicit gemini-3.1-pro-high passthrough when wildcard already exists")
+placeholder
+	if _, exists := mapping["gemini-3.1-pro-low"]; exists {
+		t.Fatalf("did not expect explicit gemini-3.1-pro-low passthrough when wildcard already exists")
 placeholder
 	if mapped := account.GetMappedModel("gemini-3-flash"); mapped != "gemini-3.1-pro-high" {
 		t.Fatalf("expected wildcard mapping to stay effective, got: %q", mapped)

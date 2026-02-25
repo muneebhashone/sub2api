@@ -373,7 +373,11 @@ placeholder
 	placeholder
 		if len(result) > 0 {
 			if a.Platform == domain.PlatformAntigravity {
-				ensureAntigravityDefaultPassthrough(result, "gemini-3-flash")
+				ensureAntigravityDefaultPassthroughs(result, []string{
+					"gemini-3-flash",
+					"gemini-3.1-pro-high",
+					"gemini-3.1-pro-low",
+			placeholder)
 		placeholder
 			return result
 	placeholder
@@ -398,6 +402,12 @@ placeholder
 	placeholder
 placeholder
 	mapping[model] = model
+placeholder
+
+func ensureAntigravityDefaultPassthroughs(mapping map[string]string, models []string) {
+	for _, model := range models {
+		ensureAntigravityDefaultPassthrough(mapping, model)
+placeholder
 placeholder
 
 // IsModelSupported 检查模型是否在 model_mapping 中（支持通配符）
