@@ -675,11 +675,90 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     placeholder
   placeholder
   const geminiModels = {
-    'gemini-2.0-flash': { name: 'Gemini 2.0 Flash' placeholder,
-    'gemini-2.5-flash': { name: 'Gemini 2.5 Flash' placeholder,
-    'gemini-2.5-pro': { name: 'Gemini 2.5 Pro' placeholder,
-    'gemini-3-flash-preview': { name: 'Gemini 3 Flash Preview' placeholder,
-    'gemini-3-pro-preview': { name: 'Gemini 3 Pro Preview' placeholder
+    'gemini-2.0-flash': {
+      name: 'Gemini 2.0 Flash',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder
+    placeholder,
+    'gemini-2.5-flash': {
+      name: 'Gemini 2.5 Flash',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder
+    placeholder,
+    'gemini-2.5-pro': {
+      name: 'Gemini 2.5 Pro',
+      limit: {
+        context: 2097152,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-3-flash-preview': {
+      name: 'Gemini 3 Flash Preview',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder
+    placeholder,
+    'gemini-3-pro-preview': {
+      name: 'Gemini 3 Pro Preview',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-3.1-pro-preview': {
+      name: 'Gemini 3.1 Pro Preview',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder
   placeholder
 
   const antigravityGeminiModels = {
