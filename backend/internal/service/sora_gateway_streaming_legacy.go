@@ -316,7 +316,7 @@ placeholder
 	placeholder
 placeholder
 
-	updatedData, err := json.Marshal(payload)
+	updatedData, err := jsonMarshalRaw(payload)
 	if err != nil {
 		return "data: " + data, contentDelta, nil
 placeholder
@@ -484,7 +484,7 @@ placeholder
 	if originalModel != "" {
 		payload["model"] = originalModel
 placeholder
-	updatedData, err := json.Marshal(payload)
+	updatedData, err := jsonMarshalRaw(payload)
 	if err != nil {
 		return "", "", err
 placeholder
