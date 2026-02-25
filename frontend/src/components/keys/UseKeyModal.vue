@@ -683,19 +683,148 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
   placeholder
 
   const antigravityGeminiModels = {
-    'gemini-2.5-flash': { name: 'Gemini 2.5 Flash' placeholder,
-    'gemini-2.5-flash-lite': { name: 'Gemini 2.5 Flash Lite' placeholder,
-    'gemini-2.5-flash-thinking': { name: 'Gemini 2.5 Flash Thinking' placeholder,
-    'gemini-3-flash': { name: 'Gemini 3 Flash' placeholder,
-    'gemini-3-pro-low': { name: 'Gemini 3 Pro Low' placeholder,
-    'gemini-3-pro-high': { name: 'Gemini 3 Pro High' placeholder,
-    'gemini-3-pro-preview': { name: 'Gemini 3 Pro Preview' placeholder,
-    'gemini-3-pro-image': { name: 'Gemini 3 Pro Image' placeholder
+    'gemini-2.5-flash': {
+      name: 'Gemini 2.5 Flash',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'disable'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-2.5-flash-lite': {
+      name: 'Gemini 2.5 Flash Lite',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-2.5-flash-thinking': {
+      name: 'Gemini 2.5 Flash (Thinking)',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-3-flash': {
+      name: 'Gemini 3 Flash',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-3.1-pro-low': {
+      name: 'Gemini 3.1 Pro Low',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-3.1-pro-high': {
+      name: 'Gemini 3.1 Pro High',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-3-pro-image': {
+      name: 'Gemini 3 Pro (Image)',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image'],
+        output: ['image']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder
   placeholder
   const claudeModels = {
-    'claude-opus-4-5-thinking': { name: 'Claude Opus 4.5 Thinking' placeholder,
-    'claude-sonnet-4-5-thinking': { name: 'Claude Sonnet 4.5 Thinking' placeholder,
-    'claude-sonnet-4-5': { name: 'Claude Sonnet 4.5' placeholder
+    'claude-opus-4-5-thinking': {
+      name: 'Claude Opus 4.5 Thinking',
+      limit: {
+        context: 200000,
+        output: 64000
+      placeholder
+    placeholder,
+    'claude-sonnet-4-5-thinking': {
+      name: 'Claude Sonnet 4.5 Thinking',
+      limit: {
+        context: 200000,
+        output: 64000
+      placeholder
+    placeholder,
+    'claude-sonnet-4-5': {
+      name: 'Claude Sonnet 4.5',
+      limit: {
+        context: 200000,
+        output: 64000
+      placeholder
+    placeholder
   placeholder
 
   if (platform === 'gemini') {
