@@ -384,6 +384,7 @@ placeholder
 		{Name: "mcp_xml_inject", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "supported_model_scopes", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "sort_order", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "simulate_claude_max_enabled", Type: field.TypeBool, Default: falseplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
@@ -420,6 +421,44 @@ placeholder
 				Name:    "group_sort_order",
 				Unique:  false,
 				Columns: []*schema.Column{GroupsColumns[29]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// IdempotencyRecordsColumns holds the columns for the "idempotency_records" table.
+	IdempotencyRecordsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "scope", Type: field.TypeString, Size: 128placeholder,
+		{Name: "idempotency_key_hash", Type: field.TypeString, Size: 64placeholder,
+		{Name: "request_fingerprint", Type: field.TypeString, Size: 64placeholder,
+		{Name: "status", Type: field.TypeString, Size: 32placeholder,
+		{Name: "response_status", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "response_body", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "error_reason", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "locked_until", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "expires_at", Type: field.TypeTimeplaceholder,
+placeholder
+	// IdempotencyRecordsTable holds the schema information for the "idempotency_records" table.
+	IdempotencyRecordsTable = &schema.Table{
+		Name:       "idempotency_records",
+		Columns:    IdempotencyRecordsColumns,
+		PrimaryKey: []*schema.Column{IdempotencyRecordsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "idempotencyrecord_scope_idempotency_key_hash",
+				Unique:  true,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[3], IdempotencyRecordsColumns[4]placeholder,
+		placeholder,
+			{
+				Name:    "idempotencyrecord_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[11]placeholder,
+		placeholder,
+			{
+				Name:    "idempotencyrecord_status_locked_until",
+				Unique:  false,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[6], IdempotencyRecordsColumns[10]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -1021,6 +1060,7 @@ placeholder
 		AnnouncementReadsTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
+		IdempotencyRecordsTable,
 		PromoCodesTable,
 		PromoCodeUsagesTable,
 		ProxiesTable,
@@ -1065,6 +1105,9 @@ placeholder
 placeholder
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",
+placeholder
+	IdempotencyRecordsTable.Annotation = &entsql.Annotation{
+		Table: "idempotency_records",
 placeholder
 	PromoCodesTable.Annotation = &entsql.Annotation{
 		Table: "promo_codes",

@@ -410,6 +410,20 @@ placeholder
 	return _c
 placeholder
 
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (_c *GroupCreate) SetSimulateClaudeMaxEnabled(v bool) *GroupCreate {
+	_c.mutation.SetSimulateClaudeMaxEnabled(v)
+	return _c
+placeholder
+
+// SetNillableSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableSimulateClaudeMaxEnabled(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetSimulateClaudeMaxEnabled(*v)
+placeholder
+	return _c
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -595,6 +609,10 @@ placeholder
 		v := group.DefaultSortOrder
 		_c.mutation.SetSortOrder(v)
 placeholder
+	if _, ok := _c.mutation.SimulateClaudeMaxEnabled(); !ok {
+		v := group.DefaultSimulateClaudeMaxEnabled
+		_c.mutation.SetSimulateClaudeMaxEnabled(v)
+placeholder
 	return nil
 placeholder
 
@@ -661,6 +679,9 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.SortOrder(); !ok {
 		return &ValidationError{Name: "sort_order", err: errors.New(`ent: missing required field "Group.sort_order"`)placeholder
+placeholder
+	if _, ok := _c.mutation.SimulateClaudeMaxEnabled(); !ok {
+		return &ValidationError{Name: "simulate_claude_max_enabled", err: errors.New(`ent: missing required field "Group.simulate_claude_max_enabled"`)placeholder
 placeholder
 	return nil
 placeholder
@@ -804,6 +825,10 @@ placeholder
 	if value, ok := _c.mutation.SortOrder(); ok {
 		_spec.SetField(group.FieldSortOrder, field.TypeInt, value)
 		_node.SortOrder = value
+placeholder
+	if value, ok := _c.mutation.SimulateClaudeMaxEnabled(); ok {
+		_spec.SetField(group.FieldSimulateClaudeMaxEnabled, field.TypeBool, value)
+		_node.SimulateClaudeMaxEnabled = value
 placeholder
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1477,6 +1502,18 @@ func (u *GroupUpsert) AddSortOrder(v int) *GroupUpsert {
 	return u
 placeholder
 
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (u *GroupUpsert) SetSimulateClaudeMaxEnabled(v bool) *GroupUpsert {
+	u.Set(group.FieldSimulateClaudeMaxEnabled, v)
+	return u
+placeholder
+
+// UpdateSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateSimulateClaudeMaxEnabled() *GroupUpsert {
+	u.SetExcluded(group.FieldSimulateClaudeMaxEnabled)
+	return u
+placeholder
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -2121,6 +2158,20 @@ placeholder
 func (u *GroupUpsertOne) UpdateSortOrder() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSortOrder()
+placeholder)
+placeholder
+
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (u *GroupUpsertOne) SetSimulateClaudeMaxEnabled(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSimulateClaudeMaxEnabled(v)
+placeholder)
+placeholder
+
+// UpdateSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateSimulateClaudeMaxEnabled() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSimulateClaudeMaxEnabled()
 placeholder)
 placeholder
 
@@ -2934,6 +2985,20 @@ placeholder
 func (u *GroupUpsertBulk) UpdateSortOrder() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSortOrder()
+placeholder)
+placeholder
+
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (u *GroupUpsertBulk) SetSimulateClaudeMaxEnabled(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetSimulateClaudeMaxEnabled(v)
+placeholder)
+placeholder
+
+// UpdateSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateSimulateClaudeMaxEnabled() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateSimulateClaudeMaxEnabled()
 placeholder)
 placeholder
 
