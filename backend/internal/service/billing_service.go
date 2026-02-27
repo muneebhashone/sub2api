@@ -543,7 +543,10 @@ placeholder
 		basePrice = 0.134
 placeholder
 
-	// 4K 尺寸翻倍
+	// 2K 尺寸 1.5 倍，4K 尺寸翻倍
+	if imageSize == "2K" {
+		return basePrice * 1.5
+placeholder
 	if imageSize == "4K" {
 		return basePrice * 2
 placeholder
