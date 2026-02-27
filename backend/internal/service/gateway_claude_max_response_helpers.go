@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/sjson"
 )
@@ -49,6 +50,18 @@ placeholder
 		return nil
 placeholder
 	return apiKey.Group
+placeholder
+
+func parsedRequestFromGinContext(c *gin.Context) *ParsedRequest {
+	if c == nil {
+		return nil
+placeholder
+	raw, exists := c.Get("parsed_request")
+	if !exists {
+		return nil
+placeholder
+	parsed, _ := raw.(*ParsedRequest)
+	return parsed
 placeholder
 
 func applyClaudeMaxSimulationToUsage(ctx context.Context, usage *ClaudeUsage, model string, accountID int64) claudeMaxCacheBillingOutcome {
@@ -144,4 +157,40 @@ func usageIntFromAny(v any) int {
 	placeholder
 placeholder
 	return 0
+placeholder
+
+// setupClaudeMaxStreamingHook 为 Antigravity 流式路径设置 SSE usage 改写 hook。
+func setupClaudeMaxStreamingHook(c *gin.Context, processor *antigravity.StreamingProcessor, originalModel string, accountID int64) {
+	group := claudeMaxGroupFromGinContext(c)
+	parsed := parsedRequestFromGinContext(c)
+	if !shouldApplyClaudeMaxBillingRulesForUsage(group, originalModel, parsed) {
+		return
+placeholder
+	processor.SetUsageMapHook(func(usageMap map[string]any) {
+		svcUsage := claudeUsageFromJSONMap(usageMap)
+		outcome := applyClaudeMaxCacheBillingPolicyToUsage(&svcUsage, parsed, group, originalModel, accountID)
+		if outcome.Simulated {
+			rewriteClaudeUsageJSONMap(usageMap, svcUsage)
+	placeholder
+placeholder)
+placeholder
+
+// applyClaudeMaxNonStreamingRewrite 为 Antigravity 非流式路径改写响应体中的 usage。
+func applyClaudeMaxNonStreamingRewrite(c *gin.Context, claudeResp []byte, agUsage *antigravity.ClaudeUsage, originalModel string, accountID int64) []byte {
+	group := claudeMaxGroupFromGinContext(c)
+	parsed := parsedRequestFromGinContext(c)
+	if !shouldApplyClaudeMaxBillingRulesForUsage(group, originalModel, parsed) {
+		return claudeResp
+placeholder
+	svcUsage := &ClaudeUsage{
+		InputTokens:              agUsage.InputTokens,
+		OutputTokens:             agUsage.OutputTokens,
+		CacheCreationInputTokens: agUsage.CacheCreationInputTokens,
+		CacheReadInputTokens:     agUsage.CacheReadInputTokens,
+placeholder
+	outcome := applyClaudeMaxCacheBillingPolicyToUsage(svcUsage, parsed, group, originalModel, accountID)
+	if outcome.Simulated {
+		return rewriteClaudeUsageJSONBytes(claudeResp, *svcUsage)
+placeholder
+	return claudeResp
 placeholder

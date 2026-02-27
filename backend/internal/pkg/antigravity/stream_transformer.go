@@ -18,6 +18,9 @@ const (
 	BlockTypeFunction
 )
 
+// UsageMapHook is a callback that can modify usage data before it's emitted in SSE events.
+type UsageMapHook func(usageMap map[string]any)
+
 // StreamingProcessor 流式响应处理器
 type StreamingProcessor struct {
 	blockType         BlockType
@@ -30,6 +33,7 @@ type StreamingProcessor struct {
 	originalModel     string
 	webSearchQueries  []string
 	groundingChunks   []GeminiGroundingChunk
+	usageMapHook      UsageMapHook
 
 	// 累计 usage
 	inputTokens     int
@@ -43,6 +47,25 @@ func NewStreamingProcessor(originalModel string) *StreamingProcessor {
 		blockType:     BlockTypeNone,
 		originalModel: originalModel,
 placeholder
+placeholder
+
+// SetUsageMapHook sets an optional hook that modifies usage maps before they are emitted.
+func (p *StreamingProcessor) SetUsageMapHook(fn UsageMapHook) {
+	p.usageMapHook = fn
+placeholder
+
+func usageToMap(u ClaudeUsage) map[string]any {
+	m := map[string]any{
+		"input_tokens":  u.InputTokens,
+		"output_tokens": u.OutputTokens,
+placeholder
+	if u.CacheCreationInputTokens > 0 {
+		m["cache_creation_input_tokens"] = u.CacheCreationInputTokens
+placeholder
+	if u.CacheReadInputTokens > 0 {
+		m["cache_read_input_tokens"] = u.CacheReadInputTokens
+placeholder
+	return m
 placeholder
 
 // ProcessLine 处理 SSE 行，返回 Claude SSE 事件
@@ -158,6 +181,13 @@ placeholder
 		responseID = "msg_" + generateRandomID()
 placeholder
 
+	var usageValue any = usage
+	if p.usageMapHook != nil {
+		usageMap := usageToMap(usage)
+		p.usageMapHook(usageMap)
+		usageValue = usageMap
+placeholder
+
 	message := map[string]any{
 		"id":            responseID,
 		"type":          "message",
@@ -166,7 +196,7 @@ placeholder
 		"model":         p.originalModel,
 		"stop_reason":   nil,
 		"stop_sequence": nil,
-		"usage":         usage,
+		"usage":         usageValue,
 placeholder
 
 	event := map[string]any{
@@ -477,13 +507,20 @@ placeholder
 		CacheReadInputTokens: p.cacheReadTokens,
 placeholder
 
+	var usageValue any = usage
+	if p.usageMapHook != nil {
+		usageMap := usageToMap(usage)
+		p.usageMapHook(usageMap)
+		usageValue = usageMap
+placeholder
+
 	deltaEvent := map[string]any{
 		"type": "message_delta",
 		"delta": map[string]any{
 			"stop_reason":   stopReason,
 			"stop_sequence": nil,
 	placeholder,
-		"usage": usage,
+		"usage": usageValue,
 placeholder
 
 	_, _ = result.Write(p.formatSSE("message_delta", deltaEvent))
