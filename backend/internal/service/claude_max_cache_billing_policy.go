@@ -64,6 +64,70 @@ placeholder
 	return out
 placeholder
 
+// detectClaudeMaxCacheBillingOutcomeForUsage only returns whether Claude Max policy
+// should influence downstream override decisions. It does not mutate usage.
+func detectClaudeMaxCacheBillingOutcomeForUsage(usage ClaudeUsage, parsed *ParsedRequest, group *Group, model string) claudeMaxCacheBillingOutcome {
+	var out claudeMaxCacheBillingOutcome
+	if !shouldApplyClaudeMaxBillingRulesForUsage(group, model, parsed) {
+		return out
+placeholder
+	if hasCacheCreationTokens(usage) {
+		out.ForcedCache1H = true
+		return out
+placeholder
+	if shouldSimulateClaudeMaxUsageForUsage(usage, parsed) {
+		out.Simulated = true
+placeholder
+	return out
+placeholder
+
+func applyClaudeMaxCacheBillingPolicyToUsage(usage *ClaudeUsage, parsed *ParsedRequest, group *Group, model string, accountID int64) claudeMaxCacheBillingOutcome {
+	var out claudeMaxCacheBillingOutcome
+	if usage == nil || !shouldApplyClaudeMaxBillingRulesForUsage(group, model, parsed) {
+		return out
+placeholder
+
+	resolvedModel := strings.TrimSpace(model)
+	if resolvedModel == "" && parsed != nil {
+		resolvedModel = strings.TrimSpace(parsed.Model)
+placeholder
+
+	if hasCacheCreationTokens(*usage) {
+		before5m := usage.CacheCreation5mTokens
+		before1h := usage.CacheCreation1hTokens
+		changed := safelyForceCacheCreationTo1H(usage)
+		// Even when value is already 1h, still mark forced to skip account TTL override.
+		out.ForcedCache1H = true
+		if changed {
+			logger.LegacyPrintf("service.gateway", "force_claude_max_cache_1h: model=%s account=%d cache_creation_5m:%d->%d cache_creation_1h:%d->%d",
+				resolvedModel,
+				accountID,
+				before5m,
+				usage.CacheCreation5mTokens,
+				before1h,
+				usage.CacheCreation1hTokens,
+			)
+	placeholder
+		return out
+placeholder
+
+	if !shouldSimulateClaudeMaxUsageForUsage(*usage, parsed) {
+		return out
+placeholder
+	beforeInputTokens := usage.InputTokens
+	out.Simulated = safelyProjectUsageToClaudeMax1H(usage, parsed)
+	if out.Simulated {
+		logger.LegacyPrintf("service.gateway", "simulate_claude_max_usage: model=%s account=%d input_tokens:%d->%d cache_creation_1h=%d",
+			resolvedModel,
+			accountID,
+			beforeInputTokens,
+			usage.InputTokens,
+			usage.CacheCreation1hTokens,
+		)
+placeholder
+	return out
+placeholder
+
 func isClaudeFamilyModel(model string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(claude.NormalizeModelID(model)))
 	if normalized == "" {
@@ -76,16 +140,22 @@ func shouldApplyClaudeMaxBillingRules(input *RecordUsageInput) bool {
 	if input == nil || input.Result == nil || input.APIKey == nil || input.APIKey.Group == nil {
 		return false
 placeholder
-	group := input.APIKey.Group
+	return shouldApplyClaudeMaxBillingRulesForUsage(input.APIKey.Group, input.Result.Model, input.ParsedRequest)
+placeholder
+
+func shouldApplyClaudeMaxBillingRulesForUsage(group *Group, model string, parsed *ParsedRequest) bool {
+	if group == nil {
+		return false
+placeholder
 	if !group.SimulateClaudeMaxEnabled || group.Platform != PlatformAnthropic {
 		return false
 placeholder
 
-	model := input.Result.Model
-	if model == "" && input.ParsedRequest != nil {
-		model = input.ParsedRequest.Model
+	resolvedModel := model
+	if resolvedModel == "" && parsed != nil {
+		resolvedModel = parsed.Model
 placeholder
-	if !isClaudeFamilyModel(model) {
+	if !isClaudeFamilyModel(resolvedModel) {
 		return false
 placeholder
 	return true
@@ -96,13 +166,19 @@ func hasCacheCreationTokens(usage ClaudeUsage) bool {
 placeholder
 
 func shouldSimulateClaudeMaxUsage(input *RecordUsageInput) bool {
+	if input == nil || input.Result == nil {
+		return false
+placeholder
 	if !shouldApplyClaudeMaxBillingRules(input) {
 		return false
 placeholder
-	if !hasClaudeCacheSignals(input.ParsedRequest) {
+	return shouldSimulateClaudeMaxUsageForUsage(input.Result.Usage, input.ParsedRequest)
+placeholder
+
+func shouldSimulateClaudeMaxUsageForUsage(usage ClaudeUsage, parsed *ParsedRequest) bool {
+	if !hasClaudeCacheSignals(parsed) {
 		return false
 placeholder
-	usage := input.Result.Usage
 	if usage.InputTokens <= 0 {
 		return false
 placeholder
@@ -147,6 +223,16 @@ func safelyApplyClaudeMaxUsageSimulation(result *ForwardResult, parsed *ParsedRe
 	placeholder
 placeholder()
 	return applyClaudeMaxUsageSimulation(result, parsed)
+placeholder
+
+func safelyProjectUsageToClaudeMax1H(usage *ClaudeUsage, parsed *ParsedRequest) (changed bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.LegacyPrintf("service.gateway", "simulate_claude_max_usage skipped: panic=%v", r)
+			changed = false
+	placeholder
+placeholder()
+	return projectUsageToClaudeMax1H(usage, parsed)
 placeholder
 
 func safelyForceCacheCreationTo1H(usage *ClaudeUsage) (changed bool) {
