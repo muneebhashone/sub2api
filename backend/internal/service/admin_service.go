@@ -130,9 +130,10 @@ type CreateGroupInput struct {
 	// 无效请求兜底分组 ID（仅 anthropic 平台使用）
 	FallbackGroupIDOnInvalidRequest *int64
 	// 模型路由配置（仅 anthropic 平台使用）
-	ModelRouting        map[string][]int64
-	ModelRoutingEnabled bool // 是否启用模型路由
-	MCPXMLInject        *bool
+	ModelRouting             map[string][]int64
+	ModelRoutingEnabled      bool // 是否启用模型路由
+	MCPXMLInject             *bool
+	SimulateClaudeMaxEnabled *bool
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes []string
 	// 从指定分组复制账号（创建分组后在同一事务内绑定）
@@ -164,9 +165,10 @@ type UpdateGroupInput struct {
 	// 无效请求兜底分组 ID（仅 anthropic 平台使用）
 	FallbackGroupIDOnInvalidRequest *int64
 	// 模型路由配置（仅 anthropic 平台使用）
-	ModelRouting        map[string][]int64
-	ModelRoutingEnabled *bool // 是否启用模型路由
-	MCPXMLInject        *bool
+	ModelRouting             map[string][]int64
+	ModelRoutingEnabled      *bool // 是否启用模型路由
+	MCPXMLInject             *bool
+	SimulateClaudeMaxEnabled *bool
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes *[]string
 	// 从指定分组复制账号（同步操作：先清空当前分组的账号绑定，再绑定源分组的账号）
@@ -763,6 +765,13 @@ placeholder
 	if input.MCPXMLInject != nil {
 		mcpXMLInject = *input.MCPXMLInject
 placeholder
+	simulateClaudeMaxEnabled := false
+	if input.SimulateClaudeMaxEnabled != nil {
+		if platform != PlatformAnthropic && *input.SimulateClaudeMaxEnabled {
+			return nil, fmt.Errorf("simulate_claude_max_enabled only supported for anthropic groups")
+	placeholder
+		simulateClaudeMaxEnabled = *input.SimulateClaudeMaxEnabled
+placeholder
 
 	// 如果指定了复制账号的源分组，先获取账号 ID 列表
 	var accountIDsToCopy []int64
@@ -819,6 +828,7 @@ placeholder
 		FallbackGroupIDOnInvalidRequest: fallbackOnInvalidRequest,
 		ModelRouting:                    input.ModelRouting,
 		MCPXMLInject:                    mcpXMLInject,
+		SimulateClaudeMaxEnabled:        simulateClaudeMaxEnabled,
 		SupportedModelScopes:            input.SupportedModelScopes,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
@@ -1023,6 +1033,15 @@ placeholder
 placeholder
 	if input.MCPXMLInject != nil {
 		group.MCPXMLInject = *input.MCPXMLInject
+placeholder
+	if input.SimulateClaudeMaxEnabled != nil {
+		if group.Platform != PlatformAnthropic && *input.SimulateClaudeMaxEnabled {
+			return nil, fmt.Errorf("simulate_claude_max_enabled only supported for anthropic groups")
+	placeholder
+		group.SimulateClaudeMaxEnabled = *input.SimulateClaudeMaxEnabled
+placeholder
+	if group.Platform != PlatformAnthropic {
+		group.SimulateClaudeMaxEnabled = false
 placeholder
 
 	// 支持的模型系列（仅 antigravity 平台使用）

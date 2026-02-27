@@ -190,6 +190,11 @@ func SortOrder(v int) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldSortOrder, v))
 placeholder
 
+// SimulateClaudeMaxEnabled applies equality check predicate on the "simulate_claude_max_enabled" field. It's identical to SimulateClaudeMaxEnabledEQ.
+func SimulateClaudeMaxEnabled(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldSimulateClaudeMaxEnabled, v))
+placeholder
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -1423,6 +1428,16 @@ placeholder
 // SortOrderLTE applies the LTE predicate on the "sort_order" field.
 func SortOrderLTE(v int) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldSortOrder, v))
+placeholder
+
+// SimulateClaudeMaxEnabledEQ applies the EQ predicate on the "simulate_claude_max_enabled" field.
+func SimulateClaudeMaxEnabledEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldSimulateClaudeMaxEnabled, v))
+placeholder
+
+// SimulateClaudeMaxEnabledNEQ applies the NEQ predicate on the "simulate_claude_max_enabled" field.
+func SimulateClaudeMaxEnabledNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldSimulateClaudeMaxEnabled, v))
 placeholder
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.
