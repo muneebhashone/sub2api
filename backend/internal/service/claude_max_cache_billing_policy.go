@@ -13,23 +13,6 @@ type claudeMaxCacheBillingOutcome struct {
 	Simulated bool
 placeholder
 
-// detectClaudeMaxCacheBillingOutcomeForUsage only returns whether Claude Max policy
-// should influence downstream override decisions. It does not mutate usage.
-func detectClaudeMaxCacheBillingOutcomeForUsage(usage ClaudeUsage, parsed *ParsedRequest, group *Group, model string) claudeMaxCacheBillingOutcome {
-	var out claudeMaxCacheBillingOutcome
-	if !shouldApplyClaudeMaxBillingRulesForUsage(group, model, parsed) {
-		return out
-placeholder
-	if hasCacheCreationTokens(usage) {
-		// Upstream already returned cache creation usage; keep original usage.
-		return out
-placeholder
-	if shouldSimulateClaudeMaxUsageForUsage(usage, parsed) {
-		out.Simulated = true
-placeholder
-	return out
-placeholder
-
 func applyClaudeMaxCacheBillingPolicyToUsage(usage *ClaudeUsage, parsed *ParsedRequest, group *Group, model string, accountID int64) claudeMaxCacheBillingOutcome {
 	var out claudeMaxCacheBillingOutcome
 	if usage == nil || !shouldApplyClaudeMaxBillingRulesForUsage(group, model, parsed) {
