@@ -1,7 +1,7 @@
 <template>
   <div class="card overflow-hidden">
     <div class="overflow-auto">
-      <DataTable :columns="cols" :data="data" :loading="loading">
+      <DataTable :columns="columns" :data="data" :loading="loading">
         <template #cell-user="{ row placeholder">
           <div class="text-sm">
             <span class="font-medium text-gray-900 dark:text-white">{{ row.user?.email || '-' placeholderplaceholder</span>
@@ -123,7 +123,7 @@
         </template>
 
         <template #cell-user_agent="{ row placeholder">
-          <span v-if="row.user_agent" class="text-sm text-gray-600 dark:text-gray-400 block max-w-[320px] whitespace-normal break-all" :title="row.user_agent">{{ formatUserAgent(row.user_agent) placeholderplaceholder</span>
+          <span v-if="row.user_agent" class="text-sm text-gray-600 dark:text-gray-400 block max-w-[320px] truncate" :title="row.user_agent">{{ formatUserAgent(row.user_agent) placeholderplaceholder</span>
           <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
         </template>
 
@@ -268,7 +268,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed placeholder from 'vue'
+import { ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
 import DataTable from '@/components/common/DataTable.vue'
@@ -276,7 +276,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/icons/Icon.vue'
 import type { AdminUsageLog placeholder from '@/types'
 
-defineProps(['data', 'loading'])
+defineProps(['data', 'loading', 'columns'])
 const { t placeholder = useI18n()
 
 // Tooltip state - cost
@@ -288,23 +288,6 @@ const tooltipData = ref<AdminUsageLog | null>(null)
 const tokenTooltipVisible = ref(false)
 const tokenTooltipPosition = ref({ x: 0, y: 0 placeholder)
 const tokenTooltipData = ref<AdminUsageLog | null>(null)
-
-const cols = computed(() => [
-  { key: 'user', label: t('admin.usage.user'), sortable: false placeholder,
-  { key: 'api_key', label: t('usage.apiKeyFilter'), sortable: false placeholder,
-  { key: 'account', label: t('admin.usage.account'), sortable: false placeholder,
-  { key: 'model', label: t('usage.model'), sortable: true placeholder,
-  { key: 'reasoning_effort', label: t('usage.reasoningEffort'), sortable: false placeholder,
-  { key: 'group', label: t('admin.usage.group'), sortable: false placeholder,
-  { key: 'stream', label: t('usage.type'), sortable: false placeholder,
-  { key: 'tokens', label: t('usage.tokens'), sortable: false placeholder,
-  { key: 'cost', label: t('usage.cost'), sortable: false placeholder,
-  { key: 'first_token', label: t('usage.firstToken'), sortable: false placeholder,
-  { key: 'duration', label: t('usage.duration'), sortable: false placeholder,
-  { key: 'created_at', label: t('usage.time'), sortable: true placeholder,
-  { key: 'user_agent', label: t('usage.userAgent'), sortable: false placeholder,
-  { key: 'ip_address', label: t('admin.usage.ipAddress'), sortable: false placeholder
-])
 
 const formatCacheTokens = (tokens: number): string => {
   if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)placeholderM`
