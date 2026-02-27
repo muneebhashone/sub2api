@@ -1619,6 +1619,9 @@ placeholder else {
 		firstTokenMs = streamRes.firstTokenMs
 placeholder
 
+	// Claude Max cache billing: 同步 ForwardResult.Usage 与客户端响应体一致
+	applyClaudeMaxCacheBillingPolicyToUsage(usage, parsedRequestFromGinContext(c), claudeMaxGroupFromGinContext(c), originalModel, account.ID)
+
 	return &ForwardResult{
 		RequestID:        requestID,
 		Usage:            *usage,
