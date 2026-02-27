@@ -31,19 +31,7 @@ placeholder
 placeholder
 
 	if hasCacheCreationTokens(*usage) {
-		before5m := usage.CacheCreation5mTokens
-		before1h := usage.CacheCreation1hTokens
-		out.ForcedCache1H = safelyForceCacheCreationTo1H(usage)
-		if out.ForcedCache1H {
-			logger.LegacyPrintf("service.gateway", "force_claude_max_cache_1h: model=%s account=%d cache_creation_5m:%d->%d cache_creation_1h:%d->%d",
-				result.Model,
-				accountID,
-				before5m,
-				usage.CacheCreation5mTokens,
-				before1h,
-				usage.CacheCreation1hTokens,
-			)
-	placeholder
+		// Upstream already returned cache creation usage; keep original usage.
 		return out
 placeholder
 
@@ -72,7 +60,7 @@ func detectClaudeMaxCacheBillingOutcomeForUsage(usage ClaudeUsage, parsed *Parse
 		return out
 placeholder
 	if hasCacheCreationTokens(usage) {
-		out.ForcedCache1H = true
+		// Upstream already returned cache creation usage; keep original usage.
 		return out
 placeholder
 	if shouldSimulateClaudeMaxUsageForUsage(usage, parsed) {
@@ -93,21 +81,7 @@ placeholder
 placeholder
 
 	if hasCacheCreationTokens(*usage) {
-		before5m := usage.CacheCreation5mTokens
-		before1h := usage.CacheCreation1hTokens
-		changed := safelyForceCacheCreationTo1H(usage)
-		// Even when value is already 1h, still mark forced to skip account TTL override.
-		out.ForcedCache1H = true
-		if changed {
-			logger.LegacyPrintf("service.gateway", "force_claude_max_cache_1h: model=%s account=%d cache_creation_5m:%d->%d cache_creation_1h:%d->%d",
-				resolvedModel,
-				accountID,
-				before5m,
-				usage.CacheCreation5mTokens,
-				before1h,
-				usage.CacheCreation1hTokens,
-			)
-	placeholder
+		// Upstream already returned cache creation usage; keep original usage.
 		return out
 placeholder
 
