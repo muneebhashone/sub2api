@@ -403,5 +403,23 @@ func (s *stubAdminService) UpdateGroupSortOrders(ctx context.Context, updates []
 	return nil
 placeholder
 
+func (s *stubAdminService) AdminUpdateAPIKeyGroupID(ctx context.Context, keyID int64, groupID *int64) (*service.APIKey, error) {
+	for i := range s.apiKeys {
+		if s.apiKeys[i].ID == keyID {
+			k := s.apiKeys[i]
+			if groupID != nil {
+				if *groupID == 0 {
+					k.GroupID = nil
+			placeholder else {
+					gid := *groupID
+					k.GroupID = &gid
+			placeholder
+		placeholder
+			return &k, nil
+	placeholder
+placeholder
+	return nil, service.ErrAPIKeyNotFound
+placeholder
+
 // Ensure stub implements interface.
 var _ service.AdminService = (*stubAdminService)(nil)
