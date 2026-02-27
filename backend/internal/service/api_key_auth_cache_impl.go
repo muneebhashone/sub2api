@@ -241,6 +241,7 @@ placeholder
 			ModelRouting:                    apiKey.Group.ModelRouting,
 			ModelRoutingEnabled:             apiKey.Group.ModelRoutingEnabled,
 			MCPXMLInject:                    apiKey.Group.MCPXMLInject,
+			SimulateClaudeMaxEnabled:        apiKey.Group.SimulateClaudeMaxEnabled,
 			SupportedModelScopes:            apiKey.Group.SupportedModelScopes,
 	placeholder
 placeholder
@@ -295,6 +296,7 @@ placeholder
 			ModelRouting:                    snapshot.Group.ModelRouting,
 			ModelRoutingEnabled:             snapshot.Group.ModelRoutingEnabled,
 			MCPXMLInject:                    snapshot.Group.MCPXMLInject,
+			SimulateClaudeMaxEnabled:        snapshot.Group.SimulateClaudeMaxEnabled,
 			SupportedModelScopes:            snapshot.Group.SupportedModelScopes,
 	placeholder
 placeholder
