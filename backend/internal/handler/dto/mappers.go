@@ -209,6 +209,13 @@ placeholder
 		if idleTimeout := a.GetSessionIdleTimeoutMinutes(); idleTimeout > 0 {
 			out.SessionIdleTimeoutMin = &idleTimeout
 	placeholder
+		if rpm := a.GetBaseRPM(); rpm > 0 {
+			out.BaseRPM = &rpm
+			strategy := a.GetRPMStrategy()
+			out.RPMStrategy = &strategy
+			buffer := a.GetRPMStickyBuffer()
+			out.RPMStickyBuffer = &buffer
+	placeholder
 		// TLS指纹伪装开关
 		if a.IsTLSFingerprintEnabled() {
 			enabled := true

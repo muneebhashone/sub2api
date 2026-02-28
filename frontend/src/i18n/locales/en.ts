@@ -1616,7 +1616,19 @@ export default {
         sessions: {
           full: 'Active sessions full, new sessions must wait (idle timeout: {idleplaceholder min)',
           normal: 'Active sessions normal (idle timeout: {idleplaceholder min)'
-        placeholder
+        placeholder,
+        rpm: {
+          full: 'RPM limit reached',
+          warning: 'RPM approaching limit',
+          normal: 'RPM normal',
+          tieredNormal: 'RPM limit (Tiered) - Normal',
+          tieredWarning: 'RPM limit (Tiered) - Approaching limit',
+          tieredStickyOnly: 'RPM limit (Tiered) - Sticky only | Buffer: {bufferplaceholder',
+          tieredBlocked: 'RPM limit (Tiered) - Blocked | Buffer: {bufferplaceholder',
+          stickyExemptNormal: 'RPM limit (Sticky Exempt) - Normal',
+          stickyExemptWarning: 'RPM limit (Sticky Exempt) - Approaching limit',
+          stickyExemptOver: 'RPM limit (Sticky Exempt) - Over limit, sticky only'
+        placeholder,
       placeholder,
       tempUnschedulable: {
         title: 'Temp Unschedulable',
@@ -1830,6 +1842,22 @@ export default {
           idleTimeout: 'Idle Timeout',
           idleTimeoutPlaceholder: '5',
           idleTimeoutHint: 'Sessions will be released after idle timeout'
+        placeholder,
+        rpmLimit: {
+          label: 'RPM Limit',
+          hint: 'Limit requests per minute to protect upstream accounts',
+          baseRpm: 'Base RPM',
+          baseRpmPlaceholder: '15',
+          baseRpmHint: 'Max requests per minute, 0 or empty means no limit',
+          strategy: 'RPM Strategy',
+          strategyTiered: 'Tiered Model',
+          strategyStickyExempt: 'Sticky Exempt',
+          strategyTieredHint: 'Green → Yellow → Sticky only → Blocked, progressive throttling',
+          strategyStickyExemptHint: 'Only sticky sessions allowed when over limit',
+          strategyHint: 'Tiered: gradually restrict when exceeded; Sticky Exempt: existing sessions unrestricted',
+          stickyBuffer: 'Sticky Buffer',
+          stickyBufferPlaceholder: 'Default: 20% of base RPM',
+          stickyBufferHint: 'Extra requests allowed for sticky sessions after exceeding base RPM. Leave empty to use default (20% of base RPM, min 1)'
         placeholder,
         tlsFingerprint: {
           label: 'TLS Fingerprint Simulation',
