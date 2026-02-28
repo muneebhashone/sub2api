@@ -1098,14 +1098,43 @@ const buildUpdatePayload = (): Record<string, unknown> | null => {
   return Object.keys(updates).length > 0 ? updates : null
 placeholder
 
+const mixedChannelConfirmed = ref(false)
+
+const needsMixedChannelCheck = () =>
+  enableGroups.value &&
+  props.selectedPlatforms.length === 1 &&
+  (props.selectedPlatforms[0] === 'antigravity' || props.selectedPlatforms[0] === 'anthropic')
+
 const handleClose = () => {
   showMixedChannelWarning.value = false
   mixedChannelWarningMessage.value = ''
   pendingUpdatesForConfirm.value = null
+  mixedChannelConfirmed.value = false
   emit('close')
 placeholder
 
-const handleSubmit = async (confirmMixedChannel = false) => {
+const checkMixedChannelRisk = async (): Promise<boolean> => {
+  if (!needsMixedChannelCheck()) return true
+  if (mixedChannelConfirmed.value) return true
+  if (groupIds.value.length === 0) return true
+
+  try {
+    const result = await adminAPI.accounts.checkMixedChannelRisk({
+      platform: props.selectedPlatforms[0],
+      group_ids: groupIds.value
+    placeholder)
+    if (!result.has_risk) return true
+
+    mixedChannelWarningMessage.value = result.message || t('admin.accounts.bulkEdit.failed')
+    showMixedChannelWarning.value = true
+    return false
+  placeholder catch (error: any) {
+    appStore.showError(error.message || t('admin.accounts.bulkEdit.failed'))
+    return false
+  placeholder
+placeholder
+
+const handleSubmit = async () => {
   if (props.accountIds.length === 0) {
     appStore.showError(t('admin.accounts.bulkEdit.noSelection'))
     return
@@ -1128,16 +1157,24 @@ const handleSubmit = async (confirmMixedChannel = false) => {
     return
   placeholder
 
-  let updates: Record<string, unknown>
-  if (confirmMixedChannel && pendingUpdatesForConfirm.value) {
-    updates = { ...pendingUpdatesForConfirm.value, confirm_mixed_channel_risk: true placeholder
-  placeholder else {
-    const built = buildUpdatePayload()
-    if (!built) {
-      appStore.showError(t('admin.accounts.bulkEdit.noFieldsSelected'))
-      return
-    placeholder
-    updates = built
+  const built = buildUpdatePayload()
+  if (!built) {
+    appStore.showError(t('admin.accounts.bulkEdit.noFieldsSelected'))
+    return
+  placeholder
+
+  const canContinue = await checkMixedChannelRisk()
+  if (!canContinue) {
+    pendingUpdatesForConfirm.value = built
+    return
+  placeholder
+
+  await submitBulkUpdate(built)
+placeholder
+
+const submitBulkUpdate = async (updates: Record<string, unknown>) => {
+  if (mixedChannelConfirmed.value && needsMixedChannelCheck()) {
+    updates = { ...updates, confirm_mixed_channel_risk: true placeholder
   placeholder
 
   submitting.value = true
@@ -1161,14 +1198,8 @@ const handleSubmit = async (confirmMixedChannel = false) => {
       handleClose()
     placeholder
   placeholder catch (error: any) {
-    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning') {
-      pendingUpdatesForConfirm.value = updates
-      mixedChannelWarningMessage.value = error.response.data.message
-      showMixedChannelWarning.value = true
-    placeholder else {
-      appStore.showError(error.response?.data?.detail || t('admin.accounts.bulkEdit.failed'))
-      console.error('Error bulk updating accounts:', error)
-    placeholder
+    appStore.showError(error.message || t('admin.accounts.bulkEdit.failed'))
+    console.error('Error bulk updating accounts:', error)
   placeholder finally {
     submitting.value = false
   placeholder
@@ -1176,7 +1207,10 @@ placeholder
 
 const handleMixedChannelConfirm = async () => {
   showMixedChannelWarning.value = false
-  await handleSubmit(true)
+  mixedChannelConfirmed.value = true
+  if (pendingUpdatesForConfirm.value) {
+    await submitBulkUpdate(pendingUpdatesForConfirm.value)
+  placeholder
 placeholder
 
 const handleMixedChannelCancel = () => {
@@ -1220,6 +1254,7 @@ watch(
       showMixedChannelWarning.value = false
       mixedChannelWarningMessage.value = ''
       pendingUpdatesForConfirm.value = null
+      mixedChannelConfirmed.value = false
     placeholder
   placeholder
 )
