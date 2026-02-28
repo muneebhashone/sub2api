@@ -298,5 +298,6 @@ placeholder
 			SupportedModelScopes:            snapshot.Group.SupportedModelScopes,
 	placeholder
 placeholder
+	s.compileAPIKeyIPRules(apiKey)
 	return apiKey
 placeholder

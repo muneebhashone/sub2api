@@ -41,7 +41,14 @@ var hopByHopHeaders = map[string]struct{placeholder{
 	"connection":        {placeholder,
 placeholder
 
-func FilterHeaders(src http.Header, cfg config.ResponseHeaderConfig) http.Header {
+type CompiledHeaderFilter struct {
+	allowed     map[string]struct{placeholder
+	forceRemove map[string]struct{placeholder
+placeholder
+
+var defaultCompiledHeaderFilter = CompileHeaderFilter(config.ResponseHeaderConfig{placeholder)
+
+func CompileHeaderFilter(cfg config.ResponseHeaderConfig) *CompiledHeaderFilter {
 	allowed := make(map[string]struct{placeholder, len(defaultAllowed)+len(cfg.AdditionalAllowed))
 	for key := range defaultAllowed {
 		allowed[key] = struct{placeholder{placeholder
@@ -69,13 +76,24 @@ placeholder
 	placeholder
 placeholder
 
+	return &CompiledHeaderFilter{
+		allowed:     allowed,
+		forceRemove: forceRemove,
+placeholder
+placeholder
+
+func FilterHeaders(src http.Header, filter *CompiledHeaderFilter) http.Header {
+	if filter == nil {
+		filter = defaultCompiledHeaderFilter
+placeholder
+
 	filtered := make(http.Header, len(src))
 	for key, values := range src {
 		lower := strings.ToLower(key)
-		if _, blocked := forceRemove[lower]; blocked {
+		if _, blocked := filter.forceRemove[lower]; blocked {
 			continue
 	placeholder
-		if _, ok := allowed[lower]; !ok {
+		if _, ok := filter.allowed[lower]; !ok {
 			continue
 	placeholder
 		// 跳过 hop-by-hop 头部，这些由 HTTP 库自动处理
@@ -89,8 +107,8 @@ placeholder
 	return filtered
 placeholder
 
-func WriteFilteredHeaders(dst http.Header, src http.Header, cfg config.ResponseHeaderConfig) {
-	filtered := FilterHeaders(src, cfg)
+func WriteFilteredHeaders(dst http.Header, src http.Header, filter *CompiledHeaderFilter) {
+	filtered := FilterHeaders(src, filter)
 	for key, values := range filtered {
 		for _, value := range values {
 			dst.Add(key, value)

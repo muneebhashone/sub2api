@@ -158,6 +158,14 @@ placeholder
 	return svc
 placeholder
 
+func (s *APIKeyService) compileAPIKeyIPRules(apiKey *APIKey) {
+	if apiKey == nil {
+		return
+placeholder
+	apiKey.CompiledIPWhitelist = ip.CompileIPRules(apiKey.IPWhitelist)
+	apiKey.CompiledIPBlacklist = ip.CompileIPRules(apiKey.IPBlacklist)
+placeholder
+
 // GenerateKey 生成随机API Key
 func (s *APIKeyService) GenerateKey() (string, error) {
 	// 生成32字节随机数据
@@ -332,6 +340,7 @@ placeholder
 placeholder
 
 	s.InvalidateAuthCacheByKey(ctx, apiKey.Key)
+	s.compileAPIKeyIPRules(apiKey)
 
 	return apiKey, nil
 placeholder
@@ -363,6 +372,7 @@ func (s *APIKeyService) GetByID(ctx context.Context, id int64) (*APIKey, error) 
 	if err != nil {
 		return nil, fmt.Errorf("get api key: %w", err)
 placeholder
+	s.compileAPIKeyIPRules(apiKey)
 	return apiKey, nil
 placeholder
 
@@ -375,6 +385,7 @@ func (s *APIKeyService) GetByKey(ctx context.Context, key string) (*APIKey, erro
 			if err != nil {
 				return nil, fmt.Errorf("get api key: %w", err)
 		placeholder
+			s.compileAPIKeyIPRules(apiKey)
 			return apiKey, nil
 	placeholder
 placeholder
@@ -391,6 +402,7 @@ placeholder
 			if err != nil {
 				return nil, fmt.Errorf("get api key: %w", err)
 		placeholder
+			s.compileAPIKeyIPRules(apiKey)
 			return apiKey, nil
 	placeholder
 placeholder else {
@@ -402,6 +414,7 @@ placeholder else {
 			if err != nil {
 				return nil, fmt.Errorf("get api key: %w", err)
 		placeholder
+			s.compileAPIKeyIPRules(apiKey)
 			return apiKey, nil
 	placeholder
 placeholder
@@ -411,6 +424,7 @@ placeholder
 		return nil, fmt.Errorf("get api key: %w", err)
 placeholder
 	apiKey.Key = key
+	s.compileAPIKeyIPRules(apiKey)
 	return apiKey, nil
 placeholder
 
@@ -510,6 +524,7 @@ placeholder
 placeholder
 
 	s.InvalidateAuthCacheByKey(ctx, apiKey.Key)
+	s.compileAPIKeyIPRules(apiKey)
 
 	return apiKey, nil
 placeholder

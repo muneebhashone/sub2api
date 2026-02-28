@@ -136,3 +136,67 @@ func TestDroppedBetaSet(t *testing.T) {
 	require.Contains(t, extended, claude.BetaClaudeCode)
 	require.Len(t, extended, len(claude.DroppedBetas)+1)
 placeholder
+
+func TestBuildBetaTokenSet(t *testing.T) {
+	got := buildBetaTokenSet([]string{"foo", "", "bar", "foo"placeholder)
+	require.Len(t, got, 2)
+	require.Contains(t, got, "foo")
+	require.Contains(t, got, "bar")
+	require.NotContains(t, got, "")
+
+	empty := buildBetaTokenSet(nil)
+	require.Empty(t, empty)
+placeholder
+
+func TestStripBetaTokensWithSet_EmptyDropSet(t *testing.T) {
+	header := "oauth-2025-04-20,placeholder"
+	got := stripBetaTokensWithSet(header, map[string]struct{placeholder{placeholder)
+	require.Equal(t, header, got)
+placeholder
+
+func TestIsCountTokensUnsupported404(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		body       string
+		want       bool
+placeholder{
+		{
+			name:       "exact endpoint not found",
+			statusCode: 404,
+			body:       `{"error":{"message":"Not found: /v1/messages/count_tokens","type":"not_found_error"placeholderplaceholder`,
+			want:       true,
+	placeholder,
+		{
+			name:       "contains count_tokens and not found",
+			statusCode: 404,
+			body:       `{"error":{"message":"count_tokens route not found","type":"not_found_error"placeholderplaceholder`,
+			want:       true,
+	placeholder,
+		{
+			name:       "generic 404",
+			statusCode: 404,
+			body:       `{"error":{"message":"resource not found","type":"not_found_error"placeholderplaceholder`,
+			want:       false,
+	placeholder,
+		{
+			name:       "404 with empty error message",
+			statusCode: 404,
+			body:       `{"error":{"message":"","type":"not_found_error"placeholderplaceholder`,
+			want:       false,
+	placeholder,
+		{
+			name:       "non-404 status",
+			statusCode: 400,
+			body:       `{"error":{"message":"Not found: /v1/messages/count_tokens","type":"invalid_request_error"placeholderplaceholder`,
+			want:       false,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isCountTokensUnsupported404(tt.statusCode, []byte(tt.body))
+			require.Equal(t, tt.want, got)
+	placeholder)
+placeholder
+placeholder

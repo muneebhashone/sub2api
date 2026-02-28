@@ -68,6 +68,9 @@ placeholder
 	if filters.Model != nil {
 		parts = append(parts, "model="+strings.TrimSpace(*filters.Model))
 placeholder
+	if filters.RequestType != nil {
+		parts = append(parts, "request_type="+RequestTypeFromInt16(*filters.RequestType).String())
+placeholder
 	if filters.Stream != nil {
 		parts = append(parts, fmt.Sprintf("stream=%t", *filters.Stream))
 placeholder
@@ -366,6 +369,16 @@ placeholder
 			filters.Model = nil
 	placeholder else {
 			filters.Model = &model
+	placeholder
+placeholder
+	if filters.RequestType != nil {
+		requestType := RequestType(*filters.RequestType)
+		if !requestType.IsValid() {
+			filters.RequestType = nil
+	placeholder else {
+			value := int16(requestType.Normalize())
+			filters.RequestType = &value
+			filters.Stream = nil
 	placeholder
 placeholder
 	if filters.BillingType != nil && *filters.BillingType < 0 {

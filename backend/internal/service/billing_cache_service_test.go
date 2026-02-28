@@ -73,3 +73,16 @@ placeholder, 2*time.Second, 10*time.Millisecond)
 		return atomic.LoadInt64(&cache.subscriptionUpdates) > 0
 placeholder, 2*time.Second, 10*time.Millisecond)
 placeholder
+
+func TestBillingCacheServiceEnqueueAfterStopReturnsFalse(t *testing.T) {
+	cache := &billingCacheWorkerStub{placeholder
+	svc := NewBillingCacheService(cache, nil, nil, &config.Config{placeholder)
+	svc.Stop()
+
+	enqueued := svc.enqueueCacheWrite(cacheWriteTask{
+		kind:   cacheWriteDeductBalance,
+		userID: 1,
+		amount: 1,
+placeholder)
+	require.False(t, enqueued)
+placeholder

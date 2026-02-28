@@ -225,6 +225,92 @@ placeholder
 	require.Equal(t, http.StatusBadRequest, recorder.Code)
 placeholder
 
+func TestUsageHandlerCreateCleanupTaskInvalidRequestType(t *testing.T) {
+	repo := &cleanupRepoStub{placeholder
+	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, MaxRangeDays: 31placeholderplaceholder
+	cleanupService := service.NewUsageCleanupService(repo, nil, nil, cfg)
+	router := setupCleanupRouter(cleanupService, 88)
+
+	payload := map[string]any{
+		"start_date":   "2024-01-01",
+		"end_date":     "2024-01-02",
+		"timezone":     "UTC",
+		"request_type": "invalid",
+placeholder
+	body, err := json.Marshal(payload)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/usage/cleanup-tasks", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+placeholder
+
+func TestUsageHandlerCreateCleanupTaskRequestTypePriority(t *testing.T) {
+	repo := &cleanupRepoStub{placeholder
+	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, MaxRangeDays: 31placeholderplaceholder
+	cleanupService := service.NewUsageCleanupService(repo, nil, nil, cfg)
+	router := setupCleanupRouter(cleanupService, 99)
+
+	payload := map[string]any{
+		"start_date":   "2024-01-01",
+		"end_date":     "2024-01-02",
+		"timezone":     "UTC",
+		"request_type": "ws_v2",
+		"stream":       false,
+placeholder
+	body, err := json.Marshal(payload)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/usage/cleanup-tasks", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	require.Len(t, repo.created, 1)
+	created := repo.created[0]
+	require.NotNil(t, created.Filters.RequestType)
+	require.Equal(t, int16(service.RequestTypeWSV2), *created.Filters.RequestType)
+	require.Nil(t, created.Filters.Stream)
+placeholder
+
+func TestUsageHandlerCreateCleanupTaskWithLegacyStream(t *testing.T) {
+	repo := &cleanupRepoStub{placeholder
+	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, MaxRangeDays: 31placeholderplaceholder
+	cleanupService := service.NewUsageCleanupService(repo, nil, nil, cfg)
+	router := setupCleanupRouter(cleanupService, 99)
+
+	payload := map[string]any{
+		"start_date": "2024-01-01",
+		"end_date":   "2024-01-02",
+		"timezone":   "UTC",
+		"stream":     true,
+placeholder
+	body, err := json.Marshal(payload)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/usage/cleanup-tasks", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	require.Len(t, repo.created, 1)
+	created := repo.created[0]
+	require.Nil(t, created.Filters.RequestType)
+	require.NotNil(t, created.Filters.Stream)
+	require.True(t, *created.Filters.Stream)
+placeholder
+
 func TestUsageHandlerCreateCleanupTaskSuccess(t *testing.T) {
 	repo := &cleanupRepoStub{placeholder
 	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, MaxRangeDays: 31placeholderplaceholder

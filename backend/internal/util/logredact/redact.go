@@ -3,7 +3,9 @@ package logredact
 import (
 	"encoding/json"
 	"regexp"
+	"sort"
 	"strings"
+	"sync"
 )
 
 // maxRedactDepth 限制递归深度以防止栈溢出
@@ -31,9 +33,18 @@ var defaultSensitiveKeyList = []string{
 	"password",
 placeholder
 
+type textRedactPatterns struct {
+	reJSONLike  *regexp.Regexp
+	reQueryLike *regexp.Regexp
+	rePlain     *regexp.Regexp
+placeholder
+
 var (
 	reGOCSPX = regexp.MustCompile(`GOCSPX-[0-9A-Za-z_-]{24,placeholder`)
 	reAIza   = regexp.MustCompile(`AIza[0-9A-Za-z_-]{35placeholder`)
+
+	defaultTextRedactPatterns = compileTextRedactPatterns(nil)
+	extraTextPatternCache     sync.Map // map[string]*textRedactPatterns
 )
 
 func RedactMap(input map[string]any, extraKeys ...string) map[string]any {
@@ -83,21 +94,69 @@ placeholder
 		return RedactJSON(raw, extraKeys...)
 placeholder
 
-	keyAlt := buildKeyAlternation(extraKeys)
-	// JSON-like: "access_token":"..."
-	reJSONLike := regexp.MustCompile(`(?i)("(?:` + keyAlt + `)"\s*:\s*")([^"]*)(")`)
-	// Query-like: access_token=...
-	reQueryLike := regexp.MustCompile(`(?i)\b((?:` + keyAlt + `))=([^&\s]+)`)
-	// Plain: access_token: ... / access_token = ...
-	rePlain := regexp.MustCompile(`(?i)\b((?:` + keyAlt + `))\b(\s*[:=]\s*)([^,\s]+)`)
+	patterns := getTextRedactPatterns(extraKeys)
 
 	out := input
 	out = reGOCSPX.ReplaceAllString(out, "GOCSPX-***")
 	out = reAIza.ReplaceAllString(out, "AIza***")
-	out = reJSONLike.ReplaceAllString(out, `$1***$3`)
-	out = reQueryLike.ReplaceAllString(out, `$1=***`)
-	out = rePlain.ReplaceAllString(out, `$1$2***`)
+	out = patterns.reJSONLike.ReplaceAllString(out, `$1***$3`)
+	out = patterns.reQueryLike.ReplaceAllString(out, `$1=***`)
+	out = patterns.rePlain.ReplaceAllString(out, `$1$2***`)
 	return out
+placeholder
+
+func compileTextRedactPatterns(extraKeys []string) *textRedactPatterns {
+	keyAlt := buildKeyAlternation(extraKeys)
+	return &textRedactPatterns{
+		// JSON-like: "access_token":"..."
+		reJSONLike: regexp.MustCompile(`(?i)("(?:` + keyAlt + `)"\s*:\s*")([^"]*)(")`),
+		// Query-like: access_token=...
+		reQueryLike: regexp.MustCompile(`(?i)\b((?:` + keyAlt + `))=([^&\s]+)`),
+		// Plain: access_token: ... / access_token = ...
+		rePlain: regexp.MustCompile(`(?i)\b((?:` + keyAlt + `))\b(\s*[:=]\s*)([^,\s]+)`),
+placeholder
+placeholder
+
+func getTextRedactPatterns(extraKeys []string) *textRedactPatterns {
+	normalizedExtraKeys := normalizeAndSortExtraKeys(extraKeys)
+	if len(normalizedExtraKeys) == 0 {
+		return defaultTextRedactPatterns
+placeholder
+
+	cacheKey := strings.Join(normalizedExtraKeys, ",")
+	if cached, ok := extraTextPatternCache.Load(cacheKey); ok {
+		if patterns, ok := cached.(*textRedactPatterns); ok {
+			return patterns
+	placeholder
+placeholder
+
+	compiled := compileTextRedactPatterns(normalizedExtraKeys)
+	actual, _ := extraTextPatternCache.LoadOrStore(cacheKey, compiled)
+	if patterns, ok := actual.(*textRedactPatterns); ok {
+		return patterns
+placeholder
+	return compiled
+placeholder
+
+func normalizeAndSortExtraKeys(extraKeys []string) []string {
+	if len(extraKeys) == 0 {
+		return nil
+placeholder
+	seen := make(map[string]struct{placeholder, len(extraKeys))
+	keys := make([]string, 0, len(extraKeys))
+	for _, key := range extraKeys {
+		normalized := normalizeKey(key)
+		if normalized == "" {
+			continue
+	placeholder
+		if _, ok := seen[normalized]; ok {
+			continue
+	placeholder
+		seen[normalized] = struct{placeholder{placeholder
+		keys = append(keys, normalized)
+placeholder
+	sort.Strings(keys)
+	return keys
 placeholder
 
 func buildKeyAlternation(extraKeys []string) string {

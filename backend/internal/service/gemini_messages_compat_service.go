@@ -53,6 +53,7 @@ type GeminiMessagesCompatService struct {
 	httpUpstream              HTTPUpstream
 	antigravityGatewayService *AntigravityGatewayService
 	cfg                       *config.Config
+	responseHeaderFilter      *responseheaders.CompiledHeaderFilter
 placeholder
 
 func NewGeminiMessagesCompatService(
@@ -76,6 +77,7 @@ func NewGeminiMessagesCompatService(
 		httpUpstream:              httpUpstream,
 		antigravityGatewayService: antigravityGatewayService,
 		cfg:                       cfg,
+		responseHeaderFilter:      compileResponseHeaderFilter(cfg),
 placeholder
 placeholder
 
@@ -230,6 +232,16 @@ func (s *GeminiMessagesCompatService) isAccountUsableForRequest(
 	requestedModel, platform string,
 	useMixedScheduling bool,
 ) bool {
+	return s.isAccountUsableForRequestWithPrecheck(ctx, account, requestedModel, platform, useMixedScheduling, nil)
+placeholder
+
+func (s *GeminiMessagesCompatService) isAccountUsableForRequestWithPrecheck(
+	ctx context.Context,
+	account *Account,
+	requestedModel, platform string,
+	useMixedScheduling bool,
+	precheckResult map[int64]bool,
+) bool {
 	// 检查模型调度能力
 	// Check model scheduling capability
 	if !account.IsSchedulableForModelWithContext(ctx, requestedModel) {
@@ -250,7 +262,7 @@ placeholder
 
 	// 速率限制预检
 	// Rate limit precheck
-	if !s.passesRateLimitPreCheck(ctx, account, requestedModel) {
+	if !s.passesRateLimitPreCheckWithCache(ctx, account, requestedModel, precheckResult) {
 		return false
 placeholder
 
@@ -272,15 +284,17 @@ placeholder
 	return false
 placeholder
 
-// passesRateLimitPreCheck 执行速率限制预检。
-// 返回 true 表示通过预检或无需预检。
-//
-// passesRateLimitPreCheck performs rate limit precheck.
-// Returns true if passed or precheck not required.
-func (s *GeminiMessagesCompatService) passesRateLimitPreCheck(ctx context.Context, account *Account, requestedModel string) bool {
+func (s *GeminiMessagesCompatService) passesRateLimitPreCheckWithCache(ctx context.Context, account *Account, requestedModel string, precheckResult map[int64]bool) bool {
 	if s.rateLimitService == nil || requestedModel == "" {
 		return true
 placeholder
+
+	if precheckResult != nil {
+		if ok, exists := precheckResult[account.ID]; exists {
+			return ok
+	placeholder
+placeholder
+
 	ok, err := s.rateLimitService.PreCheckUsage(ctx, account, requestedModel)
 	if err != nil {
 		logger.LegacyPrintf("service.gemini_messages_compat", "[Gemini PreCheck] Account %d precheck error: %v", account.ID, err)
@@ -302,6 +316,7 @@ func (s *GeminiMessagesCompatService) selectBestGeminiAccount(
 	useMixedScheduling bool,
 ) *Account {
 	var selected *Account
+	precheckResult := s.buildPreCheckUsageResultMap(ctx, accounts, requestedModel)
 
 	for i := range accounts {
 		acc := &accounts[i]
@@ -312,7 +327,7 @@ func (s *GeminiMessagesCompatService) selectBestGeminiAccount(
 	placeholder
 
 		// 检查账号是否可用于当前请求
-		if !s.isAccountUsableForRequest(ctx, acc, requestedModel, platform, useMixedScheduling) {
+		if !s.isAccountUsableForRequestWithPrecheck(ctx, acc, requestedModel, platform, useMixedScheduling, precheckResult) {
 			continue
 	placeholder
 
@@ -328,6 +343,23 @@ func (s *GeminiMessagesCompatService) selectBestGeminiAccount(
 placeholder
 
 	return selected
+placeholder
+
+func (s *GeminiMessagesCompatService) buildPreCheckUsageResultMap(ctx context.Context, accounts []Account, requestedModel string) map[int64]bool {
+	if s.rateLimitService == nil || requestedModel == "" || len(accounts) == 0 {
+		return nil
+placeholder
+
+	candidates := make([]*Account, 0, len(accounts))
+	for i := range accounts {
+		candidates = append(candidates, &accounts[i])
+placeholder
+
+	result, err := s.rateLimitService.PreCheckUsageBatch(ctx, candidates, requestedModel)
+	if err != nil {
+		logger.LegacyPrintf("service.gemini_messages_compat", "[Gemini PreCheckBatch] failed: %v", err)
+placeholder
+	return result
 placeholder
 
 // isBetterGeminiAccount 判断 candidate 是否比 current 更优。
@@ -2390,7 +2422,7 @@ placeholder
 	placeholder
 placeholder
 
-	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.cfg.Security.ResponseHeaders)
+	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType == "" {
@@ -2415,8 +2447,8 @@ func (s *GeminiMessagesCompatService) handleNativeStreamingResponse(c *gin.Conte
 		logger.LegacyPrintf("service.gemini_messages_compat", "[GeminiAPI] ====================================================")
 placeholder
 
-	if s.cfg != nil {
-		responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.cfg.Security.ResponseHeaders)
+	if s.responseHeaderFilter != nil {
+		responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 placeholder
 
 	c.Status(resp.StatusCode)
@@ -2557,7 +2589,7 @@ placeholder
 
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 	wwwAuthenticate := resp.Header.Get("Www-Authenticate")
-	filteredHeaders := responseheaders.FilterHeaders(resp.Header, s.cfg.Security.ResponseHeaders)
+	filteredHeaders := responseheaders.FilterHeaders(resp.Header, s.responseHeaderFilter)
 	if wwwAuthenticate != "" {
 		filteredHeaders.Set("Www-Authenticate", wwwAuthenticate)
 placeholder

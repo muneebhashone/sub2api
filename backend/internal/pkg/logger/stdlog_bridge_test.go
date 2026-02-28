@@ -16,6 +16,7 @@ placeholder{
 		{msg: "Warning: queue full", want: LevelWarnplaceholder,
 		{msg: "Forward request failed: timeout", want: LevelErrorplaceholder,
 		{msg: "[ERROR] upstream unavailable", want: LevelErrorplaceholder,
+		{msg: "[OpenAI WS Mode] reconnect_retry account_id=22 retry=1 max_retries=5", want: LevelInfoplaceholder,
 		{msg: "service started", want: LevelInfoplaceholder,
 		{msg: "debug: cache miss", want: LevelDebugplaceholder,
 placeholder

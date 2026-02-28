@@ -21,12 +21,12 @@ type mockUserRepo struct {
 	updateBalanceFn  func(ctx context.Context, id int64, amount float64) error
 placeholder
 
-func (m *mockUserRepo) Create(context.Context, *User) error                     { return nil placeholder
-func (m *mockUserRepo) GetByID(context.Context, int64) (*User, error)           { return &User{placeholder, nil placeholder
-func (m *mockUserRepo) GetByEmail(context.Context, string) (*User, error)       { return &User{placeholder, nil placeholder
-func (m *mockUserRepo) GetFirstAdmin(context.Context) (*User, error)            { return &User{placeholder, nil placeholder
-func (m *mockUserRepo) Update(context.Context, *User) error                     { return nil placeholder
-func (m *mockUserRepo) Delete(context.Context, int64) error                     { return nil placeholder
+func (m *mockUserRepo) Create(context.Context, *User) error               { return nil placeholder
+func (m *mockUserRepo) GetByID(context.Context, int64) (*User, error)     { return &User{placeholder, nil placeholder
+func (m *mockUserRepo) GetByEmail(context.Context, string) (*User, error) { return &User{placeholder, nil placeholder
+func (m *mockUserRepo) GetFirstAdmin(context.Context) (*User, error)      { return &User{placeholder, nil placeholder
+func (m *mockUserRepo) Update(context.Context, *User) error               { return nil placeholder
+func (m *mockUserRepo) Delete(context.Context, int64) error               { return nil placeholder
 func (m *mockUserRepo) List(context.Context, pagination.PaginationParams) ([]User, *pagination.PaginationResult, error) {
 	return nil, nil, nil
 placeholder
@@ -56,8 +56,8 @@ type mockAuthCacheInvalidator struct {
 	mu                 sync.Mutex
 placeholder
 
-func (m *mockAuthCacheInvalidator) InvalidateAuthCacheByKey(context.Context, string)     {placeholder
-func (m *mockAuthCacheInvalidator) InvalidateAuthCacheByGroupID(context.Context, int64)  {placeholder
+func (m *mockAuthCacheInvalidator) InvalidateAuthCacheByKey(context.Context, string)    {placeholder
+func (m *mockAuthCacheInvalidator) InvalidateAuthCacheByGroupID(context.Context, int64) {placeholder
 func (m *mockAuthCacheInvalidator) InvalidateAuthCacheByUserID(_ context.Context, userID int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -73,9 +73,9 @@ type mockBillingCache struct {
 	mu                  sync.Mutex
 placeholder
 
-func (m *mockBillingCache) GetUserBalance(context.Context, int64) (float64, error)   { return 0, nil placeholder
-func (m *mockBillingCache) SetUserBalance(context.Context, int64, float64) error     { return nil placeholder
-func (m *mockBillingCache) DeductUserBalance(context.Context, int64, float64) error  { return nil placeholder
+func (m *mockBillingCache) GetUserBalance(context.Context, int64) (float64, error)  { return 0, nil placeholder
+func (m *mockBillingCache) SetUserBalance(context.Context, int64, float64) error    { return nil placeholder
+func (m *mockBillingCache) DeductUserBalance(context.Context, int64, float64) error { return nil placeholder
 func (m *mockBillingCache) InvalidateUserBalance(_ context.Context, userID int64) error {
 	m.invalidateCallCount.Add(1)
 	m.mu.Lock()

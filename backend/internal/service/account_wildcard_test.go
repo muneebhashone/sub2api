@@ -314,3 +314,72 @@ placeholder
 		t.Fatalf("expected wildcard mapping to stay effective, got: %q", mapped)
 placeholder
 placeholder
+
+func TestAccountGetModelMapping_CacheInvalidatesOnCredentialsReplace(t *testing.T) {
+	account := &Account{
+placeholder
+			"model_mapping": map[string]any{
+				"claude-3-5-sonnet": "upstream-a",
+		placeholder,
+	placeholder,
+placeholder
+
+	first := account.GetModelMapping()
+	if first["claude-3-5-sonnet"] != "upstream-a" {
+		t.Fatalf("unexpected first mapping: %v", first)
+placeholder
+
+	account.Credentials = map[string]any{
+		"model_mapping": map[string]any{
+			"claude-3-5-sonnet": "upstream-b",
+	placeholder,
+placeholder
+	second := account.GetModelMapping()
+	if second["claude-3-5-sonnet"] != "upstream-b" {
+		t.Fatalf("expected cache invalidated after credentials replace, got: %v", second)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_CacheInvalidatesOnMappingLenChange(t *testing.T) {
+	rawMapping := map[string]any{
+		"claude-sonnet": "sonnet-a",
+placeholder
+	account := &Account{
+placeholder
+			"model_mapping": rawMapping,
+	placeholder,
+placeholder
+
+	first := account.GetModelMapping()
+	if len(first) != 1 {
+		t.Fatalf("unexpected first mapping length: %d", len(first))
+placeholder
+
+	rawMapping["claude-opus"] = "opus-b"
+	second := account.GetModelMapping()
+	if second["claude-opus"] != "opus-b" {
+		t.Fatalf("expected cache invalidated after mapping len change, got: %v", second)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_CacheInvalidatesOnInPlaceValueChange(t *testing.T) {
+	rawMapping := map[string]any{
+		"claude-sonnet": "sonnet-a",
+placeholder
+	account := &Account{
+placeholder
+			"model_mapping": rawMapping,
+	placeholder,
+placeholder
+
+	first := account.GetModelMapping()
+	if first["claude-sonnet"] != "sonnet-a" {
+		t.Fatalf("unexpected first mapping: %v", first)
+placeholder
+
+	rawMapping["claude-sonnet"] = "sonnet-b"
+	second := account.GetModelMapping()
+	if second["claude-sonnet"] != "sonnet-b" {
+		t.Fatalf("expected cache invalidated after in-place value change, got: %v", second)
+placeholder
+placeholder
