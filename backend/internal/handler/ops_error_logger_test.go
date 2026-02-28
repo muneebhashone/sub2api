@@ -263,6 +263,9 @@ placeholder{
 		{"empty type with balance code", "", "INSUFFICIENT_BALANCE", "billing_error"placeholder,
 		{"empty type with subscription code", "", "SUBSCRIPTION_NOT_FOUND", "subscription_error"placeholder,
 		{"empty type no code", "", "", "api_error"placeholder,
+
+		// Known type overrides conflicting code-based mapping.
+		{"known type overrides conflicting code", "rate_limit_error", "INSUFFICIENT_BALANCE", "rate_limit_error"placeholder,
 placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
