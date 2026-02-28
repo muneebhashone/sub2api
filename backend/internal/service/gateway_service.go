@@ -2641,6 +2641,9 @@ func (s *GatewayService) selectAccountForModelWithPlatform(ctx context.Context, 
 			if !s.isAccountSchedulableForModelSelection(ctx, acc, requestedModel) {
 				continue
 		placeholder
+			if !s.isAccountSchedulableForWindowCost(ctx, acc, false) {
+				continue
+		placeholder
 			if !s.isAccountSchedulableForRPM(ctx, acc, false) {
 				continue
 		placeholder
@@ -2735,6 +2738,9 @@ placeholder
 			continue
 	placeholder
 		if !s.isAccountSchedulableForModelSelection(ctx, acc, requestedModel) {
+			continue
+	placeholder
+		if !s.isAccountSchedulableForWindowCost(ctx, acc, false) {
 			continue
 	placeholder
 		if !s.isAccountSchedulableForRPM(ctx, acc, false) {
@@ -2865,6 +2871,9 @@ func (s *GatewayService) selectAccountWithMixedScheduling(ctx context.Context, g
 			if !s.isAccountSchedulableForModelSelection(ctx, acc, requestedModel) {
 				continue
 		placeholder
+			if !s.isAccountSchedulableForWindowCost(ctx, acc, false) {
+				continue
+		placeholder
 			if !s.isAccountSchedulableForRPM(ctx, acc, false) {
 				continue
 		placeholder
@@ -2961,6 +2970,9 @@ placeholder
 			continue
 	placeholder
 		if !s.isAccountSchedulableForModelSelection(ctx, acc, requestedModel) {
+			continue
+	placeholder
+		if !s.isAccountSchedulableForWindowCost(ctx, acc, false) {
 			continue
 	placeholder
 		if !s.isAccountSchedulableForRPM(ctx, acc, false) {
