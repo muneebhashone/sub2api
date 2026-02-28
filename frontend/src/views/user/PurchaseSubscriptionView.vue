@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <AppLayout>
     <div class="purchase-page-layout">
       <div class="flex items-start justify-between gap-4">
@@ -70,14 +70,20 @@
           </div>
         </div>
 
-        <iframe v-else :src="purchaseUrl" class="h-full w-full border-0" allowfullscreen></iframe>
+        <div v-else class="purchase-embed-shell">
+          <iframe
+            :src="purchaseUrl"
+            class="purchase-embed-frame"
+            allowfullscreen
+          ></iframe>
+        </div>
       </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref placeholder from 'vue'
+import { computed, onMounted, onUnmounted, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores'
 import { useAuthStore placeholder from '@/stores/auth'
@@ -89,28 +95,48 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 
 const PURCHASE_USER_ID_QUERY_KEY = 'user_id'
+const PURCHASE_THEME_QUERY_KEY = 'theme'
+const PURCHASE_UI_MODE_QUERY_KEY = 'ui_mode'
+const PURCHASE_UI_MODE_EMBEDDED = 'embedded'
 
 const loading = ref(false)
+const purchaseTheme = ref<'light' | 'dark'>('light')
+let themeObserver: MutationObserver | null = null
 
 const purchaseEnabled = computed(() => {
   return appStore.cachedPublicSettings?.purchase_subscription_enabled ?? false
 placeholder)
 
-function buildPurchaseUrl(baseUrl: string, userId?: number): string {
-  if (!baseUrl || !userId) return baseUrl
+function detectTheme(): 'light' | 'dark' {
+  if (typeof document === 'undefined') return 'light'
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+placeholder
+
+function buildPurchaseUrl(baseUrl: string, userId?: number, theme: 'light' | 'dark' = 'light'): string {
+  if (!baseUrl) return baseUrl
   try {
     const url = new URL(baseUrl)
-    url.searchParams.set(PURCHASE_USER_ID_QUERY_KEY, String(userId))
+    if (userId) {
+      url.searchParams.set(PURCHASE_USER_ID_QUERY_KEY, String(userId))
+    placeholder
+    url.searchParams.set(PURCHASE_THEME_QUERY_KEY, theme)
+    url.searchParams.set(PURCHASE_UI_MODE_QUERY_KEY, PURCHASE_UI_MODE_EMBEDDED)
     return url.toString()
   placeholder catch {
+    const params: string[] = []
+    if (userId) {
+      params.push(`${PURCHASE_USER_ID_QUERY_KEYplaceholder=${encodeURIComponent(String(userId))placeholder`)
+    placeholder
+    params.push(`${PURCHASE_THEME_QUERY_KEYplaceholder=${encodeURIComponent(theme)placeholder`)
+    params.push(`${PURCHASE_UI_MODE_QUERY_KEYplaceholder=${encodeURIComponent(PURCHASE_UI_MODE_EMBEDDED)placeholder`)
     const separator = baseUrl.includes('?') ? '&' : '?'
-    return `${baseUrlplaceholder${separatorplaceholder${PURCHASE_USER_ID_QUERY_KEYplaceholder=${encodeURIComponent(String(userId))placeholder`
+    return `${baseUrlplaceholder${separatorplaceholder${params.join('&')placeholder`
   placeholder
 placeholder
 
 const purchaseUrl = computed(() => {
   const baseUrl = (appStore.cachedPublicSettings?.purchase_subscription_url || '').trim()
-  return buildPurchaseUrl(baseUrl, authStore.user?.id)
+  return buildPurchaseUrl(baseUrl, authStore.user?.id, purchaseTheme.value)
 placeholder)
 
 const isValidUrl = computed(() => {
@@ -119,6 +145,18 @@ const isValidUrl = computed(() => {
 placeholder)
 
 onMounted(async () => {
+  purchaseTheme.value = detectTheme()
+
+  if (typeof document !== 'undefined') {
+    themeObserver = new MutationObserver(() => {
+      purchaseTheme.value = detectTheme()
+    placeholder)
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    placeholder)
+  placeholder
+
   if (appStore.publicSettingsLoaded) return
   loading.value = true
   try {
@@ -127,12 +165,43 @@ onMounted(async () => {
     loading.value = false
   placeholder
 placeholder)
+
+onUnmounted(() => {
+  if (themeObserver) {
+    themeObserver.disconnect()
+    themeObserver = null
+  placeholder
+placeholder)
 </script>
 
 <style scoped>
 .purchase-page-layout {
   @apply flex flex-col gap-6;
-  height: calc(100vh - 64px - 4rem); /* 减去 header + lg:p-8 的上下padding */
+  height: calc(100vh - 64px - 4rem);
+placeholder
+
+.purchase-embed-shell {
+  @apply h-full w-full overflow-auto rounded-2xl;
+  @apply bg-gradient-to-b from-gray-50 to-white dark:from-dark-900 dark:to-dark-950;
+  @apply p-3 sm:p-4;
+placeholder
+
+.purchase-embed-frame {
+  display: block;
+  margin: 0 auto;
+  width: min(100%, 440px);
+  height: 840px;
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  background: transparent;
+placeholder
+
+@media (max-width: 640px) {
+  .purchase-embed-frame {
+    width: 100%;
+    height: 780px;
+    border-radius: 12px;
+  placeholder
 placeholder
 </style>
-
