@@ -1961,7 +1961,7 @@ const ensureAntigravityMixedChannelConfirmed = async (onConfirm: () => Promise<v
     placeholder)
     return false
   placeholder catch (error: any) {
-    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
+    appStore.showError(error.message || t('admin.accounts.failedToUpdate'))
     return false
   placeholder
 placeholder
@@ -1984,9 +1984,9 @@ const submitUpdateAccount = async (accountID: number, updatePayload: Record<stri
     emit('updated', updatedAccount)
     handleClose()
   placeholder catch (error: any) {
-    if (error.response?.status === 409 && error.response?.data?.error === 'mixed_channel_warning' && needsMixedChannelCheck()) {
+    if (error.status === 409 && error.error === 'mixed_channel_warning' && needsMixedChannelCheck()) {
       openMixedChannelDialog({
-        message: error.response?.data?.message,
+        message: error.message,
         onConfirm: async () => {
           antigravityMixedChannelConfirmed.value = true
           await submitUpdateAccount(accountID, updatePayload)
@@ -1994,7 +1994,7 @@ const submitUpdateAccount = async (accountID: number, updatePayload: Record<stri
       placeholder)
       return
     placeholder
-    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
+    appStore.showError(error.message || t('admin.accounts.failedToUpdate'))
   placeholder finally {
     submitting.value = false
   placeholder
@@ -2245,7 +2245,7 @@ const handleSubmit = async () => {
 
     await submitUpdateAccount(accountID, updatePayload)
   placeholder catch (error: any) {
-    appStore.showError(error.response?.data?.message || error.response?.data?.detail || t('admin.accounts.failedToUpdate'))
+    appStore.showError(error.message || t('admin.accounts.failedToUpdate'))
   placeholder
 placeholder
 
