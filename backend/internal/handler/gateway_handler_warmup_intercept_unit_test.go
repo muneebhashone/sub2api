@@ -153,6 +153,7 @@ placeholder
 		nil, // deferredService
 		nil, // claudeTokenProvider
 		nil, // sessionLimitCache
+		nil, // rpmCache
 		nil, // digestStore
 	)
 
