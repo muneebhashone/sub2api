@@ -59,9 +59,11 @@ placeholder
 		return nil
 placeholder
 	return &AdminUser{
-		User:       *base,
-		Notes:      u.Notes,
-		GroupRates: u.GroupRates,
+		User:                  *base,
+		Notes:                 u.Notes,
+		GroupRates:            u.GroupRates,
+		SoraStorageQuotaBytes: u.SoraStorageQuotaBytes,
+		SoraStorageUsedBytes:  u.SoraStorageUsedBytes,
 placeholder
 placeholder
 
@@ -152,6 +154,7 @@ func groupFromServiceBase(g *service.Group) Group {
 		ClaudeCodeOnly:                  g.ClaudeCodeOnly,
 		FallbackGroupID:                 g.FallbackGroupID,
 		FallbackGroupIDOnInvalidRequest: g.FallbackGroupIDOnInvalidRequest,
+		SoraStorageQuotaBytes:           g.SoraStorageQuotaBytes,
 		CreatedAt:                       g.CreatedAt,
 		UpdatedAt:                       g.UpdatedAt,
 placeholder
@@ -385,6 +388,8 @@ placeholder
 
 func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 	// 普通用户 DTO：严禁包含管理员字段（例如 account_rate_multiplier、ip_address、account）。
+	requestType := l.EffectiveRequestType()
+	stream, openAIWSMode := service.ApplyLegacyRequestFields(requestType, l.Stream, l.OpenAIWSMode)
 	return UsageLog{
 		ID:                    l.ID,
 		UserID:                l.UserID,
@@ -409,7 +414,9 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		ActualCost:            l.ActualCost,
 		RateMultiplier:        l.RateMultiplier,
 		BillingType:           l.BillingType,
-		Stream:                l.Stream,
+		RequestType:           requestType.String(),
+		Stream:                stream,
+		OpenAIWSMode:          openAIWSMode,
 		DurationMs:            l.DurationMs,
 		FirstTokenMs:          l.FirstTokenMs,
 		ImageCount:            l.ImageCount,
@@ -464,6 +471,7 @@ placeholder
 			AccountID:   task.Filters.AccountID,
 			GroupID:     task.Filters.GroupID,
 			Model:       task.Filters.Model,
+			RequestType: requestTypeStringPtr(task.Filters.RequestType),
 			Stream:      task.Filters.Stream,
 			BillingType: task.Filters.BillingType,
 	placeholder,
@@ -477,6 +485,14 @@ placeholder
 		CreatedAt:    task.CreatedAt,
 		UpdatedAt:    task.UpdatedAt,
 placeholder
+placeholder
+
+func requestTypeStringPtr(requestType *int16) *string {
+	if requestType == nil {
+		return nil
+placeholder
+	value := service.RequestTypeFromInt16(*requestType).String()
+	return &value
 placeholder
 
 func SettingFromService(s *service.Setting) *Setting {

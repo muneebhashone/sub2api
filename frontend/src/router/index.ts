@@ -191,6 +191,18 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'purchase.description'
     placeholder
   placeholder,
+  {
+    path: '/sora',
+    name: 'Sora',
+    component: () => import('@/views/user/SoraView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Sora',
+      titleKey: 'sora.title',
+      descriptionKey: 'sora.description'
+    placeholder
+  placeholder,
 
   // ==================== Admin Routes ====================
   {
@@ -315,6 +327,18 @@ const routes: RouteRecordRaw[] = [
       title: 'Promo Code Management',
       titleKey: 'admin.promo.title',
       descriptionKey: 'admin.promo.description'
+    placeholder
+  placeholder,
+  {
+    path: '/admin/data-management',
+    name: 'AdminDataManagement',
+    component: () => import('@/views/admin/DataManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Data Management',
+      titleKey: 'admin.dataManagement.title',
+      descriptionKey: 'admin.dataManagement.description'
     placeholder
   placeholder,
   {

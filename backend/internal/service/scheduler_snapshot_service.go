@@ -305,13 +305,78 @@ func (s *SchedulerSnapshotService) handleBulkAccountEvent(ctx context.Context, p
 	if payload == nil {
 		return nil
 placeholder
-	ids := parseInt64Slice(payload["account_ids"])
-	for _, id := range ids {
-		if err := s.handleAccountEvent(ctx, &id, payload); err != nil {
-			return err
+	if s.accountRepo == nil {
+		return nil
+placeholder
+
+	rawIDs := parseInt64Slice(payload["account_ids"])
+	if len(rawIDs) == 0 {
+		return nil
+placeholder
+
+	ids := make([]int64, 0, len(rawIDs))
+	seen := make(map[int64]struct{placeholder, len(rawIDs))
+	for _, id := range rawIDs {
+		if id <= 0 {
+			continue
+	placeholder
+		if _, exists := seen[id]; exists {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		ids = append(ids, id)
+placeholder
+	if len(ids) == 0 {
+		return nil
+placeholder
+
+	preloadGroupIDs := parseInt64Slice(payload["group_ids"])
+	accounts, err := s.accountRepo.GetByIDs(ctx, ids)
+	if err != nil {
+		return err
+placeholder
+
+	found := make(map[int64]struct{placeholder, len(accounts))
+	rebuildGroupSet := make(map[int64]struct{placeholder, len(preloadGroupIDs))
+	for _, gid := range preloadGroupIDs {
+		if gid > 0 {
+			rebuildGroupSet[gid] = struct{placeholder{placeholder
 	placeholder
 placeholder
-	return nil
+
+	for _, account := range accounts {
+		if account == nil || account.ID <= 0 {
+			continue
+	placeholder
+		found[account.ID] = struct{placeholder{placeholder
+		if s.cache != nil {
+			if err := s.cache.SetAccount(ctx, account); err != nil {
+				return err
+		placeholder
+	placeholder
+		for _, gid := range account.GroupIDs {
+			if gid > 0 {
+				rebuildGroupSet[gid] = struct{placeholder{placeholder
+		placeholder
+	placeholder
+placeholder
+
+	if s.cache != nil {
+		for _, id := range ids {
+			if _, ok := found[id]; ok {
+				continue
+		placeholder
+			if err := s.cache.DeleteAccount(ctx, id); err != nil {
+				return err
+		placeholder
+	placeholder
+placeholder
+
+	rebuildGroupIDs := make([]int64, 0, len(rebuildGroupSet))
+	for gid := range rebuildGroupSet {
+		rebuildGroupIDs = append(rebuildGroupIDs, gid)
+placeholder
+	return s.rebuildByGroupIDs(ctx, rebuildGroupIDs, "account_bulk_change")
 placeholder
 
 func (s *SchedulerSnapshotService) handleAccountEvent(ctx context.Context, accountID *int64, payload map[string]any) error {

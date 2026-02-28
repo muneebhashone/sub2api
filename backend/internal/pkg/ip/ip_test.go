@@ -73,3 +73,24 @@ placeholder)
 	require.Equal(t, 200, w.Code)
 	require.Equal(t, "9.9.9.9", w.Body.String())
 placeholder
+
+func TestCheckIPRestrictionWithCompiledRules(t *testing.T) {
+	whitelist := CompileIPRules([]string{"10.0.0.0/8", "192.168.1.2"placeholder)
+	blacklist := CompileIPRules([]string{"10.1.1.1"placeholder)
+
+	allowed, reason := CheckIPRestrictionWithCompiledRules("10.2.3.4", whitelist, blacklist)
+	require.True(t, allowed)
+	require.Equal(t, "", reason)
+
+	allowed, reason = CheckIPRestrictionWithCompiledRules("10.1.1.1", whitelist, blacklist)
+	require.False(t, allowed)
+	require.Equal(t, "access denied", reason)
+placeholder
+
+func TestCheckIPRestrictionWithCompiledRules_InvalidWhitelistStillDenies(t *testing.T) {
+	// 与旧实现保持一致：白名单有配置但全无效时，最终应拒绝访问。
+	invalidWhitelist := CompileIPRules([]string{"not-a-valid-pattern"placeholder)
+	allowed, reason := CheckIPRestrictionWithCompiledRules("8.8.8.8", invalidWhitelist, nil)
+	require.False(t, allowed)
+	require.Equal(t, "access denied", reason)
+placeholder

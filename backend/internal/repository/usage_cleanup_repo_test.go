@@ -466,6 +466,38 @@ placeholder)
 	require.Equal(t, []any{start, end, userID, apiKeyID, accountID, groupID, "gpt-4", stream, billingTypeplaceholder, args)
 placeholder
 
+func TestBuildUsageCleanupWhereRequestTypePriority(t *testing.T) {
+	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+	requestType := int16(service.RequestTypeWSV2)
+	stream := false
+
+	where, args := buildUsageCleanupWhere(service.UsageCleanupFilters{
+		StartTime:   start,
+		EndTime:     end,
+		RequestType: &requestType,
+		Stream:      &stream,
+placeholder)
+
+	require.Equal(t, "created_at >= $1 AND created_at <= $2 AND (request_type = $3 OR (request_type = 0 AND openai_ws_mode = TRUE))", where)
+	require.Equal(t, []any{start, end, requestTypeplaceholder, args)
+placeholder
+
+func TestBuildUsageCleanupWhereRequestTypeLegacyFallback(t *testing.T) {
+	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+	requestType := int16(service.RequestTypeStream)
+
+	where, args := buildUsageCleanupWhere(service.UsageCleanupFilters{
+		StartTime:   start,
+		EndTime:     end,
+		RequestType: &requestType,
+placeholder)
+
+	require.Equal(t, "created_at >= $1 AND created_at <= $2 AND (request_type = $3 OR (request_type = 0 AND stream = TRUE AND openai_ws_mode = FALSE))", where)
+	require.Equal(t, []any{start, end, requestTypeplaceholder, args)
+placeholder
+
 func TestBuildUsageCleanupWhereModelEmpty(t *testing.T) {
 	start := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := start.Add(24 * time.Hour)

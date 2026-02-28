@@ -51,6 +51,7 @@ placeholder
 		PurchaseSubscriptionEnabled: settings.PurchaseSubscriptionEnabled,
 		PurchaseSubscriptionURL:     settings.PurchaseSubscriptionURL,
 		LinuxDoOAuthEnabled:         settings.LinuxDoOAuthEnabled,
+		SoraClientEnabled:           settings.SoraClientEnabled,
 		Version:                     h.version,
 placeholder)
 placeholder

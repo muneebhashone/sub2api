@@ -166,3 +166,18 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestToHTTP_MetadataDeepCopy(t *testing.T) {
+	md := map[string]string{"k": "v"placeholder
+	appErr := BadRequest("BAD_REQUEST", "invalid").WithMetadata(md)
+
+	code, body := ToHTTP(appErr)
+	require.Equal(t, http.StatusBadRequest, code)
+	require.Equal(t, "v", body.Metadata["k"])
+
+	md["k"] = "changed"
+	require.Equal(t, "v", body.Metadata["k"])
+
+	appErr.Metadata["k"] = "changed-again"
+	require.Equal(t, "v", body.Metadata["k"])
+placeholder

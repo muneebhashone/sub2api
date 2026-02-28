@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -63,8 +64,8 @@ placeholder)
 // SoraGatewayService handles forwarding requests to Sora upstream.
 type SoraGatewayService struct {
 	soraClient       SoraClient
-	mediaStorage     *SoraMediaStorage
 	rateLimitService *RateLimitService
+	httpUpstream     HTTPUpstream // 用于 apikey 类型账号的 HTTP 透传
 	cfg              *config.Config
 placeholder
 
@@ -100,20 +101,29 @@ placeholder
 
 func NewSoraGatewayService(
 	soraClient SoraClient,
-	mediaStorage *SoraMediaStorage,
 	rateLimitService *RateLimitService,
+	httpUpstream HTTPUpstream,
 	cfg *config.Config,
 ) *SoraGatewayService {
 	return &SoraGatewayService{
 		soraClient:       soraClient,
-		mediaStorage:     mediaStorage,
 		rateLimitService: rateLimitService,
+		httpUpstream:     httpUpstream,
 		cfg:              cfg,
 placeholder
 placeholder
 
 func (s *SoraGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte, clientStream bool) (*ForwardResult, error) {
 	startTime := time.Now()
+
+	// apikey 类型账号：HTTP 透传到上游，不走 SoraSDKClient
+	if account.Type == AccountTypeAPIKey && account.GetBaseURL() != "" {
+		if s.httpUpstream == nil {
+			s.writeSoraError(c, http.StatusInternalServerError, "api_error", "HTTP upstream client not configured", clientStream)
+			return nil, errors.New("httpUpstream not configured for sora apikey forwarding")
+	placeholder
+		return s.forwardToUpstream(ctx, c, account, body, clientStream, startTime)
+placeholder
 
 	if s.soraClient == nil || !s.soraClient.Enabled() {
 		if c != nil {
@@ -296,6 +306,7 @@ placeholder
 
 	taskID := ""
 	var err error
+	videoCount := parseSoraVideoCount(reqBody)
 	switch modelCfg.Type {
 	case "image":
 		taskID, err = s.soraClient.CreateImageTask(reqCtx, account, SoraImageRequest{
@@ -321,6 +332,7 @@ placeholder
 				Frames:        modelCfg.Frames,
 				Model:         modelCfg.Model,
 				Size:          modelCfg.Size,
+				VideoCount:    videoCount,
 				MediaID:       mediaID,
 				RemixTargetID: remixTargetID,
 				CameoIDs:      extractSoraCameoIDs(reqBody),
@@ -378,16 +390,9 @@ placeholder
 	placeholder
 placeholder
 
+	// 直调路径（/sora/v1/chat/completions）保持纯透传，不执行本地/S3 媒体落盘。
+	// 媒体存储由客户端 API 路径（/api/v1/sora/generate）的异步流程负责。
 	finalURLs := s.normalizeSoraMediaURLs(mediaURLs)
-	if len(mediaURLs) > 0 && s.mediaStorage != nil && s.mediaStorage.Enabled() {
-		stored, storeErr := s.mediaStorage.StoreFromURLs(reqCtx, mediaType, mediaURLs)
-		if storeErr != nil {
-			// 存储失败时降级使用原始 URL，不中断用户请求
-			log.Printf("[Sora] StoreFromURLs failed, falling back to original URLs: %v", storeErr)
-	placeholder else {
-			finalURLs = s.normalizeSoraMediaURLs(stored)
-	placeholder
-placeholder
 	if watermarkPostID != "" && watermarkOpts.DeletePost {
 		if deleteErr := s.soraClient.DeletePost(reqCtx, account, watermarkPostID); deleteErr != nil {
 			log.Printf("[Sora] delete post failed, post_id=%s err=%v", watermarkPostID, deleteErr)
@@ -463,6 +468,20 @@ func parseSoraCharacterOptions(body map[string]any) soraCharacterOptions {
 placeholder
 placeholder
 
+func parseSoraVideoCount(body map[string]any) int {
+	if body == nil {
+		return 1
+placeholder
+	keys := []string{"video_count", "videos", "n_variants"placeholder
+	for _, key := range keys {
+		count := parseIntWithDefault(body, key, 0)
+		if count > 0 {
+			return clampInt(count, 1, 3)
+	placeholder
+placeholder
+	return 1
+placeholder
+
 func parseBoolWithDefault(body map[string]any, key string, def bool) bool {
 	if body == nil {
 		return def
@@ -506,6 +525,42 @@ placeholder
 		return str
 placeholder
 	return def
+placeholder
+
+func parseIntWithDefault(body map[string]any, key string, def int) int {
+	if body == nil {
+		return def
+placeholder
+	val, ok := body[key]
+	if !ok {
+		return def
+placeholder
+	switch typed := val.(type) {
+	case int:
+		return typed
+	case int32:
+		return int(typed)
+	case int64:
+		return int(typed)
+	case float64:
+		return int(typed)
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(typed))
+		if err == nil {
+			return parsed
+	placeholder
+placeholder
+	return def
+placeholder
+
+func clampInt(v, minVal, maxVal int) int {
+	if v < minVal {
+		return minVal
+placeholder
+	if v > maxVal {
+		return maxVal
+placeholder
+	return v
 placeholder
 
 func extractSoraCameoIDs(body map[string]any) []string {
@@ -904,6 +959,21 @@ func (s *SoraGatewayService) handleSoraRequestError(ctx context.Context, account
 placeholder
 	var upstreamErr *SoraUpstreamError
 	if errors.As(err, &upstreamErr) {
+		accountID := int64(0)
+		if account != nil {
+			accountID = account.ID
+	placeholder
+		logger.LegacyPrintf(
+			"service.sora",
+			"[SoraRawError] account_id=%d model=%s status=%d request_id=%s cf_ray=%s message=%s raw_body=%s",
+			accountID,
+			model,
+			upstreamErr.StatusCode,
+			strings.TrimSpace(upstreamErr.Headers.Get("x-request-id")),
+			strings.TrimSpace(upstreamErr.Headers.Get("cf-ray")),
+			strings.TrimSpace(upstreamErr.Message),
+			truncateForLog(upstreamErr.Body, 1024),
+		)
 		if s.rateLimitService != nil && account != nil {
 			s.rateLimitService.HandleUpstreamError(ctx, account, upstreamErr.StatusCode, upstreamErr.Headers, upstreamErr.Body)
 	placeholder

@@ -157,6 +157,64 @@ placeholder
 	return results, nil
 placeholder
 
+// TotalSizeByRelativePaths 统计本地存储路径总大小（仅统计 /image 和 /video 路径）。
+func (s *SoraMediaStorage) TotalSizeByRelativePaths(paths []string) (int64, error) {
+	if s == nil || len(paths) == 0 {
+		return 0, nil
+placeholder
+	var total int64
+	for _, p := range paths {
+		localPath, err := s.resolveLocalPath(p)
+		if err != nil {
+			continue
+	placeholder
+		info, err := os.Stat(localPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+		placeholder
+			return 0, err
+	placeholder
+		if info.Mode().IsRegular() {
+			total += info.Size()
+	placeholder
+placeholder
+	return total, nil
+placeholder
+
+// DeleteByRelativePaths 删除本地媒体路径（仅删除 /image 和 /video 路径）。
+func (s *SoraMediaStorage) DeleteByRelativePaths(paths []string) error {
+	if s == nil || len(paths) == 0 {
+		return nil
+placeholder
+	var lastErr error
+	for _, p := range paths {
+		localPath, err := s.resolveLocalPath(p)
+		if err != nil {
+			continue
+	placeholder
+		if err := os.Remove(localPath); err != nil && !os.IsNotExist(err) {
+			lastErr = err
+	placeholder
+placeholder
+	return lastErr
+placeholder
+
+func (s *SoraMediaStorage) resolveLocalPath(relativePath string) (string, error) {
+	if s == nil || strings.TrimSpace(relativePath) == "" {
+		return "", errors.New("empty path")
+placeholder
+	cleaned := path.Clean(relativePath)
+	if !strings.HasPrefix(cleaned, "/image/") && !strings.HasPrefix(cleaned, "/video/") {
+		return "", errors.New("not a local media path")
+placeholder
+	if strings.TrimSpace(s.root) == "" {
+		return "", errors.New("storage root not configured")
+placeholder
+	relative := strings.TrimPrefix(cleaned, "/")
+	return filepath.Join(s.root, filepath.FromSlash(relative)), nil
+placeholder
+
 func (s *SoraMediaStorage) downloadAndStore(ctx context.Context, mediaType, rawURL string) (string, error) {
 	if strings.TrimSpace(rawURL) == "" {
 		return "", errors.New("empty url")

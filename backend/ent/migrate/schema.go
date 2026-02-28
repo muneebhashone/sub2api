@@ -108,6 +108,8 @@ placeholder
 		{Name: "rate_limited_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "rate_limit_reset_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "overload_until", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "temp_unschedulable_until", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "temp_unschedulable_reason", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "session_window_start", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "session_window_end", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "session_window_status", Type: field.TypeString, Nullable: true, Size: 20placeholder,
@@ -121,7 +123,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[25]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[27]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -145,7 +147,7 @@ placeholder
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[25]placeholder,
+				Columns: []*schema.Column{AccountsColumns[27]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
@@ -176,6 +178,16 @@ placeholder
 				Name:    "account_overload_until",
 				Unique:  false,
 				Columns: []*schema.Column{AccountsColumns[21]placeholder,
+		placeholder,
+			{
+				Name:    "account_platform_priority",
+				Unique:  false,
+				Columns: []*schema.Column{AccountsColumns[6], AccountsColumns[11]placeholder,
+		placeholder,
+			{
+				Name:    "account_priority_status",
+				Unique:  false,
+				Columns: []*schema.Column{AccountsColumns[11], AccountsColumns[13]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
@@ -376,6 +388,7 @@ placeholder
 		{Name: "sora_image_price_540", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "sora_video_price_per_request", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "sora_video_price_per_request_hd", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "sora_storage_quota_bytes", Type: field.TypeInt64, Default: 0placeholder,
 		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "fallback_group_id_on_invalid_request", Type: field.TypeInt64, Nullable: trueplaceholder,
@@ -419,7 +432,45 @@ placeholder
 			{
 				Name:    "group_sort_order",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[29]placeholder,
+				Columns: []*schema.Column{GroupsColumns[30]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// IdempotencyRecordsColumns holds the columns for the "idempotency_records" table.
+	IdempotencyRecordsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "scope", Type: field.TypeString, Size: 128placeholder,
+		{Name: "idempotency_key_hash", Type: field.TypeString, Size: 64placeholder,
+		{Name: "request_fingerprint", Type: field.TypeString, Size: 64placeholder,
+		{Name: "status", Type: field.TypeString, Size: 32placeholder,
+		{Name: "response_status", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "response_body", Type: field.TypeString, Nullable: trueplaceholder,
+		{Name: "error_reason", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "locked_until", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "expires_at", Type: field.TypeTimeplaceholder,
+placeholder
+	// IdempotencyRecordsTable holds the schema information for the "idempotency_records" table.
+	IdempotencyRecordsTable = &schema.Table{
+		Name:       "idempotency_records",
+		Columns:    IdempotencyRecordsColumns,
+		PrimaryKey: []*schema.Column{IdempotencyRecordsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "idempotencyrecord_scope_idempotency_key_hash",
+				Unique:  true,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[3], IdempotencyRecordsColumns[4]placeholder,
+		placeholder,
+			{
+				Name:    "idempotencyrecord_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[11]placeholder,
+		placeholder,
+			{
+				Name:    "idempotencyrecord_status_locked_until",
+				Unique:  false,
+				Columns: []*schema.Column{IdempotencyRecordsColumns[6], IdempotencyRecordsColumns[10]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -771,6 +822,11 @@ placeholder
 				Unique:  false,
 				Columns: []*schema.Column{UsageLogsColumns[28], UsageLogsColumns[27]placeholder,
 		placeholder,
+			{
+				Name:    "usagelog_group_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageLogsColumns[30], UsageLogsColumns[27]placeholder,
+		placeholder,
 	placeholder,
 placeholder
 	// UsersColumns holds the columns for the "users" table.
@@ -790,6 +846,8 @@ placeholder
 		{Name: "totp_secret_encrypted", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "totp_enabled", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "totp_enabled_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "sora_storage_quota_bytes", Type: field.TypeInt64, Default: 0placeholder,
+		{Name: "sora_storage_used_bytes", Type: field.TypeInt64, Default: 0placeholder,
 placeholder
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
@@ -996,6 +1054,11 @@ placeholder
 				Columns: []*schema.Column{UserSubscriptionsColumns[5]placeholder,
 		placeholder,
 			{
+				Name:    "usersubscription_user_id_status_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{UserSubscriptionsColumns[16], UserSubscriptionsColumns[6], UserSubscriptionsColumns[5]placeholder,
+		placeholder,
+			{
 				Name:    "usersubscription_assigned_by",
 				Unique:  false,
 				Columns: []*schema.Column{UserSubscriptionsColumns[17]placeholder,
@@ -1021,6 +1084,7 @@ placeholder
 		AnnouncementReadsTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
+		IdempotencyRecordsTable,
 		PromoCodesTable,
 		PromoCodeUsagesTable,
 		ProxiesTable,
@@ -1065,6 +1129,9 @@ placeholder
 placeholder
 	GroupsTable.Annotation = &entsql.Annotation{
 		Table: "groups",
+placeholder
+	IdempotencyRecordsTable.Annotation = &entsql.Annotation{
+		Table: "idempotency_records",
 placeholder
 	PromoCodesTable.Annotation = &entsql.Annotation{
 		Table: "promo_codes",

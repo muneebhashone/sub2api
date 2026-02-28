@@ -155,6 +155,16 @@ func OverloadUntil(v time.Time) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldOverloadUntil, v))
 placeholder
 
+// TempUnschedulableUntil applies equality check predicate on the "temp_unschedulable_until" field. It's identical to TempUnschedulableUntilEQ.
+func TempUnschedulableUntil(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableReason applies equality check predicate on the "temp_unschedulable_reason" field. It's identical to TempUnschedulableReasonEQ.
+func TempUnschedulableReason(v string) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldTempUnschedulableReason, v))
+placeholder
+
 // SessionWindowStart applies equality check predicate on the "session_window_start" field. It's identical to SessionWindowStartEQ.
 func SessionWindowStart(v time.Time) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldSessionWindowStart, v))
@@ -1128,6 +1138,131 @@ placeholder
 // OverloadUntilNotNil applies the NotNil predicate on the "overload_until" field.
 func OverloadUntilNotNil() predicate.Account {
 	return predicate.Account(sql.FieldNotNull(FieldOverloadUntil))
+placeholder
+
+// TempUnschedulableUntilEQ applies the EQ predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilEQ(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableUntilNEQ applies the NEQ predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilNEQ(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldNEQ(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableUntilIn applies the In predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilIn(vs ...time.Time) predicate.Account {
+	return predicate.Account(sql.FieldIn(FieldTempUnschedulableUntil, vs...))
+placeholder
+
+// TempUnschedulableUntilNotIn applies the NotIn predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilNotIn(vs ...time.Time) predicate.Account {
+	return predicate.Account(sql.FieldNotIn(FieldTempUnschedulableUntil, vs...))
+placeholder
+
+// TempUnschedulableUntilGT applies the GT predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilGT(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldGT(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableUntilGTE applies the GTE predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilGTE(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldGTE(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableUntilLT applies the LT predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilLT(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldLT(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableUntilLTE applies the LTE predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilLTE(v time.Time) predicate.Account {
+	return predicate.Account(sql.FieldLTE(FieldTempUnschedulableUntil, v))
+placeholder
+
+// TempUnschedulableUntilIsNil applies the IsNil predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilIsNil() predicate.Account {
+	return predicate.Account(sql.FieldIsNull(FieldTempUnschedulableUntil))
+placeholder
+
+// TempUnschedulableUntilNotNil applies the NotNil predicate on the "temp_unschedulable_until" field.
+func TempUnschedulableUntilNotNil() predicate.Account {
+	return predicate.Account(sql.FieldNotNull(FieldTempUnschedulableUntil))
+placeholder
+
+// TempUnschedulableReasonEQ applies the EQ predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonEQ(v string) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonNEQ applies the NEQ predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonNEQ(v string) predicate.Account {
+	return predicate.Account(sql.FieldNEQ(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonIn applies the In predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonIn(vs ...string) predicate.Account {
+	return predicate.Account(sql.FieldIn(FieldTempUnschedulableReason, vs...))
+placeholder
+
+// TempUnschedulableReasonNotIn applies the NotIn predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonNotIn(vs ...string) predicate.Account {
+	return predicate.Account(sql.FieldNotIn(FieldTempUnschedulableReason, vs...))
+placeholder
+
+// TempUnschedulableReasonGT applies the GT predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonGT(v string) predicate.Account {
+	return predicate.Account(sql.FieldGT(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonGTE applies the GTE predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonGTE(v string) predicate.Account {
+	return predicate.Account(sql.FieldGTE(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonLT applies the LT predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonLT(v string) predicate.Account {
+	return predicate.Account(sql.FieldLT(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonLTE applies the LTE predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonLTE(v string) predicate.Account {
+	return predicate.Account(sql.FieldLTE(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonContains applies the Contains predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonContains(v string) predicate.Account {
+	return predicate.Account(sql.FieldContains(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonHasPrefix applies the HasPrefix predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonHasPrefix(v string) predicate.Account {
+	return predicate.Account(sql.FieldHasPrefix(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonHasSuffix applies the HasSuffix predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonHasSuffix(v string) predicate.Account {
+	return predicate.Account(sql.FieldHasSuffix(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonIsNil applies the IsNil predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonIsNil() predicate.Account {
+	return predicate.Account(sql.FieldIsNull(FieldTempUnschedulableReason))
+placeholder
+
+// TempUnschedulableReasonNotNil applies the NotNil predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonNotNil() predicate.Account {
+	return predicate.Account(sql.FieldNotNull(FieldTempUnschedulableReason))
+placeholder
+
+// TempUnschedulableReasonEqualFold applies the EqualFold predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonEqualFold(v string) predicate.Account {
+	return predicate.Account(sql.FieldEqualFold(FieldTempUnschedulableReason, v))
+placeholder
+
+// TempUnschedulableReasonContainsFold applies the ContainsFold predicate on the "temp_unschedulable_reason" field.
+func TempUnschedulableReasonContainsFold(v string) predicate.Account {
+	return predicate.Account(sql.FieldContainsFold(FieldTempUnschedulableReason, v))
 placeholder
 
 // SessionWindowStartEQ applies the EQ predicate on the "session_window_start" field.

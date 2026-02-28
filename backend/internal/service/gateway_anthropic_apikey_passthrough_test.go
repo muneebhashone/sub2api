@@ -279,10 +279,10 @@ placeholder{
 			wantPassthrough: true,
 	placeholder,
 		{
-			name:            "404 generic not found passes through as 404",
+			name:            "404 generic not found does not passthrough",
 			statusCode:      http.StatusNotFound,
 			respBody:        `{"error":{"message":"resource not found","type":"not_found_error"placeholderplaceholder`,
-			wantPassthrough: true,
+			wantPassthrough: false,
 	placeholder,
 		{
 			name:            "400 Invalid URL does not passthrough",

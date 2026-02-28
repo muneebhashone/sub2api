@@ -16,6 +16,16 @@ placeholder
 		return http.StatusOK, Status{Code: int32(http.StatusOK)placeholder
 placeholder
 
-	cloned := Clone(appErr)
-	return int(cloned.Code), cloned.Status
+	body = Status{
+		Code:    appErr.Code,
+		Reason:  appErr.Reason,
+		Message: appErr.Message,
+placeholder
+	if appErr.Metadata != nil {
+		body.Metadata = make(map[string]string, len(appErr.Metadata))
+		for k, v := range appErr.Metadata {
+			body.Metadata[k] = v
+	placeholder
+placeholder
+	return int(appErr.Code), body
 placeholder

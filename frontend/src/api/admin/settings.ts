@@ -31,6 +31,7 @@ export interface SystemSettings {
   hide_ccs_import_button: boolean
   purchase_subscription_enabled: boolean
   purchase_subscription_url: string
+  sora_client_enabled: boolean
   // SMTP settings
   smtp_host: string
   smtp_port: number
@@ -87,6 +88,7 @@ export interface UpdateSettingsRequest {
   hide_ccs_import_button?: boolean
   purchase_subscription_enabled?: boolean
   purchase_subscription_url?: string
+  sora_client_enabled?: boolean
   smtp_host?: string
   smtp_port?: number
   smtp_username?: string
@@ -251,6 +253,142 @@ export async function updateStreamTimeoutSettings(
   return data
 placeholder
 
+// ==================== Sora S3 Settings ====================
+
+export interface SoraS3Settings {
+  enabled: boolean
+  endpoint: string
+  region: string
+  bucket: string
+  access_key_id: string
+  secret_access_key_configured: boolean
+  prefix: string
+  force_path_style: boolean
+  cdn_url: string
+  default_storage_quota_bytes: number
+placeholder
+
+export interface SoraS3Profile {
+  profile_id: string
+  name: string
+  is_active: boolean
+  enabled: boolean
+  endpoint: string
+  region: string
+  bucket: string
+  access_key_id: string
+  secret_access_key_configured: boolean
+  prefix: string
+  force_path_style: boolean
+  cdn_url: string
+  default_storage_quota_bytes: number
+  updated_at: string
+placeholder
+
+export interface ListSoraS3ProfilesResponse {
+  active_profile_id: string
+  items: SoraS3Profile[]
+placeholder
+
+export interface UpdateSoraS3SettingsRequest {
+  profile_id?: string
+  enabled: boolean
+  endpoint: string
+  region: string
+  bucket: string
+  access_key_id: string
+  secret_access_key?: string
+  prefix: string
+  force_path_style: boolean
+  cdn_url: string
+  default_storage_quota_bytes: number
+placeholder
+
+export interface CreateSoraS3ProfileRequest {
+  profile_id: string
+  name: string
+  set_active?: boolean
+  enabled: boolean
+  endpoint: string
+  region: string
+  bucket: string
+  access_key_id: string
+  secret_access_key?: string
+  prefix: string
+  force_path_style: boolean
+  cdn_url: string
+  default_storage_quota_bytes: number
+placeholder
+
+export interface UpdateSoraS3ProfileRequest {
+  name: string
+  enabled: boolean
+  endpoint: string
+  region: string
+  bucket: string
+  access_key_id: string
+  secret_access_key?: string
+  prefix: string
+  force_path_style: boolean
+  cdn_url: string
+  default_storage_quota_bytes: number
+placeholder
+
+export interface TestSoraS3ConnectionRequest {
+  profile_id?: string
+  enabled: boolean
+  endpoint: string
+  region: string
+  bucket: string
+  access_key_id: string
+  secret_access_key?: string
+  prefix: string
+  force_path_style: boolean
+  cdn_url: string
+  default_storage_quota_bytes?: number
+placeholder
+
+export async function getSoraS3Settings(): Promise<SoraS3Settings> {
+  const { data placeholder = await apiClient.get<SoraS3Settings>('/admin/settings/sora-s3')
+  return data
+placeholder
+
+export async function updateSoraS3Settings(settings: UpdateSoraS3SettingsRequest): Promise<SoraS3Settings> {
+  const { data placeholder = await apiClient.put<SoraS3Settings>('/admin/settings/sora-s3', settings)
+  return data
+placeholder
+
+export async function testSoraS3Connection(
+  settings: TestSoraS3ConnectionRequest
+): Promise<{ message: string placeholder> {
+  const { data placeholder = await apiClient.post<{ message: string placeholder>('/admin/settings/sora-s3/test', settings)
+  return data
+placeholder
+
+export async function listSoraS3Profiles(): Promise<ListSoraS3ProfilesResponse> {
+  const { data placeholder = await apiClient.get<ListSoraS3ProfilesResponse>('/admin/settings/sora-s3/profiles')
+  return data
+placeholder
+
+export async function createSoraS3Profile(request: CreateSoraS3ProfileRequest): Promise<SoraS3Profile> {
+  const { data placeholder = await apiClient.post<SoraS3Profile>('/admin/settings/sora-s3/profiles', request)
+  return data
+placeholder
+
+export async function updateSoraS3Profile(profileID: string, request: UpdateSoraS3ProfileRequest): Promise<SoraS3Profile> {
+  const { data placeholder = await apiClient.put<SoraS3Profile>(`/admin/settings/sora-s3/profiles/${profileIDplaceholder`, request)
+  return data
+placeholder
+
+export async function deleteSoraS3Profile(profileID: string): Promise<void> {
+  await apiClient.delete(`/admin/settings/sora-s3/profiles/${profileIDplaceholder`)
+placeholder
+
+export async function setActiveSoraS3Profile(profileID: string): Promise<SoraS3Profile> {
+  const { data placeholder = await apiClient.post<SoraS3Profile>(`/admin/settings/sora-s3/profiles/${profileIDplaceholder/activate`)
+  return data
+placeholder
+
 export const settingsAPI = {
   getSettings,
   updateSettings,
@@ -260,7 +398,15 @@ export const settingsAPI = {
   regenerateAdminApiKey,
   deleteAdminApiKey,
   getStreamTimeoutSettings,
-  updateStreamTimeoutSettings
+  updateStreamTimeoutSettings,
+  getSoraS3Settings,
+  updateSoraS3Settings,
+  testSoraS3Connection,
+  listSoraS3Profiles,
+  createSoraS3Profile,
+  updateSoraS3Profile,
+  deleteSoraS3Profile,
+  setActiveSoraS3Profile
 placeholder
 
 export default settingsAPI
