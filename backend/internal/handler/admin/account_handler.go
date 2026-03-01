@@ -1122,6 +1122,14 @@ placeholder
 		SkipMixedChannelCheck: skipCheck,
 placeholder)
 	if err != nil {
+		var mixedErr *service.MixedChannelError
+		if errors.As(err, &mixedErr) {
+			c.JSON(409, gin.H{
+				"error":   "mixed_channel_warning",
+				"message": mixedErr.Error(),
+		placeholder)
+			return
+	placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
