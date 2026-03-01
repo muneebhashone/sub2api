@@ -60,6 +60,9 @@ type SystemSettings struct {
 	OpsRealtimeMonitoringEnabled bool
 	OpsQueryModeDefault          string
 	OpsMetricsIntervalSeconds    int
+
+	// Claude Code version check
+	MinClaudeCodeVersion string
 placeholder
 
 type PublicSettings struct {

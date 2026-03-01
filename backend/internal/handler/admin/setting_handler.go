@@ -3,6 +3,8 @@ package admin
 import (
 	"fmt"
 	"log"
+	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +16,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// semverPattern 预编译 semver 格式校验正则
+var semverPattern = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 
 // SettingHandler 系统设置处理器
 type SettingHandler struct {
@@ -93,6 +98,7 @@ placeholder
 		OpsRealtimeMonitoringEnabled:         settings.OpsRealtimeMonitoringEnabled,
 		OpsQueryModeDefault:                  settings.OpsQueryModeDefault,
 		OpsMetricsIntervalSeconds:            settings.OpsMetricsIntervalSeconds,
+		MinClaudeCodeVersion:                 settings.MinClaudeCodeVersion,
 placeholder)
 placeholder
 
@@ -159,6 +165,8 @@ type UpdateSettingsRequest struct {
 	OpsRealtimeMonitoringEnabled *bool   `json:"ops_realtime_monitoring_enabled"`
 	OpsQueryModeDefault          *string `json:"ops_query_mode_default"`
 	OpsMetricsIntervalSeconds    *int    `json:"ops_metrics_interval_seconds"`
+
+	MinClaudeCodeVersion string `json:"min_claude_code_version"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -293,6 +301,14 @@ placeholder
 		req.OpsMetricsIntervalSeconds = &v
 placeholder
 
+	// 验证最低版本号格式（空字符串=禁用，或合法 semver）
+	if req.MinClaudeCodeVersion != "" {
+		if !semverPattern.MatchString(req.MinClaudeCodeVersion) {
+			response.Error(c, http.StatusBadRequest, "min_claude_code_version must be empty or a valid semver (e.g. 2.1.63)")
+			return
+	placeholder
+placeholder
+
 	settings := &service.SystemSettings{
 		RegistrationEnabled:         req.RegistrationEnabled,
 		EmailVerifyEnabled:          req.EmailVerifyEnabled,
@@ -334,6 +350,7 @@ placeholder
 		FallbackModelAntigravity:    req.FallbackModelAntigravity,
 		EnableIdentityPatch:         req.EnableIdentityPatch,
 		IdentityPatchPrompt:         req.IdentityPatchPrompt,
+		MinClaudeCodeVersion:        req.MinClaudeCodeVersion,
 		OpsMonitoringEnabled: func() bool {
 			if req.OpsMonitoringEnabled != nil {
 				return *req.OpsMonitoringEnabled
@@ -420,6 +437,7 @@ placeholder
 		OpsRealtimeMonitoringEnabled:         updatedSettings.OpsRealtimeMonitoringEnabled,
 		OpsQueryModeDefault:                  updatedSettings.OpsQueryModeDefault,
 		OpsMetricsIntervalSeconds:            updatedSettings.OpsMetricsIntervalSeconds,
+		MinClaudeCodeVersion:                 updatedSettings.MinClaudeCodeVersion,
 placeholder)
 placeholder
 
@@ -561,6 +579,9 @@ placeholder
 placeholder
 	if before.OpsMetricsIntervalSeconds != after.OpsMetricsIntervalSeconds {
 		changed = append(changed, "ops_metrics_interval_seconds")
+placeholder
+	if before.MinClaudeCodeVersion != after.MinClaudeCodeVersion {
+		changed = append(changed, "min_claude_code_version")
 placeholder
 	return changed
 placeholder
