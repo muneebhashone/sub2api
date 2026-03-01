@@ -139,34 +139,34 @@ placeholder
 	require.Contains(t, err.Error(), "group repository not configured")
 placeholder
 
-func TestAdminService_BulkUpdateAccounts_MixedChannelCheckUsesUpdatedSnapshot(t *testing.T) {
+// TestAdminService_BulkUpdateAccounts_MixedChannelPreCheckBlocksOnExistingConflict verifies
+// that the global pre-check detects a conflict with existing group members and returns an
+// error before any DB write is performed.
+func TestAdminService_BulkUpdateAccounts_MixedChannelPreCheckBlocksOnExistingConflict(t *testing.T) {
 	repo := &accountRepoStubForBulkUpdate{
 		getByIDsAccounts: []*Account{
-			{ID: 1, Platform: PlatformAnthropicplaceholder,
-			{ID: 2, Platform: PlatformAntigravityplaceholder,
+			{ID: 1, Platform: PlatformAntigravityplaceholder,
 	placeholder,
+		// Group 10 already contains an Anthropic account.
 		listByGroupData: map[int64][]Account{
-			10: {placeholder,
+			10: {{ID: 99, Platform: PlatformAnthropicplaceholderplaceholder,
 	placeholder,
 placeholder
 	svc := &adminServiceImpl{
 		accountRepo: repo,
-		groupRepo:   &groupRepoStubForAdmin{getByID: &Group{ID: 10, Name: "目标分组"placeholderplaceholder,
+		groupRepo:   &groupRepoStubForAdmin{getByID: &Group{ID: 10, Name: "target-group"placeholderplaceholder,
 placeholder
 
 	groupIDs := []int64{10placeholder
 	input := &BulkUpdateAccountsInput{
-		AccountIDs: []int64{1, 2placeholder,
+		AccountIDs: []int64{1placeholder,
 		GroupIDs:   &groupIDs,
 placeholder
 
 	result, err := svc.BulkUpdateAccounts(context.Background(), input)
+	require.Nil(t, result)
 placeholder
-	require.Equal(t, 1, result.Success)
-	require.Equal(t, 1, result.Failed)
-	require.ElementsMatch(t, []int64{1placeholder, result.SuccessIDs)
-	require.ElementsMatch(t, []int64{2placeholder, result.FailedIDs)
-	require.Len(t, result.Results, 2)
-	require.Contains(t, result.Results[1].Error, "mixed channel")
-	require.Equal(t, []int64{1placeholder, repo.bindGroupsCalls)
+	require.Contains(t, err.Error(), "mixed channel")
+	// No BindGroups should have been called since the check runs before any write.
+	require.Empty(t, repo.bindGroupsCalls)
 placeholder
