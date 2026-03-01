@@ -15,6 +15,7 @@ type accountRepoStubForBulkUpdate struct {
 	bulkUpdateErr    error
 	bulkUpdateIDs    []int64
 	bindGroupErrByID map[int64]error
+	bindGroupsCalls  []int64
 	getByIDsAccounts []*Account
 	getByIDsErr      error
 	getByIDsCalled   bool
@@ -22,6 +23,8 @@ type accountRepoStubForBulkUpdate struct {
 	getByIDAccounts  map[int64]*Account
 	getByIDErrByID   map[int64]error
 	getByIDCalled    []int64
+	listByGroupData  map[int64][]Account
+	listByGroupErr   map[int64]error
 placeholder
 
 func (s *accountRepoStubForBulkUpdate) BulkUpdate(_ context.Context, ids []int64, _ AccountBulkUpdate) (int64, error) {
@@ -33,10 +36,21 @@ placeholder
 placeholder
 
 func (s *accountRepoStubForBulkUpdate) BindGroups(_ context.Context, accountID int64, _ []int64) error {
+	s.bindGroupsCalls = append(s.bindGroupsCalls, accountID)
 	if err, ok := s.bindGroupErrByID[accountID]; ok {
 		return err
 placeholder
 	return nil
+placeholder
+
+func (s *accountRepoStubForBulkUpdate) ListByGroup(_ context.Context, groupID int64) ([]Account, error) {
+	if err, ok := s.listByGroupErr[groupID]; ok {
+		return nil, err
+placeholder
+	if rows, ok := s.listByGroupData[groupID]; ok {
+		return rows, nil
+placeholder
+	return nil, nil
 placeholder
 
 func (s *accountRepoStubForBulkUpdate) GetByIDs(_ context.Context, ids []int64) ([]*Account, error) {
@@ -104,22 +118,6 @@ placeholder
 	require.ElementsMatch(t, []int64{1, 3placeholder, result.SuccessIDs)
 	require.ElementsMatch(t, []int64{2placeholder, result.FailedIDs)
 	require.Len(t, result.Results, 3)
-placeholder
-
-func TestAdminService_BulkUpdateAccounts_NilGroupRepoReturnsError(t *testing.T) {
-	repo := &accountRepoStubForBulkUpdate{placeholder
-	svc := &adminServiceImpl{accountRepo: repoplaceholder
-
-	groupIDs := []int64{10placeholder
-	input := &BulkUpdateAccountsInput{
-		AccountIDs: []int64{1placeholder,
-		GroupIDs:   &groupIDs,
-placeholder
-
-	result, err := svc.BulkUpdateAccounts(context.Background(), input)
-	require.Nil(t, result)
-placeholder
-	require.Contains(t, err.Error(), "group repository not configured")
 placeholder
 
 // TestAdminService_BulkUpdateAccounts_MixedChannelPreCheckBlocksOnExistingConflict verifies

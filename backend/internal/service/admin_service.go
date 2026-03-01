@@ -336,6 +336,10 @@ type ProxyExitInfoProber interface {
 	ProbeProxy(ctx context.Context, proxyURL string) (*ProxyExitInfo, int64, error)
 placeholder
 
+type groupExistenceBatchReader interface {
+	ExistsByIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
+placeholder
+
 type proxyQualityTarget struct {
 	Target          string
 	URL             string
