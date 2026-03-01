@@ -1539,9 +1539,8 @@ placeholder
 
 	needMixedChannelCheck := input.GroupIDs != nil && !input.SkipMixedChannelCheck
 
-	// 预加载账号平台信息（混合渠道检查或 Sora 同步需要）。
+	// 预加载账号平台信息（混合渠道检查需要）。
 	platformByID := map[int64]string{placeholder
-	groupAccountsByID := map[int64][]Account{placeholder
 	if needMixedChannelCheck {
 		accounts, err := s.accountRepo.GetByIDs(ctx, input.AccountIDs)
 		if err != nil {
@@ -1608,7 +1607,6 @@ placeholder
 	// Handle group bindings per account (requires individual operations).
 	for _, accountID := range input.AccountIDs {
 		entry := BulkUpdateAccountResult{AccountID: accountIDplaceholder
-		platform := ""
 
 		if input.GroupIDs != nil {
 			if err := s.accountRepo.BindGroups(ctx, accountID, *input.GroupIDs); err != nil {
@@ -1618,9 +1616,6 @@ placeholder
 				result.FailedIDs = append(result.FailedIDs, accountID)
 				result.Results = append(result.Results, entry)
 				continue
-		placeholder
-			if !input.SkipMixedChannelCheck && platform != "" {
-				updateMixedChannelPreloadedAccounts(groupAccountsByID, *input.GroupIDs, accountID, platform)
 		placeholder
 	placeholder
 
