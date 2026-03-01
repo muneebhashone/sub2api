@@ -64,9 +64,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.ProxyWithAccountCount, 0, len(proxies))
+	out := make([]dto.AdminProxyWithAccountCount, 0, len(proxies))
 	for i := range proxies {
-		out = append(out, *dto.ProxyWithAccountCountFromService(&proxies[i]))
+		out = append(out, *dto.ProxyWithAccountCountFromServiceAdmin(&proxies[i]))
 placeholder
 	response.Paginated(c, out, total, page, pageSize)
 placeholder
@@ -83,9 +83,9 @@ func (h *ProxyHandler) GetAll(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 	placeholder
-		out := make([]dto.ProxyWithAccountCount, 0, len(proxies))
+		out := make([]dto.AdminProxyWithAccountCount, 0, len(proxies))
 		for i := range proxies {
-			out = append(out, *dto.ProxyWithAccountCountFromService(&proxies[i]))
+			out = append(out, *dto.ProxyWithAccountCountFromServiceAdmin(&proxies[i]))
 	placeholder
 		response.Success(c, out)
 		return
@@ -97,9 +97,9 @@ placeholder
 		return
 placeholder
 
-	out := make([]dto.Proxy, 0, len(proxies))
+	out := make([]dto.AdminProxy, 0, len(proxies))
 	for i := range proxies {
-		out = append(out, *dto.ProxyFromService(&proxies[i]))
+		out = append(out, *dto.ProxyFromServiceAdmin(&proxies[i]))
 placeholder
 	response.Success(c, out)
 placeholder
@@ -119,7 +119,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.ProxyFromService(proxy))
+	response.Success(c, dto.ProxyFromServiceAdmin(proxy))
 placeholder
 
 // Create handles creating a new proxy
@@ -143,7 +143,7 @@ placeholder
 		if err != nil {
 			return nil, err
 	placeholder
-		return dto.ProxyFromService(proxy), nil
+		return dto.ProxyFromServiceAdmin(proxy), nil
 placeholder)
 placeholder
 
@@ -176,7 +176,7 @@ placeholder)
 		return
 placeholder
 
-	response.Success(c, dto.ProxyFromService(proxy))
+	response.Success(c, dto.ProxyFromServiceAdmin(proxy))
 placeholder
 
 // Delete handles deleting a proxy

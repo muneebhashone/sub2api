@@ -293,7 +293,6 @@ placeholder
 		Host:      p.Host,
 		Port:      p.Port,
 		Username:  p.Username,
-		Password:  p.Password,
 		Status:    p.Status,
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
@@ -306,6 +305,51 @@ func ProxyWithAccountCountFromService(p *service.ProxyWithAccountCount) *ProxyWi
 placeholder
 	return &ProxyWithAccountCount{
 		Proxy:          *ProxyFromService(&p.Proxy),
+		AccountCount:   p.AccountCount,
+		LatencyMs:      p.LatencyMs,
+		LatencyStatus:  p.LatencyStatus,
+		LatencyMessage: p.LatencyMessage,
+		IPAddress:      p.IPAddress,
+		Country:        p.Country,
+		CountryCode:    p.CountryCode,
+		Region:         p.Region,
+		City:           p.City,
+		QualityStatus:  p.QualityStatus,
+		QualityScore:   p.QualityScore,
+		QualityGrade:   p.QualityGrade,
+		QualitySummary: p.QualitySummary,
+		QualityChecked: p.QualityChecked,
+placeholder
+placeholder
+
+// ProxyFromServiceAdmin converts a service Proxy to AdminProxy DTO for admin users.
+// It includes the password field - user-facing endpoints must not use this.
+func ProxyFromServiceAdmin(p *service.Proxy) *AdminProxy {
+	if p == nil {
+		return nil
+placeholder
+	base := ProxyFromService(p)
+	if base == nil {
+		return nil
+placeholder
+	return &AdminProxy{
+		Proxy:    *base,
+		Password: p.Password,
+placeholder
+placeholder
+
+// ProxyWithAccountCountFromServiceAdmin converts a service ProxyWithAccountCount to AdminProxyWithAccountCount DTO.
+// It includes the password field - user-facing endpoints must not use this.
+func ProxyWithAccountCountFromServiceAdmin(p *service.ProxyWithAccountCount) *AdminProxyWithAccountCount {
+	if p == nil {
+		return nil
+placeholder
+	admin := ProxyFromServiceAdmin(&p.Proxy)
+	if admin == nil {
+		return nil
+placeholder
+	return &AdminProxyWithAccountCount{
+		AdminProxy:     *admin,
 		AccountCount:   p.AccountCount,
 		LatencyMs:      p.LatencyMs,
 		LatencyStatus:  p.LatencyStatus,
