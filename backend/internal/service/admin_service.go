@@ -2288,41 +2288,6 @@ placeholder
 	return nil
 placeholder
 
-func (s *adminServiceImpl) preloadMixedChannelRiskData(ctx context.Context, groupIDs []int64) (map[int64][]Account, map[int64]string, error) {
-	accountsByGroup := make(map[int64][]Account)
-	groupNameByID := make(map[int64]string)
-	if len(groupIDs) == 0 {
-		return accountsByGroup, groupNameByID, nil
-placeholder
-
-	seen := make(map[int64]struct{placeholder, len(groupIDs))
-	for _, groupID := range groupIDs {
-		if groupID <= 0 {
-			continue
-	placeholder
-		if _, ok := seen[groupID]; ok {
-			continue
-	placeholder
-		seen[groupID] = struct{placeholder{placeholder
-
-		accounts, err := s.accountRepo.ListByGroup(ctx, groupID)
-		if err != nil {
-			return nil, nil, fmt.Errorf("get accounts in group %d: %w", groupID, err)
-	placeholder
-		accountsByGroup[groupID] = accounts
-
-		group, err := s.groupRepo.GetByID(ctx, groupID)
-		if err != nil {
-			continue
-	placeholder
-		if group != nil {
-			groupNameByID[groupID] = group.Name
-	placeholder
-placeholder
-
-	return accountsByGroup, groupNameByID, nil
-placeholder
-
 func (s *adminServiceImpl) validateGroupIDsExist(ctx context.Context, groupIDs []int64) error {
 	if len(groupIDs) == 0 {
 		return nil
@@ -2350,71 +2315,6 @@ placeholder
 	placeholder
 placeholder
 	return nil
-placeholder
-
-func (s *adminServiceImpl) checkMixedChannelRiskWithPreloaded(currentAccountID int64, currentAccountPlatform string, groupIDs []int64, accountsByGroup map[int64][]Account, groupNameByID map[int64]string) error {
-	currentPlatform := getAccountPlatform(currentAccountPlatform)
-	if currentPlatform == "" {
-		return nil
-placeholder
-
-	for _, groupID := range groupIDs {
-		accounts := accountsByGroup[groupID]
-		for _, account := range accounts {
-			if currentAccountID > 0 && account.ID == currentAccountID {
-				continue
-		placeholder
-
-			otherPlatform := getAccountPlatform(account.Platform)
-			if otherPlatform == "" {
-				continue
-		placeholder
-
-			if currentPlatform != otherPlatform {
-				groupName := fmt.Sprintf("Group %d", groupID)
-				if name := strings.TrimSpace(groupNameByID[groupID]); name != "" {
-					groupName = name
-			placeholder
-
-				return &MixedChannelError{
-					GroupID:         groupID,
-					GroupName:       groupName,
-					CurrentPlatform: currentPlatform,
-					OtherPlatform:   otherPlatform,
-			placeholder
-		placeholder
-	placeholder
-placeholder
-
-	return nil
-placeholder
-
-func updateMixedChannelPreloadedAccounts(accountsByGroup map[int64][]Account, groupIDs []int64, accountID int64, platform string) {
-	if len(groupIDs) == 0 || accountID <= 0 || platform == "" {
-		return
-placeholder
-	for _, groupID := range groupIDs {
-		if groupID <= 0 {
-			continue
-	placeholder
-		accounts := accountsByGroup[groupID]
-		found := false
-		for i := range accounts {
-			if accounts[i].ID != accountID {
-				continue
-		placeholder
-			accounts[i].Platform = platform
-			found = true
-			break
-	placeholder
-		if !found {
-			accounts = append(accounts, Account{
-				ID:       accountID,
-				Platform: platform,
-		placeholder)
-	placeholder
-		accountsByGroup[groupID] = accounts
-placeholder
 placeholder
 
 // CheckMixedChannelRisk checks whether target groups contain mixed channels for the current account platform.
