@@ -127,6 +127,38 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		SetMcpXMLInject(groupIn.MCPXMLInject).
 		SetSoraStorageQuotaBytes(groupIn.SoraStorageQuotaBytes)
 
+	// 显式处理可空字段：nil 需要 clear，非 nil 需要 set。
+	if groupIn.DailyLimitUSD != nil {
+		builder = builder.SetDailyLimitUsd(*groupIn.DailyLimitUSD)
+placeholder else {
+		builder = builder.ClearDailyLimitUsd()
+placeholder
+	if groupIn.WeeklyLimitUSD != nil {
+		builder = builder.SetWeeklyLimitUsd(*groupIn.WeeklyLimitUSD)
+placeholder else {
+		builder = builder.ClearWeeklyLimitUsd()
+placeholder
+	if groupIn.MonthlyLimitUSD != nil {
+		builder = builder.SetMonthlyLimitUsd(*groupIn.MonthlyLimitUSD)
+placeholder else {
+		builder = builder.ClearMonthlyLimitUsd()
+placeholder
+	if groupIn.ImagePrice1K != nil {
+		builder = builder.SetImagePrice1k(*groupIn.ImagePrice1K)
+placeholder else {
+		builder = builder.ClearImagePrice1k()
+placeholder
+	if groupIn.ImagePrice2K != nil {
+		builder = builder.SetImagePrice2k(*groupIn.ImagePrice2K)
+placeholder else {
+		builder = builder.ClearImagePrice2k()
+placeholder
+	if groupIn.ImagePrice4K != nil {
+		builder = builder.SetImagePrice4k(*groupIn.ImagePrice4K)
+placeholder else {
+		builder = builder.ClearImagePrice4k()
+placeholder
+
 	// 处理 FallbackGroupID：nil 时清除，否则设置
 	if groupIn.FallbackGroupID != nil {
 		builder = builder.SetFallbackGroupID(*groupIn.FallbackGroupID)
