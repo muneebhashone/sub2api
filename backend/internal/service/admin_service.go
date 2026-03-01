@@ -2119,6 +2119,35 @@ placeholder
 	return nil
 placeholder
 
+func (s *adminServiceImpl) validateGroupIDsExist(ctx context.Context, groupIDs []int64) error {
+	if len(groupIDs) == 0 {
+		return nil
+placeholder
+	if s.groupRepo == nil {
+		return errors.New("group repository not configured")
+placeholder
+
+	if batchReader, ok := s.groupRepo.(groupExistenceBatchReader); ok {
+		existsByID, err := batchReader.ExistsByIDs(ctx, groupIDs)
+		if err != nil {
+			return fmt.Errorf("check groups exists: %w", err)
+	placeholder
+		for _, groupID := range groupIDs {
+			if groupID <= 0 || !existsByID[groupID] {
+				return fmt.Errorf("get group: %w", ErrGroupNotFound)
+		placeholder
+	placeholder
+		return nil
+placeholder
+
+	for _, groupID := range groupIDs {
+		if _, err := s.groupRepo.GetByID(ctx, groupID); err != nil {
+			return fmt.Errorf("get group: %w", err)
+	placeholder
+placeholder
+	return nil
+placeholder
+
 // CheckMixedChannelRisk checks whether target groups contain mixed channels for the current account platform.
 func (s *adminServiceImpl) CheckMixedChannelRisk(ctx context.Context, currentAccountID int64, currentAccountPlatform string, groupIDs []int64) error {
 	return s.checkMixedChannelRisk(ctx, currentAccountID, currentAccountPlatform, groupIDs)
