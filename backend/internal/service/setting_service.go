@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -237,23 +238,133 @@ placeholder{
 		PurchaseSubscriptionEnabled: settings.PurchaseSubscriptionEnabled,
 		PurchaseSubscriptionURL:     settings.PurchaseSubscriptionURL,
 		SoraClientEnabled:           settings.SoraClientEnabled,
-		CustomMenuItems:             sanitizeCustomMenuItemsJSON(settings.CustomMenuItems),
+		CustomMenuItems:             filterUserVisibleMenuItems(settings.CustomMenuItems),
 		LinuxDoOAuthEnabled:         settings.LinuxDoOAuthEnabled,
 		Version:                     s.version,
 placeholder, nil
 placeholder
 
-// sanitizeCustomMenuItemsJSON validates a raw JSON string and returns it as json.RawMessage.
-// Returns "[]" if the input is empty or invalid JSON.
+// sanitizeCustomMenuItemsJSON validates a raw JSON string is a valid JSON array
+// and returns it as json.RawMessage. Returns "[]" if the input is empty, not a
+// valid JSON array, or is a non-array JSON value (e.g. object, string).
 func sanitizeCustomMenuItemsJSON(raw string) json.RawMessage {
 	raw = strings.TrimSpace(raw)
 	if raw == "" || raw == "[]" {
 		return json.RawMessage("[]")
 placeholder
-	if json.Valid([]byte(raw)) {
-		return json.RawMessage(raw)
+	// Verify it's actually a JSON array, not an object or other type
+	var arr []json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &arr); err != nil {
+		return json.RawMessage("[]")
 placeholder
-	return json.RawMessage("[]")
+	return json.RawMessage(raw)
+placeholder
+
+// filterUserVisibleMenuItems filters out admin-only menu items from a raw JSON
+// array string, returning only items with visibility != "admin".
+func filterUserVisibleMenuItems(raw string) json.RawMessage {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "[]" {
+		return json.RawMessage("[]")
+placeholder
+	var items []struct {
+		Visibility string `json:"visibility"`
+placeholder
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return json.RawMessage("[]")
+placeholder
+
+	// Parse full items to preserve all fields
+	var fullItems []json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &fullItems); err != nil {
+		return json.RawMessage("[]")
+placeholder
+
+	var filtered []json.RawMessage
+	for i, item := range items {
+		if item.Visibility != "admin" {
+			filtered = append(filtered, fullItems[i])
+	placeholder
+placeholder
+	if len(filtered) == 0 {
+		return json.RawMessage("[]")
+placeholder
+	result, err := json.Marshal(filtered)
+	if err != nil {
+		return json.RawMessage("[]")
+placeholder
+	return result
+placeholder
+
+// GetFrameSrcOrigins returns deduplicated http(s) origins from purchase_subscription_url
+// and all custom_menu_items URLs. Used by the router layer for CSP frame-src injection.
+func (s *SettingService) GetFrameSrcOrigins(ctx context.Context) ([]string, error) {
+	settings, err := s.GetPublicSettings(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+
+	seen := make(map[string]struct{placeholder)
+	var origins []string
+
+	addOrigin := func(rawURL string) {
+		if origin := extractOriginFromURL(rawURL); origin != "" {
+			if _, ok := seen[origin]; !ok {
+				seen[origin] = struct{placeholder{placeholder
+				origins = append(origins, origin)
+		placeholder
+	placeholder
+placeholder
+
+	// purchase subscription URL
+	if settings.PurchaseSubscriptionEnabled {
+		addOrigin(settings.PurchaseSubscriptionURL)
+placeholder
+
+	// all custom menu items (including admin-only, since CSP must allow all iframes)
+	for _, item := range parseCustomMenuItemURLs(settings.CustomMenuItems) {
+		addOrigin(item)
+placeholder
+
+	return origins, nil
+placeholder
+
+// extractOriginFromURL returns the scheme+host origin from rawURL.
+// Only http and https schemes are accepted.
+func extractOriginFromURL(rawURL string) string {
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" {
+		return ""
+placeholder
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return ""
+placeholder
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return ""
+placeholder
+	return u.Scheme + "://" + u.Host
+placeholder
+
+// parseCustomMenuItemURLs extracts URLs from a raw JSON array of custom menu items.
+func parseCustomMenuItemURLs(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "[]" {
+		return nil
+placeholder
+	var items []struct {
+		URL string `json:"url"`
+placeholder
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return nil
+placeholder
+	urls := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.URL != "" {
+			urls = append(urls, item.URL)
+	placeholder
+placeholder
+	return urls
 placeholder
 
 // UpdateSettings 更新系统设置
