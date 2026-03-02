@@ -56,15 +56,20 @@ placeholder
 
 // AuthService 认证服务
 type AuthService struct {
-	userRepo          UserRepository
-	redeemRepo        RedeemCodeRepository
-	refreshTokenCache RefreshTokenCache
-	cfg               *config.Config
-	settingService    *SettingService
-	emailService      *EmailService
-	turnstileService  *TurnstileService
-	emailQueueService *EmailQueueService
-	promoService      *PromoService
+	userRepo           UserRepository
+	redeemRepo         RedeemCodeRepository
+	refreshTokenCache  RefreshTokenCache
+	cfg                *config.Config
+	settingService     *SettingService
+	emailService       *EmailService
+	turnstileService   *TurnstileService
+	emailQueueService  *EmailQueueService
+	promoService       *PromoService
+	defaultSubAssigner DefaultSubscriptionAssigner
+placeholder
+
+type DefaultSubscriptionAssigner interface {
+	AssignOrExtendSubscription(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error)
 placeholder
 
 // NewAuthService 创建认证服务实例
@@ -78,17 +83,19 @@ func NewAuthService(
 	turnstileService *TurnstileService,
 	emailQueueService *EmailQueueService,
 	promoService *PromoService,
+	defaultSubAssigner DefaultSubscriptionAssigner,
 ) *AuthService {
 	return &AuthService{
-		userRepo:          userRepo,
-		redeemRepo:        redeemRepo,
-		refreshTokenCache: refreshTokenCache,
-		cfg:               cfg,
-		settingService:    settingService,
-		emailService:      emailService,
-		turnstileService:  turnstileService,
-		emailQueueService: emailQueueService,
-		promoService:      promoService,
+		userRepo:           userRepo,
+		redeemRepo:         redeemRepo,
+		refreshTokenCache:  refreshTokenCache,
+		cfg:                cfg,
+		settingService:     settingService,
+		emailService:       emailService,
+		turnstileService:   turnstileService,
+		emailQueueService:  emailQueueService,
+		promoService:       promoService,
+		defaultSubAssigner: defaultSubAssigner,
 placeholder
 placeholder
 
@@ -188,6 +195,7 @@ placeholder
 		logger.LegacyPrintf("service.auth", "[Auth] Database error creating user: %v", err)
 		return "", nil, ErrServiceUnavailable
 placeholder
+	s.assignDefaultSubscriptions(ctx, user.ID)
 
 	// 标记邀请码为已使用（如果使用了邀请码）
 	if invitationRedeemCode != nil {
@@ -477,6 +485,7 @@ placeholder
 			placeholder
 		placeholder else {
 				user = newUser
+				s.assignDefaultSubscriptions(ctx, user.ID)
 		placeholder
 	placeholder else {
 			logger.LegacyPrintf("service.auth", "[Auth] Database error during oauth login: %v", err)
@@ -572,6 +581,7 @@ placeholder
 			placeholder
 		placeholder else {
 				user = newUser
+				s.assignDefaultSubscriptions(ctx, user.ID)
 		placeholder
 	placeholder else {
 			logger.LegacyPrintf("service.auth", "[Auth] Database error during oauth login: %v", err)
@@ -595,6 +605,23 @@ placeholder
 		return nil, nil, fmt.Errorf("generate token pair: %w", err)
 placeholder
 	return tokenPair, user, nil
+placeholder
+
+func (s *AuthService) assignDefaultSubscriptions(ctx context.Context, userID int64) {
+	if s.settingService == nil || s.defaultSubAssigner == nil || userID <= 0 {
+		return
+placeholder
+	items := s.settingService.GetDefaultSubscriptions(ctx)
+	for _, item := range items {
+		if _, _, err := s.defaultSubAssigner.AssignOrExtendSubscription(ctx, &AssignSubscriptionInput{
+			UserID:       userID,
+			GroupID:      item.GroupID,
+			ValidityDays: item.ValidityDays,
+			Notes:        "auto assigned by default user subscriptions setting",
+	placeholder); err != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] Failed to assign default subscription: user_id=%d group_id=%d err=%v", userID, item.GroupID, err)
+	placeholder
+placeholder
 placeholder
 
 // ValidateToken 验证JWT token并返回用户声明

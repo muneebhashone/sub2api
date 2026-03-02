@@ -52,6 +52,7 @@ placeholder
 		turnstileService,
 		nil, // emailQueueService
 		nil, // promoService
+		nil, // defaultSubAssigner
 	)
 placeholder
 
