@@ -1045,7 +1045,7 @@ placeholder
 		ValidateResolvedIP: true,
 placeholder)
 	if err != nil {
-		client = &http.Client{Timeout: 30 * time.Secondplaceholder
+		return "", fmt.Errorf("create http client failed: %w", err)
 placeholder
 
 	resp, err := client.Do(req)
