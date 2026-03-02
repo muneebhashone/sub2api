@@ -112,7 +112,10 @@ placeholder
 	placeholder
 placeholder
 
-	client := antigravity.NewClient(proxyURL)
+	client, err := antigravity.NewClient(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("create antigravity client failed: %w", err)
+placeholder
 
 	// 交换 token
 	tokenResp, err := client.ExchangeCode(ctx, input.Code, session.CodeVerifier)
@@ -167,7 +170,10 @@ func (s *AntigravityOAuthService) RefreshToken(ctx context.Context, refreshToken
 			time.Sleep(backoff)
 	placeholder
 
-		client := antigravity.NewClient(proxyURL)
+		client, err := antigravity.NewClient(proxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("create antigravity client failed: %w", err)
+	placeholder
 		tokenResp, err := client.RefreshToken(ctx, refreshToken)
 		if err == nil {
 			now := time.Now()
@@ -209,7 +215,10 @@ placeholder
 placeholder
 
 	// 获取用户信息（email）
-	client := antigravity.NewClient(proxyURL)
+	client, err := antigravity.NewClient(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("create antigravity client failed: %w", err)
+placeholder
 	userInfo, err := client.GetUserInfo(ctx, tokenInfo.AccessToken)
 	if err != nil {
 		fmt.Printf("[AntigravityOAuth] 警告: 获取用户信息失败: %v\n", err)
@@ -309,7 +318,10 @@ func (s *AntigravityOAuthService) loadProjectIDWithRetry(ctx context.Context, ac
 			time.Sleep(backoff)
 	placeholder
 
-		client := antigravity.NewClient(proxyURL)
+		client, err := antigravity.NewClient(proxyURL)
+		if err != nil {
+			return "", fmt.Errorf("create antigravity client failed: %w", err)
+	placeholder
 		loadResp, loadRaw, err := client.LoadCodeAssist(ctx, accessToken)
 
 		if err == nil && loadResp != nil && loadResp.CloudAICompanionProject != "" {

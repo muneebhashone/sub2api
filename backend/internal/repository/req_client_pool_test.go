@@ -26,11 +26,13 @@ func TestGetSharedReqClient_ForceHTTP2SeparatesCache(t *testing.T) {
 		ProxyURL: "http://proxy.local:8080",
 		Timeout:  time.Second,
 placeholder
-	clientDefault := getSharedReqClient(base)
+	clientDefault, err := getSharedReqClient(base)
+placeholder
 
 	force := base
 	force.ForceHTTP2 = true
-	clientForce := getSharedReqClient(force)
+	clientForce, err := getSharedReqClient(force)
+placeholder
 
 	require.NotSame(t, clientDefault, clientForce)
 	require.NotEqual(t, buildReqClientKey(base), buildReqClientKey(force))
@@ -42,8 +44,10 @@ func TestGetSharedReqClient_ReuseCachedClient(t *testing.T) {
 		ProxyURL: "http://proxy.local:8080",
 		Timeout:  2 * time.Second,
 placeholder
-	first := getSharedReqClient(opts)
-	second := getSharedReqClient(opts)
+	first, err := getSharedReqClient(opts)
+placeholder
+	second, err := getSharedReqClient(opts)
+placeholder
 	require.Same(t, first, second)
 placeholder
 
@@ -56,7 +60,8 @@ placeholder
 	key := buildReqClientKey(opts)
 	sharedReqClients.Store(key, "invalid")
 
-	client := getSharedReqClient(opts)
+	client, err := getSharedReqClient(opts)
+placeholder
 
 	require.NotNil(t, client)
 	loaded, ok := sharedReqClients.Load(key)
@@ -71,20 +76,45 @@ func TestGetSharedReqClient_ImpersonateAndProxy(t *testing.T) {
 		Timeout:     4 * time.Second,
 		Impersonate: true,
 placeholder
-	client := getSharedReqClient(opts)
+	client, err := getSharedReqClient(opts)
+placeholder
 
 	require.NotNil(t, client)
 	require.Equal(t, "http://proxy.local:8080|4s|true|false", buildReqClientKey(opts))
 placeholder
 
+func TestGetSharedReqClient_InvalidProxyURL(t *testing.T) {
+	sharedReqClients = sync.Map{placeholder
+	opts := reqClientOptions{
+		ProxyURL: "://missing-scheme",
+		Timeout:  time.Second,
+placeholder
+	_, err := getSharedReqClient(opts)
+placeholder
+	require.Contains(t, err.Error(), "invalid proxy URL")
+placeholder
+
+func TestGetSharedReqClient_ProxyURLMissingHost(t *testing.T) {
+	sharedReqClients = sync.Map{placeholder
+	opts := reqClientOptions{
+		ProxyURL: "http://",
+		Timeout:  time.Second,
+placeholder
+	_, err := getSharedReqClient(opts)
+placeholder
+	require.Contains(t, err.Error(), "proxy URL missing host")
+placeholder
+
 func TestCreateOpenAIReqClient_Timeout120Seconds(t *testing.T) {
 	sharedReqClients = sync.Map{placeholder
-	client := createOpenAIReqClient("http://proxy.local:8080")
+	client, err := createOpenAIReqClient("http://proxy.local:8080")
+placeholder
 	require.Equal(t, 120*time.Second, client.GetClient().Timeout)
 placeholder
 
 func TestCreateGeminiReqClient_ForceHTTP2Disabled(t *testing.T) {
 	sharedReqClients = sync.Map{placeholder
-	client := createGeminiReqClient("http://proxy.local:8080")
+	client, err := createGeminiReqClient("http://proxy.local:8080")
+placeholder
 	require.Equal(t, "", forceHTTPVersion(t, client))
 placeholder
