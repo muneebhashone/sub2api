@@ -47,7 +47,7 @@
             "
             @click="handleMenuItemClick(item.path)"
           >
-            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="item.iconSvg"></span>
+            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
             <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
             <transition name="fade">
               <span v-if="!sidebarCollapsed">{{ item.label placeholderplaceholder</span>
@@ -72,7 +72,7 @@
             :data-tour="item.path === '/keys' ? 'sidebar-my-keys' : undefined"
             @click="handleMenuItemClick(item.path)"
           >
-            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="item.iconSvg"></span>
+            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
             <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
             <transition name="fade">
               <span v-if="!sidebarCollapsed">{{ item.label placeholderplaceholder</span>
@@ -94,7 +94,7 @@
             :data-tour="item.path === '/keys' ? 'sidebar-my-keys' : undefined"
             @click="handleMenuItemClick(item.path)"
           >
-            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="item.iconSvg"></span>
+            <span v-if="item.iconSvg" class="h-5 w-5 flex-shrink-0 sidebar-svg-icon" v-html="sanitizeSvg(item.iconSvg)"></span>
             <component v-else :is="item.icon" class="h-5 w-5 flex-shrink-0" />
             <transition name="fade">
               <span v-if="!sidebarCollapsed">{{ item.label placeholderplaceholder</span>
@@ -152,6 +152,7 @@ import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore placeholder from '@/stores'
 import VersionBadge from '@/components/common/VersionBadge.vue'
+import { sanitizeSvg placeholder from '@/utils/sanitize'
 
 interface NavItem {
   path: string
