@@ -177,8 +177,13 @@ import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore placeholder from '@/stores'
 import { getPublicSettings, sendVerifyCode placeholder from '@/api/auth'
+import { buildAuthErrorMessage placeholder from '@/utils/authError'
+import {
+  isRegistrationEmailSuffixAllowed,
+  normalizeRegistrationEmailSuffixWhitelist
+placeholder from '@/utils/registrationEmailPolicy'
 
-const { t placeholder = useI18n()
+const { t, locale placeholder = useI18n()
 
 // ==================== Router & Stores ====================
 
@@ -208,6 +213,7 @@ const hasRegisterData = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const siteName = ref<string>('Sub2API')
+const registrationEmailSuffixWhitelist = ref<string[]>([])
 
 // Turnstile for resend
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -244,6 +250,9 @@ onMounted(async () => {
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     siteName.value = settings.site_name || 'Sub2API'
+    registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
+      settings.registration_email_suffix_whitelist || []
+    )
   placeholder catch (error) {
     console.error('Failed to load public settings:', error)
   placeholder
@@ -306,6 +315,12 @@ async function sendCode(): Promise<void> {
   errorMessage.value = ''
 
   try {
+    if (!isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
+      errorMessage.value = buildEmailSuffixNotAllowedMessage()
+      appStore.showError(errorMessage.value)
+      return
+    placeholder
+
     const response = await sendVerifyCode({
       email: email.value,
       // 优先使用重发时新获取的 token（因为初始 token 可能已被使用）
@@ -320,15 +335,9 @@ async function sendCode(): Promise<void> {
     showResendTurnstile.value = false
     resendTurnstileToken.value = ''
   placeholder catch (error: unknown) {
-    const err = error as { message?: string; response?: { data?: { detail?: string placeholder placeholder placeholder
-
-    if (err.response?.data?.detail) {
-      errorMessage.value = err.response.data.detail
-    placeholder else if (err.message) {
-      errorMessage.value = err.message
-    placeholder else {
-      errorMessage.value = 'Failed to send verification code. Please try again.'
-    placeholder
+    errorMessage.value = buildAuthErrorMessage(error, {
+      fallback: 'Failed to send verification code. Please try again.'
+    placeholder)
 
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -380,6 +389,12 @@ async function handleVerify(): Promise<void> {
   isLoading.value = true
 
   try {
+    if (!isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
+      errorMessage.value = buildEmailSuffixNotAllowedMessage()
+      appStore.showError(errorMessage.value)
+      return
+    placeholder
+
     // Register with verification code
     await authStore.register({
       email: email.value,
@@ -399,15 +414,9 @@ async function handleVerify(): Promise<void> {
     // Redirect to dashboard
     await router.push('/dashboard')
   placeholder catch (error: unknown) {
-    const err = error as { message?: string; response?: { data?: { detail?: string placeholder placeholder placeholder
-
-    if (err.response?.data?.detail) {
-      errorMessage.value = err.response.data.detail
-    placeholder else if (err.message) {
-      errorMessage.value = err.message
-    placeholder else {
-      errorMessage.value = 'Verification failed. Please try again.'
-    placeholder
+    errorMessage.value = buildAuthErrorMessage(error, {
+      fallback: 'Verification failed. Please try again.'
+    placeholder)
 
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -421,6 +430,19 @@ function handleBack(): void {
 
   // Go back to registration
   router.push('/register')
+placeholder
+
+function buildEmailSuffixNotAllowedMessage(): string {
+  const normalizedWhitelist = normalizeRegistrationEmailSuffixWhitelist(
+    registrationEmailSuffixWhitelist.value
+  )
+  if (normalizedWhitelist.length === 0) {
+    return t('auth.emailSuffixNotAllowed')
+  placeholder
+  const separator = String(locale.value || '').toLowerCase().startsWith('zh') ? '、' : ', '
+  return t('auth.emailSuffixNotAllowedWithAllowed', {
+    suffixes: normalizedWhitelist.join(separator)
+  placeholder)
 placeholder
 </script>
 
