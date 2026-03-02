@@ -100,7 +100,7 @@ func runSetupServer() {
 	r := gin.New()
 	r.Use(middleware.Recovery())
 	r.Use(middleware.CORS(config.CORSConfig{placeholder))
-	r.Use(middleware.SecurityHeaders(config.CSPConfig{Enabled: true, Policy: config.DefaultCSPPolicyplaceholder))
+	r.Use(middleware.SecurityHeaders(config.CSPConfig{Enabled: true, Policy: config.DefaultCSPPolicyplaceholder, nil))
 
 	// Register setup routes
 	setup.RegisterRoutes(r)
