@@ -41,7 +41,7 @@ func (r *tokenCacheInvalidatorRecorder) InvalidateToken(ctx context.Context, acc
 	return r.err
 placeholder
 
-func TestRateLimitService_HandleUpstreamError_OAuth401MarksError(t *testing.T) {
+func TestRateLimitService_HandleUpstreamError_OAuth401SetsTempUnschedulable(t *testing.T) {
 	tests := []struct {
 		name     string
 		platform string
@@ -76,9 +76,8 @@ placeholder
 			shouldDisable := service.HandleUpstreamError(context.Background(), account, 401, http.Header{placeholder, []byte("unauthorized"))
 
 			require.True(t, shouldDisable)
-			require.Equal(t, 1, repo.setErrorCalls)
-			require.Equal(t, 0, repo.tempCalls)
-			require.Contains(t, repo.lastErrorMsg, "Authentication failed (401)")
+			require.Equal(t, 0, repo.setErrorCalls)
+			require.Equal(t, 1, repo.tempCalls)
 			require.Len(t, invalidator.accounts, 1)
 	placeholder)
 placeholder
@@ -98,7 +97,8 @@ placeholder
 	shouldDisable := service.HandleUpstreamError(context.Background(), account, 401, http.Header{placeholder, []byte("unauthorized"))
 
 	require.True(t, shouldDisable)
-	require.Equal(t, 1, repo.setErrorCalls)
+	require.Equal(t, 0, repo.setErrorCalls)
+	require.Equal(t, 1, repo.tempCalls)
 	require.Len(t, invalidator.accounts, 1)
 placeholder
 
