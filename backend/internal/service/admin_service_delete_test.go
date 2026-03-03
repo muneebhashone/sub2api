@@ -348,6 +348,19 @@ func (s *billingCacheStub) InvalidateSubscriptionCache(ctx context.Context, user
 	return nil
 placeholder
 
+func (s *billingCacheStub) GetAPIKeyRateLimit(ctx context.Context, keyID int64) (*APIKeyRateLimitCacheData, error) {
+	panic("unexpected GetAPIKeyRateLimit call")
+placeholder
+func (s *billingCacheStub) SetAPIKeyRateLimit(ctx context.Context, keyID int64, data *APIKeyRateLimitCacheData) error {
+	panic("unexpected SetAPIKeyRateLimit call")
+placeholder
+func (s *billingCacheStub) UpdateAPIKeyRateLimitUsage(ctx context.Context, keyID int64, cost float64) error {
+	panic("unexpected UpdateAPIKeyRateLimitUsage call")
+placeholder
+func (s *billingCacheStub) InvalidateAPIKeyRateLimit(ctx context.Context, keyID int64) error {
+	panic("unexpected InvalidateAPIKeyRateLimit call")
+placeholder
+
 func waitForInvalidations(t *testing.T, ch <-chan subscriptionInvalidateCall, expected int) []subscriptionInvalidateCall {
 placeholder
 	calls := make([]subscriptionInvalidateCall, 0, expected)

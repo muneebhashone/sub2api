@@ -411,7 +411,7 @@ placeholder
 	deferredService := service.NewDeferredService(accountRepo, nil, 0)
 	billingService := service.NewBillingService(cfg, nil)
 	concurrencyService := service.NewConcurrencyService(testutil.StubConcurrencyCache{placeholder)
-	billingCacheService := service.NewBillingCacheService(nil, nil, nil, cfg)
+	billingCacheService := service.NewBillingCacheService(nil, nil, nil, nil, cfg)
 	t.Cleanup(func() {
 		billingCacheService.Stop()
 placeholder)

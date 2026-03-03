@@ -106,6 +106,15 @@ placeholder
 func (s *authRepoStub) UpdateLastUsed(ctx context.Context, id int64, usedAt time.Time) error {
 	panic("unexpected UpdateLastUsed call")
 placeholder
+func (s *authRepoStub) IncrementRateLimitUsage(ctx context.Context, id int64, cost float64) error {
+	panic("unexpected IncrementRateLimitUsage call")
+placeholder
+func (s *authRepoStub) ResetRateLimitWindows(ctx context.Context, id int64) error {
+	panic("unexpected ResetRateLimitWindows call")
+placeholder
+func (s *authRepoStub) GetRateLimitData(ctx context.Context, id int64) (*APIKeyRateLimitData, error) {
+	panic("unexpected GetRateLimitData call")
+placeholder
 
 type authCacheStub struct {
 	getAuthCache   func(ctx context.Context, key string) (*APIKeyAuthCacheEntry, error)

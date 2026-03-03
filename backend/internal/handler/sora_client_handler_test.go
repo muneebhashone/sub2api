@@ -1032,6 +1032,15 @@ placeholder
 func (r *stubAPIKeyRepoForHandler) UpdateLastUsed(context.Context, int64, time.Time) error {
 	return nil
 placeholder
+func (r *stubAPIKeyRepoForHandler) IncrementRateLimitUsage(context.Context, int64, float64) error {
+	return nil
+placeholder
+func (r *stubAPIKeyRepoForHandler) ResetRateLimitWindows(context.Context, int64) error {
+	return nil
+placeholder
+func (r *stubAPIKeyRepoForHandler) GetRateLimitData(context.Context, int64) (*service.APIKeyRateLimitData, error) {
+	return nil, nil
+placeholder
 
 // newTestAPIKeyService 创建测试用的 APIKeyService
 func newTestAPIKeyService(repo *stubAPIKeyRepoForHandler) *service.APIKeyService {
