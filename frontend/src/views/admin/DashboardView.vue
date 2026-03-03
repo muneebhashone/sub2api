@@ -246,7 +246,10 @@
               {{ t('admin.dashboard.recentUsage') placeholderplaceholder (Top 12)
             </h3>
             <div class="h-64">
-              <Line v-if="userTrendChartData" :data="userTrendChartData" :options="lineOptions" />
+              <div v-if="userTrendLoading" class="flex h-full items-center justify-center">
+                <LoadingSpinner size="md" />
+              </div>
+              <Line v-else-if="userTrendChartData" :data="userTrendChartData" :options="lineOptions" />
               <div
                 v-else
                 class="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400"
@@ -306,11 +309,13 @@ const appStore = useAppStore()
 const stats = ref<DashboardStats | null>(null)
 const loading = ref(false)
 const chartsLoading = ref(false)
+const userTrendLoading = ref(false)
 
 // Chart data
 const trendData = ref<TrendDataPoint[]>([])
 const modelStats = ref<ModelStat[]>([])
 const userTrend = ref<UserUsageTrendPoint[]>([])
+let chartLoadSeq = 0
 
 // Helper function to format date in local timezone
 const formatLocalDate = (date: Date): string => {
@@ -531,7 +536,9 @@ const loadDashboardStats = async () => {
 placeholder
 
 const loadChartData = async () => {
+  const currentSeq = ++chartLoadSeq
   chartsLoading.value = true
+  userTrendLoading.value = true
   try {
     const params = {
       start_date: startDate.value,
@@ -539,19 +546,38 @@ const loadChartData = async () => {
       granularity: granularity.value
     placeholder
 
-    const [trendResponse, modelResponse, userResponse] = await Promise.all([
+    const [trendResponse, modelResponse] = await Promise.all([
       adminAPI.dashboard.getUsageTrend(params),
-      adminAPI.dashboard.getModelStats({ start_date: startDate.value, end_date: endDate.value placeholder),
-      adminAPI.dashboard.getUserUsageTrend({ ...params, limit: 12 placeholder)
+      adminAPI.dashboard.getModelStats({ start_date: startDate.value, end_date: endDate.value placeholder)
     ])
 
+    if (currentSeq !== chartLoadSeq) return
     trendData.value = trendResponse.trend || []
     modelStats.value = modelResponse.models || []
-    userTrend.value = userResponse.trend || []
   placeholder catch (error) {
+    if (currentSeq !== chartLoadSeq) return
     console.error('Error loading chart data:', error)
   placeholder finally {
+    if (currentSeq !== chartLoadSeq) return
     chartsLoading.value = false
+  placeholder
+
+  try {
+    const params = {
+      start_date: startDate.value,
+      end_date: endDate.value,
+      granularity: granularity.value,
+      limit: 12
+    placeholder
+    const userResponse = await adminAPI.dashboard.getUserUsageTrend(params)
+    if (currentSeq !== chartLoadSeq) return
+    userTrend.value = userResponse.trend || []
+  placeholder catch (error) {
+    if (currentSeq !== chartLoadSeq) return
+    console.error('Error loading user trend:', error)
+  placeholder finally {
+    if (currentSeq !== chartLoadSeq) return
+    userTrendLoading.value = false
   placeholder
 placeholder
 
