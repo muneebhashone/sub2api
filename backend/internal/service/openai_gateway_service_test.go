@@ -57,6 +57,10 @@ placeholder
 	return result, nil
 placeholder
 
+func (r stubOpenAIAccountRepo) ListSchedulableUngroupedByPlatform(ctx context.Context, platform string) ([]Account, error) {
+	return r.ListSchedulableByPlatform(ctx, platform)
+placeholder
+
 type stubConcurrencyCache struct {
 	ConcurrencyCache
 	loadBatchErr    error

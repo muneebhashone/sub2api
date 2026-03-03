@@ -182,6 +182,12 @@ placeholder
 func (r *stubAccountRepo) ListSchedulableByGroupIDAndPlatforms(ctx context.Context, groupID int64, platforms []string) ([]service.Account, error) {
 	return r.ListSchedulableByPlatforms(ctx, platforms)
 placeholder
+func (r *stubAccountRepo) ListSchedulableUngroupedByPlatform(ctx context.Context, platform string) ([]service.Account, error) {
+	return r.ListSchedulableByPlatform(ctx, platform)
+placeholder
+func (r *stubAccountRepo) ListSchedulableUngroupedByPlatforms(ctx context.Context, platforms []string) ([]service.Account, error) {
+	return r.ListSchedulableByPlatforms(ctx, platforms)
+placeholder
 func (r *stubAccountRepo) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	return nil
 placeholder

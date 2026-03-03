@@ -1343,7 +1343,7 @@ placeholder
 placeholder else if groupID != nil {
 		accounts, err = s.accountRepo.ListSchedulableByGroupIDAndPlatform(ctx, *groupID, PlatformOpenAI)
 placeholder else {
-		accounts, err = s.accountRepo.ListSchedulableByPlatform(ctx, PlatformOpenAI)
+		accounts, err = s.accountRepo.ListSchedulableUngroupedByPlatform(ctx, PlatformOpenAI)
 placeholder
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
