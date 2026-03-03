@@ -203,6 +203,17 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'sora.description'
     placeholder
   placeholder,
+  {
+    path: '/custom/:id',
+    name: 'CustomPage',
+    component: () => import('@/views/user/CustomPageView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Custom Page',
+      titleKey: 'customPage.title',
+    placeholder
+  placeholder,
 
   // ==================== Admin Routes ====================
   {
@@ -417,7 +428,20 @@ router.beforeEach((to, _from, next) => {
 
   // Set page title
   const appStore = useAppStore()
-  document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
+  // For custom pages, use menu item label as document title
+  if (to.name === 'CustomPage') {
+    const id = to.params.id as string
+    const items = appStore.cachedPublicSettings?.custom_menu_items ?? []
+    const menuItem = items.find((item) => item.id === id)
+    if (menuItem?.label) {
+      const siteName = appStore.siteName || 'Sub2API'
+      document.title = `${menuItem.labelplaceholder - ${siteNameplaceholder`
+    placeholder else {
+      document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
+    placeholder
+  placeholder else {
+    document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
+  placeholder
 
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
