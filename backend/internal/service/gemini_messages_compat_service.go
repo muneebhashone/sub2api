@@ -431,7 +431,10 @@ placeholder
 	if groupID != nil {
 		return s.accountRepo.ListSchedulableByGroupIDAndPlatforms(ctx, *groupID, queryPlatforms)
 placeholder
-	return s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
+	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+		return s.accountRepo.ListSchedulableByPlatforms(ctx, queryPlatforms)
+placeholder
+	return s.accountRepo.ListSchedulableUngroupedByPlatforms(ctx, queryPlatforms)
 placeholder
 
 func (s *GeminiMessagesCompatService) validateUpstreamBaseURL(raw string) (string, error) {
