@@ -14,10 +14,11 @@ import (
 
 type tokenRefreshAccountRepo struct {
 	mockAccountRepoForGemini
-	updateCalls   int
-	setErrorCalls int
-	lastAccount   *Account
-	updateErr     error
+	updateCalls    int
+	setErrorCalls  int
+	clearTempCalls int
+	lastAccount    *Account
+	updateErr      error
 placeholder
 
 func (r *tokenRefreshAccountRepo) Update(ctx context.Context, account *Account) error {
@@ -31,6 +32,11 @@ func (r *tokenRefreshAccountRepo) SetError(ctx context.Context, id int64, errorM
 	return nil
 placeholder
 
+func (r *tokenRefreshAccountRepo) ClearTempUnschedulable(ctx context.Context, id int64) error {
+	r.clearTempCalls++
+	return nil
+placeholder
+
 type tokenCacheInvalidatorStub struct {
 	calls int
 	err   error
@@ -39,6 +45,23 @@ placeholder
 func (s *tokenCacheInvalidatorStub) InvalidateToken(ctx context.Context, account *Account) error {
 	s.calls++
 	return s.err
+placeholder
+
+type tempUnschedCacheStub struct {
+	deleteCalls int
+placeholder
+
+func (s *tempUnschedCacheStub) SetTempUnsched(ctx context.Context, accountID int64, state *TempUnschedState) error {
+	return nil
+placeholder
+
+func (s *tempUnschedCacheStub) GetTempUnsched(ctx context.Context, accountID int64) (*TempUnschedState, error) {
+	return nil, nil
+placeholder
+
+func (s *tempUnschedCacheStub) DeleteTempUnsched(ctx context.Context, accountID int64) error {
+	s.deleteCalls++
+	return nil
 placeholder
 
 type tokenRefresherStub struct {
@@ -70,7 +93,7 @@ func TestTokenRefreshService_RefreshWithRetry_InvalidatesCache(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       5,
 placeholder
@@ -98,7 +121,7 @@ func TestTokenRefreshService_RefreshWithRetry_InvalidatorErrorIgnored(t *testing
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       6,
 placeholder
@@ -124,7 +147,7 @@ func TestTokenRefreshService_RefreshWithRetry_NilInvalidator(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, nil, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, nil, nil, cfg, nil)
 	account := &Account{
 		ID:       7,
 placeholder
@@ -151,7 +174,7 @@ func TestTokenRefreshService_RefreshWithRetry_Antigravity(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       8,
 		Platform: PlatformAntigravity,
@@ -179,7 +202,7 @@ func TestTokenRefreshService_RefreshWithRetry_NonOAuthAccount(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       9,
 placeholder
@@ -207,7 +230,7 @@ func TestTokenRefreshService_RefreshWithRetry_OtherPlatformOAuth(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       10,
 		Platform: PlatformOpenAI, // OpenAI OAuth 账户
@@ -235,7 +258,7 @@ func TestTokenRefreshService_RefreshWithRetry_UpdateFailed(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       11,
 placeholder
@@ -254,7 +277,7 @@ placeholder
 	require.Equal(t, 0, invalidator.calls) // 更新失败时不应触发缓存失效
 placeholder
 
-// TestTokenRefreshService_RefreshWithRetry_RefreshFailed 测试刷新失败的情况
+// TestTokenRefreshService_RefreshWithRetry_RefreshFailed 测试可重试错误耗尽不标记 error
 func TestTokenRefreshService_RefreshWithRetry_RefreshFailed(t *testing.T) {
 	repo := &tokenRefreshAccountRepo{placeholder
 	invalidator := &tokenCacheInvalidatorStub{placeholder
@@ -264,7 +287,7 @@ func TestTokenRefreshService_RefreshWithRetry_RefreshFailed(t *testing.T) {
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       12,
 placeholder
@@ -278,7 +301,7 @@ placeholder
 placeholder
 	require.Equal(t, 0, repo.updateCalls)   // 刷新失败不应更新
 	require.Equal(t, 0, invalidator.calls)  // 刷新失败不应触发缓存失效
-	require.Equal(t, 1, repo.setErrorCalls) // 应设置错误状态
+	require.Equal(t, 0, repo.setErrorCalls) // 可重试错误耗尽不标记 error，下个周期继续重试
 placeholder
 
 // TestTokenRefreshService_RefreshWithRetry_AntigravityRefreshFailed 测试 Antigravity 刷新失败不设置错误状态
@@ -291,7 +314,7 @@ func TestTokenRefreshService_RefreshWithRetry_AntigravityRefreshFailed(t *testin
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       13,
 		Platform: PlatformAntigravity,
@@ -318,7 +341,7 @@ func TestTokenRefreshService_RefreshWithRetry_AntigravityNonRetryableError(t *te
 			RetryBackoffSeconds: 0,
 	placeholder,
 placeholder
-	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg)
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
 	account := &Account{
 		ID:       14,
 		Platform: PlatformAntigravity,
@@ -333,6 +356,77 @@ placeholder
 	require.Equal(t, 0, repo.updateCalls)
 	require.Equal(t, 0, invalidator.calls)
 	require.Equal(t, 1, repo.setErrorCalls) // 不可重试错误应设置错误状态
+placeholder
+
+// TestTokenRefreshService_RefreshWithRetry_ClearsTempUnschedulable 测试刷新成功后清除临时不可调度（DB + Redis）
+func TestTokenRefreshService_RefreshWithRetry_ClearsTempUnschedulable(t *testing.T) {
+	repo := &tokenRefreshAccountRepo{placeholder
+	invalidator := &tokenCacheInvalidatorStub{placeholder
+	tempCache := &tempUnschedCacheStub{placeholder
+	cfg := &config.Config{
+		TokenRefresh: config.TokenRefreshConfig{
+			MaxRetries:          1,
+			RetryBackoffSeconds: 0,
+	placeholder,
+placeholder
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, tempCache)
+	until := time.Now().Add(10 * time.Minute)
+	account := &Account{
+		ID:                     15,
+		Platform:               PlatformGemini,
+		Type:                   AccountTypeOAuth,
+		TempUnschedulableUntil: &until,
+placeholder
+	refresher := &tokenRefresherStub{
+		credentials: map[string]any{
+			"access_token": "new-token",
+	placeholder,
+placeholder
+
+	err := service.refreshWithRetry(context.Background(), account, refresher)
+placeholder
+	require.Equal(t, 1, repo.updateCalls)
+	require.Equal(t, 1, repo.clearTempCalls)  // DB 清除
+	require.Equal(t, 1, tempCache.deleteCalls) // Redis 缓存也应清除
+placeholder
+
+// TestTokenRefreshService_RefreshWithRetry_NonRetryableErrorAllPlatforms 测试所有平台不可重试错误都 SetError
+func TestTokenRefreshService_RefreshWithRetry_NonRetryableErrorAllPlatforms(t *testing.T) {
+	tests := []struct {
+		name     string
+		platform string
+placeholder{
+		{name: "gemini", platform: PlatformGeminiplaceholder,
+		{name: "anthropic", platform: PlatformAnthropicplaceholder,
+		{name: "openai", platform: PlatformOpenAIplaceholder,
+		{name: "antigravity", platform: PlatformAntigravityplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &tokenRefreshAccountRepo{placeholder
+			invalidator := &tokenCacheInvalidatorStub{placeholder
+			cfg := &config.Config{
+				TokenRefresh: config.TokenRefreshConfig{
+					MaxRetries:          3,
+					RetryBackoffSeconds: 0,
+			placeholder,
+		placeholder
+			service := NewTokenRefreshService(repo, nil, nil, nil, nil, invalidator, nil, cfg, nil)
+			account := &Account{
+				ID:       16,
+				Platform: tt.platform,
+				Type:     AccountTypeOAuth,
+		placeholder
+			refresher := &tokenRefresherStub{
+				err: errors.New("invalid_grant: token revoked"),
+		placeholder
+
+			err := service.refreshWithRetry(context.Background(), account, refresher)
+		placeholder
+			require.Equal(t, 1, repo.setErrorCalls) // 所有平台不可重试错误都应 SetError
+	placeholder)
+placeholder
 placeholder
 
 // TestIsNonRetryableRefreshError 测试不可重试错误判断
