@@ -216,6 +216,10 @@ placeholder
 			buffer := a.GetRPMStickyBuffer()
 			out.RPMStickyBuffer = &buffer
 	placeholder
+		// 用户消息队列模式
+		if mode := a.GetUserMsgQueueMode(); mode != "" {
+			out.UserMsgQueueMode = &mode
+	placeholder
 		// TLS指纹伪装开关
 		if a.IsTLSFingerprintEnabled() {
 			enabled := true
