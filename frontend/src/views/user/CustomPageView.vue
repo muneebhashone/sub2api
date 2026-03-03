@@ -70,6 +70,7 @@ import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores'
 import { useAuthStore placeholder from '@/stores/auth'
+import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { buildEmbeddedUrl, detectTheme placeholder from '@/utils/embedded-url'
@@ -78,6 +79,7 @@ const { t placeholder = useI18n()
 const route = useRoute()
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const adminSettingsStore = useAdminSettingsStore()
 
 const loading = ref(false)
 const pageTheme = ref<'light' | 'dark'>('light')
@@ -86,8 +88,15 @@ let themeObserver: MutationObserver | null = null
 const menuItemId = computed(() => route.params.id as string)
 
 const menuItem = computed(() => {
-  const items = appStore.cachedPublicSettings?.custom_menu_items ?? []
-  const found = items.find((item) => item.id === menuItemId.value) ?? null
+  const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
+  const adminItems = authStore.isAdmin ? (adminSettingsStore.customMenuItems ?? []) : []
+  const allItems = [...publicItems]
+  for (const item of adminItems) {
+    if (!allItems.some((existing) => existing.id === item.id)) {
+      allItems.push(item)
+    placeholder
+  placeholder
+  const found = allItems.find((item) => item.id === menuItemId.value) ?? null
   if (found && found.visibility === 'admin' && !authStore.isAdmin) {
     return null
   placeholder
@@ -122,12 +131,20 @@ onMounted(async () => {
     placeholder)
   placeholder
 
-  if (appStore.publicSettingsLoaded) return
-  loading.value = true
-  try {
-    await appStore.fetchPublicSettings()
-  placeholder finally {
-    loading.value = false
+  const promises: Promise<unknown>[] = []
+  if (!appStore.publicSettingsLoaded) {
+    promises.push(appStore.fetchPublicSettings())
+  placeholder
+  if (authStore.isAdmin) {
+    promises.push(adminSettingsStore.fetch())
+  placeholder
+  if (promises.length > 0) {
+    loading.value = true
+    try {
+      await Promise.all(promises)
+    placeholder finally {
+      loading.value = false
+    placeholder
   placeholder
 placeholder)
 
