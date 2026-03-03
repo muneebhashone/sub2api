@@ -6361,9 +6361,10 @@ type RecordUsageInput struct {
 	APIKeyService     APIKeyQuotaUpdater // 可选：用于更新API Key配额
 placeholder
 
-// APIKeyQuotaUpdater defines the interface for updating API Key quota
+// APIKeyQuotaUpdater defines the interface for updating API Key quota and rate limit usage
 type APIKeyQuotaUpdater interface {
 	UpdateQuotaUsed(ctx context.Context, apiKeyID int64, cost float64) error
+	UpdateRateLimitUsage(ctx context.Context, apiKeyID int64, cost float64) error
 placeholder
 
 // RecordUsage 记录使用量并扣费（或更新订阅用量）
@@ -6557,6 +6558,14 @@ placeholder
 	placeholder
 placeholder
 
+	// Update API Key rate limit usage
+	if shouldBill && cost.ActualCost > 0 && apiKey.HasRateLimits() && input.APIKeyService != nil {
+		if err := input.APIKeyService.UpdateRateLimitUsage(ctx, apiKey.ID, cost.ActualCost); err != nil {
+			logger.LegacyPrintf("service.gateway", "Update API key rate limit usage failed: %v", err)
+	placeholder
+		s.billingCacheService.QueueUpdateAPIKeyRateLimitUsage(apiKey.ID, cost.ActualCost)
+placeholder
+
 	// Schedule batch update for account last_used_at
 	s.deferredService.ScheduleLastUsedUpdate(account.ID)
 
@@ -6744,6 +6753,14 @@ placeholder else {
 			placeholder
 		placeholder
 	placeholder
+placeholder
+
+	// Update API Key rate limit usage
+	if shouldBill && cost.ActualCost > 0 && apiKey.HasRateLimits() && input.APIKeyService != nil {
+		if err := input.APIKeyService.UpdateRateLimitUsage(ctx, apiKey.ID, cost.ActualCost); err != nil {
+			logger.LegacyPrintf("service.gateway", "Update API key rate limit usage failed: %v", err)
+	placeholder
+		s.billingCacheService.QueueUpdateAPIKeyRateLimitUsage(apiKey.ID, cost.ActualCost)
 placeholder
 
 	// Schedule batch update for account last_used_at

@@ -24,6 +24,15 @@ var (
 		{Name: "quota", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "quota_used", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "expires_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "rate_limit_5h", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "rate_limit_1d", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "rate_limit_7d", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "usage_5h", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "usage_1d", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "usage_7d", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "window_5h_start", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "window_1d_start", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "window_7d_start", Type: field.TypeTime, Nullable: trueplaceholder,
 		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "user_id", Type: field.TypeInt64placeholder,
 placeholder
@@ -35,13 +44,13 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "api_keys_groups_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[13]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[22]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[14]placeholder,
+				Columns:    []*schema.Column{APIKeysColumns[23]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
@@ -50,12 +59,12 @@ placeholder
 			{
 				Name:    "apikey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[14]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[23]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[13]placeholder,
+				Columns: []*schema.Column{APIKeysColumns[22]placeholder,
 		placeholder,
 			{
 				Name:    "apikey_status",
