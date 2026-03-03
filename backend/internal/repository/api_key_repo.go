@@ -21,7 +21,11 @@ type apiKeyRepository struct {
 placeholder
 
 func NewAPIKeyRepository(client *dbent.Client, sqlDB *sql.DB) service.APIKeyRepository {
-	return &apiKeyRepository{client: client, sql: sqlDBplaceholder
+	return newAPIKeyRepositoryWithSQL(client, sqlDB)
+placeholder
+
+func newAPIKeyRepositoryWithSQL(client *dbent.Client, sqlq sqlExecutor) *apiKeyRepository {
+	return &apiKeyRepository{client: client, sql: sqlqplaceholder
 placeholder
 
 func (r *apiKeyRepository) activeQuery() *dbent.APIKeyQuery {
