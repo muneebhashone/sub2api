@@ -3,8 +3,6 @@ package server
 import (
 	"context"
 	"log"
-	"net/url"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -19,24 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// extractOrigin returns the scheme+host origin from rawURL, or "" on error.
-// Only http and https schemes are accepted; other values (e.g. "//host/path") return "".
-func extractOrigin(rawURL string) string {
-	rawURL = strings.TrimSpace(rawURL)
-	if rawURL == "" {
-		return ""
-placeholder
-	u, err := url.Parse(rawURL)
-	if err != nil || u.Host == "" {
-		return ""
-placeholder
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return ""
-placeholder
-	return u.Scheme + "://" + u.Host
-placeholder
-
-const paymentOriginFetchTimeout = 5 * time.Second
+const frameSrcRefreshTimeout = 5 * time.Second
 
 // SetupRouter 配置路由器中间件和路由
 func SetupRouter(
@@ -52,38 +33,32 @@ func SetupRouter(
 	cfg *config.Config,
 	redisClient *redis.Client,
 ) *gin.Engine {
-	// 缓存 purchase_subscription_url 的 origin，用于动态注入 CSP frame-src
-	var cachedPaymentOrigin atomic.Pointer[string]
-	empty := ""
-	cachedPaymentOrigin.Store(&empty)
+	// 缓存 iframe 页面的 origin 列表，用于动态注入 CSP frame-src
+	var cachedFrameOrigins atomic.Pointer[[]string]
+	emptyOrigins := []string{placeholder
+	cachedFrameOrigins.Store(&emptyOrigins)
 
-	refreshPaymentOrigin := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), paymentOriginFetchTimeout)
+	refreshFrameOrigins := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), frameSrcRefreshTimeout)
 		defer cancel()
-		settings, err := settingService.GetPublicSettings(ctx)
+		origins, err := settingService.GetFrameSrcOrigins(ctx)
 		if err != nil {
 			// 获取失败时保留已有缓存，避免 frame-src 被意外清空
 			return
 	placeholder
-		if settings.PurchaseSubscriptionEnabled {
-			origin := extractOrigin(settings.PurchaseSubscriptionURL)
-			cachedPaymentOrigin.Store(&origin)
-	placeholder else {
-			e := ""
-			cachedPaymentOrigin.Store(&e)
-	placeholder
+		cachedFrameOrigins.Store(&origins)
 placeholder
-	refreshPaymentOrigin() // 启动时初始化
+	refreshFrameOrigins() // 启动时初始化
 
 	// 应用中间件
 	r.Use(middleware2.RequestLogger())
 	r.Use(middleware2.Logger())
 	r.Use(middleware2.CORS(cfg.CORS))
-	r.Use(middleware2.SecurityHeaders(cfg.Security.CSP, func() string {
-		if p := cachedPaymentOrigin.Load(); p != nil {
+	r.Use(middleware2.SecurityHeaders(cfg.Security.CSP, func() []string {
+		if p := cachedFrameOrigins.Load(); p != nil {
 			return *p
 	placeholder
-		return ""
+		return nil
 placeholder))
 
 	// Serve embedded frontend with settings injection if available
@@ -92,21 +67,21 @@ placeholder))
 		if err != nil {
 			log.Printf("Warning: Failed to create frontend server with settings injection: %v, using legacy mode", err)
 			r.Use(web.ServeEmbeddedFrontend())
-			settingService.SetOnUpdateCallback(refreshPaymentOrigin)
+			settingService.SetOnUpdateCallback(refreshFrameOrigins)
 	placeholder else {
-			// Register combined callback: invalidate HTML cache + refresh payment origin
+			// Register combined callback: invalidate HTML cache + refresh frame origins
 			settingService.SetOnUpdateCallback(func() {
 				frontendServer.InvalidateCache()
-				refreshPaymentOrigin()
+				refreshFrameOrigins()
 		placeholder)
 			r.Use(frontendServer.Middleware())
 	placeholder
 placeholder else {
-		settingService.SetOnUpdateCallback(refreshPaymentOrigin)
+		settingService.SetOnUpdateCallback(refreshFrameOrigins)
 placeholder
 
 	// 注册路由
-	registerRoutes(r, handlers, jwtAuth, adminAuth, apiKeyAuth, apiKeyService, subscriptionService, opsService, cfg, redisClient)
+	registerRoutes(r, handlers, jwtAuth, adminAuth, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, cfg, redisClient)
 
 	return r
 placeholder
@@ -121,6 +96,7 @@ func registerRoutes(
 	apiKeyService *service.APIKeyService,
 	subscriptionService *service.SubscriptionService,
 	opsService *service.OpsService,
+	settingService *service.SettingService,
 	cfg *config.Config,
 	redisClient *redis.Client,
 ) {
@@ -133,6 +109,7 @@ func registerRoutes(
 	// 注册各模块路由
 	routes.RegisterAuthRoutes(v1, h, jwtAuth, redisClient)
 	routes.RegisterUserRoutes(v1, h, jwtAuth)
+	routes.RegisterSoraClientRoutes(v1, h, jwtAuth)
 	routes.RegisterAdminRoutes(v1, h, adminAuth)
-	routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, cfg)
+	routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, cfg)
 placeholder

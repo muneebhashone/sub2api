@@ -7,7 +7,7 @@
           {{ t('auth.verifyYourEmail') placeholderplaceholder
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
-          We'll send a verification code to
+          {{ t('auth.sendCodeDesc') placeholderplaceholder
           <span class="font-medium text-gray-700 dark:text-gray-300">{{ email placeholderplaceholder</span>
         </p>
       </div>
@@ -64,7 +64,7 @@
               <Icon name="checkCircle" size="md" class="text-green-500" />
             </div>
             <p class="text-sm text-green-700 dark:text-green-400">
-              Verification code sent! Please check your inbox.
+              {{ t('auth.codeSentSuccess') placeholderplaceholder
             </p>
           </div>
         </div>
@@ -123,7 +123,7 @@
             ></path>
           </svg>
           <Icon v-else name="checkCircle" size="md" class="mr-2" />
-          {{ isLoading ? 'Verifying...' : 'Verify & Create Account' placeholderplaceholder
+          {{ isLoading ? t('auth.verifying') : t('auth.verifyAndCreate') placeholderplaceholder
         </button>
 
         <!-- Resend Code -->
@@ -134,7 +134,7 @@
             disabled
             class="cursor-not-allowed text-sm text-gray-400 dark:text-dark-500"
           >
-            Resend code in {{ countdown placeholderplaceholders
+            {{ t('auth.resendCountdown', { countdown placeholder) placeholderplaceholder
           </button>
           <button
             v-else
@@ -162,7 +162,7 @@
         class="flex items-center gap-2 text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-gray-300"
       >
         <Icon name="arrowLeft" size="sm" />
-        Back to registration
+        {{ t('auth.backToRegistration') placeholderplaceholder
       </button>
     </template>
   </AuthLayout>
@@ -177,8 +177,13 @@ import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore placeholder from '@/stores'
 import { getPublicSettings, sendVerifyCode placeholder from '@/api/auth'
+import { buildAuthErrorMessage placeholder from '@/utils/authError'
+import {
+  isRegistrationEmailSuffixAllowed,
+  normalizeRegistrationEmailSuffixWhitelist
+placeholder from '@/utils/registrationEmailPolicy'
 
-const { t placeholder = useI18n()
+const { t, locale placeholder = useI18n()
 
 // ==================== Router & Stores ====================
 
@@ -208,6 +213,7 @@ const hasRegisterData = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const siteName = ref<string>('Sub2API')
+const registrationEmailSuffixWhitelist = ref<string[]>([])
 
 // Turnstile for resend
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -244,6 +250,9 @@ onMounted(async () => {
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     siteName.value = settings.site_name || 'Sub2API'
+    registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
+      settings.registration_email_suffix_whitelist || []
+    )
   placeholder catch (error) {
     console.error('Failed to load public settings:', error)
   placeholder
@@ -291,12 +300,12 @@ placeholder
 
 function onTurnstileExpire(): void {
   resendTurnstileToken.value = ''
-  errors.value.turnstile = 'Verification expired, please try again'
+  errors.value.turnstile = t('auth.turnstileExpired')
 placeholder
 
 function onTurnstileError(): void {
   resendTurnstileToken.value = ''
-  errors.value.turnstile = 'Verification failed, please try again'
+  errors.value.turnstile = t('auth.turnstileFailed')
 placeholder
 
 // ==================== Send Code ====================
@@ -306,6 +315,12 @@ async function sendCode(): Promise<void> {
   errorMessage.value = ''
 
   try {
+    if (!isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
+      errorMessage.value = buildEmailSuffixNotAllowedMessage()
+      appStore.showError(errorMessage.value)
+      return
+    placeholder
+
     const response = await sendVerifyCode({
       email: email.value,
       // 优先使用重发时新获取的 token（因为初始 token 可能已被使用）
@@ -320,15 +335,9 @@ async function sendCode(): Promise<void> {
     showResendTurnstile.value = false
     resendTurnstileToken.value = ''
   placeholder catch (error: unknown) {
-    const err = error as { message?: string; response?: { data?: { detail?: string placeholder placeholder placeholder
-
-    if (err.response?.data?.detail) {
-      errorMessage.value = err.response.data.detail
-    placeholder else if (err.message) {
-      errorMessage.value = err.message
-    placeholder else {
-      errorMessage.value = 'Failed to send verification code. Please try again.'
-    placeholder
+    errorMessage.value = buildAuthErrorMessage(error, {
+      fallback: t('auth.sendCodeFailed')
+    placeholder)
 
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -347,7 +356,7 @@ async function handleResendCode(): Promise<void> {
 
   // If turnstile is enabled but no token yet, wait
   if (turnstileEnabled.value && !resendTurnstileToken.value) {
-    errors.value.turnstile = 'Please complete the verification'
+    errors.value.turnstile = t('auth.completeVerification')
     return
   placeholder
 
@@ -358,12 +367,12 @@ function validateForm(): boolean {
   errors.value.code = ''
 
   if (!verifyCode.value.trim()) {
-    errors.value.code = 'Verification code is required'
+    errors.value.code = t('auth.codeRequired')
     return false
   placeholder
 
   if (!/^\d{6placeholder$/.test(verifyCode.value.trim())) {
-    errors.value.code = 'Please enter a valid 6-digit code'
+    errors.value.code = t('auth.invalidCode')
     return false
   placeholder
 
@@ -380,6 +389,12 @@ async function handleVerify(): Promise<void> {
   isLoading.value = true
 
   try {
+    if (!isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
+      errorMessage.value = buildEmailSuffixNotAllowedMessage()
+      appStore.showError(errorMessage.value)
+      return
+    placeholder
+
     // Register with verification code
     await authStore.register({
       email: email.value,
@@ -394,20 +409,14 @@ async function handleVerify(): Promise<void> {
     sessionStorage.removeItem('register_data')
 
     // Show success toast
-    appStore.showSuccess('Account created successfully! Welcome to ' + siteName.value + '.')
+    appStore.showSuccess(t('auth.accountCreatedSuccess', { siteName: siteName.value placeholder))
 
     // Redirect to dashboard
     await router.push('/dashboard')
   placeholder catch (error: unknown) {
-    const err = error as { message?: string; response?: { data?: { detail?: string placeholder placeholder placeholder
-
-    if (err.response?.data?.detail) {
-      errorMessage.value = err.response.data.detail
-    placeholder else if (err.message) {
-      errorMessage.value = err.message
-    placeholder else {
-      errorMessage.value = 'Verification failed. Please try again.'
-    placeholder
+    errorMessage.value = buildAuthErrorMessage(error, {
+      fallback: t('auth.verifyFailed')
+    placeholder)
 
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -421,6 +430,19 @@ function handleBack(): void {
 
   // Go back to registration
   router.push('/register')
+placeholder
+
+function buildEmailSuffixNotAllowedMessage(): string {
+  const normalizedWhitelist = normalizeRegistrationEmailSuffixWhitelist(
+    registrationEmailSuffixWhitelist.value
+  )
+  if (normalizedWhitelist.length === 0) {
+    return t('auth.emailSuffixNotAllowed')
+  placeholder
+  const separator = String(locale.value || '').toLowerCase().startsWith('zh') ? '、' : ', '
+  return t('auth.emailSuffixNotAllowedWithAllowed', {
+    suffixes: normalizedWhitelist.join(separator)
+  placeholder)
 placeholder
 </script>
 

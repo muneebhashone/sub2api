@@ -54,6 +54,8 @@ type AccountRepository interface {
 	ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]Account, error)
 	ListSchedulableByPlatforms(ctx context.Context, platforms []string) ([]Account, error)
 	ListSchedulableByGroupIDAndPlatforms(ctx context.Context, groupID int64, platforms []string) ([]Account, error)
+	ListSchedulableUngroupedByPlatform(ctx context.Context, platform string) ([]Account, error)
+	ListSchedulableUngroupedByPlatforms(ctx context.Context, platforms []string) ([]Account, error)
 
 	SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error
 	SetModelRateLimit(ctx context.Context, id int64, scope string, resetAt time.Time) error
@@ -119,6 +121,10 @@ type AccountService struct {
 	groupRepo   GroupRepository
 placeholder
 
+type groupExistenceBatchChecker interface {
+	ExistsByIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
+placeholder
+
 // NewAccountService 创建账号服务实例
 func NewAccountService(accountRepo AccountRepository, groupRepo GroupRepository) *AccountService {
 	return &AccountService{
@@ -131,11 +137,8 @@ placeholder
 func (s *AccountService) Create(ctx context.Context, req CreateAccountRequest) (*Account, error) {
 	// 验证分组是否存在（如果指定了分组）
 	if len(req.GroupIDs) > 0 {
-		for _, groupID := range req.GroupIDs {
-			_, err := s.groupRepo.GetByID(ctx, groupID)
-			if err != nil {
-				return nil, fmt.Errorf("get group: %w", err)
-		placeholder
+		if err := s.validateGroupIDsExist(ctx, req.GroupIDs); err != nil {
+			return nil, err
 	placeholder
 placeholder
 
@@ -256,11 +259,8 @@ placeholder
 
 	// 先验证分组是否存在（在任何写操作之前）
 	if req.GroupIDs != nil {
-		for _, groupID := range *req.GroupIDs {
-			_, err := s.groupRepo.GetByID(ctx, groupID)
-			if err != nil {
-				return nil, fmt.Errorf("get group: %w", err)
-		placeholder
+		if err := s.validateGroupIDsExist(ctx, *req.GroupIDs); err != nil {
+			return nil, err
 	placeholder
 placeholder
 
@@ -297,6 +297,39 @@ placeholder
 		return fmt.Errorf("delete account: %w", err)
 placeholder
 
+	return nil
+placeholder
+
+func (s *AccountService) validateGroupIDsExist(ctx context.Context, groupIDs []int64) error {
+	if len(groupIDs) == 0 {
+		return nil
+placeholder
+	if s.groupRepo == nil {
+		return fmt.Errorf("group repository not configured")
+placeholder
+
+	if batchChecker, ok := s.groupRepo.(groupExistenceBatchChecker); ok {
+		existsByID, err := batchChecker.ExistsByIDs(ctx, groupIDs)
+		if err != nil {
+			return fmt.Errorf("check groups exists: %w", err)
+	placeholder
+		for _, groupID := range groupIDs {
+			if groupID <= 0 {
+				return fmt.Errorf("get group: %w", ErrGroupNotFound)
+		placeholder
+			if !existsByID[groupID] {
+				return fmt.Errorf("get group: %w", ErrGroupNotFound)
+		placeholder
+	placeholder
+		return nil
+placeholder
+
+	for _, groupID := range groupIDs {
+		_, err := s.groupRepo.GetByID(ctx, groupID)
+		if err != nil {
+			return fmt.Errorf("get group: %w", err)
+	placeholder
+placeholder
 	return nil
 placeholder
 

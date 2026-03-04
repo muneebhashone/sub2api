@@ -59,9 +59,11 @@ placeholder
 		return nil
 placeholder
 	return &AdminUser{
-		User:       *base,
-		Notes:      u.Notes,
-		GroupRates: u.GroupRates,
+		User:                  *base,
+		Notes:                 u.Notes,
+		GroupRates:            u.GroupRates,
+		SoraStorageQuotaBytes: u.SoraStorageQuotaBytes,
+		SoraStorageUsedBytes:  u.SoraStorageUsedBytes,
 placeholder
 placeholder
 
@@ -70,22 +72,31 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		return nil
 placeholder
 	return &APIKey{
-		ID:          k.ID,
-		UserID:      k.UserID,
-		Key:         k.Key,
-		Name:        k.Name,
-		GroupID:     k.GroupID,
-		Status:      k.Status,
-		IPWhitelist: k.IPWhitelist,
-		IPBlacklist: k.IPBlacklist,
-		LastUsedAt:  k.LastUsedAt,
-		Quota:       k.Quota,
-		QuotaUsed:   k.QuotaUsed,
-		ExpiresAt:   k.ExpiresAt,
-		CreatedAt:   k.CreatedAt,
-		UpdatedAt:   k.UpdatedAt,
-		User:        UserFromServiceShallow(k.User),
-		Group:       GroupFromServiceShallow(k.Group),
+		ID:            k.ID,
+		UserID:        k.UserID,
+		Key:           k.Key,
+		Name:          k.Name,
+		GroupID:       k.GroupID,
+		Status:        k.Status,
+		IPWhitelist:   k.IPWhitelist,
+		IPBlacklist:   k.IPBlacklist,
+		LastUsedAt:    k.LastUsedAt,
+		Quota:         k.Quota,
+		QuotaUsed:     k.QuotaUsed,
+		ExpiresAt:     k.ExpiresAt,
+		CreatedAt:     k.CreatedAt,
+		UpdatedAt:     k.UpdatedAt,
+		RateLimit5h:   k.RateLimit5h,
+		RateLimit1d:   k.RateLimit1d,
+		RateLimit7d:   k.RateLimit7d,
+		Usage5h:       k.Usage5h,
+		Usage1d:       k.Usage1d,
+		Usage7d:       k.Usage7d,
+		Window5hStart: k.Window5hStart,
+		Window1dStart: k.Window1dStart,
+		Window7dStart: k.Window7dStart,
+		User:          UserFromServiceShallow(k.User),
+		Group:         GroupFromServiceShallow(k.Group),
 placeholder
 placeholder
 
@@ -153,6 +164,7 @@ func groupFromServiceBase(g *service.Group) Group {
 		ClaudeCodeOnly:                  g.ClaudeCodeOnly,
 		FallbackGroupID:                 g.FallbackGroupID,
 		FallbackGroupIDOnInvalidRequest: g.FallbackGroupIDOnInvalidRequest,
+		SoraStorageQuotaBytes:           g.SoraStorageQuotaBytes,
 		CreatedAt:                       g.CreatedAt,
 		UpdatedAt:                       g.UpdatedAt,
 placeholder
@@ -206,6 +218,17 @@ placeholder
 	placeholder
 		if idleTimeout := a.GetSessionIdleTimeoutMinutes(); idleTimeout > 0 {
 			out.SessionIdleTimeoutMin = &idleTimeout
+	placeholder
+		if rpm := a.GetBaseRPM(); rpm > 0 {
+			out.BaseRPM = &rpm
+			strategy := a.GetRPMStrategy()
+			out.RPMStrategy = &strategy
+			buffer := a.GetRPMStickyBuffer()
+			out.RPMStickyBuffer = &buffer
+	placeholder
+		// 用户消息队列模式
+		if mode := a.GetUserMsgQueueMode(); mode != "" {
+			out.UserMsgQueueMode = &mode
 	placeholder
 		// TLS指纹伪装开关
 		if a.IsTLSFingerprintEnabled() {
@@ -284,7 +307,6 @@ placeholder
 		Host:      p.Host,
 		Port:      p.Port,
 		Username:  p.Username,
-		Password:  p.Password,
 		Status:    p.Status,
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
@@ -297,6 +319,51 @@ func ProxyWithAccountCountFromService(p *service.ProxyWithAccountCount) *ProxyWi
 placeholder
 	return &ProxyWithAccountCount{
 		Proxy:          *ProxyFromService(&p.Proxy),
+		AccountCount:   p.AccountCount,
+		LatencyMs:      p.LatencyMs,
+		LatencyStatus:  p.LatencyStatus,
+		LatencyMessage: p.LatencyMessage,
+		IPAddress:      p.IPAddress,
+		Country:        p.Country,
+		CountryCode:    p.CountryCode,
+		Region:         p.Region,
+		City:           p.City,
+		QualityStatus:  p.QualityStatus,
+		QualityScore:   p.QualityScore,
+		QualityGrade:   p.QualityGrade,
+		QualitySummary: p.QualitySummary,
+		QualityChecked: p.QualityChecked,
+placeholder
+placeholder
+
+// ProxyFromServiceAdmin converts a service Proxy to AdminProxy DTO for admin users.
+// It includes the password field - user-facing endpoints must not use this.
+func ProxyFromServiceAdmin(p *service.Proxy) *AdminProxy {
+	if p == nil {
+		return nil
+placeholder
+	base := ProxyFromService(p)
+	if base == nil {
+		return nil
+placeholder
+	return &AdminProxy{
+		Proxy:    *base,
+		Password: p.Password,
+placeholder
+placeholder
+
+// ProxyWithAccountCountFromServiceAdmin converts a service ProxyWithAccountCount to AdminProxyWithAccountCount DTO.
+// It includes the password field - user-facing endpoints must not use this.
+func ProxyWithAccountCountFromServiceAdmin(p *service.ProxyWithAccountCount) *AdminProxyWithAccountCount {
+	if p == nil {
+		return nil
+placeholder
+	admin := ProxyFromServiceAdmin(&p.Proxy)
+	if admin == nil {
+		return nil
+placeholder
+	return &AdminProxyWithAccountCount{
+		AdminProxy:     *admin,
 		AccountCount:   p.AccountCount,
 		LatencyMs:      p.LatencyMs,
 		LatencyStatus:  p.LatencyStatus,
@@ -386,6 +453,8 @@ placeholder
 
 func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 	// 普通用户 DTO：严禁包含管理员字段（例如 account_rate_multiplier、ip_address、account）。
+	requestType := l.EffectiveRequestType()
+	stream, openAIWSMode := service.ApplyLegacyRequestFields(requestType, l.Stream, l.OpenAIWSMode)
 	return UsageLog{
 		ID:                    l.ID,
 		UserID:                l.UserID,
@@ -410,7 +479,9 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		ActualCost:            l.ActualCost,
 		RateMultiplier:        l.RateMultiplier,
 		BillingType:           l.BillingType,
-		Stream:                l.Stream,
+		RequestType:           requestType.String(),
+		Stream:                stream,
+		OpenAIWSMode:          openAIWSMode,
 		DurationMs:            l.DurationMs,
 		FirstTokenMs:          l.FirstTokenMs,
 		ImageCount:            l.ImageCount,
@@ -465,6 +536,7 @@ placeholder
 			AccountID:   task.Filters.AccountID,
 			GroupID:     task.Filters.GroupID,
 			Model:       task.Filters.Model,
+			RequestType: requestTypeStringPtr(task.Filters.RequestType),
 			Stream:      task.Filters.Stream,
 			BillingType: task.Filters.BillingType,
 	placeholder,
@@ -478,6 +550,14 @@ placeholder
 		CreatedAt:    task.CreatedAt,
 		UpdatedAt:    task.UpdatedAt,
 placeholder
+placeholder
+
+func requestTypeStringPtr(requestType *int16) *string {
+	if requestType == nil {
+		return nil
+placeholder
+	value := service.RequestTypeFromInt16(*requestType).String()
+	return &value
 placeholder
 
 func SettingFromService(s *service.Setting) *Setting {

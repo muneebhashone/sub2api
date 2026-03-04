@@ -100,7 +100,10 @@ func TestAdminService_BulkUpdateAccounts_PartialFailureIDs(t *testing.T) {
 			2: errors.New("bind failed"),
 	placeholder,
 placeholder
-	svc := &adminServiceImpl{accountRepo: repoplaceholder
+	svc := &adminServiceImpl{
+		accountRepo: repo,
+		groupRepo:   &groupRepoStubForAdmin{getByID: &Group{ID: 10, Name: "g10"placeholderplaceholder,
+placeholder
 
 	groupIDs := []int64{10placeholder
 	schedulable := false
@@ -118,6 +121,22 @@ placeholder
 	require.ElementsMatch(t, []int64{1, 3placeholder, result.SuccessIDs)
 	require.ElementsMatch(t, []int64{2placeholder, result.FailedIDs)
 	require.Len(t, result.Results, 3)
+placeholder
+
+func TestAdminService_BulkUpdateAccounts_NilGroupRepoReturnsError(t *testing.T) {
+	repo := &accountRepoStubForBulkUpdate{placeholder
+	svc := &adminServiceImpl{accountRepo: repoplaceholder
+
+	groupIDs := []int64{10placeholder
+	input := &BulkUpdateAccountsInput{
+		AccountIDs: []int64{1placeholder,
+		GroupIDs:   &groupIDs,
+placeholder
+
+	result, err := svc.BulkUpdateAccounts(context.Background(), input)
+	require.Nil(t, result)
+placeholder
+	require.Contains(t, err.Error(), "group repository not configured")
 placeholder
 
 // TestAdminService_BulkUpdateAccounts_MixedChannelPreCheckBlocksOnExistingConflict verifies

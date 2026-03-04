@@ -125,6 +125,16 @@ func TotpEnabledAt(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldTotpEnabledAt, v))
 placeholder
 
+// SoraStorageQuotaBytes applies equality check predicate on the "sora_storage_quota_bytes" field. It's identical to SoraStorageQuotaBytesEQ.
+func SoraStorageQuotaBytes(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageUsedBytes applies equality check predicate on the "sora_storage_used_bytes" field. It's identical to SoraStorageUsedBytesEQ.
+func SoraStorageUsedBytes(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSoraStorageUsedBytes, v))
+placeholder
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCreatedAt, v))
@@ -858,6 +868,86 @@ placeholder
 // TotpEnabledAtNotNil applies the NotNil predicate on the "totp_enabled_at" field.
 func TotpEnabledAtNotNil() predicate.User {
 	return predicate.User(sql.FieldNotNull(FieldTotpEnabledAt))
+placeholder
+
+// SoraStorageQuotaBytesEQ applies the EQ predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageQuotaBytesNEQ applies the NEQ predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesNEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageQuotaBytesIn applies the In predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSoraStorageQuotaBytes, vs...))
+placeholder
+
+// SoraStorageQuotaBytesNotIn applies the NotIn predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesNotIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSoraStorageQuotaBytes, vs...))
+placeholder
+
+// SoraStorageQuotaBytesGT applies the GT predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesGT(v int64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageQuotaBytesGTE applies the GTE predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesGTE(v int64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageQuotaBytesLT applies the LT predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesLT(v int64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageQuotaBytesLTE applies the LTE predicate on the "sora_storage_quota_bytes" field.
+func SoraStorageQuotaBytesLTE(v int64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSoraStorageQuotaBytes, v))
+placeholder
+
+// SoraStorageUsedBytesEQ applies the EQ predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSoraStorageUsedBytes, v))
+placeholder
+
+// SoraStorageUsedBytesNEQ applies the NEQ predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesNEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSoraStorageUsedBytes, v))
+placeholder
+
+// SoraStorageUsedBytesIn applies the In predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldSoraStorageUsedBytes, vs...))
+placeholder
+
+// SoraStorageUsedBytesNotIn applies the NotIn predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesNotIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldSoraStorageUsedBytes, vs...))
+placeholder
+
+// SoraStorageUsedBytesGT applies the GT predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesGT(v int64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldSoraStorageUsedBytes, v))
+placeholder
+
+// SoraStorageUsedBytesGTE applies the GTE predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesGTE(v int64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldSoraStorageUsedBytes, v))
+placeholder
+
+// SoraStorageUsedBytesLT applies the LT predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesLT(v int64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldSoraStorageUsedBytes, v))
+placeholder
+
+// SoraStorageUsedBytesLTE applies the LTE predicate on the "sora_storage_used_bytes" field.
+func SoraStorageUsedBytesLTE(v int64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldSoraStorageUsedBytes, v))
 placeholder
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

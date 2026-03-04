@@ -6,7 +6,18 @@ import i18n, { initI18n placeholder from './i18n'
 import { useAppStore placeholder from '@/stores/app'
 import './style.css'
 
+function initThemeClass() {
+  const savedTheme = localStorage.getItem('theme')
+  const shouldUseDark =
+    savedTheme === 'dark' ||
+    (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  document.documentElement.classList.toggle('dark', shouldUseDark)
+placeholder
+
 async function bootstrap() {
+  // Apply theme class globally before app mount to keep all routes consistent.
+  initThemeClass()
+
   const app = createApp(App)
   const pinia = createPinia()
   app.use(pinia)

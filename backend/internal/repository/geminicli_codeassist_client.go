@@ -26,7 +26,11 @@ func (c *geminiCliCodeAssistClient) LoadCodeAssist(ctx context.Context, accessTo
 placeholder
 
 	var out geminicli.LoadCodeAssistResponse
-	resp, err := createGeminiCliReqClient(proxyURL).R().
+	client, err := createGeminiCliReqClient(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("create HTTP client: %w", err)
+placeholder
+	resp, err := client.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "Bearer "+accessToken).
 		SetHeader("Content-Type", "application/json").
@@ -66,7 +70,11 @@ placeholder
 	fmt.Printf("[CodeAssist] OnboardUser request body: %+v\n", reqBody)
 
 	var out geminicli.OnboardUserResponse
-	resp, err := createGeminiCliReqClient(proxyURL).R().
+	client, err := createGeminiCliReqClient(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("create HTTP client: %w", err)
+placeholder
+	resp, err := client.R().
 		SetContext(ctx).
 		SetHeader("Authorization", "Bearer "+accessToken).
 		SetHeader("Content-Type", "application/json").
@@ -98,7 +106,7 @@ placeholder
 	return &out, nil
 placeholder
 
-func createGeminiCliReqClient(proxyURL string) *req.Client {
+func createGeminiCliReqClient(proxyURL string) (*req.Client, error) {
 	return getSharedReqClient(reqClientOptions{
 		ProxyURL: proxyURL,
 		Timeout:  30 * time.Second,

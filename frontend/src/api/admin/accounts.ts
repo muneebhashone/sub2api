@@ -36,6 +36,7 @@ export async function list(
     status?: string
     group?: string
     search?: string
+    lite?: string
   placeholder,
   options?: {
     signal?: AbortSignal
@@ -66,6 +67,7 @@ export async function listWithEtag(
     type?: string
     status?: string
     search?: string
+    lite?: string
   placeholder,
   options?: {
     signal?: AbortSignal
@@ -369,6 +371,22 @@ export async function getTodayStats(id: number): Promise<WindowStats> {
   return data
 placeholder
 
+export interface BatchTodayStatsResponse {
+  stats: Record<string, WindowStats>
+placeholder
+
+/**
+ * 批量获取多个账号的今日统计
+ * @param accountIds - 账号 ID 列表
+ * @returns 以账号 ID（字符串）为键的统计映射
+ */
+export async function getBatchTodayStats(accountIds: number[]): Promise<BatchTodayStatsResponse> {
+  const { data placeholder = await apiClient.post<BatchTodayStatsResponse>('/admin/accounts/today-stats/batch', {
+    account_ids: accountIds
+  placeholder)
+  return data
+placeholder
+
 /**
  * Set account schedulable status
  * @param id - Account ID
@@ -556,6 +574,7 @@ export const accountsAPI = {
   clearError,
   getUsage,
   getTodayStats,
+  getBatchTodayStats,
   clearRateLimit,
   getTempUnschedulableStatus,
   resetTempUnschedulable,

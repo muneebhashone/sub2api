@@ -1,8 +1,10 @@
 package admin
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -186,7 +188,7 @@ placeholder
 
 // GetUsageTrend handles getting usage trend data
 // GET /api/v1/admin/dashboard/trend
-// Query params: start_date, end_date (YYYY-MM-DD), granularity (day/hour), user_id, api_key_id, model, account_id, group_id, stream, billing_type
+// Query params: start_date, end_date (YYYY-MM-DD), granularity (day/hour), user_id, api_key_id, model, account_id, group_id, request_type, stream, billing_type
 func (h *DashboardHandler) GetUsageTrend(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	granularity := c.DefaultQuery("granularity", "day")
@@ -194,6 +196,7 @@ func (h *DashboardHandler) GetUsageTrend(c *gin.Context) {
 	// Parse optional filter params
 	var userID, apiKeyID, accountID, groupID int64
 	var model string
+	var requestType *int16
 	var stream *bool
 	var billingType *int8
 
@@ -220,9 +223,20 @@ placeholder
 	if modelStr := c.Query("model"); modelStr != "" {
 		model = modelStr
 placeholder
-	if streamStr := c.Query("stream"); streamStr != "" {
+	if requestTypeStr := strings.TrimSpace(c.Query("request_type")); requestTypeStr != "" {
+		parsed, err := service.ParseUsageRequestType(requestTypeStr)
+		if err != nil {
+			response.BadRequest(c, err.Error())
+			return
+	placeholder
+		value := int16(parsed)
+		requestType = &value
+placeholder else if streamStr := c.Query("stream"); streamStr != "" {
 		if streamVal, err := strconv.ParseBool(streamStr); err == nil {
 			stream = &streamVal
+	placeholder else {
+			response.BadRequest(c, "Invalid stream value, use true or false")
+			return
 	placeholder
 placeholder
 	if billingTypeStr := c.Query("billing_type"); billingTypeStr != "" {
@@ -235,7 +249,7 @@ placeholder
 	placeholder
 placeholder
 
-	trend, err := h.dashboardService.GetUsageTrendWithFilters(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, stream, billingType)
+	trend, err := h.dashboardService.GetUsageTrendWithFilters(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, requestType, stream, billingType)
 	if err != nil {
 		response.Error(c, 500, "Failed to get usage trend")
 		return
@@ -251,12 +265,13 @@ placeholder
 
 // GetModelStats handles getting model usage statistics
 // GET /api/v1/admin/dashboard/models
-// Query params: start_date, end_date (YYYY-MM-DD), user_id, api_key_id, account_id, group_id, stream, billing_type
+// Query params: start_date, end_date (YYYY-MM-DD), user_id, api_key_id, account_id, group_id, request_type, stream, billing_type
 func (h *DashboardHandler) GetModelStats(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 
 	// Parse optional filter params
 	var userID, apiKeyID, accountID, groupID int64
+	var requestType *int16
 	var stream *bool
 	var billingType *int8
 
@@ -280,9 +295,20 @@ placeholder
 			groupID = id
 	placeholder
 placeholder
-	if streamStr := c.Query("stream"); streamStr != "" {
+	if requestTypeStr := strings.TrimSpace(c.Query("request_type")); requestTypeStr != "" {
+		parsed, err := service.ParseUsageRequestType(requestTypeStr)
+		if err != nil {
+			response.BadRequest(c, err.Error())
+			return
+	placeholder
+		value := int16(parsed)
+		requestType = &value
+placeholder else if streamStr := c.Query("stream"); streamStr != "" {
 		if streamVal, err := strconv.ParseBool(streamStr); err == nil {
 			stream = &streamVal
+	placeholder else {
+			response.BadRequest(c, "Invalid stream value, use true or false")
+			return
 	placeholder
 placeholder
 	if billingTypeStr := c.Query("billing_type"); billingTypeStr != "" {
@@ -295,7 +321,7 @@ placeholder
 	placeholder
 placeholder
 
-	stats, err := h.dashboardService.GetModelStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, stream, billingType)
+	stats, err := h.dashboardService.GetModelStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, billingType)
 	if err != nil {
 		response.Error(c, 500, "Failed to get model statistics")
 		return
@@ -310,11 +336,12 @@ placeholder
 
 // GetGroupStats handles getting group usage statistics
 // GET /api/v1/admin/dashboard/groups
-// Query params: start_date, end_date (YYYY-MM-DD), user_id, api_key_id, account_id, group_id, stream, billing_type
+// Query params: start_date, end_date (YYYY-MM-DD), user_id, api_key_id, account_id, group_id, request_type, stream, billing_type
 func (h *DashboardHandler) GetGroupStats(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 
 	var userID, apiKeyID, accountID, groupID int64
+	var requestType *int16
 	var stream *bool
 	var billingType *int8
 
@@ -338,9 +365,20 @@ placeholder
 			groupID = id
 	placeholder
 placeholder
-	if streamStr := c.Query("stream"); streamStr != "" {
+	if requestTypeStr := strings.TrimSpace(c.Query("request_type")); requestTypeStr != "" {
+		parsed, err := service.ParseUsageRequestType(requestTypeStr)
+		if err != nil {
+			response.BadRequest(c, err.Error())
+			return
+	placeholder
+		value := int16(parsed)
+		requestType = &value
+placeholder else if streamStr := c.Query("stream"); streamStr != "" {
 		if streamVal, err := strconv.ParseBool(streamStr); err == nil {
 			stream = &streamVal
+	placeholder else {
+			response.BadRequest(c, "Invalid stream value, use true or false")
+			return
 	placeholder
 placeholder
 	if billingTypeStr := c.Query("billing_type"); billingTypeStr != "" {
@@ -353,7 +391,7 @@ placeholder
 	placeholder
 placeholder
 
-	stats, err := h.dashboardService.GetGroupStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, stream, billingType)
+	stats, err := h.dashboardService.GetGroupStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, billingType)
 	if err != nil {
 		response.Error(c, 500, "Failed to get group statistics")
 		return
@@ -423,6 +461,9 @@ type BatchUsersUsageRequest struct {
 	UserIDs []int64 `json:"user_ids" binding:"required"`
 placeholder
 
+var dashboardBatchUsersUsageCache = newSnapshotCache(30 * time.Second)
+var dashboardBatchAPIKeysUsageCache = newSnapshotCache(30 * time.Second)
+
 // GetBatchUsersUsage handles getting usage stats for multiple users
 // POST /api/v1/admin/dashboard/users-usage
 func (h *DashboardHandler) GetBatchUsersUsage(c *gin.Context) {
@@ -432,18 +473,34 @@ func (h *DashboardHandler) GetBatchUsersUsage(c *gin.Context) {
 		return
 placeholder
 
-	if len(req.UserIDs) == 0 {
+	userIDs := normalizeInt64IDList(req.UserIDs)
+	if len(userIDs) == 0 {
 		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 
-	stats, err := h.dashboardService.GetBatchUserUsageStats(c.Request.Context(), req.UserIDs, time.Time{placeholder, time.Time{placeholder)
+	keyRaw, _ := json.Marshal(struct {
+		UserIDs []int64 `json:"user_ids"`
+placeholder{
+		UserIDs: userIDs,
+placeholder)
+	cacheKey := string(keyRaw)
+	if cached, ok := dashboardBatchUsersUsageCache.Get(cacheKey); ok {
+		c.Header("X-Snapshot-Cache", "hit")
+		response.Success(c, cached.Payload)
+		return
+placeholder
+
+	stats, err := h.dashboardService.GetBatchUserUsageStats(c.Request.Context(), userIDs, time.Time{placeholder, time.Time{placeholder)
 	if err != nil {
 		response.Error(c, 500, "Failed to get user usage stats")
 		return
 placeholder
 
-	response.Success(c, gin.H{"stats": statsplaceholder)
+	payload := gin.H{"stats": statsplaceholder
+	dashboardBatchUsersUsageCache.Set(cacheKey, payload)
+	c.Header("X-Snapshot-Cache", "miss")
+	response.Success(c, payload)
 placeholder
 
 // BatchAPIKeysUsageRequest represents the request body for batch api key usage stats
@@ -460,16 +517,32 @@ func (h *DashboardHandler) GetBatchAPIKeysUsage(c *gin.Context) {
 		return
 placeholder
 
-	if len(req.APIKeyIDs) == 0 {
+	apiKeyIDs := normalizeInt64IDList(req.APIKeyIDs)
+	if len(apiKeyIDs) == 0 {
 		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 
-	stats, err := h.dashboardService.GetBatchAPIKeyUsageStats(c.Request.Context(), req.APIKeyIDs, time.Time{placeholder, time.Time{placeholder)
+	keyRaw, _ := json.Marshal(struct {
+		APIKeyIDs []int64 `json:"api_key_ids"`
+placeholder{
+		APIKeyIDs: apiKeyIDs,
+placeholder)
+	cacheKey := string(keyRaw)
+	if cached, ok := dashboardBatchAPIKeysUsageCache.Get(cacheKey); ok {
+		c.Header("X-Snapshot-Cache", "hit")
+		response.Success(c, cached.Payload)
+		return
+placeholder
+
+	stats, err := h.dashboardService.GetBatchAPIKeyUsageStats(c.Request.Context(), apiKeyIDs, time.Time{placeholder, time.Time{placeholder)
 	if err != nil {
 		response.Error(c, 500, "Failed to get API key usage stats")
 		return
 placeholder
 
-	response.Success(c, gin.H{"stats": statsplaceholder)
+	payload := gin.H{"stats": statsplaceholder
+	dashboardBatchAPIKeysUsageCache.Set(cacheKey, payload)
+	c.Header("X-Snapshot-Cache", "miss")
+	response.Success(c, payload)
 placeholder

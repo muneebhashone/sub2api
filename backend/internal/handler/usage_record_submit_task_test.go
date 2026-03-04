@@ -61,6 +61,22 @@ func TestGatewayHandlerSubmitUsageRecordTask_NilTask(t *testing.T) {
 placeholder)
 placeholder
 
+func TestGatewayHandlerSubmitUsageRecordTask_WithoutPool_TaskPanicRecovered(t *testing.T) {
+	h := &GatewayHandler{placeholder
+	var called atomic.Bool
+
+	require.NotPanics(t, func() {
+		h.submitUsageRecordTask(func(ctx context.Context) {
+			panic("usage task panic")
+	placeholder)
+placeholder)
+
+	h.submitUsageRecordTask(func(ctx context.Context) {
+		called.Store(true)
+placeholder)
+	require.True(t, called.Load(), "panic 后后续任务应仍可执行")
+placeholder
+
 func TestOpenAIGatewayHandlerSubmitUsageRecordTask_WithPool(t *testing.T) {
 	pool := newUsageRecordTestPool(t)
 	h := &OpenAIGatewayHandler{usageRecordWorkerPool: poolplaceholder
@@ -98,6 +114,22 @@ func TestOpenAIGatewayHandlerSubmitUsageRecordTask_NilTask(t *testing.T) {
 placeholder)
 placeholder
 
+func TestOpenAIGatewayHandlerSubmitUsageRecordTask_WithoutPool_TaskPanicRecovered(t *testing.T) {
+	h := &OpenAIGatewayHandler{placeholder
+	var called atomic.Bool
+
+	require.NotPanics(t, func() {
+		h.submitUsageRecordTask(func(ctx context.Context) {
+			panic("usage task panic")
+	placeholder)
+placeholder)
+
+	h.submitUsageRecordTask(func(ctx context.Context) {
+		called.Store(true)
+placeholder)
+	require.True(t, called.Load(), "panic 后后续任务应仍可执行")
+placeholder
+
 func TestSoraGatewayHandlerSubmitUsageRecordTask_WithPool(t *testing.T) {
 	pool := newUsageRecordTestPool(t)
 	h := &SoraGatewayHandler{usageRecordWorkerPool: poolplaceholder
@@ -133,4 +165,20 @@ func TestSoraGatewayHandlerSubmitUsageRecordTask_NilTask(t *testing.T) {
 	require.NotPanics(t, func() {
 		h.submitUsageRecordTask(nil)
 placeholder)
+placeholder
+
+func TestSoraGatewayHandlerSubmitUsageRecordTask_WithoutPool_TaskPanicRecovered(t *testing.T) {
+	h := &SoraGatewayHandler{placeholder
+	var called atomic.Bool
+
+	require.NotPanics(t, func() {
+		h.submitUsageRecordTask(func(ctx context.Context) {
+			panic("usage task panic")
+	placeholder)
+placeholder)
+
+	h.submitUsageRecordTask(func(ctx context.Context) {
+		called.Store(true)
+placeholder)
+	require.True(t, called.Load(), "panic 后后续任务应仍可执行")
 placeholder

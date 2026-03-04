@@ -83,7 +83,7 @@ placeholder else {
 			AllowPrivateHosts:  s.allowPrivateHosts,
 	placeholder)
 		if err != nil {
-			client = &http.Client{Timeout: 30 * time.Secondplaceholder
+			return nil, fmt.Errorf("create http client failed: %w", err)
 	placeholder
 
 		resp, err = client.Do(req)

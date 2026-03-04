@@ -6,6 +6,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw placeholder from 'vue-router'
 import { useAuthStore placeholder from '@/stores/auth'
 import { useAppStore placeholder from '@/stores/app'
+import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 import { useNavigationLoadingState placeholder from '@/composables/useNavigationLoading'
 import { useRoutePrefetch placeholder from '@/composables/useRoutePrefetch'
 import { resolveDocumentTitle placeholder from './title'
@@ -191,6 +192,29 @@ const routes: RouteRecordRaw[] = [
       descriptionKey: 'purchase.description'
     placeholder
   placeholder,
+  {
+    path: '/sora',
+    name: 'Sora',
+    component: () => import('@/views/user/SoraView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Sora',
+      titleKey: 'sora.title',
+      descriptionKey: 'sora.description'
+    placeholder
+  placeholder,
+  {
+    path: '/custom/:id',
+    name: 'CustomPage',
+    component: () => import('@/views/user/CustomPageView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Custom Page',
+      titleKey: 'customPage.title',
+    placeholder
+  placeholder,
 
   // ==================== Admin Routes ====================
   {
@@ -318,6 +342,18 @@ const routes: RouteRecordRaw[] = [
     placeholder
   placeholder,
   {
+    path: '/admin/data-management',
+    name: 'AdminDataManagement',
+    component: () => import('@/views/admin/DataManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Data Management',
+      titleKey: 'admin.dataManagement.title',
+      descriptionKey: 'admin.dataManagement.description'
+    placeholder
+  placeholder,
+  {
     path: '/admin/settings',
     name: 'AdminSettings',
     component: () => import('@/views/admin/SettingsView.vue'),
@@ -393,7 +429,22 @@ router.beforeEach((to, _from, next) => {
 
   // Set page title
   const appStore = useAppStore()
-  document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
+  // For custom pages, use menu item label as document title
+  if (to.name === 'CustomPage') {
+    const id = to.params.id as string
+    const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
+    const adminSettingsStore = useAdminSettingsStore()
+    const menuItem = publicItems.find((item) => item.id === id)
+      ?? (authStore.isAdmin ? adminSettingsStore.customMenuItems.find((item) => item.id === id) : undefined)
+    if (menuItem?.label) {
+      const siteName = appStore.siteName || 'Sub2API'
+      document.title = `${menuItem.labelplaceholder - ${siteNameplaceholder`
+    placeholder else {
+      document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
+    placeholder
+  placeholder else {
+    document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
+  placeholder
 
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true

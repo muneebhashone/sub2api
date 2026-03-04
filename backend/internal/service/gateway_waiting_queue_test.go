@@ -105,12 +105,12 @@ func TestCalculateMaxWait_Scenarios(t *testing.T) {
 		concurrency int
 		expected    int
 placeholder{
-		{5, 25placeholder,   // 5 + 20
-		{10, 30placeholder,  // 10 + 20
-		{1, 21placeholder,   // 1 + 20
-		{0, 21placeholder,   // min(1) + 20
-		{-1, 21placeholder,  // min(1) + 20
-		{-10, 21placeholder, // min(1) + 20
+		{5, 25placeholder,    // 5 + 20
+		{10, 30placeholder,   // 10 + 20
+		{1, 21placeholder,    // 1 + 20
+		{0, 21placeholder,    // min(1) + 20
+		{-1, 21placeholder,   // min(1) + 20
+		{-10, 21placeholder,  // min(1) + 20
 		{100, 120placeholder, // 100 + 20
 placeholder
 	for _, tt := range tests {

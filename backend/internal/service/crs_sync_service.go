@@ -221,7 +221,7 @@ placeholder
 		AllowPrivateHosts:  s.cfg.Security.URLAllowlist.AllowPrivateHosts,
 placeholder)
 	if err != nil {
-		client = &http.Client{Timeout: 20 * time.Secondplaceholder
+		return nil, fmt.Errorf("create http client failed: %w", err)
 placeholder
 
 	adminToken, err := crsLogin(ctx, client, normalizedURL, username, password)
