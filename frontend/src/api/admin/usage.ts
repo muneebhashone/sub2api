@@ -75,6 +75,7 @@ placeholder
 
 export interface AdminUsageQueryParams extends UsageQueryParams {
   user_id?: number
+  exact_total?: boolean
 placeholder
 
 // ==================== API Functions ====================
