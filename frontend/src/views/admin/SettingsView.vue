@@ -324,6 +324,56 @@
               <Toggle v-model="form.email_verify_enabled" />
             </div>
 
+            <!-- Email Suffix Whitelist -->
+            <div class="border-t border-gray-100 pt-4 dark:border-dark-700">
+              <label class="font-medium text-gray-900 dark:text-white">{{
+                t('admin.settings.registration.emailSuffixWhitelist')
+              placeholderplaceholder</label>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.registration.emailSuffixWhitelistHint') placeholderplaceholder
+              </p>
+              <div
+                class="mt-3 rounded-lg border border-gray-300 bg-white p-2 dark:border-dark-500 dark:bg-dark-700"
+              >
+                <div class="flex flex-wrap items-center gap-2">
+                  <span
+                    v-for="suffix in registrationEmailSuffixWhitelistTags"
+                    :key="suffix"
+                    class="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs font-mono text-gray-700 dark:bg-dark-600 dark:text-gray-200"
+                  >
+                    <span class="text-gray-400 dark:text-gray-500">@</span>
+                    <span>{{ suffix placeholderplaceholder</span>
+                    <button
+                      type="button"
+                      class="rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-dark-500 dark:hover:text-white"
+                      @click="removeRegistrationEmailSuffixWhitelistTag(suffix)"
+                    >
+                      <Icon name="x" size="xs" class="h-3.5 w-3.5" :stroke-width="2" />
+                    </button>
+                  </span>
+
+                  <div
+                    class="flex min-w-[220px] flex-1 items-center gap-1 rounded border border-transparent px-2 py-1 focus-within:border-primary-300 dark:focus-within:border-primary-700"
+                  >
+                    <span class="font-mono text-sm text-gray-400 dark:text-gray-500">@</span>
+                    <input
+                      v-model="registrationEmailSuffixWhitelistDraft"
+                      type="text"
+                      class="w-full bg-transparent text-sm font-mono text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+                      :placeholder="t('admin.settings.registration.emailSuffixWhitelistPlaceholder')"
+                      @input="handleRegistrationEmailSuffixWhitelistDraftInput"
+                      @keydown="handleRegistrationEmailSuffixWhitelistDraftKeydown"
+                      @blur="commitRegistrationEmailSuffixWhitelistDraft"
+                      @paste="handleRegistrationEmailSuffixWhitelistPaste"
+                    />
+                  </div>
+                </div>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.registration.emailSuffixWhitelistInputHint') placeholderplaceholder
+              </p>
+            </div>
+
             <!-- Promo Code -->
             <div
               class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
@@ -1364,6 +1414,12 @@ import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { useAppStore placeholder from '@/stores'
 import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
+import {
+  isRegistrationEmailSuffixDomainValid,
+  normalizeRegistrationEmailSuffixDomain,
+  normalizeRegistrationEmailSuffixDomains,
+  parseRegistrationEmailSuffixWhitelistInput
+placeholder from '@/utils/registrationEmailPolicy'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -1375,6 +1431,8 @@ const saving = ref(false)
 const testingSmtp = ref(false)
 const sendingTestEmail = ref(false)
 const testEmailAddress = ref('')
+const registrationEmailSuffixWhitelistTags = ref<string[]>([])
+const registrationEmailSuffixWhitelistDraft = ref('')
 
 // Admin API Key 状态
 const adminApiKeyLoading = ref(true)
@@ -1414,6 +1472,7 @@ placeholder
 const form = reactive<SettingsForm>({
   registration_enabled: true,
   email_verify_enabled: false,
+  registration_email_suffix_whitelist: [],
   promo_code_enabled: true,
   invitation_code_enabled: false,
   password_reset_enabled: false,
@@ -1484,6 +1543,74 @@ const defaultSubscriptionGroupOptions = computed<DefaultSubscriptionGroupOption[
   placeholder))
 )
 
+const registrationEmailSuffixWhitelistSeparatorKeys = new Set([' ', ',', '，', 'Enter', 'Tab'])
+
+function removeRegistrationEmailSuffixWhitelistTag(suffix: string) {
+  registrationEmailSuffixWhitelistTags.value = registrationEmailSuffixWhitelistTags.value.filter(
+    (item) => item !== suffix
+  )
+placeholder
+
+function addRegistrationEmailSuffixWhitelistTag(raw: string) {
+  const suffix = normalizeRegistrationEmailSuffixDomain(raw)
+  if (
+    !isRegistrationEmailSuffixDomainValid(suffix) ||
+    registrationEmailSuffixWhitelistTags.value.includes(suffix)
+  ) {
+    return
+  placeholder
+  registrationEmailSuffixWhitelistTags.value = [
+    ...registrationEmailSuffixWhitelistTags.value,
+    suffix
+  ]
+placeholder
+
+function commitRegistrationEmailSuffixWhitelistDraft() {
+  if (!registrationEmailSuffixWhitelistDraft.value) {
+    return
+  placeholder
+  addRegistrationEmailSuffixWhitelistTag(registrationEmailSuffixWhitelistDraft.value)
+  registrationEmailSuffixWhitelistDraft.value = ''
+placeholder
+
+function handleRegistrationEmailSuffixWhitelistDraftInput() {
+  registrationEmailSuffixWhitelistDraft.value = normalizeRegistrationEmailSuffixDomain(
+    registrationEmailSuffixWhitelistDraft.value
+  )
+placeholder
+
+function handleRegistrationEmailSuffixWhitelistDraftKeydown(event: KeyboardEvent) {
+  if (event.isComposing) {
+    return
+  placeholder
+
+  if (registrationEmailSuffixWhitelistSeparatorKeys.has(event.key)) {
+    event.preventDefault()
+    commitRegistrationEmailSuffixWhitelistDraft()
+    return
+  placeholder
+
+  if (
+    event.key === 'Backspace' &&
+    !registrationEmailSuffixWhitelistDraft.value &&
+    registrationEmailSuffixWhitelistTags.value.length > 0
+  ) {
+    registrationEmailSuffixWhitelistTags.value.pop()
+  placeholder
+placeholder
+
+function handleRegistrationEmailSuffixWhitelistPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData('text') || ''
+  if (!text.trim()) {
+    return
+  placeholder
+  event.preventDefault()
+  const tokens = parseRegistrationEmailSuffixWhitelistInput(text)
+  for (const token of tokens) {
+    addRegistrationEmailSuffixWhitelistTag(token)
+  placeholder
+placeholder
+
 // LinuxDo OAuth redirect URL suggestion
 const linuxdoRedirectUrlSuggestion = computed(() => {
   if (typeof window === 'undefined') return ''
@@ -1546,6 +1673,10 @@ async function loadSettings() {
             validity_days: item.validity_days
           placeholder))
       : []
+    registrationEmailSuffixWhitelistTags.value = normalizeRegistrationEmailSuffixDomains(
+      settings.registration_email_suffix_whitelist
+    )
+    registrationEmailSuffixWhitelistDraft.value = ''
     form.smtp_password = ''
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
@@ -1615,6 +1746,9 @@ async function saveSettings() {
     const payload: UpdateSettingsRequest = {
       registration_enabled: form.registration_enabled,
       email_verify_enabled: form.email_verify_enabled,
+      registration_email_suffix_whitelist: registrationEmailSuffixWhitelistTags.value.map(
+        (suffix) => `@${suffixplaceholder`
+      ),
       promo_code_enabled: form.promo_code_enabled,
       invitation_code_enabled: form.invitation_code_enabled,
       password_reset_enabled: form.password_reset_enabled,
@@ -1660,6 +1794,10 @@ async function saveSettings() {
     placeholder
     const updated = await adminAPI.settings.updateSettings(payload)
     Object.assign(form, updated)
+    registrationEmailSuffixWhitelistTags.value = normalizeRegistrationEmailSuffixDomains(
+      updated.registration_email_suffix_whitelist
+    )
+    registrationEmailSuffixWhitelistDraft.value = ''
     form.smtp_password = ''
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''

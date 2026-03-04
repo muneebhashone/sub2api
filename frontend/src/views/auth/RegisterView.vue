@@ -293,8 +293,13 @@ import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import { useAuthStore, useAppStore placeholder from '@/stores'
 import { getPublicSettings, validatePromoCode, validateInvitationCode placeholder from '@/api/auth'
+import { buildAuthErrorMessage placeholder from '@/utils/authError'
+import {
+  isRegistrationEmailSuffixAllowed,
+  normalizeRegistrationEmailSuffixWhitelist
+placeholder from '@/utils/registrationEmailPolicy'
 
-const { t placeholder = useI18n()
+const { t, locale placeholder = useI18n()
 
 // ==================== Router & Stores ====================
 
@@ -319,6 +324,7 @@ const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
 const siteName = ref<string>('Sub2API')
 const linuxdoOAuthEnabled = ref<boolean>(false)
+const registrationEmailSuffixWhitelist = ref<string[]>([])
 
 // Turnstile
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -370,6 +376,9 @@ onMounted(async () => {
     turnstileSiteKey.value = settings.turnstile_site_key || ''
     siteName.value = settings.site_name || 'Sub2API'
     linuxdoOAuthEnabled.value = settings.linuxdo_oauth_enabled
+    registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
+      settings.registration_email_suffix_whitelist || []
+    )
 
     // Read promo code from URL parameter only if promo code is enabled
     if (promoCodeEnabled.value) {
@@ -557,6 +566,19 @@ function validateEmail(email: string): boolean {
   return emailRegex.test(email)
 placeholder
 
+function buildEmailSuffixNotAllowedMessage(): string {
+  const normalizedWhitelist = normalizeRegistrationEmailSuffixWhitelist(
+    registrationEmailSuffixWhitelist.value
+  )
+  if (normalizedWhitelist.length === 0) {
+    return t('auth.emailSuffixNotAllowed')
+  placeholder
+  const separator = String(locale.value || '').toLowerCase().startsWith('zh') ? '、' : ', '
+  return t('auth.emailSuffixNotAllowedWithAllowed', {
+    suffixes: normalizedWhitelist.join(separator)
+  placeholder)
+placeholder
+
 function validateForm(): boolean {
   // Reset errors
   errors.email = ''
@@ -572,6 +594,11 @@ function validateForm(): boolean {
     isValid = false
   placeholder else if (!validateEmail(formData.email)) {
     errors.email = t('auth.invalidEmail')
+    isValid = false
+  placeholder else if (
+    !isRegistrationEmailSuffixAllowed(formData.email, registrationEmailSuffixWhitelist.value)
+  ) {
+    errors.email = buildEmailSuffixNotAllowedMessage()
     isValid = false
   placeholder
 
@@ -694,15 +721,9 @@ async function handleRegister(): Promise<void> {
     placeholder
 
     // Handle registration error
-    const err = error as { message?: string; response?: { data?: { detail?: string placeholder placeholder placeholder
-
-    if (err.response?.data?.detail) {
-      errorMessage.value = err.response.data.detail
-    placeholder else if (err.message) {
-      errorMessage.value = err.message
-    placeholder else {
-      errorMessage.value = t('auth.registrationFailed')
-    placeholder
+    errorMessage.value = buildAuthErrorMessage(error, {
+      fallback: t('auth.registrationFailed')
+    placeholder)
 
     // Also show error toast
     appStore.showError(errorMessage.value)
