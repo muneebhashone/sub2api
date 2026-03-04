@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,8 +14,14 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/cespare/xxhash/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
+
+// 编译期接口断言
+var _ AccountRepository = (*stubOpenAIAccountRepo)(nil)
+var _ GatewayCache = (*stubGatewayCache)(nil)
 
 type stubOpenAIAccountRepo struct {
 	AccountRepository
@@ -48,6 +55,10 @@ func (r stubOpenAIAccountRepo) ListSchedulableByPlatform(ctx context.Context, pl
 	placeholder
 placeholder
 	return result, nil
+placeholder
+
+func (r stubOpenAIAccountRepo) ListSchedulableUngroupedByPlatform(ctx context.Context, platform string) ([]Account, error) {
+	return r.ListSchedulableByPlatform(ctx, platform)
 placeholder
 
 type stubConcurrencyCache struct {
@@ -124,17 +135,19 @@ func TestOpenAIGatewayService_GenerateSessionHash_Priority(t *testing.T) {
 
 	svc := &OpenAIGatewayService{placeholder
 
+	bodyWithKey := []byte(`{"prompt_cache_key":"ses_aaa"placeholder`)
+
 	// 1) session_id header wins
 	c.Request.Header.Set("session_id", "sess-123")
 	c.Request.Header.Set("conversation_id", "conv-456")
-	h1 := svc.GenerateSessionHash(c, map[string]any{"prompt_cache_key": "ses_aaa"placeholder)
+	h1 := svc.GenerateSessionHash(c, bodyWithKey)
 	if h1 == "" {
 		t.Fatalf("expected non-empty hash")
 placeholder
 
 	// 2) conversation_id used when session_id absent
 	c.Request.Header.Del("session_id")
-	h2 := svc.GenerateSessionHash(c, map[string]any{"prompt_cache_key": "ses_aaa"placeholder)
+	h2 := svc.GenerateSessionHash(c, bodyWithKey)
 	if h2 == "" {
 		t.Fatalf("expected non-empty hash")
 placeholder
@@ -144,7 +157,7 @@ placeholder
 
 	// 3) prompt_cache_key used when both headers absent
 	c.Request.Header.Del("conversation_id")
-	h3 := svc.GenerateSessionHash(c, map[string]any{"prompt_cache_key": "ses_aaa"placeholder)
+	h3 := svc.GenerateSessionHash(c, bodyWithKey)
 	if h3 == "" {
 		t.Fatalf("expected non-empty hash")
 placeholder
@@ -153,10 +166,58 @@ placeholder
 placeholder
 
 	// 4) empty when no signals
-	h4 := svc.GenerateSessionHash(c, map[string]any{placeholder)
+	h4 := svc.GenerateSessionHash(c, []byte(`{placeholder`))
 	if h4 != "" {
 		t.Fatalf("expected empty hash when no signals")
 placeholder
+placeholder
+
+func TestOpenAIGatewayService_GenerateSessionHash_UsesXXHash64(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+
+	c.Request.Header.Set("session_id", "sess-fixed-value")
+	svc := &OpenAIGatewayService{placeholder
+
+	got := svc.GenerateSessionHash(c, nil)
+	want := fmt.Sprintf("%016x", xxhash.Sum64String("sess-fixed-value"))
+	require.Equal(t, want, got)
+placeholder
+
+func TestOpenAIGatewayService_GenerateSessionHash_AttachesLegacyHashToContext(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+
+	c.Request.Header.Set("session_id", "sess-legacy-check")
+	svc := &OpenAIGatewayService{placeholder
+
+	sessionHash := svc.GenerateSessionHash(c, nil)
+	require.NotEmpty(t, sessionHash)
+	require.NotNil(t, c.Request)
+	require.NotNil(t, c.Request.Context())
+	require.NotEmpty(t, openAILegacySessionHashFromContext(c.Request.Context()))
+placeholder
+
+func TestOpenAIGatewayService_GenerateSessionHashWithFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+
+	svc := &OpenAIGatewayService{placeholder
+	seed := "openai_ws_ingress:9:100:200"
+
+	got := svc.GenerateSessionHashWithFallback(c, []byte(`{placeholder`), seed)
+	want := fmt.Sprintf("%016x", xxhash.Sum64String(seed))
+	require.Equal(t, want, got)
+	require.NotEmpty(t, openAILegacySessionHashFromContext(c.Request.Context()))
+
+	empty := svc.GenerateSessionHashWithFallback(c, []byte(`{placeholder`), "   ")
+	require.Equal(t, "", empty)
 placeholder
 
 func (c stubConcurrencyCache) GetAccountWaitingCount(ctx context.Context, accountID int64) (int, error) {
@@ -1066,6 +1127,43 @@ placeholder
 placeholder
 placeholder
 
+func TestOpenAIStreamingReuseScannerBufferAndStillWorks(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	pr, pw := io.Pipe()
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       pr,
+		Header:     http.Header{placeholder,
+placeholder
+
+	go func() {
+		defer func() { _ = pw.Close() placeholder()
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":1,\"output_tokens\":2,\"input_tokens_details\":{\"cached_tokens\":3placeholderplaceholderplaceholderplaceholder\n\n"))
+placeholder()
+
+	result, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model")
+	_ = pr.Close()
+placeholder
+	require.NotNil(t, result)
+	require.NotNil(t, result.usage)
+	require.Equal(t, 1, result.usage.InputTokens)
+	require.Equal(t, 2, result.usage.OutputTokens)
+	require.Equal(t, 3, result.usage.CacheReadInputTokens)
+placeholder
+
 func TestOpenAIInvalidBaseURLWhenAllowlistDisabled(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := &config.Config{
@@ -1148,4 +1246,333 @@ placeholder
 	if _, err := svc.validateUpstreamBaseURL("https://evil.com"); err == nil {
 		t.Fatalf("expected non-allowlisted host to fail")
 placeholder
+placeholder
+
+// ==================== P1-08 修复：model 替换性能优化测试 ====================
+
+func TestReplaceModelInSSELine(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+
+	tests := []struct {
+		name     string
+		line     string
+		from     string
+		to       string
+		expected string
+placeholder{
+		{
+			name:     "顶层 model 字段替换",
+			line:     `data: {"id":"chatcmpl-123","model":"gpt-4o","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "my-custom-model",
+			expected: `data: {"id":"chatcmpl-123","model":"my-custom-model","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "嵌套 response.model 替换",
+			line:     `data: {"type":"response","response":{"id":"resp-1","model":"gpt-4o","output":[]placeholderplaceholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"type":"response","response":{"id":"resp-1","model":"my-model","output":[]placeholderplaceholder`,
+	placeholder,
+		{
+			name:     "model 不匹配时不替换",
+			line:     `data: {"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "无 model 字段时不替换",
+			line:     `data: {"id":"chatcmpl-123","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"id":"chatcmpl-123","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "空 data 行",
+			line:     `data: `,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: `,
+	placeholder,
+		{
+			name:     "[DONE] 行",
+			line:     `data: [DONE]`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: [DONE]`,
+	placeholder,
+		{
+			name:     "非 data: 前缀行",
+			line:     `event: message`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `event: message`,
+	placeholder,
+		{
+			name:     "非法 JSON 不替换",
+			line:     `data: {invalid jsonplaceholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {invalid jsonplaceholder`,
+	placeholder,
+		{
+			name:     "无空格 data: 格式",
+			line:     `data:{"id":"x","model":"gpt-4o"placeholder`,
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: `data: {"id":"x","model":"my-model"placeholder`,
+	placeholder,
+		{
+			name:     "model 名含特殊字符",
+			line:     `data: {"model":"org/model-v2.1-beta"placeholder`,
+			from:     "org/model-v2.1-beta",
+			to:       "custom/alias",
+			expected: `data: {"model":"custom/alias"placeholder`,
+	placeholder,
+		{
+			name:     "空行",
+			line:     "",
+			from:     "gpt-4o",
+			to:       "my-model",
+			expected: "",
+	placeholder,
+		{
+			name:     "保持其他字段不变",
+			line:     `data: {"id":"abc","object":"chat.completion.chunk","model":"gpt-4o","created":1234567890,"choices":[{"index":0,"delta":{"content":"hi"placeholderplaceholder]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `data: {"id":"abc","object":"chat.completion.chunk","model":"alias","created":1234567890,"choices":[{"index":0,"delta":{"content":"hi"placeholderplaceholder]placeholder`,
+	placeholder,
+		{
+			name:     "顶层优先于嵌套：同时存在两个 model",
+			line:     `data: {"model":"gpt-4o","response":{"model":"gpt-4o"placeholderplaceholder`,
+			from:     "gpt-4o",
+			to:       "replaced",
+			expected: `data: {"model":"replaced","response":{"model":"gpt-4o"placeholderplaceholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.replaceModelInSSELine(tt.line, tt.from, tt.to)
+			require.Equal(t, tt.expected, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestReplaceModelInSSEBody(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+
+	tests := []struct {
+		name     string
+		body     string
+		from     string
+		to       string
+		expected string
+placeholder{
+		{
+			name:     "多行 SSE body 替换",
+			body:     "data: {\"model\":\"gpt-4o\",\"choices\":[]placeholder\n\ndata: {\"model\":\"gpt-4o\",\"choices\":[{\"delta\":{\"content\":\"hi\"placeholderplaceholder]placeholder\n\ndata: [DONE]\n",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "data: {\"model\":\"alias\",\"choices\":[]placeholder\n\ndata: {\"model\":\"alias\",\"choices\":[{\"delta\":{\"content\":\"hi\"placeholderplaceholder]placeholder\n\ndata: [DONE]\n",
+	placeholder,
+		{
+			name:     "无需替换的 body",
+			body:     "data: {\"model\":\"gpt-3.5-turbo\"placeholder\n\ndata: [DONE]\n",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "data: {\"model\":\"gpt-3.5-turbo\"placeholder\n\ndata: [DONE]\n",
+	placeholder,
+		{
+			name:     "混合 event 和 data 行",
+			body:     "event: message\ndata: {\"model\":\"gpt-4o\"placeholder\n\n",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "event: message\ndata: {\"model\":\"alias\"placeholder\n\n",
+	placeholder,
+		{
+			name:     "空 body",
+			body:     "",
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: "",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.replaceModelInSSEBody(tt.body, tt.from, tt.to)
+			require.Equal(t, tt.expected, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestReplaceModelInResponseBody(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+
+	tests := []struct {
+		name     string
+		body     string
+		from     string
+		to       string
+		expected string
+placeholder{
+		{
+			name:     "替换顶层 model",
+			body:     `{"id":"chatcmpl-123","model":"gpt-4o","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"id":"chatcmpl-123","model":"alias","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "model 不匹配不替换",
+			body:     `{"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"id":"chatcmpl-123","model":"gpt-3.5-turbo","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "无 model 字段不替换",
+			body:     `{"id":"chatcmpl-123","choices":[]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"id":"chatcmpl-123","choices":[]placeholder`,
+	placeholder,
+		{
+			name:     "非法 JSON 返回原值",
+			body:     `not json`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `not json`,
+	placeholder,
+		{
+			name:     "空 body 返回原值",
+			body:     ``,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: ``,
+	placeholder,
+		{
+			name:     "保持嵌套结构不变",
+			body:     `{"model":"gpt-4o","usage":{"prompt_tokens":10,"completion_tokens":20placeholder,"choices":[{"message":{"role":"assistant","content":"hello"placeholderplaceholder]placeholder`,
+			from:     "gpt-4o",
+			to:       "alias",
+			expected: `{"model":"alias","usage":{"prompt_tokens":10,"completion_tokens":20placeholder,"choices":[{"message":{"role":"assistant","content":"hello"placeholderplaceholder]placeholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := svc.replaceModelInResponseBody([]byte(tt.body), tt.from, tt.to)
+			require.Equal(t, tt.expected, string(got))
+	placeholder)
+placeholder
+placeholder
+
+func TestExtractOpenAISSEDataLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		wantData string
+		wantOK   bool
+placeholder{
+		{name: "标准格式", line: `data: {"type":"x"placeholder`, wantData: `{"type":"x"placeholder`, wantOK: trueplaceholder,
+		{name: "无空格格式", line: `data:{"type":"x"placeholder`, wantData: `{"type":"x"placeholder`, wantOK: trueplaceholder,
+		{name: "纯空数据", line: `data:   `, wantData: ``, wantOK: trueplaceholder,
+		{name: "非 data 行", line: `event: message`, wantData: ``, wantOK: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := extractOpenAISSEDataLine(tt.line)
+			require.Equal(t, tt.wantOK, ok)
+			require.Equal(t, tt.wantData, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestParseSSEUsage_SelectiveParsing(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	usage := &OpenAIUsage{InputTokens: 9, OutputTokens: 8, CacheReadInputTokens: 7placeholder
+
+	// 非 completed 事件，不应覆盖 usage
+	svc.parseSSEUsage(`{"type":"response.in_progress","response":{"usage":{"input_tokens":1,"output_tokens":2placeholderplaceholderplaceholder`, usage)
+	require.Equal(t, 9, usage.InputTokens)
+	require.Equal(t, 8, usage.OutputTokens)
+	require.Equal(t, 7, usage.CacheReadInputTokens)
+
+	// completed 事件，应提取 usage
+	svc.parseSSEUsage(`{"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":5,"input_tokens_details":{"cached_tokens":2placeholderplaceholderplaceholderplaceholder`, usage)
+	require.Equal(t, 3, usage.InputTokens)
+	require.Equal(t, 5, usage.OutputTokens)
+	require.Equal(t, 2, usage.CacheReadInputTokens)
+placeholder
+
+func TestExtractCodexFinalResponse_SampleReplay(t *testing.T) {
+	body := strings.Join([]string{
+		`event: message`,
+		`data: {"type":"response.in_progress","response":{"id":"resp_1"placeholderplaceholder`,
+		`data: {"type":"response.completed","response":{"id":"resp_1","model":"gpt-4o","usage":{"input_tokens":11,"output_tokens":22,"input_tokens_details":{"cached_tokens":3placeholderplaceholderplaceholderplaceholder`,
+		`data: [DONE]`,
+placeholder, "\n")
+
+	finalResp, ok := extractCodexFinalResponse(body)
+	require.True(t, ok)
+	require.Contains(t, string(finalResp), `"id":"resp_1"`)
+	require.Contains(t, string(finalResp), `"input_tokens":11`)
+placeholder
+
+func TestHandleOAuthSSEToJSON_CompletedEventReturnsJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+placeholder
+	body := []byte(strings.Join([]string{
+		`data: {"type":"response.in_progress","response":{"id":"resp_2"placeholderplaceholder`,
+		`data: {"type":"response.completed","response":{"id":"resp_2","model":"gpt-4o","usage":{"input_tokens":7,"output_tokens":9,"input_tokens_details":{"cached_tokens":1placeholderplaceholderplaceholderplaceholder`,
+		`data: [DONE]`,
+placeholder, "\n"))
+
+	usage, err := svc.handleOAuthSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+placeholder
+	require.NotNil(t, usage)
+	require.Equal(t, 7, usage.InputTokens)
+	require.Equal(t, 9, usage.OutputTokens)
+	require.Equal(t, 1, usage.CacheReadInputTokens)
+	// Header 可能由上游 Content-Type 透传；关键是 body 已转换为最终 JSON 响应。
+	require.NotContains(t, rec.Body.String(), "event:")
+	require.Contains(t, rec.Body.String(), `"id":"resp_2"`)
+	require.NotContains(t, rec.Body.String(), "data:")
+placeholder
+
+func TestHandleOAuthSSEToJSON_NoFinalResponseKeepsSSEBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+placeholder
+	body := []byte(strings.Join([]string{
+		`data: {"type":"response.in_progress","response":{"id":"resp_3"placeholderplaceholder`,
+		`data: [DONE]`,
+placeholder, "\n"))
+
+	usage, err := svc.handleOAuthSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+placeholder
+	require.NotNil(t, usage)
+	require.Equal(t, 0, usage.InputTokens)
+	require.Contains(t, rec.Header().Get("Content-Type"), "text/event-stream")
+	require.Contains(t, rec.Body.String(), `data: {"type":"response.in_progress"`)
 placeholder

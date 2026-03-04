@@ -7,6 +7,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/ent"
@@ -67,28 +68,36 @@ func provideCleanup(
 	opsAlertEvaluator *service.OpsAlertEvaluatorService,
 	opsCleanup *service.OpsCleanupService,
 	opsScheduledReport *service.OpsScheduledReportService,
+	opsSystemLogSink *service.OpsSystemLogSink,
+	soraMediaCleanup *service.SoraMediaCleanupService,
 	schedulerSnapshot *service.SchedulerSnapshotService,
 	tokenRefresh *service.TokenRefreshService,
 	accountExpiry *service.AccountExpiryService,
 	subscriptionExpiry *service.SubscriptionExpiryService,
 	usageCleanup *service.UsageCleanupService,
+	idempotencyCleanup *service.IdempotencyCleanupService,
 	pricing *service.PricingService,
 	emailQueue *service.EmailQueueService,
 	billingCache *service.BillingCacheService,
+	usageRecordWorkerPool *service.UsageRecordWorkerPool,
+	subscriptionService *service.SubscriptionService,
 	oauth *service.OAuthService,
 	openaiOAuth *service.OpenAIOAuthService,
 	geminiOAuth *service.GeminiOAuthService,
 	antigravityOAuth *service.AntigravityOAuthService,
+	openAIGateway *service.OpenAIGatewayService,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		// Cleanup steps in reverse dependency order
-		cleanupSteps := []struct {
+		type cleanupStep struct {
 			name string
 			fn   func() error
-	placeholder{
+	placeholder
+
+		// 应用层清理步骤可并行执行，基础设施资源（Redis/Ent）最后按顺序关闭。
+		parallelSteps := []cleanupStep{
 			{"OpsScheduledReportService", func() error {
 				if opsScheduledReport != nil {
 					opsScheduledReport.Stop()
@@ -98,6 +107,18 @@ func provideCleanup(
 			{"OpsCleanupService", func() error {
 				if opsCleanup != nil {
 					opsCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"OpsSystemLogSink", func() error {
+				if opsSystemLogSink != nil {
+					opsSystemLogSink.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"SoraMediaCleanupService", func() error {
+				if soraMediaCleanup != nil {
+					soraMediaCleanup.Stop()
 			placeholder
 				return nil
 	placeholder
@@ -131,6 +152,12 @@ func provideCleanup(
 			placeholder
 				return nil
 	placeholder
+			{"IdempotencyCleanupService", func() error {
+				if idempotencyCleanup != nil {
+					idempotencyCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
 			{"TokenRefreshService", func() error {
 				tokenRefresh.Stop()
 				return nil
@@ -143,6 +170,12 @@ func provideCleanup(
 				subscriptionExpiry.Stop()
 				return nil
 	placeholder
+			{"SubscriptionService", func() error {
+				if subscriptionService != nil {
+					subscriptionService.Stop()
+			placeholder
+				return nil
+	placeholder
 			{"PricingService", func() error {
 				pricing.Stop()
 				return nil
@@ -153,6 +186,12 @@ func provideCleanup(
 	placeholder
 			{"BillingCacheService", func() error {
 				billingCache.Stop()
+				return nil
+	placeholder
+			{"UsageRecordWorkerPool", func() error {
+				if usageRecordWorkerPool != nil {
+					usageRecordWorkerPool.Stop()
+			placeholder
 				return nil
 	placeholder
 			{"OAuthService", func() error {
@@ -171,22 +210,59 @@ func provideCleanup(
 				antigravityOAuth.Stop()
 				return nil
 	placeholder
+			{"OpenAIWSPool", func() error {
+				if openAIGateway != nil {
+					openAIGateway.CloseOpenAIWSPool()
+			placeholder
+				return nil
+	placeholder
+	placeholder
+
+		infraSteps := []cleanupStep{
 			{"Redis", func() error {
+				if rdb == nil {
+					return nil
+			placeholder
 				return rdb.Close()
 	placeholder
 			{"Ent", func() error {
+				if entClient == nil {
+					return nil
+			placeholder
 				return entClient.Close()
 	placeholder
 	placeholder
 
-		for _, step := range cleanupSteps {
-			if err := step.fn(); err != nil {
-				log.Printf("[Cleanup] %s failed: %v", step.name, err)
-				// Continue with remaining cleanup steps even if one fails
-		placeholder else {
+		runParallel := func(steps []cleanupStep) {
+			var wg sync.WaitGroup
+			for i := range steps {
+				step := steps[i]
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					if err := step.fn(); err != nil {
+						log.Printf("[Cleanup] %s failed: %v", step.name, err)
+						return
+				placeholder
+					log.Printf("[Cleanup] %s succeeded", step.name)
+			placeholder()
+		placeholder
+			wg.Wait()
+	placeholder
+
+		runSequential := func(steps []cleanupStep) {
+			for i := range steps {
+				step := steps[i]
+				if err := step.fn(); err != nil {
+					log.Printf("[Cleanup] %s failed: %v", step.name, err)
+					continue
+			placeholder
 				log.Printf("[Cleanup] %s succeeded", step.name)
 		placeholder
 	placeholder
+
+		runParallel(parallelSteps)
+		runSequential(infraSteps)
 
 		// Check if context timed out
 		select {

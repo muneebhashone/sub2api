@@ -77,6 +77,11 @@ placeholder
 func (m *mockAccountRepoForPlatform) GetByCRSAccountID(ctx context.Context, crsAccountID string) (*Account, error) {
 	return nil, nil
 placeholder
+
+func (m *mockAccountRepoForPlatform) FindByExtraField(ctx context.Context, key string, value any) ([]Account, error) {
+	return nil, nil
+placeholder
+
 func (m *mockAccountRepoForPlatform) ListCRSAccountIDs(ctx context.Context) (map[string]int64, error) {
 	return nil, nil
 placeholder
@@ -140,6 +145,12 @@ placeholder
 	return result, nil
 placeholder
 func (m *mockAccountRepoForPlatform) ListSchedulableByGroupIDAndPlatforms(ctx context.Context, groupID int64, platforms []string) ([]Account, error) {
+	return m.ListSchedulableByPlatforms(ctx, platforms)
+placeholder
+func (m *mockAccountRepoForPlatform) ListSchedulableUngroupedByPlatform(ctx context.Context, platform string) ([]Account, error) {
+	return m.ListSchedulableByPlatform(ctx, platform)
+placeholder
+func (m *mockAccountRepoForPlatform) ListSchedulableUngroupedByPlatforms(ctx context.Context, platforms []string) ([]Account, error) {
 	return m.ListSchedulableByPlatforms(ctx, platforms)
 placeholder
 func (m *mockAccountRepoForPlatform) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
@@ -890,6 +901,55 @@ placeholder
 	require.Equal(t, int64(2), acc.ID)
 placeholder
 
+func TestGatewayService_SelectAccountForModelWithPlatform_GeminiAPIKeyModelMappingFilter(t *testing.T) {
+	ctx := context.Background()
+
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{
+				ID:          1,
+				Platform:    PlatformGemini,
+				Type:        AccountTypeAPIKey,
+				Priority:    1,
+				Status:      StatusActive,
+				Schedulable: true,
+		placeholder"model_mapping": map[string]any{"gemini-2.5-pro": "gemini-2.5-pro"placeholderplaceholder,
+		placeholder,
+			{
+				ID:          2,
+				Platform:    PlatformGemini,
+				Type:        AccountTypeAPIKey,
+				Priority:    2,
+				Status:      StatusActive,
+				Schedulable: true,
+		placeholder"model_mapping": map[string]any{"gemini-2.5-flash": "gemini-2.5-flash"placeholderplaceholder,
+		placeholder,
+	placeholder,
+		accountsByID: map[int64]*Account{placeholder,
+placeholder
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+placeholder
+
+	cache := &mockGatewayCacheForPlatform{placeholder
+
+	svc := &GatewayService{
+		accountRepo: repo,
+		cache:       cache,
+		cfg:         testConfig(),
+placeholder
+
+	acc, err := svc.selectAccountForModelWithPlatform(ctx, nil, "", "gemini-2.5-flash", nil, PlatformGemini)
+placeholder
+	require.NotNil(t, acc)
+	require.Equal(t, int64(2), acc.ID, "应过滤不支持请求模型的 APIKey 账号")
+
+	acc, err = svc.selectAccountForModelWithPlatform(ctx, nil, "", "gemini-3-pro-preview", nil, PlatformGemini)
+placeholder
+	require.Nil(t, acc)
+	require.Contains(t, err.Error(), "supporting model")
+placeholder
+
 func TestGatewayService_SelectAccountForModelWithPlatform_StickyInGroup(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(50)
@@ -1063,6 +1123,36 @@ placeholder{
 		placeholder"model_mapping": map[string]any{"claude-3-5-sonnet-20241022": "x"placeholderplaceholder,
 		placeholder,
 			model:    "claude-3-5-sonnet-20241022",
+			expected: true,
+	placeholder,
+		{
+			name:     "Gemini平台-无映射配置-支持所有模型",
+			account:  &Account{Platform: PlatformGemini, Type: AccountTypeAPIKeyplaceholder,
+			model:    "gemini-2.5-flash",
+			expected: true,
+	placeholder,
+		{
+			name: "Gemini平台-有映射配置-只支持配置的模型",
+			account: &Account{
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder
+					"model_mapping": map[string]any{"gemini-2.5-pro": "gemini-2.5-pro"placeholder,
+			placeholder,
+		placeholder,
+			model:    "gemini-2.5-flash",
+			expected: false,
+	placeholder,
+		{
+			name: "Gemini平台-有映射配置-支持配置的模型",
+			account: &Account{
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder
+					"model_mapping": map[string]any{"gemini-2.5-pro": "gemini-2.5-pro"placeholder,
+			placeholder,
+		placeholder,
+			model:    "gemini-2.5-pro",
 			expected: true,
 	placeholder,
 placeholder
@@ -1806,6 +1896,14 @@ placeholder
 
 func (m *mockConcurrencyCache) GetAccountConcurrency(ctx context.Context, accountID int64) (int, error) {
 	return 0, nil
+placeholder
+
+func (m *mockConcurrencyCache) GetAccountConcurrencyBatch(ctx context.Context, accountIDs []int64) (map[int64]int, error) {
+	result := make(map[int64]int, len(accountIDs))
+	for _, accountID := range accountIDs {
+		result[accountID] = 0
+placeholder
+	return result, nil
 placeholder
 
 func (m *mockConcurrencyCache) IncrementAccountWaitCount(ctx context.Context, accountID int64, maxWait int) (bool, error) {

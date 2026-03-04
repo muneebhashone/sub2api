@@ -6,7 +6,27 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 )
+
+func resetViperWithJWTSecret(t *testing.T) {
+placeholder
+	viper.Reset()
+	t.Setenv("JWT_SECRET", strings.Repeat("x", 32))
+placeholder
+
+func TestLoadForBootstrapAllowsMissingJWTSecret(t *testing.T) {
+	viper.Reset()
+	t.Setenv("JWT_SECRET", "")
+
+	cfg, err := LoadForBootstrap()
+	if err != nil {
+		t.Fatalf("LoadForBootstrap() error: %v", err)
+placeholder
+	if cfg.JWT.Secret != "" {
+		t.Fatalf("LoadForBootstrap() should keep empty jwt.secret during bootstrap")
+placeholder
+placeholder
 
 func TestNormalizeRunMode(t *testing.T) {
 	tests := []struct {
@@ -29,7 +49,7 @@ placeholder
 placeholder
 
 func TestLoadDefaultSchedulingConfig(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -56,8 +76,141 @@ placeholder
 placeholder
 placeholder
 
+func TestLoadDefaultOpenAIWSConfig(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if !cfg.Gateway.OpenAIWS.Enabled {
+		t.Fatalf("Gateway.OpenAIWS.Enabled = false, want true")
+placeholder
+	if !cfg.Gateway.OpenAIWS.ResponsesWebsocketsV2 {
+		t.Fatalf("Gateway.OpenAIWS.ResponsesWebsocketsV2 = false, want true")
+placeholder
+	if cfg.Gateway.OpenAIWS.ResponsesWebsockets {
+		t.Fatalf("Gateway.OpenAIWS.ResponsesWebsockets = true, want false")
+placeholder
+	if !cfg.Gateway.OpenAIWS.DynamicMaxConnsByAccountConcurrencyEnabled {
+		t.Fatalf("Gateway.OpenAIWS.DynamicMaxConnsByAccountConcurrencyEnabled = false, want true")
+placeholder
+	if cfg.Gateway.OpenAIWS.OAuthMaxConnsFactor != 1.0 {
+		t.Fatalf("Gateway.OpenAIWS.OAuthMaxConnsFactor = %v, want 1.0", cfg.Gateway.OpenAIWS.OAuthMaxConnsFactor)
+placeholder
+	if cfg.Gateway.OpenAIWS.APIKeyMaxConnsFactor != 1.0 {
+		t.Fatalf("Gateway.OpenAIWS.APIKeyMaxConnsFactor = %v, want 1.0", cfg.Gateway.OpenAIWS.APIKeyMaxConnsFactor)
+placeholder
+	if cfg.Gateway.OpenAIWS.StickySessionTTLSeconds != 3600 {
+		t.Fatalf("Gateway.OpenAIWS.StickySessionTTLSeconds = %d, want 3600", cfg.Gateway.OpenAIWS.StickySessionTTLSeconds)
+placeholder
+	if !cfg.Gateway.OpenAIWS.SessionHashReadOldFallback {
+		t.Fatalf("Gateway.OpenAIWS.SessionHashReadOldFallback = false, want true")
+placeholder
+	if !cfg.Gateway.OpenAIWS.SessionHashDualWriteOld {
+		t.Fatalf("Gateway.OpenAIWS.SessionHashDualWriteOld = false, want true")
+placeholder
+	if !cfg.Gateway.OpenAIWS.MetadataBridgeEnabled {
+		t.Fatalf("Gateway.OpenAIWS.MetadataBridgeEnabled = false, want true")
+placeholder
+	if cfg.Gateway.OpenAIWS.StickyResponseIDTTLSeconds != 3600 {
+		t.Fatalf("Gateway.OpenAIWS.StickyResponseIDTTLSeconds = %d, want 3600", cfg.Gateway.OpenAIWS.StickyResponseIDTTLSeconds)
+placeholder
+	if cfg.Gateway.OpenAIWS.FallbackCooldownSeconds != 30 {
+		t.Fatalf("Gateway.OpenAIWS.FallbackCooldownSeconds = %d, want 30", cfg.Gateway.OpenAIWS.FallbackCooldownSeconds)
+placeholder
+	if cfg.Gateway.OpenAIWS.EventFlushBatchSize != 1 {
+		t.Fatalf("Gateway.OpenAIWS.EventFlushBatchSize = %d, want 1", cfg.Gateway.OpenAIWS.EventFlushBatchSize)
+placeholder
+	if cfg.Gateway.OpenAIWS.EventFlushIntervalMS != 10 {
+		t.Fatalf("Gateway.OpenAIWS.EventFlushIntervalMS = %d, want 10", cfg.Gateway.OpenAIWS.EventFlushIntervalMS)
+placeholder
+	if cfg.Gateway.OpenAIWS.PrewarmCooldownMS != 300 {
+		t.Fatalf("Gateway.OpenAIWS.PrewarmCooldownMS = %d, want 300", cfg.Gateway.OpenAIWS.PrewarmCooldownMS)
+placeholder
+	if cfg.Gateway.OpenAIWS.RetryBackoffInitialMS != 120 {
+		t.Fatalf("Gateway.OpenAIWS.RetryBackoffInitialMS = %d, want 120", cfg.Gateway.OpenAIWS.RetryBackoffInitialMS)
+placeholder
+	if cfg.Gateway.OpenAIWS.RetryBackoffMaxMS != 2000 {
+		t.Fatalf("Gateway.OpenAIWS.RetryBackoffMaxMS = %d, want 2000", cfg.Gateway.OpenAIWS.RetryBackoffMaxMS)
+placeholder
+	if cfg.Gateway.OpenAIWS.RetryJitterRatio != 0.2 {
+		t.Fatalf("Gateway.OpenAIWS.RetryJitterRatio = %v, want 0.2", cfg.Gateway.OpenAIWS.RetryJitterRatio)
+placeholder
+	if cfg.Gateway.OpenAIWS.RetryTotalBudgetMS != 5000 {
+		t.Fatalf("Gateway.OpenAIWS.RetryTotalBudgetMS = %d, want 5000", cfg.Gateway.OpenAIWS.RetryTotalBudgetMS)
+placeholder
+	if cfg.Gateway.OpenAIWS.PayloadLogSampleRate != 0.2 {
+		t.Fatalf("Gateway.OpenAIWS.PayloadLogSampleRate = %v, want 0.2", cfg.Gateway.OpenAIWS.PayloadLogSampleRate)
+placeholder
+	if !cfg.Gateway.OpenAIWS.StoreDisabledForceNewConn {
+		t.Fatalf("Gateway.OpenAIWS.StoreDisabledForceNewConn = false, want true")
+placeholder
+	if cfg.Gateway.OpenAIWS.StoreDisabledConnMode != "strict" {
+		t.Fatalf("Gateway.OpenAIWS.StoreDisabledConnMode = %q, want %q", cfg.Gateway.OpenAIWS.StoreDisabledConnMode, "strict")
+placeholder
+	if cfg.Gateway.OpenAIWS.ModeRouterV2Enabled {
+		t.Fatalf("Gateway.OpenAIWS.ModeRouterV2Enabled = true, want false")
+placeholder
+	if cfg.Gateway.OpenAIWS.IngressModeDefault != "shared" {
+		t.Fatalf("Gateway.OpenAIWS.IngressModeDefault = %q, want %q", cfg.Gateway.OpenAIWS.IngressModeDefault, "shared")
+placeholder
+placeholder
+
+func TestLoadOpenAIWSStickyTTLCompatibility(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_OPENAI_WS_STICKY_RESPONSE_ID_TTL_SECONDS", "0")
+	t.Setenv("GATEWAY_OPENAI_WS_STICKY_PREVIOUS_RESPONSE_TTL_SECONDS", "7200")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if cfg.Gateway.OpenAIWS.StickyResponseIDTTLSeconds != 7200 {
+		t.Fatalf("StickyResponseIDTTLSeconds = %d, want 7200", cfg.Gateway.OpenAIWS.StickyResponseIDTTLSeconds)
+placeholder
+placeholder
+
+func TestLoadDefaultIdempotencyConfig(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if !cfg.Idempotency.ObserveOnly {
+		t.Fatalf("Idempotency.ObserveOnly = false, want true")
+placeholder
+	if cfg.Idempotency.DefaultTTLSeconds != 86400 {
+		t.Fatalf("Idempotency.DefaultTTLSeconds = %d, want 86400", cfg.Idempotency.DefaultTTLSeconds)
+placeholder
+	if cfg.Idempotency.SystemOperationTTLSeconds != 3600 {
+		t.Fatalf("Idempotency.SystemOperationTTLSeconds = %d, want 3600", cfg.Idempotency.SystemOperationTTLSeconds)
+placeholder
+placeholder
+
+func TestLoadIdempotencyConfigFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("IDEMPOTENCY_OBSERVE_ONLY", "false")
+	t.Setenv("IDEMPOTENCY_DEFAULT_TTL_SECONDS", "600")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+	if cfg.Idempotency.ObserveOnly {
+		t.Fatalf("Idempotency.ObserveOnly = true, want false")
+placeholder
+	if cfg.Idempotency.DefaultTTLSeconds != 600 {
+		t.Fatalf("Idempotency.DefaultTTLSeconds = %d, want 600", cfg.Idempotency.DefaultTTLSeconds)
+placeholder
+placeholder
+
 func TestLoadSchedulingConfigFromEnv(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 	t.Setenv("GATEWAY_SCHEDULING_STICKY_SESSION_MAX_WAITING", "5")
 
 	cfg, err := Load()
@@ -71,7 +224,7 @@ placeholder
 placeholder
 
 func TestLoadDefaultSecurityToggles(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -87,13 +240,69 @@ placeholder
 	if !cfg.Security.URLAllowlist.AllowPrivateHosts {
 		t.Fatalf("URLAllowlist.AllowPrivateHosts = false, want true")
 placeholder
-	if cfg.Security.ResponseHeaders.Enabled {
-		t.Fatalf("ResponseHeaders.Enabled = true, want false")
+	if !cfg.Security.ResponseHeaders.Enabled {
+		t.Fatalf("ResponseHeaders.Enabled = false, want true")
+placeholder
+placeholder
+
+func TestLoadDefaultServerMode(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if cfg.Server.Mode != "release" {
+		t.Fatalf("Server.Mode = %q, want %q", cfg.Server.Mode, "release")
+placeholder
+placeholder
+
+func TestLoadDefaultJWTAccessTokenExpireMinutes(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if cfg.JWT.ExpireHour != 24 {
+		t.Fatalf("JWT.ExpireHour = %d, want 24", cfg.JWT.ExpireHour)
+placeholder
+	if cfg.JWT.AccessTokenExpireMinutes != 0 {
+		t.Fatalf("JWT.AccessTokenExpireMinutes = %d, want 0", cfg.JWT.AccessTokenExpireMinutes)
+placeholder
+placeholder
+
+func TestLoadJWTAccessTokenExpireMinutesFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "90")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if cfg.JWT.AccessTokenExpireMinutes != 90 {
+		t.Fatalf("JWT.AccessTokenExpireMinutes = %d, want 90", cfg.JWT.AccessTokenExpireMinutes)
+placeholder
+placeholder
+
+func TestLoadDefaultDatabaseSSLMode(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if cfg.Database.SSLMode != "prefer" {
+		t.Fatalf("Database.SSLMode = %q, want %q", cfg.Database.SSLMode, "prefer")
 placeholder
 placeholder
 
 func TestValidateLinuxDoFrontendRedirectURL(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -118,7 +327,7 @@ placeholder
 placeholder
 
 func TestValidateLinuxDoPKCERequiredForPublicClient(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -143,7 +352,7 @@ placeholder
 placeholder
 
 func TestLoadDefaultDashboardCacheConfig(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -168,7 +377,7 @@ placeholder
 placeholder
 
 func TestValidateDashboardCacheConfigEnabled(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -188,7 +397,7 @@ placeholder
 placeholder
 
 func TestValidateDashboardCacheConfigDisabled(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -207,7 +416,7 @@ placeholder
 placeholder
 
 func TestLoadDefaultDashboardAggregationConfig(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -244,7 +453,7 @@ placeholder
 placeholder
 
 func TestValidateDashboardAggregationConfigDisabled(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -263,7 +472,7 @@ placeholder
 placeholder
 
 func TestValidateDashboardAggregationBackfillMaxDays(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -282,7 +491,7 @@ placeholder
 placeholder
 
 func TestLoadDefaultUsageCleanupConfig(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -307,7 +516,7 @@ placeholder
 placeholder
 
 func TestValidateUsageCleanupConfigEnabled(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -326,7 +535,7 @@ placeholder
 placeholder
 
 func TestValidateUsageCleanupConfigDisabled(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -424,6 +633,40 @@ placeholder
 placeholder
 placeholder
 
+func TestValidateServerFrontendURL(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	cfg.Server.FrontendURL = "https://example.com"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() frontend_url valid error: %v", err)
+placeholder
+
+	cfg.Server.FrontendURL = "https://example.com/path"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() frontend_url with path valid error: %v", err)
+placeholder
+
+	cfg.Server.FrontendURL = "https://example.com?utm=1"
+	if err := cfg.Validate(); err == nil {
+		t.Fatalf("Validate() should reject server.frontend_url with query")
+placeholder
+
+	cfg.Server.FrontendURL = "https://user:pass@example.com"
+	if err := cfg.Validate(); err == nil {
+		t.Fatalf("Validate() should reject server.frontend_url with userinfo")
+placeholder
+
+	cfg.Server.FrontendURL = "/relative"
+	if err := cfg.Validate(); err == nil {
+		t.Fatalf("Validate() should reject relative server.frontend_url")
+placeholder
+placeholder
+
 func TestValidateFrontendRedirectURL(t *testing.T) {
 	if err := ValidateFrontendRedirectURL("/auth/callback"); err != nil {
 		t.Fatalf("ValidateFrontendRedirectURL relative error: %v", err)
@@ -445,6 +688,7 @@ placeholder
 func TestWarnIfInsecureURL(t *testing.T) {
 	warnIfInsecureURL("test", "http://example.com")
 	warnIfInsecureURL("test", "bad://url")
+	warnIfInsecureURL("test", "://invalid")
 placeholder
 
 func TestGenerateJWTSecretDefaultLength(t *testing.T) {
@@ -458,7 +702,7 @@ placeholder
 placeholder
 
 func TestValidateOpsCleanupScheduleRequired(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -476,7 +720,7 @@ placeholder
 placeholder
 
 func TestValidateConcurrencyPingInterval(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -493,14 +737,14 @@ placeholder
 placeholder
 
 func TestProvideConfig(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 	if _, err := ProvideConfig(); err != nil {
 		t.Fatalf("ProvideConfig() error: %v", err)
 placeholder
 placeholder
 
 func TestValidateConfigWithLinuxDoEnabled(t *testing.T) {
-	viper.Reset()
+	resetViperWithJWTSecret(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -544,6 +788,24 @@ placeholder
 placeholder
 placeholder
 
+func TestDatabaseDSNWithTimezone_WithPassword(t *testing.T) {
+	d := &DatabaseConfig{
+		Host:     "localhost",
+		Port:     5432,
+		User:     "u",
+		Password: "p",
+		DBName:   "db",
+		SSLMode:  "prefer",
+placeholder
+	got := d.DSNWithTimezone("UTC")
+	if !strings.Contains(got, "password=p") {
+		t.Fatalf("DSNWithTimezone should include password: %q", got)
+placeholder
+	if !strings.Contains(got, "TimeZone=UTC") {
+		t.Fatalf("DSNWithTimezone should include TimeZone=UTC: %q", got)
+placeholder
+placeholder
+
 func TestValidateAbsoluteHTTPURLMissingHost(t *testing.T) {
 	if err := ValidateAbsoluteHTTPURL("https://"); err == nil {
 		t.Fatalf("ValidateAbsoluteHTTPURL should reject missing host")
@@ -566,10 +828,35 @@ func TestWarnIfInsecureURLHTTPS(t *testing.T) {
 	warnIfInsecureURL("secure", "https://example.com")
 placeholder
 
+func TestValidateJWTSecret_UTF8Bytes(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	// 31 bytes (< 32) even though it's 31 characters.
+	cfg.JWT.Secret = strings.Repeat("a", 31)
+	err = cfg.Validate()
+	if err == nil {
+		t.Fatalf("Validate() should reject 31-byte secret")
+placeholder
+	if !strings.Contains(err.Error(), "at least 32 bytes") {
+		t.Fatalf("Validate() error = %v", err)
+placeholder
+
+	// 32 bytes OK.
+	cfg.JWT.Secret = strings.Repeat("a", 32)
+	err = cfg.Validate()
+	if err != nil {
+		t.Fatalf("Validate() should accept 32-byte secret: %v", err)
+placeholder
+placeholder
+
 func TestValidateConfigErrors(t *testing.T) {
 	buildValid := func(t *testing.T) *Config {
 	placeholder
-		viper.Reset()
+		resetViperWithJWTSecret(t)
 		cfg, err := Load()
 		if err != nil {
 			t.Fatalf("Load() error: %v", err)
@@ -583,6 +870,26 @@ placeholder
 		wantErr string
 placeholder{
 		{
+			name:    "jwt secret required",
+			mutate:  func(c *Config) { c.JWT.Secret = "" placeholder,
+			wantErr: "jwt.secret is required",
+	placeholder,
+		{
+			name:    "jwt secret min bytes",
+			mutate:  func(c *Config) { c.JWT.Secret = strings.Repeat("a", 31) placeholder,
+			wantErr: "jwt.secret must be at least 32 bytes",
+	placeholder,
+		{
+			name:    "subscription maintenance worker_count non-negative",
+			mutate:  func(c *Config) { c.SubscriptionMaintenance.WorkerCount = -1 placeholder,
+			wantErr: "subscription_maintenance.worker_count",
+	placeholder,
+		{
+			name:    "subscription maintenance queue_size non-negative",
+			mutate:  func(c *Config) { c.SubscriptionMaintenance.QueueSize = -1 placeholder,
+			wantErr: "subscription_maintenance.queue_size",
+	placeholder,
+		{
 			name:    "jwt expire hour positive",
 			mutate:  func(c *Config) { c.JWT.ExpireHour = 0 placeholder,
 			wantErr: "jwt.expire_hour must be positive",
@@ -591,6 +898,11 @@ placeholder{
 			name:    "jwt expire hour max",
 			mutate:  func(c *Config) { c.JWT.ExpireHour = 200 placeholder,
 			wantErr: "jwt.expire_hour must be <= 168",
+	placeholder,
+		{
+			name:    "jwt access token expire minutes non-negative",
+			mutate:  func(c *Config) { c.JWT.AccessTokenExpireMinutes = -1 placeholder,
+			wantErr: "jwt.access_token_expire_minutes must be non-negative",
 	placeholder,
 		{
 			name:    "csp policy required",
@@ -780,6 +1092,16 @@ placeholder{
 			wantErr: "gateway.stream_keepalive_interval",
 	placeholder,
 		{
+			name:    "gateway openai ws oauth max conns factor",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.OAuthMaxConnsFactor = 0 placeholder,
+			wantErr: "gateway.openai_ws.oauth_max_conns_factor",
+	placeholder,
+		{
+			name:    "gateway openai ws apikey max conns factor",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.APIKeyMaxConnsFactor = 0 placeholder,
+			wantErr: "gateway.openai_ws.apikey_max_conns_factor",
+	placeholder,
+		{
 			name:    "gateway stream data interval range",
 			mutate:  func(c *Config) { c.Gateway.StreamDataIntervalTimeout = 5 placeholder,
 			wantErr: "gateway.stream_data_interval_timeout",
@@ -798,6 +1120,84 @@ placeholder{
 			name:    "gateway max line size negative",
 			mutate:  func(c *Config) { c.Gateway.MaxLineSize = -1 placeholder,
 			wantErr: "gateway.max_line_size must be non-negative",
+	placeholder,
+		{
+			name:    "gateway usage record worker count",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.WorkerCount = 0 placeholder,
+			wantErr: "gateway.usage_record.worker_count",
+	placeholder,
+		{
+			name:    "gateway usage record queue size",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.QueueSize = 0 placeholder,
+			wantErr: "gateway.usage_record.queue_size",
+	placeholder,
+		{
+			name:    "gateway usage record timeout",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.TaskTimeoutSeconds = 0 placeholder,
+			wantErr: "gateway.usage_record.task_timeout_seconds",
+	placeholder,
+		{
+			name:    "gateway usage record overflow policy",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.OverflowPolicy = "invalid" placeholder,
+			wantErr: "gateway.usage_record.overflow_policy",
+	placeholder,
+		{
+			name:    "gateway usage record sample percent range",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.OverflowSamplePercent = 101 placeholder,
+			wantErr: "gateway.usage_record.overflow_sample_percent",
+	placeholder,
+		{
+			name: "gateway usage record sample percent required for sample policy",
+			mutate: func(c *Config) {
+				c.Gateway.UsageRecord.OverflowPolicy = UsageRecordOverflowPolicySample
+				c.Gateway.UsageRecord.OverflowSamplePercent = 0
+		placeholder,
+			wantErr: "gateway.usage_record.overflow_sample_percent must be positive",
+	placeholder,
+		{
+			name: "gateway usage record auto scale max gte min",
+			mutate: func(c *Config) {
+				c.Gateway.UsageRecord.AutoScaleMinWorkers = 256
+				c.Gateway.UsageRecord.AutoScaleMaxWorkers = 128
+		placeholder,
+			wantErr: "gateway.usage_record.auto_scale_max_workers",
+	placeholder,
+		{
+			name: "gateway usage record worker in auto scale range",
+			mutate: func(c *Config) {
+				c.Gateway.UsageRecord.AutoScaleMinWorkers = 200
+				c.Gateway.UsageRecord.AutoScaleMaxWorkers = 300
+				c.Gateway.UsageRecord.WorkerCount = 128
+		placeholder,
+			wantErr: "gateway.usage_record.worker_count must be between auto_scale_min_workers and auto_scale_max_workers",
+	placeholder,
+		{
+			name: "gateway usage record auto scale queue thresholds order",
+			mutate: func(c *Config) {
+				c.Gateway.UsageRecord.AutoScaleUpQueuePercent = 50
+				c.Gateway.UsageRecord.AutoScaleDownQueuePercent = 50
+		placeholder,
+			wantErr: "gateway.usage_record.auto_scale_down_queue_percent must be less",
+	placeholder,
+		{
+			name:    "gateway usage record auto scale up step",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.AutoScaleUpStep = 0 placeholder,
+			wantErr: "gateway.usage_record.auto_scale_up_step",
+	placeholder,
+		{
+			name:    "gateway usage record auto scale interval",
+			mutate:  func(c *Config) { c.Gateway.UsageRecord.AutoScaleCheckIntervalSeconds = 0 placeholder,
+			wantErr: "gateway.usage_record.auto_scale_check_interval_seconds",
+	placeholder,
+		{
+			name:    "gateway user group rate cache ttl",
+			mutate:  func(c *Config) { c.Gateway.UserGroupRateCacheTTLSeconds = 0 placeholder,
+			wantErr: "gateway.user_group_rate_cache_ttl_seconds",
+	placeholder,
+		{
+			name:    "gateway models list cache ttl range",
+			mutate:  func(c *Config) { c.Gateway.ModelsListCacheTTLSeconds = 31 placeholder,
+			wantErr: "gateway.models_list_cache_ttl_seconds",
 	placeholder,
 		{
 			name:    "gateway scheduling sticky waiting",
@@ -821,6 +1221,37 @@ placeholder{
 				c.Gateway.Scheduling.OutboxLagRebuildSeconds = 5
 		placeholder,
 			wantErr: "gateway.scheduling.outbox_lag_rebuild_seconds",
+	placeholder,
+		{
+			name:    "log level invalid",
+			mutate:  func(c *Config) { c.Log.Level = "trace" placeholder,
+			wantErr: "log.level",
+	placeholder,
+		{
+			name:    "log format invalid",
+			mutate:  func(c *Config) { c.Log.Format = "plain" placeholder,
+			wantErr: "log.format",
+	placeholder,
+		{
+			name: "log output disabled",
+			mutate: func(c *Config) {
+				c.Log.Output.ToStdout = false
+				c.Log.Output.ToFile = false
+		placeholder,
+			wantErr: "log.output.to_stdout and log.output.to_file cannot both be false",
+	placeholder,
+		{
+			name:    "log rotation size",
+			mutate:  func(c *Config) { c.Log.Rotation.MaxSizeMB = 0 placeholder,
+			wantErr: "log.rotation.max_size_mb",
+	placeholder,
+		{
+			name: "log sampling enabled invalid",
+			mutate: func(c *Config) {
+				c.Log.Sampling.Enabled = true
+				c.Log.Sampling.Initial = 0
+		placeholder,
+			wantErr: "log.sampling.initial",
 	placeholder,
 		{
 			name:    "ops metrics collector ttl",
@@ -848,5 +1279,395 @@ placeholder
 				t.Fatalf("Validate() error = %v, want %q", err, tt.wantErr)
 		placeholder
 	placeholder)
+placeholder
+placeholder
+
+func TestValidateConfig_OpenAIWSRules(t *testing.T) {
+	buildValid := func(t *testing.T) *Config {
+	placeholder
+		resetViperWithJWTSecret(t)
+		cfg, err := Load()
+	placeholder
+		return cfg
+placeholder
+
+	t.Run("sticky response id ttl 兼容旧键回填", func(t *testing.T) {
+		cfg := buildValid(t)
+		cfg.Gateway.OpenAIWS.StickyResponseIDTTLSeconds = 0
+		cfg.Gateway.OpenAIWS.StickyPreviousResponseTTLSeconds = 7200
+
+		require.NoError(t, cfg.Validate())
+		require.Equal(t, 7200, cfg.Gateway.OpenAIWS.StickyResponseIDTTLSeconds)
+placeholder)
+
+	cases := []struct {
+		name    string
+		mutate  func(*Config)
+		wantErr string
+placeholder{
+		{
+			name:    "max_conns_per_account 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.MaxConnsPerAccount = 0 placeholder,
+			wantErr: "gateway.openai_ws.max_conns_per_account",
+	placeholder,
+		{
+			name:    "min_idle_per_account 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.MinIdlePerAccount = -1 placeholder,
+			wantErr: "gateway.openai_ws.min_idle_per_account",
+	placeholder,
+		{
+			name:    "max_idle_per_account 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.MaxIdlePerAccount = -1 placeholder,
+			wantErr: "gateway.openai_ws.max_idle_per_account",
+	placeholder,
+		{
+			name: "min_idle_per_account 不能大于 max_idle_per_account",
+			mutate: func(c *Config) {
+				c.Gateway.OpenAIWS.MinIdlePerAccount = 3
+				c.Gateway.OpenAIWS.MaxIdlePerAccount = 2
+		placeholder,
+			wantErr: "gateway.openai_ws.min_idle_per_account must be <= max_idle_per_account",
+	placeholder,
+		{
+			name: "max_idle_per_account 不能大于 max_conns_per_account",
+			mutate: func(c *Config) {
+				c.Gateway.OpenAIWS.MaxConnsPerAccount = 2
+				c.Gateway.OpenAIWS.MinIdlePerAccount = 1
+				c.Gateway.OpenAIWS.MaxIdlePerAccount = 3
+		placeholder,
+			wantErr: "gateway.openai_ws.max_idle_per_account must be <= max_conns_per_account",
+	placeholder,
+		{
+			name:    "dial_timeout_seconds 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.DialTimeoutSeconds = 0 placeholder,
+			wantErr: "gateway.openai_ws.dial_timeout_seconds",
+	placeholder,
+		{
+			name:    "read_timeout_seconds 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.ReadTimeoutSeconds = 0 placeholder,
+			wantErr: "gateway.openai_ws.read_timeout_seconds",
+	placeholder,
+		{
+			name:    "write_timeout_seconds 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.WriteTimeoutSeconds = 0 placeholder,
+			wantErr: "gateway.openai_ws.write_timeout_seconds",
+	placeholder,
+		{
+			name:    "pool_target_utilization 必须在 (0,1]",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.PoolTargetUtilization = 0 placeholder,
+			wantErr: "gateway.openai_ws.pool_target_utilization",
+	placeholder,
+		{
+			name:    "queue_limit_per_conn 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.QueueLimitPerConn = 0 placeholder,
+			wantErr: "gateway.openai_ws.queue_limit_per_conn",
+	placeholder,
+		{
+			name:    "fallback_cooldown_seconds 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.FallbackCooldownSeconds = -1 placeholder,
+			wantErr: "gateway.openai_ws.fallback_cooldown_seconds",
+	placeholder,
+		{
+			name:    "store_disabled_conn_mode 必须为 strict|adaptive|off",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.StoreDisabledConnMode = "invalid" placeholder,
+			wantErr: "gateway.openai_ws.store_disabled_conn_mode",
+	placeholder,
+		{
+			name:    "ingress_mode_default 必须为 off|shared|dedicated",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.IngressModeDefault = "invalid" placeholder,
+			wantErr: "gateway.openai_ws.ingress_mode_default",
+	placeholder,
+		{
+			name:    "payload_log_sample_rate 必须在 [0,1] 范围内",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.PayloadLogSampleRate = 1.2 placeholder,
+			wantErr: "gateway.openai_ws.payload_log_sample_rate",
+	placeholder,
+		{
+			name:    "retry_total_budget_ms 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.RetryTotalBudgetMS = -1 placeholder,
+			wantErr: "gateway.openai_ws.retry_total_budget_ms",
+	placeholder,
+		{
+			name:    "lb_top_k 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.LBTopK = 0 placeholder,
+			wantErr: "gateway.openai_ws.lb_top_k",
+	placeholder,
+		{
+			name:    "sticky_session_ttl_seconds 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.StickySessionTTLSeconds = 0 placeholder,
+			wantErr: "gateway.openai_ws.sticky_session_ttl_seconds",
+	placeholder,
+		{
+			name: "sticky_response_id_ttl_seconds 必须为正数",
+			mutate: func(c *Config) {
+				c.Gateway.OpenAIWS.StickyResponseIDTTLSeconds = 0
+				c.Gateway.OpenAIWS.StickyPreviousResponseTTLSeconds = 0
+		placeholder,
+			wantErr: "gateway.openai_ws.sticky_response_id_ttl_seconds",
+	placeholder,
+		{
+			name:    "sticky_previous_response_ttl_seconds 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.StickyPreviousResponseTTLSeconds = -1 placeholder,
+			wantErr: "gateway.openai_ws.sticky_previous_response_ttl_seconds",
+	placeholder,
+		{
+			name:    "scheduler_score_weights 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.SchedulerScoreWeights.Queue = -0.1 placeholder,
+			wantErr: "gateway.openai_ws.scheduler_score_weights.* must be non-negative",
+	placeholder,
+		{
+			name: "scheduler_score_weights 不能全为 0",
+			mutate: func(c *Config) {
+				c.Gateway.OpenAIWS.SchedulerScoreWeights.Priority = 0
+				c.Gateway.OpenAIWS.SchedulerScoreWeights.Load = 0
+				c.Gateway.OpenAIWS.SchedulerScoreWeights.Queue = 0
+				c.Gateway.OpenAIWS.SchedulerScoreWeights.ErrorRate = 0
+				c.Gateway.OpenAIWS.SchedulerScoreWeights.TTFT = 0
+		placeholder,
+			wantErr: "gateway.openai_ws.scheduler_score_weights must not all be zero",
+	placeholder,
+placeholder
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := buildValid(t)
+			tc.mutate(cfg)
+
+			err := cfg.Validate()
+		placeholder
+			require.Contains(t, err.Error(), tc.wantErr)
+	placeholder)
+placeholder
+placeholder
+
+func TestValidateConfig_AutoScaleDisabledIgnoreAutoScaleFields(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	cfg.Gateway.UsageRecord.AutoScaleEnabled = false
+	cfg.Gateway.UsageRecord.WorkerCount = 64
+
+	// 自动扩缩容关闭时，这些字段应被忽略，不应导致校验失败。
+	cfg.Gateway.UsageRecord.AutoScaleMinWorkers = 0
+	cfg.Gateway.UsageRecord.AutoScaleMaxWorkers = 0
+	cfg.Gateway.UsageRecord.AutoScaleUpQueuePercent = 0
+	cfg.Gateway.UsageRecord.AutoScaleDownQueuePercent = 100
+	cfg.Gateway.UsageRecord.AutoScaleUpStep = 0
+	cfg.Gateway.UsageRecord.AutoScaleDownStep = 0
+	cfg.Gateway.UsageRecord.AutoScaleCheckIntervalSeconds = 0
+	cfg.Gateway.UsageRecord.AutoScaleCooldownSeconds = -1
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() should ignore auto scale fields when disabled: %v", err)
+placeholder
+placeholder
+
+func TestValidateConfig_LogRequiredAndRotationBounds(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cases := []struct {
+		name    string
+		mutate  func(*Config)
+		wantErr string
+placeholder{
+		{
+			name: "log level required",
+			mutate: func(c *Config) {
+				c.Log.Level = ""
+		placeholder,
+			wantErr: "log.level is required",
+	placeholder,
+		{
+			name: "log format required",
+			mutate: func(c *Config) {
+				c.Log.Format = ""
+		placeholder,
+			wantErr: "log.format is required",
+	placeholder,
+		{
+			name: "log stacktrace required",
+			mutate: func(c *Config) {
+				c.Log.StacktraceLevel = ""
+		placeholder,
+			wantErr: "log.stacktrace_level is required",
+	placeholder,
+		{
+			name: "log max backups non-negative",
+			mutate: func(c *Config) {
+				c.Log.Rotation.MaxBackups = -1
+		placeholder,
+			wantErr: "log.rotation.max_backups must be non-negative",
+	placeholder,
+		{
+			name: "log max age non-negative",
+			mutate: func(c *Config) {
+				c.Log.Rotation.MaxAgeDays = -1
+		placeholder,
+			wantErr: "log.rotation.max_age_days must be non-negative",
+	placeholder,
+		{
+			name: "sampling thereafter non-negative when disabled",
+			mutate: func(c *Config) {
+				c.Log.Sampling.Enabled = false
+				c.Log.Sampling.Thereafter = -1
+		placeholder,
+			wantErr: "log.sampling.thereafter must be non-negative",
+	placeholder,
+placeholder
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error: %v", err)
+		placeholder
+			tt.mutate(cfg)
+			err = cfg.Validate()
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("Validate() error = %v, want %q", err, tt.wantErr)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestSoraCurlCFFISidecarDefaults(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	if !cfg.Sora.Client.CurlCFFISidecar.Enabled {
+		t.Fatalf("Sora curl_cffi sidecar should be enabled by default")
+placeholder
+	if cfg.Sora.Client.CloudflareChallengeCooldownSeconds <= 0 {
+		t.Fatalf("Sora cloudflare challenge cooldown should be positive by default")
+placeholder
+	if cfg.Sora.Client.CurlCFFISidecar.BaseURL == "" {
+		t.Fatalf("Sora curl_cffi sidecar base_url should not be empty by default")
+placeholder
+	if cfg.Sora.Client.CurlCFFISidecar.Impersonate == "" {
+		t.Fatalf("Sora curl_cffi sidecar impersonate should not be empty by default")
+placeholder
+	if !cfg.Sora.Client.CurlCFFISidecar.SessionReuseEnabled {
+		t.Fatalf("Sora curl_cffi sidecar session reuse should be enabled by default")
+placeholder
+	if cfg.Sora.Client.CurlCFFISidecar.SessionTTLSeconds <= 0 {
+		t.Fatalf("Sora curl_cffi sidecar session ttl should be positive by default")
+placeholder
+placeholder
+
+func TestValidateSoraCurlCFFISidecarRequired(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	cfg.Sora.Client.CurlCFFISidecar.Enabled = false
+	err = cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "sora.client.curl_cffi_sidecar.enabled must be true") {
+		t.Fatalf("Validate() error = %v, want sidecar enabled error", err)
+placeholder
+placeholder
+
+func TestValidateSoraCurlCFFISidecarBaseURLRequired(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	cfg.Sora.Client.CurlCFFISidecar.BaseURL = "   "
+	err = cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "sora.client.curl_cffi_sidecar.base_url is required") {
+		t.Fatalf("Validate() error = %v, want sidecar base_url required error", err)
+placeholder
+placeholder
+
+func TestValidateSoraCurlCFFISidecarSessionTTLNonNegative(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	cfg.Sora.Client.CurlCFFISidecar.SessionTTLSeconds = -1
+	err = cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "sora.client.curl_cffi_sidecar.session_ttl_seconds must be non-negative") {
+		t.Fatalf("Validate() error = %v, want sidecar session ttl error", err)
+placeholder
+placeholder
+
+func TestValidateSoraCloudflareChallengeCooldownNonNegative(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+
+	cfg.Sora.Client.CloudflareChallengeCooldownSeconds = -1
+	err = cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "sora.client.cloudflare_challenge_cooldown_seconds must be non-negative") {
+		t.Fatalf("Validate() error = %v, want cloudflare cooldown error", err)
+placeholder
+placeholder
+
+func TestLoad_DefaultGatewayUsageRecordConfig(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+placeholder
+	if cfg.Gateway.UsageRecord.WorkerCount != 128 {
+		t.Fatalf("worker_count = %d, want 128", cfg.Gateway.UsageRecord.WorkerCount)
+placeholder
+	if cfg.Gateway.UsageRecord.QueueSize != 16384 {
+		t.Fatalf("queue_size = %d, want 16384", cfg.Gateway.UsageRecord.QueueSize)
+placeholder
+	if cfg.Gateway.UsageRecord.TaskTimeoutSeconds != 5 {
+		t.Fatalf("task_timeout_seconds = %d, want 5", cfg.Gateway.UsageRecord.TaskTimeoutSeconds)
+placeholder
+	if cfg.Gateway.UsageRecord.OverflowPolicy != UsageRecordOverflowPolicySample {
+		t.Fatalf("overflow_policy = %s, want %s", cfg.Gateway.UsageRecord.OverflowPolicy, UsageRecordOverflowPolicySample)
+placeholder
+	if cfg.Gateway.UsageRecord.OverflowSamplePercent != 10 {
+		t.Fatalf("overflow_sample_percent = %d, want 10", cfg.Gateway.UsageRecord.OverflowSamplePercent)
+placeholder
+	if !cfg.Gateway.UsageRecord.AutoScaleEnabled {
+		t.Fatalf("auto_scale_enabled = false, want true")
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleMinWorkers != 128 {
+		t.Fatalf("auto_scale_min_workers = %d, want 128", cfg.Gateway.UsageRecord.AutoScaleMinWorkers)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleMaxWorkers != 512 {
+		t.Fatalf("auto_scale_max_workers = %d, want 512", cfg.Gateway.UsageRecord.AutoScaleMaxWorkers)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleUpQueuePercent != 70 {
+		t.Fatalf("auto_scale_up_queue_percent = %d, want 70", cfg.Gateway.UsageRecord.AutoScaleUpQueuePercent)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleDownQueuePercent != 15 {
+		t.Fatalf("auto_scale_down_queue_percent = %d, want 15", cfg.Gateway.UsageRecord.AutoScaleDownQueuePercent)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleUpStep != 32 {
+		t.Fatalf("auto_scale_up_step = %d, want 32", cfg.Gateway.UsageRecord.AutoScaleUpStep)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleDownStep != 16 {
+		t.Fatalf("auto_scale_down_step = %d, want 16", cfg.Gateway.UsageRecord.AutoScaleDownStep)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleCheckIntervalSeconds != 3 {
+		t.Fatalf("auto_scale_check_interval_seconds = %d, want 3", cfg.Gateway.UsageRecord.AutoScaleCheckIntervalSeconds)
+placeholder
+	if cfg.Gateway.UsageRecord.AutoScaleCooldownSeconds != 10 {
+		t.Fatalf("auto_scale_cooldown_seconds = %d, want 10", cfg.Gateway.UsageRecord.AutoScaleCooldownSeconds)
 placeholder
 placeholder

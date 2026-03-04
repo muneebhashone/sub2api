@@ -1,0 +1,64 @@
+//go:build unit
+
+package service
+
+import (
+	"context"
+	"testing"
+
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/stretchr/testify/require"
+)
+
+type settingPublicRepoStub struct {
+	values map[string]string
+placeholder
+
+func (s *settingPublicRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
+	panic("unexpected Get call")
+placeholder
+
+func (s *settingPublicRepoStub) GetValue(ctx context.Context, key string) (string, error) {
+	panic("unexpected GetValue call")
+placeholder
+
+func (s *settingPublicRepoStub) Set(ctx context.Context, key, value string) error {
+	panic("unexpected Set call")
+placeholder
+
+func (s *settingPublicRepoStub) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
+	out := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if value, ok := s.values[key]; ok {
+			out[key] = value
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
+func (s *settingPublicRepoStub) SetMultiple(ctx context.Context, settings map[string]string) error {
+	panic("unexpected SetMultiple call")
+placeholder
+
+func (s *settingPublicRepoStub) GetAll(ctx context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+placeholder
+
+func (s *settingPublicRepoStub) Delete(ctx context.Context, key string) error {
+	panic("unexpected Delete call")
+placeholder
+
+func TestSettingService_GetPublicSettings_ExposesRegistrationEmailSuffixWhitelist(t *testing.T) {
+	repo := &settingPublicRepoStub{
+		values: map[string]string{
+			SettingKeyRegistrationEnabled:              "true",
+			SettingKeyEmailVerifyEnabled:               "true",
+			SettingKeyRegistrationEmailSuffixWhitelist: `["@EXAMPLE.com"," @foo.bar ","@invalid_domain",""]`,
+	placeholder,
+placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+placeholder
+	require.Equal(t, []string{"@example.com", "@foo.bar"placeholder, settings.RegistrationEmailSuffixWhitelist)
+placeholder

@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"math"
 	"net"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -62,7 +62,8 @@ const (
 )
 
 var wsConnCount atomic.Int32
-var wsConnCountByIP sync.Map // map[string]*atomic.Int32
+var wsConnCountByIPMu sync.Mutex
+var wsConnCountByIP = make(map[string]int32)
 
 const qpsWSIdleStopDelay = 30 * time.Second
 
@@ -252,7 +253,7 @@ placeholder
 	stats, err := opsService.GetWindowStats(ctx, now.Add(-c.requestCountWindow), now)
 	if err != nil || stats == nil {
 		if err != nil {
-			log.Printf("[OpsWS] refresh: get window stats failed: %v", err)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] refresh: get window stats failed: %v", err)
 	placeholder
 		return
 placeholder
@@ -278,7 +279,7 @@ placeholder
 
 	msg, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("[OpsWS] refresh: marshal payload failed: %v", err)
+		logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] refresh: marshal payload failed: %v", err)
 		return
 placeholder
 
@@ -338,7 +339,7 @@ placeholder
 
 	// Reserve a global slot before upgrading the connection to keep the limit strict.
 	if !tryAcquireOpsWSTotalSlot(opsWSLimits.MaxConns) {
-		log.Printf("[OpsWS] connection limit reached: %d/%d", wsConnCount.Load(), opsWSLimits.MaxConns)
+		logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] connection limit reached: %d/%d", wsConnCount.Load(), opsWSLimits.MaxConns)
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "too many connections"placeholder)
 		return
 placeholder
@@ -350,7 +351,7 @@ placeholder()
 
 	if opsWSLimits.MaxConnsPerIP > 0 && clientIP != "" {
 		if !tryAcquireOpsWSIPSlot(clientIP, opsWSLimits.MaxConnsPerIP) {
-			log.Printf("[OpsWS] per-ip connection limit reached: ip=%s limit=%d", clientIP, opsWSLimits.MaxConnsPerIP)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] per-ip connection limit reached: ip=%s limit=%d", clientIP, opsWSLimits.MaxConnsPerIP)
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "too many connections"placeholder)
 			return
 	placeholder
@@ -359,7 +360,7 @@ placeholder
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("[OpsWS] upgrade failed: %v", err)
+		logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] upgrade failed: %v", err)
 		return
 placeholder
 
@@ -389,42 +390,31 @@ func tryAcquireOpsWSIPSlot(clientIP string, limit int32) bool {
 	if strings.TrimSpace(clientIP) == "" || limit <= 0 {
 		return true
 placeholder
-
-	v, _ := wsConnCountByIP.LoadOrStore(clientIP, &atomic.Int32{placeholder)
-	counter, ok := v.(*atomic.Int32)
-	if !ok {
+	wsConnCountByIPMu.Lock()
+	defer wsConnCountByIPMu.Unlock()
+	current := wsConnCountByIP[clientIP]
+	if current >= limit {
 		return false
 placeholder
-
-	for {
-		current := counter.Load()
-		if current >= limit {
-			return false
-	placeholder
-		if counter.CompareAndSwap(current, current+1) {
-			return true
-	placeholder
-placeholder
+	wsConnCountByIP[clientIP] = current + 1
+	return true
 placeholder
 
 func releaseOpsWSIPSlot(clientIP string) {
 	if strings.TrimSpace(clientIP) == "" {
 		return
 placeholder
-
-	v, ok := wsConnCountByIP.Load(clientIP)
+	wsConnCountByIPMu.Lock()
+	defer wsConnCountByIPMu.Unlock()
+	current, ok := wsConnCountByIP[clientIP]
 	if !ok {
 		return
 placeholder
-	counter, ok := v.(*atomic.Int32)
-	if !ok {
+	if current <= 1 {
+		delete(wsConnCountByIP, clientIP)
 		return
 placeholder
-	next := counter.Add(-1)
-	if next <= 0 {
-		// Best-effort cleanup; safe even if a new slot was acquired concurrently.
-		wsConnCountByIP.Delete(clientIP)
-placeholder
+	wsConnCountByIP[clientIP] = current - 1
 placeholder
 
 func handleQPSWebSocket(parentCtx context.Context, conn *websocket.Conn) {
@@ -452,7 +442,7 @@ placeholder
 
 		conn.SetReadLimit(qpsWSMaxReadBytes)
 		if err := conn.SetReadDeadline(time.Now().Add(qpsWSPongWait)); err != nil {
-			log.Printf("[OpsWS] set read deadline failed: %v", err)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] set read deadline failed: %v", err)
 			return
 	placeholder
 		conn.SetPongHandler(func(string) error {
@@ -471,7 +461,7 @@ placeholder
 			_, _, err := conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-					log.Printf("[OpsWS] read failed: %v", err)
+					logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] read failed: %v", err)
 			placeholder
 				return
 		placeholder
@@ -508,7 +498,7 @@ placeholder
 				continue
 		placeholder
 			if err := writeWithTimeout(websocket.TextMessage, msg); err != nil {
-				log.Printf("[OpsWS] write failed: %v", err)
+				logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] write failed: %v", err)
 				cancel()
 				closeConn()
 				wg.Wait()
@@ -517,7 +507,7 @@ placeholder
 
 		case <-pingTicker.C:
 			if err := writeWithTimeout(websocket.PingMessage, nil); err != nil {
-				log.Printf("[OpsWS] ping failed: %v", err)
+				logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] ping failed: %v", err)
 				cancel()
 				closeConn()
 				wg.Wait()
@@ -666,14 +656,14 @@ placeholder
 		if parsed, err := strconv.ParseBool(v); err == nil {
 			cfg.TrustProxy = parsed
 	placeholder else {
-			log.Printf("[OpsWS] invalid %s=%q (expected bool); using default=%v", envOpsWSTrustProxy, v, cfg.TrustProxy)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] invalid %s=%q (expected bool); using default=%v", envOpsWSTrustProxy, v, cfg.TrustProxy)
 	placeholder
 placeholder
 
 	if raw := strings.TrimSpace(os.Getenv(envOpsWSTrustedProxies)); raw != "" {
 		prefixes, invalid := parseTrustedProxyList(raw)
 		if len(invalid) > 0 {
-			log.Printf("[OpsWS] invalid %s entries ignored: %s", envOpsWSTrustedProxies, strings.Join(invalid, ", "))
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] invalid %s entries ignored: %s", envOpsWSTrustedProxies, strings.Join(invalid, ", "))
 	placeholder
 		cfg.TrustedProxies = prefixes
 placeholder
@@ -684,7 +674,7 @@ placeholder
 		case OriginPolicyStrict, OriginPolicyPermissive:
 			cfg.OriginPolicy = normalized
 		default:
-			log.Printf("[OpsWS] invalid %s=%q (expected %q or %q); using default=%q", envOpsWSOriginPolicy, v, OriginPolicyStrict, OriginPolicyPermissive, cfg.OriginPolicy)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] invalid %s=%q (expected %q or %q); using default=%q", envOpsWSOriginPolicy, v, OriginPolicyStrict, OriginPolicyPermissive, cfg.OriginPolicy)
 	placeholder
 placeholder
 
@@ -701,14 +691,14 @@ placeholder
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
 			cfg.MaxConns = int32(parsed)
 	placeholder else {
-			log.Printf("[OpsWS] invalid %s=%q (expected int>0); using default=%d", envOpsWSMaxConns, v, cfg.MaxConns)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] invalid %s=%q (expected int>0); using default=%d", envOpsWSMaxConns, v, cfg.MaxConns)
 	placeholder
 placeholder
 	if v := strings.TrimSpace(os.Getenv(envOpsWSMaxConnsPerIP)); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed >= 0 {
 			cfg.MaxConnsPerIP = int32(parsed)
 	placeholder else {
-			log.Printf("[OpsWS] invalid %s=%q (expected int>=0); using default=%d", envOpsWSMaxConnsPerIP, v, cfg.MaxConnsPerIP)
+			logger.LegacyPrintf("handler.admin.ops_ws", "[OpsWS] invalid %s=%q (expected int>=0); using default=%d", envOpsWSMaxConnsPerIP, v, cfg.MaxConnsPerIP)
 	placeholder
 placeholder
 	return cfg

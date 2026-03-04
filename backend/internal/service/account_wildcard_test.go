@@ -267,3 +267,119 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestAccountGetModelMapping_AntigravityEnsuresGeminiDefaultPassthroughs(t *testing.T) {
+	account := &Account{
+		Platform: PlatformAntigravity,
+placeholder
+			"model_mapping": map[string]any{
+				"gemini-3-pro-high": "gemini-3.1-pro-high",
+		placeholder,
+	placeholder,
+placeholder
+
+	mapping := account.GetModelMapping()
+	if mapping["gemini-3-flash"] != "gemini-3-flash" {
+		t.Fatalf("expected gemini-3-flash passthrough to be auto-filled, got: %q", mapping["gemini-3-flash"])
+placeholder
+	if mapping["gemini-3.1-pro-high"] != "gemini-3.1-pro-high" {
+		t.Fatalf("expected gemini-3.1-pro-high passthrough to be auto-filled, got: %q", mapping["gemini-3.1-pro-high"])
+placeholder
+	if mapping["gemini-3.1-pro-low"] != "gemini-3.1-pro-low" {
+		t.Fatalf("expected gemini-3.1-pro-low passthrough to be auto-filled, got: %q", mapping["gemini-3.1-pro-low"])
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_AntigravityRespectsWildcardOverride(t *testing.T) {
+	account := &Account{
+		Platform: PlatformAntigravity,
+placeholder
+			"model_mapping": map[string]any{
+				"gemini-3*": "gemini-3.1-pro-high",
+		placeholder,
+	placeholder,
+placeholder
+
+	mapping := account.GetModelMapping()
+	if _, exists := mapping["gemini-3-flash"]; exists {
+		t.Fatalf("did not expect explicit gemini-3-flash passthrough when wildcard already exists")
+placeholder
+	if _, exists := mapping["gemini-3.1-pro-high"]; exists {
+		t.Fatalf("did not expect explicit gemini-3.1-pro-high passthrough when wildcard already exists")
+placeholder
+	if _, exists := mapping["gemini-3.1-pro-low"]; exists {
+		t.Fatalf("did not expect explicit gemini-3.1-pro-low passthrough when wildcard already exists")
+placeholder
+	if mapped := account.GetMappedModel("gemini-3-flash"); mapped != "gemini-3.1-pro-high" {
+		t.Fatalf("expected wildcard mapping to stay effective, got: %q", mapped)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_CacheInvalidatesOnCredentialsReplace(t *testing.T) {
+	account := &Account{
+placeholder
+			"model_mapping": map[string]any{
+				"claude-3-5-sonnet": "upstream-a",
+		placeholder,
+	placeholder,
+placeholder
+
+	first := account.GetModelMapping()
+	if first["claude-3-5-sonnet"] != "upstream-a" {
+		t.Fatalf("unexpected first mapping: %v", first)
+placeholder
+
+	account.Credentials = map[string]any{
+		"model_mapping": map[string]any{
+			"claude-3-5-sonnet": "upstream-b",
+	placeholder,
+placeholder
+	second := account.GetModelMapping()
+	if second["claude-3-5-sonnet"] != "upstream-b" {
+		t.Fatalf("expected cache invalidated after credentials replace, got: %v", second)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_CacheInvalidatesOnMappingLenChange(t *testing.T) {
+	rawMapping := map[string]any{
+		"claude-sonnet": "sonnet-a",
+placeholder
+	account := &Account{
+placeholder
+			"model_mapping": rawMapping,
+	placeholder,
+placeholder
+
+	first := account.GetModelMapping()
+	if len(first) != 1 {
+		t.Fatalf("unexpected first mapping length: %d", len(first))
+placeholder
+
+	rawMapping["claude-opus"] = "opus-b"
+	second := account.GetModelMapping()
+	if second["claude-opus"] != "opus-b" {
+		t.Fatalf("expected cache invalidated after mapping len change, got: %v", second)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_CacheInvalidatesOnInPlaceValueChange(t *testing.T) {
+	rawMapping := map[string]any{
+		"claude-sonnet": "sonnet-a",
+placeholder
+	account := &Account{
+placeholder
+			"model_mapping": rawMapping,
+	placeholder,
+placeholder
+
+	first := account.GetModelMapping()
+	if first["claude-sonnet"] != "sonnet-a" {
+		t.Fatalf("unexpected first mapping: %v", first)
+placeholder
+
+	rawMapping["claude-sonnet"] = "sonnet-b"
+	second := account.GetModelMapping()
+	if second["claude-sonnet"] != "sonnet-b" {
+		t.Fatalf("expected cache invalidated after in-place value change, got: %v", second)
+placeholder
+placeholder

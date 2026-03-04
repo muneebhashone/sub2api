@@ -113,6 +113,20 @@ placeholder
 	return _c
 placeholder
 
+// SetLastUsedAt sets the "last_used_at" field.
+func (_c *APIKeyCreate) SetLastUsedAt(v time.Time) *APIKeyCreate {
+	_c.mutation.SetLastUsedAt(v)
+	return _c
+placeholder
+
+// SetNillableLastUsedAt sets the "last_used_at" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableLastUsedAt(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetLastUsedAt(*v)
+placeholder
+	return _c
+placeholder
+
 // SetIPWhitelist sets the "ip_whitelist" field.
 func (_c *APIKeyCreate) SetIPWhitelist(v []string) *APIKeyCreate {
 	_c.mutation.SetIPWhitelist(v)
@@ -163,6 +177,132 @@ placeholder
 func (_c *APIKeyCreate) SetNillableExpiresAt(v *time.Time) *APIKeyCreate {
 	if v != nil {
 		_c.SetExpiresAt(*v)
+placeholder
+	return _c
+placeholder
+
+// SetRateLimit5h sets the "rate_limit_5h" field.
+func (_c *APIKeyCreate) SetRateLimit5h(v float64) *APIKeyCreate {
+	_c.mutation.SetRateLimit5h(v)
+	return _c
+placeholder
+
+// SetNillableRateLimit5h sets the "rate_limit_5h" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableRateLimit5h(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetRateLimit5h(*v)
+placeholder
+	return _c
+placeholder
+
+// SetRateLimit1d sets the "rate_limit_1d" field.
+func (_c *APIKeyCreate) SetRateLimit1d(v float64) *APIKeyCreate {
+	_c.mutation.SetRateLimit1d(v)
+	return _c
+placeholder
+
+// SetNillableRateLimit1d sets the "rate_limit_1d" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableRateLimit1d(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetRateLimit1d(*v)
+placeholder
+	return _c
+placeholder
+
+// SetRateLimit7d sets the "rate_limit_7d" field.
+func (_c *APIKeyCreate) SetRateLimit7d(v float64) *APIKeyCreate {
+	_c.mutation.SetRateLimit7d(v)
+	return _c
+placeholder
+
+// SetNillableRateLimit7d sets the "rate_limit_7d" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableRateLimit7d(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetRateLimit7d(*v)
+placeholder
+	return _c
+placeholder
+
+// SetUsage5h sets the "usage_5h" field.
+func (_c *APIKeyCreate) SetUsage5h(v float64) *APIKeyCreate {
+	_c.mutation.SetUsage5h(v)
+	return _c
+placeholder
+
+// SetNillableUsage5h sets the "usage_5h" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUsage5h(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetUsage5h(*v)
+placeholder
+	return _c
+placeholder
+
+// SetUsage1d sets the "usage_1d" field.
+func (_c *APIKeyCreate) SetUsage1d(v float64) *APIKeyCreate {
+	_c.mutation.SetUsage1d(v)
+	return _c
+placeholder
+
+// SetNillableUsage1d sets the "usage_1d" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUsage1d(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetUsage1d(*v)
+placeholder
+	return _c
+placeholder
+
+// SetUsage7d sets the "usage_7d" field.
+func (_c *APIKeyCreate) SetUsage7d(v float64) *APIKeyCreate {
+	_c.mutation.SetUsage7d(v)
+	return _c
+placeholder
+
+// SetNillableUsage7d sets the "usage_7d" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUsage7d(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetUsage7d(*v)
+placeholder
+	return _c
+placeholder
+
+// SetWindow5hStart sets the "window_5h_start" field.
+func (_c *APIKeyCreate) SetWindow5hStart(v time.Time) *APIKeyCreate {
+	_c.mutation.SetWindow5hStart(v)
+	return _c
+placeholder
+
+// SetNillableWindow5hStart sets the "window_5h_start" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableWindow5hStart(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetWindow5hStart(*v)
+placeholder
+	return _c
+placeholder
+
+// SetWindow1dStart sets the "window_1d_start" field.
+func (_c *APIKeyCreate) SetWindow1dStart(v time.Time) *APIKeyCreate {
+	_c.mutation.SetWindow1dStart(v)
+	return _c
+placeholder
+
+// SetNillableWindow1dStart sets the "window_1d_start" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableWindow1dStart(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetWindow1dStart(*v)
+placeholder
+	return _c
+placeholder
+
+// SetWindow7dStart sets the "window_7d_start" field.
+func (_c *APIKeyCreate) SetWindow7dStart(v time.Time) *APIKeyCreate {
+	_c.mutation.SetWindow7dStart(v)
+	return _c
+placeholder
+
+// SetNillableWindow7dStart sets the "window_7d_start" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableWindow7dStart(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetWindow7dStart(*v)
 placeholder
 	return _c
 placeholder
@@ -255,6 +395,30 @@ placeholder
 		v := apikey.DefaultQuotaUsed
 		_c.mutation.SetQuotaUsed(v)
 placeholder
+	if _, ok := _c.mutation.RateLimit5h(); !ok {
+		v := apikey.DefaultRateLimit5h
+		_c.mutation.SetRateLimit5h(v)
+placeholder
+	if _, ok := _c.mutation.RateLimit1d(); !ok {
+		v := apikey.DefaultRateLimit1d
+		_c.mutation.SetRateLimit1d(v)
+placeholder
+	if _, ok := _c.mutation.RateLimit7d(); !ok {
+		v := apikey.DefaultRateLimit7d
+		_c.mutation.SetRateLimit7d(v)
+placeholder
+	if _, ok := _c.mutation.Usage5h(); !ok {
+		v := apikey.DefaultUsage5h
+		_c.mutation.SetUsage5h(v)
+placeholder
+	if _, ok := _c.mutation.Usage1d(); !ok {
+		v := apikey.DefaultUsage1d
+		_c.mutation.SetUsage1d(v)
+placeholder
+	if _, ok := _c.mutation.Usage7d(); !ok {
+		v := apikey.DefaultUsage7d
+		_c.mutation.SetUsage7d(v)
+placeholder
 	return nil
 placeholder
 
@@ -298,6 +462,24 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.QuotaUsed(); !ok {
 		return &ValidationError{Name: "quota_used", err: errors.New(`ent: missing required field "APIKey.quota_used"`)placeholder
+placeholder
+	if _, ok := _c.mutation.RateLimit5h(); !ok {
+		return &ValidationError{Name: "rate_limit_5h", err: errors.New(`ent: missing required field "APIKey.rate_limit_5h"`)placeholder
+placeholder
+	if _, ok := _c.mutation.RateLimit1d(); !ok {
+		return &ValidationError{Name: "rate_limit_1d", err: errors.New(`ent: missing required field "APIKey.rate_limit_1d"`)placeholder
+placeholder
+	if _, ok := _c.mutation.RateLimit7d(); !ok {
+		return &ValidationError{Name: "rate_limit_7d", err: errors.New(`ent: missing required field "APIKey.rate_limit_7d"`)placeholder
+placeholder
+	if _, ok := _c.mutation.Usage5h(); !ok {
+		return &ValidationError{Name: "usage_5h", err: errors.New(`ent: missing required field "APIKey.usage_5h"`)placeholder
+placeholder
+	if _, ok := _c.mutation.Usage1d(); !ok {
+		return &ValidationError{Name: "usage_1d", err: errors.New(`ent: missing required field "APIKey.usage_1d"`)placeholder
+placeholder
+	if _, ok := _c.mutation.Usage7d(); !ok {
+		return &ValidationError{Name: "usage_7d", err: errors.New(`ent: missing required field "APIKey.usage_7d"`)placeholder
 placeholder
 	if len(_c.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "APIKey.user"`)placeholder
@@ -353,6 +535,10 @@ placeholder
 		_spec.SetField(apikey.FieldStatus, field.TypeString, value)
 		_node.Status = value
 placeholder
+	if value, ok := _c.mutation.LastUsedAt(); ok {
+		_spec.SetField(apikey.FieldLastUsedAt, field.TypeTime, value)
+		_node.LastUsedAt = &value
+placeholder
 	if value, ok := _c.mutation.IPWhitelist(); ok {
 		_spec.SetField(apikey.FieldIPWhitelist, field.TypeJSON, value)
 		_node.IPWhitelist = value
@@ -372,6 +558,42 @@ placeholder
 	if value, ok := _c.mutation.ExpiresAt(); ok {
 		_spec.SetField(apikey.FieldExpiresAt, field.TypeTime, value)
 		_node.ExpiresAt = &value
+placeholder
+	if value, ok := _c.mutation.RateLimit5h(); ok {
+		_spec.SetField(apikey.FieldRateLimit5h, field.TypeFloat64, value)
+		_node.RateLimit5h = value
+placeholder
+	if value, ok := _c.mutation.RateLimit1d(); ok {
+		_spec.SetField(apikey.FieldRateLimit1d, field.TypeFloat64, value)
+		_node.RateLimit1d = value
+placeholder
+	if value, ok := _c.mutation.RateLimit7d(); ok {
+		_spec.SetField(apikey.FieldRateLimit7d, field.TypeFloat64, value)
+		_node.RateLimit7d = value
+placeholder
+	if value, ok := _c.mutation.Usage5h(); ok {
+		_spec.SetField(apikey.FieldUsage5h, field.TypeFloat64, value)
+		_node.Usage5h = value
+placeholder
+	if value, ok := _c.mutation.Usage1d(); ok {
+		_spec.SetField(apikey.FieldUsage1d, field.TypeFloat64, value)
+		_node.Usage1d = value
+placeholder
+	if value, ok := _c.mutation.Usage7d(); ok {
+		_spec.SetField(apikey.FieldUsage7d, field.TypeFloat64, value)
+		_node.Usage7d = value
+placeholder
+	if value, ok := _c.mutation.Window5hStart(); ok {
+		_spec.SetField(apikey.FieldWindow5hStart, field.TypeTime, value)
+		_node.Window5hStart = &value
+placeholder
+	if value, ok := _c.mutation.Window1dStart(); ok {
+		_spec.SetField(apikey.FieldWindow1dStart, field.TypeTime, value)
+		_node.Window1dStart = &value
+placeholder
+	if value, ok := _c.mutation.Window7dStart(); ok {
+		_spec.SetField(apikey.FieldWindow7dStart, field.TypeTime, value)
+		_node.Window7dStart = &value
 placeholder
 	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -571,6 +793,24 @@ func (u *APIKeyUpsert) UpdateStatus() *APIKeyUpsert {
 	return u
 placeholder
 
+// SetLastUsedAt sets the "last_used_at" field.
+func (u *APIKeyUpsert) SetLastUsedAt(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldLastUsedAt, v)
+	return u
+placeholder
+
+// UpdateLastUsedAt sets the "last_used_at" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateLastUsedAt() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldLastUsedAt)
+	return u
+placeholder
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (u *APIKeyUpsert) ClearLastUsedAt() *APIKeyUpsert {
+	u.SetNull(apikey.FieldLastUsedAt)
+	return u
+placeholder
+
 // SetIPWhitelist sets the "ip_whitelist" field.
 func (u *APIKeyUpsert) SetIPWhitelist(v []string) *APIKeyUpsert {
 	u.Set(apikey.FieldIPWhitelist, v)
@@ -658,6 +898,168 @@ placeholder
 // ClearExpiresAt clears the value of the "expires_at" field.
 func (u *APIKeyUpsert) ClearExpiresAt() *APIKeyUpsert {
 	u.SetNull(apikey.FieldExpiresAt)
+	return u
+placeholder
+
+// SetRateLimit5h sets the "rate_limit_5h" field.
+func (u *APIKeyUpsert) SetRateLimit5h(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldRateLimit5h, v)
+	return u
+placeholder
+
+// UpdateRateLimit5h sets the "rate_limit_5h" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateRateLimit5h() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldRateLimit5h)
+	return u
+placeholder
+
+// AddRateLimit5h adds v to the "rate_limit_5h" field.
+func (u *APIKeyUpsert) AddRateLimit5h(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldRateLimit5h, v)
+	return u
+placeholder
+
+// SetRateLimit1d sets the "rate_limit_1d" field.
+func (u *APIKeyUpsert) SetRateLimit1d(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldRateLimit1d, v)
+	return u
+placeholder
+
+// UpdateRateLimit1d sets the "rate_limit_1d" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateRateLimit1d() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldRateLimit1d)
+	return u
+placeholder
+
+// AddRateLimit1d adds v to the "rate_limit_1d" field.
+func (u *APIKeyUpsert) AddRateLimit1d(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldRateLimit1d, v)
+	return u
+placeholder
+
+// SetRateLimit7d sets the "rate_limit_7d" field.
+func (u *APIKeyUpsert) SetRateLimit7d(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldRateLimit7d, v)
+	return u
+placeholder
+
+// UpdateRateLimit7d sets the "rate_limit_7d" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateRateLimit7d() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldRateLimit7d)
+	return u
+placeholder
+
+// AddRateLimit7d adds v to the "rate_limit_7d" field.
+func (u *APIKeyUpsert) AddRateLimit7d(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldRateLimit7d, v)
+	return u
+placeholder
+
+// SetUsage5h sets the "usage_5h" field.
+func (u *APIKeyUpsert) SetUsage5h(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldUsage5h, v)
+	return u
+placeholder
+
+// UpdateUsage5h sets the "usage_5h" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUsage5h() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUsage5h)
+	return u
+placeholder
+
+// AddUsage5h adds v to the "usage_5h" field.
+func (u *APIKeyUpsert) AddUsage5h(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldUsage5h, v)
+	return u
+placeholder
+
+// SetUsage1d sets the "usage_1d" field.
+func (u *APIKeyUpsert) SetUsage1d(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldUsage1d, v)
+	return u
+placeholder
+
+// UpdateUsage1d sets the "usage_1d" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUsage1d() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUsage1d)
+	return u
+placeholder
+
+// AddUsage1d adds v to the "usage_1d" field.
+func (u *APIKeyUpsert) AddUsage1d(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldUsage1d, v)
+	return u
+placeholder
+
+// SetUsage7d sets the "usage_7d" field.
+func (u *APIKeyUpsert) SetUsage7d(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldUsage7d, v)
+	return u
+placeholder
+
+// UpdateUsage7d sets the "usage_7d" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUsage7d() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUsage7d)
+	return u
+placeholder
+
+// AddUsage7d adds v to the "usage_7d" field.
+func (u *APIKeyUpsert) AddUsage7d(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldUsage7d, v)
+	return u
+placeholder
+
+// SetWindow5hStart sets the "window_5h_start" field.
+func (u *APIKeyUpsert) SetWindow5hStart(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldWindow5hStart, v)
+	return u
+placeholder
+
+// UpdateWindow5hStart sets the "window_5h_start" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateWindow5hStart() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldWindow5hStart)
+	return u
+placeholder
+
+// ClearWindow5hStart clears the value of the "window_5h_start" field.
+func (u *APIKeyUpsert) ClearWindow5hStart() *APIKeyUpsert {
+	u.SetNull(apikey.FieldWindow5hStart)
+	return u
+placeholder
+
+// SetWindow1dStart sets the "window_1d_start" field.
+func (u *APIKeyUpsert) SetWindow1dStart(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldWindow1dStart, v)
+	return u
+placeholder
+
+// UpdateWindow1dStart sets the "window_1d_start" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateWindow1dStart() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldWindow1dStart)
+	return u
+placeholder
+
+// ClearWindow1dStart clears the value of the "window_1d_start" field.
+func (u *APIKeyUpsert) ClearWindow1dStart() *APIKeyUpsert {
+	u.SetNull(apikey.FieldWindow1dStart)
+	return u
+placeholder
+
+// SetWindow7dStart sets the "window_7d_start" field.
+func (u *APIKeyUpsert) SetWindow7dStart(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldWindow7dStart, v)
+	return u
+placeholder
+
+// UpdateWindow7dStart sets the "window_7d_start" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateWindow7dStart() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldWindow7dStart)
+	return u
+placeholder
+
+// ClearWindow7dStart clears the value of the "window_7d_start" field.
+func (u *APIKeyUpsert) ClearWindow7dStart() *APIKeyUpsert {
+	u.SetNull(apikey.FieldWindow7dStart)
 	return u
 placeholder
 
@@ -818,6 +1220,27 @@ func (u *APIKeyUpsertOne) UpdateStatus() *APIKeyUpsertOne {
 placeholder)
 placeholder
 
+// SetLastUsedAt sets the "last_used_at" field.
+func (u *APIKeyUpsertOne) SetLastUsedAt(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetLastUsedAt(v)
+placeholder)
+placeholder
+
+// UpdateLastUsedAt sets the "last_used_at" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateLastUsedAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateLastUsedAt()
+placeholder)
+placeholder
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (u *APIKeyUpsertOne) ClearLastUsedAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearLastUsedAt()
+placeholder)
+placeholder
+
 // SetIPWhitelist sets the "ip_whitelist" field.
 func (u *APIKeyUpsertOne) SetIPWhitelist(v []string) *APIKeyUpsertOne {
 	return u.Update(func(s *APIKeyUpsert) {
@@ -920,6 +1343,195 @@ placeholder
 func (u *APIKeyUpsertOne) ClearExpiresAt() *APIKeyUpsertOne {
 	return u.Update(func(s *APIKeyUpsert) {
 		s.ClearExpiresAt()
+placeholder)
+placeholder
+
+// SetRateLimit5h sets the "rate_limit_5h" field.
+func (u *APIKeyUpsertOne) SetRateLimit5h(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimit5h(v)
+placeholder)
+placeholder
+
+// AddRateLimit5h adds v to the "rate_limit_5h" field.
+func (u *APIKeyUpsertOne) AddRateLimit5h(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddRateLimit5h(v)
+placeholder)
+placeholder
+
+// UpdateRateLimit5h sets the "rate_limit_5h" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateRateLimit5h() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimit5h()
+placeholder)
+placeholder
+
+// SetRateLimit1d sets the "rate_limit_1d" field.
+func (u *APIKeyUpsertOne) SetRateLimit1d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimit1d(v)
+placeholder)
+placeholder
+
+// AddRateLimit1d adds v to the "rate_limit_1d" field.
+func (u *APIKeyUpsertOne) AddRateLimit1d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddRateLimit1d(v)
+placeholder)
+placeholder
+
+// UpdateRateLimit1d sets the "rate_limit_1d" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateRateLimit1d() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimit1d()
+placeholder)
+placeholder
+
+// SetRateLimit7d sets the "rate_limit_7d" field.
+func (u *APIKeyUpsertOne) SetRateLimit7d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimit7d(v)
+placeholder)
+placeholder
+
+// AddRateLimit7d adds v to the "rate_limit_7d" field.
+func (u *APIKeyUpsertOne) AddRateLimit7d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddRateLimit7d(v)
+placeholder)
+placeholder
+
+// UpdateRateLimit7d sets the "rate_limit_7d" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateRateLimit7d() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimit7d()
+placeholder)
+placeholder
+
+// SetUsage5h sets the "usage_5h" field.
+func (u *APIKeyUpsertOne) SetUsage5h(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUsage5h(v)
+placeholder)
+placeholder
+
+// AddUsage5h adds v to the "usage_5h" field.
+func (u *APIKeyUpsertOne) AddUsage5h(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUsage5h(v)
+placeholder)
+placeholder
+
+// UpdateUsage5h sets the "usage_5h" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUsage5h() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUsage5h()
+placeholder)
+placeholder
+
+// SetUsage1d sets the "usage_1d" field.
+func (u *APIKeyUpsertOne) SetUsage1d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUsage1d(v)
+placeholder)
+placeholder
+
+// AddUsage1d adds v to the "usage_1d" field.
+func (u *APIKeyUpsertOne) AddUsage1d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUsage1d(v)
+placeholder)
+placeholder
+
+// UpdateUsage1d sets the "usage_1d" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUsage1d() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUsage1d()
+placeholder)
+placeholder
+
+// SetUsage7d sets the "usage_7d" field.
+func (u *APIKeyUpsertOne) SetUsage7d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUsage7d(v)
+placeholder)
+placeholder
+
+// AddUsage7d adds v to the "usage_7d" field.
+func (u *APIKeyUpsertOne) AddUsage7d(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUsage7d(v)
+placeholder)
+placeholder
+
+// UpdateUsage7d sets the "usage_7d" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUsage7d() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUsage7d()
+placeholder)
+placeholder
+
+// SetWindow5hStart sets the "window_5h_start" field.
+func (u *APIKeyUpsertOne) SetWindow5hStart(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetWindow5hStart(v)
+placeholder)
+placeholder
+
+// UpdateWindow5hStart sets the "window_5h_start" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateWindow5hStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateWindow5hStart()
+placeholder)
+placeholder
+
+// ClearWindow5hStart clears the value of the "window_5h_start" field.
+func (u *APIKeyUpsertOne) ClearWindow5hStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearWindow5hStart()
+placeholder)
+placeholder
+
+// SetWindow1dStart sets the "window_1d_start" field.
+func (u *APIKeyUpsertOne) SetWindow1dStart(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetWindow1dStart(v)
+placeholder)
+placeholder
+
+// UpdateWindow1dStart sets the "window_1d_start" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateWindow1dStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateWindow1dStart()
+placeholder)
+placeholder
+
+// ClearWindow1dStart clears the value of the "window_1d_start" field.
+func (u *APIKeyUpsertOne) ClearWindow1dStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearWindow1dStart()
+placeholder)
+placeholder
+
+// SetWindow7dStart sets the "window_7d_start" field.
+func (u *APIKeyUpsertOne) SetWindow7dStart(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetWindow7dStart(v)
+placeholder)
+placeholder
+
+// UpdateWindow7dStart sets the "window_7d_start" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateWindow7dStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateWindow7dStart()
+placeholder)
+placeholder
+
+// ClearWindow7dStart clears the value of the "window_7d_start" field.
+func (u *APIKeyUpsertOne) ClearWindow7dStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearWindow7dStart()
 placeholder)
 placeholder
 
@@ -1246,6 +1858,27 @@ func (u *APIKeyUpsertBulk) UpdateStatus() *APIKeyUpsertBulk {
 placeholder)
 placeholder
 
+// SetLastUsedAt sets the "last_used_at" field.
+func (u *APIKeyUpsertBulk) SetLastUsedAt(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetLastUsedAt(v)
+placeholder)
+placeholder
+
+// UpdateLastUsedAt sets the "last_used_at" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateLastUsedAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateLastUsedAt()
+placeholder)
+placeholder
+
+// ClearLastUsedAt clears the value of the "last_used_at" field.
+func (u *APIKeyUpsertBulk) ClearLastUsedAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearLastUsedAt()
+placeholder)
+placeholder
+
 // SetIPWhitelist sets the "ip_whitelist" field.
 func (u *APIKeyUpsertBulk) SetIPWhitelist(v []string) *APIKeyUpsertBulk {
 	return u.Update(func(s *APIKeyUpsert) {
@@ -1348,6 +1981,195 @@ placeholder
 func (u *APIKeyUpsertBulk) ClearExpiresAt() *APIKeyUpsertBulk {
 	return u.Update(func(s *APIKeyUpsert) {
 		s.ClearExpiresAt()
+placeholder)
+placeholder
+
+// SetRateLimit5h sets the "rate_limit_5h" field.
+func (u *APIKeyUpsertBulk) SetRateLimit5h(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimit5h(v)
+placeholder)
+placeholder
+
+// AddRateLimit5h adds v to the "rate_limit_5h" field.
+func (u *APIKeyUpsertBulk) AddRateLimit5h(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddRateLimit5h(v)
+placeholder)
+placeholder
+
+// UpdateRateLimit5h sets the "rate_limit_5h" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateRateLimit5h() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimit5h()
+placeholder)
+placeholder
+
+// SetRateLimit1d sets the "rate_limit_1d" field.
+func (u *APIKeyUpsertBulk) SetRateLimit1d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimit1d(v)
+placeholder)
+placeholder
+
+// AddRateLimit1d adds v to the "rate_limit_1d" field.
+func (u *APIKeyUpsertBulk) AddRateLimit1d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddRateLimit1d(v)
+placeholder)
+placeholder
+
+// UpdateRateLimit1d sets the "rate_limit_1d" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateRateLimit1d() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimit1d()
+placeholder)
+placeholder
+
+// SetRateLimit7d sets the "rate_limit_7d" field.
+func (u *APIKeyUpsertBulk) SetRateLimit7d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimit7d(v)
+placeholder)
+placeholder
+
+// AddRateLimit7d adds v to the "rate_limit_7d" field.
+func (u *APIKeyUpsertBulk) AddRateLimit7d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddRateLimit7d(v)
+placeholder)
+placeholder
+
+// UpdateRateLimit7d sets the "rate_limit_7d" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateRateLimit7d() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimit7d()
+placeholder)
+placeholder
+
+// SetUsage5h sets the "usage_5h" field.
+func (u *APIKeyUpsertBulk) SetUsage5h(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUsage5h(v)
+placeholder)
+placeholder
+
+// AddUsage5h adds v to the "usage_5h" field.
+func (u *APIKeyUpsertBulk) AddUsage5h(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUsage5h(v)
+placeholder)
+placeholder
+
+// UpdateUsage5h sets the "usage_5h" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUsage5h() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUsage5h()
+placeholder)
+placeholder
+
+// SetUsage1d sets the "usage_1d" field.
+func (u *APIKeyUpsertBulk) SetUsage1d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUsage1d(v)
+placeholder)
+placeholder
+
+// AddUsage1d adds v to the "usage_1d" field.
+func (u *APIKeyUpsertBulk) AddUsage1d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUsage1d(v)
+placeholder)
+placeholder
+
+// UpdateUsage1d sets the "usage_1d" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUsage1d() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUsage1d()
+placeholder)
+placeholder
+
+// SetUsage7d sets the "usage_7d" field.
+func (u *APIKeyUpsertBulk) SetUsage7d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUsage7d(v)
+placeholder)
+placeholder
+
+// AddUsage7d adds v to the "usage_7d" field.
+func (u *APIKeyUpsertBulk) AddUsage7d(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUsage7d(v)
+placeholder)
+placeholder
+
+// UpdateUsage7d sets the "usage_7d" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUsage7d() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUsage7d()
+placeholder)
+placeholder
+
+// SetWindow5hStart sets the "window_5h_start" field.
+func (u *APIKeyUpsertBulk) SetWindow5hStart(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetWindow5hStart(v)
+placeholder)
+placeholder
+
+// UpdateWindow5hStart sets the "window_5h_start" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateWindow5hStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateWindow5hStart()
+placeholder)
+placeholder
+
+// ClearWindow5hStart clears the value of the "window_5h_start" field.
+func (u *APIKeyUpsertBulk) ClearWindow5hStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearWindow5hStart()
+placeholder)
+placeholder
+
+// SetWindow1dStart sets the "window_1d_start" field.
+func (u *APIKeyUpsertBulk) SetWindow1dStart(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetWindow1dStart(v)
+placeholder)
+placeholder
+
+// UpdateWindow1dStart sets the "window_1d_start" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateWindow1dStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateWindow1dStart()
+placeholder)
+placeholder
+
+// ClearWindow1dStart clears the value of the "window_1d_start" field.
+func (u *APIKeyUpsertBulk) ClearWindow1dStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearWindow1dStart()
+placeholder)
+placeholder
+
+// SetWindow7dStart sets the "window_7d_start" field.
+func (u *APIKeyUpsertBulk) SetWindow7dStart(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetWindow7dStart(v)
+placeholder)
+placeholder
+
+// UpdateWindow7dStart sets the "window_7d_start" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateWindow7dStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateWindow7dStart()
+placeholder)
+placeholder
+
+// ClearWindow7dStart clears the value of the "window_7d_start" field.
+func (u *APIKeyUpsertBulk) ClearWindow7dStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearWindow7dStart()
 placeholder)
 placeholder
 

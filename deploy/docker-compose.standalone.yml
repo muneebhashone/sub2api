@@ -48,6 +48,10 @@ services:
       - DATABASE_PASSWORD=${DATABASE_PASSWORD:?DATABASE_PASSWORD is requiredplaceholder
       - DATABASE_DBNAME=${DATABASE_DBNAME:-sub2apiplaceholder
       - DATABASE_SSLMODE=${DATABASE_SSLMODE:-disableplaceholder
+      - DATABASE_MAX_OPEN_CONNS=${DATABASE_MAX_OPEN_CONNS:-50placeholder
+      - DATABASE_MAX_IDLE_CONNS=${DATABASE_MAX_IDLE_CONNS:-10placeholder
+      - DATABASE_CONN_MAX_LIFETIME_MINUTES=${DATABASE_CONN_MAX_LIFETIME_MINUTES:-30placeholder
+      - DATABASE_CONN_MAX_IDLE_TIME_MINUTES=${DATABASE_CONN_MAX_IDLE_TIME_MINUTES:-5placeholder
 
       # =======================================================================
       # Redis Configuration - Required
@@ -56,6 +60,8 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379placeholder
       - REDIS_PASSWORD=${REDIS_PASSWORD:-placeholder
       - REDIS_DB=${REDIS_DB:-0placeholder
+      - REDIS_POOL_SIZE=${REDIS_POOL_SIZE:-placeholder
+      - REDIS_MIN_IDLE_CONNS=${REDIS_MIN_IDLE_CONNS:-10placeholder
       - REDIS_ENABLE_TLS=${REDIS_ENABLE_TLS:-falseplaceholder
 
       # =======================================================================
@@ -82,6 +88,11 @@ services:
       - GEMINI_OAUTH_CLIENT_SECRET=${GEMINI_OAUTH_CLIENT_SECRET:-placeholder
       - GEMINI_OAUTH_SCOPES=${GEMINI_OAUTH_SCOPES:-placeholder
       - GEMINI_QUOTA_POLICY=${GEMINI_QUOTA_POLICY:-placeholder
+
+      # Built-in OAuth client secrets (optional)
+      # SECURITY: This repo does not embed third-party client_secret.
+      - GEMINI_CLI_OAUTH_CLIENT_SECRET=${GEMINI_CLI_OAUTH_CLIENT_SECRET:-placeholder
+      - ANTIGRAVITY_OAUTH_CLIENT_SECRET=${ANTIGRAVITY_OAUTH_CLIENT_SECRET:-placeholder
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

@@ -77,6 +77,12 @@ placeholder{
 
 		// 3. 默认映射中的透传（映射到自己）
 		{
+			name:           "默认映射透传 - claude-sonnet-4-6",
+			requestedModel: "claude-sonnet-4-6",
+			accountMapping: nil,
+			expected:       "claude-sonnet-4-6",
+	placeholder,
+		{
 			name:           "默认映射透传 - claude-sonnet-4-5",
 			requestedModel: "claude-sonnet-4-5",
 			accountMapping: nil,

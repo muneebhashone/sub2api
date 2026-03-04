@@ -15,7 +15,9 @@ import type {
   AccountUsageStatsResponse,
   TempUnschedulableStatus,
   AdminDataPayload,
-  AdminDataImportResult
+  AdminDataImportResult,
+  CheckMixedChannelRequest,
+  CheckMixedChannelResponse
 placeholder from '@/types'
 
 /**
@@ -34,6 +36,7 @@ export async function list(
     status?: string
     group?: string
     search?: string
+    lite?: string
   placeholder,
   options?: {
     signal?: AbortSignal
@@ -48,6 +51,59 @@ export async function list(
     signal: options?.signal
   placeholder)
   return data
+placeholder
+
+export interface AccountListWithEtagResult {
+  notModified: boolean
+  etag: string | null
+  data: PaginatedResponse<Account> | null
+placeholder
+
+export async function listWithEtag(
+  page: number = 1,
+  pageSize: number = 20,
+  filters?: {
+    platform?: string
+    type?: string
+    status?: string
+    search?: string
+    lite?: string
+  placeholder,
+  options?: {
+    signal?: AbortSignal
+    etag?: string | null
+  placeholder
+): Promise<AccountListWithEtagResult> {
+  const headers: Record<string, string> = {placeholder
+  if (options?.etag) {
+    headers['If-None-Match'] = options.etag
+  placeholder
+
+  const response = await apiClient.get<PaginatedResponse<Account>>('/admin/accounts', {
+    params: {
+      page,
+      page_size: pageSize,
+      ...filters
+    placeholder,
+    headers,
+    signal: options?.signal,
+    validateStatus: (status) => (status >= 200 && status < 300) || status === 304
+  placeholder)
+
+  const etagHeader = typeof response.headers?.etag === 'string' ? response.headers.etag : null
+  if (response.status === 304) {
+    return {
+      notModified: true,
+      etag: etagHeader,
+      data: null
+    placeholder
+  placeholder
+
+  return {
+    notModified: false,
+    etag: etagHeader,
+    data: response.data
+  placeholder
 placeholder
 
 /**
@@ -78,6 +134,16 @@ placeholder
  */
 export async function update(id: number, updates: UpdateAccountRequest): Promise<Account> {
   const { data placeholder = await apiClient.put<Account>(`/admin/accounts/${idplaceholder`, updates)
+  return data
+placeholder
+
+/**
+ * Check mixed-channel risk for account-group binding.
+ */
+export async function checkMixedChannelRisk(
+  payload: CheckMixedChannelRequest
+): Promise<CheckMixedChannelResponse> {
+  const { data placeholder = await apiClient.post<CheckMixedChannelResponse>('/admin/accounts/check-mixed-channel', payload)
   return data
 placeholder
 
@@ -165,10 +231,10 @@ placeholder
 /**
  * Clear account rate limit status
  * @param id - Account ID
- * @returns Success confirmation
+ * @returns Updated account
  */
-export async function clearRateLimit(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.post<{ message: string placeholder>(
+export async function clearRateLimit(id: number): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(
     `/admin/accounts/${idplaceholder/clear-rate-limit`
   )
   return data
@@ -220,7 +286,7 @@ placeholder
  */
 export async function exchangeCode(
   endpoint: string,
-  exchangeData: { session_id: string; code: string; proxy_id?: number placeholder
+  exchangeData: { session_id: string; code: string; state?: string; proxy_id?: number placeholder
 ): Promise<Record<string, unknown>> {
   const { data placeholder = await apiClient.post<Record<string, unknown>>(endpoint, exchangeData)
   return data
@@ -302,6 +368,22 @@ placeholder
  */
 export async function getTodayStats(id: number): Promise<WindowStats> {
   const { data placeholder = await apiClient.get<WindowStats>(`/admin/accounts/${idplaceholder/today-stats`)
+  return data
+placeholder
+
+export interface BatchTodayStatsResponse {
+  stats: Record<string, WindowStats>
+placeholder
+
+/**
+ * 批量获取多个账号的今日统计
+ * @param accountIds - 账号 ID 列表
+ * @returns 以账号 ID（字符串）为键的统计映射
+ */
+export async function getBatchTodayStats(accountIds: number[]): Promise<BatchTodayStatsResponse> {
+  const { data placeholder = await apiClient.post<BatchTodayStatsResponse>('/admin/accounts/today-stats/batch', {
+    account_ids: accountIds
+  placeholder)
   return data
 placeholder
 
@@ -442,7 +524,8 @@ placeholder
  */
 export async function refreshOpenAIToken(
   refreshToken: string,
-  proxyId?: number | null
+  proxyId?: number | null,
+  endpoint: string = '/admin/openai/refresh-token'
 ): Promise<Record<string, unknown>> {
   const payload: { refresh_token: string; proxy_id?: number placeholder = {
     refresh_token: refreshToken
@@ -450,15 +533,39 @@ export async function refreshOpenAIToken(
   if (proxyId) {
     payload.proxy_id = proxyId
   placeholder
-  const { data placeholder = await apiClient.post<Record<string, unknown>>('/admin/openai/refresh-token', payload)
+  const { data placeholder = await apiClient.post<Record<string, unknown>>(endpoint, payload)
+  return data
+placeholder
+
+/**
+ * Validate Sora session token and exchange to access token
+ * @param sessionToken - Sora session token
+ * @param proxyId - Optional proxy ID
+ * @param endpoint - API endpoint path
+ * @returns Token information including access_token
+ */
+export async function validateSoraSessionToken(
+  sessionToken: string,
+  proxyId?: number | null,
+  endpoint: string = '/admin/sora/st2at'
+): Promise<Record<string, unknown>> {
+  const payload: { session_token: string; proxy_id?: number placeholder = {
+    session_token: sessionToken
+  placeholder
+  if (proxyId) {
+    payload.proxy_id = proxyId
+  placeholder
+  const { data placeholder = await apiClient.post<Record<string, unknown>>(endpoint, payload)
   return data
 placeholder
 
 export const accountsAPI = {
   list,
+  listWithEtag,
   getById,
   create,
   update,
+  checkMixedChannelRisk,
   delete: deleteAccount,
   toggleStatus,
   testAccount,
@@ -467,6 +574,7 @@ export const accountsAPI = {
   clearError,
   getUsage,
   getTodayStats,
+  getBatchTodayStats,
   clearRateLimit,
   getTempUnschedulableStatus,
   resetTempUnschedulable,
@@ -475,6 +583,7 @@ export const accountsAPI = {
   generateAuthUrl,
   exchangeCode,
   refreshOpenAIToken,
+  validateSoraSessionToken,
   batchCreate,
   batchUpdateCredentials,
   bulkUpdate,

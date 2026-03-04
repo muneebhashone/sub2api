@@ -93,6 +93,18 @@ placeholder
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GroupMutation", m)
 placeholder
 
+// The IdempotencyRecordFunc type is an adapter to allow the use of ordinary
+// function as IdempotencyRecord mutator.
+type IdempotencyRecordFunc func(context.Context, *ent.IdempotencyRecordMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f IdempotencyRecordFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.IdempotencyRecordMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IdempotencyRecordMutation", m)
+placeholder
+
 // The PromoCodeFunc type is an adapter to allow the use of ordinary
 // function as PromoCode mutator.
 type PromoCodeFunc func(context.Context, *ent.PromoCodeMutation) (ent.Value, error)
@@ -139,6 +151,18 @@ func (f RedeemCodeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 placeholder
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RedeemCodeMutation", m)
+placeholder
+
+// The SecuritySecretFunc type is an adapter to allow the use of ordinary
+// function as SecuritySecret mutator.
+type SecuritySecretFunc func(context.Context, *ent.SecuritySecretMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SecuritySecretFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SecuritySecretMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SecuritySecretMutation", m)
 placeholder
 
 // The SettingFunc type is an adapter to allow the use of ordinary

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,6 +14,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 )
 
@@ -67,6 +68,9 @@ placeholder
 	if filters.Model != nil {
 		parts = append(parts, "model="+strings.TrimSpace(*filters.Model))
 placeholder
+	if filters.RequestType != nil {
+		parts = append(parts, "request_type="+RequestTypeFromInt16(*filters.RequestType).String())
+placeholder
 	if filters.Stream != nil {
 		parts = append(parts, fmt.Sprintf("stream=%t", *filters.Stream))
 placeholder
@@ -81,18 +85,18 @@ func (s *UsageCleanupService) Start() {
 		return
 placeholder
 	if s.cfg != nil && !s.cfg.UsageCleanup.Enabled {
-		log.Printf("[UsageCleanup] not started (disabled)")
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] not started (disabled)")
 		return
 placeholder
 	if s.repo == nil || s.timingWheel == nil {
-		log.Printf("[UsageCleanup] not started (missing deps)")
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] not started (missing deps)")
 		return
 placeholder
 
 	interval := s.workerInterval()
 	s.startOnce.Do(func() {
 		s.timingWheel.ScheduleRecurring(usageCleanupWorkerName, interval, s.runOnce)
-		log.Printf("[UsageCleanup] started (interval=%s max_range_days=%d batch_size=%d task_timeout=%s)", interval, s.maxRangeDays(), s.batchSize(), s.taskTimeout())
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] started (interval=%s max_range_days=%d batch_size=%d task_timeout=%s)", interval, s.maxRangeDays(), s.batchSize(), s.taskTimeout())
 placeholder)
 placeholder
 
@@ -107,7 +111,7 @@ placeholder
 		if s.timingWheel != nil {
 			s.timingWheel.Cancel(usageCleanupWorkerName)
 	placeholder
-		log.Printf("[UsageCleanup] stopped")
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] stopped")
 placeholder)
 placeholder
 
@@ -129,10 +133,10 @@ placeholder
 		return nil, infraerrors.BadRequest("USAGE_CLEANUP_INVALID_CREATOR", "invalid creator")
 placeholder
 
-	log.Printf("[UsageCleanup] create_task requested: operator=%d %s", createdBy, describeUsageCleanupFilters(filters))
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] create_task requested: operator=%d %s", createdBy, describeUsageCleanupFilters(filters))
 	sanitizeUsageCleanupFilters(&filters)
 	if err := s.validateFilters(filters); err != nil {
-		log.Printf("[UsageCleanup] create_task rejected: operator=%d err=%v %s", createdBy, err, describeUsageCleanupFilters(filters))
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] create_task rejected: operator=%d err=%v %s", createdBy, err, describeUsageCleanupFilters(filters))
 		return nil, err
 placeholder
 
@@ -142,10 +146,10 @@ placeholder
 		CreatedBy: createdBy,
 placeholder
 	if err := s.repo.CreateTask(ctx, task); err != nil {
-		log.Printf("[UsageCleanup] create_task persist failed: operator=%d err=%v %s", createdBy, err, describeUsageCleanupFilters(filters))
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] create_task persist failed: operator=%d err=%v %s", createdBy, err, describeUsageCleanupFilters(filters))
 		return nil, fmt.Errorf("create cleanup task: %w", err)
 placeholder
-	log.Printf("[UsageCleanup] create_task persisted: task=%d operator=%d status=%s deleted_rows=%d %s", task.ID, createdBy, task.Status, task.DeletedRows, describeUsageCleanupFilters(filters))
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] create_task persisted: task=%d operator=%d status=%s deleted_rows=%d %s", task.ID, createdBy, task.Status, task.DeletedRows, describeUsageCleanupFilters(filters))
 	go s.runOnce()
 	return task, nil
 placeholder
@@ -156,7 +160,7 @@ func (s *UsageCleanupService) runOnce() {
 		return
 placeholder
 	if !atomic.CompareAndSwapInt32(&svc.running, 0, 1) {
-		log.Printf("[UsageCleanup] run_once skipped: already_running=true")
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] run_once skipped: already_running=true")
 		return
 placeholder
 	defer atomic.StoreInt32(&svc.running, 0)
@@ -170,15 +174,15 @@ placeholder
 
 	task, err := svc.repo.ClaimNextPendingTask(ctx, int64(svc.taskTimeout().Seconds()))
 	if err != nil {
-		log.Printf("[UsageCleanup] claim pending task failed: %v", err)
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] claim pending task failed: %v", err)
 		return
 placeholder
 	if task == nil {
-		log.Printf("[UsageCleanup] run_once done: no_task=true")
+		slog.Debug("[UsageCleanup] run_once done: no_task=true")
 		return
 placeholder
 
-	log.Printf("[UsageCleanup] task claimed: task=%d status=%s created_by=%d deleted_rows=%d %s", task.ID, task.Status, task.CreatedBy, task.DeletedRows, describeUsageCleanupFilters(task.Filters))
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task claimed: task=%d status=%s created_by=%d deleted_rows=%d %s", task.ID, task.Status, task.CreatedBy, task.DeletedRows, describeUsageCleanupFilters(task.Filters))
 	svc.executeTask(ctx, task)
 placeholder
 
@@ -190,12 +194,12 @@ placeholder
 	batchSize := s.batchSize()
 	deletedTotal := task.DeletedRows
 	start := time.Now()
-	log.Printf("[UsageCleanup] task started: task=%d batch_size=%d deleted_rows=%d %s", task.ID, batchSize, deletedTotal, describeUsageCleanupFilters(task.Filters))
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task started: task=%d batch_size=%d deleted_rows=%d %s", task.ID, batchSize, deletedTotal, describeUsageCleanupFilters(task.Filters))
 	var batchNum int
 
 	for {
 		if ctx != nil && ctx.Err() != nil {
-			log.Printf("[UsageCleanup] task interrupted: task=%d err=%v", task.ID, ctx.Err())
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task interrupted: task=%d err=%v", task.ID, ctx.Err())
 			return
 	placeholder
 		canceled, err := s.isTaskCanceled(ctx, task.ID)
@@ -204,7 +208,7 @@ placeholder
 			return
 	placeholder
 		if canceled {
-			log.Printf("[UsageCleanup] task canceled: task=%d deleted_rows=%d duration=%s", task.ID, deletedTotal, time.Since(start))
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task canceled: task=%d deleted_rows=%d duration=%s", task.ID, deletedTotal, time.Since(start))
 			return
 	placeholder
 
@@ -213,7 +217,7 @@ placeholder
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				// 任务被中断（例如服务停止/超时），保持 running 状态，后续通过 stale reclaim 续跑。
-				log.Printf("[UsageCleanup] task interrupted: task=%d err=%v", task.ID, err)
+				logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task interrupted: task=%d err=%v", task.ID, err)
 				return
 		placeholder
 			s.markTaskFailed(task.ID, deletedTotal, err)
@@ -223,12 +227,12 @@ placeholder
 		if deleted > 0 {
 			updateCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			if err := s.repo.UpdateTaskProgress(updateCtx, task.ID, deletedTotal); err != nil {
-				log.Printf("[UsageCleanup] task progress update failed: task=%d deleted_rows=%d err=%v", task.ID, deletedTotal, err)
+				logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task progress update failed: task=%d deleted_rows=%d err=%v", task.ID, deletedTotal, err)
 		placeholder
 			cancel()
 	placeholder
 		if batchNum <= 3 || batchNum%20 == 0 || deleted < int64(batchSize) {
-			log.Printf("[UsageCleanup] task batch done: task=%d batch=%d deleted=%d deleted_total=%d", task.ID, batchNum, deleted, deletedTotal)
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task batch done: task=%d batch=%d deleted=%d deleted_total=%d", task.ID, batchNum, deleted, deletedTotal)
 	placeholder
 		if deleted == 0 || deleted < int64(batchSize) {
 			break
@@ -238,16 +242,16 @@ placeholder
 	updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := s.repo.MarkTaskSucceeded(updateCtx, task.ID, deletedTotal); err != nil {
-		log.Printf("[UsageCleanup] update task succeeded failed: task=%d err=%v", task.ID, err)
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] update task succeeded failed: task=%d err=%v", task.ID, err)
 placeholder else {
-		log.Printf("[UsageCleanup] task succeeded: task=%d deleted_rows=%d duration=%s", task.ID, deletedTotal, time.Since(start))
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task succeeded: task=%d deleted_rows=%d duration=%s", task.ID, deletedTotal, time.Since(start))
 placeholder
 
 	if s.dashboard != nil {
 		if err := s.dashboard.TriggerRecomputeRange(task.Filters.StartTime, task.Filters.EndTime); err != nil {
-			log.Printf("[UsageCleanup] trigger dashboard recompute failed: task=%d err=%v", task.ID, err)
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] trigger dashboard recompute failed: task=%d err=%v", task.ID, err)
 	placeholder else {
-			log.Printf("[UsageCleanup] trigger dashboard recompute: task=%d start=%s end=%s", task.ID, task.Filters.StartTime.UTC().Format(time.RFC3339), task.Filters.EndTime.UTC().Format(time.RFC3339))
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] trigger dashboard recompute: task=%d start=%s end=%s", task.ID, task.Filters.StartTime.UTC().Format(time.RFC3339), task.Filters.EndTime.UTC().Format(time.RFC3339))
 	placeholder
 placeholder
 placeholder
@@ -257,11 +261,11 @@ func (s *UsageCleanupService) markTaskFailed(taskID int64, deletedRows int64, er
 	if len(msg) > 500 {
 		msg = msg[:500]
 placeholder
-	log.Printf("[UsageCleanup] task failed: task=%d deleted_rows=%d err=%s", taskID, deletedRows, msg)
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task failed: task=%d deleted_rows=%d err=%s", taskID, deletedRows, msg)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if updateErr := s.repo.MarkTaskFailed(ctx, taskID, deletedRows, msg); updateErr != nil {
-		log.Printf("[UsageCleanup] update task failed failed: task=%d err=%v", taskID, updateErr)
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] update task failed failed: task=%d err=%v", taskID, updateErr)
 placeholder
 placeholder
 
@@ -279,7 +283,7 @@ placeholder
 		return false, err
 placeholder
 	if status == UsageCleanupStatusCanceled {
-		log.Printf("[UsageCleanup] task cancel detected: task=%d", taskID)
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] task cancel detected: task=%d", taskID)
 placeholder
 	return status == UsageCleanupStatusCanceled, nil
 placeholder
@@ -318,7 +322,11 @@ placeholder
 	placeholder
 		return err
 placeholder
-	log.Printf("[UsageCleanup] cancel_task requested: task=%d operator=%d status=%s", taskID, canceledBy, status)
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task requested: task=%d operator=%d status=%s", taskID, canceledBy, status)
+	if status == UsageCleanupStatusCanceled {
+		logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task idempotent hit: task=%d operator=%d", taskID, canceledBy)
+		return nil
+placeholder
 	if status != UsageCleanupStatusPending && status != UsageCleanupStatusRunning {
 		return infraerrors.New(http.StatusConflict, "USAGE_CLEANUP_CANCEL_CONFLICT", "cleanup task cannot be canceled in current status")
 placeholder
@@ -328,9 +336,14 @@ placeholder
 placeholder
 	if !ok {
 		// 状态可能并发改变
+		currentStatus, getErr := s.repo.GetTaskStatus(ctx, taskID)
+		if getErr == nil && currentStatus == UsageCleanupStatusCanceled {
+			logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task idempotent race hit: task=%d operator=%d", taskID, canceledBy)
+			return nil
+	placeholder
 		return infraerrors.New(http.StatusConflict, "USAGE_CLEANUP_CANCEL_CONFLICT", "cleanup task cannot be canceled in current status")
 placeholder
-	log.Printf("[UsageCleanup] cancel_task done: task=%d operator=%d", taskID, canceledBy)
+	logger.LegacyPrintf("service.usage_cleanup", "[UsageCleanup] cancel_task done: task=%d operator=%d", taskID, canceledBy)
 	return nil
 placeholder
 
@@ -356,6 +369,16 @@ placeholder
 			filters.Model = nil
 	placeholder else {
 			filters.Model = &model
+	placeholder
+placeholder
+	if filters.RequestType != nil {
+		requestType := RequestType(*filters.RequestType)
+		if !requestType.IsValid() {
+			filters.RequestType = nil
+	placeholder else {
+			value := int16(requestType.Normalize())
+			filters.RequestType = &value
+			filters.Stream = nil
 	placeholder
 placeholder
 	if filters.BillingType != nil && *filters.BillingType < 0 {

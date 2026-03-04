@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,6 +134,36 @@ func (s *httpUpstreamStub) DoWithTLS(_ *http.Request, _ string, _ int64, _ int, 
 	return s.resp, s.err
 placeholder
 
+type antigravitySettingRepoStub struct{placeholder
+
+func (s *antigravitySettingRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
+	panic("unexpected Get call")
+placeholder
+
+func (s *antigravitySettingRepoStub) GetValue(ctx context.Context, key string) (string, error) {
+	return "", ErrSettingNotFound
+placeholder
+
+func (s *antigravitySettingRepoStub) Set(ctx context.Context, key, value string) error {
+	panic("unexpected Set call")
+placeholder
+
+func (s *antigravitySettingRepoStub) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
+	panic("unexpected GetMultiple call")
+placeholder
+
+func (s *antigravitySettingRepoStub) SetMultiple(ctx context.Context, settings map[string]string) error {
+	panic("unexpected SetMultiple call")
+placeholder
+
+func (s *antigravitySettingRepoStub) GetAll(ctx context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+placeholder
+
+func (s *antigravitySettingRepoStub) Delete(ctx context.Context, key string) error {
+	panic("unexpected Delete call")
+placeholder
+
 func TestAntigravityGatewayService_Forward_PromptTooLong(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	writer := httptest.NewRecorder()
@@ -159,8 +190,9 @@ placeholder
 placeholder
 
 	svc := &AntigravityGatewayService{
-		tokenProvider: &AntigravityTokenProvider{placeholder,
-		httpUpstream:  &httpUpstreamStub{resp: respplaceholder,
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
 placeholder
 
 	account := &Account{
@@ -415,6 +447,151 @@ placeholder
 	require.ErrorAs(t, err, &failoverErr, "error should be UpstreamFailoverError to trigger account switch")
 	require.Equal(t, http.StatusServiceUnavailable, failoverErr.StatusCode)
 	require.True(t, failoverErr.ForceCacheBilling, "ForceCacheBilling should be true for sticky session switch")
+placeholder
+
+// TestAntigravityGatewayService_Forward_BillsWithMappedModel
+// 验证：Antigravity Claude 转发返回的计费模型使用映射后的模型
+func TestAntigravityGatewayService_Forward_BillsWithMappedModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"model": "claude-sonnet-4-5",
+		"messages": []map[string]any{
+			{"role": "user", "content": "hello"placeholder,
+	placeholder,
+		"max_tokens": 16,
+		"stream":     true,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request = req
+
+	upstreamBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":3placeholderplaceholderplaceholder\n\n")
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Request-Id": []string{"req-bill-1"placeholderplaceholder,
+		Body:       io.NopCloser(bytes.NewReader(upstreamBody)),
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
+placeholder
+
+	const mappedModel = "gemini-3-pro-high"
+	account := &Account{
+		ID:          5,
+		Name:        "acc-forward-billing",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				"claude-sonnet-4-5": mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, mappedModel, result.Model)
+placeholder
+
+// TestAntigravityGatewayService_ForwardGemini_BillsWithMappedModel
+// 验证：Antigravity Gemini 转发返回的计费模型使用映射后的模型
+func TestAntigravityGatewayService_ForwardGemini_BillsWithMappedModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-2.5-flash:generateContent", bytes.NewReader(body))
+	c.Request = req
+
+	upstreamBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":3placeholderplaceholderplaceholder\n\n")
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Request-Id": []string{"req-bill-2"placeholderplaceholder,
+		Body:       io.NopCloser(bytes.NewReader(upstreamBody)),
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   &httpUpstreamStub{resp: respplaceholder,
+placeholder
+
+	const mappedModel = "gemini-3-pro-high"
+	account := &Account{
+		ID:          6,
+		Name:        "acc-gemini-billing",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				"gemini-2.5-flash": mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "generateContent", true, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, mappedModel, result.Model)
+placeholder
+
+// TestStreamUpstreamResponse_UsageAndFirstToken
+// 验证：usage 字段可被累积/覆盖更新，并且能记录首 token 时间
+func TestStreamUpstreamResponse_UsageAndFirstToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := newAntigravityTestService(&config.Config{
+		Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholder,
+placeholder)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	pr, pw := io.Pipe()
+	resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{placeholder, Body: prplaceholder
+
+	go func() {
+		defer func() { _ = pw.Close() placeholder()
+		fmt.Fprintln(pw, `data: {"usage":{"input_tokens":1,"output_tokens":2,"cache_read_input_tokens":3,"cache_creation_input_tokens":4placeholderplaceholder`)
+		fmt.Fprintln(pw, `data: {"usage":{"output_tokens":5placeholderplaceholder`)
+placeholder()
+
+	start := time.Now().Add(-10 * time.Millisecond)
+	result := svc.streamUpstreamResponse(c, resp, start)
+	_ = pr.Close()
+
+	require.NotNil(t, result)
+	require.NotNil(t, result.usage)
+	require.Equal(t, 1, result.usage.InputTokens)
+	// 第二次事件覆盖 output_tokens
+	require.Equal(t, 5, result.usage.OutputTokens)
+	require.Equal(t, 3, result.usage.CacheReadInputTokens)
+	require.Equal(t, 4, result.usage.CacheCreationInputTokens)
+	require.NotNil(t, result.firstTokenMs)
+
+	// 确保有透传输出
+	require.Contains(t, rec.Body.String(), "data:")
 placeholder
 
 // --- 流式 happy path 测试 ---
@@ -919,4 +1096,145 @@ placeholder)
 		require.False(t, ok)
 		require.True(t, cw.Disconnected())
 placeholder)
+placeholder
+
+// TestUnwrapV1InternalResponse 测试 unwrapV1InternalResponse 的各种输入场景
+func TestUnwrapV1InternalResponse(t *testing.T) {
+	svc := &AntigravityGatewayService{placeholder
+
+	// 构造 >50KB 的大型 JSON
+	largePadding := strings.Repeat("x", 50*1024)
+	largeInput := []byte(fmt.Sprintf(`{"response":{"id":"big","pad":"%s"placeholderplaceholder`, largePadding))
+	largeExpected := fmt.Sprintf(`{"id":"big","pad":"%s"placeholder`, largePadding)
+
+	tests := []struct {
+		name     string
+		input    []byte
+		expected string
+		wantErr  bool
+placeholder{
+		{
+			name:     "正常 response 包装",
+			input:    []byte(`{"response":{"id":"123","content":"hello"placeholderplaceholder`),
+			expected: `{"id":"123","content":"hello"placeholder`,
+	placeholder,
+		{
+			name:     "无 response 透传",
+			input:    []byte(`{"id":"456"placeholder`),
+			expected: `{"id":"456"placeholder`,
+	placeholder,
+		{
+			name:     "空 JSON",
+			input:    []byte(`{placeholder`),
+			expected: `{placeholder`,
+	placeholder,
+		{
+			name:     "response 为 null",
+			input:    []byte(`{"response":nullplaceholder`),
+			expected: `null`,
+	placeholder,
+		{
+			name:     "response 为基础类型 string",
+			input:    []byte(`{"response":"hello"placeholder`),
+			expected: `"hello"`,
+	placeholder,
+		{
+			name:     "非法 JSON",
+			input:    []byte(`not json`),
+			expected: `not json`,
+	placeholder,
+		{
+			name:     "嵌套 response 只解一层",
+			input:    []byte(`{"response":{"response":{"inner":trueplaceholderplaceholderplaceholder`),
+			expected: `{"response":{"inner":trueplaceholderplaceholder`,
+	placeholder,
+		{
+			name:     "大型 JSON >50KB",
+			input:    largeInput,
+			expected: largeExpected,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := svc.unwrapV1InternalResponse(tt.input)
+			if tt.wantErr {
+			placeholder
+				return
+		placeholder
+		placeholder
+			require.Equal(t, tt.expected, strings.TrimSpace(string(got)))
+	placeholder)
+placeholder
+placeholder
+
+// --- unwrapV1InternalResponse benchmark 对照组 ---
+
+// unwrapV1InternalResponseOld 旧实现：Unmarshal+Marshal 双重开销（仅用于 benchmark 对照）
+func unwrapV1InternalResponseOld(body []byte) ([]byte, error) {
+	var outer map[string]any
+	if err := json.Unmarshal(body, &outer); err != nil {
+		return nil, err
+placeholder
+	if resp, ok := outer["response"]; ok {
+		return json.Marshal(resp)
+placeholder
+	return body, nil
+placeholder
+
+func BenchmarkUnwrapV1Internal_Old_Small(b *testing.B) {
+	body := []byte(`{"response":{"candidates":[{"content":{"parts":[{"text":"hello world"placeholder]placeholderplaceholder],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5placeholderplaceholderplaceholder`)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = unwrapV1InternalResponseOld(body)
+placeholder
+placeholder
+
+func BenchmarkUnwrapV1Internal_New_Small(b *testing.B) {
+	body := []byte(`{"response":{"candidates":[{"content":{"parts":[{"text":"hello world"placeholder]placeholderplaceholder],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5placeholderplaceholderplaceholder`)
+	svc := &AntigravityGatewayService{placeholder
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.unwrapV1InternalResponse(body)
+placeholder
+placeholder
+
+func BenchmarkUnwrapV1Internal_Old_Large(b *testing.B) {
+	body := generateLargeUnwrapJSON(10 * 1024) // ~10KB
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = unwrapV1InternalResponseOld(body)
+placeholder
+placeholder
+
+func BenchmarkUnwrapV1Internal_New_Large(b *testing.B) {
+	body := generateLargeUnwrapJSON(10 * 1024) // ~10KB
+	svc := &AntigravityGatewayService{placeholder
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = svc.unwrapV1InternalResponse(body)
+placeholder
+placeholder
+
+// generateLargeUnwrapJSON 生成指定最小大小的包含 response 包装的 JSON
+func generateLargeUnwrapJSON(minSize int) []byte {
+	parts := make([]map[string]string, 0)
+	current := 0
+	for current < minSize {
+		text := fmt.Sprintf("这是第 %d 段内容，用于填充 JSON 到目标大小。", len(parts)+1)
+		parts = append(parts, map[string]string{"text": textplaceholder)
+		current += len(text) + 20 // 估算 JSON 编码开销
+placeholder
+	inner := map[string]any{
+		"candidates": []map[string]any{
+			{"content": map[string]any{"parts": partsplaceholderplaceholder,
+	placeholder,
+		"usageMetadata": map[string]any{
+			"promptTokenCount":     100,
+			"candidatesTokenCount": 50,
+	placeholder,
+placeholder
+	outer := map[string]any{"response": innerplaceholder
+	b, _ := json.Marshal(outer)
+	return b
 placeholder

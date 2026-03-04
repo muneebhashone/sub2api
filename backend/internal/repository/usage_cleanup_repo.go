@@ -362,7 +362,12 @@ placeholder
 			idx++
 	placeholder
 placeholder
-	if filters.Stream != nil {
+	if filters.RequestType != nil {
+		condition, conditionArgs := buildRequestTypeFilterCondition(idx, *filters.RequestType)
+		conditions = append(conditions, condition)
+		args = append(args, conditionArgs...)
+		idx += len(conditionArgs)
+placeholder else if filters.Stream != nil {
 		conditions = append(conditions, fmt.Sprintf("stream = $%d", idx))
 		args = append(args, *filters.Stream)
 		idx++

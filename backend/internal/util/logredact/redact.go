@@ -2,7 +2,10 @@ package logredact
 
 import (
 	"encoding/json"
+	"regexp"
+	"sort"
 	"strings"
+	"sync"
 )
 
 // maxRedactDepth 限制递归深度以防止栈溢出
@@ -18,6 +21,31 @@ var defaultSensitiveKeys = map[string]struct{placeholder{
 	"client_secret":      {placeholder,
 	"password":           {placeholder,
 placeholder
+
+var defaultSensitiveKeyList = []string{
+	"authorization_code",
+	"code",
+	"code_verifier",
+	"access_token",
+	"refresh_token",
+	"id_token",
+	"client_secret",
+	"password",
+placeholder
+
+type textRedactPatterns struct {
+	reJSONLike  *regexp.Regexp
+	reQueryLike *regexp.Regexp
+	rePlain     *regexp.Regexp
+placeholder
+
+var (
+	reGOCSPX = regexp.MustCompile(`GOCSPX-[0-9A-Za-z_-]{24,placeholder`)
+	reAIza   = regexp.MustCompile(`AIza[0-9A-Za-z_-]{35placeholder`)
+
+	defaultTextRedactPatterns = compileTextRedactPatterns(nil)
+	extraTextPatternCache     sync.Map // map[string]*textRedactPatterns
+)
 
 func RedactMap(input map[string]any, extraKeys ...string) map[string]any {
 	if input == nil {
@@ -46,6 +74,110 @@ placeholder
 		return "<redacted>"
 placeholder
 	return string(encoded)
+placeholder
+
+// RedactText 对非结构化文本做轻量脱敏。
+//
+// 规则：
+// - 如果文本本身是 JSON，则按 RedactJSON 处理。
+// - 否则尝试对常见 key=value / key:"value" 片段做脱敏。
+//
+// 注意：该函数用于日志/错误信息兜底，不保证覆盖所有格式。
+func RedactText(input string, extraKeys ...string) string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return ""
+placeholder
+
+	raw := []byte(input)
+	if json.Valid(raw) {
+		return RedactJSON(raw, extraKeys...)
+placeholder
+
+	patterns := getTextRedactPatterns(extraKeys)
+
+	out := input
+	out = reGOCSPX.ReplaceAllString(out, "GOCSPX-***")
+	out = reAIza.ReplaceAllString(out, "AIza***")
+	out = patterns.reJSONLike.ReplaceAllString(out, `$1***$3`)
+	out = patterns.reQueryLike.ReplaceAllString(out, `$1=***`)
+	out = patterns.rePlain.ReplaceAllString(out, `$1$2***`)
+	return out
+placeholder
+
+func compileTextRedactPatterns(extraKeys []string) *textRedactPatterns {
+	keyAlt := buildKeyAlternation(extraKeys)
+	return &textRedactPatterns{
+		// JSON-like: "access_token":"..."
+		reJSONLike: regexp.MustCompile(`(?i)("(?:` + keyAlt + `)"\s*:\s*")([^"]*)(")`),
+		// Query-like: access_token=...
+		reQueryLike: regexp.MustCompile(`(?i)\b((?:` + keyAlt + `))=([^&\s]+)`),
+		// Plain: access_token: ... / access_token = ...
+		rePlain: regexp.MustCompile(`(?i)\b((?:` + keyAlt + `))\b(\s*[:=]\s*)([^,\s]+)`),
+placeholder
+placeholder
+
+func getTextRedactPatterns(extraKeys []string) *textRedactPatterns {
+	normalizedExtraKeys := normalizeAndSortExtraKeys(extraKeys)
+	if len(normalizedExtraKeys) == 0 {
+		return defaultTextRedactPatterns
+placeholder
+
+	cacheKey := strings.Join(normalizedExtraKeys, ",")
+	if cached, ok := extraTextPatternCache.Load(cacheKey); ok {
+		if patterns, ok := cached.(*textRedactPatterns); ok {
+			return patterns
+	placeholder
+placeholder
+
+	compiled := compileTextRedactPatterns(normalizedExtraKeys)
+	actual, _ := extraTextPatternCache.LoadOrStore(cacheKey, compiled)
+	if patterns, ok := actual.(*textRedactPatterns); ok {
+		return patterns
+placeholder
+	return compiled
+placeholder
+
+func normalizeAndSortExtraKeys(extraKeys []string) []string {
+	if len(extraKeys) == 0 {
+		return nil
+placeholder
+	seen := make(map[string]struct{placeholder, len(extraKeys))
+	keys := make([]string, 0, len(extraKeys))
+	for _, key := range extraKeys {
+		normalized := normalizeKey(key)
+		if normalized == "" {
+			continue
+	placeholder
+		if _, ok := seen[normalized]; ok {
+			continue
+	placeholder
+		seen[normalized] = struct{placeholder{placeholder
+		keys = append(keys, normalized)
+placeholder
+	sort.Strings(keys)
+	return keys
+placeholder
+
+func buildKeyAlternation(extraKeys []string) string {
+	seen := make(map[string]struct{placeholder, len(defaultSensitiveKeyList)+len(extraKeys))
+	keys := make([]string, 0, len(defaultSensitiveKeyList)+len(extraKeys))
+	for _, k := range defaultSensitiveKeyList {
+		seen[k] = struct{placeholder{placeholder
+		keys = append(keys, regexp.QuoteMeta(k))
+placeholder
+	for _, k := range extraKeys {
+		n := normalizeKey(k)
+		if n == "" {
+			continue
+	placeholder
+		if _, ok := seen[n]; ok {
+			continue
+	placeholder
+		seen[n] = struct{placeholder{placeholder
+		keys = append(keys, regexp.QuoteMeta(n))
+placeholder
+	return strings.Join(keys, "|")
 placeholder
 
 func buildKeySet(extraKeys []string) map[string]struct{placeholder {

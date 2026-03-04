@@ -22,5 +22,12 @@ placeholder
 	if filter.StartTime.After(filter.EndTime) {
 		return nil, infraerrors.BadRequest("OPS_TIME_RANGE_INVALID", "start_time must be <= end_time")
 placeholder
-	return s.opsRepo.GetLatencyHistogram(ctx, filter)
+	filter.QueryMode = s.resolveOpsQueryMode(ctx, filter.QueryMode)
+
+	result, err := s.opsRepo.GetLatencyHistogram(ctx, filter)
+	if err != nil && shouldFallbackOpsPreagg(filter, err) {
+		rawFilter := cloneOpsFilterWithMode(filter, OpsQueryModeRaw)
+		return s.opsRepo.GetLatencyHistogram(ctx, rawFilter)
+placeholder
+	return result, err
 placeholder
