@@ -281,8 +281,26 @@ placeholder
 	return nil
 placeholder
 
-func (r *apiKeyRepository) ListByUserID(ctx context.Context, userID int64, params pagination.PaginationParams) ([]service.APIKey, *pagination.PaginationResult, error) {
+func (r *apiKeyRepository) ListByUserID(ctx context.Context, userID int64, params pagination.PaginationParams, filters service.APIKeyListFilters) ([]service.APIKey, *pagination.PaginationResult, error) {
 	q := r.activeQuery().Where(apikey.UserIDEQ(userID))
+
+	// Apply filters
+	if filters.Search != "" {
+		q = q.Where(apikey.Or(
+			apikey.NameContainsFold(filters.Search),
+			apikey.KeyContainsFold(filters.Search),
+		))
+placeholder
+	if filters.Status != "" {
+		q = q.Where(apikey.StatusEQ(filters.Status))
+placeholder
+	if filters.GroupID != nil {
+		if *filters.GroupID == 0 {
+			q = q.Where(apikey.GroupIDIsNil())
+	placeholder else {
+			q = q.Where(apikey.GroupIDEQ(*filters.GroupID))
+	placeholder
+placeholder
 
 	total, err := q.Count(ctx)
 	if err != nil {

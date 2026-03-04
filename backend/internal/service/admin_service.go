@@ -745,7 +745,7 @@ placeholder
 
 func (s *adminServiceImpl) GetUserAPIKeys(ctx context.Context, userID int64, page, pageSize int) ([]APIKey, int64, error) {
 	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
-	keys, result, err := s.apiKeyRepo.ListByUserID(ctx, userID, params)
+	keys, result, err := s.apiKeyRepo.ListByUserID(ctx, userID, params, APIKeyListFilters{placeholder)
 	if err != nil {
 		return nil, 0, err
 placeholder
