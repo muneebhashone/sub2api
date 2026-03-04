@@ -243,7 +243,8 @@ placeholder
 		userMap[u.ID] = &outUsers[len(outUsers)-1]
 placeholder
 
-	if filters.IncludeSubscriptions {
+	shouldLoadSubscriptions := filters.IncludeSubscriptions == nil || *filters.IncludeSubscriptions
+	if shouldLoadSubscriptions {
 		// Batch load active subscriptions with groups to avoid N+1.
 		subs, err := r.client.UserSubscription.Query().
 			Where(
