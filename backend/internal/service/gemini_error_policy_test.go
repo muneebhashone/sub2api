@@ -123,6 +123,28 @@ placeholder{
 			expected:   ErrorPolicyTempUnscheduled,
 	placeholder,
 		{
+			name: "gemini_apikey_temp_unschedulable_401_second_hit_returns_none",
+			account: &Account{
+				ID:                      105,
+				Type:                    AccountTypeAPIKey,
+				Platform:                PlatformGemini,
+				TempUnschedulableReason: `{"status_code":401,"until_unix":1735689600placeholder`,
+		placeholder
+					"temp_unschedulable_enabled": true,
+					"temp_unschedulable_rules": []any{
+						map[string]any{
+							"error_code":       float64(401),
+							"keywords":         []any{"unauthorized"placeholder,
+							"duration_minutes": float64(10),
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+			statusCode: 401,
+			body:       []byte(`unauthorized`),
+			expected:   ErrorPolicyNone,
+	placeholder,
+		{
 			name: "gemini_custom_codes_override_temp_unschedulable",
 			account: &Account{
 				ID:       104,
