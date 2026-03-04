@@ -1363,9 +1363,11 @@ import Toggle from '@/components/common/Toggle.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { useAppStore placeholder from '@/stores'
+import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
+const adminSettingsStore = useAdminSettingsStore()
 const { copyToClipboard placeholder = useClipboard()
 
 const loading = ref(true)
@@ -1661,8 +1663,9 @@ async function saveSettings() {
     form.smtp_password = ''
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
-    // Refresh cached public settings so sidebar/header update immediately
+    // Refresh cached settings so sidebar/header update immediately
     await appStore.fetchPublicSettings(true)
+    await adminSettingsStore.fetch(true)
     appStore.showSuccess(t('admin.settings.settingsSaved'))
   placeholder catch (error: any) {
     appStore.showError(

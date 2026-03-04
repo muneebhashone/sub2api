@@ -6,6 +6,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw placeholder from 'vue-router'
 import { useAuthStore placeholder from '@/stores/auth'
 import { useAppStore placeholder from '@/stores/app'
+import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 import { useNavigationLoadingState placeholder from '@/composables/useNavigationLoading'
 import { useRoutePrefetch placeholder from '@/composables/useRoutePrefetch'
 import { resolveDocumentTitle placeholder from './title'
@@ -431,8 +432,10 @@ router.beforeEach((to, _from, next) => {
   // For custom pages, use menu item label as document title
   if (to.name === 'CustomPage') {
     const id = to.params.id as string
-    const items = appStore.cachedPublicSettings?.custom_menu_items ?? []
-    const menuItem = items.find((item) => item.id === id)
+    const publicItems = appStore.cachedPublicSettings?.custom_menu_items ?? []
+    const adminSettingsStore = useAdminSettingsStore()
+    const menuItem = publicItems.find((item) => item.id === id)
+      ?? (authStore.isAdmin ? adminSettingsStore.customMenuItems.find((item) => item.id === id) : undefined)
     if (menuItem?.label) {
       const siteName = appStore.siteName || 'Sub2API'
       document.title = `${menuItem.labelplaceholder - ${siteNameplaceholder`
