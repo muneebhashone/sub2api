@@ -32,16 +32,6 @@ type ScheduledTestResult struct {
 	CreatedAt    time.Time `json:"created_at"`
 placeholder
 
-// ScheduledTestOutcome is returned by RunTestBackground.
-type ScheduledTestOutcome struct {
-	Status       string
-	ResponseText string
-	ErrorMessage string
-	LatencyMs    int64
-	StartedAt    time.Time
-	FinishedAt   time.Time
-placeholder
-
 // ScheduledTestPlanRepository defines the data access interface for test plans.
 type ScheduledTestPlanRepository interface {
 	Create(ctx context.Context, plan *ScheduledTestPlan) (*ScheduledTestPlan, error)

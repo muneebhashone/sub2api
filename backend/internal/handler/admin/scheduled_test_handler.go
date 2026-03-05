@@ -47,9 +47,6 @@ placeholder
 		response.InternalError(c, err.Error())
 		return
 placeholder
-	if plans == nil {
-		plans = []*service.ScheduledTestPlan{placeholder
-placeholder
 	c.JSON(http.StatusOK, plans)
 placeholder
 
@@ -153,9 +150,6 @@ placeholder
 	if err != nil {
 		response.InternalError(c, err.Error())
 		return
-placeholder
-	if results == nil {
-		results = []*service.ScheduledTestResult{placeholder
 placeholder
 	c.JSON(http.StatusOK, results)
 placeholder
