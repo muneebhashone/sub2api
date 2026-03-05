@@ -1322,7 +1322,7 @@ placeholder
 			for _, acc := range routingCandidates {
 				routingLoads = append(routingLoads, AccountWithConcurrency{
 					ID:             acc.ID,
-					MaxConcurrency: acc.Concurrency,
+					MaxConcurrency: acc.EffectiveLoadFactor(),
 			placeholder)
 		placeholder
 			routingLoadMap, _ := s.concurrencyService.GetAccountsLoadBatch(ctx, routingLoads)
@@ -1515,7 +1515,7 @@ placeholder
 	for _, acc := range candidates {
 		accountLoads = append(accountLoads, AccountWithConcurrency{
 			ID:             acc.ID,
-			MaxConcurrency: acc.Concurrency,
+			MaxConcurrency: acc.EffectiveLoadFactor(),
 	placeholder)
 placeholder
 

@@ -198,6 +198,7 @@ type CreateAccountInput struct {
 	Concurrency        int
 	Priority           int
 	RateMultiplier     *float64 // 账号计费倍率（>=0，允许 0）
+	LoadFactor         *int
 	GroupIDs           []int64
 	ExpiresAt          *int64
 	AutoPauseOnExpired *bool
@@ -218,6 +219,7 @@ type UpdateAccountInput struct {
 	Concurrency           *int     // 使用指针区分"未提供"和"设置为0"
 	Priority              *int     // 使用指针区分"未提供"和"设置为0"
 	RateMultiplier        *float64 // 账号计费倍率（>=0，允许 0）
+	LoadFactor            *int
 	Status                string
 	GroupIDs              *[]int64
 	ExpiresAt             *int64
@@ -233,6 +235,7 @@ type BulkUpdateAccountsInput struct {
 	Concurrency    *int
 	Priority       *int
 	RateMultiplier *float64 // 账号计费倍率（>=0，允许 0）
+	LoadFactor     *int
 	Status         string
 	Schedulable    *bool
 	GroupIDs       *[]int64
@@ -1433,6 +1436,9 @@ placeholder
 	placeholder
 		account.RateMultiplier = input.RateMultiplier
 placeholder
+	if input.LoadFactor != nil && *input.LoadFactor > 0 {
+		account.LoadFactor = input.LoadFactor
+placeholder
 	if err := s.accountRepo.Create(ctx, account); err != nil {
 		return nil, err
 placeholder
@@ -1506,6 +1512,13 @@ placeholder
 			return nil, errors.New("rate_multiplier must be >= 0")
 	placeholder
 		account.RateMultiplier = input.RateMultiplier
+placeholder
+	if input.LoadFactor != nil {
+		if *input.LoadFactor <= 0 {
+			account.LoadFactor = nil // 0 或负数表示清除
+	placeholder else {
+			account.LoadFactor = input.LoadFactor
+	placeholder
 placeholder
 	if input.Status != "" {
 		account.Status = input.Status
@@ -1639,6 +1652,9 @@ placeholder
 placeholder
 	if input.RateMultiplier != nil {
 		repoUpdates.RateMultiplier = input.RateMultiplier
+placeholder
+	if input.LoadFactor != nil {
+		repoUpdates.LoadFactor = input.LoadFactor
 placeholder
 	if input.Status != "" {
 		repoUpdates.Status = &input.Status

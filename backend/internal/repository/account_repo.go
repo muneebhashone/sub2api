@@ -84,6 +84,9 @@ placeholder
 	if account.RateMultiplier != nil {
 		builder.SetRateMultiplier(*account.RateMultiplier)
 placeholder
+	if account.LoadFactor != nil {
+		builder.SetLoadFactor(*account.LoadFactor)
+placeholder
 
 	if account.ProxyID != nil {
 		builder.SetProxyID(*account.ProxyID)
@@ -317,6 +320,11 @@ placeholder
 
 	if account.RateMultiplier != nil {
 		builder.SetRateMultiplier(*account.RateMultiplier)
+placeholder
+	if account.LoadFactor != nil {
+		builder.SetLoadFactor(*account.LoadFactor)
+placeholder else {
+		builder.ClearLoadFactor()
 placeholder
 
 	if account.ProxyID != nil {
@@ -1205,6 +1213,15 @@ placeholder
 		args = append(args, *updates.RateMultiplier)
 		idx++
 placeholder
+	if updates.LoadFactor != nil {
+		if *updates.LoadFactor <= 0 {
+			setClauses = append(setClauses, "load_factor = NULL")
+	placeholder else {
+			setClauses = append(setClauses, "load_factor = $"+itoa(idx))
+			args = append(args, *updates.LoadFactor)
+			idx++
+	placeholder
+placeholder
 	if updates.Status != nil {
 		setClauses = append(setClauses, "status = $"+itoa(idx))
 		args = append(args, *updates.Status)
@@ -1527,6 +1544,7 @@ placeholder
 		Concurrency:             m.Concurrency,
 		Priority:                m.Priority,
 		RateMultiplier:          &rateMultiplier,
+		LoadFactor:              m.LoadFactor,
 		Status:                  m.Status,
 		ErrorMessage:            derefString(m.ErrorMessage),
 		LastUsedAt:              m.LastUsedAt,
