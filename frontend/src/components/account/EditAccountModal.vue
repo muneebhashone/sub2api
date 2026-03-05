@@ -759,6 +759,26 @@
         </div>
       </div>
 
+      <!-- API Key 账号配额限制 -->
+      <div
+        v-if="account?.type === 'apikey'"
+        class="border-t border-gray-200 pt-4 dark:border-dark-600"
+      >
+        <label class="input-label">{{ t('admin.accounts.quotaLimit') placeholderplaceholder</label>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">$</span>
+          <input
+            v-model.number="editQuotaLimit"
+            type="number"
+            min="0"
+            step="0.01"
+            class="input"
+            :placeholder="t('admin.accounts.quotaLimitPlaceholder')"
+          />
+        </div>
+        <p class="input-hint">{{ t('admin.accounts.quotaLimitHint') placeholderplaceholder</p>
+      </div>
+
       <!-- OpenAI OAuth Codex 官方客户端限制开关 -->
       <div
         v-if="account?.platform === 'openai' && account?.type === 'oauth'"
@@ -1385,6 +1405,7 @@ const openaiOAuthResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF
 const openaiAPIKeyResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const codexCLIOnlyEnabled = ref(false)
 const anthropicPassthroughEnabled = ref(false)
+const editQuotaLimit = ref<number | null>(null)
 const openAIWSModeOptions = computed(() => [
   { value: OPENAI_WS_MODE_OFF, label: t('admin.accounts.openai.wsModeOff') placeholder,
   { value: OPENAI_WS_MODE_SHARED, label: t('admin.accounts.openai.wsModeShared') placeholder,
@@ -1534,6 +1555,14 @@ watch(
       placeholder
       if (newAccount.platform === 'anthropic' && newAccount.type === 'apikey') {
         anthropicPassthroughEnabled.value = extra?.anthropic_passthrough === true
+      placeholder
+
+      // Load quota limit for apikey accounts
+      if (newAccount.type === 'apikey') {
+        const quotaVal = extra?.quota_limit as number | undefined
+        editQuotaLimit.value = (quotaVal && quotaVal > 0) ? quotaVal : null
+      placeholder else {
+        editQuotaLimit.value = null
       placeholder
 
       // Load antigravity model mapping (Antigravity 只支持映射模式)
@@ -2272,6 +2301,19 @@ const handleSubmit = async () => {
         placeholder
       placeholder
 
+      updatePayload.extra = newExtra
+    placeholder
+
+    // For apikey accounts, handle quota_limit in extra
+    if (props.account.type === 'apikey') {
+      const currentExtra = (updatePayload.extra as Record<string, unknown>) ||
+        (props.account.extra as Record<string, unknown>) || {placeholder
+      const newExtra: Record<string, unknown> = { ...currentExtra placeholder
+      if (editQuotaLimit.value != null && editQuotaLimit.value > 0) {
+        newExtra.quota_limit = editQuotaLimit.value
+      placeholder else {
+        delete newExtra.quota_limit
+      placeholder
       updatePayload.extra = newExtra
     placeholder
 
