@@ -863,7 +863,8 @@ placeholder
 		strings.Contains(message, "unexpected eof") ||
 		strings.Contains(message, "use of closed network connection") ||
 		strings.Contains(message, "connection reset by peer") ||
-		strings.Contains(message, "broken pipe")
+		strings.Contains(message, "broken pipe") ||
+		strings.Contains(message, "an established connection was aborted")
 placeholder
 
 func classifyOpenAIWSReadFallbackReason(err error) string {
