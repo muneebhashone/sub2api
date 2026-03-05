@@ -64,9 +64,12 @@ placeholder
 		if acc.ID <= 0 {
 			continue
 	placeholder
-		lf := acc.EffectiveLoadFactor()
-		if prev, ok := unique[acc.ID]; !ok || lf > prev {
-			unique[acc.ID] = lf
+		c := acc.Concurrency
+		if c <= 0 {
+			c = 1
+	placeholder
+		if prev, ok := unique[acc.ID]; !ok || c > prev {
+			unique[acc.ID] = c
 	placeholder
 placeholder
 
