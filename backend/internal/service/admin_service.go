@@ -1635,7 +1635,13 @@ placeholder
 		repoUpdates.RateMultiplier = input.RateMultiplier
 placeholder
 	if input.LoadFactor != nil {
-		repoUpdates.LoadFactor = input.LoadFactor
+		if *input.LoadFactor <= 0 {
+			repoUpdates.LoadFactor = nil // 0 或负数表示清除
+	placeholder else if *input.LoadFactor > 10000 {
+			return nil, errors.New("load_factor must be <= 10000")
+	placeholder else {
+			repoUpdates.LoadFactor = input.LoadFactor
+	placeholder
 placeholder
 	if input.Status != "" {
 		repoUpdates.Status = &input.Status
