@@ -18,6 +18,10 @@
               <Icon name="chart" size="sm" class="text-indigo-500" />
               {{ t('admin.accounts.viewStats') placeholderplaceholder
             </button>
+            <button @click="$emit('schedule', account); $emit('close')" class="flex w-full items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-dark-700">
+              <Icon name="clock" size="sm" class="text-orange-500" />
+              {{ t('admin.scheduledTests.schedule') placeholderplaceholder
+            </button>
             <template v-if="account.type === 'oauth' || account.type === 'setup-token'">
               <button @click="$emit('reauth', account); $emit('close')" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-gray-100 dark:hover:bg-dark-700">
                 <Icon name="link" size="sm" />
@@ -51,7 +55,7 @@ import { Icon placeholder from '@/components/icons'
 import type { Account placeholder from '@/types'
 
 const props = defineProps<{ show: boolean; account: Account | null; position: { top: number; left: number placeholder | null placeholder>()
-const emit = defineEmits(['close', 'test', 'stats', 'reauth', 'refresh-token', 'reset-status', 'clear-rate-limit'])
+const emit = defineEmits(['close', 'test', 'stats', 'schedule', 'reauth', 'refresh-token', 'reset-status', 'clear-rate-limit'])
 const { t placeholder = useI18n()
 const isRateLimited = computed(() => {
   if (props.account?.rate_limit_reset_at && new Date(props.account.rate_limit_reset_at) > new Date()) {
