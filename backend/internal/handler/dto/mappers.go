@@ -248,6 +248,17 @@ placeholder
 	placeholder
 placeholder
 
+	// 提取 API Key 账号配额限制（仅 apikey 类型有效）
+	if a.Type == service.AccountTypeAPIKey {
+		if limit := a.GetQuotaLimit(); limit > 0 {
+			out.QuotaLimit = &limit
+	placeholder
+		used := a.GetQuotaUsed()
+		if out.QuotaLimit != nil {
+			out.QuotaUsed = &used
+	placeholder
+placeholder
+
 	return out
 placeholder
 

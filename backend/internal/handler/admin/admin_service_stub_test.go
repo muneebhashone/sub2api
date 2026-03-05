@@ -425,5 +425,9 @@ placeholder
 	return nil, service.ErrAPIKeyNotFound
 placeholder
 
+func (s *stubAdminService) ResetAccountQuota(ctx context.Context, id int64) error {
+	return nil
+placeholder
+
 // Ensure stub implements interface.
 var _ service.AdminService = (*stubAdminService)(nil)
