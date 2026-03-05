@@ -819,7 +819,7 @@ placeholder
 
 	err := h.emailService.TestSMTPConnectionWithConfig(config)
 	if err != nil {
-		response.ErrorFrom(c, err)
+		response.BadRequest(c, "SMTP connection test failed: "+err.Error())
 		return
 placeholder
 
@@ -905,7 +905,7 @@ placeholder
 `
 
 	if err := h.emailService.SendEmailWithConfig(config, req.Email, subject, body); err != nil {
-		response.ErrorFrom(c, err)
+		response.BadRequest(c, "Failed to send test email: "+err.Error())
 		return
 placeholder
 
