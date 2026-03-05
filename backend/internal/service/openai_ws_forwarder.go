@@ -46,9 +46,10 @@ const (
 	openAIWSPayloadSizeEstimateMaxBytes = 64 * 1024
 	openAIWSPayloadSizeEstimateMaxItems = 16
 
-	openAIWSEventFlushBatchSizeDefault = 4
-	openAIWSEventFlushIntervalDefault  = 25 * time.Millisecond
-	openAIWSPayloadLogSampleDefault    = 0.2
+	openAIWSEventFlushBatchSizeDefault    = 4
+	openAIWSEventFlushIntervalDefault     = 25 * time.Millisecond
+	openAIWSPayloadLogSampleDefault       = 0.2
+	openAIWSPassthroughIdleTimeoutDefault = time.Hour
 
 	openAIWSStoreDisabledConnModeStrict   = "strict"
 	openAIWSStoreDisabledConnModeAdaptive = "adaptive"
@@ -904,6 +905,18 @@ placeholder)
 	return s.openaiWSPool
 placeholder
 
+func (s *OpenAIGatewayService) getOpenAIWSPassthroughDialer() openAIWSClientDialer {
+	if s == nil {
+		return nil
+placeholder
+	s.openaiWSPassthroughDialerOnce.Do(func() {
+		if s.openaiWSPassthroughDialer == nil {
+			s.openaiWSPassthroughDialer = newDefaultOpenAIWSClientDialer()
+	placeholder
+placeholder)
+	return s.openaiWSPassthroughDialer
+placeholder
+
 func (s *OpenAIGatewayService) SnapshotOpenAIWSPoolMetrics() OpenAIWSPoolMetricsSnapshot {
 	pool := s.getOpenAIWSConnPool()
 	if pool == nil {
@@ -965,6 +978,13 @@ func (s *OpenAIGatewayService) openAIWSReadTimeout() time.Duration {
 		return time.Duration(s.cfg.Gateway.OpenAIWS.ReadTimeoutSeconds) * time.Second
 placeholder
 	return 15 * time.Minute
+placeholder
+
+func (s *OpenAIGatewayService) openAIWSPassthroughIdleTimeout() time.Duration {
+	if timeout := s.openAIWSReadTimeout(); timeout > 0 {
+		return timeout
+placeholder
+	return openAIWSPassthroughIdleTimeoutDefault
 placeholder
 
 func (s *OpenAIGatewayService) openAIWSWriteTimeout() time.Duration {
@@ -2322,13 +2342,37 @@ placeholder
 
 	wsDecision := s.getOpenAIWSProtocolResolver().Resolve(account)
 	modeRouterV2Enabled := s != nil && s.cfg != nil && s.cfg.Gateway.OpenAIWS.ModeRouterV2Enabled
-	ingressMode := OpenAIWSIngressModeShared
+	ingressMode := OpenAIWSIngressModeCtxPool
 	if modeRouterV2Enabled {
 		ingressMode = account.ResolveOpenAIResponsesWebSocketV2Mode(s.cfg.Gateway.OpenAIWS.IngressModeDefault)
 		if ingressMode == OpenAIWSIngressModeOff {
 			return NewOpenAIWSClientCloseError(
 				coderws.StatusPolicyViolation,
 				"websocket mode is disabled for this account",
+				nil,
+			)
+	placeholder
+		switch ingressMode {
+		case OpenAIWSIngressModePassthrough:
+			if wsDecision.Transport != OpenAIUpstreamTransportResponsesWebsocketV2 {
+				return fmt.Errorf("websocket ingress requires ws_v2 transport, got=%s", wsDecision.Transport)
+		placeholder
+			return s.proxyResponsesWebSocketV2Passthrough(
+				ctx,
+				c,
+				clientConn,
+				account,
+				token,
+				firstClientMessage,
+				hooks,
+				wsDecision,
+			)
+		case OpenAIWSIngressModeCtxPool, OpenAIWSIngressModeShared, OpenAIWSIngressModeDedicated:
+			// continue
+		default:
+			return NewOpenAIWSClientCloseError(
+				coderws.StatusPolicyViolation,
+				"websocket mode only supports ctx_pool/passthrough",
 				nil,
 			)
 	placeholder
