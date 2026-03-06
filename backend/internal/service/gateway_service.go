@@ -5429,6 +5429,11 @@ func extractUpstreamErrorMessage(body []byte) string {
 		return m
 placeholder
 
+	// ChatGPT 内部 API 风格：{"detail":"..."placeholder
+	if d := gjson.GetBytes(body, "detail").String(); strings.TrimSpace(d) != "" {
+		return d
+placeholder
+
 	// 兜底：尝试顶层 message
 	return gjson.GetBytes(body, "message").String()
 placeholder
