@@ -1248,6 +1248,90 @@ placeholder
 placeholder
 placeholder
 
+func TestOpenAIResponsesRequestPathSuffix(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+
+	tests := []struct {
+		name string
+		path string
+		want string
+placeholder{
+		{name: "exact v1 responses", path: "/v1/responses", want: ""placeholder,
+		{name: "compact v1 responses", path: "/v1/responses/compact", want: "/compact"placeholder,
+		{name: "compact alias responses", path: "/responses/compact/", want: "/compact"placeholder,
+		{name: "nested suffix", path: "/openai/v1/responses/compact/detail", want: "/compact/detail"placeholder,
+		{name: "unrelated path", path: "/v1/chat/completions", want: ""placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Request = httptest.NewRequest(http.MethodPost, tt.path, nil)
+			require.Equal(t, tt.want, openAIResponsesRequestPathSuffix(c))
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIBuildUpstreamRequestOpenAIPassthroughPreservesCompactPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+
+	svc := &OpenAIGatewayService{placeholder
+	account := &Account{Type: AccountTypeOAuthplaceholder
+
+	req, err := svc.buildUpstreamRequestOpenAIPassthrough(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token")
+placeholder
+	require.Equal(t, chatgptCodexURL+"/compact", req.URL.String())
+	require.Equal(t, "application/json", req.Header.Get("Accept"))
+	require.Equal(t, codexCLIVersion, req.Header.Get("Version"))
+	require.NotEmpty(t, req.Header.Get("Session_Id"))
+placeholder
+
+func TestOpenAIBuildUpstreamRequestCompactForcesJSONAcceptForOAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+
+	svc := &OpenAIGatewayService{placeholder
+	account := &Account{
+		Type:        AccountTypeOAuth,
+placeholder"chatgpt_account_id": "chatgpt-acc"placeholder,
+placeholder
+
+	req, err := svc.buildUpstreamRequest(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token", false, "", true)
+placeholder
+	require.Equal(t, chatgptCodexURL+"/compact", req.URL.String())
+	require.Equal(t, "application/json", req.Header.Get("Accept"))
+	require.Equal(t, codexCLIVersion, req.Header.Get("Version"))
+	require.NotEmpty(t, req.Header.Get("Session_Id"))
+placeholder
+
+func TestOpenAIBuildUpstreamRequestPreservesCompactPathForAPIKeyBaseURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+
+	svc := &OpenAIGatewayService{cfg: &config.Config{
+		Security: config.SecurityConfig{
+			URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholder,
+	placeholder,
+placeholderplaceholder
+	account := &Account{
+		Type:        AccountTypeAPIKey,
+		Platform:    PlatformOpenAI,
+placeholder"base_url": "https://example.com/v1"placeholder,
+placeholder
+
+	req, err := svc.buildUpstreamRequest(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token", false, "", false)
+placeholder
+	require.Equal(t, "https://example.com/v1/responses/compact", req.URL.String())
+placeholder
+
 // ==================== P1-08 修复：model 替换性能优化测试 ====================
 
 func TestReplaceModelInSSELine(t *testing.T) {

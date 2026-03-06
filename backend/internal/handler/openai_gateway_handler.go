@@ -118,6 +118,20 @@ placeholder
 placeholder
 
 	setOpsRequestContext(c, "", false, body)
+	sessionHashBody := body
+	if service.IsOpenAIResponsesCompactPathForTest(c) {
+		if compactSeed := strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String()); compactSeed != "" {
+			c.Set(service.OpenAICompactSessionSeedKeyForTest(), compactSeed)
+	placeholder
+		normalizedCompactBody, normalizedCompact, compactErr := service.NormalizeOpenAICompactRequestBodyForTest(body)
+		if compactErr != nil {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to normalize compact request body")
+			return
+	placeholder
+		if normalizedCompact {
+			body = normalizedCompactBody
+	placeholder
+placeholder
 
 	// 校验请求体 JSON 合法性
 	if !gjson.ValidBytes(body) {
@@ -193,7 +207,7 @@ placeholder
 placeholder
 
 	// Generate session hash (header first; fallback to prompt_cache_key)
-	sessionHash := h.gatewayService.GenerateSessionHash(c, body)
+	sessionHash := h.gatewayService.GenerateSessionHash(c, sessionHashBody)
 
 	maxAccountSwitches := h.maxAccountSwitches
 	switchCount := 0
