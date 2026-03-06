@@ -64,8 +64,12 @@ placeholder
 		if acc.ID <= 0 {
 			continue
 	placeholder
-		if prev, ok := unique[acc.ID]; !ok || acc.Concurrency > prev {
-			unique[acc.ID] = acc.Concurrency
+		c := acc.Concurrency
+		if c <= 0 {
+			c = 1
+	placeholder
+		if prev, ok := unique[acc.ID]; !ok || c > prev {
+			unique[acc.ID] = c
 	placeholder
 placeholder
 
