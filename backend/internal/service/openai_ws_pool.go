@@ -126,6 +126,13 @@ placeholder
 	return l.conn.handshakeHeader(name)
 placeholder
 
+func (l *openAIWSConnLease) HandshakeHeaders() http.Header {
+	if l == nil || l.conn == nil {
+		return nil
+placeholder
+	return cloneHeader(l.conn.handshakeHeaders)
+placeholder
+
 func (l *openAIWSConnLease) IsPrewarmed() bool {
 	if l == nil || l.conn == nil {
 		return false
