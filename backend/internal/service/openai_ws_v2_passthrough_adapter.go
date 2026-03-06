@@ -177,11 +177,12 @@ placeholder
 						CacheCreationInputTokens: turn.Usage.CacheCreationInputTokens,
 						CacheReadInputTokens:     turn.Usage.CacheReadInputTokens,
 				placeholder,
-					Model:        turn.RequestModel,
-					Stream:       true,
-					OpenAIWSMode: true,
-					Duration:     turn.Duration,
-					FirstTokenMs: turn.FirstTokenMs,
+					Model:           turn.RequestModel,
+					Stream:          true,
+					OpenAIWSMode:    true,
+					ResponseHeaders: cloneHeader(handshakeHeaders),
+					Duration:        turn.Duration,
+					FirstTokenMs:    turn.FirstTokenMs,
 			placeholder
 				logOpenAIWSV2Passthrough(
 					"relay_turn_completed account_id=%d turn=%d request_id=%s terminal_event=%s duration_ms=%d first_token_ms=%d input_tokens=%d output_tokens=%d cache_read_tokens=%d",
@@ -223,11 +224,12 @@ placeholder)
 			CacheCreationInputTokens: relayResult.Usage.CacheCreationInputTokens,
 			CacheReadInputTokens:     relayResult.Usage.CacheReadInputTokens,
 	placeholder,
-		Model:        relayResult.RequestModel,
-		Stream:       true,
-		OpenAIWSMode: true,
-		Duration:     relayResult.Duration,
-		FirstTokenMs: relayResult.FirstTokenMs,
+		Model:           relayResult.RequestModel,
+		Stream:          true,
+		OpenAIWSMode:    true,
+		ResponseHeaders: cloneHeader(handshakeHeaders),
+		Duration:        relayResult.Duration,
+		FirstTokenMs:    relayResult.FirstTokenMs,
 placeholder
 
 	turnCount := int(completedTurns.Load())
