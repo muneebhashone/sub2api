@@ -137,7 +137,9 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+			if s.rateLimitService != nil {
+				s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+		placeholder
 			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
 	placeholder
 		// Non-failover error: return Anthropic-formatted error to client

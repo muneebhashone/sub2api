@@ -428,7 +428,7 @@ placeholder
 // POST /v1/messages (when group platform is OpenAI)
 func (h *OpenAIGatewayHandler) Messages(c *gin.Context) {
 	streamStarted := false
-	defer h.recoverResponsesPanic(c, &streamStarted)
+	defer h.recoverAnthropicMessagesPanic(c, &streamStarted)
 
 	requestStart := time.Now()
 
@@ -1155,6 +1155,26 @@ placeholder
 		zap.Any("panic", recovered),
 		zap.ByteString("stack", debug.Stack()),
 	)
+placeholder
+
+// recoverAnthropicMessagesPanic recovers from panics in the Anthropic Messages
+// handler and returns an Anthropic-formatted error response.
+func (h *OpenAIGatewayHandler) recoverAnthropicMessagesPanic(c *gin.Context, streamStarted *bool) {
+	recovered := recover()
+	if recovered == nil {
+		return
+placeholder
+
+	started := streamStarted != nil && *streamStarted
+	requestLogger(c, "handler.openai_gateway.messages").Error(
+		"openai.messages_panic_recovered",
+		zap.Bool("stream_started", started),
+		zap.Any("panic", recovered),
+		zap.ByteString("stack", debug.Stack()),
+	)
+	if !started {
+		h.anthropicErrorResponse(c, http.StatusInternalServerError, "api_error", "Internal server error")
+placeholder
 placeholder
 
 func (h *OpenAIGatewayHandler) ensureResponsesDependencies(c *gin.Context, reqLog *zap.Logger) bool {
