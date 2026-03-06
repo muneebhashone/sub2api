@@ -106,6 +106,7 @@ placeholder
 		{Name: "credentials", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "extra", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "concurrency", Type: field.TypeInt, Default: 3placeholder,
+		{Name: "load_factor", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "priority", Type: field.TypeInt, Default: 50placeholder,
 		{Name: "rate_multiplier", Type: field.TypeFloat64, Default: 1, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
@@ -132,7 +133,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[27]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[28]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -151,52 +152,52 @@ placeholder
 			{
 				Name:    "account_status",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[13]placeholder,
+				Columns: []*schema.Column{AccountsColumns[14]placeholder,
 		placeholder,
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[27]placeholder,
+				Columns: []*schema.Column{AccountsColumns[28]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[11]placeholder,
+				Columns: []*schema.Column{AccountsColumns[12]placeholder,
 		placeholder,
 			{
 				Name:    "account_last_used_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[15]placeholder,
+				Columns: []*schema.Column{AccountsColumns[16]placeholder,
 		placeholder,
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[18]placeholder,
+				Columns: []*schema.Column{AccountsColumns[19]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[19]placeholder,
+				Columns: []*schema.Column{AccountsColumns[20]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[20]placeholder,
+				Columns: []*schema.Column{AccountsColumns[21]placeholder,
 		placeholder,
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[21]placeholder,
+				Columns: []*schema.Column{AccountsColumns[22]placeholder,
 		placeholder,
 			{
 				Name:    "account_platform_priority",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[6], AccountsColumns[11]placeholder,
+				Columns: []*schema.Column{AccountsColumns[6], AccountsColumns[12]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority_status",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[11], AccountsColumns[13]placeholder,
+				Columns: []*schema.Column{AccountsColumns[12], AccountsColumns[14]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
