@@ -900,6 +900,22 @@ placeholder
 	return false
 placeholder
 
+// ExtractSessionID extracts the raw session ID from headers or body without hashing.
+// Used by ForwardAsAnthropic to pass as prompt_cache_key for upstream cache.
+func (s *OpenAIGatewayService) ExtractSessionID(c *gin.Context, body []byte) string {
+	if c == nil {
+		return ""
+placeholder
+	sessionID := strings.TrimSpace(c.GetHeader("session_id"))
+	if sessionID == "" {
+		sessionID = strings.TrimSpace(c.GetHeader("conversation_id"))
+placeholder
+	if sessionID == "" && len(body) > 0 {
+		sessionID = strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String())
+placeholder
+	return sessionID
+placeholder
+
 // GenerateSessionHash generates a sticky-session hash for OpenAI requests.
 //
 // Priority:
