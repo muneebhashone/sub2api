@@ -2275,6 +2275,8 @@ const handleSubmit = async () => {
         const modelMapping = buildModelMappingObject(modelRestrictionMode.value, allowedModels.value, modelMappings.value)
         if (modelMapping) {
           newCredentials.model_mapping = modelMapping
+        placeholder else {
+          delete newCredentials.model_mapping
         placeholder
       placeholder else if (currentCredentials.model_mapping) {
         newCredentials.model_mapping = currentCredentials.model_mapping
@@ -2284,6 +2286,9 @@ const handleSubmit = async () => {
       if (customErrorCodesEnabled.value) {
         newCredentials.custom_error_codes_enabled = true
         newCredentials.custom_error_codes = [...selectedErrorCodes.value]
+      placeholder else {
+        delete newCredentials.custom_error_codes_enabled
+        delete newCredentials.custom_error_codes
       placeholder
 
       // Add intercept warmup requests setting
