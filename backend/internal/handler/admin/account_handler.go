@@ -660,6 +660,42 @@ placeholder
 		// Error already sent via SSE, just log
 		return
 placeholder
+
+	if h.rateLimitService != nil {
+		if _, err := h.rateLimitService.RecoverAccountAfterSuccessfulTest(c.Request.Context(), accountID); err != nil {
+			_ = c.Error(err)
+	placeholder
+placeholder
+placeholder
+
+// RecoverState handles unified recovery of recoverable account runtime state.
+// POST /api/v1/admin/accounts/:id/recover-state
+func (h *AccountHandler) RecoverState(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+placeholder
+
+	if h.rateLimitService == nil {
+		response.Error(c, http.StatusServiceUnavailable, "Rate limit service unavailable")
+		return
+placeholder
+
+	if _, err := h.rateLimitService.RecoverAccountState(c.Request.Context(), accountID, service.AccountRecoveryOptions{
+		InvalidateToken: true,
+placeholder); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, h.buildAccountResponseWithRuntime(c.Request.Context(), account))
 placeholder
 
 // SyncFromCRS handles syncing accounts from claude-relay-service (CRS)

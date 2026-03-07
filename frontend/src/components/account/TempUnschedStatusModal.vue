@@ -29,6 +29,10 @@
       </div>
 
       <div v-else class="space-y-4">
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          {{ t('admin.accounts.recoverStateHint') placeholderplaceholder
+        </div>
+
         <div class="rounded-lg border border-gray-200 p-4 dark:border-dark-600">
           <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ t('admin.accounts.tempUnschedulable.accountName') placeholderplaceholder
@@ -131,7 +135,7 @@
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          {{ t('admin.accounts.tempUnschedulable.reset') placeholderplaceholder
+          {{ t('admin.accounts.recoverState') placeholderplaceholder
         </button>
       </div>
     </template>
@@ -154,7 +158,7 @@ placeholder>()
 
 const emit = defineEmits<{
   close: []
-  reset: []
+  reset: [account: Account]
 placeholder>()
 
 const { t placeholder = useI18n()
@@ -225,12 +229,12 @@ const handleReset = async () => {
   if (!props.account) return
   resetting.value = true
   try {
-    await adminAPI.accounts.resetTempUnschedulable(props.account.id)
-    appStore.showSuccess(t('admin.accounts.tempUnschedulable.resetSuccess'))
-    emit('reset')
+    const updated = await adminAPI.accounts.recoverState(props.account.id)
+    appStore.showSuccess(t('admin.accounts.recoverStateSuccess'))
+    emit('reset', updated)
     handleClose()
   placeholder catch (error: any) {
-    appStore.showError(error?.message || t('admin.accounts.tempUnschedulable.resetFailed'))
+    appStore.showError(error?.message || t('admin.accounts.recoverStateFailed'))
   placeholder finally {
     resetting.value = false
   placeholder

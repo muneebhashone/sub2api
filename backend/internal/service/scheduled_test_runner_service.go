@@ -17,6 +17,7 @@ type ScheduledTestRunnerService struct {
 	planRepo       ScheduledTestPlanRepository
 	scheduledSvc   *ScheduledTestService
 	accountTestSvc *AccountTestService
+	rateLimitSvc   *RateLimitService
 	cfg            *config.Config
 
 	cron      *cron.Cron
@@ -29,12 +30,14 @@ func NewScheduledTestRunnerService(
 	planRepo ScheduledTestPlanRepository,
 	scheduledSvc *ScheduledTestService,
 	accountTestSvc *AccountTestService,
+	rateLimitSvc *RateLimitService,
 	cfg *config.Config,
 ) *ScheduledTestRunnerService {
 	return &ScheduledTestRunnerService{
 		planRepo:       planRepo,
 		scheduledSvc:   scheduledSvc,
 		accountTestSvc: accountTestSvc,
+		rateLimitSvc:   rateLimitSvc,
 		cfg:            cfg,
 placeholder
 placeholder
@@ -127,6 +130,11 @@ placeholder
 		logger.LegacyPrintf("service.scheduled_test_runner", "[ScheduledTestRunner] plan=%d SaveResult error: %v", plan.ID, err)
 placeholder
 
+	// Auto-recover account if test succeeded and auto_recover is enabled.
+	if result.Status == "success" && plan.AutoRecover {
+		s.tryRecoverAccount(ctx, plan.AccountID, plan.ID)
+placeholder
+
 	nextRun, err := computeNextRun(plan.CronExpression, time.Now())
 	if err != nil {
 		logger.LegacyPrintf("service.scheduled_test_runner", "[ScheduledTestRunner] plan=%d computeNextRun error: %v", plan.ID, err)
@@ -135,5 +143,28 @@ placeholder
 
 	if err := s.planRepo.UpdateAfterRun(ctx, plan.ID, time.Now(), nextRun); err != nil {
 		logger.LegacyPrintf("service.scheduled_test_runner", "[ScheduledTestRunner] plan=%d UpdateAfterRun error: %v", plan.ID, err)
+placeholder
+placeholder
+
+// tryRecoverAccount attempts to recover an account from recoverable runtime state.
+func (s *ScheduledTestRunnerService) tryRecoverAccount(ctx context.Context, accountID int64, planID int64) {
+	if s.rateLimitSvc == nil {
+		return
+placeholder
+
+	recovery, err := s.rateLimitSvc.RecoverAccountAfterSuccessfulTest(ctx, accountID)
+	if err != nil {
+		logger.LegacyPrintf("service.scheduled_test_runner", "[ScheduledTestRunner] plan=%d auto-recover failed: %v", planID, err)
+		return
+placeholder
+	if recovery == nil {
+		return
+placeholder
+
+	if recovery.ClearedError {
+		logger.LegacyPrintf("service.scheduled_test_runner", "[ScheduledTestRunner] plan=%d auto-recover: account=%d recovered from error status", planID, accountID)
+placeholder
+	if recovery.ClearedRateLimit {
+		logger.LegacyPrintf("service.scheduled_test_runner", "[ScheduledTestRunner] plan=%d auto-recover: account=%d cleared rate-limit/runtime state", planID, accountID)
 placeholder
 placeholder

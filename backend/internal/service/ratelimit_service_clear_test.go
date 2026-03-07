@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/stretchr/testify/require"
@@ -13,14 +14,32 @@ import (
 
 type rateLimitClearRepoStub struct {
 	mockAccountRepoForGemini
+	getByIDAccount            *Account
+	getByIDErr                error
+	getByIDCalls              int
+	clearErrorCalls           int
 	clearRateLimitCalls       int
 	clearAntigravityCalls     int
 	clearModelRateLimitCalls  int
 	clearTempUnschedCalls     int
+	clearErrorErr             error
 	clearRateLimitErr         error
 	clearAntigravityErr       error
 	clearModelRateLimitErr    error
 	clearTempUnschedulableErr error
+placeholder
+
+func (r *rateLimitClearRepoStub) GetByID(ctx context.Context, id int64) (*Account, error) {
+	r.getByIDCalls++
+	if r.getByIDErr != nil {
+		return nil, r.getByIDErr
+placeholder
+	return r.getByIDAccount, nil
+placeholder
+
+func (r *rateLimitClearRepoStub) ClearError(ctx context.Context, id int64) error {
+	r.clearErrorCalls++
+	return r.clearErrorErr
 placeholder
 
 func (r *rateLimitClearRepoStub) ClearRateLimit(ctx context.Context, id int64) error {
@@ -48,6 +67,11 @@ type tempUnschedCacheRecorder struct {
 	deleteErr  error
 placeholder
 
+type recoverTokenInvalidatorStub struct {
+	accounts []*Account
+	err      error
+placeholder
+
 func (c *tempUnschedCacheRecorder) SetTempUnsched(ctx context.Context, accountID int64, state *TempUnschedState) error {
 	return nil
 placeholder
@@ -59,6 +83,11 @@ placeholder
 func (c *tempUnschedCacheRecorder) DeleteTempUnsched(ctx context.Context, accountID int64) error {
 	c.deletedIDs = append(c.deletedIDs, accountID)
 	return c.deleteErr
+placeholder
+
+func (s *recoverTokenInvalidatorStub) InvalidateToken(ctx context.Context, account *Account) error {
+	s.accounts = append(s.accounts, account)
+	return s.err
 placeholder
 
 func TestRateLimitService_ClearRateLimit_AlsoClearsTempUnschedulable(t *testing.T) {
@@ -169,4 +198,109 @@ placeholder
 	require.Equal(t, 1, repo.clearAntigravityCalls)
 	require.Equal(t, 1, repo.clearModelRateLimitCalls)
 	require.Equal(t, 1, repo.clearTempUnschedCalls)
+placeholder
+
+func TestRateLimitService_RecoverAccountAfterSuccessfulTest_ClearsErrorAndRateLimitRelatedState(t *testing.T) {
+	now := time.Now()
+	repo := &rateLimitClearRepoStub{
+		getByIDAccount: &Account{
+			ID:                     42,
+			Status:                 StatusError,
+			RateLimitedAt:          &now,
+			TempUnschedulableUntil: &now,
+			Extra: map[string]any{
+				"model_rate_limits": map[string]any{
+					"claude-sonnet-4-5": map[string]any{
+						"rate_limit_reset_at": now.Format(time.RFC3339),
+				placeholder,
+			placeholder,
+				"antigravity_quota_scopes": map[string]any{"gemini": trueplaceholder,
+		placeholder,
+	placeholder,
+placeholder
+	cache := &tempUnschedCacheRecorder{placeholder
+	svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, cache)
+
+	result, err := svc.RecoverAccountAfterSuccessfulTest(context.Background(), 42)
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.ClearedError)
+	require.True(t, result.ClearedRateLimit)
+
+	require.Equal(t, 1, repo.getByIDCalls)
+	require.Equal(t, 1, repo.clearErrorCalls)
+	require.Equal(t, 1, repo.clearRateLimitCalls)
+	require.Equal(t, 1, repo.clearAntigravityCalls)
+	require.Equal(t, 1, repo.clearModelRateLimitCalls)
+	require.Equal(t, 1, repo.clearTempUnschedCalls)
+	require.Equal(t, []int64{42placeholder, cache.deletedIDs)
+placeholder
+
+func TestRateLimitService_RecoverAccountAfterSuccessfulTest_NoRecoverableStateIsNoop(t *testing.T) {
+	repo := &rateLimitClearRepoStub{
+		getByIDAccount: &Account{
+			ID:          7,
+			Status:      StatusActive,
+			Schedulable: true,
+			Extra:       map[string]any{placeholder,
+	placeholder,
+placeholder
+	cache := &tempUnschedCacheRecorder{placeholder
+	svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, cache)
+
+	result, err := svc.RecoverAccountAfterSuccessfulTest(context.Background(), 7)
+placeholder
+	require.NotNil(t, result)
+	require.False(t, result.ClearedError)
+	require.False(t, result.ClearedRateLimit)
+
+	require.Equal(t, 1, repo.getByIDCalls)
+	require.Equal(t, 0, repo.clearErrorCalls)
+	require.Equal(t, 0, repo.clearRateLimitCalls)
+	require.Equal(t, 0, repo.clearAntigravityCalls)
+	require.Equal(t, 0, repo.clearModelRateLimitCalls)
+	require.Equal(t, 0, repo.clearTempUnschedCalls)
+	require.Empty(t, cache.deletedIDs)
+placeholder
+
+func TestRateLimitService_RecoverAccountAfterSuccessfulTest_ClearErrorFailed(t *testing.T) {
+	repo := &rateLimitClearRepoStub{
+		getByIDAccount: &Account{
+			ID:     9,
+			Status: StatusError,
+	placeholder,
+		clearErrorErr: errors.New("clear error failed"),
+placeholder
+	svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+
+	result, err := svc.RecoverAccountAfterSuccessfulTest(context.Background(), 9)
+placeholder
+	require.Nil(t, result)
+	require.Equal(t, 1, repo.getByIDCalls)
+	require.Equal(t, 1, repo.clearErrorCalls)
+	require.Equal(t, 0, repo.clearRateLimitCalls)
+placeholder
+
+func TestRateLimitService_RecoverAccountState_InvalidatesOAuthTokenOnErrorRecovery(t *testing.T) {
+	repo := &rateLimitClearRepoStub{
+		getByIDAccount: &Account{
+			ID:     21,
+			Type:   AccountTypeOAuth,
+			Status: StatusError,
+	placeholder,
+placeholder
+	invalidator := &recoverTokenInvalidatorStub{placeholder
+	svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	svc.SetTokenCacheInvalidator(invalidator)
+
+	result, err := svc.RecoverAccountState(context.Background(), 21, AccountRecoveryOptions{
+		InvalidateToken: true,
+placeholder)
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.ClearedError)
+	require.False(t, result.ClearedRateLimit)
+	require.Equal(t, 1, repo.clearErrorCalls)
+	require.Len(t, invalidator.accounts, 1)
+	require.Equal(t, int64(21), invalidator.accounts[0].ID)
 placeholder

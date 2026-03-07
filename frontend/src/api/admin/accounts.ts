@@ -241,6 +241,16 @@ export async function clearRateLimit(id: number): Promise<Account> {
 placeholder
 
 /**
+ * Recover account runtime state in one call
+ * @param id - Account ID
+ * @returns Updated account
+ */
+export async function recoverState(id: number): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/recover-state`)
+  return data
+placeholder
+
+/**
  * Reset account quota usage
  * @param id - Account ID
  * @returns Updated account
@@ -588,6 +598,7 @@ export const accountsAPI = {
   getTodayStats,
   getBatchTodayStats,
   clearRateLimit,
+  recoverState,
   resetAccountQuota,
   getTempUnschedulableStatus,
   resetTempUnschedulable,
