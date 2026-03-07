@@ -273,6 +273,41 @@ export async function updateStreamTimeoutSettings(
   return data
 placeholder
 
+// ==================== Rectifier Settings ====================
+
+/**
+ * Rectifier settings interface
+ */
+export interface RectifierSettings {
+  enabled: boolean
+  thinking_signature_enabled: boolean
+  thinking_budget_enabled: boolean
+placeholder
+
+/**
+ * Get rectifier settings
+ * @returns Rectifier settings
+ */
+export async function getRectifierSettings(): Promise<RectifierSettings> {
+  const { data placeholder = await apiClient.get<RectifierSettings>('/admin/settings/rectifier')
+  return data
+placeholder
+
+/**
+ * Update rectifier settings
+ * @param settings - Rectifier settings to update
+ * @returns Updated settings
+ */
+export async function updateRectifierSettings(
+  settings: RectifierSettings
+): Promise<RectifierSettings> {
+  const { data placeholder = await apiClient.put<RectifierSettings>(
+    '/admin/settings/rectifier',
+    settings
+  )
+  return data
+placeholder
+
 // ==================== Sora S3 Settings ====================
 
 export interface SoraS3Settings {
@@ -419,6 +454,8 @@ export const settingsAPI = {
   deleteAdminApiKey,
   getStreamTimeoutSettings,
   updateStreamTimeoutSettings,
+  getRectifierSettings,
+  updateRectifierSettings,
   getSoraS3Settings,
   updateSoraS3Settings,
   testSoraS3Connection,

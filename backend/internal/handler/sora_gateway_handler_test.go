@@ -445,6 +445,7 @@ placeholder)
 		testutil.StubSessionLimitCache{placeholder,
 		nil, // rpmCache
 		nil, // digestStore
+		nil, // settingService
 	)
 
 	soraClient := &stubSoraClient{imageURLs: []string{"https://example.com/a.png"placeholderplaceholder
