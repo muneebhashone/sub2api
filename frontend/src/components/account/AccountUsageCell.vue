@@ -412,14 +412,24 @@ const isActiveOpenAIRateLimited = computed(() => {
 placeholder)
 
 const preferFetchedOpenAIUsage = computed(() => {
-  return isActiveOpenAIRateLimited.value && hasOpenAIUsageFallback.value
+  return (isActiveOpenAIRateLimited.value || isOpenAICodexSnapshotStale.value) && hasOpenAIUsageFallback.value
 placeholder)
 
 const openAIUsageRefreshKey = computed(() => buildOpenAIUsageRefreshKey(props.account))
 
+const isOpenAICodexSnapshotStale = computed(() => {
+  if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return false
+  const extra = props.account.extra as Record<string, unknown> | undefined
+  const updatedAtRaw = extra?.codex_usage_updated_at
+  if (!updatedAtRaw) return true
+  const updatedAt = Date.parse(String(updatedAtRaw))
+  if (Number.isNaN(updatedAt)) return true
+  return Date.now() - updatedAt >= 10 * 60 * 1000
+placeholder)
+
 const shouldAutoLoadUsageOnMount = computed(() => {
   if (props.account.platform === 'openai' && props.account.type === 'oauth') {
-    return isActiveOpenAIRateLimited.value || !hasCodexUsage.value
+    return isActiveOpenAIRateLimited.value || !hasCodexUsage.value || isOpenAICodexSnapshotStale.value
   placeholder
   return shouldFetchUsage.value
 placeholder)
@@ -807,7 +817,7 @@ placeholder)
 watch(openAIUsageRefreshKey, (nextKey, prevKey) => {
   if (!prevKey || nextKey === prevKey) return
   if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return
-  if (!isActiveOpenAIRateLimited.value && hasCodexUsage.value) return
+  if (!isActiveOpenAIRateLimited.value && hasCodexUsage.value && !isOpenAICodexSnapshotStale.value) return
 
   loadUsage().catch((e) => {
     console.error('Failed to refresh OpenAI usage:', e)
