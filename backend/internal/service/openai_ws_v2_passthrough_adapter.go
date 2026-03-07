@@ -107,7 +107,7 @@ placeholder
 
 	isCodexCLI := false
 	if c != nil {
-		isCodexCLI = openai.IsCodexCLIRequest(c.GetHeader("User-Agent"))
+		isCodexCLI = openai.IsCodexOfficialClientByHeaders(c.GetHeader("User-Agent"), c.GetHeader("originator"))
 placeholder
 	if s.cfg != nil && s.cfg.Gateway.ForceCodexCLI {
 		isCodexCLI = true

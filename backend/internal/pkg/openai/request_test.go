@@ -85,3 +85,26 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestIsCodexOfficialClientByHeaders(t *testing.T) {
+	tests := []struct {
+		name       string
+		ua         string
+		originator string
+		want       bool
+placeholder{
+		{name: "仅 originator 命中 desktop", originator: "Codex Desktop", want: trueplaceholder,
+		{name: "仅 originator 命中 vscode", originator: "codex_vscode", want: trueplaceholder,
+		{name: "仅 ua 命中 desktop", ua: "Codex Desktop/1.2.3", want: trueplaceholder,
+		{name: "ua 与 originator 都未命中", ua: "curl/8.0.1", originator: "my_client", want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsCodexOfficialClientByHeaders(tt.ua, tt.originator)
+			if got != tt.want {
+				t.Fatalf("IsCodexOfficialClientByHeaders(%q, %q) = %v, want %v", tt.ua, tt.originator, got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
