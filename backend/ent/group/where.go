@@ -195,6 +195,16 @@ func SortOrder(v int) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldSortOrder, v))
 placeholder
 
+// AllowMessagesDispatch applies equality check predicate on the "allow_messages_dispatch" field. It's identical to AllowMessagesDispatchEQ.
+func AllowMessagesDispatch(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldAllowMessagesDispatch, v))
+placeholder
+
+// DefaultMappedModel applies equality check predicate on the "default_mapped_model" field. It's identical to DefaultMappedModelEQ.
+func DefaultMappedModel(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldDefaultMappedModel, v))
+placeholder
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -1468,6 +1478,81 @@ placeholder
 // SortOrderLTE applies the LTE predicate on the "sort_order" field.
 func SortOrderLTE(v int) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldSortOrder, v))
+placeholder
+
+// AllowMessagesDispatchEQ applies the EQ predicate on the "allow_messages_dispatch" field.
+func AllowMessagesDispatchEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldAllowMessagesDispatch, v))
+placeholder
+
+// AllowMessagesDispatchNEQ applies the NEQ predicate on the "allow_messages_dispatch" field.
+func AllowMessagesDispatchNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldAllowMessagesDispatch, v))
+placeholder
+
+// DefaultMappedModelEQ applies the EQ predicate on the "default_mapped_model" field.
+func DefaultMappedModelEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelNEQ applies the NEQ predicate on the "default_mapped_model" field.
+func DefaultMappedModelNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelIn applies the In predicate on the "default_mapped_model" field.
+func DefaultMappedModelIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldDefaultMappedModel, vs...))
+placeholder
+
+// DefaultMappedModelNotIn applies the NotIn predicate on the "default_mapped_model" field.
+func DefaultMappedModelNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldDefaultMappedModel, vs...))
+placeholder
+
+// DefaultMappedModelGT applies the GT predicate on the "default_mapped_model" field.
+func DefaultMappedModelGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelGTE applies the GTE predicate on the "default_mapped_model" field.
+func DefaultMappedModelGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelLT applies the LT predicate on the "default_mapped_model" field.
+func DefaultMappedModelLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelLTE applies the LTE predicate on the "default_mapped_model" field.
+func DefaultMappedModelLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelContains applies the Contains predicate on the "default_mapped_model" field.
+func DefaultMappedModelContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelHasPrefix applies the HasPrefix predicate on the "default_mapped_model" field.
+func DefaultMappedModelHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelHasSuffix applies the HasSuffix predicate on the "default_mapped_model" field.
+func DefaultMappedModelHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelEqualFold applies the EqualFold predicate on the "default_mapped_model" field.
+func DefaultMappedModelEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldDefaultMappedModel, v))
+placeholder
+
+// DefaultMappedModelContainsFold applies the ContainsFold predicate on the "default_mapped_model" field.
+func DefaultMappedModelContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldDefaultMappedModel, v))
 placeholder
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

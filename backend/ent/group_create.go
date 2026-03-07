@@ -424,6 +424,34 @@ placeholder
 	return _c
 placeholder
 
+// SetAllowMessagesDispatch sets the "allow_messages_dispatch" field.
+func (_c *GroupCreate) SetAllowMessagesDispatch(v bool) *GroupCreate {
+	_c.mutation.SetAllowMessagesDispatch(v)
+	return _c
+placeholder
+
+// SetNillableAllowMessagesDispatch sets the "allow_messages_dispatch" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableAllowMessagesDispatch(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetAllowMessagesDispatch(*v)
+placeholder
+	return _c
+placeholder
+
+// SetDefaultMappedModel sets the "default_mapped_model" field.
+func (_c *GroupCreate) SetDefaultMappedModel(v string) *GroupCreate {
+	_c.mutation.SetDefaultMappedModel(v)
+	return _c
+placeholder
+
+// SetNillableDefaultMappedModel sets the "default_mapped_model" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableDefaultMappedModel(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetDefaultMappedModel(*v)
+placeholder
+	return _c
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -613,6 +641,14 @@ placeholder
 		v := group.DefaultSortOrder
 		_c.mutation.SetSortOrder(v)
 placeholder
+	if _, ok := _c.mutation.AllowMessagesDispatch(); !ok {
+		v := group.DefaultAllowMessagesDispatch
+		_c.mutation.SetAllowMessagesDispatch(v)
+placeholder
+	if _, ok := _c.mutation.DefaultMappedModel(); !ok {
+		v := group.DefaultDefaultMappedModel
+		_c.mutation.SetDefaultMappedModel(v)
+placeholder
 	return nil
 placeholder
 
@@ -682,6 +718,17 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.SortOrder(); !ok {
 		return &ValidationError{Name: "sort_order", err: errors.New(`ent: missing required field "Group.sort_order"`)placeholder
+placeholder
+	if _, ok := _c.mutation.AllowMessagesDispatch(); !ok {
+		return &ValidationError{Name: "allow_messages_dispatch", err: errors.New(`ent: missing required field "Group.allow_messages_dispatch"`)placeholder
+placeholder
+	if _, ok := _c.mutation.DefaultMappedModel(); !ok {
+		return &ValidationError{Name: "default_mapped_model", err: errors.New(`ent: missing required field "Group.default_mapped_model"`)placeholder
+placeholder
+	if v, ok := _c.mutation.DefaultMappedModel(); ok {
+		if err := group.DefaultMappedModelValidator(v); err != nil {
+			return &ValidationError{Name: "default_mapped_model", err: fmt.Errorf(`ent: validator failed for field "Group.default_mapped_model": %w`, err)placeholder
+	placeholder
 placeholder
 	return nil
 placeholder
@@ -829,6 +876,14 @@ placeholder
 	if value, ok := _c.mutation.SortOrder(); ok {
 		_spec.SetField(group.FieldSortOrder, field.TypeInt, value)
 		_node.SortOrder = value
+placeholder
+	if value, ok := _c.mutation.AllowMessagesDispatch(); ok {
+		_spec.SetField(group.FieldAllowMessagesDispatch, field.TypeBool, value)
+		_node.AllowMessagesDispatch = value
+placeholder
+	if value, ok := _c.mutation.DefaultMappedModel(); ok {
+		_spec.SetField(group.FieldDefaultMappedModel, field.TypeString, value)
+		_node.DefaultMappedModel = value
 placeholder
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1520,6 +1575,30 @@ func (u *GroupUpsert) AddSortOrder(v int) *GroupUpsert {
 	return u
 placeholder
 
+// SetAllowMessagesDispatch sets the "allow_messages_dispatch" field.
+func (u *GroupUpsert) SetAllowMessagesDispatch(v bool) *GroupUpsert {
+	u.Set(group.FieldAllowMessagesDispatch, v)
+	return u
+placeholder
+
+// UpdateAllowMessagesDispatch sets the "allow_messages_dispatch" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateAllowMessagesDispatch() *GroupUpsert {
+	u.SetExcluded(group.FieldAllowMessagesDispatch)
+	return u
+placeholder
+
+// SetDefaultMappedModel sets the "default_mapped_model" field.
+func (u *GroupUpsert) SetDefaultMappedModel(v string) *GroupUpsert {
+	u.Set(group.FieldDefaultMappedModel, v)
+	return u
+placeholder
+
+// UpdateDefaultMappedModel sets the "default_mapped_model" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateDefaultMappedModel() *GroupUpsert {
+	u.SetExcluded(group.FieldDefaultMappedModel)
+	return u
+placeholder
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -2185,6 +2264,34 @@ placeholder
 func (u *GroupUpsertOne) UpdateSortOrder() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSortOrder()
+placeholder)
+placeholder
+
+// SetAllowMessagesDispatch sets the "allow_messages_dispatch" field.
+func (u *GroupUpsertOne) SetAllowMessagesDispatch(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAllowMessagesDispatch(v)
+placeholder)
+placeholder
+
+// UpdateAllowMessagesDispatch sets the "allow_messages_dispatch" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateAllowMessagesDispatch() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAllowMessagesDispatch()
+placeholder)
+placeholder
+
+// SetDefaultMappedModel sets the "default_mapped_model" field.
+func (u *GroupUpsertOne) SetDefaultMappedModel(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetDefaultMappedModel(v)
+placeholder)
+placeholder
+
+// UpdateDefaultMappedModel sets the "default_mapped_model" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateDefaultMappedModel() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateDefaultMappedModel()
 placeholder)
 placeholder
 
@@ -3019,6 +3126,34 @@ placeholder
 func (u *GroupUpsertBulk) UpdateSortOrder() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSortOrder()
+placeholder)
+placeholder
+
+// SetAllowMessagesDispatch sets the "allow_messages_dispatch" field.
+func (u *GroupUpsertBulk) SetAllowMessagesDispatch(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAllowMessagesDispatch(v)
+placeholder)
+placeholder
+
+// UpdateAllowMessagesDispatch sets the "allow_messages_dispatch" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateAllowMessagesDispatch() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAllowMessagesDispatch()
+placeholder)
+placeholder
+
+// SetDefaultMappedModel sets the "default_mapped_model" field.
+func (u *GroupUpsertBulk) SetDefaultMappedModel(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetDefaultMappedModel(v)
+placeholder)
+placeholder
+
+// UpdateDefaultMappedModel sets the "default_mapped_model" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateDefaultMappedModel() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateDefaultMappedModel()
 placeholder)
 placeholder
 
