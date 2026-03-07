@@ -2207,7 +2207,7 @@ placeholder
 func newMinimalGatewayService(accountRepo service.AccountRepository) *service.GatewayService {
 	return service.NewGatewayService(
 		accountRepo, nil, nil, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 placeholder
 
