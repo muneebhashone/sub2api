@@ -1,12 +1,8 @@
 package service
 
 import (
-	_ "embed"
 	"strings"
 )
-
-//go:embed prompts/codex_cli_instructions.md
-var codexCLIInstructions string
 
 var codexModelMap = map[string]string{
 	"gpt-5.4":                    "gpt-5.4",
@@ -230,72 +226,13 @@ placeholder
 	return ""
 placeholder
 
-func getOpenCodeCodexHeader() string {
-	// 兼容保留：历史上这里会从 opencode 仓库拉取 codex_header.txt。
-	// 现在我们与 Codex CLI 一致，直接使用仓库内置的 instructions，避免读写缓存与外网依赖。
-	return getCodexCLIInstructions()
-placeholder
-
-func getCodexCLIInstructions() string {
-	return codexCLIInstructions
-placeholder
-
-func GetOpenCodeInstructions() string {
-	return getOpenCodeCodexHeader()
-placeholder
-
-// GetCodexCLIInstructions 返回内置的 Codex CLI 指令内容。
-func GetCodexCLIInstructions() string {
-	return getCodexCLIInstructions()
-placeholder
-
-// applyInstructions 处理 instructions 字段
-// isCodexCLI=true: 仅补充缺失的 instructions（使用内置 Codex CLI 指令）
-// isCodexCLI=false: 优先使用内置 Codex CLI 指令覆盖
+// applyInstructions 处理 instructions 字段：仅在 instructions 为空时填充默认值。
 func applyInstructions(reqBody map[string]any, isCodexCLI bool) bool {
-	if isCodexCLI {
-		return applyCodexCLIInstructions(reqBody)
-placeholder
-	return applyOpenCodeInstructions(reqBody)
-placeholder
-
-// applyCodexCLIInstructions 为 Codex CLI 请求补充缺失的 instructions
-// 仅在 instructions 为空时添加内置 Codex CLI 指令（不依赖 opencode 缓存/回源）
-func applyCodexCLIInstructions(reqBody map[string]any) bool {
 	if !isInstructionsEmpty(reqBody) {
-		return false // 已有有效 instructions，不修改
+		return false
 placeholder
-
-	instructions := strings.TrimSpace(getCodexCLIInstructions())
-	if instructions != "" {
-		reqBody["instructions"] = instructions
-		return true
-placeholder
-
-	return false
-placeholder
-
-// applyOpenCodeInstructions 为非 Codex CLI 请求应用内置 Codex CLI 指令（兼容历史函数名）
-// 优先使用内置 Codex CLI 指令覆盖
-func applyOpenCodeInstructions(reqBody map[string]any) bool {
-	instructions := strings.TrimSpace(getOpenCodeCodexHeader())
-	existingInstructions, _ := reqBody["instructions"].(string)
-	existingInstructions = strings.TrimSpace(existingInstructions)
-
-	if instructions != "" {
-		if existingInstructions != instructions {
-			reqBody["instructions"] = instructions
-			return true
-	placeholder
-placeholder else if existingInstructions == "" {
-		codexInstructions := strings.TrimSpace(getCodexCLIInstructions())
-		if codexInstructions != "" {
-			reqBody["instructions"] = codexInstructions
-			return true
-	placeholder
-placeholder
-
-	return false
+	reqBody["instructions"] = "You are a helpful coding assistant."
+	return true
 placeholder
 
 // isInstructionsEmpty 检查 instructions 字段是否为空
