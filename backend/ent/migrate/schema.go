@@ -251,6 +251,7 @@ placeholder
 		{Name: "title", Type: field.TypeString, Size: 200placeholder,
 		{Name: "content", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "draft"placeholder,
+		{Name: "notify_mode", Type: field.TypeString, Size: 20, Default: "silent"placeholder,
 		{Name: "targeting", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "starts_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "ends_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -273,17 +274,17 @@ placeholder
 			{
 				Name:    "announcement_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[9]placeholder,
+				Columns: []*schema.Column{AnnouncementsColumns[10]placeholder,
 		placeholder,
 			{
 				Name:    "announcement_starts_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[5]placeholder,
+				Columns: []*schema.Column{AnnouncementsColumns[6]placeholder,
 		placeholder,
 			{
 				Name:    "announcement_ends_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[6]placeholder,
+				Columns: []*schema.Column{AnnouncementsColumns[7]placeholder,
 		placeholder,
 	placeholder,
 placeholder

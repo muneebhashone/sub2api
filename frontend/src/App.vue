@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { RouterView, useRouter, useRoute placeholder from 'vue-router'
-import { onMounted, watch placeholder from 'vue'
+import { onMounted, onBeforeUnmount, watch placeholder from 'vue'
 import Toast from '@/components/common/Toast.vue'
 import NavigationProgress from '@/components/common/NavigationProgress.vue'
-import { useAppStore, useAuthStore, useSubscriptionStore placeholder from '@/stores'
+import AnnouncementPopup from '@/components/common/AnnouncementPopup.vue'
+import { useAppStore, useAuthStore, useSubscriptionStore, useAnnouncementStore placeholder from '@/stores'
 import { getSetupStatus placeholder from '@/api/setup'
 
 const router = useRouter()
@@ -11,6 +12,7 @@ const route = useRoute()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
+const announcementStore = useAnnouncementStore()
 
 /**
  * Update favicon dynamically
@@ -39,23 +41,54 @@ watch(
   { immediate: true placeholder
 )
 
-// Watch for authentication state and manage subscription data
+// Watch for authentication state and manage subscription data + announcements
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible' && authStore.isAuthenticated) {
+    announcementStore.fetchAnnouncements()
+  placeholder
+placeholder
+
 watch(
   () => authStore.isAuthenticated,
-  (isAuthenticated) => {
+  (isAuthenticated, oldValue) => {
     if (isAuthenticated) {
       // User logged in: preload subscriptions and start polling
       subscriptionStore.fetchActiveSubscriptions().catch((error) => {
         console.error('Failed to preload subscriptions:', error)
       placeholder)
       subscriptionStore.startPolling()
+
+      // Announcements: new login vs page refresh restore
+      if (oldValue === false) {
+        // New login: delay 3s then force fetch
+        setTimeout(() => announcementStore.fetchAnnouncements(true), 3000)
+      placeholder else {
+        // Page refresh restore (oldValue was undefined)
+        announcementStore.fetchAnnouncements()
+      placeholder
+
+      // Register visibility change listener
+      document.addEventListener('visibilitychange', onVisibilityChange)
     placeholder else {
       // User logged out: clear data and stop polling
       subscriptionStore.clear()
+      announcementStore.reset()
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     placeholder
   placeholder,
   { immediate: true placeholder
 )
+
+// Route change trigger (throttled by store)
+router.afterEach(() => {
+  if (authStore.isAuthenticated) {
+    announcementStore.fetchAnnouncements()
+  placeholder
+placeholder)
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+placeholder)
 
 onMounted(async () => {
   // Check if setup is needed
@@ -78,4 +111,5 @@ placeholder)
   <NavigationProgress />
   <RouterView />
   <Toast />
+  <AnnouncementPopup />
 </template>
