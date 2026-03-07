@@ -125,9 +125,9 @@ placeholder
 		Group:                groupFromServiceBase(g),
 		ModelRouting:         g.ModelRouting,
 		ModelRoutingEnabled:  g.ModelRoutingEnabled,
-		MCPXMLInject:       g.MCPXMLInject,
-		DefaultMappedModel: g.DefaultMappedModel,
-		SupportedModelScopes:  g.SupportedModelScopes,
+		MCPXMLInject:         g.MCPXMLInject,
+		DefaultMappedModel:   g.DefaultMappedModel,
+		SupportedModelScopes: g.SupportedModelScopes,
 		AccountCount:         g.AccountCount,
 		SortOrder:            g.SortOrder,
 placeholder
@@ -255,10 +255,18 @@ placeholder
 	if a.Type == service.AccountTypeAPIKey {
 		if limit := a.GetQuotaLimit(); limit > 0 {
 			out.QuotaLimit = &limit
-	placeholder
-		used := a.GetQuotaUsed()
-		if out.QuotaLimit != nil {
+			used := a.GetQuotaUsed()
 			out.QuotaUsed = &used
+	placeholder
+		if limit := a.GetQuotaDailyLimit(); limit > 0 {
+			out.QuotaDailyLimit = &limit
+			used := a.GetQuotaDailyUsed()
+			out.QuotaDailyUsed = &used
+	placeholder
+		if limit := a.GetQuotaWeeklyLimit(); limit > 0 {
+			out.QuotaWeeklyLimit = &limit
+			used := a.GetQuotaWeeklyUsed()
+			out.QuotaWeeklyUsed = &used
 	placeholder
 placeholder
 
