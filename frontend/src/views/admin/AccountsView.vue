@@ -562,16 +562,17 @@ placeholder
 const isFirstLoad = ref(true)
 
 const load = async () => {
+  const requestParams = params as any
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = false
   if (isFirstLoad.value) {
-    ;(params as any).lite = '1'
+    requestParams.lite = '1'
   placeholder
   await baseLoad()
   if (isFirstLoad.value) {
     isFirstLoad.value = false
-    delete (params as any).lite
+    delete requestParams.lite
   placeholder
   await refreshTodayStatsBatch()
 placeholder

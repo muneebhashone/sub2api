@@ -552,9 +552,10 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
     appStore.showError(t('admin.dashboard.failedToLoad'))
     console.error('Error loading dashboard snapshot:', error)
   placeholder finally {
-    if (currentSeq !== chartLoadSeq) return
-    loading.value = false
-    chartsLoading.value = false
+    if (currentSeq === chartLoadSeq) {
+      loading.value = false
+      chartsLoading.value = false
+    placeholder
   placeholder
 placeholder
 
@@ -575,8 +576,9 @@ const loadUsersTrend = async () => {
     console.error('Error loading users trend:', error)
     userTrend.value = []
   placeholder finally {
-    if (currentSeq !== usersTrendLoadSeq) return
-    userTrendLoading.value = false
+    if (currentSeq === usersTrendLoadSeq) {
+      userTrendLoading.value = false
+    placeholder
   placeholder
 placeholder
 
