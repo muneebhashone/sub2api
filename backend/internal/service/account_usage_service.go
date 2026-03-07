@@ -367,7 +367,7 @@ placeholder
 		usage.SevenDay = progress
 placeholder
 
-	if (usage.FiveHour == nil || usage.SevenDay == nil) && s.shouldProbeOpenAICodexSnapshot(account.ID, now) {
+	if shouldRefreshOpenAICodexSnapshot(account, usage, now) && s.shouldProbeOpenAICodexSnapshot(account.ID, now) {
 		if updates, err := s.probeOpenAICodexSnapshot(ctx, account); err == nil && len(updates) > 0 {
 			mergeAccountExtra(account, updates)
 			if usage.UpdatedAt == nil {
@@ -407,6 +407,40 @@ placeholder
 placeholder
 
 	return usage, nil
+placeholder
+
+func shouldRefreshOpenAICodexSnapshot(account *Account, usage *UsageInfo, now time.Time) bool {
+	if account == nil {
+		return false
+placeholder
+	if usage == nil {
+		return true
+placeholder
+	if usage.FiveHour == nil || usage.SevenDay == nil {
+		return true
+placeholder
+	if account.IsRateLimited() {
+		return true
+placeholder
+	return isOpenAICodexSnapshotStale(account, now)
+placeholder
+
+func isOpenAICodexSnapshotStale(account *Account, now time.Time) bool {
+	if account == nil || !account.IsOpenAIOAuth() || !account.IsOpenAIResponsesWebSocketV2Enabled() {
+		return false
+placeholder
+	if account.Extra == nil {
+		return true
+placeholder
+	raw, ok := account.Extra["codex_usage_updated_at"]
+	if !ok {
+		return true
+placeholder
+	ts, err := parseTime(fmt.Sprint(raw))
+	if err != nil {
+		return true
+placeholder
+	return now.Sub(ts) >= openAIProbeCacheTTL
 placeholder
 
 func (s *AccountUsageService) shouldProbeOpenAICodexSnapshot(accountID int64, now time.Time) bool {
@@ -478,19 +512,33 @@ placeholder
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("openai codex probe returned status %d", resp.StatusCode)
+	updates, err := extractOpenAICodexProbeUpdates(resp)
+	if err != nil {
+		return nil, err
+placeholder
+	if len(updates) > 0 {
+		go func(accountID int64, updates map[string]any) {
+			updateCtx, updateCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer updateCancel()
+			_ = s.accountRepo.UpdateExtra(updateCtx, accountID, updates)
+	placeholder(account.ID, updates)
+		return updates, nil
+placeholder
+	return nil, nil
+placeholder
+
+func extractOpenAICodexProbeUpdates(resp *http.Response) (map[string]any, error) {
+	if resp == nil {
+		return nil, nil
 placeholder
 	if snapshot := ParseCodexRateLimitHeaders(resp.Header); snapshot != nil {
 		updates := buildCodexUsageExtraUpdates(snapshot, time.Now())
 		if len(updates) > 0 {
-			go func(accountID int64, updates map[string]any) {
-				updateCtx, updateCancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer updateCancel()
-				_ = s.accountRepo.UpdateExtra(updateCtx, accountID, updates)
-		placeholder(account.ID, updates)
 			return updates, nil
 	placeholder
+placeholder
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("openai codex probe returned status %d", resp.StatusCode)
 placeholder
 	return nil, nil
 placeholder
