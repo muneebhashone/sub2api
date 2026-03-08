@@ -507,7 +507,11 @@ placeholder
 					filtered = append(filtered, edit)
 			placeholder
 				if len(filtered) != len(edits) {
-					cm["edits"] = filtered
+					if len(filtered) == 0 {
+						delete(cm, "edits")
+				placeholder else {
+						cm["edits"] = filtered
+				placeholder
 			placeholder
 		placeholder
 	placeholder
