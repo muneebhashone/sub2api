@@ -4319,7 +4319,11 @@ placeholder
 					return ""
 			placeholder(),
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
+			return nil, &UpstreamFailoverError{
+				StatusCode:             resp.StatusCode,
+				ResponseBody:           respBody,
+				RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
+		placeholder
 	placeholder
 		return s.handleRetryExhaustedError(ctx, resp, c, account)
 placeholder
@@ -4349,7 +4353,11 @@ placeholder
 				return ""
 		placeholder(),
 	placeholder)
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
+		return nil, &UpstreamFailoverError{
+			StatusCode:             resp.StatusCode,
+			ResponseBody:           respBody,
+			RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
+	placeholder
 placeholder
 	if resp.StatusCode >= 400 {
 		// 可选：对部分 400 触发 failover（默认关闭以保持语义）
@@ -4584,7 +4592,11 @@ placeholder
 					return ""
 			placeholder(),
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
+			return nil, &UpstreamFailoverError{
+				StatusCode:             resp.StatusCode,
+				ResponseBody:           respBody,
+				RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
+		placeholder
 	placeholder
 		return s.handleRetryExhaustedError(ctx, resp, c, account)
 placeholder
@@ -4614,7 +4626,11 @@ placeholder
 				return ""
 		placeholder(),
 	placeholder)
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
+		return nil, &UpstreamFailoverError{
+			StatusCode:             resp.StatusCode,
+			ResponseBody:           respBody,
+			RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
+	placeholder
 placeholder
 
 	if resp.StatusCode >= 400 {
