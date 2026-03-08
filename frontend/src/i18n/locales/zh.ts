@@ -1859,7 +1859,8 @@ export default {
         rateLimited: '限流中',
         overloaded: '过载中',
         tempUnschedulable: '临时不可调度',
-        rateLimitedUntil: '限流中，重置时间：{timeplaceholder',
+        rateLimitedUntil: '限流中，当前不参与调度，预计 {timeplaceholder 自动恢复',
+        rateLimitedAutoResume: '{timeplaceholder 自动恢复',
         modelRateLimitedUntil: '{modelplaceholder 限流至 {timeplaceholder',
         overloadedUntil: '负载过重，重置时间：{timeplaceholder',
         viewTempUnschedDetails: '查看临时不可调度详情'
