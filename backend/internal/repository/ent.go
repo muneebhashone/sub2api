@@ -89,6 +89,10 @@ placeholder
 			_ = client.Close()
 			return nil, nil, err
 	placeholder
+		if err := ensureSimpleModeAdminConcurrency(seedCtx, client); err != nil {
+			_ = client.Close()
+			return nil, nil, err
+	placeholder
 placeholder
 
 	return client, drv.DB(), nil
