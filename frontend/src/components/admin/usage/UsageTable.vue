@@ -4,7 +4,15 @@
       <DataTable :columns="columns" :data="data" :loading="loading">
         <template #cell-user="{ row placeholder">
           <div class="text-sm">
-            <span class="font-medium text-gray-900 dark:text-white">{{ row.user?.email || '-' placeholderplaceholder</span>
+            <button
+              v-if="row.user?.email"
+              class="font-medium text-primary-600 underline decoration-dashed underline-offset-2 transition-colors hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+              @click="$emit('userClick', row.user_id, row.user?.email)"
+              :title="t('admin.usage.clickToViewBalance')"
+            >
+              {{ row.user.email placeholderplaceholder
+            </button>
+            <span v-else class="font-medium text-gray-900 dark:text-white">-</span>
             <span class="ml-1 text-gray-500 dark:text-gray-400">#{{ row.user_id placeholderplaceholder</span>
           </div>
         </template>
@@ -278,6 +286,7 @@ import Icon from '@/components/icons/Icon.vue'
 import type { AdminUsageLog placeholder from '@/types'
 
 defineProps(['data', 'loading', 'columns'])
+defineEmits(['userClick'])
 const { t placeholder = useI18n()
 
 // Tooltip state - cost
