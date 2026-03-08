@@ -259,6 +259,7 @@ placeholder
 	if !hasEmptyContent && !containsThinkingBlocks {
 		if topThinking := gjson.Get(jsonStr, "thinking"); topThinking.Exists() {
 			if out, err := sjson.DeleteBytes(body, "thinking"); err == nil {
+				out = removeThinkingDependentContextStrategies(out)
 				return out
 		placeholder
 			return body
