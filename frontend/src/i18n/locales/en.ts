@@ -1836,7 +1836,12 @@ export default {
         edit: 'Bulk Edit',
         delete: 'Bulk Delete',
         enableScheduling: 'Enable Scheduling',
-        disableScheduling: 'Disable Scheduling'
+        disableScheduling: 'Disable Scheduling',
+        resetStatus: 'Reset Status',
+        refreshToken: 'Refresh Token',
+        resetStatusSuccess: 'Successfully reset {countplaceholder account(s) status',
+        refreshTokenSuccess: 'Successfully refreshed {countplaceholder account(s) token',
+        partialSuccess: 'Partially completed: {successplaceholder succeeded, {failedplaceholder failed'
       placeholder,
       bulkEdit: {
         title: 'Bulk Edit Accounts',

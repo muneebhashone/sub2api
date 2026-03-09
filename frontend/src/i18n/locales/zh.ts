@@ -1983,7 +1983,12 @@ export default {
         edit: '批量编辑账号',
         delete: '批量删除',
         enableScheduling: '批量启用调度',
-        disableScheduling: '批量停止调度'
+        disableScheduling: '批量停止调度',
+        resetStatus: '批量重置状态',
+        refreshToken: '批量刷新令牌',
+        resetStatusSuccess: '已成功重置 {countplaceholder 个账号状态',
+        refreshTokenSuccess: '已成功刷新 {countplaceholder 个账号令牌',
+        partialSuccess: '操作部分完成：{successplaceholder 成功，{failedplaceholder 失败'
       placeholder,
       bulkEdit: {
         title: '批量编辑账号',
