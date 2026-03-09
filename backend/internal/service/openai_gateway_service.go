@@ -2040,7 +2040,11 @@ placeholder
 		placeholder)
 
 			s.handleFailoverSideEffects(ctx, resp, account)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBodyplaceholder
+			return nil, &UpstreamFailoverError{
+				StatusCode:             resp.StatusCode,
+				ResponseBody:           respBody,
+				RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
+		placeholder
 	placeholder
 		return s.handleErrorResponse(ctx, resp, c, account, body)
 placeholder
@@ -2853,7 +2857,11 @@ placeholder
 		Detail:             upstreamDetail,
 placeholder)
 	if shouldDisable {
-		return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: bodyplaceholder
+		return nil, &UpstreamFailoverError{
+			StatusCode:             resp.StatusCode,
+			ResponseBody:           body,
+			RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
+	placeholder
 placeholder
 
 	// Return appropriate error response

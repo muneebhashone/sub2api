@@ -177,6 +177,36 @@ placeholder{
 			body:       []byte(`overloaded`),
 			expected:   ErrorPolicyMatched, // custom codes take precedence
 	placeholder,
+		{
+			name: "pool_mode_custom_error_codes_hit_returns_matched",
+			account: &Account{
+				ID:       7,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"pool_mode":                  true,
+					"custom_error_codes_enabled": true,
+					"custom_error_codes":         []any{float64(401), float64(403)placeholder,
+			placeholder,
+		placeholder,
+			statusCode: 401,
+			body:       []byte(`unauthorized`),
+			expected:   ErrorPolicyMatched,
+	placeholder,
+		{
+			name: "pool_mode_without_custom_error_codes_returns_skipped",
+			account: &Account{
+				ID:       8,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"pool_mode": true,
+			placeholder,
+		placeholder,
+			statusCode: 401,
+			body:       []byte(`unauthorized`),
+			expected:   ErrorPolicySkipped,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -188,6 +218,48 @@ placeholder
 			require.Equal(t, tt.expected, result, "unexpected ErrorPolicyResult")
 	placeholder)
 placeholder
+placeholder
+
+func TestHandleUpstreamError_PoolModeCustomErrorCodesOverride(t *testing.T) {
+	t.Run("pool_mode_without_custom_error_codes_still_skips", func(t *testing.T) {
+		repo := &errorPolicyRepoStub{placeholder
+		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+		account := &Account{
+			ID:       30,
+			Type:     AccountTypeAPIKey,
+			Platform: PlatformOpenAI,
+	placeholder
+				"pool_mode": true,
+		placeholder,
+	placeholder
+
+		shouldDisable := svc.HandleUpstreamError(context.Background(), account, 401, http.Header{placeholder, []byte("unauthorized"))
+
+		require.False(t, shouldDisable)
+		require.Equal(t, 0, repo.setErrCalls)
+		require.Equal(t, 0, repo.tempCalls)
+placeholder)
+
+	t.Run("pool_mode_with_custom_error_codes_uses_local_error_policy", func(t *testing.T) {
+		repo := &errorPolicyRepoStub{placeholder
+		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+		account := &Account{
+			ID:       31,
+			Type:     AccountTypeAPIKey,
+			Platform: PlatformOpenAI,
+	placeholder
+				"pool_mode":                  true,
+				"custom_error_codes_enabled": true,
+				"custom_error_codes":         []any{float64(401)placeholder,
+		placeholder,
+	placeholder
+
+		shouldDisable := svc.HandleUpstreamError(context.Background(), account, 401, http.Header{placeholder, []byte("unauthorized"))
+
+		require.True(t, shouldDisable)
+		require.Equal(t, 1, repo.setErrCalls)
+		require.Equal(t, 0, repo.tempCalls)
+placeholder)
 placeholder
 
 // ---------------------------------------------------------------------------
