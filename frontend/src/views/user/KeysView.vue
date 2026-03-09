@@ -187,6 +187,9 @@
                     :style="{ width: Math.min((row.usage_5h / row.rate_limit_5h) * 100, 100) + '%' placeholder"
                   />
                 </div>
+                <div v-if="row.reset_5h_at && formatResetTime(row.reset_5h_at)" class="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
+                  ⟳ {{ formatResetTime(row.reset_5h_at) placeholderplaceholder
+                </div>
               </div>
               <!-- 1d window -->
               <div v-if="row.rate_limit_1d > 0">
@@ -212,6 +215,9 @@
                     :style="{ width: Math.min((row.usage_1d / row.rate_limit_1d) * 100, 100) + '%' placeholder"
                   />
                 </div>
+                <div v-if="row.reset_1d_at && formatResetTime(row.reset_1d_at)" class="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
+                  ⟳ {{ formatResetTime(row.reset_1d_at) placeholderplaceholder
+                </div>
               </div>
               <!-- 7d window -->
               <div v-if="row.rate_limit_7d > 0">
@@ -236,6 +242,9 @@
                     ]"
                     :style="{ width: Math.min((row.usage_7d / row.rate_limit_7d) * 100, 100) + '%' placeholder"
                   />
+                </div>
+                <div v-if="row.reset_7d_at && formatResetTime(row.reset_7d_at)" class="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
+                  ⟳ {{ formatResetTime(row.reset_7d_at) placeholderplaceholder
                 </div>
               </div>
               <!-- Reset button -->
@@ -1085,6 +1094,8 @@ const apiKeys = ref<ApiKey[]>([])
 const groups = ref<Group[]>([])
 const loading = ref(false)
 const submitting = ref(false)
+const now = ref(new Date())
+let resetTimer: ReturnType<typeof setInterval> | null = null
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({placeholder)
 const userGroupRates = ref<Record<number, number>>({placeholder)
 
@@ -1745,15 +1756,29 @@ const closeCcsClientSelect = () => {
   pendingCcsRow.value = null
 placeholder
 
+function formatResetTime(resetAt: string | null): string {
+  if (!resetAt) return ''
+  const diff = new Date(resetAt).getTime() - now.value.getTime()
+  if (diff <= 0) return t('keys.resetNow')
+  const days = Math.floor(diff / 86400000)
+  const hours = Math.floor((diff % 86400000) / 3600000)
+  const mins = Math.floor((diff % 3600000) / 60000)
+  if (days > 0) return `${daysplaceholderd ${hoursplaceholderh`
+  if (hours > 0) return `${hoursplaceholderh ${minsplaceholderm`
+  return `${minsplaceholderm`
+placeholder
+
 onMounted(() => {
   loadApiKeys()
   loadGroups()
   loadUserGroupRates()
   loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
+  resetTimer = setInterval(() => { now.value = new Date() placeholder, 60000)
 placeholder)
 
 onUnmounted(() => {
   document.removeEventListener('click', closeGroupSelector)
+  if (resetTimer) clearInterval(resetTimer)
 placeholder)
 </script>

@@ -153,6 +153,7 @@ export default {
     todayExpires: '(expires today)',
     daysLeft: '({daysplaceholder days)',
     usedQuota: 'Used Quota',
+    resetNow: 'Resetting soon',
     subscriptionType: 'Subscription Type',
     subscriptionExpires: 'Subscription Expires',
     // Usage stat cells
@@ -660,6 +661,7 @@ export default {
     resetRateLimitConfirmMessage: 'Are you sure you want to reset the rate limit usage for key "{nameplaceholder"? All time window usage will be reset to zero. This action cannot be undone.',
     rateLimitResetSuccess: 'Rate limit usage reset successfully',
     failedToResetRateLimit: 'Failed to reset rate limit usage',
+    resetNow: 'Resetting soon',
     expiration: 'Expiration',
     expiresInDays: '{daysplaceholder days',
     extendDays: '+{daysplaceholder days',
