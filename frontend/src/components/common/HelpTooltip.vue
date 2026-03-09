@@ -1,18 +1,40 @@
 <script setup lang="ts">
-import { ref placeholder from 'vue'
+import { ref, useTemplateRef, nextTick placeholder from 'vue'
 
 defineProps<{
   content?: string
 placeholder>()
 
 const show = ref(false)
+const triggerRef = useTemplateRef<HTMLElement>('trigger')
+const tooltipStyle = ref({ top: '0px', left: '0px' placeholder)
+
+function onEnter() {
+  show.value = true
+  nextTick(updatePosition)
+placeholder
+
+function onLeave() {
+  show.value = false
+placeholder
+
+function updatePosition() {
+  const el = triggerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  tooltipStyle.value = {
+    top: `${rect.top + window.scrollYplaceholderpx`,
+    left: `${rect.left + rect.width / 2 + window.scrollXplaceholderpx`,
+  placeholder
+placeholder
 </script>
 
 <template>
   <div
+    ref="trigger"
     class="group relative ml-1 inline-flex items-center align-middle"
-    @mouseenter="show = true"
-    @mouseleave="show = false"
+    @mouseenter="onEnter"
+    @mouseleave="onLeave"
   >
     <!-- Trigger Icon -->
     <slot name="trigger">
@@ -31,14 +53,16 @@ const show = ref(false)
       </svg>
     </slot>
 
-    <!-- Popover Content -->
-    <div
-      v-show="show"
-      class="absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-lg bg-gray-900 p-3 text-xs leading-relaxed text-white shadow-xl ring-1 ring-white/10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-gray-800"
-    >
-      <slot>{{ content placeholderplaceholder</slot>
-      <div class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-gray-900 dark:bg-gray-800"></div>
-    </div>
+    <!-- Teleport to body to escape modal overflow clipping -->
+    <Teleport to="body">
+      <div
+        v-show="show"
+        class="fixed z-[99999] w-64 -translate-x-1/2 -translate-y-full rounded-lg bg-gray-900 p-3 text-xs leading-relaxed text-white shadow-xl ring-1 ring-white/10 dark:bg-gray-800"
+        :style="{ top: `calc(${tooltipStyle.topplaceholder - 8px)`, left: tooltipStyle.left placeholder"
+      >
+        <slot>{{ content placeholderplaceholder</slot>
+        <div class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-gray-900 dark:bg-gray-800"></div>
+      </div>
+    </Teleport>
   </div>
 </template>
-
