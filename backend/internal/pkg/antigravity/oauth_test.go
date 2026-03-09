@@ -690,7 +690,7 @@ placeholder
 	if RedirectURI != "http://localhost:8085/callback" {
 		t.Errorf("RedirectURI 不匹配: got %s", RedirectURI)
 placeholder
-	if GetUserAgent() != "antigravity/1.19.6 windows/amd64" {
+	if GetUserAgent() != "antigravity/1.20.4 windows/amd64" {
 		t.Errorf("UserAgent 不匹配: got %s", GetUserAgent())
 placeholder
 	if SessionTTL != 30*time.Minute {
