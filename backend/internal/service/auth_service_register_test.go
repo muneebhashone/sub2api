@@ -130,6 +130,7 @@ placeholder
 placeholder
 
 	return NewAuthService(
+		nil, // entClient
 		repo,
 		nil, // redeemRepo
 		nil, // refreshTokenCache
