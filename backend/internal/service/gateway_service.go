@@ -5341,6 +5341,19 @@ placeholder
 	return m
 placeholder
 
+// containsBetaToken checks if a comma-separated header value contains the given token.
+func containsBetaToken(header, token string) bool {
+	if header == "" || token == "" {
+		return false
+placeholder
+	for _, p := range strings.Split(header, ",") {
+		if strings.TrimSpace(p) == token {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
 func buildBetaTokenSet(tokens []string) map[string]struct{placeholder {
 	m := make(map[string]struct{placeholder, len(tokens))
 	for _, t := range tokens {

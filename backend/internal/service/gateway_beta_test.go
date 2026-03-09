@@ -148,6 +148,32 @@ func TestBuildBetaTokenSet(t *testing.T) {
 	require.Empty(t, empty)
 placeholder
 
+func TestContainsBetaToken(t *testing.T) {
+	tests := []struct {
+		name   string
+		header string
+		token  string
+		want   bool
+placeholder{
+		{"present in middle", "oauth-2025-04-20,fast-mode-2026-02-01,placeholder", "fast-mode-2026-02-01", trueplaceholder,
+		{"present at start", "fast-mode-2026-02-01,oauth-2025-04-20", "fast-mode-2026-02-01", trueplaceholder,
+		{"present at end", "oauth-2025-04-20,fast-mode-2026-02-01", "fast-mode-2026-02-01", trueplaceholder,
+		{"only token", "fast-mode-2026-02-01", "fast-mode-2026-02-01", trueplaceholder,
+		{"not present", "oauth-2025-04-20,placeholder", "fast-mode-2026-02-01", falseplaceholder,
+		{"with spaces", "oauth-2025-04-20, fast-mode-2026-02-01 , placeholder", "fast-mode-2026-02-01", trueplaceholder,
+		{"empty header", "", "fast-mode-2026-02-01", falseplaceholder,
+		{"empty token", "fast-mode-2026-02-01", "", falseplaceholder,
+		{"partial match", "fast-mode-2026-02-01-extra", "fast-mode-2026-02-01", falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := containsBetaToken(tt.header, tt.token)
+			require.Equal(t, tt.want, got)
+	placeholder)
+placeholder
+placeholder
+
 func TestStripBetaTokensWithSet_EmptyDropSet(t *testing.T) {
 	header := "oauth-2025-04-20,placeholder"
 	got := stripBetaTokensWithSet(header, map[string]struct{placeholder{placeholder)

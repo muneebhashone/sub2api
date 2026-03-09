@@ -631,7 +631,8 @@ placeholder
 	resp, err := AnthropicToResponses(req)
 placeholder
 	require.NotNil(t, resp.Reasoning)
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	// thinking.type is ignored for effort; default xhigh applies.
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
 	assert.Equal(t, "auto", resp.Reasoning.Summary)
 	assert.Contains(t, resp.Include, "reasoning.encrypted_content")
 	assert.NotContains(t, resp.Include, "reasoning.summary")
@@ -648,7 +649,8 @@ placeholder
 	resp, err := AnthropicToResponses(req)
 placeholder
 	require.NotNil(t, resp.Reasoning)
-	assert.Equal(t, "medium", resp.Reasoning.Effort)
+	// thinking.type is ignored for effort; default xhigh applies.
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
 	assert.Equal(t, "auto", resp.Reasoning.Summary)
 	assert.NotContains(t, resp.Include, "reasoning.summary")
 placeholder
@@ -663,8 +665,9 @@ placeholder
 
 	resp, err := AnthropicToResponses(req)
 placeholder
-	assert.Nil(t, resp.Reasoning)
-	assert.NotContains(t, resp.Include, "reasoning.summary")
+	// Default effort applies (high → xhigh) even when thinking is disabled.
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
 placeholder
 
 func TestAnthropicToResponses_NoThinking(t *testing.T) {
@@ -676,7 +679,93 @@ placeholder
 
 	resp, err := AnthropicToResponses(req)
 placeholder
-	assert.Nil(t, resp.Reasoning)
+	// Default effort applies (high → xhigh) when no thinking/output_config is set.
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
+placeholder
+
+// ---------------------------------------------------------------------------
+// output_config.effort override tests
+// ---------------------------------------------------------------------------
+
+func TestAnthropicToResponses_OutputConfigOverridesDefault(t *testing.T) {
+	// Default is xhigh, but output_config.effort="low" overrides. low→low after mapping.
+	req := &AnthropicRequest{
+		Model:        "gpt-5.2",
+		MaxTokens:    1024,
+		Messages:     []AnthropicMessage{{Role: "user", Content: json.RawMessage(`"Hello"`)placeholderplaceholder,
+		Thinking:     &AnthropicThinking{Type: "enabled", BudgetTokens: 10000placeholder,
+		OutputConfig: &AnthropicOutputConfig{Effort: "low"placeholder,
+placeholder
+
+	resp, err := AnthropicToResponses(req)
+placeholder
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "low", resp.Reasoning.Effort)
+	assert.Equal(t, "auto", resp.Reasoning.Summary)
+placeholder
+
+func TestAnthropicToResponses_OutputConfigWithoutThinking(t *testing.T) {
+	// No thinking field, but output_config.effort="medium" → creates reasoning.
+	// medium→high after mapping.
+	req := &AnthropicRequest{
+		Model:        "gpt-5.2",
+		MaxTokens:    1024,
+		Messages:     []AnthropicMessage{{Role: "user", Content: json.RawMessage(`"Hello"`)placeholderplaceholder,
+		OutputConfig: &AnthropicOutputConfig{Effort: "medium"placeholder,
+placeholder
+
+	resp, err := AnthropicToResponses(req)
+placeholder
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "high", resp.Reasoning.Effort)
+	assert.Equal(t, "auto", resp.Reasoning.Summary)
+placeholder
+
+func TestAnthropicToResponses_OutputConfigHigh(t *testing.T) {
+	// output_config.effort="high" → mapped to "xhigh".
+	req := &AnthropicRequest{
+		Model:        "gpt-5.2",
+		MaxTokens:    1024,
+		Messages:     []AnthropicMessage{{Role: "user", Content: json.RawMessage(`"Hello"`)placeholderplaceholder,
+		OutputConfig: &AnthropicOutputConfig{Effort: "high"placeholder,
+placeholder
+
+	resp, err := AnthropicToResponses(req)
+placeholder
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
+	assert.Equal(t, "auto", resp.Reasoning.Summary)
+placeholder
+
+func TestAnthropicToResponses_NoOutputConfig(t *testing.T) {
+	// No output_config → default xhigh regardless of thinking.type.
+	req := &AnthropicRequest{
+		Model:     "gpt-5.2",
+		MaxTokens: 1024,
+		Messages:  []AnthropicMessage{{Role: "user", Content: json.RawMessage(`"Hello"`)placeholderplaceholder,
+		Thinking:  &AnthropicThinking{Type: "enabled", BudgetTokens: 10000placeholder,
+placeholder
+
+	resp, err := AnthropicToResponses(req)
+placeholder
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
+placeholder
+
+func TestAnthropicToResponses_OutputConfigWithoutEffort(t *testing.T) {
+	// output_config present but effort empty (e.g. only format set) → default xhigh.
+	req := &AnthropicRequest{
+		Model:        "gpt-5.2",
+		MaxTokens:    1024,
+		Messages:     []AnthropicMessage{{Role: "user", Content: json.RawMessage(`"Hello"`)placeholderplaceholder,
+		OutputConfig: &AnthropicOutputConfig{placeholder,
+placeholder
+
+	resp, err := AnthropicToResponses(req)
+placeholder
+	require.NotNil(t, resp.Reasoning)
+	assert.Equal(t, "xhigh", resp.Reasoning.Effort)
 placeholder
 
 // ---------------------------------------------------------------------------
