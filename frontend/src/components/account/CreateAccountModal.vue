@@ -1969,6 +1969,12 @@
           <p class="input-hint">{{ t('admin.accounts.loadFactorHint') placeholderplaceholder</p>
         </div>
         <div>
+          <label class="input-label">{{ t('admin.accounts.loadFactor') placeholderplaceholder</label>
+          <input v-model.number="form.load_factor" type="number" min="1"
+            class="input" :placeholder="String(form.concurrency || 1)" />
+          <p class="input-hint">{{ t('admin.accounts.loadFactorHint') placeholderplaceholder</p>
+        </div>
+        <div>
           <label class="input-label">{{ t('admin.accounts.priority') placeholderplaceholder</label>
           <input
             v-model.number="form.priority"

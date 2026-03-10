@@ -8252,6 +8252,7 @@ type GroupMutation struct {
 	addsort_order                           *int
 	allow_messages_dispatch                 *bool
 	default_mapped_model                    *string
+	simulate_claude_max_enabled             *bool
 	clearedFields                           map[string]struct{placeholder
 	api_keys                                map[int64]struct{placeholder
 	removedapi_keys                         map[int64]struct{placeholder
@@ -10068,6 +10069,42 @@ func (m *GroupMutation) ResetDefaultMappedModel() {
 	m.default_mapped_model = nil
 placeholder
 
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (m *GroupMutation) SetSimulateClaudeMaxEnabled(b bool) {
+	m.simulate_claude_max_enabled = &b
+placeholder
+
+// SimulateClaudeMaxEnabled returns the value of the "simulate_claude_max_enabled" field in the mutation.
+func (m *GroupMutation) SimulateClaudeMaxEnabled() (r bool, exists bool) {
+	v := m.simulate_claude_max_enabled
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldSimulateClaudeMaxEnabled returns the old "simulate_claude_max_enabled" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldSimulateClaudeMaxEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSimulateClaudeMaxEnabled is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSimulateClaudeMaxEnabled requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSimulateClaudeMaxEnabled: %w", err)
+placeholder
+	return oldValue.SimulateClaudeMaxEnabled, nil
+placeholder
+
+// ResetSimulateClaudeMaxEnabled resets all changes to the "simulate_claude_max_enabled" field.
+func (m *GroupMutation) ResetSimulateClaudeMaxEnabled() {
+	m.simulate_claude_max_enabled = nil
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -10426,7 +10463,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 32)
+	fields := make([]string, 0, 33)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 placeholder
@@ -10523,6 +10560,9 @@ placeholder
 	if m.default_mapped_model != nil {
 		fields = append(fields, group.FieldDefaultMappedModel)
 placeholder
+	if m.simulate_claude_max_enabled != nil {
+		fields = append(fields, group.FieldSimulateClaudeMaxEnabled)
+placeholder
 	return fields
 placeholder
 
@@ -10595,6 +10635,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.AllowMessagesDispatch()
 	case group.FieldDefaultMappedModel:
 		return m.DefaultMappedModel()
+	case group.FieldSimulateClaudeMaxEnabled:
+		return m.SimulateClaudeMaxEnabled()
 placeholder
 	return nil, false
 placeholder
@@ -10668,6 +10710,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldAllowMessagesDispatch(ctx)
 	case group.FieldDefaultMappedModel:
 		return m.OldDefaultMappedModel(ctx)
+	case group.FieldSimulateClaudeMaxEnabled:
+		return m.OldSimulateClaudeMaxEnabled(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -10900,6 +10944,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 	placeholder
 		m.SetDefaultMappedModel(v)
+		return nil
+	case group.FieldSimulateClaudeMaxEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetSimulateClaudeMaxEnabled(v)
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
@@ -11333,6 +11384,9 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldDefaultMappedModel:
 		m.ResetDefaultMappedModel()
+		return nil
+	case group.FieldSimulateClaudeMaxEnabled:
+		m.ResetSimulateClaudeMaxEnabled()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)

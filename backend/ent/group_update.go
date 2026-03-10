@@ -653,6 +653,20 @@ placeholder
 	return _u
 placeholder
 
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (_u *GroupUpdate) SetSimulateClaudeMaxEnabled(v bool) *GroupUpdate {
+	_u.mutation.SetSimulateClaudeMaxEnabled(v)
+	return _u
+placeholder
+
+// SetNillableSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableSimulateClaudeMaxEnabled(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetSimulateClaudeMaxEnabled(*v)
+placeholder
+	return _u
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdate) AddAPIKeyIDs(ids ...int64) *GroupUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1148,6 +1162,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.DefaultMappedModel(); ok {
 		_spec.SetField(group.FieldDefaultMappedModel, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.SimulateClaudeMaxEnabled(); ok {
+		_spec.SetField(group.FieldSimulateClaudeMaxEnabled, field.TypeBool, value)
 placeholder
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -2081,6 +2098,20 @@ placeholder
 	return _u
 placeholder
 
+// SetSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field.
+func (_u *GroupUpdateOne) SetSimulateClaudeMaxEnabled(v bool) *GroupUpdateOne {
+	_u.mutation.SetSimulateClaudeMaxEnabled(v)
+	return _u
+placeholder
+
+// SetNillableSimulateClaudeMaxEnabled sets the "simulate_claude_max_enabled" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableSimulateClaudeMaxEnabled(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetSimulateClaudeMaxEnabled(*v)
+placeholder
+	return _u
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdateOne) AddAPIKeyIDs(ids ...int64) *GroupUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -2606,6 +2637,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.DefaultMappedModel(); ok {
 		_spec.SetField(group.FieldDefaultMappedModel, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.SimulateClaudeMaxEnabled(); ok {
+		_spec.SetField(group.FieldSimulateClaudeMaxEnabled, field.TypeBool, value)
 placeholder
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
