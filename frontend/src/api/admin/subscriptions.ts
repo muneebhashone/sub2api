@@ -121,6 +121,23 @@ export async function revoke(id: number): Promise<{ message: string placeholder>
 placeholder
 
 /**
+ * Reset daily and/or weekly usage quota for a subscription
+ * @param id - Subscription ID
+ * @param options - Which windows to reset
+ * @returns Updated subscription
+ */
+export async function resetQuota(
+  id: number,
+  options: { daily: boolean; weekly: boolean placeholder
+): Promise<UserSubscription> {
+  const { data placeholder = await apiClient.post<UserSubscription>(
+    `/admin/subscriptions/${idplaceholder/reset-quota`,
+    options
+  )
+  return data
+placeholder
+
+/**
  * List subscriptions by group
  * @param groupId - Group ID
  * @param page - Page number
@@ -170,6 +187,7 @@ export const subscriptionsAPI = {
   bulkAssign,
   extend,
   revoke,
+  resetQuota,
   listByGroup,
   listByUser
 placeholder
