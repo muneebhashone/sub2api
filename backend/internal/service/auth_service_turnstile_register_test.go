@@ -43,6 +43,7 @@ placeholder
 	turnstileService := NewTurnstileService(settingService, verifier)
 
 	return NewAuthService(
+		nil, // entClient
 		&userRepoStub{placeholder,
 		nil, // redeemRepo
 		nil, // refreshTokenCache
