@@ -76,7 +76,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { buildEmbeddedUrl, detectTheme placeholder from '@/utils/embedded-url'
 
-const { t placeholder = useI18n()
+const { t, locale placeholder = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 
@@ -90,7 +90,7 @@ placeholder)
 
 const purchaseUrl = computed(() => {
   const baseUrl = (appStore.cachedPublicSettings?.purchase_subscription_url || '').trim()
-  return buildEmbeddedUrl(baseUrl, authStore.user?.id, authStore.token, purchaseTheme.value)
+  return buildEmbeddedUrl(baseUrl, authStore.user?.id, authStore.token, purchaseTheme.value, locale.value)
 placeholder)
 
 const isValidUrl = computed(() => {
