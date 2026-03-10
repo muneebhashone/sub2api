@@ -32,8 +32,12 @@ placeholder
 	return &cp, nil
 placeholder
 
-func (r *resetQuotaUserSubRepoStub) ResetDailyUsage(_ context.Context, _ int64, _ time.Time) error {
+func (r *resetQuotaUserSubRepoStub) ResetDailyUsage(_ context.Context, _ int64, windowStart time.Time) error {
 	r.resetDailyCalled = true
+	if r.resetDailyErr == nil && r.sub != nil {
+		r.sub.DailyUsageUSD = 0
+		r.sub.DailyWindowStart = &windowStart
+placeholder
 	return r.resetDailyErr
 placeholder
 
@@ -88,6 +92,19 @@ placeholder
 	require.True(t, stub.resetWeeklyCalled, "应调用 ResetWeeklyUsage")
 placeholder
 
+func TestAdminResetQuota_BothFalseReturnsError(t *testing.T) {
+	stub := &resetQuotaUserSubRepoStub{
+		sub: &UserSubscription{ID: 7, UserID: 10, GroupID: 20placeholder,
+placeholder
+	svc := newResetQuotaSvc(stub)
+
+	_, err := svc.AdminResetQuota(context.Background(), 7, false, false)
+
+	require.ErrorIs(t, err, ErrInvalidInput)
+	require.False(t, stub.resetDailyCalled)
+	require.False(t, stub.resetWeeklyCalled)
+placeholder
+
 func TestAdminResetQuota_SubscriptionNotFound(t *testing.T) {
 	stub := &resetQuotaUserSubRepoStub{sub: nilplaceholder
 	svc := newResetQuotaSvc(stub)
@@ -129,26 +146,21 @@ placeholder
 placeholder
 
 func TestAdminResetQuota_ReturnsRefreshedSub(t *testing.T) {
-	now := time.Now()
-	windowStart := startOfDay(now)
-	sub := &UserSubscription{
-		ID:            6,
-		UserID:        10,
-		GroupID:       20,
-		DailyUsageUSD: 99.9,
+	stub := &resetQuotaUserSubRepoStub{
+		sub: &UserSubscription{
+			ID:            6,
+			UserID:        10,
+			GroupID:       20,
+			DailyUsageUSD: 99.9,
+	placeholder,
 placeholder
-	stub := &resetQuotaUserSubRepoStub{sub: subplaceholder
-	// 模拟 ResetDailyUsage 将 DB 中的数据归零
-	stub.resetDailyErr = nil
-	stub.ResetDailyUsage(context.Background(), sub.ID, windowStart) //nolint:errcheck
-	// 手动更新 stub 中的 sub，模拟 DB 写入效果
-	stub.resetDailyCalled = false
-	stub.sub.DailyUsageUSD = 0
-	stub.sub.DailyWindowStart = &windowStart
 
 	svc := newResetQuotaSvc(stub)
 	result, err := svc.AdminResetQuota(context.Background(), 6, true, false)
 
 placeholder
+	// ResetDailyUsage stub 会将 sub.DailyUsageUSD 归零，
+	// 服务应返回第二次 GetByID 的刷新值而非初始的 99.9
 	require.Equal(t, float64(0), result.DailyUsageUSD, "返回的订阅应反映已归零的用量")
+	require.True(t, stub.resetDailyCalled)
 placeholder
