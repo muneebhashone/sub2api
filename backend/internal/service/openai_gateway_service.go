@@ -4102,6 +4102,9 @@ placeholder
 		return
 placeholder
 	shouldPersistUpdates := len(updates) > 0 && s.getCodexSnapshotThrottle().Allow(accountID, now)
+	if !shouldPersistUpdates && resetAt == nil {
+		return
+placeholder
 
 	go func() {
 		updateCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
