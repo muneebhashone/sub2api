@@ -3,6 +3,8 @@
 package admin
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -93,6 +95,61 @@ func TestBuildETagFromAny_UnmarshalablePayload(t *testing.T) {
 	// channels are not JSON-serializable
 	etag := buildETagFromAny(make(chan int))
 	require.Empty(t, etag)
+placeholder
+
+func TestSnapshotCache_GetOrLoad_MissThenHit(t *testing.T) {
+	c := newSnapshotCache(5 * time.Second)
+	var loads atomic.Int32
+
+	entry, hit, err := c.GetOrLoad("key1", func() (any, error) {
+		loads.Add(1)
+		return map[string]string{"hello": "world"placeholder, nil
+placeholder)
+placeholder
+	require.False(t, hit)
+	require.NotEmpty(t, entry.ETag)
+	require.Equal(t, int32(1), loads.Load())
+
+	entry2, hit, err := c.GetOrLoad("key1", func() (any, error) {
+		loads.Add(1)
+		return map[string]string{"unexpected": "value"placeholder, nil
+placeholder)
+placeholder
+	require.True(t, hit)
+	require.Equal(t, entry.ETag, entry2.ETag)
+	require.Equal(t, int32(1), loads.Load())
+placeholder
+
+func TestSnapshotCache_GetOrLoad_ConcurrentSingleflight(t *testing.T) {
+	c := newSnapshotCache(5 * time.Second)
+	var loads atomic.Int32
+	start := make(chan struct{placeholder)
+	const callers = 8
+	errCh := make(chan error, callers)
+
+	var wg sync.WaitGroup
+	wg.Add(callers)
+	for range callers {
+		go func() {
+			defer wg.Done()
+			<-start
+			_, _, err := c.GetOrLoad("shared", func() (any, error) {
+				loads.Add(1)
+				time.Sleep(20 * time.Millisecond)
+				return "value", nil
+		placeholder)
+			errCh <- err
+	placeholder()
+placeholder
+	close(start)
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+	placeholder
+placeholder
+
+	require.Equal(t, int32(1), loads.Load())
 placeholder
 
 func TestParseBoolQueryWithDefault(t *testing.T) {
