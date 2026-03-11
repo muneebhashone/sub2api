@@ -146,6 +146,22 @@ placeholder
 		input = filterCodexInput(input, needsToolContinuation)
 		reqBody["input"] = input
 		result.Modified = true
+placeholder else if inputStr, ok := reqBody["input"].(string); ok {
+		// ChatGPT codex endpoint requires input to be a list, not a string.
+		// Convert string input to the expected message array format.
+		trimmed := strings.TrimSpace(inputStr)
+		if trimmed != "" {
+			reqBody["input"] = []any{
+				map[string]any{
+					"type":    "message",
+					"role":    "user",
+					"content": inputStr,
+			placeholder,
+		placeholder
+	placeholder else {
+			reqBody["input"] = []any{placeholder
+	placeholder
+		result.Modified = true
 placeholder
 
 	return result
