@@ -162,7 +162,7 @@ placeholder
 	if includeStats {
 		stats, err := h.dashboardService.GetDashboardStats(ctx)
 		if err != nil {
-			return nil, errors.New("Failed to get dashboard statistics")
+			return nil, errors.New("failed to get dashboard statistics")
 	placeholder
 		resp.Stats = &dashboardSnapshotV2Stats{
 			DashboardStats: *stats,
@@ -186,7 +186,7 @@ placeholder
 			filters.BillingType,
 		)
 		if err != nil {
-			return nil, errors.New("Failed to get usage trend")
+			return nil, errors.New("failed to get usage trend")
 	placeholder
 		resp.Trend = trend
 placeholder
@@ -205,7 +205,7 @@ placeholder
 			filters.BillingType,
 		)
 		if err != nil {
-			return nil, errors.New("Failed to get model statistics")
+			return nil, errors.New("failed to get model statistics")
 	placeholder
 		resp.Models = models
 placeholder
@@ -224,7 +224,7 @@ placeholder
 			filters.BillingType,
 		)
 		if err != nil {
-			return nil, errors.New("Failed to get group statistics")
+			return nil, errors.New("failed to get group statistics")
 	placeholder
 		resp.Groups = groups
 placeholder
@@ -232,7 +232,7 @@ placeholder
 	if includeUsersTrend {
 		usersTrend, _, err := h.getUserUsageTrendCached(ctx, startTime, endTime, granularity, usersTrendLimit)
 		if err != nil {
-			return nil, errors.New("Failed to get user usage trend")
+			return nil, errors.New("failed to get user usage trend")
 	placeholder
 		resp.UsersTrend = usersTrend
 placeholder
