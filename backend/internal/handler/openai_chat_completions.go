@@ -62,6 +62,7 @@ placeholder
 
 	stream, _ := converted["stream"].(bool)
 	model, _ := converted["model"].(string)
+	originalWriter := c.Writer
 	writer := newChatCompletionsResponseWriter(c.Writer, stream, includeUsage, model)
 	c.Writer = writer
 	c.Request.Body = io.NopCloser(bytes.NewReader(convertedBody))
@@ -69,6 +70,7 @@ placeholder
 
 	h.Responses(c)
 	writer.Finalize()
+	c.Writer = originalWriter
 placeholder
 
 type chatCompletionsResponseWriter struct {
@@ -165,6 +167,20 @@ placeholder
 
 func (w *chatCompletionsResponseWriter) SetPassthrough() {
 	w.passthrough = true
+placeholder
+
+func (w *chatCompletionsResponseWriter) Status() int {
+	if w.ResponseWriter == nil {
+		return 0
+placeholder
+	return w.ResponseWriter.Status()
+placeholder
+
+func (w *chatCompletionsResponseWriter) Written() bool {
+	if w.ResponseWriter == nil {
+		return false
+placeholder
+	return w.ResponseWriter.Written()
 placeholder
 
 func (w *chatCompletionsResponseWriter) flushStreamBuffer() {
