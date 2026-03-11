@@ -31,6 +31,7 @@ const (
 const (
 	opsErrorLogTimeout      = 5 * time.Second
 	opsErrorLogDrainTimeout = 10 * time.Second
+	opsErrorLogBatchWindow  = 200 * time.Millisecond
 
 	opsErrorLogMinWorkerCount = 4
 	opsErrorLogMaxWorkerCount = 32
@@ -38,6 +39,7 @@ const (
 	opsErrorLogQueueSizePerWorker = 128
 	opsErrorLogMinQueueSize       = 256
 	opsErrorLogMaxQueueSize       = 8192
+	opsErrorLogBatchSize          = 32
 )
 
 type opsErrorLogJob struct {
@@ -82,25 +84,80 @@ placeholder
 	for i := 0; i < workerCount; i++ {
 		go func() {
 			defer opsErrorLogWorkersWg.Done()
-			for job := range opsErrorLogQueue {
-				opsErrorLogQueueLen.Add(-1)
-				if job.ops == nil || job.entry == nil {
-					continue
+			for {
+				job, ok := <-opsErrorLogQueue
+				if !ok {
+					return
 			placeholder
-				func() {
-					defer func() {
-						if r := recover(); r != nil {
-							log.Printf("[OpsErrorLogger] worker panic: %v\n%s", r, debug.Stack())
+				opsErrorLogQueueLen.Add(-1)
+				batch := make([]opsErrorLogJob, 0, opsErrorLogBatchSize)
+				batch = append(batch, job)
+
+				timer := time.NewTimer(opsErrorLogBatchWindow)
+			batchLoop:
+				for len(batch) < opsErrorLogBatchSize {
+					select {
+					case nextJob, ok := <-opsErrorLogQueue:
+						if !ok {
+							if !timer.Stop() {
+								select {
+								case <-timer.C:
+								default:
+							placeholder
+						placeholder
+							flushOpsErrorLogBatch(batch)
+							return
 					placeholder
-				placeholder()
-					ctx, cancel := context.WithTimeout(context.Background(), opsErrorLogTimeout)
-					_ = job.ops.RecordError(ctx, job.entry, nil)
-					cancel()
-					opsErrorLogProcessed.Add(1)
-			placeholder()
+						opsErrorLogQueueLen.Add(-1)
+						batch = append(batch, nextJob)
+					case <-timer.C:
+						break batchLoop
+				placeholder
+			placeholder
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+				placeholder
+			placeholder
+				flushOpsErrorLogBatch(batch)
 		placeholder
 	placeholder()
 placeholder
+placeholder
+
+func flushOpsErrorLogBatch(batch []opsErrorLogJob) {
+	if len(batch) == 0 {
+		return
+placeholder
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[OpsErrorLogger] worker panic: %v\n%s", r, debug.Stack())
+	placeholder
+placeholder()
+
+	grouped := make(map[*service.OpsService][]*service.OpsInsertErrorLogInput, len(batch))
+	var processed int64
+	for _, job := range batch {
+		if job.ops == nil || job.entry == nil {
+			continue
+	placeholder
+		grouped[job.ops] = append(grouped[job.ops], job.entry)
+		processed++
+placeholder
+	if processed == 0 {
+		return
+placeholder
+
+	for opsSvc, entries := range grouped {
+		if opsSvc == nil || len(entries) == 0 {
+			continue
+	placeholder
+		ctx, cancel := context.WithTimeout(context.Background(), opsErrorLogTimeout)
+		_ = opsSvc.RecordErrorBatch(ctx, entries)
+		cancel()
+placeholder
+	opsErrorLogProcessed.Add(processed)
 placeholder
 
 func enqueueOpsErrorLog(ops *service.OpsService, entry *service.OpsInsertErrorLogInput) {
