@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -224,6 +225,29 @@ placeholder
 placeholder
 
 	return "gpt-5.1"
+placeholder
+
+func SupportsVerbosity(model string) bool {
+	if !strings.HasPrefix(model, "gpt-") {
+		return true
+placeholder
+
+	var major, minor int
+	n, _ := fmt.Sscanf(model, "gpt-%d.%d", &major, &minor)
+
+	if major > 5 {
+		return true
+placeholder
+	if major < 5 {
+		return false
+placeholder
+
+	// gpt-5
+	if n == 1 {
+		return true
+placeholder
+
+	return minor >= 3
 placeholder
 
 func getNormalizedCodexModel(modelID string) string {
