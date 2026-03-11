@@ -1,4 +1,9 @@
-import { describe, expect, it placeholder from 'vitest'
+import { describe, expect, it, vi placeholder from 'vitest'
+
+vi.mock('@/api/admin/accounts', () => ({
+  getAntigravityDefaultModelMapping: vi.fn()
+placeholder))
+
 import { buildModelMappingObject, getModelsByPlatform placeholder from '../useModelWhitelist'
 
 describe('useModelWhitelist', () => {
@@ -12,8 +17,16 @@ describe('useModelWhitelist', () => {
   it('antigravity 模型列表包含图片模型兼容项', () => {
     const models = getModelsByPlatform('antigravity')
 
+    expect(models).toContain('gemini-2.5-flash-image')
     expect(models).toContain('gemini-3.1-flash-image')
     expect(models).toContain('gemini-3-pro-image')
+  placeholder)
+
+  it('gemini 模型列表包含原生生图模型', () => {
+    const models = getModelsByPlatform('gemini')
+
+    expect(models).toContain('gemini-2.5-flash-image')
+    expect(models).toContain('gemini-3.1-flash-image')
   placeholder)
 
   it('whitelist 模式会忽略通配符条目', () => {

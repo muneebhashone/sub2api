@@ -959,6 +959,23 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         placeholder
       placeholder
     placeholder,
+    'gemini-2.5-flash-image': {
+      name: 'Gemini 2.5 Flash Image',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image'],
+        output: ['image']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
     'gemini-3.1-flash-image': {
       name: 'Gemini 3.1 Flash Image',
       limit: {
