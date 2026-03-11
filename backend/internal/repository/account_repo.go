@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -1185,10 +1186,36 @@ placeholder
 	if affected == 0 {
 		return service.ErrAccountNotFound
 placeholder
-	if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
-		logger.LegacyPrintf("repository.account", "[SchedulerOutbox] enqueue extra update failed: account=%d err=%v", id, err)
+	if shouldEnqueueSchedulerOutboxForExtraUpdates(updates) {
+		if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
+			logger.LegacyPrintf("repository.account", "[SchedulerOutbox] enqueue extra update failed: account=%d err=%v", id, err)
+	placeholder
 placeholder
 	return nil
+placeholder
+
+func shouldEnqueueSchedulerOutboxForExtraUpdates(updates map[string]any) bool {
+	if len(updates) == 0 {
+		return false
+placeholder
+	for key := range updates {
+		if isSchedulerNeutralAccountExtraKey(key) {
+			continue
+	placeholder
+		return true
+placeholder
+	return false
+placeholder
+
+func isSchedulerNeutralAccountExtraKey(key string) bool {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return false
+placeholder
+	if key == "session_window_utilization" {
+		return true
+placeholder
+	return strings.HasPrefix(key, "codex_")
 placeholder
 
 func (r *accountRepository) BulkUpdate(ctx context.Context, ids []int64, updates service.AccountBulkUpdate) (int64, error) {
