@@ -543,6 +543,21 @@ placeholder
               />
             </div>
           </div>
+
+          <!-- Dashboard Cards -->
+          <div class="space-y-3">
+            <h5 class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.dashboardCards') placeholderplaceholder</h5>
+
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.displayOpenAITokenStats') placeholderplaceholder</label>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{ t('admin.ops.settings.displayOpenAITokenStatsHint') placeholderplaceholder
+                </p>
+              </div>
+              <Toggle v-model="advancedSettings.display_openai_token_stats" />
+            </div>
+          </div>
         </div>
       </details>
     </div>
