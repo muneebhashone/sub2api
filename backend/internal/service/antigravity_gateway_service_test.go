@@ -134,6 +134,43 @@ func (s *httpUpstreamStub) DoWithTLS(_ *http.Request, _ string, _ int64, _ int, 
 	return s.resp, s.err
 placeholder
 
+type queuedHTTPUpstreamStub struct {
+	responses     []*http.Response
+	errors        []error
+	requestBodies [][]byte
+	callCount     int
+placeholder
+
+func (s *queuedHTTPUpstreamStub) Do(req *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+	if req != nil && req.Body != nil {
+		body, _ := io.ReadAll(req.Body)
+		s.requestBodies = append(s.requestBodies, body)
+		req.Body = io.NopCloser(bytes.NewReader(body))
+placeholder else {
+		s.requestBodies = append(s.requestBodies, nil)
+placeholder
+
+	idx := s.callCount
+	s.callCount++
+
+	var resp *http.Response
+	if idx < len(s.responses) {
+		resp = s.responses[idx]
+placeholder
+	var err error
+	if idx < len(s.errors) {
+		err = s.errors[idx]
+placeholder
+	if resp == nil && err == nil {
+		return nil, errors.New("unexpected upstream call")
+placeholder
+	return resp, err
+placeholder
+
+func (s *queuedHTTPUpstreamStub) DoWithTLS(req *http.Request, proxyURL string, accountID int64, concurrency int, _ bool) (*http.Response, error) {
+	return s.Do(req, proxyURL, accountID, concurrency)
+placeholder
+
 type antigravitySettingRepoStub struct{placeholder
 
 func (s *antigravitySettingRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
@@ -554,6 +591,92 @@ placeholder
 placeholder
 	require.NotNil(t, result)
 	require.Equal(t, mappedModel, result.Model)
+placeholder
+
+func TestAntigravityGatewayService_ForwardGemini_RetriesCorruptedThoughtSignature(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+			{"role": "model", "parts": []map[string]any{{"text": "thinking", "thought": true, "thoughtSignature": "sig_bad_1"placeholderplaceholderplaceholder,
+			{"role": "model", "parts": []map[string]any{{"functionCall": map[string]any{"name": "toolA", "args": map[string]any{"x": 1placeholderplaceholder, "thoughtSignature": "sig_bad_2"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-3.1-pro-preview:streamGenerateContent", bytes.NewReader(body))
+	c.Request = req
+
+	firstRespBody := []byte(`{"response":{"error":{"code":400,"message":"Corrupted thought signature.","status":"INVALID_ARGUMENT"placeholderplaceholderplaceholder`)
+	secondRespBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":3placeholderplaceholderplaceholder\n\n")
+
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{
+			{
+				StatusCode: http.StatusBadRequest,
+				Header: http.Header{
+					"Content-Type": []string{"application/json"placeholder,
+					"X-Request-Id": []string{"req-sig-1"placeholder,
+			placeholder,
+				Body: io.NopCloser(bytes.NewReader(firstRespBody)),
+		placeholder,
+			{
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type": []string{"text/event-stream"placeholder,
+					"X-Request-Id": []string{"req-sig-2"placeholder,
+			placeholder,
+				Body: io.NopCloser(bytes.NewReader(secondRespBody)),
+		placeholder,
+	placeholder,
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   upstream,
+placeholder
+
+	const originalModel = "gemini-3.1-pro-preview"
+	const mappedModel = "gemini-3.1-pro-high"
+	account := &Account{
+		ID:          7,
+		Name:        "acc-gemini-signature",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				originalModel: mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, originalModel, "streamGenerateContent", true, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, mappedModel, result.Model)
+	require.Len(t, upstream.requestBodies, 2, "signature error should trigger exactly one retry")
+
+	firstReq := string(upstream.requestBodies[0])
+	secondReq := string(upstream.requestBodies[1])
+	require.Contains(t, firstReq, `"thoughtSignature":"sig_bad_1"`)
+	require.Contains(t, firstReq, `"thoughtSignature":"sig_bad_2"`)
+	require.Contains(t, secondReq, `"thoughtSignature":"skip_thought_signature_validator"`)
+	require.NotContains(t, secondReq, `"thoughtSignature":"sig_bad_1"`)
+	require.NotContains(t, secondReq, `"thoughtSignature":"sig_bad_2"`)
+
+	raw, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok)
+	events, ok := raw.([]*OpsUpstreamErrorEvent)
+	require.True(t, ok)
+	require.NotEmpty(t, events)
+	require.Equal(t, "signature_error", events[0].Kind)
 placeholder
 
 // TestStreamUpstreamResponse_UsageAndFirstToken
