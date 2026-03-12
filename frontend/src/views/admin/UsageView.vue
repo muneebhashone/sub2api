@@ -89,6 +89,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { saveAs placeholder from 'file-saver'
+import { useRoute placeholder from 'vue-router'
 import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'; import { adminUsageAPI placeholder from '@/api/admin/usage'
 import { formatReasoningEffort placeholder from '@/utils/format'
 import { resolveUsageRequestType, requestTypeToLegacyStream placeholder from '@/utils/usageRequestType'
@@ -104,7 +105,7 @@ import type { AdminUsageLog, TrendDataPoint, ModelStat, GroupStat, AdminUser pla
 const { t placeholder = useI18n()
 const appStore = useAppStore()
 type DistributionMetric = 'tokens' | 'actual_cost'
-
+const route = useRoute()
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<AdminUsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
 const trendData = ref<TrendDataPoint[]>([]); const modelStats = ref<ModelStat[]>([]); const groupStats = ref<GroupStat[]>([]); const chartsLoading = ref(false); const granularity = ref<'day' | 'hour'>('day')
 const modelDistributionMetric = ref<DistributionMetric>('tokens')
@@ -139,6 +140,38 @@ const now = new Date(); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getD
 const startDate = ref(formatLD(weekAgo)); const endDate = ref(formatLD(now))
 const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, billing_type: null, start_date: startDate.value, end_date: endDate.value placeholder)
 const pagination = reactive({ page: 1, page_size: 20, total: 0 placeholder)
+
+const getSingleQueryValue = (value: string | null | Array<string | null> | undefined): string | undefined => {
+  if (Array.isArray(value)) return value.find((item): item is string => typeof item === 'string' && item.length > 0)
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+placeholder
+
+const getNumericQueryValue = (value: string | null | Array<string | null> | undefined): number | undefined => {
+  const raw = getSingleQueryValue(value)
+  if (!raw) return undefined
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : undefined
+placeholder
+
+const applyRouteQueryFilters = () => {
+  const queryStartDate = getSingleQueryValue(route.query.start_date)
+  const queryEndDate = getSingleQueryValue(route.query.end_date)
+  const queryUserId = getNumericQueryValue(route.query.user_id)
+
+  if (queryStartDate) {
+    startDate.value = queryStartDate
+  placeholder
+  if (queryEndDate) {
+    endDate.value = queryEndDate
+  placeholder
+
+  filters.value = {
+    ...filters.value,
+    user_id: queryUserId,
+    start_date: startDate.value,
+    end_date: endDate.value
+  placeholder
+placeholder
 
 const loadLogs = async () => {
   abortController?.abort(); const c = new AbortController(); abortController = c; loading.value = true
@@ -329,6 +362,7 @@ const handleColumnClickOutside = (event: MouseEvent) => {
 placeholder
 
 onMounted(() => {
+  applyRouteQueryFilters()
   loadLogs()
   loadStats()
   window.setTimeout(() => {

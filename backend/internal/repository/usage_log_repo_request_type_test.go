@@ -248,6 +248,35 @@ placeholder
 	require.NoError(t, mock.ExpectationsWereMet())
 placeholder
 
+func TestUsageLogRepositoryGetUserSpendingRanking(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: dbplaceholder
+
+	start := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+
+	rows := sqlmock.NewRows([]string{"user_id", "email", "actual_cost", "requests", "tokens", "total_actual_cost"placeholder).
+		AddRow(int64(2), "beta@example.com", 12.5, int64(9), int64(900), 40.0).
+		AddRow(int64(1), "alpha@example.com", 12.5, int64(8), int64(800), 40.0).
+		AddRow(int64(3), "gamma@example.com", 4.25, int64(5), int64(300), 40.0)
+
+	mock.ExpectQuery("WITH user_spend AS \\(").
+		WithArgs(start, end, 12).
+		WillReturnRows(rows)
+
+	got, err := repo.GetUserSpendingRanking(context.Background(), start, end, 12)
+placeholder
+	require.Equal(t, &usagestats.UserSpendingRankingResponse{
+		Ranking: []usagestats.UserSpendingRankingItem{
+			{UserID: 2, Email: "beta@example.com", ActualCost: 12.5, Requests: 9, Tokens: 900placeholder,
+			{UserID: 1, Email: "alpha@example.com", ActualCost: 12.5, Requests: 8, Tokens: 800placeholder,
+			{UserID: 3, Email: "gamma@example.com", ActualCost: 4.25, Requests: 5, Tokens: 300placeholder,
+	placeholder,
+		TotalActualCost: 40.0,
+placeholder, got)
+	require.NoError(t, mock.ExpectationsWereMet())
+placeholder
+
 func TestBuildRequestTypeFilterConditionLegacyFallback(t *testing.T) {
 	tests := []struct {
 		name      string
