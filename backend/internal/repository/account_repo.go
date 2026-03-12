@@ -51,6 +51,18 @@ type accountRepository struct {
 	schedulerCache service.SchedulerCache
 placeholder
 
+var schedulerNeutralExtraKeyPrefixes = []string{
+	"codex_primary_",
+	"codex_secondary_",
+	"codex_5h_",
+	"codex_7d_",
+placeholder
+
+var schedulerNeutralExtraKeys = map[string]struct{placeholder{
+	"codex_usage_updated_at":     {placeholder,
+	"session_window_utilization": {placeholder,
+placeholder
+
 // NewAccountRepository 创建账户仓储实例。
 // 这是对外暴露的构造函数，返回接口类型以便于依赖注入。
 func NewAccountRepository(client *dbent.Client, sqlDB *sql.DB, schedulerCache service.SchedulerCache) service.AccountRepository {
@@ -1190,8 +1202,10 @@ placeholder
 		if err := enqueueSchedulerOutbox(ctx, r.sql, service.SchedulerOutboxEventAccountChanged, &id, nil, nil); err != nil {
 			logger.LegacyPrintf("repository.account", "[SchedulerOutbox] enqueue extra update failed: account=%d err=%v", id, err)
 	placeholder
-placeholder else if shouldSyncSchedulerSnapshotForExtraUpdates(updates) {
-		// codex 限流快照仍需要让调度缓存尽快看见，避免 DB 抖动时丢失自愈链路。
+placeholder else {
+		// 观测型 extra 字段不需要触发 bucket 重建，但仍同步单账号快照，
+		// 让 sticky session / GetAccount 命中缓存时也能读到最新数据，
+		// 同时避免缓存局部 patch 覆盖掉并发写入的其它账号字段。
 		r.syncSchedulerAccountSnapshot(ctx, id)
 placeholder
 	return nil
@@ -1202,7 +1216,7 @@ func shouldEnqueueSchedulerOutboxForExtraUpdates(updates map[string]any) bool {
 		return false
 placeholder
 	for key := range updates {
-		if isSchedulerNeutralAccountExtraKey(key) {
+		if isSchedulerNeutralExtraKey(key) {
 			continue
 	placeholder
 		return true
@@ -1210,91 +1224,20 @@ placeholder
 	return false
 placeholder
 
-func shouldSyncSchedulerSnapshotForExtraUpdates(updates map[string]any) bool {
-	return codexExtraIndicatesRateLimit(updates, "7d") || codexExtraIndicatesRateLimit(updates, "5h")
-placeholder
-
-func isSchedulerNeutralAccountExtraKey(key string) bool {
+func isSchedulerNeutralExtraKey(key string) bool {
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return false
 placeholder
-	if key == "session_window_utilization" {
+	if _, ok := schedulerNeutralExtraKeys[key]; ok {
 		return true
 placeholder
-	return strings.HasPrefix(key, "codex_")
+	for _, prefix := range schedulerNeutralExtraKeyPrefixes {
+		if strings.HasPrefix(key, prefix) {
+			return true
+	placeholder
 placeholder
-
-func codexExtraIndicatesRateLimit(updates map[string]any, window string) bool {
-	if len(updates) == 0 {
-		return false
-placeholder
-	usedValue, ok := updates["codex_"+window+"_used_percent"]
-	if !ok || !extraValueIndicatesExhausted(usedValue) {
-		return false
-placeholder
-	return extraValueHasResetMarker(updates["codex_"+window+"_reset_at"]) ||
-		extraValueHasPositiveNumber(updates["codex_"+window+"_reset_after_seconds"])
-placeholder
-
-func extraValueIndicatesExhausted(value any) bool {
-	number, ok := extraValueToFloat64(value)
-	return ok && number >= 100-1e-9
-placeholder
-
-func extraValueHasPositiveNumber(value any) bool {
-	number, ok := extraValueToFloat64(value)
-	return ok && number > 0
-placeholder
-
-func extraValueHasResetMarker(value any) bool {
-	switch v := value.(type) {
-	case string:
-		return strings.TrimSpace(v) != ""
-	case time.Time:
-		return !v.IsZero()
-	case *time.Time:
-		return v != nil && !v.IsZero()
-	default:
-		return false
-placeholder
-placeholder
-
-func extraValueToFloat64(value any) (float64, bool) {
-	switch v := value.(type) {
-	case float64:
-		return v, true
-	case float32:
-		return float64(v), true
-	case int:
-		return float64(v), true
-	case int8:
-		return float64(v), true
-	case int16:
-		return float64(v), true
-	case int32:
-		return float64(v), true
-	case int64:
-		return float64(v), true
-	case uint:
-		return float64(v), true
-	case uint8:
-		return float64(v), true
-	case uint16:
-		return float64(v), true
-	case uint32:
-		return float64(v), true
-	case uint64:
-		return float64(v), true
-	case json.Number:
-		parsed, err := v.Float64()
-		return parsed, err == nil
-	case string:
-		parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
-		return parsed, err == nil
-	default:
-		return 0, false
-placeholder
+	return false
 placeholder
 
 func (r *accountRepository) BulkUpdate(ctx context.Context, ids []int64, updates service.AccountBulkUpdate) (int64, error) {
