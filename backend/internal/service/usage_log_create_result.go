@@ -7,6 +7,7 @@ type usageLogCreateDisposition int
 const (
 	usageLogCreateDispositionUnknown usageLogCreateDisposition = iota
 	usageLogCreateDispositionNotPersisted
+	usageLogCreateDispositionDropped
 )
 
 type UsageLogCreateError struct {
@@ -38,6 +39,16 @@ placeholder
 placeholder
 placeholder
 
+func MarkUsageLogCreateDropped(err error) error {
+	if err == nil {
+		return nil
+placeholder
+	return &UsageLogCreateError{
+		err:         err,
+		disposition: usageLogCreateDispositionDropped,
+placeholder
+placeholder
+
 func IsUsageLogCreateNotPersisted(err error) bool {
 	if err == nil {
 		return false
@@ -47,6 +58,17 @@ placeholder
 		return false
 placeholder
 	return target.disposition == usageLogCreateDispositionNotPersisted
+placeholder
+
+func IsUsageLogCreateDropped(err error) bool {
+	if err == nil {
+		return false
+placeholder
+	var target *UsageLogCreateError
+	if !errors.As(err, &target) {
+		return false
+placeholder
+	return target.disposition == usageLogCreateDispositionDropped
 placeholder
 
 func ShouldBillAfterUsageLogCreate(inserted bool, err error) bool {

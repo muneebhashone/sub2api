@@ -4,6 +4,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -231,6 +233,89 @@ placeholder)
 placeholder
 	require.NotNil(t, usageRepo.lastLog)
 	require.Equal(t, "local:gateway-local-fallback", usageRepo.lastLog.RequestID)
+placeholder
+
+func TestGatewayServiceRecordUsage_PrefersClientRequestIDOverUpstreamRequestID(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{placeholder
+	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: trueplaceholderplaceholder
+	svc := newGatewayRecordUsageServiceWithBillingRepoForTest(usageRepo, billingRepo, &openAIRecordUsageUserRepoStub{placeholder, &openAIRecordUsageSubRepoStub{placeholder)
+
+	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-stable-123")
+	ctx = context.WithValue(ctx, ctxkey.RequestID, "req-local-ignored")
+	err := svc.RecordUsage(ctx, &RecordUsageInput{
+		Result: &ForwardResult{
+			RequestID: "upstream-volatile-456",
+			Usage: ClaudeUsage{
+				InputTokens:  10,
+				OutputTokens: 6,
+		placeholder,
+			Model:    "claude-sonnet-4",
+			Duration: time.Second,
+	placeholder,
+		APIKey:  &APIKey{ID: 506placeholder,
+		User:    &User{ID: 606placeholder,
+		Account: &Account{ID: 706placeholder,
+placeholder)
+
+placeholder
+	require.NotNil(t, billingRepo.lastCmd)
+	require.Equal(t, "client:client-stable-123", billingRepo.lastCmd.RequestID)
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, "client:client-stable-123", usageRepo.lastLog.RequestID)
+placeholder
+
+func TestGatewayServiceRecordUsage_GeneratesRequestIDWhenAllSourcesMissing(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{placeholder
+	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: trueplaceholderplaceholder
+	svc := newGatewayRecordUsageServiceWithBillingRepoForTest(usageRepo, billingRepo, &openAIRecordUsageUserRepoStub{placeholder, &openAIRecordUsageSubRepoStub{placeholder)
+
+	err := svc.RecordUsage(context.Background(), &RecordUsageInput{
+		Result: &ForwardResult{
+			RequestID: "",
+			Usage: ClaudeUsage{
+				InputTokens:  10,
+				OutputTokens: 6,
+		placeholder,
+			Model:    "claude-sonnet-4",
+			Duration: time.Second,
+	placeholder,
+		APIKey:  &APIKey{ID: 507placeholder,
+		User:    &User{ID: 607placeholder,
+		Account: &Account{ID: 707placeholder,
+placeholder)
+
+placeholder
+	require.NotNil(t, billingRepo.lastCmd)
+	require.True(t, strings.HasPrefix(billingRepo.lastCmd.RequestID, "generated:"))
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, billingRepo.lastCmd.RequestID, usageRepo.lastLog.RequestID)
+placeholder
+
+func TestGatewayServiceRecordUsage_DroppedUsageLogDoesNotSyncFallback(t *testing.T) {
+	usageRepo := &openAIRecordUsageBestEffortLogRepoStub{
+		bestEffortErr: MarkUsageLogCreateDropped(errors.New("usage log best-effort queue full")),
+placeholder
+	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: trueplaceholderplaceholder
+	svc := newGatewayRecordUsageServiceWithBillingRepoForTest(usageRepo, billingRepo, &openAIRecordUsageUserRepoStub{placeholder, &openAIRecordUsageSubRepoStub{placeholder)
+
+	err := svc.RecordUsage(context.Background(), &RecordUsageInput{
+		Result: &ForwardResult{
+			RequestID: "gateway_drop_usage_log",
+			Usage: ClaudeUsage{
+				InputTokens:  10,
+				OutputTokens: 6,
+		placeholder,
+			Model:    "claude-sonnet-4",
+			Duration: time.Second,
+	placeholder,
+		APIKey:  &APIKey{ID: 508placeholder,
+		User:    &User{ID: 608placeholder,
+		Account: &Account{ID: 708placeholder,
+placeholder)
+
+placeholder
+	require.Equal(t, 1, usageRepo.bestEffortCalls)
+	require.Equal(t, 0, usageRepo.createCalls)
 placeholder
 
 func TestGatewayServiceRecordUsage_BillingErrorSkipsUsageLogWrite(t *testing.T) {
