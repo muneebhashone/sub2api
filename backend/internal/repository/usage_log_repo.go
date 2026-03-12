@@ -377,7 +377,7 @@ placeholder
 placeholder
 
 func (r *usageLogRepository) ensureCreateBatcher() {
-	if r == nil || r.db == nil {
+	if r == nil || r.db == nil || r.createBatchCh != nil {
 		return
 placeholder
 	r.createBatchOnce.Do(func() {
@@ -387,7 +387,7 @@ placeholder)
 placeholder
 
 func (r *usageLogRepository) ensureBestEffortBatcher() {
-	if r == nil || r.db == nil {
+	if r == nil || r.db == nil || r.bestEffortBatchCh != nil {
 		return
 placeholder
 	r.bestEffortBatchOnce.Do(func() {
