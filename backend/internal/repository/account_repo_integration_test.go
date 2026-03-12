@@ -623,6 +623,65 @@ func (s *AccountRepoSuite) TestUpdateExtra_NilExtra() {
 	s.Require().Equal("val", got.Extra["key"])
 placeholder
 
+func (s *AccountRepoSuite) TestUpdateExtra_SchedulerNeutralKeysSkipOutbox() {
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-extra-neutral", Extra: map[string]any{placeholderplaceholder)
+	_, err := s.repo.sql.ExecContext(s.ctx, "TRUNCATE scheduler_outbox")
+	s.Require().NoError(err)
+
+	s.Require().NoError(s.repo.UpdateExtra(s.ctx, account.ID, map[string]any{
+		"codex_usage_updated_at":     "2026-03-11T13:00:00Z",
+		"codex_5h_used_percent":      12.5,
+		"session_window_utilization": 0.42,
+placeholder))
+
+	var count int
+	err = scanSingleRow(s.ctx, s.repo.sql, "SELECT COUNT(*) FROM scheduler_outbox", nil, &count)
+	s.Require().NoError(err)
+	s.Require().Equal(0, count)
+placeholder
+
+func (s *AccountRepoSuite) TestUpdateExtra_ExhaustedCodexSnapshotSyncsSchedulerCache() {
+	account := mustCreateAccount(s.T(), s.client, &service.Account{
+		Name:     "acc-extra-codex-exhausted",
+		Platform: service.PlatformOpenAI,
+		Type:     service.AccountTypeOAuth,
+		Extra:    map[string]any{placeholder,
+placeholder)
+	cacheRecorder := &schedulerCacheRecorder{placeholder
+	s.repo.schedulerCache = cacheRecorder
+	_, err := s.repo.sql.ExecContext(s.ctx, "TRUNCATE scheduler_outbox")
+	s.Require().NoError(err)
+
+	s.Require().NoError(s.repo.UpdateExtra(s.ctx, account.ID, map[string]any{
+		"codex_7d_used_percent":        100.0,
+		"codex_7d_reset_at":            "2026-03-12T13:00:00Z",
+		"codex_7d_reset_after_seconds": 86400,
+placeholder))
+
+	var count int
+	err = scanSingleRow(s.ctx, s.repo.sql, "SELECT COUNT(*) FROM scheduler_outbox", nil, &count)
+	s.Require().NoError(err)
+	s.Require().Equal(0, count)
+	s.Require().Len(cacheRecorder.setAccounts, 1)
+	s.Require().Equal(account.ID, cacheRecorder.setAccounts[0].ID)
+	s.Require().Equal(100.0, cacheRecorder.setAccounts[0].Extra["codex_7d_used_percent"])
+placeholder
+
+func (s *AccountRepoSuite) TestUpdateExtra_CustomKeysStillEnqueueOutbox() {
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "acc-extra-custom", Extra: map[string]any{placeholderplaceholder)
+	_, err := s.repo.sql.ExecContext(s.ctx, "TRUNCATE scheduler_outbox")
+	s.Require().NoError(err)
+
+	s.Require().NoError(s.repo.UpdateExtra(s.ctx, account.ID, map[string]any{
+		"custom_scheduler_sensitive_key": true,
+placeholder))
+
+	var count int
+	err = scanSingleRow(s.ctx, s.repo.sql, "SELECT COUNT(*) FROM scheduler_outbox", nil, &count)
+	s.Require().NoError(err)
+	s.Require().Equal(1, count)
+placeholder
+
 // --- GetByCRSAccountID ---
 
 func (s *AccountRepoSuite) TestGetByCRSAccountID() {
