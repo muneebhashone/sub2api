@@ -361,12 +361,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch placeholder from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, AccountUsageInfo, GeminiCredentials, WindowStats placeholder from '@/types'
 import { buildOpenAIUsageRefreshKey placeholder from '@/utils/accountUsageRefresh'
 import { resolveCodexUsageWindow placeholder from '@/utils/codexUsage'
+import { enqueueUsageRequest placeholder from '@/utils/usageLoadQueue'
 import UsageProgressBar from './UsageProgressBar.vue'
 import AccountQuotaInfo from './AccountQuotaInfo.vue'
 
@@ -375,6 +376,9 @@ const props = defineProps<{
 placeholder>()
 
 const { t placeholder = useI18n()
+
+const unmounted = ref(false)
+onBeforeUnmount(() => { unmounted.value = true placeholder)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -823,12 +827,30 @@ const loadUsage = async () => {
   error.value = null
 
   try {
-    usageInfo.value = await adminAPI.accounts.getUsage(props.account.id)
+    const fetchFn = () => adminAPI.accounts.getUsage(props.account.id)
+    let result: AccountUsageInfo
+    // Only throttle Anthropic OAuth/setup-token accounts to avoid upstream 429
+    if (
+      props.account.platform === 'anthropic' &&
+      (props.account.type === 'oauth' || props.account.type === 'setup-token')
+    ) {
+      result = await enqueueUsageRequest(
+        props.account.platform,
+        'claude_code',
+        props.account.proxy_id,
+        fetchFn
+      )
+    placeholder else {
+      result = await fetchFn()
+    placeholder
+    if (!unmounted.value) usageInfo.value = result
   placeholder catch (e: any) {
-    error.value = t('common.error')
-    console.error('Failed to load usage:', e)
+    if (!unmounted.value) {
+      error.value = t('common.error')
+      console.error('Failed to load usage:', e)
+    placeholder
   placeholder finally {
-    loading.value = false
+    if (!unmounted.value) loading.value = false
   placeholder
 placeholder
 

@@ -922,7 +922,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 	_ = pr.Close()
 
 placeholder
@@ -999,7 +999,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "gemini-2.5-pro")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "gemini-2.5-pro", 0)
 	_ = pr.Close()
 
 placeholder
@@ -1202,7 +1202,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 	_ = pr.Close()
 
 placeholder
@@ -1234,7 +1234,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	_, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	_, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 	_ = pr.Close()
 
 	// 应当返回 UpstreamFailoverError 而非 nil，以便上层触发 failover
@@ -1266,7 +1266,7 @@ placeholder)
 
 	resp := &http.Response{StatusCode: http.StatusOK, Body: cancelReadCloser{placeholder, Header: http.Header{placeholderplaceholder
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 
 placeholder
 	require.NotNil(t, result)

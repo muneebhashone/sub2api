@@ -391,7 +391,7 @@ placeholder
 	placeholder
 		batch = append(batch, AccountWithConcurrency{
 			ID:             acc.ID,
-			MaxConcurrency: acc.Concurrency,
+			MaxConcurrency: acc.EffectiveLoadFactor(),
 	placeholder)
 placeholder
 	if len(batch) == 0 {

@@ -55,7 +55,7 @@ import { Icon placeholder from '@/components/icons'
 import type { Account placeholder from '@/types'
 
 const props = defineProps<{ show: boolean; account: Account | null; position: { top: number; left: number placeholder | null placeholder>()
-const emit = defineEmits(['close', 'test', 'stats', 'schedule', 'reauth', 'refresh-token', 'recover-state', 'reset-quota'])
+const emit = defineEmits(['close', 'test', 'stats', 'schedule', 'reauth', 'refresh-token', 'recover-state', 'reset-status', 'clear-rate-limit', 'reset-quota'])
 const { t placeholder = useI18n()
 const isRateLimited = computed(() => {
   if (props.account?.rate_limit_reset_at && new Date(props.account.rate_limit_reset_at) > new Date()) {
