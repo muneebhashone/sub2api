@@ -959,10 +959,11 @@ const allModels = [
   { value: 'gpt-5.1-2025-11-13', label: 'GPT-5.1' placeholder,
   { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini' placeholder,
   { value: 'gpt-5-2025-08-07', label: 'GPT-5' placeholder,
+  { value: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image' placeholder,
+  { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' placeholder,
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' placeholder,
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' placeholder,
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' placeholder,
-  { value: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image' placeholder,
   { value: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image (Legacy)' placeholder,
   { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' placeholder,
   { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' placeholder
@@ -1041,6 +1042,12 @@ const presetMappings = [
     from: 'claude-opus-4-5-20251101',
     to: 'claude-sonnet-4-5-20250929',
     color: 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
+  placeholder,
+  {
+    label: 'Gemini 2.5 Image',
+    from: 'gemini-2.5-flash-image',
+    to: 'gemini-2.5-flash-image',
+    color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400'
   placeholder,
   {
     label: 'Gemini 3.1 Image',
