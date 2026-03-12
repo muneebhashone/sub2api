@@ -865,6 +865,9 @@ placeholder
 	placeholder
 placeholder
 
+	// OpenAI OAuth: 刷新成功后检查并设置 privacy_mode
+	h.adminService.EnsureOpenAIPrivacy(ctx, updatedAccount)
+
 	return updatedAccount, "", nil
 placeholder
 
