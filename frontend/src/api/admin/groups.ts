@@ -154,6 +154,27 @@ export async function getGroupApiKeys(
 placeholder
 
 /**
+ * Rate multiplier entry for a user in a group
+ */
+export interface GroupRateMultiplierEntry {
+  user_id: number
+  user_email: string
+  rate_multiplier: number
+placeholder
+
+/**
+ * Get rate multipliers for users in a group
+ * @param id - Group ID
+ * @returns List of user rate multiplier entries
+ */
+export async function getGroupRateMultipliers(id: number): Promise<GroupRateMultiplierEntry[]> {
+  const { data placeholder = await apiClient.get<GroupRateMultiplierEntry[]>(
+    `/admin/groups/${idplaceholder/rate-multipliers`
+  )
+  return data
+placeholder
+
+/**
  * Update group sort orders
  * @param updates - Array of { id, sort_order placeholder objects
  * @returns Success confirmation
@@ -178,6 +199,7 @@ export const groupsAPI = {
   toggleStatus,
   getStats,
   getGroupApiKeys,
+  getGroupRateMultipliers,
   updateSortOrder
 placeholder
 

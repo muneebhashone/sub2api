@@ -339,6 +339,27 @@ placeholder
 	response.Paginated(c, outKeys, total, page, pageSize)
 placeholder
 
+// GetGroupRateMultipliers handles getting rate multipliers for users in a group
+// GET /api/v1/admin/groups/:id/rate-multipliers
+func (h *GroupHandler) GetGroupRateMultipliers(c *gin.Context) {
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid group ID")
+		return
+placeholder
+
+	entries, err := h.adminService.GetGroupRateMultipliers(c.Request.Context(), groupID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	if entries == nil {
+		entries = []service.UserGroupRateEntry{placeholder
+placeholder
+	response.Success(c, entries)
+placeholder
+
 // UpdateSortOrderRequest represents the request to update group sort orders
 type UpdateSortOrderRequest struct {
 	Updates []struct {

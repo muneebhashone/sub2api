@@ -1022,7 +1022,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	_, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	_, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 	_ = pr.Close()
 
 	// 应当返回 UpstreamFailoverError 而非 nil，以便上层触发 failover
