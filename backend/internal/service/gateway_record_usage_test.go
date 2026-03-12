@@ -49,6 +49,31 @@ func newGatewayRecordUsageServiceWithBillingRepoForTest(usageRepo UsageLogReposi
 	return svc
 placeholder
 
+type openAIRecordUsageBestEffortLogRepoStub struct {
+	UsageLogRepository
+
+	bestEffortErr   error
+	createErr       error
+	bestEffortCalls int
+	createCalls     int
+	lastLog         *UsageLog
+	lastCtxErr      error
+placeholder
+
+func (s *openAIRecordUsageBestEffortLogRepoStub) CreateBestEffort(ctx context.Context, log *UsageLog) error {
+	s.bestEffortCalls++
+	s.lastLog = log
+	s.lastCtxErr = ctx.Err()
+	return s.bestEffortErr
+placeholder
+
+func (s *openAIRecordUsageBestEffortLogRepoStub) Create(ctx context.Context, log *UsageLog) (bool, error) {
+	s.createCalls++
+	s.lastLog = log
+	s.lastCtxErr = ctx.Err()
+	return false, s.createErr
+placeholder
+
 func TestGatewayServiceRecordUsage_BillingUsesDetachedContext(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: false, err: context.DeadlineExceededplaceholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
