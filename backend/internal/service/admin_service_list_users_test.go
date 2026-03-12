@@ -68,7 +68,15 @@ func (s *userGroupRateRepoStubForListUsers) SyncUserGroupRates(_ context.Context
 	panic("unexpected SyncUserGroupRates call")
 placeholder
 
-func (s *userGroupRateRepoStubForListUsers) DeleteByGroupID(_ context.Context, groupID int64) error {
+func (s *userGroupRateRepoStubForListUsers) GetByGroupID(_ context.Context, _ int64) ([]UserGroupRateEntry, error) {
+	panic("unexpected GetByGroupID call")
+placeholder
+
+func (s *userGroupRateRepoStubForListUsers) SyncGroupRateMultipliers(_ context.Context, _ int64, _ []GroupRateMultiplierInput) error {
+	panic("unexpected SyncGroupRateMultipliers call")
+placeholder
+
+func (s *userGroupRateRepoStubForListUsers) DeleteByGroupID(_ context.Context, _ int64) error {
 	panic("unexpected DeleteByGroupID call")
 placeholder
 
