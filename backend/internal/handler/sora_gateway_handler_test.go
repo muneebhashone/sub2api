@@ -431,6 +431,7 @@ placeholder)
 		nil,
 		nil,
 		nil,
+		nil,
 		testutil.StubGatewayCache{placeholder,
 		cfg,
 		nil,

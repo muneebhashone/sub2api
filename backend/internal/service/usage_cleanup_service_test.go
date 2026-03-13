@@ -56,7 +56,8 @@ type cleanupRepoStub struct {
 placeholder
 
 type dashboardRepoStub struct {
-	recomputeErr error
+	recomputeErr   error
+	recomputeCalls int
 placeholder
 
 func (s *dashboardRepoStub) AggregateRange(ctx context.Context, start, end time.Time) error {
@@ -64,6 +65,7 @@ func (s *dashboardRepoStub) AggregateRange(ctx context.Context, start, end time.
 placeholder
 
 func (s *dashboardRepoStub) RecomputeRange(ctx context.Context, start, end time.Time) error {
+	s.recomputeCalls++
 	return s.recomputeErr
 placeholder
 
@@ -80,6 +82,10 @@ func (s *dashboardRepoStub) CleanupAggregates(ctx context.Context, hourlyCutoff,
 placeholder
 
 func (s *dashboardRepoStub) CleanupUsageLogs(ctx context.Context, cutoff time.Time) error {
+	return nil
+placeholder
+
+func (s *dashboardRepoStub) CleanupUsageBillingDedup(ctx context.Context, cutoff time.Time) error {
 	return nil
 placeholder
 
@@ -550,13 +556,14 @@ placeholder
 placeholder
 
 func TestUsageCleanupServiceExecuteTaskDashboardRecomputeError(t *testing.T) {
+	dashboardRepo := &dashboardRepoStub{recomputeErr: errors.New("recompute failed")placeholder
 	repo := &cleanupRepoStub{
 		deleteQueue: []cleanupDeleteResponse{
 			{deleted: 0placeholder,
 	placeholder,
 placeholder
-	dashboard := NewDashboardAggregationService(&dashboardRepoStub{placeholder, nil, &config.Config{
-		DashboardAgg: config.DashboardAggregationConfig{Enabled: falseplaceholder,
+	dashboard := NewDashboardAggregationService(dashboardRepo, nil, &config.Config{
+		DashboardAgg: config.DashboardAggregationConfig{Enabled: trueplaceholder,
 placeholder)
 	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, BatchSize: 2placeholderplaceholder
 	svc := NewUsageCleanupService(repo, nil, dashboard, cfg)
@@ -573,15 +580,17 @@ placeholder
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 	require.Len(t, repo.markSucceeded, 1)
+	require.Eventually(t, func() bool { return dashboardRepo.recomputeCalls == 1 placeholder, time.Second, 10*time.Millisecond)
 placeholder
 
 func TestUsageCleanupServiceExecuteTaskDashboardRecomputeSuccess(t *testing.T) {
+	dashboardRepo := &dashboardRepoStub{placeholder
 	repo := &cleanupRepoStub{
 		deleteQueue: []cleanupDeleteResponse{
 			{deleted: 0placeholder,
 	placeholder,
 placeholder
-	dashboard := NewDashboardAggregationService(&dashboardRepoStub{placeholder, nil, &config.Config{
+	dashboard := NewDashboardAggregationService(dashboardRepo, nil, &config.Config{
 		DashboardAgg: config.DashboardAggregationConfig{Enabled: trueplaceholder,
 placeholder)
 	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, BatchSize: 2placeholderplaceholder
@@ -599,6 +608,7 @@ placeholder
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 	require.Len(t, repo.markSucceeded, 1)
+	require.Eventually(t, func() bool { return dashboardRepo.recomputeCalls == 1 placeholder, time.Second, 10*time.Millisecond)
 placeholder
 
 func TestUsageCleanupServiceExecuteTaskCanceled(t *testing.T) {
