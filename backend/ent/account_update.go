@@ -172,6 +172,33 @@ func (_u *AccountUpdate) AddConcurrency(v int) *AccountUpdate {
 	return _u
 placeholder
 
+// SetLoadFactor sets the "load_factor" field.
+func (_u *AccountUpdate) SetLoadFactor(v int) *AccountUpdate {
+	_u.mutation.ResetLoadFactor()
+	_u.mutation.SetLoadFactor(v)
+	return _u
+placeholder
+
+// SetNillableLoadFactor sets the "load_factor" field if the given value is not nil.
+func (_u *AccountUpdate) SetNillableLoadFactor(v *int) *AccountUpdate {
+	if v != nil {
+		_u.SetLoadFactor(*v)
+placeholder
+	return _u
+placeholder
+
+// AddLoadFactor adds value to the "load_factor" field.
+func (_u *AccountUpdate) AddLoadFactor(v int) *AccountUpdate {
+	_u.mutation.AddLoadFactor(v)
+	return _u
+placeholder
+
+// ClearLoadFactor clears the value of the "load_factor" field.
+func (_u *AccountUpdate) ClearLoadFactor() *AccountUpdate {
+	_u.mutation.ClearLoadFactor()
+	return _u
+placeholder
+
 // SetPriority sets the "priority" field.
 func (_u *AccountUpdate) SetPriority(v int) *AccountUpdate {
 	_u.mutation.ResetPriority()
@@ -684,6 +711,15 @@ placeholder
 	if value, ok := _u.mutation.AddedConcurrency(); ok {
 		_spec.AddField(account.FieldConcurrency, field.TypeInt, value)
 placeholder
+	if value, ok := _u.mutation.LoadFactor(); ok {
+		_spec.SetField(account.FieldLoadFactor, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.AddedLoadFactor(); ok {
+		_spec.AddField(account.FieldLoadFactor, field.TypeInt, value)
+placeholder
+	if _u.mutation.LoadFactorCleared() {
+		_spec.ClearField(account.FieldLoadFactor, field.TypeInt)
+placeholder
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(account.FieldPriority, field.TypeInt, value)
 placeholder
@@ -1060,6 +1096,33 @@ placeholder
 // AddConcurrency adds value to the "concurrency" field.
 func (_u *AccountUpdateOne) AddConcurrency(v int) *AccountUpdateOne {
 	_u.mutation.AddConcurrency(v)
+	return _u
+placeholder
+
+// SetLoadFactor sets the "load_factor" field.
+func (_u *AccountUpdateOne) SetLoadFactor(v int) *AccountUpdateOne {
+	_u.mutation.ResetLoadFactor()
+	_u.mutation.SetLoadFactor(v)
+	return _u
+placeholder
+
+// SetNillableLoadFactor sets the "load_factor" field if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableLoadFactor(v *int) *AccountUpdateOne {
+	if v != nil {
+		_u.SetLoadFactor(*v)
+placeholder
+	return _u
+placeholder
+
+// AddLoadFactor adds value to the "load_factor" field.
+func (_u *AccountUpdateOne) AddLoadFactor(v int) *AccountUpdateOne {
+	_u.mutation.AddLoadFactor(v)
+	return _u
+placeholder
+
+// ClearLoadFactor clears the value of the "load_factor" field.
+func (_u *AccountUpdateOne) ClearLoadFactor() *AccountUpdateOne {
+	_u.mutation.ClearLoadFactor()
 	return _u
 placeholder
 
@@ -1604,6 +1667,15 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AddedConcurrency(); ok {
 		_spec.AddField(account.FieldConcurrency, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.LoadFactor(); ok {
+		_spec.SetField(account.FieldLoadFactor, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.AddedLoadFactor(); ok {
+		_spec.AddField(account.FieldLoadFactor, field.TypeInt, value)
+placeholder
+	if _u.mutation.LoadFactorCleared() {
+		_spec.ClearField(account.FieldLoadFactor, field.TypeInt)
 placeholder
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(account.FieldPriority, field.TypeInt, value)

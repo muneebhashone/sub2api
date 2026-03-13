@@ -32,28 +32,44 @@ func (s *userRepoStubForGroupUpdate) AddGroupToAllowedGroups(_ context.Context, 
 	return s.addGroupErr
 placeholder
 
-func (s *userRepoStubForGroupUpdate) Create(context.Context, *User) error                { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) GetByID(context.Context, int64) (*User, error)      { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) GetByEmail(context.Context, string) (*User, error)  { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) GetFirstAdmin(context.Context) (*User, error)       { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) Update(context.Context, *User) error                { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) Delete(context.Context, int64) error                { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) Create(context.Context, *User) error { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) GetByID(context.Context, int64) (*User, error) {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) GetByEmail(context.Context, string) (*User, error) {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) GetFirstAdmin(context.Context) (*User, error) {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) Update(context.Context, *User) error { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) Delete(context.Context, int64) error { panic("unexpected") placeholder
 func (s *userRepoStubForGroupUpdate) List(context.Context, pagination.PaginationParams) ([]User, *pagination.PaginationResult, error) {
 	panic("unexpected")
 placeholder
 func (s *userRepoStubForGroupUpdate) ListWithFilters(context.Context, pagination.PaginationParams, UserListFilters) ([]User, *pagination.PaginationResult, error) {
 	panic("unexpected")
 placeholder
-func (s *userRepoStubForGroupUpdate) UpdateBalance(context.Context, int64, float64) error   { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) DeductBalance(context.Context, int64, float64) error   { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) UpdateConcurrency(context.Context, int64, int) error   { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) ExistsByEmail(context.Context, string) (bool, error)   { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) UpdateBalance(context.Context, int64, float64) error {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) DeductBalance(context.Context, int64, float64) error {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) UpdateConcurrency(context.Context, int64, int) error {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) ExistsByEmail(context.Context, string) (bool, error) {
+	panic("unexpected")
+placeholder
 func (s *userRepoStubForGroupUpdate) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {
 	panic("unexpected")
 placeholder
-func (s *userRepoStubForGroupUpdate) UpdateTotpSecret(context.Context, int64, *string) error { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) EnableTotp(context.Context, int64) error                { panic("unexpected") placeholder
-func (s *userRepoStubForGroupUpdate) DisableTotp(context.Context, int64) error               { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) UpdateTotpSecret(context.Context, int64, *string) error {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) EnableTotp(context.Context, int64) error  { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) DisableTotp(context.Context, int64) error { panic("unexpected") placeholder
 
 // apiKeyRepoStubForGroupUpdate implements APIKeyRepository for AdminUpdateAPIKeyGroupID tests.
 type apiKeyRepoStubForGroupUpdate struct {
@@ -192,6 +208,29 @@ func (s *groupRepoStubForGroupUpdate) BindAccountsToGroup(context.Context, int64
 placeholder
 func (s *groupRepoStubForGroupUpdate) UpdateSortOrders(context.Context, []GroupSortOrderUpdate) error {
 	panic("unexpected")
+placeholder
+
+type userSubRepoStubForGroupUpdate struct {
+	userSubRepoNoop
+	getActiveSub  *UserSubscription
+	getActiveErr  error
+	called        bool
+	calledUserID  int64
+	calledGroupID int64
+placeholder
+
+func (s *userSubRepoStubForGroupUpdate) GetActiveByUserIDAndGroupID(_ context.Context, userID, groupID int64) (*UserSubscription, error) {
+	s.called = true
+	s.calledUserID = userID
+	s.calledGroupID = groupID
+	if s.getActiveErr != nil {
+		return nil, s.getActiveErr
+placeholder
+	if s.getActiveSub == nil {
+		return nil, ErrSubscriptionNotFound
+placeholder
+	clone := *s.getActiveSub
+	return &clone, nil
 placeholder
 
 // ---------------------------------------------------------------------------
@@ -386,14 +425,49 @@ placeholder
 func TestAdminService_AdminUpdateAPIKeyGroupID_SubscriptionGroup_Blocked(t *testing.T) {
 	existing := &APIKey{ID: 1, UserID: 42, Key: "sk-test", GroupID: nilplaceholder
 	apiKeyRepo := &apiKeyRepoStubForGroupUpdate{key: existingplaceholder
-	groupRepo := &groupRepoStubForGroupUpdate{group: &Group{ID: 10, Name: "Sub", Status: StatusActive, IsExclusive: true, SubscriptionType: SubscriptionTypeSubscriptionplaceholderplaceholder
+	groupRepo := &groupRepoStubForGroupUpdate{group: &Group{ID: 10, Name: "Sub", Status: StatusActive, IsExclusive: false, SubscriptionType: SubscriptionTypeSubscriptionplaceholderplaceholder
+	userRepo := &userRepoStubForGroupUpdate{placeholder
+	userSubRepo := &userSubRepoStubForGroupUpdate{getActiveErr: ErrSubscriptionNotFoundplaceholder
+	svc := &adminServiceImpl{apiKeyRepo: apiKeyRepo, groupRepo: groupRepo, userRepo: userRepo, userSubRepo: userSubRepoplaceholder
+
+	// 无有效订阅时应拒绝绑定
+	_, err := svc.AdminUpdateAPIKeyGroupID(context.Background(), 1, int64Ptr(10))
+placeholder
+	require.Equal(t, "SUBSCRIPTION_REQUIRED", infraerrors.Reason(err))
+	require.True(t, userSubRepo.called)
+	require.Equal(t, int64(42), userSubRepo.calledUserID)
+	require.Equal(t, int64(10), userSubRepo.calledGroupID)
+	require.False(t, userRepo.addGroupCalled)
+placeholder
+
+func TestAdminService_AdminUpdateAPIKeyGroupID_SubscriptionGroup_RequiresRepo(t *testing.T) {
+	existing := &APIKey{ID: 1, UserID: 42, Key: "sk-test", GroupID: nilplaceholder
+	apiKeyRepo := &apiKeyRepoStubForGroupUpdate{key: existingplaceholder
+	groupRepo := &groupRepoStubForGroupUpdate{group: &Group{ID: 10, Name: "Sub", Status: StatusActive, IsExclusive: false, SubscriptionType: SubscriptionTypeSubscriptionplaceholderplaceholder
 	userRepo := &userRepoStubForGroupUpdate{placeholder
 	svc := &adminServiceImpl{apiKeyRepo: apiKeyRepo, groupRepo: groupRepo, userRepo: userRepoplaceholder
 
-	// 订阅类型分组应被阻止绑定
 	_, err := svc.AdminUpdateAPIKeyGroupID(context.Background(), 1, int64Ptr(10))
 placeholder
-	require.Equal(t, "SUBSCRIPTION_GROUP_NOT_ALLOWED", infraerrors.Reason(err))
+	require.Equal(t, "SUBSCRIPTION_REPOSITORY_UNAVAILABLE", infraerrors.Reason(err))
+	require.False(t, userRepo.addGroupCalled)
+placeholder
+
+func TestAdminService_AdminUpdateAPIKeyGroupID_SubscriptionGroup_AllowsActiveSubscription(t *testing.T) {
+	existing := &APIKey{ID: 1, UserID: 42, Key: "sk-test", GroupID: nilplaceholder
+	apiKeyRepo := &apiKeyRepoStubForGroupUpdate{key: existingplaceholder
+	groupRepo := &groupRepoStubForGroupUpdate{group: &Group{ID: 10, Name: "Sub", Status: StatusActive, IsExclusive: true, SubscriptionType: SubscriptionTypeSubscriptionplaceholderplaceholder
+	userRepo := &userRepoStubForGroupUpdate{placeholder
+	userSubRepo := &userSubRepoStubForGroupUpdate{
+		getActiveSub: &UserSubscription{ID: 99, UserID: 42, GroupID: 10placeholder,
+placeholder
+	svc := &adminServiceImpl{apiKeyRepo: apiKeyRepo, groupRepo: groupRepo, userRepo: userRepo, userSubRepo: userSubRepoplaceholder
+
+	got, err := svc.AdminUpdateAPIKeyGroupID(context.Background(), 1, int64Ptr(10))
+placeholder
+	require.True(t, userSubRepo.called)
+	require.NotNil(t, got.APIKey.GroupID)
+	require.Equal(t, int64(10), *got.APIKey.GroupID)
 	require.False(t, userRepo.addGroupCalled)
 placeholder
 

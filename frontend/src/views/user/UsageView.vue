@@ -113,6 +113,9 @@
 
             <!-- Actions -->
             <div class="ml-auto flex items-center gap-3">
+              <button @click="applyFilters" :disabled="loading" class="btn btn-secondary">
+                {{ t('common.refresh') placeholderplaceholder
+              </button>
               <button @click="resetFilters" class="btn btn-secondary">
                 {{ t('common.reset') placeholderplaceholder
               </button>
@@ -423,6 +426,14 @@
               <span class="text-gray-400">{{ t('admin.usage.outputCost') placeholderplaceholder</span>
               <span class="font-medium text-white">${{ tooltipData.output_cost.toFixed(6) placeholderplaceholder</span>
             </div>
+            <div v-if="tooltipData && tooltipData.input_tokens > 0" class="flex items-center justify-between gap-4">
+              <span class="text-gray-400">{{ t('usage.inputTokenPrice') placeholderplaceholder</span>
+              <span class="font-medium text-sky-300">{{ formatTokenPricePerMillion(tooltipData.input_cost, tooltipData.input_tokens) placeholderplaceholder {{ t('usage.perMillionTokens') placeholderplaceholder</span>
+            </div>
+            <div v-if="tooltipData && tooltipData.output_tokens > 0" class="flex items-center justify-between gap-4">
+              <span class="text-gray-400">{{ t('usage.outputTokenPrice') placeholderplaceholder</span>
+              <span class="font-medium text-violet-300">{{ formatTokenPricePerMillion(tooltipData.output_cost, tooltipData.output_tokens) placeholderplaceholder {{ t('usage.perMillionTokens') placeholderplaceholder</span>
+            </div>
             <div v-if="tooltipData && tooltipData.cache_creation_cost > 0" class="flex items-center justify-between gap-4">
               <span class="text-gray-400">{{ t('admin.usage.cacheCreationCost') placeholderplaceholder</span>
               <span class="font-medium text-white">${{ tooltipData.cache_creation_cost.toFixed(6) placeholderplaceholder</span>
@@ -433,6 +444,10 @@
             </div>
           </div>
           <!-- Rate and Summary -->
+          <div class="flex items-center justify-between gap-6">
+            <span class="text-gray-400">{{ t('usage.serviceTier') placeholderplaceholder</span>
+            <span class="font-semibold text-cyan-300">{{ getUsageServiceTierLabel(tooltipData?.service_tier, t) placeholderplaceholder</span>
+          </div>
           <div class="flex items-center justify-between gap-6">
             <span class="text-gray-400">{{ t('usage.rate') placeholderplaceholder</span>
             <span class="font-semibold text-blue-400"
@@ -475,6 +490,8 @@ import Icon from '@/components/icons/Icon.vue'
 import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
 import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
+import { formatTokenPricePerMillion placeholder from '@/utils/usagePricing'
+import { getUsageServiceTierLabel placeholder from '@/utils/usageServiceTier'
 import { resolveUsageRequestType placeholder from '@/utils/usageRequestType'
 
 const { t placeholder = useI18n()

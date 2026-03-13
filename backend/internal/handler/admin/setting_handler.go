@@ -77,6 +77,7 @@ placeholder
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  settings.RegistrationEnabled,
 		EmailVerifyEnabled:                   settings.EmailVerifyEnabled,
+		RegistrationEmailSuffixWhitelist:     settings.RegistrationEmailSuffixWhitelist,
 		PromoCodeEnabled:                     settings.PromoCodeEnabled,
 		PasswordResetEnabled:                 settings.PasswordResetEnabled,
 		InvitationCodeEnabled:                settings.InvitationCodeEnabled,
@@ -130,12 +131,13 @@ placeholder
 // UpdateSettingsRequest 更新设置请求
 type UpdateSettingsRequest struct {
 	// 注册设置
-	RegistrationEnabled   bool `json:"registration_enabled"`
-	EmailVerifyEnabled    bool `json:"email_verify_enabled"`
-	PromoCodeEnabled      bool `json:"promo_code_enabled"`
-	PasswordResetEnabled  bool `json:"password_reset_enabled"`
-	InvitationCodeEnabled bool `json:"invitation_code_enabled"`
-	TotpEnabled           bool `json:"totp_enabled"` // TOTP 双因素认证
+	RegistrationEnabled              bool     `json:"registration_enabled"`
+	EmailVerifyEnabled               bool     `json:"email_verify_enabled"`
+	RegistrationEmailSuffixWhitelist []string `json:"registration_email_suffix_whitelist"`
+	PromoCodeEnabled                 bool     `json:"promo_code_enabled"`
+	PasswordResetEnabled             bool     `json:"password_reset_enabled"`
+	InvitationCodeEnabled            bool     `json:"invitation_code_enabled"`
+	TotpEnabled                      bool     `json:"totp_enabled"` // TOTP 双因素认证
 
 	// 邮件服务设置
 	SMTPHost     string `json:"smtp_host"`
@@ -426,50 +428,51 @@ placeholder
 placeholder
 
 	settings := &service.SystemSettings{
-		RegistrationEnabled:         req.RegistrationEnabled,
-		EmailVerifyEnabled:          req.EmailVerifyEnabled,
-		PromoCodeEnabled:            req.PromoCodeEnabled,
-		PasswordResetEnabled:        req.PasswordResetEnabled,
-		InvitationCodeEnabled:       req.InvitationCodeEnabled,
-		TotpEnabled:                 req.TotpEnabled,
-		SMTPHost:                    req.SMTPHost,
-		SMTPPort:                    req.SMTPPort,
-		SMTPUsername:                req.SMTPUsername,
-		SMTPPassword:                req.SMTPPassword,
-		SMTPFrom:                    req.SMTPFrom,
-		SMTPFromName:                req.SMTPFromName,
-		SMTPUseTLS:                  req.SMTPUseTLS,
-		TurnstileEnabled:            req.TurnstileEnabled,
-		TurnstileSiteKey:            req.TurnstileSiteKey,
-		TurnstileSecretKey:          req.TurnstileSecretKey,
-		LinuxDoConnectEnabled:       req.LinuxDoConnectEnabled,
-		LinuxDoConnectClientID:      req.LinuxDoConnectClientID,
-		LinuxDoConnectClientSecret:  req.LinuxDoConnectClientSecret,
-		LinuxDoConnectRedirectURL:   req.LinuxDoConnectRedirectURL,
-		SiteName:                    req.SiteName,
-		SiteLogo:                    req.SiteLogo,
-		SiteSubtitle:                req.SiteSubtitle,
-		APIBaseURL:                  req.APIBaseURL,
-		ContactInfo:                 req.ContactInfo,
-		DocURL:                      req.DocURL,
-		HomeContent:                 req.HomeContent,
-		HideCcsImportButton:         req.HideCcsImportButton,
-		PurchaseSubscriptionEnabled: purchaseEnabled,
-		PurchaseSubscriptionURL:     purchaseURL,
-		SoraClientEnabled:           req.SoraClientEnabled,
-		CustomMenuItems:             customMenuJSON,
-		DefaultConcurrency:          req.DefaultConcurrency,
-		DefaultBalance:              req.DefaultBalance,
-		DefaultSubscriptions:        defaultSubscriptions,
-		EnableModelFallback:         req.EnableModelFallback,
-		FallbackModelAnthropic:      req.FallbackModelAnthropic,
-		FallbackModelOpenAI:         req.FallbackModelOpenAI,
-		FallbackModelGemini:         req.FallbackModelGemini,
-		FallbackModelAntigravity:    req.FallbackModelAntigravity,
-		EnableIdentityPatch:         req.EnableIdentityPatch,
-		IdentityPatchPrompt:         req.IdentityPatchPrompt,
-		MinClaudeCodeVersion:        req.MinClaudeCodeVersion,
-		AllowUngroupedKeyScheduling: req.AllowUngroupedKeyScheduling,
+		RegistrationEnabled:              req.RegistrationEnabled,
+		EmailVerifyEnabled:               req.EmailVerifyEnabled,
+		RegistrationEmailSuffixWhitelist: req.RegistrationEmailSuffixWhitelist,
+		PromoCodeEnabled:                 req.PromoCodeEnabled,
+		PasswordResetEnabled:             req.PasswordResetEnabled,
+		InvitationCodeEnabled:            req.InvitationCodeEnabled,
+		TotpEnabled:                      req.TotpEnabled,
+		SMTPHost:                         req.SMTPHost,
+		SMTPPort:                         req.SMTPPort,
+		SMTPUsername:                     req.SMTPUsername,
+		SMTPPassword:                     req.SMTPPassword,
+		SMTPFrom:                         req.SMTPFrom,
+		SMTPFromName:                     req.SMTPFromName,
+		SMTPUseTLS:                       req.SMTPUseTLS,
+		TurnstileEnabled:                 req.TurnstileEnabled,
+		TurnstileSiteKey:                 req.TurnstileSiteKey,
+		TurnstileSecretKey:               req.TurnstileSecretKey,
+		LinuxDoConnectEnabled:            req.LinuxDoConnectEnabled,
+		LinuxDoConnectClientID:           req.LinuxDoConnectClientID,
+		LinuxDoConnectClientSecret:       req.LinuxDoConnectClientSecret,
+		LinuxDoConnectRedirectURL:        req.LinuxDoConnectRedirectURL,
+		SiteName:                         req.SiteName,
+		SiteLogo:                         req.SiteLogo,
+		SiteSubtitle:                     req.SiteSubtitle,
+		APIBaseURL:                       req.APIBaseURL,
+		ContactInfo:                      req.ContactInfo,
+		DocURL:                           req.DocURL,
+		HomeContent:                      req.HomeContent,
+		HideCcsImportButton:              req.HideCcsImportButton,
+		PurchaseSubscriptionEnabled:      purchaseEnabled,
+		PurchaseSubscriptionURL:          purchaseURL,
+		SoraClientEnabled:                req.SoraClientEnabled,
+		CustomMenuItems:                  customMenuJSON,
+		DefaultConcurrency:               req.DefaultConcurrency,
+		DefaultBalance:                   req.DefaultBalance,
+		DefaultSubscriptions:             defaultSubscriptions,
+		EnableModelFallback:              req.EnableModelFallback,
+		FallbackModelAnthropic:           req.FallbackModelAnthropic,
+		FallbackModelOpenAI:              req.FallbackModelOpenAI,
+		FallbackModelGemini:              req.FallbackModelGemini,
+		FallbackModelAntigravity:         req.FallbackModelAntigravity,
+		EnableIdentityPatch:              req.EnableIdentityPatch,
+		IdentityPatchPrompt:              req.IdentityPatchPrompt,
+		MinClaudeCodeVersion:             req.MinClaudeCodeVersion,
+		AllowUngroupedKeyScheduling:      req.AllowUngroupedKeyScheduling,
 		OpsMonitoringEnabled: func() bool {
 			if req.OpsMonitoringEnabled != nil {
 				return *req.OpsMonitoringEnabled
@@ -520,6 +523,7 @@ placeholder
 	response.Success(c, dto.SystemSettings{
 		RegistrationEnabled:                  updatedSettings.RegistrationEnabled,
 		EmailVerifyEnabled:                   updatedSettings.EmailVerifyEnabled,
+		RegistrationEmailSuffixWhitelist:     updatedSettings.RegistrationEmailSuffixWhitelist,
 		PromoCodeEnabled:                     updatedSettings.PromoCodeEnabled,
 		PasswordResetEnabled:                 updatedSettings.PasswordResetEnabled,
 		InvitationCodeEnabled:                updatedSettings.InvitationCodeEnabled,
@@ -597,6 +601,9 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 placeholder
 	if before.EmailVerifyEnabled != after.EmailVerifyEnabled {
 		changed = append(changed, "email_verify_enabled")
+placeholder
+	if !equalStringSlice(before.RegistrationEmailSuffixWhitelist, after.RegistrationEmailSuffixWhitelist) {
+		changed = append(changed, "registration_email_suffix_whitelist")
 placeholder
 	if before.PasswordResetEnabled != after.PasswordResetEnabled {
 		changed = append(changed, "password_reset_enabled")
@@ -747,6 +754,18 @@ placeholder
 	return normalized
 placeholder
 
+func equalStringSlice(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+placeholder
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+	placeholder
+placeholder
+	return true
+placeholder
+
 func equalDefaultSubscriptions(a, b []service.DefaultSubscriptionSetting) bool {
 	if len(a) != len(b) {
 		return false
@@ -800,7 +819,7 @@ placeholder
 
 	err := h.emailService.TestSMTPConnectionWithConfig(config)
 	if err != nil {
-		response.ErrorFrom(c, err)
+		response.BadRequest(c, "SMTP connection test failed: "+err.Error())
 		return
 placeholder
 
@@ -886,7 +905,7 @@ placeholder
 `
 
 	if err := h.emailService.SendEmailWithConfig(config, req.Email, subject, body); err != nil {
-		response.ErrorFrom(c, err)
+		response.BadRequest(c, "Failed to send test email: "+err.Error())
 		return
 placeholder
 
@@ -1327,6 +1346,118 @@ placeholder
 		return
 placeholder
 	response.Success(c, gin.H{"message": "S3 连接成功"placeholder)
+placeholder
+
+// GetRectifierSettings 获取请求整流器配置
+// GET /api/v1/admin/settings/rectifier
+func (h *SettingHandler) GetRectifierSettings(c *gin.Context) {
+	settings, err := h.settingService.GetRectifierSettings(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.RectifierSettings{
+		Enabled:                  settings.Enabled,
+		ThinkingSignatureEnabled: settings.ThinkingSignatureEnabled,
+		ThinkingBudgetEnabled:    settings.ThinkingBudgetEnabled,
+placeholder)
+placeholder
+
+// UpdateRectifierSettingsRequest 更新整流器配置请求
+type UpdateRectifierSettingsRequest struct {
+	Enabled                  bool `json:"enabled"`
+	ThinkingSignatureEnabled bool `json:"thinking_signature_enabled"`
+	ThinkingBudgetEnabled    bool `json:"thinking_budget_enabled"`
+placeholder
+
+// UpdateRectifierSettings 更新请求整流器配置
+// PUT /api/v1/admin/settings/rectifier
+func (h *SettingHandler) UpdateRectifierSettings(c *gin.Context) {
+	var req UpdateRectifierSettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	settings := &service.RectifierSettings{
+		Enabled:                  req.Enabled,
+		ThinkingSignatureEnabled: req.ThinkingSignatureEnabled,
+		ThinkingBudgetEnabled:    req.ThinkingBudgetEnabled,
+placeholder
+
+	if err := h.settingService.SetRectifierSettings(c.Request.Context(), settings); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+
+	// 重新获取设置返回
+	updatedSettings, err := h.settingService.GetRectifierSettings(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.RectifierSettings{
+		Enabled:                  updatedSettings.Enabled,
+		ThinkingSignatureEnabled: updatedSettings.ThinkingSignatureEnabled,
+		ThinkingBudgetEnabled:    updatedSettings.ThinkingBudgetEnabled,
+placeholder)
+placeholder
+
+// GetBetaPolicySettings 获取 Beta 策略配置
+// GET /api/v1/admin/settings/beta-policy
+func (h *SettingHandler) GetBetaPolicySettings(c *gin.Context) {
+	settings, err := h.settingService.GetBetaPolicySettings(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	rules := make([]dto.BetaPolicyRule, len(settings.Rules))
+	for i, r := range settings.Rules {
+		rules[i] = dto.BetaPolicyRule(r)
+placeholder
+	response.Success(c, dto.BetaPolicySettings{Rules: rulesplaceholder)
+placeholder
+
+// UpdateBetaPolicySettingsRequest 更新 Beta 策略配置请求
+type UpdateBetaPolicySettingsRequest struct {
+	Rules []dto.BetaPolicyRule `json:"rules"`
+placeholder
+
+// UpdateBetaPolicySettings 更新 Beta 策略配置
+// PUT /api/v1/admin/settings/beta-policy
+func (h *SettingHandler) UpdateBetaPolicySettings(c *gin.Context) {
+	var req UpdateBetaPolicySettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	rules := make([]service.BetaPolicyRule, len(req.Rules))
+	for i, r := range req.Rules {
+		rules[i] = service.BetaPolicyRule(r)
+placeholder
+
+	settings := &service.BetaPolicySettings{Rules: rulesplaceholder
+	if err := h.settingService.SetBetaPolicySettings(c.Request.Context(), settings); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+
+	// Re-fetch to return updated settings
+	updated, err := h.settingService.GetBetaPolicySettings(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	outRules := make([]dto.BetaPolicyRule, len(updated.Rules))
+	for i, r := range updated.Rules {
+		outRules[i] = dto.BetaPolicyRule(r)
+placeholder
+	response.Success(c, dto.BetaPolicySettings{Rules: outRulesplaceholder)
 placeholder
 
 // UpdateStreamTimeoutSettingsRequest 更新流超时配置请求

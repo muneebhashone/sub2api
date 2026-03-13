@@ -18,6 +18,7 @@ export interface SystemSettings {
   // Registration settings
   registration_enabled: boolean
   email_verify_enabled: boolean
+  registration_email_suffix_whitelist: string[]
   promo_code_enabled: boolean
   password_reset_enabled: boolean
   invitation_code_enabled: boolean
@@ -86,6 +87,7 @@ placeholder
 export interface UpdateSettingsRequest {
   registration_enabled?: boolean
   email_verify_enabled?: boolean
+  registration_email_suffix_whitelist?: string[]
   promo_code_enabled?: boolean
   password_reset_enabled?: boolean
   invitation_code_enabled?: boolean
@@ -271,6 +273,84 @@ export async function updateStreamTimeoutSettings(
   return data
 placeholder
 
+// ==================== Rectifier Settings ====================
+
+/**
+ * Rectifier settings interface
+ */
+export interface RectifierSettings {
+  enabled: boolean
+  thinking_signature_enabled: boolean
+  thinking_budget_enabled: boolean
+placeholder
+
+/**
+ * Get rectifier settings
+ * @returns Rectifier settings
+ */
+export async function getRectifierSettings(): Promise<RectifierSettings> {
+  const { data placeholder = await apiClient.get<RectifierSettings>('/admin/settings/rectifier')
+  return data
+placeholder
+
+/**
+ * Update rectifier settings
+ * @param settings - Rectifier settings to update
+ * @returns Updated settings
+ */
+export async function updateRectifierSettings(
+  settings: RectifierSettings
+): Promise<RectifierSettings> {
+  const { data placeholder = await apiClient.put<RectifierSettings>(
+    '/admin/settings/rectifier',
+    settings
+  )
+  return data
+placeholder
+
+// ==================== Beta Policy Settings ====================
+
+/**
+ * Beta policy rule interface
+ */
+export interface BetaPolicyRule {
+  beta_token: string
+  action: 'pass' | 'filter' | 'block'
+  scope: 'all' | 'oauth' | 'apikey'
+  error_message?: string
+placeholder
+
+/**
+ * Beta policy settings interface
+ */
+export interface BetaPolicySettings {
+  rules: BetaPolicyRule[]
+placeholder
+
+/**
+ * Get beta policy settings
+ * @returns Beta policy settings
+ */
+export async function getBetaPolicySettings(): Promise<BetaPolicySettings> {
+  const { data placeholder = await apiClient.get<BetaPolicySettings>('/admin/settings/beta-policy')
+  return data
+placeholder
+
+/**
+ * Update beta policy settings
+ * @param settings - Beta policy settings to update
+ * @returns Updated settings
+ */
+export async function updateBetaPolicySettings(
+  settings: BetaPolicySettings
+): Promise<BetaPolicySettings> {
+  const { data placeholder = await apiClient.put<BetaPolicySettings>(
+    '/admin/settings/beta-policy',
+    settings
+  )
+  return data
+placeholder
+
 // ==================== Sora S3 Settings ====================
 
 export interface SoraS3Settings {
@@ -417,6 +497,10 @@ export const settingsAPI = {
   deleteAdminApiKey,
   getStreamTimeoutSettings,
   updateStreamTimeoutSettings,
+  getRectifierSettings,
+  updateRectifierSettings,
+  getBetaPolicySettings,
+  updateBetaPolicySettings,
   getSoraS3Settings,
   updateSoraS3Settings,
   testSoraS3Connection,

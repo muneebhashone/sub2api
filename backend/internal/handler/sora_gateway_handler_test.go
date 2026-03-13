@@ -216,6 +216,14 @@ func (r *stubAccountRepo) BulkUpdate(ctx context.Context, ids []int64, updates s
 	return 0, nil
 placeholder
 
+func (r *stubAccountRepo) IncrementQuotaUsed(ctx context.Context, id int64, amount float64) error {
+	return nil
+placeholder
+
+func (r *stubAccountRepo) ResetQuotaUsed(ctx context.Context, id int64) error {
+	return nil
+placeholder
+
 func (r *stubAccountRepo) listSchedulable() []service.Account {
 	var result []service.Account
 	for _, acc := range r.accounts {
@@ -437,6 +445,7 @@ placeholder)
 		testutil.StubSessionLimitCache{placeholder,
 		nil, // rpmCache
 		nil, // digestStore
+		nil, // settingService
 	)
 
 	soraClient := &stubSoraClient{imageURLs: []string{"https://example.com/a.png"placeholderplaceholder

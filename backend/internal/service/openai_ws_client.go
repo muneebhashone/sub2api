@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	openaiwsv2 "github.com/Wei-Shaw/sub2api/internal/service/openai_ws_v2"
 	coderws "github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -234,6 +235,8 @@ type coderOpenAIWSClientConn struct {
 	conn *coderws.Conn
 placeholder
 
+var _ openaiwsv2.FrameConn = (*coderOpenAIWSClientConn)(nil)
+
 func (c *coderOpenAIWSClientConn) WriteJSON(ctx context.Context, value any) error {
 	if c == nil || c.conn == nil {
 		return errOpenAIWSConnClosed
@@ -262,6 +265,30 @@ placeholder
 	default:
 		return nil, errOpenAIWSConnClosed
 placeholder
+placeholder
+
+func (c *coderOpenAIWSClientConn) ReadFrame(ctx context.Context) (coderws.MessageType, []byte, error) {
+	if c == nil || c.conn == nil {
+		return coderws.MessageText, nil, errOpenAIWSConnClosed
+placeholder
+	if ctx == nil {
+		ctx = context.Background()
+placeholder
+	msgType, payload, err := c.conn.Read(ctx)
+	if err != nil {
+		return coderws.MessageText, nil, err
+placeholder
+	return msgType, payload, nil
+placeholder
+
+func (c *coderOpenAIWSClientConn) WriteFrame(ctx context.Context, msgType coderws.MessageType, payload []byte) error {
+	if c == nil || c.conn == nil {
+		return errOpenAIWSConnClosed
+placeholder
+	if ctx == nil {
+		ctx = context.Background()
+placeholder
+	return c.conn.Write(ctx, msgType, payload)
 placeholder
 
 func (c *coderOpenAIWSClientConn) Ping(ctx context.Context) error {

@@ -47,13 +47,15 @@ services:
 
       # =======================================================================
       # Database Configuration (PostgreSQL)
+      # Default: uses local postgres container
+      # External DB: set DATABASE_HOST and DATABASE_SSLMODE in .env
       # =======================================================================
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
+      - DATABASE_HOST=${DATABASE_HOST:-postgresplaceholder
+      - DATABASE_PORT=${DATABASE_PORT:-5432placeholder
       - DATABASE_USER=${POSTGRES_USER:-sub2apiplaceholder
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is requiredplaceholder
       - DATABASE_DBNAME=${POSTGRES_DB:-sub2apiplaceholder
-      - DATABASE_SSLMODE=disable
+      - DATABASE_SSLMODE=${DATABASE_SSLMODE:-disableplaceholder
       - DATABASE_MAX_OPEN_CONNS=${DATABASE_MAX_OPEN_CONNS:-50placeholder
       - DATABASE_MAX_IDLE_CONNS=${DATABASE_MAX_IDLE_CONNS:-10placeholder
       - DATABASE_CONN_MAX_LIFETIME_MINUTES=${DATABASE_CONN_MAX_LIFETIME_MINUTES:-30placeholder
@@ -139,8 +141,6 @@ services:
       # Examples: http://host:port, socks5://host:port
       - UPDATE_PROXY_URL=${UPDATE_PROXY_URL:-placeholder
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:

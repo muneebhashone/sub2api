@@ -1,14 +1,18 @@
 package service
 
 import (
-	_ "embed"
+	"fmt"
 	"strings"
 )
 
-//go:embed prompts/codex_cli_instructions.md
-var codexCLIInstructions string
-
 var codexModelMap = map[string]string{
+	"gpt-5.4":                    "gpt-5.4",
+	"gpt-5.4-none":               "gpt-5.4",
+	"gpt-5.4-low":                "gpt-5.4",
+	"gpt-5.4-medium":             "gpt-5.4",
+	"gpt-5.4-high":               "gpt-5.4",
+	"gpt-5.4-xhigh":              "gpt-5.4",
+	"gpt-5.4-chat-latest":        "gpt-5.4",
 	"gpt-5.3":                    "gpt-5.3-codex",
 	"gpt-5.3-none":               "gpt-5.3-codex",
 	"gpt-5.3-low":                "gpt-5.3-codex",
@@ -70,7 +74,7 @@ type codexTransformResult struct {
 	PromptCacheKey  string
 placeholder
 
-func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool) codexTransformResult {
+func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact bool) codexTransformResult {
 	result := codexTransformResult{placeholder
 	// 工具续链需求会影响存储策略与 input 过滤逻辑。
 	needsToolContinuation := NeedsToolContinuation(reqBody)
@@ -88,15 +92,26 @@ placeholder
 		result.NormalizedModel = normalizedModel
 placeholder
 
-	// OAuth 走 ChatGPT internal API 时，store 必须为 false；显式 true 也会强制覆盖。
-	// 避免上游返回 "Store must be set to false"。
-	if v, ok := reqBody["store"].(bool); !ok || v {
-		reqBody["store"] = false
-		result.Modified = true
-placeholder
-	if v, ok := reqBody["stream"].(bool); !ok || !v {
-		reqBody["stream"] = true
-		result.Modified = true
+	if isCompact {
+		if _, ok := reqBody["store"]; ok {
+			delete(reqBody, "store")
+			result.Modified = true
+	placeholder
+		if _, ok := reqBody["stream"]; ok {
+			delete(reqBody, "stream")
+			result.Modified = true
+	placeholder
+placeholder else {
+		// OAuth 走 ChatGPT internal API 时，store 必须为 false；显式 true 也会强制覆盖。
+		// 避免上游返回 "Store must be set to false"。
+		if v, ok := reqBody["store"].(bool); !ok || v {
+			reqBody["store"] = false
+			result.Modified = true
+	placeholder
+		if v, ok := reqBody["stream"].(bool); !ok || !v {
+			reqBody["stream"] = true
+			result.Modified = true
+	placeholder
 placeholder
 
 	// Strip parameters unsupported by codex models via the Responses API.
@@ -132,6 +147,22 @@ placeholder
 		input = filterCodexInput(input, needsToolContinuation)
 		reqBody["input"] = input
 		result.Modified = true
+placeholder else if inputStr, ok := reqBody["input"].(string); ok {
+		// ChatGPT codex endpoint requires input to be a list, not a string.
+		// Convert string input to the expected message array format.
+		trimmed := strings.TrimSpace(inputStr)
+		if trimmed != "" {
+			reqBody["input"] = []any{
+				map[string]any{
+					"type":    "message",
+					"role":    "user",
+					"content": inputStr,
+			placeholder,
+		placeholder
+	placeholder else {
+			reqBody["input"] = []any{placeholder
+	placeholder
+		result.Modified = true
 placeholder
 
 	return result
@@ -154,6 +185,9 @@ placeholder
 
 	normalized := strings.ToLower(modelID)
 
+	if strings.Contains(normalized, "gpt-5.4") || strings.Contains(normalized, "gpt 5.4") {
+		return "gpt-5.4"
+placeholder
 	if strings.Contains(normalized, "gpt-5.2-codex") || strings.Contains(normalized, "gpt 5.2 codex") {
 		return "gpt-5.2-codex"
 placeholder
@@ -193,6 +227,29 @@ placeholder
 	return "gpt-5.1"
 placeholder
 
+func SupportsVerbosity(model string) bool {
+	if !strings.HasPrefix(model, "gpt-") {
+		return true
+placeholder
+
+	var major, minor int
+	n, _ := fmt.Sscanf(model, "gpt-%d.%d", &major, &minor)
+
+	if major > 5 {
+		return true
+placeholder
+	if major < 5 {
+		return false
+placeholder
+
+	// gpt-5
+	if n == 1 {
+		return true
+placeholder
+
+	return minor >= 3
+placeholder
+
 func getNormalizedCodexModel(modelID string) string {
 	if modelID == "" {
 		return ""
@@ -209,72 +266,13 @@ placeholder
 	return ""
 placeholder
 
-func getOpenCodeCodexHeader() string {
-	// 兼容保留：历史上这里会从 opencode 仓库拉取 codex_header.txt。
-	// 现在我们与 Codex CLI 一致，直接使用仓库内置的 instructions，避免读写缓存与外网依赖。
-	return getCodexCLIInstructions()
-placeholder
-
-func getCodexCLIInstructions() string {
-	return codexCLIInstructions
-placeholder
-
-func GetOpenCodeInstructions() string {
-	return getOpenCodeCodexHeader()
-placeholder
-
-// GetCodexCLIInstructions 返回内置的 Codex CLI 指令内容。
-func GetCodexCLIInstructions() string {
-	return getCodexCLIInstructions()
-placeholder
-
-// applyInstructions 处理 instructions 字段
-// isCodexCLI=true: 仅补充缺失的 instructions（使用内置 Codex CLI 指令）
-// isCodexCLI=false: 优先使用内置 Codex CLI 指令覆盖
+// applyInstructions 处理 instructions 字段：仅在 instructions 为空时填充默认值。
 func applyInstructions(reqBody map[string]any, isCodexCLI bool) bool {
-	if isCodexCLI {
-		return applyCodexCLIInstructions(reqBody)
-placeholder
-	return applyOpenCodeInstructions(reqBody)
-placeholder
-
-// applyCodexCLIInstructions 为 Codex CLI 请求补充缺失的 instructions
-// 仅在 instructions 为空时添加内置 Codex CLI 指令（不依赖 opencode 缓存/回源）
-func applyCodexCLIInstructions(reqBody map[string]any) bool {
 	if !isInstructionsEmpty(reqBody) {
-		return false // 已有有效 instructions，不修改
+		return false
 placeholder
-
-	instructions := strings.TrimSpace(getCodexCLIInstructions())
-	if instructions != "" {
-		reqBody["instructions"] = instructions
-		return true
-placeholder
-
-	return false
-placeholder
-
-// applyOpenCodeInstructions 为非 Codex CLI 请求应用内置 Codex CLI 指令（兼容历史函数名）
-// 优先使用内置 Codex CLI 指令覆盖
-func applyOpenCodeInstructions(reqBody map[string]any) bool {
-	instructions := strings.TrimSpace(getOpenCodeCodexHeader())
-	existingInstructions, _ := reqBody["instructions"].(string)
-	existingInstructions = strings.TrimSpace(existingInstructions)
-
-	if instructions != "" {
-		if existingInstructions != instructions {
-			reqBody["instructions"] = instructions
-			return true
-	placeholder
-placeholder else if existingInstructions == "" {
-		codexInstructions := strings.TrimSpace(getCodexCLIInstructions())
-		if codexInstructions != "" {
-			reqBody["instructions"] = codexInstructions
-			return true
-	placeholder
-placeholder
-
-	return false
+	reqBody["instructions"] = "You are a helpful coding assistant."
+	return true
 placeholder
 
 // isInstructionsEmpty 检查 instructions 字段是否为空

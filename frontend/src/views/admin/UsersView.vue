@@ -655,16 +655,28 @@ placeholder
 
 // Toggle column visibility
 const toggleColumn = (key: string) => {
+  const wasHidden = hiddenColumns.has(key)
   if (hiddenColumns.has(key)) {
     hiddenColumns.delete(key)
   placeholder else {
     hiddenColumns.add(key)
   placeholder
   saveColumnsToStorage()
+  if (wasHidden && (key === 'usage' || key.startsWith('attr_'))) {
+    refreshCurrentPageSecondaryData()
+  placeholder
+  if (key === 'subscriptions') {
+    loadUsers()
+  placeholder
 placeholder
 
 // Check if column is visible (not in hidden set)
 const isColumnVisible = (key: string) => !hiddenColumns.has(key)
+const hasVisibleUsageColumn = computed(() => !hiddenColumns.has('usage'))
+const hasVisibleSubscriptionsColumn = computed(() => !hiddenColumns.has('subscriptions'))
+const hasVisibleAttributeColumns = computed(() =>
+  attributeDefinitions.value.some((def) => def.enabled && !hiddenColumns.has(`attr_${def.idplaceholder`))
+)
 
 // Filtered columns based on visibility
 const columns = computed<Column[]>(() =>
@@ -776,6 +788,60 @@ const editingUser = ref<AdminUser | null>(null)
 const deletingUser = ref<AdminUser | null>(null)
 const viewingUser = ref<AdminUser | null>(null)
 let abortController: AbortController | null = null
+let secondaryDataSeq = 0
+
+const loadUsersSecondaryData = async (
+  userIds: number[],
+  signal?: AbortSignal,
+  expectedSeq?: number
+) => {
+  if (userIds.length === 0) return
+
+  const tasks: Promise<void>[] = []
+
+  if (hasVisibleUsageColumn.value) {
+    tasks.push(
+      (async () => {
+        try {
+          const usageResponse = await adminAPI.dashboard.getBatchUsersUsage(userIds)
+          if (signal?.aborted) return
+          if (typeof expectedSeq === 'number' && expectedSeq !== secondaryDataSeq) return
+          usageStats.value = usageResponse.stats
+        placeholder catch (e) {
+          if (signal?.aborted) return
+          console.error('Failed to load usage stats:', e)
+        placeholder
+      placeholder)()
+    )
+  placeholder
+
+  if (attributeDefinitions.value.length > 0 && hasVisibleAttributeColumns.value) {
+    tasks.push(
+      (async () => {
+        try {
+          const attrResponse = await adminAPI.userAttributes.getBatchUserAttributes(userIds)
+          if (signal?.aborted) return
+          if (typeof expectedSeq === 'number' && expectedSeq !== secondaryDataSeq) return
+          userAttributeValues.value = attrResponse.attributes
+        placeholder catch (e) {
+          if (signal?.aborted) return
+          console.error('Failed to load user attribute values:', e)
+        placeholder
+      placeholder)()
+    )
+  placeholder
+
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks)
+  placeholder
+placeholder
+
+const refreshCurrentPageSecondaryData = () => {
+  const userIds = users.value.map((u) => u.id)
+  if (userIds.length === 0) return
+  const seq = ++secondaryDataSeq
+  void loadUsersSecondaryData(userIds, undefined, seq)
+placeholder
 
 // Action Menu State
 const activeMenuId = ref<number | null>(null)
@@ -913,7 +979,8 @@ const loadUsers = async () => {
         role: filters.role as any,
         status: filters.status as any,
         search: searchQuery.value || undefined,
-        attributes: Object.keys(attrFilters).length > 0 ? attrFilters : undefined
+        attributes: Object.keys(attrFilters).length > 0 ? attrFilters : undefined,
+        include_subscriptions: hasVisibleSubscriptionsColumn.value
       placeholder,
       { signal placeholder
     )
@@ -923,38 +990,17 @@ const loadUsers = async () => {
     users.value = response.items
     pagination.total = response.total
     pagination.pages = response.pages
+    usageStats.value = {placeholder
+    userAttributeValues.value = {placeholder
 
-    // Load usage stats and attribute values for all users in the list
+    // Defer heavy secondary data so table can render first.
     if (response.items.length > 0) {
       const userIds = response.items.map((u) => u.id)
-      // Load usage stats
-      try {
-        const usageResponse = await adminAPI.dashboard.getBatchUsersUsage(userIds)
-        if (signal.aborted) {
-          return
-        placeholder
-        usageStats.value = usageResponse.stats
-      placeholder catch (e) {
-        if (signal.aborted) {
-          return
-        placeholder
-        console.error('Failed to load usage stats:', e)
-      placeholder
-      // Load attribute values
-      if (attributeDefinitions.value.length > 0) {
-        try {
-          const attrResponse = await adminAPI.userAttributes.getBatchUserAttributes(userIds)
-          if (signal.aborted) {
-            return
-          placeholder
-          userAttributeValues.value = attrResponse.attributes
-        placeholder catch (e) {
-          if (signal.aborted) {
-            return
-          placeholder
-          console.error('Failed to load user attribute values:', e)
-        placeholder
-      placeholder
+      const seq = ++secondaryDataSeq
+      window.setTimeout(() => {
+        if (signal.aborted || seq !== secondaryDataSeq) return
+        void loadUsersSecondaryData(userIds, signal, seq)
+      placeholder, 50)
     placeholder
   placeholder catch (error: any) {
     const errorInfo = error as { name?: string; code?: string placeholder

@@ -91,6 +91,10 @@ placeholder
 		Search:     search,
 		Attributes: parseAttributeFilters(c),
 placeholder
+	if raw, ok := c.GetQuery("include_subscriptions"); ok {
+		includeSubscriptions := parseBoolQueryWithDefault(raw, true)
+		filters.IncludeSubscriptions = &includeSubscriptions
+placeholder
 
 	users, total, err := h.adminService.ListUsers(c.Request.Context(), page, pageSize, filters)
 	if err != nil {

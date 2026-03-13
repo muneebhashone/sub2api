@@ -1,6 +1,9 @@
+//go:build unit
+
 package service
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -138,6 +141,51 @@ placeholder
 
 	if resetAt.Before(minExpected) || resetAt.After(maxExpected) {
 		t.Errorf("resetAt %v not in expected range [%v, %v]", resetAt, minExpected, maxExpected)
+placeholder
+placeholder
+
+type openAI429SnapshotRepo struct {
+	mockAccountRepoForGemini
+	rateLimitedID int64
+	updatedExtra  map[string]any
+placeholder
+
+func (r *openAI429SnapshotRepo) SetRateLimited(_ context.Context, id int64, _ time.Time) error {
+	r.rateLimitedID = id
+	return nil
+placeholder
+
+func (r *openAI429SnapshotRepo) UpdateExtra(_ context.Context, _ int64, updates map[string]any) error {
+	r.updatedExtra = updates
+	return nil
+placeholder
+
+func TestHandle429_OpenAIPersistsCodexSnapshotImmediately(t *testing.T) {
+	repo := &openAI429SnapshotRepo{placeholder
+	svc := NewRateLimitService(repo, nil, nil, nil, nil)
+	account := &Account{ID: 123, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
+
+	headers := http.Header{placeholder
+	headers.Set("x-codex-primary-used-percent", "100")
+	headers.Set("x-codex-primary-reset-after-seconds", "604800")
+	headers.Set("x-codex-primary-window-minutes", "10080")
+	headers.Set("x-codex-secondary-used-percent", "100")
+	headers.Set("x-codex-secondary-reset-after-seconds", "18000")
+	headers.Set("x-codex-secondary-window-minutes", "300")
+
+	svc.handle429(context.Background(), account, headers, nil)
+
+	if repo.rateLimitedID != account.ID {
+		t.Fatalf("rateLimitedID = %d, want %d", repo.rateLimitedID, account.ID)
+placeholder
+	if len(repo.updatedExtra) == 0 {
+		t.Fatal("expected codex snapshot to be persisted on 429")
+placeholder
+	if got := repo.updatedExtra["codex_5h_used_percent"]; got != 100.0 {
+		t.Fatalf("codex_5h_used_percent = %v, want 100", got)
+placeholder
+	if got := repo.updatedExtra["codex_7d_used_percent"]; got != 100.0 {
+		t.Fatalf("codex_7d_used_percent = %v, want 100", got)
 placeholder
 placeholder
 

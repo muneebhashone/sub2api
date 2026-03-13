@@ -102,6 +102,15 @@ const routes: RouteRecordRaw[] = [
       title: 'Reset Password'
     placeholder
   placeholder,
+  {
+    path: '/key-usage',
+    name: 'KeyUsage',
+    component: () => import('@/views/KeyUsageView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Key Usage',
+    placeholder
+  placeholder,
 
   // ==================== User Routes ====================
   {

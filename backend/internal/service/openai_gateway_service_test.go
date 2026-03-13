@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/cespare/xxhash/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,22 @@ var _ GatewayCache = (*stubGatewayCache)(nil)
 type stubOpenAIAccountRepo struct {
 	AccountRepository
 	accounts []Account
+placeholder
+
+type snapshotUpdateAccountRepo struct {
+	stubOpenAIAccountRepo
+	updateExtraCalls chan map[string]any
+placeholder
+
+func (r *snapshotUpdateAccountRepo) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
+	if r.updateExtraCalls != nil {
+		copied := make(map[string]any, len(updates))
+		for k, v := range updates {
+			copied[k] = v
+	placeholder
+		r.updateExtraCalls <- copied
+placeholder
+	return nil
 placeholder
 
 func (r stubOpenAIAccountRepo) GetByID(ctx context.Context, id int64) (*Account, error) {
@@ -1248,8 +1265,157 @@ placeholder
 placeholder
 placeholder
 
+func TestOpenAIUpdateCodexUsageSnapshotFromHeaders(t *testing.T) {
+	repo := &snapshotUpdateAccountRepo{updateExtraCalls: make(chan map[string]any, 1)placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	headers := http.Header{placeholder
+	headers.Set("x-codex-primary-used-percent", "12")
+	headers.Set("x-codex-secondary-used-percent", "34")
+	headers.Set("x-codex-primary-window-minutes", "300")
+	headers.Set("x-codex-secondary-window-minutes", "10080")
+	headers.Set("x-codex-primary-reset-after-seconds", "600")
+	headers.Set("x-codex-secondary-reset-after-seconds", "86400")
+
+	svc.UpdateCodexUsageSnapshotFromHeaders(context.Background(), 123, headers)
+
+	select {
+	case updates := <-repo.updateExtraCalls:
+		require.Equal(t, 12.0, updates["codex_5h_used_percent"])
+		require.Equal(t, 34.0, updates["codex_7d_used_percent"])
+		require.Equal(t, 600, updates["codex_5h_reset_after_seconds"])
+		require.Equal(t, 86400, updates["codex_7d_reset_after_seconds"])
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected UpdateExtra to be called")
+placeholder
+placeholder
+
+func TestOpenAIResponsesRequestPathSuffix(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+
+	tests := []struct {
+		name string
+		path string
+		want string
+placeholder{
+		{name: "exact v1 responses", path: "/v1/responses", want: ""placeholder,
+		{name: "compact v1 responses", path: "/v1/responses/compact", want: "/compact"placeholder,
+		{name: "compact alias responses", path: "/responses/compact/", want: "/compact"placeholder,
+		{name: "nested suffix", path: "/openai/v1/responses/compact/detail", want: "/compact/detail"placeholder,
+		{name: "unrelated path", path: "/v1/chat/completions", want: ""placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c.Request = httptest.NewRequest(http.MethodPost, tt.path, nil)
+			require.Equal(t, tt.want, openAIResponsesRequestPathSuffix(c))
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIBuildUpstreamRequestOpenAIPassthroughPreservesCompactPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+
+	svc := &OpenAIGatewayService{placeholder
+	account := &Account{Type: AccountTypeOAuthplaceholder
+
+	req, err := svc.buildUpstreamRequestOpenAIPassthrough(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token")
+placeholder
+	require.Equal(t, chatgptCodexURL+"/compact", req.URL.String())
+	require.Equal(t, "application/json", req.Header.Get("Accept"))
+	require.Equal(t, codexCLIVersion, req.Header.Get("Version"))
+	require.NotEmpty(t, req.Header.Get("Session_Id"))
+placeholder
+
+func TestOpenAIBuildUpstreamRequestCompactForcesJSONAcceptForOAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+
+	svc := &OpenAIGatewayService{placeholder
+	account := &Account{
+		Type:        AccountTypeOAuth,
+placeholder"chatgpt_account_id": "chatgpt-acc"placeholder,
+placeholder
+
+	req, err := svc.buildUpstreamRequest(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token", false, "", true)
+placeholder
+	require.Equal(t, chatgptCodexURL+"/compact", req.URL.String())
+	require.Equal(t, "application/json", req.Header.Get("Accept"))
+	require.Equal(t, codexCLIVersion, req.Header.Get("Version"))
+	require.NotEmpty(t, req.Header.Get("Session_Id"))
+placeholder
+
+func TestOpenAIBuildUpstreamRequestPreservesCompactPathForAPIKeyBaseURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+
+	svc := &OpenAIGatewayService{cfg: &config.Config{
+		Security: config.SecurityConfig{
+			URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholder,
+	placeholder,
+placeholderplaceholder
+	account := &Account{
+		Type:        AccountTypeAPIKey,
+		Platform:    PlatformOpenAI,
+placeholder"base_url": "https://example.com/v1"placeholder,
+placeholder
+
+	req, err := svc.buildUpstreamRequest(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token", false, "", false)
+placeholder
+	require.Equal(t, "https://example.com/v1/responses/compact", req.URL.String())
+placeholder
+
+func TestOpenAIBuildUpstreamRequestOAuthOfficialClientOriginatorCompatibility(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name           string
+		userAgent      string
+		originator     string
+		wantOriginator string
+placeholder{
+		{name: "desktop originator preserved", originator: "Codex Desktop", wantOriginator: "Codex Desktop"placeholder,
+		{name: "vscode originator preserved", originator: "codex_vscode", wantOriginator: "codex_vscode"placeholder,
+		{name: "official ua fallback to codex_cli_rs", userAgent: "Codex Desktop/1.2.3", wantOriginator: "codex_cli_rs"placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader([]byte(`{"model":"gpt-5"placeholder`)))
+			if tt.userAgent != "" {
+				c.Request.Header.Set("User-Agent", tt.userAgent)
+		placeholder
+			if tt.originator != "" {
+				c.Request.Header.Set("originator", tt.originator)
+		placeholder
+
+			svc := &OpenAIGatewayService{placeholder
+			account := &Account{
+				Type:        AccountTypeOAuth,
+		placeholder"chatgpt_account_id": "chatgpt-acc"placeholder,
+		placeholder
+
+			isCodexCLI := openai.IsCodexOfficialClientByHeaders(c.GetHeader("User-Agent"), c.GetHeader("originator"))
+			req, err := svc.buildUpstreamRequest(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"placeholder`), "token", false, "", isCodexCLI)
+		placeholder
+			require.Equal(t, tt.wantOriginator, req.Header.Get("originator"))
+	placeholder)
+placeholder
+placeholder
+
 // ==================== P1-08 修复：model 替换性能优化测试 ====================
 
+// ==================== P1-08 修复：model 替换性能优化测试 =============
 func TestReplaceModelInSSELine(t *testing.T) {
 	svc := &OpenAIGatewayService{placeholder
 
@@ -1575,4 +1741,28 @@ placeholder
 	require.Equal(t, 0, usage.InputTokens)
 	require.Contains(t, rec.Header().Get("Content-Type"), "text/event-stream")
 	require.Contains(t, rec.Body.String(), `data: {"type":"response.in_progress"`)
+placeholder
+
+func TestHandleOAuthSSEToJSON_ResponseFailedReturnsProtocolError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+placeholder
+	body := []byte(strings.Join([]string{
+		`data: {"type":"response.failed","error":{"message":"upstream rejected request"placeholderplaceholder`,
+		`data: [DONE]`,
+placeholder, "\n"))
+
+	usage, err := svc.handleOAuthSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	require.Nil(t, usage)
+placeholder
+	require.Equal(t, http.StatusBadGateway, rec.Code)
+	require.Contains(t, rec.Body.String(), "upstream rejected request")
+	require.Contains(t, rec.Header().Get("Content-Type"), "application/json")
 placeholder

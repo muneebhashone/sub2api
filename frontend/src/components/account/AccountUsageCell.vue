@@ -69,9 +69,39 @@
       <div v-else class="text-xs text-gray-400">-</div>
     </template>
 
-    <!-- OpenAI OAuth accounts: show Codex usage from extra field -->
+    <!-- OpenAI OAuth accounts: prefer fresh usage query for active rate-limited rows -->
     <template v-else-if="account.platform === 'openai' && account.type === 'oauth'">
-      <div v-if="hasCodexUsage" class="space-y-1">
+      <div v-if="preferFetchedOpenAIUsage" class="space-y-1">
+        <UsageProgressBar
+          v-if="usageInfo?.five_hour"
+          label="5h"
+          :utilization="usageInfo.five_hour.utilization"
+          :resets-at="usageInfo.five_hour.resets_at"
+          :window-stats="usageInfo.five_hour.window_stats"
+          color="indigo"
+        />
+        <UsageProgressBar
+          v-if="usageInfo?.seven_day"
+          label="7d"
+          :utilization="usageInfo.seven_day.utilization"
+          :resets-at="usageInfo.seven_day.resets_at"
+          :window-stats="usageInfo.seven_day.window_stats"
+          color="emerald"
+        />
+      </div>
+      <div v-else-if="isActiveOpenAIRateLimited && loading" class="space-y-1.5">
+        <div class="flex items-center gap-1">
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-1.5 w-8 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-1.5 w-8 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+      </div>
+      <div v-else-if="hasCodexUsage" class="space-y-1">
         <!-- 5h Window -->
         <UsageProgressBar
           v-if="codex5hUsedPercent !== null"
@@ -87,6 +117,36 @@
           label="7d"
           :utilization="codex7dUsedPercent"
           :resets-at="codex7dResetAt"
+          color="emerald"
+        />
+      </div>
+      <div v-else-if="loading" class="space-y-1.5">
+        <div class="flex items-center gap-1">
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-1.5 w-8 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+        <div class="flex items-center gap-1">
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-1.5 w-8 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-3 w-[32px] animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+      </div>
+      <div v-else-if="hasOpenAIUsageFallback" class="space-y-1">
+        <UsageProgressBar
+          v-if="usageInfo?.five_hour"
+          label="5h"
+          :utilization="usageInfo.five_hour.utilization"
+          :resets-at="usageInfo.five_hour.resets_at"
+          :window-stats="usageInfo.five_hour.window_stats"
+          color="indigo"
+        />
+        <UsageProgressBar
+          v-if="usageInfo?.seven_day"
+          label="7d"
+          :utilization="usageInfo.seven_day.utilization"
+          :resets-at="usageInfo.seven_day.resets_at"
+          :window-stats="usageInfo.seven_day.window_stats"
           color="emerald"
         />
       </div>
@@ -273,16 +333,41 @@
   <div v-else>
     <!-- Gemini API Key accounts: show quota info -->
     <AccountQuotaInfo v-if="account.platform === 'gemini'" :account="account" />
+    <!-- API Key accounts with quota limits: show progress bars -->
+    <div v-else-if="hasApiKeyQuota" class="space-y-1">
+      <UsageProgressBar
+        v-if="quotaDailyBar"
+        label="1d"
+        :utilization="quotaDailyBar.utilization"
+        :resets-at="quotaDailyBar.resetsAt"
+        color="indigo"
+      />
+      <UsageProgressBar
+        v-if="quotaWeeklyBar"
+        label="7d"
+        :utilization="quotaWeeklyBar.utilization"
+        :resets-at="quotaWeeklyBar.resetsAt"
+        color="emerald"
+      />
+      <UsageProgressBar
+        v-if="quotaTotalBar"
+        label="total"
+        :utilization="quotaTotalBar.utilization"
+        color="purple"
+      />
+    </div>
     <div v-else class="text-xs text-gray-400">-</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted placeholder from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, AccountUsageInfo, GeminiCredentials, WindowStats placeholder from '@/types'
+import { buildOpenAIUsageRefreshKey placeholder from '@/utils/accountUsageRefresh'
 import { resolveCodexUsageWindow placeholder from '@/utils/codexUsage'
+import { enqueueUsageRequest placeholder from '@/utils/usageLoadQueue'
 import UsageProgressBar from './UsageProgressBar.vue'
 import AccountQuotaInfo from './AccountQuotaInfo.vue'
 
@@ -291,6 +376,9 @@ const props = defineProps<{
 placeholder>()
 
 const { t placeholder = useI18n()
+
+const unmounted = ref(false)
+onBeforeUnmount(() => { unmounted.value = true placeholder)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -313,6 +401,9 @@ const shouldFetchUsage = computed(() => {
   if (props.account.platform === 'antigravity') {
     return props.account.type === 'oauth'
   placeholder
+  if (props.account.platform === 'openai') {
+    return props.account.type === 'oauth'
+  placeholder
   return false
 placeholder)
 
@@ -333,6 +424,41 @@ const codex7dWindow = computed(() => resolveCodexUsageWindow(props.account.extra
 // OpenAI Codex usage computed properties
 const hasCodexUsage = computed(() => {
   return codex5hWindow.value.usedPercent !== null || codex7dWindow.value.usedPercent !== null
+placeholder)
+
+const hasOpenAIUsageFallback = computed(() => {
+  if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return false
+  return !!usageInfo.value?.five_hour || !!usageInfo.value?.seven_day
+placeholder)
+
+const isActiveOpenAIRateLimited = computed(() => {
+  if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return false
+  if (!props.account.rate_limit_reset_at) return false
+  const resetAt = Date.parse(props.account.rate_limit_reset_at)
+  return !Number.isNaN(resetAt) && resetAt > Date.now()
+placeholder)
+
+const preferFetchedOpenAIUsage = computed(() => {
+  return (isActiveOpenAIRateLimited.value || isOpenAICodexSnapshotStale.value) && hasOpenAIUsageFallback.value
+placeholder)
+
+const openAIUsageRefreshKey = computed(() => buildOpenAIUsageRefreshKey(props.account))
+
+const isOpenAICodexSnapshotStale = computed(() => {
+  if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return false
+  const extra = props.account.extra as Record<string, unknown> | undefined
+  const updatedAtRaw = extra?.codex_usage_updated_at
+  if (!updatedAtRaw) return true
+  const updatedAt = Date.parse(String(updatedAtRaw))
+  if (Number.isNaN(updatedAt)) return true
+  return Date.now() - updatedAt >= 10 * 60 * 1000
+placeholder)
+
+const shouldAutoLoadUsageOnMount = computed(() => {
+  if (props.account.platform === 'openai' && props.account.type === 'oauth') {
+    return isActiveOpenAIRateLimited.value || !hasCodexUsage.value || isOpenAICodexSnapshotStale.value
+  placeholder
+  return shouldFetchUsage.value
 placeholder)
 
 const codex5hUsedPercent = computed(() => codex5hWindow.value.usedPercent)
@@ -399,7 +525,7 @@ const antigravity3FlashUsageFromAPI = computed(() => getAntigravityUsageFromAPI(
 
 // Gemini Image from API
 const antigravity3ImageUsageFromAPI = computed(() =>
-  getAntigravityUsageFromAPI(['gemini-3.1-flash-image', 'gemini-3-pro-image'])
+  getAntigravityUsageFromAPI(['gemini-2.5-flash-image', 'gemini-3.1-flash-image', 'gemini-3-pro-image'])
 )
 
 // Claude from API (all Claude model variants)
@@ -701,16 +827,98 @@ const loadUsage = async () => {
   error.value = null
 
   try {
-    usageInfo.value = await adminAPI.accounts.getUsage(props.account.id)
+    const fetchFn = () => adminAPI.accounts.getUsage(props.account.id)
+    let result: AccountUsageInfo
+    // Only throttle Anthropic OAuth/setup-token accounts to avoid upstream 429
+    if (
+      props.account.platform === 'anthropic' &&
+      (props.account.type === 'oauth' || props.account.type === 'setup-token')
+    ) {
+      result = await enqueueUsageRequest(
+        props.account.platform,
+        'claude_code',
+        props.account.proxy_id,
+        fetchFn
+      )
+    placeholder else {
+      result = await fetchFn()
+    placeholder
+    if (!unmounted.value) usageInfo.value = result
   placeholder catch (e: any) {
-    error.value = t('common.error')
-    console.error('Failed to load usage:', e)
+    if (!unmounted.value) {
+      error.value = t('common.error')
+      console.error('Failed to load usage:', e)
+    placeholder
   placeholder finally {
-    loading.value = false
+    if (!unmounted.value) loading.value = false
   placeholder
 placeholder
 
+// ===== API Key quota progress bars =====
+
+interface QuotaBarInfo {
+  utilization: number
+  resetsAt: string | null
+placeholder
+
+const makeQuotaBar = (
+  used: number,
+  limit: number,
+  startKey?: string
+): QuotaBarInfo => {
+  const utilization = limit > 0 ? (used / limit) * 100 : 0
+  let resetsAt: string | null = null
+  if (startKey) {
+    const extra = props.account.extra as Record<string, unknown> | undefined
+    const startStr = extra?.[startKey] as string | undefined
+    if (startStr) {
+      const startDate = new Date(startStr)
+      const periodMs = startKey.includes('daily') ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000
+      resetsAt = new Date(startDate.getTime() + periodMs).toISOString()
+    placeholder
+  placeholder
+  return { utilization, resetsAt placeholder
+placeholder
+
+const hasApiKeyQuota = computed(() => {
+  if (props.account.type !== 'apikey') return false
+  return (
+    (props.account.quota_daily_limit ?? 0) > 0 ||
+    (props.account.quota_weekly_limit ?? 0) > 0 ||
+    (props.account.quota_limit ?? 0) > 0
+  )
+placeholder)
+
+const quotaDailyBar = computed((): QuotaBarInfo | null => {
+  const limit = props.account.quota_daily_limit ?? 0
+  if (limit <= 0) return null
+  return makeQuotaBar(props.account.quota_daily_used ?? 0, limit, 'quota_daily_start')
+placeholder)
+
+const quotaWeeklyBar = computed((): QuotaBarInfo | null => {
+  const limit = props.account.quota_weekly_limit ?? 0
+  if (limit <= 0) return null
+  return makeQuotaBar(props.account.quota_weekly_used ?? 0, limit, 'quota_weekly_start')
+placeholder)
+
+const quotaTotalBar = computed((): QuotaBarInfo | null => {
+  const limit = props.account.quota_limit ?? 0
+  if (limit <= 0) return null
+  return makeQuotaBar(props.account.quota_used ?? 0, limit)
+placeholder)
+
 onMounted(() => {
+  if (!shouldAutoLoadUsageOnMount.value) return
   loadUsage()
+placeholder)
+
+watch(openAIUsageRefreshKey, (nextKey, prevKey) => {
+  if (!prevKey || nextKey === prevKey) return
+  if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return
+  if (!isActiveOpenAIRateLimited.value && hasCodexUsage.value && !isOpenAICodexSnapshotStale.value) return
+
+  loadUsage().catch((e) => {
+    console.error('Failed to refresh OpenAI usage:', e)
+  placeholder)
 placeholder)
 </script>

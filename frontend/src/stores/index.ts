@@ -8,6 +8,7 @@ export { useAppStore placeholder from './app'
 export { useAdminSettingsStore placeholder from './adminSettings'
 export { useSubscriptionStore placeholder from './subscriptions'
 export { useOnboardingStore placeholder from './onboarding'
+export { useAnnouncementStore placeholder from './announcements'
 
 // Re-export types for convenience
 export type { User, LoginRequest, RegisterRequest, AuthResponse placeholder from '@/types'

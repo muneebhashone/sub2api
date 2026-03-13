@@ -13,8 +13,18 @@
           </div>
         </div>
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <ModelDistributionChart :model-stats="modelStats" :loading="chartsLoading" />
-          <GroupDistributionChart :group-stats="groupStats" :loading="chartsLoading" />
+          <ModelDistributionChart
+            v-model:metric="modelDistributionMetric"
+            :model-stats="modelStats"
+            :loading="chartsLoading"
+            :show-metric-toggle="true"
+          />
+          <GroupDistributionChart
+            v-model:metric="groupDistributionMetric"
+            :group-stats="groupStats"
+            :loading="chartsLoading"
+            :show-metric-toggle="true"
+          />
         </div>
         <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" />
       </div>
@@ -54,7 +64,7 @@
           </div>
         </template>
       </UsageFilters>
-      <UsageTable :data="usageLogs" :loading="loading" :columns="visibleColumns" />
+      <UsageTable :data="usageLogs" :loading="loading" :columns="visibleColumns" @userClick="handleUserClick" />
       <Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" @update:pageSize="handlePageSizeChange" />
     </div>
   </AppLayout>
@@ -65,6 +75,13 @@
     :start-date="startDate"
     :end-date="endDate"
     @close="cleanupDialogVisible = false"
+  />
+  <!-- Balance history modal triggered from usage table user click -->
+  <UserBalanceHistoryModal
+    :show="showBalanceHistoryModal"
+    :user="balanceHistoryUser"
+    :hide-actions="true"
+    @close="showBalanceHistoryModal = false; balanceHistoryUser = null"
   />
 </template>
 
@@ -79,17 +96,36 @@ import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination fro
 import UsageStatsCards from '@/components/admin/usage/UsageStatsCards.vue'; import UsageFilters from '@/components/admin/usage/UsageFilters.vue'
 import UsageTable from '@/components/admin/usage/UsageTable.vue'; import UsageExportProgress from '@/components/admin/usage/UsageExportProgress.vue'
 import UsageCleanupDialog from '@/components/admin/usage/UsageCleanupDialog.vue'
+import UserBalanceHistoryModal from '@/components/admin/user/UserBalanceHistoryModal.vue'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'; import GroupDistributionChart from '@/components/charts/GroupDistributionChart.vue'; import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
 import Icon from '@/components/icons/Icon.vue'
-import type { AdminUsageLog, TrendDataPoint, ModelStat, GroupStat placeholder from '@/types'; import type { AdminUsageStatsResponse, AdminUsageQueryParams placeholder from '@/api/admin/usage'
+import type { AdminUsageLog, TrendDataPoint, ModelStat, GroupStat, AdminUser placeholder from '@/types'; import type { AdminUsageStatsResponse, AdminUsageQueryParams placeholder from '@/api/admin/usage'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
+type DistributionMetric = 'tokens' | 'actual_cost'
+
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<AdminUsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
 const trendData = ref<TrendDataPoint[]>([]); const modelStats = ref<ModelStat[]>([]); const groupStats = ref<GroupStat[]>([]); const chartsLoading = ref(false); const granularity = ref<'day' | 'hour'>('day')
+const modelDistributionMetric = ref<DistributionMetric>('tokens')
+const groupDistributionMetric = ref<DistributionMetric>('tokens')
 let abortController: AbortController | null = null; let exportAbortController: AbortController | null = null
+let chartReqSeq = 0
 const exportProgress = reactive({ show: false, progress: 0, current: 0, total: 0, estimatedTime: '' placeholder)
 const cleanupDialogVisible = ref(false)
+// Balance history modal state
+const showBalanceHistoryModal = ref(false)
+const balanceHistoryUser = ref<AdminUser | null>(null)
+
+const handleUserClick = async (userId: number) => {
+  try {
+    const user = await adminAPI.users.getById(userId)
+    balanceHistoryUser.value = user
+    showBalanceHistoryModal.value = true
+  placeholder catch {
+    appStore.showError(t('admin.usage.failedToLoadUser'))
+  placeholder
+placeholder
 
 const granularityOptions = computed(() => [{ value: 'day', label: t('admin.dashboard.day') placeholder, { value: 'hour', label: t('admin.dashboard.hour') placeholder])
 // Use local timezone to avoid UTC timezone issues
@@ -109,7 +145,7 @@ const loadLogs = async () => {
   try {
     const requestType = filters.value.request_type
     const legacyStream = requestType ? requestTypeToLegacyStream(requestType) : filters.value.stream
-    const res = await adminAPI.usage.list({ page: pagination.page, page_size: pagination.page_size, ...filters.value, stream: legacyStream === null ? undefined : legacyStream placeholder, { signal: c.signal placeholder)
+    const res = await adminAPI.usage.list({ page: pagination.page, page_size: pagination.page_size, exact_total: false, ...filters.value, stream: legacyStream === null ? undefined : legacyStream placeholder, { signal: c.signal placeholder)
     if(!c.signal.aborted) { usageLogs.value = res.items; pagination.total = res.total placeholder
   placeholder catch (error: any) { if(error?.name !== 'AbortError') console.error('Failed to load usage logs:', error) placeholder finally { if(abortController === c) loading.value = false placeholder
 placeholder
@@ -124,15 +160,34 @@ const loadStats = async () => {
   placeholder
 placeholder
 const loadChartData = async () => {
+  const seq = ++chartReqSeq
   chartsLoading.value = true
   try {
     const requestType = filters.value.request_type
     const legacyStream = requestType ? requestTypeToLegacyStream(requestType) : filters.value.stream
-    const params = { start_date: filters.value.start_date || startDate.value, end_date: filters.value.end_date || endDate.value, granularity: granularity.value, user_id: filters.value.user_id, model: filters.value.model, api_key_id: filters.value.api_key_id, account_id: filters.value.account_id, group_id: filters.value.group_id, request_type: requestType, stream: legacyStream === null ? undefined : legacyStream, billing_type: filters.value.billing_type placeholder
-    const statsParams = { start_date: params.start_date, end_date: params.end_date, user_id: params.user_id, model: params.model, api_key_id: params.api_key_id, account_id: params.account_id, group_id: params.group_id, request_type: params.request_type, stream: params.stream, billing_type: params.billing_type placeholder
-    const [trendRes, modelRes, groupRes] = await Promise.all([adminAPI.dashboard.getUsageTrend(params), adminAPI.dashboard.getModelStats(statsParams), adminAPI.dashboard.getGroupStats(statsParams)])
-    trendData.value = trendRes.trend || []; modelStats.value = modelRes.models || []; groupStats.value = groupRes.groups || []
-  placeholder catch (error) { console.error('Failed to load chart data:', error) placeholder finally { chartsLoading.value = false placeholder
+    const snapshot = await adminAPI.dashboard.getSnapshotV2({
+      start_date: filters.value.start_date || startDate.value,
+      end_date: filters.value.end_date || endDate.value,
+      granularity: granularity.value,
+      user_id: filters.value.user_id,
+      model: filters.value.model,
+      api_key_id: filters.value.api_key_id,
+      account_id: filters.value.account_id,
+      group_id: filters.value.group_id,
+      request_type: requestType,
+      stream: legacyStream === null ? undefined : legacyStream,
+      billing_type: filters.value.billing_type,
+      include_stats: false,
+      include_trend: true,
+      include_model_stats: true,
+      include_group_stats: true,
+      include_users_trend: false
+    placeholder)
+    if (seq !== chartReqSeq) return
+    trendData.value = snapshot.trend || []
+    modelStats.value = snapshot.models || []
+    groupStats.value = snapshot.groups || []
+  placeholder catch (error) { console.error('Failed to load chart data:', error) placeholder finally { if (seq === chartReqSeq) chartsLoading.value = false placeholder
 placeholder
 const applyFilters = () => { pagination.page = 1; loadLogs(); loadStats(); loadChartData() placeholder
 const refreshData = () => { loadLogs(); loadStats(); loadChartData() placeholder
@@ -171,7 +226,7 @@ const exportToExcel = async () => {
     while (true) {
       const requestType = filters.value.request_type
       const legacyStream = requestType ? requestTypeToLegacyStream(requestType) : filters.value.stream
-      const res = await adminUsageAPI.list({ page: p, page_size: 100, ...filters.value, stream: legacyStream === null ? undefined : legacyStream placeholder, { signal: c.signal placeholder)
+      const res = await adminUsageAPI.list({ page: p, page_size: 100, exact_total: true, ...filters.value, stream: legacyStream === null ? undefined : legacyStream placeholder, { signal: c.signal placeholder)
       if (c.signal.aborted) break; if (p === 1) { total = res.total; exportProgress.total = total placeholder
       const rows = (res.items || []).map((log: AdminUsageLog) => [
         log.created_at, log.user?.email || '', log.api_key?.name || '', log.account?.name || '', log.model,
@@ -273,6 +328,14 @@ const handleColumnClickOutside = (event: MouseEvent) => {
   placeholder
 placeholder
 
-onMounted(() => { loadLogs(); loadStats(); loadChartData(); loadSavedColumns(); document.addEventListener('click', handleColumnClickOutside) placeholder)
+onMounted(() => {
+  loadLogs()
+  loadStats()
+  window.setTimeout(() => {
+    void loadChartData()
+  placeholder, 120)
+  loadSavedColumns()
+  document.addEventListener('click', handleColumnClickOutside)
+placeholder)
 onUnmounted(() => { abortController?.abort(); exportAbortController?.abort(); document.removeEventListener('click', handleColumnClickOutside) placeholder)
 </script>

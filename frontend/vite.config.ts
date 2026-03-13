@@ -115,6 +115,10 @@ export default defineConfig(({ mode placeholder) => {
           target: backendUrl,
           changeOrigin: true
         placeholder,
+        '/v1': {
+          target: backendUrl,
+          changeOrigin: true
+        placeholder,
         '/setup': {
           target: backendUrl,
           changeOrigin: true

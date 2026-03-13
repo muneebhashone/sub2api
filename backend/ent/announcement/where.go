@@ -70,6 +70,11 @@ func Status(v string) predicate.Announcement {
 	return predicate.Announcement(sql.FieldEQ(FieldStatus, v))
 placeholder
 
+// NotifyMode applies equality check predicate on the "notify_mode" field. It's identical to NotifyModeEQ.
+func NotifyMode(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldEQ(FieldNotifyMode, v))
+placeholder
+
 // StartsAt applies equality check predicate on the "starts_at" field. It's identical to StartsAtEQ.
 func StartsAt(v time.Time) predicate.Announcement {
 	return predicate.Announcement(sql.FieldEQ(FieldStartsAt, v))
@@ -293,6 +298,71 @@ placeholder
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.Announcement {
 	return predicate.Announcement(sql.FieldContainsFold(FieldStatus, v))
+placeholder
+
+// NotifyModeEQ applies the EQ predicate on the "notify_mode" field.
+func NotifyModeEQ(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldEQ(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeNEQ applies the NEQ predicate on the "notify_mode" field.
+func NotifyModeNEQ(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldNEQ(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeIn applies the In predicate on the "notify_mode" field.
+func NotifyModeIn(vs ...string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldIn(FieldNotifyMode, vs...))
+placeholder
+
+// NotifyModeNotIn applies the NotIn predicate on the "notify_mode" field.
+func NotifyModeNotIn(vs ...string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldNotIn(FieldNotifyMode, vs...))
+placeholder
+
+// NotifyModeGT applies the GT predicate on the "notify_mode" field.
+func NotifyModeGT(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldGT(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeGTE applies the GTE predicate on the "notify_mode" field.
+func NotifyModeGTE(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldGTE(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeLT applies the LT predicate on the "notify_mode" field.
+func NotifyModeLT(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldLT(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeLTE applies the LTE predicate on the "notify_mode" field.
+func NotifyModeLTE(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldLTE(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeContains applies the Contains predicate on the "notify_mode" field.
+func NotifyModeContains(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldContains(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeHasPrefix applies the HasPrefix predicate on the "notify_mode" field.
+func NotifyModeHasPrefix(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldHasPrefix(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeHasSuffix applies the HasSuffix predicate on the "notify_mode" field.
+func NotifyModeHasSuffix(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldHasSuffix(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeEqualFold applies the EqualFold predicate on the "notify_mode" field.
+func NotifyModeEqualFold(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldEqualFold(FieldNotifyMode, v))
+placeholder
+
+// NotifyModeContainsFold applies the ContainsFold predicate on the "notify_mode" field.
+func NotifyModeContainsFold(v string) predicate.Announcement {
+	return predicate.Announcement(sql.FieldContainsFold(FieldNotifyMode, v))
 placeholder
 
 // TargetingIsNil applies the IsNil predicate on the "targeting" field.

@@ -172,6 +172,28 @@ placeholder
 	require.Nil(t, repo.updates)
 placeholder
 
+func TestSettingService_UpdateSettings_RegistrationEmailSuffixWhitelist_Normalized(t *testing.T) {
+	repo := &settingUpdateRepoStub{placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		RegistrationEmailSuffixWhitelist: []string{"example.com", "@EXAMPLE.com", " @foo.bar "placeholder,
+placeholder)
+placeholder
+	require.Equal(t, `["@example.com","@foo.bar"]`, repo.updates[SettingKeyRegistrationEmailSuffixWhitelist])
+placeholder
+
+func TestSettingService_UpdateSettings_RegistrationEmailSuffixWhitelist_Invalid(t *testing.T) {
+	repo := &settingUpdateRepoStub{placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		RegistrationEmailSuffixWhitelist: []string{"@invalid_domain"placeholder,
+placeholder)
+placeholder
+	require.Equal(t, "INVALID_REGISTRATION_EMAIL_SUFFIX_WHITELIST", infraerrors.Reason(err))
+placeholder
+
 func TestParseDefaultSubscriptions_NormalizesValues(t *testing.T) {
 	got := parseDefaultSubscriptions(`[{"group_id":11,"validity_days":30placeholder,{"group_id":11,"validity_days":60placeholder,{"group_id":0,"validity_days":10placeholder,{"group_id":12,"validity_days":99999placeholder]`)
 	require.Equal(t, []DefaultSubscriptionSetting{

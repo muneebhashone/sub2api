@@ -244,7 +244,10 @@ placeholder
 			ModelRouting:                    apiKey.Group.ModelRouting,
 			ModelRoutingEnabled:             apiKey.Group.ModelRoutingEnabled,
 			MCPXMLInject:                    apiKey.Group.MCPXMLInject,
+			SimulateClaudeMaxEnabled:        apiKey.Group.SimulateClaudeMaxEnabled,
 			SupportedModelScopes:            apiKey.Group.SupportedModelScopes,
+			AllowMessagesDispatch:           apiKey.Group.AllowMessagesDispatch,
+			DefaultMappedModel:              apiKey.Group.DefaultMappedModel,
 	placeholder
 placeholder
 	return snapshot
@@ -301,7 +304,10 @@ placeholder
 			ModelRouting:                    snapshot.Group.ModelRouting,
 			ModelRoutingEnabled:             snapshot.Group.ModelRoutingEnabled,
 			MCPXMLInject:                    snapshot.Group.MCPXMLInject,
+			SimulateClaudeMaxEnabled:        snapshot.Group.SimulateClaudeMaxEnabled,
 			SupportedModelScopes:            snapshot.Group.SupportedModelScopes,
+			AllowMessagesDispatch:           snapshot.Group.AllowMessagesDispatch,
+			DefaultMappedModel:              snapshot.Group.DefaultMappedModel,
 	placeholder
 placeholder
 	s.compileAPIKeyIPRules(apiKey)

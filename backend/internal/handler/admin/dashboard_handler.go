@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -248,11 +249,12 @@ placeholder
 	placeholder
 placeholder
 
-	trend, err := h.dashboardService.GetUsageTrendWithFilters(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, requestType, stream, billingType)
+	trend, hit, err := h.getUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, requestType, stream, billingType)
 	if err != nil {
 		response.Error(c, 500, "Failed to get usage trend")
 		return
 placeholder
+	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
 	response.Success(c, gin.H{
 		"trend":       trend,
@@ -320,11 +322,12 @@ placeholder
 	placeholder
 placeholder
 
-	stats, err := h.dashboardService.GetModelStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, billingType)
+	stats, hit, err := h.getModelStatsCached(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, billingType)
 	if err != nil {
 		response.Error(c, 500, "Failed to get model statistics")
 		return
 placeholder
+	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
 	response.Success(c, gin.H{
 		"models":     stats,
@@ -390,11 +393,12 @@ placeholder
 	placeholder
 placeholder
 
-	stats, err := h.dashboardService.GetGroupStatsWithFilters(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, billingType)
+	stats, hit, err := h.getGroupStatsCached(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, billingType)
 	if err != nil {
 		response.Error(c, 500, "Failed to get group statistics")
 		return
 placeholder
+	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
 	response.Success(c, gin.H{
 		"groups":     stats,
@@ -415,11 +419,12 @@ func (h *DashboardHandler) GetAPIKeyUsageTrend(c *gin.Context) {
 		limit = 5
 placeholder
 
-	trend, err := h.dashboardService.GetAPIKeyUsageTrend(c.Request.Context(), startTime, endTime, granularity, limit)
+	trend, hit, err := h.getAPIKeyUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, limit)
 	if err != nil {
 		response.Error(c, 500, "Failed to get API key usage trend")
 		return
 placeholder
+	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
 	response.Success(c, gin.H{
 		"trend":       trend,
@@ -441,11 +446,12 @@ func (h *DashboardHandler) GetUserUsageTrend(c *gin.Context) {
 		limit = 12
 placeholder
 
-	trend, err := h.dashboardService.GetUserUsageTrend(c.Request.Context(), startTime, endTime, granularity, limit)
+	trend, hit, err := h.getUserUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, limit)
 	if err != nil {
 		response.Error(c, 500, "Failed to get user usage trend")
 		return
 placeholder
+	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
 	response.Success(c, gin.H{
 		"trend":       trend,
@@ -460,6 +466,9 @@ type BatchUsersUsageRequest struct {
 	UserIDs []int64 `json:"user_ids" binding:"required"`
 placeholder
 
+var dashboardBatchUsersUsageCache = newSnapshotCache(30 * time.Second)
+var dashboardBatchAPIKeysUsageCache = newSnapshotCache(30 * time.Second)
+
 // GetBatchUsersUsage handles getting usage stats for multiple users
 // POST /api/v1/admin/dashboard/users-usage
 func (h *DashboardHandler) GetBatchUsersUsage(c *gin.Context) {
@@ -469,18 +478,34 @@ func (h *DashboardHandler) GetBatchUsersUsage(c *gin.Context) {
 		return
 placeholder
 
-	if len(req.UserIDs) == 0 {
+	userIDs := normalizeInt64IDList(req.UserIDs)
+	if len(userIDs) == 0 {
 		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 
-	stats, err := h.dashboardService.GetBatchUserUsageStats(c.Request.Context(), req.UserIDs, time.Time{placeholder, time.Time{placeholder)
+	keyRaw, _ := json.Marshal(struct {
+		UserIDs []int64 `json:"user_ids"`
+placeholder{
+		UserIDs: userIDs,
+placeholder)
+	cacheKey := string(keyRaw)
+	if cached, ok := dashboardBatchUsersUsageCache.Get(cacheKey); ok {
+		c.Header("X-Snapshot-Cache", "hit")
+		response.Success(c, cached.Payload)
+		return
+placeholder
+
+	stats, err := h.dashboardService.GetBatchUserUsageStats(c.Request.Context(), userIDs, time.Time{placeholder, time.Time{placeholder)
 	if err != nil {
 		response.Error(c, 500, "Failed to get user usage stats")
 		return
 placeholder
 
-	response.Success(c, gin.H{"stats": statsplaceholder)
+	payload := gin.H{"stats": statsplaceholder
+	dashboardBatchUsersUsageCache.Set(cacheKey, payload)
+	c.Header("X-Snapshot-Cache", "miss")
+	response.Success(c, payload)
 placeholder
 
 // BatchAPIKeysUsageRequest represents the request body for batch api key usage stats
@@ -497,16 +522,32 @@ func (h *DashboardHandler) GetBatchAPIKeysUsage(c *gin.Context) {
 		return
 placeholder
 
-	if len(req.APIKeyIDs) == 0 {
+	apiKeyIDs := normalizeInt64IDList(req.APIKeyIDs)
+	if len(apiKeyIDs) == 0 {
 		response.Success(c, gin.H{"stats": map[string]any{placeholderplaceholder)
 		return
 placeholder
 
-	stats, err := h.dashboardService.GetBatchAPIKeyUsageStats(c.Request.Context(), req.APIKeyIDs, time.Time{placeholder, time.Time{placeholder)
+	keyRaw, _ := json.Marshal(struct {
+		APIKeyIDs []int64 `json:"api_key_ids"`
+placeholder{
+		APIKeyIDs: apiKeyIDs,
+placeholder)
+	cacheKey := string(keyRaw)
+	if cached, ok := dashboardBatchAPIKeysUsageCache.Get(cacheKey); ok {
+		c.Header("X-Snapshot-Cache", "hit")
+		response.Success(c, cached.Payload)
+		return
+placeholder
+
+	stats, err := h.dashboardService.GetBatchAPIKeyUsageStats(c.Request.Context(), apiKeyIDs, time.Time{placeholder, time.Time{placeholder)
 	if err != nil {
 		response.Error(c, 500, "Failed to get API key usage stats")
 		return
 placeholder
 
-	response.Success(c, gin.H{"stats": statsplaceholder)
+	payload := gin.H{"stats": statsplaceholder
+	dashboardBatchAPIKeysUsageCache.Set(cacheKey, payload)
+	c.Header("X-Snapshot-Cache", "miss")
+	response.Success(c, payload)
 placeholder

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -129,6 +130,7 @@ placeholder
 placeholder
 
 	return NewAuthService(
+		nil, // entClient
 		repo,
 		nil, // redeemRepo
 		nil, // refreshTokenCache
@@ -229,6 +231,51 @@ placeholder, nil)
 
 	_, _, err := service.Register(context.Background(), "linuxdo-123@linuxdo-connect.invalid", "password")
 	require.ErrorIs(t, err, ErrEmailReserved)
+placeholder
+
+func TestAuthService_Register_EmailSuffixNotAllowed(t *testing.T) {
+	repo := &userRepoStub{placeholder
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com","@company.com"]`,
+placeholder, nil)
+
+	_, _, err := service.Register(context.Background(), "user@other.com", "password")
+	require.ErrorIs(t, err, ErrEmailSuffixNotAllowed)
+	appErr := infraerrors.FromError(err)
+	require.Contains(t, appErr.Message, "@example.com")
+	require.Contains(t, appErr.Message, "@company.com")
+	require.Equal(t, "EMAIL_SUFFIX_NOT_ALLOWED", appErr.Reason)
+	require.Equal(t, "2", appErr.Metadata["allowed_suffix_count"])
+	require.Equal(t, "@example.com,@company.com", appErr.Metadata["allowed_suffixes"])
+placeholder
+
+func TestAuthService_Register_EmailSuffixAllowed(t *testing.T) {
+	repo := &userRepoStub{nextID: 8placeholder
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["example.com"]`,
+placeholder, nil)
+
+	_, user, err := service.Register(context.Background(), "user@example.com", "password")
+placeholder
+	require.NotNil(t, user)
+	require.Equal(t, int64(8), user.ID)
+placeholder
+
+func TestAuthService_SendVerifyCode_EmailSuffixNotAllowed(t *testing.T) {
+	repo := &userRepoStub{placeholder
+	service := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com","@company.com"]`,
+placeholder, nil)
+
+	err := service.SendVerifyCode(context.Background(), "user@other.com")
+	require.ErrorIs(t, err, ErrEmailSuffixNotAllowed)
+	appErr := infraerrors.FromError(err)
+	require.Contains(t, appErr.Message, "@example.com")
+	require.Contains(t, appErr.Message, "@company.com")
+	require.Equal(t, "2", appErr.Metadata["allowed_suffix_count"])
 placeholder
 
 func TestAuthService_Register_CreateError(t *testing.T) {
@@ -402,7 +449,7 @@ func TestAuthService_Register_AssignsDefaultSubscriptions(t *testing.T) {
 	repo := &userRepoStub{nextID: 42placeholder
 	assigner := &defaultSubscriptionAssignerStub{placeholder
 	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
+		SettingKeyRegistrationEnabled:  "true",
 		SettingKeyDefaultSubscriptions: `[{"group_id":11,"validity_days":30placeholder,{"group_id":12,"validity_days":7placeholder]`,
 placeholder, nil)
 	service.defaultSubAssigner = assigner

@@ -19,8 +19,10 @@ import (
 
 // 预编译正则表达式（避免每次调用重新编译）
 var (
-	// 匹配 user_id 格式: user_{64位hexplaceholder_account__session_{uuidplaceholder
-	userIDRegex = regexp.MustCompile(`^user_[a-f0-9]{64placeholder_account__session_([a-f0-9-]{36placeholder)$`)
+	// 匹配 user_id 格式:
+	//   旧格式: user_{64位hexplaceholder_account__session_{uuidplaceholder        (account 后无 UUID)
+	//   新格式: user_{64位hexplaceholder_account_{uuidplaceholder_session_{uuidplaceholder  (account 后有 UUID)
+	userIDRegex = regexp.MustCompile(`^user_[a-f0-9]{64placeholder_account_([a-f0-9-]*)_session_([a-f0-9-]{36placeholder)$`)
 	// 匹配 User-Agent 版本号: xxx/x.y.z
 	userAgentVersionRegex = regexp.MustCompile(`/(\d+)\.(\d+)\.(\d+)`)
 )
@@ -239,13 +241,16 @@ placeholder
 		return body, nil
 placeholder
 
-	// 匹配格式: user_{64位hexplaceholder_account__session_{uuidplaceholder
+	// 匹配格式:
+	//   旧格式: user_{64位hexplaceholder_account__session_{uuidplaceholder
+	//   新格式: user_{64位hexplaceholder_account_{uuidplaceholder_session_{uuidplaceholder
 	matches := userIDRegex.FindStringSubmatch(userID)
 	if matches == nil {
 		return body, nil
 placeholder
 
-	sessionTail := matches[1] // 原始session UUID
+	// matches[1] = account UUID (可能为空), matches[2] = session UUID
+	sessionTail := matches[2] // 原始session UUID
 
 	// 生成新的session hash: SHA256(accountID::sessionTail) -> UUID格式
 	seed := fmt.Sprintf("%d::%s", accountID, sessionTail)

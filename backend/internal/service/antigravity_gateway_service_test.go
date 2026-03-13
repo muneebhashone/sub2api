@@ -134,6 +134,47 @@ func (s *httpUpstreamStub) DoWithTLS(_ *http.Request, _ string, _ int64, _ int, 
 	return s.resp, s.err
 placeholder
 
+type queuedHTTPUpstreamStub struct {
+	responses     []*http.Response
+	errors        []error
+	requestBodies [][]byte
+	callCount     int
+	onCall        func(*http.Request, *queuedHTTPUpstreamStub)
+placeholder
+
+func (s *queuedHTTPUpstreamStub) Do(req *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+	if req != nil && req.Body != nil {
+		body, _ := io.ReadAll(req.Body)
+		s.requestBodies = append(s.requestBodies, body)
+		req.Body = io.NopCloser(bytes.NewReader(body))
+placeholder else {
+		s.requestBodies = append(s.requestBodies, nil)
+placeholder
+
+	idx := s.callCount
+	s.callCount++
+	if s.onCall != nil {
+		s.onCall(req, s)
+placeholder
+
+	var resp *http.Response
+	if idx < len(s.responses) {
+		resp = s.responses[idx]
+placeholder
+	var err error
+	if idx < len(s.errors) {
+		err = s.errors[idx]
+placeholder
+	if resp == nil && err == nil {
+		return nil, errors.New("unexpected upstream call")
+placeholder
+	return resp, err
+placeholder
+
+func (s *queuedHTTPUpstreamStub) DoWithTLS(req *http.Request, proxyURL string, accountID int64, concurrency int, _ bool) (*http.Response, error) {
+	return s.Do(req, proxyURL, accountID, concurrency)
+placeholder
+
 type antigravitySettingRepoStub struct{placeholder
 
 func (s *antigravitySettingRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
@@ -556,6 +597,177 @@ placeholder
 	require.Equal(t, mappedModel, result.Model)
 placeholder
 
+func TestAntigravityGatewayService_ForwardGemini_RetriesCorruptedThoughtSignature(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+			{"role": "model", "parts": []map[string]any{{"text": "thinking", "thought": true, "thoughtSignature": "sig_bad_1"placeholderplaceholderplaceholder,
+			{"role": "model", "parts": []map[string]any{{"functionCall": map[string]any{"name": "toolA", "args": map[string]any{"x": 1placeholderplaceholder, "thoughtSignature": "sig_bad_2"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-3.1-pro-preview:streamGenerateContent", bytes.NewReader(body))
+	c.Request = req
+
+	firstRespBody := []byte(`{"response":{"error":{"code":400,"message":"Corrupted thought signature.","status":"INVALID_ARGUMENT"placeholderplaceholderplaceholder`)
+	secondRespBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":8,\"candidatesTokenCount\":3placeholderplaceholderplaceholder\n\n")
+
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{
+			{
+				StatusCode: http.StatusBadRequest,
+				Header: http.Header{
+					"Content-Type": []string{"application/json"placeholder,
+					"X-Request-Id": []string{"req-sig-1"placeholder,
+			placeholder,
+				Body: io.NopCloser(bytes.NewReader(firstRespBody)),
+		placeholder,
+			{
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type": []string{"text/event-stream"placeholder,
+					"X-Request-Id": []string{"req-sig-2"placeholder,
+			placeholder,
+				Body: io.NopCloser(bytes.NewReader(secondRespBody)),
+		placeholder,
+	placeholder,
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   upstream,
+placeholder
+
+	const originalModel = "gemini-3.1-pro-preview"
+	const mappedModel = "gemini-3.1-pro-high"
+	account := &Account{
+		ID:          7,
+		Name:        "acc-gemini-signature",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				originalModel: mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, originalModel, "streamGenerateContent", true, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, mappedModel, result.Model)
+	require.Len(t, upstream.requestBodies, 2, "signature error should trigger exactly one retry")
+
+	firstReq := string(upstream.requestBodies[0])
+	secondReq := string(upstream.requestBodies[1])
+	require.Contains(t, firstReq, `"thoughtSignature":"sig_bad_1"`)
+	require.Contains(t, firstReq, `"thoughtSignature":"sig_bad_2"`)
+	require.Contains(t, secondReq, `"thoughtSignature":"skip_thought_signature_validator"`)
+	require.NotContains(t, secondReq, `"thoughtSignature":"sig_bad_1"`)
+	require.NotContains(t, secondReq, `"thoughtSignature":"sig_bad_2"`)
+
+	raw, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok)
+	events, ok := raw.([]*OpsUpstreamErrorEvent)
+	require.True(t, ok)
+	require.NotEmpty(t, events)
+	require.Equal(t, "signature_error", events[0].Kind)
+placeholder
+
+func TestAntigravityGatewayService_ForwardGemini_SignatureRetryPropagatesFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+			{"role": "model", "parts": []map[string]any{{"text": "thinking", "thought": true, "thoughtSignature": "sig_bad_1"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+
+	req := httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-3.1-pro-preview:streamGenerateContent", bytes.NewReader(body))
+	c.Request = req
+
+	firstRespBody := []byte(`{"response":{"error":{"code":400,"message":"Corrupted thought signature.","status":"INVALID_ARGUMENT"placeholderplaceholderplaceholder`)
+
+	const originalModel = "gemini-3.1-pro-preview"
+	const mappedModel = "gemini-3.1-pro-high"
+	account := &Account{
+		ID:          8,
+		Name:        "acc-gemini-signature-failover",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				originalModel: mappedModel,
+		placeholder,
+	placeholder,
+placeholder
+
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{
+			{
+				StatusCode: http.StatusBadRequest,
+				Header: http.Header{
+					"Content-Type": []string{"application/json"placeholder,
+					"X-Request-Id": []string{"req-sig-failover-1"placeholder,
+			placeholder,
+				Body: io.NopCloser(bytes.NewReader(firstRespBody)),
+		placeholder,
+	placeholder,
+		onCall: func(_ *http.Request, stub *queuedHTTPUpstreamStub) {
+			if stub.callCount != 1 {
+				return
+		placeholder
+			futureResetAt := time.Now().Add(30 * time.Second).Format(time.RFC3339)
+			account.Extra = map[string]any{
+				modelRateLimitsKey: map[string]any{
+					mappedModel: map[string]any{
+						"rate_limit_reset_at": futureResetAt,
+				placeholder,
+			placeholder,
+		placeholder
+	placeholder,
+placeholder
+
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   upstream,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, originalModel, "streamGenerateContent", true, body, true)
+	require.Nil(t, result)
+
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr, "signature retry should propagate failover instead of falling back to the original 400")
+	require.Equal(t, http.StatusServiceUnavailable, failoverErr.StatusCode)
+	require.True(t, failoverErr.ForceCacheBilling)
+	require.Len(t, upstream.requestBodies, 1, "retry should stop at preflight failover and not issue a second upstream request")
+
+	raw, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok)
+	events, ok := raw.([]*OpsUpstreamErrorEvent)
+	require.True(t, ok)
+	require.Len(t, events, 2)
+	require.Equal(t, "signature_error", events[0].Kind)
+	require.Equal(t, "failover", events[1].Kind)
+placeholder
+
 // TestStreamUpstreamResponse_UsageAndFirstToken
 // 验证：usage 字段可被累积/覆盖更新，并且能记录首 token 时间
 func TestStreamUpstreamResponse_UsageAndFirstToken(t *testing.T) {
@@ -710,7 +922,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 	_ = pr.Close()
 
 placeholder
@@ -787,7 +999,7 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "gemini-2.5-pro")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "gemini-2.5-pro", 0)
 	_ = pr.Close()
 
 placeholder
@@ -990,12 +1202,52 @@ placeholder)
 		fmt.Fprintln(pw, "")
 placeholder()
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 	_ = pr.Close()
 
 placeholder
 	require.NotNil(t, result)
 	require.True(t, result.clientDisconnect)
+placeholder
+
+// TestHandleClaudeStreamingResponse_EmptyStream
+// 验证：上游只返回无法解析的 SSE 行时，触发 UpstreamFailoverError 而不是向客户端发出残缺流
+func TestHandleClaudeStreamingResponse_EmptyStream(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := newAntigravityTestService(&config.Config{
+		Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholder,
+placeholder)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	pr, pw := io.Pipe()
+	resp := &http.Response{StatusCode: http.StatusOK, Body: pr, Header: http.Header{placeholderplaceholder
+
+	go func() {
+		defer func() { _ = pw.Close() placeholder()
+		// 所有行均为无法 JSON 解析的内容，ProcessLine 全部返回 nil
+		fmt.Fprintln(pw, "data: not-valid-json")
+		fmt.Fprintln(pw, "")
+		fmt.Fprintln(pw, "data: also-invalid")
+		fmt.Fprintln(pw, "")
+placeholder()
+
+	_, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
+	_ = pr.Close()
+
+	// 应当返回 UpstreamFailoverError 而非 nil，以便上层触发 failover
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.True(t, failoverErr.RetryableOnSameAccount)
+
+	// 客户端不应收到任何 SSE 事件（既无 message_start 也无 message_stop）
+	body := rec.Body.String()
+	require.NotContains(t, body, "event: message_start")
+	require.NotContains(t, body, "event: message_stop")
+	require.NotContains(t, body, "event: message_delta")
 placeholder
 
 // TestHandleClaudeStreamingResponse_ContextCanceled
@@ -1014,7 +1266,7 @@ placeholder)
 
 	resp := &http.Response{StatusCode: http.StatusOK, Body: cancelReadCloser{placeholder, Header: http.Header{placeholderplaceholder
 
-	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5")
+	result, err := svc.handleClaudeStreamingResponse(c, resp, time.Now(), "claude-sonnet-4-5", 0)
 
 placeholder
 	require.NotNil(t, result)

@@ -146,6 +146,7 @@ interface Props {
   apiKey: string
   baseUrl: string
   platform: GroupPlatform | null
+  allowMessagesDispatch?: boolean
 placeholder
 
 interface Emits {
@@ -265,12 +266,17 @@ placeholder
 const clientTabs = computed((): TabConfig[] => {
   if (!props.platform) return []
   switch (props.platform) {
-    case 'openai':
-      return [
+    case 'openai': {
+      const tabs: TabConfig[] = [
         { id: 'codex', label: t('keys.useKeyModal.cliTabs.codexCli'), icon: TerminalIcon placeholder,
         { id: 'codex-ws', label: t('keys.useKeyModal.cliTabs.codexCliWs'), icon: TerminalIcon placeholder,
-        { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon placeholder
       ]
+      if (props.allowMessagesDispatch) {
+        tabs.push({ id: 'claude', label: t('keys.useKeyModal.cliTabs.claudeCode'), icon: TerminalIcon placeholder)
+      placeholder
+      tabs.push({ id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon placeholder)
+      return tabs
+    placeholder
     case 'gemini':
       return [
         { id: 'gemini', label: t('keys.useKeyModal.cliTabs.geminiCli'), icon: SparkleIcon placeholder,
@@ -316,6 +322,9 @@ placeholder)
 const platformDescription = computed(() => {
   switch (props.platform) {
     case 'openai':
+      if (activeClientTab.value === 'claude') {
+        return t('keys.useKeyModal.description')
+      placeholder
       return t('keys.useKeyModal.openai.description')
     case 'gemini':
       return t('keys.useKeyModal.gemini.description')
@@ -329,6 +338,9 @@ placeholder)
 const platformNote = computed(() => {
   switch (props.platform) {
     case 'openai':
+      if (activeClientTab.value === 'claude') {
+        return t('keys.useKeyModal.note')
+      placeholder
       return activeTab.value === 'windows'
         ? t('keys.useKeyModal.openai.noteWindows')
         : t('keys.useKeyModal.openai.note')
@@ -402,6 +414,9 @@ const currentFiles = computed((): FileConfig[] => {
 
   switch (props.platform) {
     case 'openai':
+      if (activeClientTab.value === 'claude') {
+        return generateAnthropicFiles(baseUrl, apiKey)
+      placeholder
       if (activeClientTab.value === 'codex-ws') {
         return generateOpenAIWsFiles(baseUrl, apiKey)
       placeholder
@@ -443,7 +458,22 @@ $env:ANTHROPIC_AUTH_TOKEN="${apiKeyplaceholder"`
       content = ''
   placeholder
 
-  return [{ path, content placeholder]
+  const vscodeSettingsPath = activeTab.value === 'unix'
+    ? '~/.claude/settings.json'
+    : '%userprofile%\\.claude\\settings.json'
+
+  const vscodeContent = `{
+  "env": {
+    "ANTHROPIC_BASE_URL": "${baseUrlplaceholder",
+    "ANTHROPIC_AUTH_TOKEN": "${apiKeyplaceholder",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0"
+  placeholder
+placeholder`
+
+  return [
+    { path, content placeholder,
+    { path: vscodeSettingsPath, content: vscodeContent, hint: 'VSCode Claude Code' placeholder
+  ]
 placeholder
 
 function generateGeminiCliContent(baseUrl: string, apiKey: string): FileConfig {
@@ -496,16 +526,18 @@ function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
 
   // config.toml content
-  const configContent = `model_provider = "sub2api"
-model = "gpt-5.3-codex"
-model_reasoning_effort = "high"
-network_access = "enabled"
+  const configContent = `model_provider = "OpenAI"
+model = "gpt-5.4"
+review_model = "gpt-5.4"
+model_reasoning_effort = "xhigh"
 disable_response_storage = true
+network_access = "enabled"
 windows_wsl_setup_acknowledged = true
-model_verbosity = "high"
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
 
-[model_providers.sub2api]
-name = "sub2api"
+[model_providers.OpenAI]
+name = "OpenAI"
 base_url = "${baseUrlplaceholder"
 wire_api = "responses"
 requires_openai_auth = true`
@@ -533,16 +565,18 @@ function generateOpenAIWsFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
 
   // config.toml content with WebSocket v2
-  const configContent = `model_provider = "sub2api"
-model = "gpt-5.3-codex"
-model_reasoning_effort = "high"
-network_access = "enabled"
+  const configContent = `model_provider = "OpenAI"
+model = "gpt-5.4"
+review_model = "gpt-5.4"
+model_reasoning_effort = "xhigh"
 disable_response_storage = true
+network_access = "enabled"
 windows_wsl_setup_acknowledged = true
-model_verbosity = "high"
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
 
-[model_providers.sub2api]
-name = "sub2api"
+[model_providers.OpenAI]
+name = "OpenAI"
 base_url = "${baseUrlplaceholder"
 wire_api = "responses"
 supports_websockets = true
@@ -643,6 +677,22 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
       name: 'GPT-5.2',
       limit: {
         context: 400000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.4': {
+      name: 'GPT-5.4',
+      limit: {
+        context: 1050000,
         output: 128000
       placeholder,
       options: {
@@ -901,6 +951,23 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
       modalities: {
         input: ['text', 'image', 'pdf'],
         output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          budgetTokens: 24576,
+          type: 'enabled'
+        placeholder
+      placeholder
+    placeholder,
+    'gemini-2.5-flash-image': {
+      name: 'Gemini 2.5 Flash Image',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image'],
+        output: ['image']
       placeholder,
       options: {
         thinking: {

@@ -1384,7 +1384,7 @@ placeholder
 		// 优先检测 thinking block 的 signature 相关错误（400）并重试一次：
 		// Antigravity /v1internal 链路在部分场景会对 thought/thinking signature 做严格校验，
 		// 当历史消息携带的 signature 不合法时会直接 400；去除 thinking 后可继续完成请求。
-		if resp.StatusCode == http.StatusBadRequest && isSignatureRelatedError(respBody) {
+		if resp.StatusCode == http.StatusBadRequest && isSignatureRelatedError(respBody) && s.settingService.IsSignatureRectifierEnabled(ctx) {
 			upstreamMsg := strings.TrimSpace(extractAntigravityErrorMessage(respBody))
 			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)
 			logBody, maxBytes := s.getLogConfig()
@@ -1517,6 +1517,80 @@ placeholder
 		placeholder
 	placeholder
 
+		// Budget 整流：检测 budget_tokens 约束错误并自动修正重试
+		if resp.StatusCode == http.StatusBadRequest && respBody != nil && !isSignatureRelatedError(respBody) {
+			errMsg := strings.TrimSpace(extractAntigravityErrorMessage(respBody))
+			if isThinkingBudgetConstraintError(errMsg) && s.settingService.IsBudgetRectifierEnabled(ctx) {
+				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					Platform:           account.Platform,
+					AccountID:          account.ID,
+					AccountName:        account.Name,
+					UpstreamStatusCode: resp.StatusCode,
+					UpstreamRequestID:  resp.Header.Get("x-request-id"),
+					Kind:               "budget_constraint_error",
+					Message:            errMsg,
+					Detail:             s.getUpstreamErrorDetail(respBody),
+			placeholder)
+
+				// 修正 claudeReq 的 thinking 参数（adaptive 模式不修正）
+				if claudeReq.Thinking == nil || claudeReq.Thinking.Type != "adaptive" {
+					retryClaudeReq := claudeReq
+					retryClaudeReq.Messages = append([]antigravity.ClaudeMessage(nil), claudeReq.Messages...)
+					// 创建新的 ThinkingConfig 避免修改原始 claudeReq.Thinking 指针
+					retryClaudeReq.Thinking = &antigravity.ThinkingConfig{
+						Type:         "enabled",
+						BudgetTokens: BudgetRectifyBudgetTokens,
+				placeholder
+					if retryClaudeReq.MaxTokens < BudgetRectifyMinMaxTokens {
+						retryClaudeReq.MaxTokens = BudgetRectifyMaxTokens
+				placeholder
+
+					logger.LegacyPrintf("service.antigravity_gateway", "Antigravity account %d: detected budget_tokens constraint error, retrying with rectified budget (budget_tokens=%d, max_tokens=%d)", account.ID, BudgetRectifyBudgetTokens, BudgetRectifyMaxTokens)
+
+					retryGeminiBody, txErr := antigravity.TransformClaudeToGeminiWithOptions(&retryClaudeReq, projectID, mappedModel, transformOpts)
+					if txErr == nil {
+						retryResult, retryErr := s.antigravityRetryLoop(antigravityRetryLoopParams{
+							ctx:             ctx,
+							prefix:          prefix,
+							account:         account,
+							proxyURL:        proxyURL,
+							accessToken:     accessToken,
+							action:          action,
+							body:            retryGeminiBody,
+							c:               c,
+							httpUpstream:    s.httpUpstream,
+							settingService:  s.settingService,
+							accountRepo:     s.accountRepo,
+							handleError:     s.handleUpstreamError,
+							requestedModel:  originalModel,
+							isStickySession: isStickySession,
+							groupID:         0,
+							sessionHash:     "",
+					placeholder)
+						if retryErr == nil {
+							retryResp := retryResult.resp
+							if retryResp.StatusCode < 400 {
+								_ = resp.Body.Close()
+								resp = retryResp
+								respBody = nil
+						placeholder else {
+								retryBody, _ := io.ReadAll(io.LimitReader(retryResp.Body, 2<<20))
+								_ = retryResp.Body.Close()
+								respBody = retryBody
+								resp = &http.Response{
+									StatusCode: retryResp.StatusCode,
+									Header:     retryResp.Header.Clone(),
+									Body:       io.NopCloser(bytes.NewReader(retryBody)),
+							placeholder
+						placeholder
+					placeholder else {
+							logger.LegacyPrintf("service.antigravity_gateway", "Antigravity account %d: budget rectifier retry failed: %v", account.ID, retryErr)
+					placeholder
+				placeholder
+			placeholder
+		placeholder
+	placeholder
+
 		// 处理错误响应（重试后仍失败或不触发重试）
 		if resp.StatusCode >= 400 {
 			// 检测 prompt too long 错误，返回特殊错误类型供上层 fallback
@@ -1599,7 +1673,7 @@ placeholder
 	var clientDisconnect bool
 	if claudeReq.Stream {
 		// 客户端要求流式，直接透传转换
-		streamRes, err := s.handleClaudeStreamingResponse(c, resp, startTime, originalModel)
+		streamRes, err := s.handleClaudeStreamingResponse(c, resp, startTime, originalModel, account.ID)
 		if err != nil {
 			logger.LegacyPrintf("service.antigravity_gateway", "%s status=stream_error error=%v", prefix, err)
 			return nil, err
@@ -1609,7 +1683,7 @@ placeholder
 		clientDisconnect = streamRes.clientDisconnect
 placeholder else {
 		// 客户端要求非流式，收集流式响应后转换返回
-		streamRes, err := s.handleClaudeStreamToNonStreaming(c, resp, startTime, originalModel)
+		streamRes, err := s.handleClaudeStreamToNonStreaming(c, resp, startTime, originalModel, account.ID)
 		if err != nil {
 			logger.LegacyPrintf("service.antigravity_gateway", "%s status=stream_collect_error error=%v", prefix, err)
 			return nil, err
@@ -1617,6 +1691,9 @@ placeholder else {
 		usage = streamRes.usage
 		firstTokenMs = streamRes.firstTokenMs
 placeholder
+
+	// Claude Max cache billing: 同步 ForwardResult.Usage 与客户端响应体一致
+	applyClaudeMaxCacheBillingPolicyToUsage(usage, parsedRequestFromGinContext(c), claudeMaxGroupFromGinContext(c), originalModel, account.ID)
 
 	return &ForwardResult{
 		RequestID:        requestID,
@@ -2087,6 +2164,112 @@ placeholder()
 					placeholder
 				placeholder
 			placeholder
+		placeholder
+	placeholder
+
+		// Gemini 原生请求中的 thoughtSignature 可能来自旧上下文/旧账号，触发上游严格校验后返回
+		// "Corrupted thought signature."。检测到此类 400 时，将 thoughtSignature 清理为 dummy 值后重试一次。
+		signatureCheckBody := respBody
+		if unwrapped, unwrapErr := s.unwrapV1InternalResponse(respBody); unwrapErr == nil && len(unwrapped) > 0 {
+			signatureCheckBody = unwrapped
+	placeholder
+		if resp.StatusCode == http.StatusBadRequest &&
+			s.settingService != nil &&
+			s.settingService.IsSignatureRectifierEnabled(ctx) &&
+			isSignatureRelatedError(signatureCheckBody) &&
+			bytes.Contains(injectedBody, []byte(`"thoughtSignature"`)) {
+			upstreamMsg := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractAntigravityErrorMessage(signatureCheckBody)))
+			upstreamDetail := s.getUpstreamErrorDetail(signatureCheckBody)
+			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				Platform:           account.Platform,
+				AccountID:          account.ID,
+				AccountName:        account.Name,
+				UpstreamStatusCode: resp.StatusCode,
+				UpstreamRequestID:  resp.Header.Get("x-request-id"),
+				Kind:               "signature_error",
+				Message:            upstreamMsg,
+				Detail:             upstreamDetail,
+		placeholder)
+
+			logger.LegacyPrintf("service.antigravity_gateway", "Antigravity Gemini account %d: detected signature-related 400, retrying with cleaned thought signatures", account.ID)
+
+			cleanedInjectedBody := CleanGeminiNativeThoughtSignatures(injectedBody)
+			retryWrappedBody, wrapErr := s.wrapV1InternalRequest(projectID, mappedModel, cleanedInjectedBody)
+			if wrapErr == nil {
+				retryResult, retryErr := s.antigravityRetryLoop(antigravityRetryLoopParams{
+					ctx:             ctx,
+					prefix:          prefix,
+					account:         account,
+					proxyURL:        proxyURL,
+					accessToken:     accessToken,
+					action:          upstreamAction,
+					body:            retryWrappedBody,
+					c:               c,
+					httpUpstream:    s.httpUpstream,
+					settingService:  s.settingService,
+					accountRepo:     s.accountRepo,
+					handleError:     s.handleUpstreamError,
+					requestedModel:  originalModel,
+					isStickySession: isStickySession,
+					groupID:         0,
+					sessionHash:     "",
+			placeholder)
+				if retryErr == nil {
+					retryResp := retryResult.resp
+					if retryResp.StatusCode < 400 {
+						resp = retryResp
+				placeholder else {
+						retryRespBody, _ := io.ReadAll(io.LimitReader(retryResp.Body, 2<<20))
+						_ = retryResp.Body.Close()
+						retryOpsBody := retryRespBody
+						if retryUnwrapped, unwrapErr := s.unwrapV1InternalResponse(retryRespBody); unwrapErr == nil && len(retryUnwrapped) > 0 {
+							retryOpsBody = retryUnwrapped
+					placeholder
+						appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+							Platform:           account.Platform,
+							AccountID:          account.ID,
+							AccountName:        account.Name,
+							UpstreamStatusCode: retryResp.StatusCode,
+							UpstreamRequestID:  retryResp.Header.Get("x-request-id"),
+							Kind:               "signature_retry",
+							Message:            sanitizeUpstreamErrorMessage(strings.TrimSpace(extractAntigravityErrorMessage(retryOpsBody))),
+							Detail:             s.getUpstreamErrorDetail(retryOpsBody),
+					placeholder)
+						respBody = retryRespBody
+						resp = &http.Response{
+							StatusCode: retryResp.StatusCode,
+							Header:     retryResp.Header.Clone(),
+							Body:       io.NopCloser(bytes.NewReader(retryRespBody)),
+					placeholder
+						contentType = resp.Header.Get("Content-Type")
+				placeholder
+			placeholder else {
+					if switchErr, ok := IsAntigravityAccountSwitchError(retryErr); ok {
+						appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+							Platform:           account.Platform,
+							AccountID:          account.ID,
+							AccountName:        account.Name,
+							UpstreamStatusCode: http.StatusServiceUnavailable,
+							Kind:               "failover",
+							Message:            sanitizeUpstreamErrorMessage(retryErr.Error()),
+					placeholder)
+						return nil, &UpstreamFailoverError{
+							StatusCode:        http.StatusServiceUnavailable,
+							ForceCacheBilling: switchErr.IsStickySession,
+					placeholder
+				placeholder
+					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+						Platform:           account.Platform,
+						AccountID:          account.ID,
+						AccountName:        account.Name,
+						UpstreamStatusCode: 0,
+						Kind:               "signature_retry_request_error",
+						Message:            sanitizeUpstreamErrorMessage(retryErr.Error()),
+				placeholder)
+					logger.LegacyPrintf("service.antigravity_gateway", "Antigravity Gemini account %d: signature retry request failed: %v", account.ID, retryErr)
+			placeholder
+		placeholder else {
+				logger.LegacyPrintf("service.antigravity_gateway", "Antigravity Gemini account %d: signature retry wrap failed: %v", account.ID, wrapErr)
 		placeholder
 	placeholder
 
@@ -3415,7 +3598,7 @@ placeholder
 
 // handleClaudeStreamToNonStreaming 收集上游流式响应，转换为 Claude 非流式格式返回
 // 用于处理客户端非流式请求但上游只支持流式的情况
-func (s *AntigravityGatewayService) handleClaudeStreamToNonStreaming(c *gin.Context, resp *http.Response, startTime time.Time, originalModel string) (*antigravityStreamResult, error) {
+func (s *AntigravityGatewayService) handleClaudeStreamToNonStreaming(c *gin.Context, resp *http.Response, startTime time.Time, originalModel string, accountID int64) (*antigravityStreamResult, error) {
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
 	if s.settingService.cfg != nil && s.settingService.cfg.Gateway.MaxLineSize > 0 {
@@ -3573,6 +3756,9 @@ placeholder
 		return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to parse upstream response")
 placeholder
 
+	// Claude Max cache billing simulation (non-streaming)
+	claudeResp = applyClaudeMaxNonStreamingRewrite(c, claudeResp, agUsage, originalModel, accountID)
+
 	c.Data(http.StatusOK, "application/json", claudeResp)
 
 	// 转换为 service.ClaudeUsage
@@ -3587,7 +3773,7 @@ placeholder
 placeholder
 
 // handleClaudeStreamingResponse 处理 Claude 流式响应（Gemini SSE → Claude SSE 转换）
-func (s *AntigravityGatewayService) handleClaudeStreamingResponse(c *gin.Context, resp *http.Response, startTime time.Time, originalModel string) (*antigravityStreamResult, error) {
+func (s *AntigravityGatewayService) handleClaudeStreamingResponse(c *gin.Context, resp *http.Response, startTime time.Time, originalModel string, accountID int64) (*antigravityStreamResult, error) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
@@ -3600,6 +3786,8 @@ func (s *AntigravityGatewayService) handleClaudeStreamingResponse(c *gin.Context
 placeholder
 
 	processor := antigravity.NewStreamingProcessor(originalModel)
+	setupClaudeMaxStreamingHook(c, processor, originalModel, accountID)
+
 	var firstTokenMs *int
 	// 使用 Scanner 并限制单行大小，避免 ReadString 无上限导致 OOM
 	scanner := bufio.NewScanner(resp.Body)
@@ -3696,6 +3884,15 @@ placeholder
 				finalEvents, agUsage := processor.Finish()
 				if len(finalEvents) > 0 {
 					cw.Write(finalEvents)
+			placeholder else if !processor.MessageStartSent() && !cw.Disconnected() {
+					// 整个流未收到任何可解析的上游数据（全部 SSE 行均无法被 JSON 解析），
+					// 触发 failover 在同账号重试，避免向客户端发出缺少 message_start 的残缺流
+					logger.LegacyPrintf("service.antigravity_gateway", "[antigravity-Claude-Stream] empty stream response (no valid events parsed), triggering failover")
+					return nil, &UpstreamFailoverError{
+						StatusCode:             http.StatusBadGateway,
+						ResponseBody:           []byte(`{"error":"empty stream response from upstream"placeholder`),
+						RetryableOnSameAccount: true,
+				placeholder
 			placeholder
 				return &antigravityStreamResult{usage: convertUsage(agUsage), firstTokenMs: firstTokenMs, clientDisconnect: cw.Disconnected()placeholder, nil
 		placeholder

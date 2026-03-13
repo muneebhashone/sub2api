@@ -43,6 +43,16 @@ placeholder
 	return nil
 placeholder
 
+func (s *accountRepoStubForBulkUpdate) ListByGroup(_ context.Context, groupID int64) ([]Account, error) {
+	if err, ok := s.listByGroupErr[groupID]; ok {
+		return nil, err
+placeholder
+	if rows, ok := s.listByGroupData[groupID]; ok {
+		return rows, nil
+placeholder
+	return nil, nil
+placeholder
+
 func (s *accountRepoStubForBulkUpdate) GetByIDs(_ context.Context, ids []int64) ([]*Account, error) {
 	s.getByIDsCalled = true
 	s.getByIDsIDs = append([]int64{placeholder, ids...)
@@ -61,16 +71,6 @@ placeholder
 		return account, nil
 placeholder
 	return nil, errors.New("account not found")
-placeholder
-
-func (s *accountRepoStubForBulkUpdate) ListByGroup(_ context.Context, groupID int64) ([]Account, error) {
-	if err, ok := s.listByGroupErr[groupID]; ok {
-		return nil, err
-placeholder
-	if rows, ok := s.listByGroupData[groupID]; ok {
-		return rows, nil
-placeholder
-	return nil, nil
 placeholder
 
 // TestAdminService_BulkUpdateAccounts_AllSuccessIDs 验证批量更新成功时返回 success_ids/failed_ids。

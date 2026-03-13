@@ -36,6 +36,7 @@ export async function list(
     status?: string
     group?: string
     search?: string
+    lite?: string
   placeholder,
   options?: {
     signal?: AbortSignal
@@ -66,6 +67,7 @@ export async function listWithEtag(
     type?: string
     status?: string
     search?: string
+    lite?: string
   placeholder,
   options?: {
     signal?: AbortSignal
@@ -234,6 +236,28 @@ placeholder
 export async function clearRateLimit(id: number): Promise<Account> {
   const { data placeholder = await apiClient.post<Account>(
     `/admin/accounts/${idplaceholder/clear-rate-limit`
+  )
+  return data
+placeholder
+
+/**
+ * Recover account runtime state in one call
+ * @param id - Account ID
+ * @returns Updated account
+ */
+export async function recoverState(id: number): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/recover-state`)
+  return data
+placeholder
+
+/**
+ * Reset account quota usage
+ * @param id - Account ID
+ * @returns Updated account
+ */
+export async function resetAccountQuota(id: number): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(
+    `/admin/accounts/${idplaceholder/reset-quota`
   )
   return data
 placeholder
@@ -557,6 +581,43 @@ export async function validateSoraSessionToken(
   return data
 placeholder
 
+/**
+ * Batch operation result type
+ */
+export interface BatchOperationResult {
+  total: number
+  success: number
+  failed: number
+  errors?: Array<{ account_id: number; error: string placeholder>
+  warnings?: Array<{ account_id: number; warning: string placeholder>
+placeholder
+
+/**
+ * Batch clear account errors
+ * @param accountIds - Array of account IDs
+ * @returns Batch operation result
+ */
+export async function batchClearError(accountIds: number[]): Promise<BatchOperationResult> {
+  const { data placeholder = await apiClient.post<BatchOperationResult>('/admin/accounts/batch-clear-error', {
+    account_ids: accountIds
+  placeholder)
+  return data
+placeholder
+
+/**
+ * Batch refresh account credentials
+ * @param accountIds - Array of account IDs
+ * @returns Batch operation result
+ */
+export async function batchRefresh(accountIds: number[]): Promise<BatchOperationResult> {
+  const { data placeholder = await apiClient.post<BatchOperationResult>('/admin/accounts/batch-refresh', {
+    account_ids: accountIds,
+  placeholder, {
+    timeout: 120000  // 120s timeout for large batch refreshes
+  placeholder)
+  return data
+placeholder
+
 export const accountsAPI = {
   list,
   listWithEtag,
@@ -574,6 +635,8 @@ export const accountsAPI = {
   getTodayStats,
   getBatchTodayStats,
   clearRateLimit,
+  recoverState,
+  resetAccountQuota,
   getTempUnschedulableStatus,
   resetTempUnschedulable,
   setSchedulable,
@@ -589,7 +652,9 @@ export const accountsAPI = {
   syncFromCrs,
   exportData,
   importData,
-  getAntigravityDefaultModelMapping
+  getAntigravityDefaultModelMapping,
+  batchClearError,
+  batchRefresh
 placeholder
 
 export default accountsAPI

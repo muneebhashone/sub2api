@@ -131,7 +131,8 @@
         </div>
       </template>
       <template #table>
-        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @edit="showBulkEdit = true" @clear="selIds = []" @select-page="selectPage" @toggle-schedulable="handleBulkToggleSchedulable" />
+        <AccountBulkActionsBar :selected-ids="selIds" @delete="handleBulkDelete" @reset-status="handleBulkResetStatus" @refresh-token="handleBulkRefreshToken" @edit="showBulkEdit = true" @clear="clearSelection" @select-page="selectPage" @toggle-schedulable="handleBulkToggleSchedulable" />
+        <div ref="accountTableRef" class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <DataTable
           :columns="cols"
           :data="accounts"
@@ -170,7 +171,7 @@
             <span v-else class="text-sm text-gray-400 dark:text-dark-500">-</span>
           </template>
           <template #cell-platform_type="{ row placeholder">
-            <PlatformTypeBadge :platform="row.platform" :type="row.type" />
+            <PlatformTypeBadge :platform="row.platform" :type="row.type" :plan-type="row.credentials?.plan_type" />
           </template>
           <template #cell-capacity="{ row placeholder">
             <AccountCapacityCell :account="row" />
@@ -252,6 +253,7 @@
             </div>
           </template>
         </DataTable>
+        </div>
       </template>
       <template #pagination><Pagination v-if="pagination.total > 0" :page="pagination.page" :total="pagination.total" :page-size="pagination.page_size" @update:page="handlePageChange" @update:pageSize="handlePageSizeChange" /></template>
     </TablePageLayout>
@@ -260,7 +262,8 @@
     <ReAuthAccountModal :show="showReAuth" :account="reAuthAcc" @close="closeReAuthModal" @reauthorized="handleAccountUpdated" />
     <AccountTestModal :show="showTest" :account="testingAcc" @close="closeTestModal" />
     <AccountStatsModal :show="showStats" :account="statsAcc" @close="closeStatsModal" />
-    <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleViewStats" @reauth="handleReAuth" @refresh-token="handleRefresh" @reset-status="handleResetStatus" @clear-rate-limit="handleClearRateLimit" />
+    <ScheduledTestsPanel :show="showSchedulePanel" :account-id="scheduleAcc?.id ?? null" :model-options="scheduleModelOptions" @close="closeSchedulePanel" />
+    <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleViewStats" @schedule="handleSchedule" @reauth="handleReAuth" @refresh-token="handleRefresh" @recover-state="handleRecoverState" @reset-status="handleResetStatus" @clear-rate-limit="handleClearRateLimit" @reset-quota="handleResetQuota" />
     <SyncFromCrsModal :show="showSync" @close="showSync = false" @synced="reload" />
     <ImportDataModal :show="showImportData" @close="showImportData = false" @imported="handleDataImported" />
     <BulkEditAccountModal :show="showBulkEdit" :account-ids="selIds" :selected-platforms="selPlatforms" :selected-types="selTypes" :proxies="proxies" :groups="groups" @close="showBulkEdit = false" @updated="handleBulkUpdated" />
@@ -284,6 +287,8 @@ import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
 import { adminAPI placeholder from '@/api/admin'
 import { useTableLoader placeholder from '@/composables/useTableLoader'
+import { useSwipeSelect placeholder from '@/composables/useSwipeSelect'
+import { useTableSelection placeholder from '@/composables/useTableSelection'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -298,6 +303,8 @@ import ImportDataModal from '@/components/admin/account/ImportDataModal.vue'
 import ReAuthAccountModal from '@/components/admin/account/ReAuthAccountModal.vue'
 import AccountTestModal from '@/components/admin/account/AccountTestModal.vue'
 import AccountStatsModal from '@/components/admin/account/AccountStatsModal.vue'
+import ScheduledTestsPanel from '@/components/admin/account/ScheduledTestsPanel.vue'
+import type { SelectOption placeholder from '@/components/common/Select.vue'
 import AccountStatusIndicator from '@/components/account/AccountStatusIndicator.vue'
 import AccountUsageCell from '@/components/account/AccountUsageCell.vue'
 import AccountTodayStatsCell from '@/components/account/AccountTodayStatsCell.vue'
@@ -306,8 +313,9 @@ import AccountCapacityCell from '@/components/account/AccountCapacityCell.vue'
 import PlatformTypeBadge from '@/components/common/PlatformTypeBadge.vue'
 import Icon from '@/components/icons/Icon.vue'
 import ErrorPassthroughRulesModal from '@/components/admin/ErrorPassthroughRulesModal.vue'
+import { buildOpenAIUsageRefreshKey placeholder from '@/utils/accountUsageRefresh'
 import { formatDateTime, formatRelativeTime placeholder from '@/utils/format'
-import type { Account, AccountPlatform, AccountType, Proxy, AdminGroup, WindowStats placeholder from '@/types'
+import type { Account, AccountPlatform, AccountType, Proxy, AdminGroup, WindowStats, ClaudeModel placeholder from '@/types'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -315,11 +323,11 @@ const authStore = useAuthStore()
 
 const proxies = ref<Proxy[]>([])
 const groups = ref<AdminGroup[]>([])
-const selIds = ref<number[]>([])
+const accountTableRef = ref<HTMLElement | null>(null)
 const selPlatforms = computed<AccountPlatform[]>(() => {
   const platforms = new Set(
     accounts.value
-      .filter(a => selIds.value.includes(a.id))
+      .filter(a => isSelected(a.id))
       .map(a => a.platform)
   )
   return [...platforms]
@@ -327,7 +335,7 @@ placeholder)
 const selTypes = computed<AccountType[]>(() => {
   const types = new Set(
     accounts.value
-      .filter(a => selIds.value.includes(a.id))
+      .filter(a => isSelected(a.id))
       .map(a => a.type)
   )
   return [...types]
@@ -351,6 +359,9 @@ const deletingAcc = ref<Account | null>(null)
 const reAuthAcc = ref<Account | null>(null)
 const testingAcc = ref<Account | null>(null)
 const statsAcc = ref<Account | null>(null)
+const showSchedulePanel = ref(false)
+const scheduleAcc = ref<Account | null>(null)
+const scheduleModelOptions = ref<SelectOption[]>([])
 const togglingSchedulable = ref<number | null>(null)
 const menu = reactive<{show:boolean, acc:Account|null, pos:{top:number, left:numberplaceholder|nullplaceholder>({ show: false, acc: null, pos: null placeholder)
 const exportingData = ref(false)
@@ -359,7 +370,7 @@ const exportingData = ref(false)
 const showColumnDropdown = ref(false)
 const columnDropdownRef = ref<HTMLElement | null>(null)
 const hiddenColumns = reactive<Set<string>>(new Set())
-const DEFAULT_HIDDEN_COLUMNS = ['proxy', 'notes', 'priority', 'rate_multiplier']
+const DEFAULT_HIDDEN_COLUMNS = ['today_stats', 'proxy', 'notes', 'priority', 'rate_multiplier']
 const HIDDEN_COLUMNS_KEY = 'account-hidden-columns'
 
 // Sorting settings
@@ -549,15 +560,48 @@ placeholder = useTableLoader<Account, any>({
   initialParams: { platform: '', type: '', status: '', group: '', search: '' placeholder
 placeholder)
 
+const {
+  selectedIds: selIds,
+  allVisibleSelected,
+  isSelected,
+  setSelectedIds,
+  select,
+  deselect,
+  toggle: toggleSel,
+  clear: clearSelection,
+  removeMany: removeSelectedAccounts,
+  toggleVisible,
+  selectVisible: selectPage
+placeholder = useTableSelection<Account>({
+  rows: accounts,
+  getId: (account) => account.id
+placeholder)
+
+useSwipeSelect(accountTableRef, {
+  isSelected,
+  select,
+  deselect
+placeholder)
+
 const resetAutoRefreshCache = () => {
   autoRefreshETag.value = null
 placeholder
 
+const isFirstLoad = ref(true)
+
 const load = async () => {
+  const requestParams = params as any
   hasPendingListSync.value = false
   resetAutoRefreshCache()
   pendingTodayStatsRefresh.value = false
+  if (isFirstLoad.value) {
+    requestParams.lite = '1'
+  placeholder
   await baseLoad()
+  if (isFirstLoad.value) {
+    isFirstLoad.value = false
+    delete requestParams.lite
+  placeholder
   await refreshTodayStatsBatch()
 placeholder
 
@@ -612,6 +656,7 @@ const isAnyModalOpen = computed(() => {
     showReAuth.value ||
     showTest.value ||
     showStats.value ||
+    showSchedulePanel.value ||
     showErrorPassthrough.value
   )
 placeholder)
@@ -635,7 +680,8 @@ const shouldReplaceAutoRefreshRow = (current: Account, next: Account) => {
     current.status !== next.status ||
     current.rate_limit_reset_at !== next.rate_limit_reset_at ||
     current.overload_until !== next.overload_until ||
-    current.temp_unschedulable_until !== next.temp_unschedulable_until
+    current.temp_unschedulable_until !== next.temp_unschedulable_until ||
+    buildOpenAIUsageRefreshKey(current) !== buildOpenAIUsageRefreshKey(next)
   )
 placeholder
 
@@ -689,6 +735,7 @@ const refreshAccountsIncrementally = async () => {
         type?: string
         status?: string
         search?: string
+
       placeholder,
       { etag: autoRefreshETag.value placeholder
     )
@@ -837,24 +884,43 @@ const openMenu = (a: Account, e: MouseEvent) => {
 
   menu.show = true
 placeholder
-const toggleSel = (id: number) => { const i = selIds.value.indexOf(id); if(i === -1) selIds.value.push(id); else selIds.value.splice(i, 1) placeholder
-const allVisibleSelected = computed(() => {
-  if (accounts.value.length === 0) return false
-  return accounts.value.every(account => selIds.value.includes(account.id))
-placeholder)
 const toggleSelectAllVisible = (event: Event) => {
   const target = event.target as HTMLInputElement
-  if (target.checked) {
-    const next = new Set(selIds.value)
-    accounts.value.forEach(account => next.add(account.id))
-    selIds.value = Array.from(next)
-    return
-  placeholder
-  const visibleIds = new Set(accounts.value.map(account => account.id))
-  selIds.value = selIds.value.filter(id => !visibleIds.has(id))
+  toggleVisible(target.checked)
 placeholder
-const selectPage = () => { selIds.value = [...new Set([...selIds.value, ...accounts.value.map(a => a.id)])] placeholder
-const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); selIds.value = []; reload() placeholder catch (error) { console.error('Failed to bulk delete accounts:', error) placeholder placeholder
+const handleBulkDelete = async () => { if(!confirm(t('common.confirm'))) return; try { await Promise.all(selIds.value.map(id => adminAPI.accounts.delete(id))); clearSelection(); reload() placeholder catch (error) { console.error('Failed to bulk delete accounts:', error) placeholder placeholder
+const handleBulkResetStatus = async () => {
+  if (!confirm(t('common.confirm'))) return
+  try {
+    const result = await adminAPI.accounts.batchClearError(selIds.value)
+    if (result.failed > 0) {
+      appStore.showError(t('admin.accounts.bulkActions.partialSuccess', { success: result.success, failed: result.failed placeholder))
+    placeholder else {
+      appStore.showSuccess(t('admin.accounts.bulkActions.resetStatusSuccess', { count: result.success placeholder))
+      clearSelection()
+    placeholder
+    reload()
+  placeholder catch (error) {
+    console.error('Failed to bulk reset status:', error)
+    appStore.showError(String(error))
+  placeholder
+placeholder
+const handleBulkRefreshToken = async () => {
+  if (!confirm(t('common.confirm'))) return
+  try {
+    const result = await adminAPI.accounts.batchRefresh(selIds.value)
+    if (result.failed > 0) {
+      appStore.showError(t('admin.accounts.bulkActions.partialSuccess', { success: result.success, failed: result.failed placeholder))
+    placeholder else {
+      appStore.showSuccess(t('admin.accounts.bulkActions.refreshTokenSuccess', { count: result.success placeholder))
+      clearSelection()
+    placeholder
+    reload()
+  placeholder catch (error) {
+    console.error('Failed to bulk refresh token:', error)
+    appStore.showError(String(error))
+  placeholder
+placeholder
 const updateSchedulableInList = (accountIds: number[], schedulable: boolean) => {
   if (accountIds.length === 0) return
   const idSet = new Set(accountIds)
@@ -927,7 +993,7 @@ const handleBulkToggleSchedulable = async (schedulable: boolean) => {
     const { successIds, failedIds, successCount, failedCount, hasIds, hasCounts placeholder = normalizeBulkSchedulableResult(result, accountIds)
     if (!hasIds && !hasCounts) {
       appStore.showError(t('admin.accounts.bulkSchedulableResultUnknown'))
-      selIds.value = accountIds
+      setSelectedIds(accountIds)
       load().catch((error) => {
         console.error('Failed to refresh accounts:', error)
       placeholder)
@@ -947,16 +1013,17 @@ const handleBulkToggleSchedulable = async (schedulable: boolean) => {
         ? t('admin.accounts.bulkSchedulablePartial', { success: successCount, failed: failedCount placeholder)
         : t('admin.accounts.bulkSchedulableResultUnknown')
       appStore.showError(message)
-      selIds.value = failedIds.length > 0 ? failedIds : accountIds
+      setSelectedIds(failedIds.length > 0 ? failedIds : accountIds)
     placeholder else {
-      selIds.value = hasIds ? [] : accountIds
+      if (hasIds) clearSelection()
+      else setSelectedIds(accountIds)
     placeholder
   placeholder catch (error) {
     console.error('Failed to bulk toggle schedulable:', error)
     appStore.showError(t('common.error'))
   placeholder
 placeholder
-const handleBulkUpdated = () => { showBulkEdit.value = false; selIds.value = []; reload() placeholder
+const handleBulkUpdated = () => { showBulkEdit.value = false; clearSelection(); reload() placeholder
 const handleDataImported = () => { showImportData.value = false; reload() placeholder
 const accountMatchesCurrentFilters = (account: Account) => {
   if (params.platform && account.platform !== params.platform) return false
@@ -1002,7 +1069,7 @@ const patchAccountInList = (updatedAccount: Account) => {
   if (!accountMatchesCurrentFilters(mergedAccount)) {
     accounts.value = accounts.value.filter(account => account.id !== mergedAccount.id)
     syncPaginationAfterLocalRemoval()
-    selIds.value = selIds.value.filter(id => id !== mergedAccount.id)
+    removeSelectedAccounts([mergedAccount.id])
     if (menu.acc?.id === mergedAccount.id) {
       menu.show = false
       menu.acc = null
@@ -1066,6 +1133,18 @@ const closeStatsModal = () => { showStats.value = false; statsAcc.value = null p
 const closeReAuthModal = () => { showReAuth.value = false; reAuthAcc.value = null placeholder
 const handleTest = (a: Account) => { testingAcc.value = a; showTest.value = true placeholder
 const handleViewStats = (a: Account) => { statsAcc.value = a; showStats.value = true placeholder
+const handleSchedule = async (a: Account) => {
+  scheduleAcc.value = a
+  scheduleModelOptions.value = []
+  showSchedulePanel.value = true
+  try {
+    const models = await adminAPI.accounts.getAvailableModels(a.id)
+    scheduleModelOptions.value = models.map((m: ClaudeModel) => ({ value: m.id, label: m.display_name || m.id placeholder))
+  placeholder catch {
+    scheduleModelOptions.value = []
+  placeholder
+placeholder
+const closeSchedulePanel = () => { showSchedulePanel.value = false; scheduleAcc.value = null; scheduleModelOptions.value = [] placeholder
 const handleReAuth = (a: Account) => { reAuthAcc.value = a; showReAuth.value = true placeholder
 const handleRefresh = async (a: Account) => {
   try {
@@ -1076,24 +1155,35 @@ const handleRefresh = async (a: Account) => {
     console.error('Failed to refresh credentials:', error)
   placeholder
 placeholder
-const handleResetStatus = async (a: Account) => {
+const handleRecoverState = async (a: Account) => {
   try {
-    const updated = await adminAPI.accounts.clearError(a.id)
+    const updated = await adminAPI.accounts.recoverState(a.id)
     patchAccountInList(updated)
     enterAutoRefreshSilentWindow()
-    appStore.showSuccess(t('common.success'))
-  placeholder catch (error) {
-    console.error('Failed to reset status:', error)
+    appStore.showSuccess(t('admin.accounts.recoverStateSuccess'))
+  placeholder catch (error: any) {
+    console.error('Failed to recover account state:', error)
+    appStore.showError(error?.message || t('admin.accounts.recoverStateFailed'))
   placeholder
 placeholder
-const handleClearRateLimit = async (a: Account) => {
+const handleResetQuota = async (a: Account) => {
   try {
-    const updated = await adminAPI.accounts.clearRateLimit(a.id)
+    const updated = await adminAPI.accounts.resetAccountQuota(a.id)
     patchAccountInList(updated)
     enterAutoRefreshSilentWindow()
     appStore.showSuccess(t('common.success'))
   placeholder catch (error) {
-    console.error('Failed to clear rate limit:', error)
+    console.error('Failed to reset quota:', error)
+  placeholder
+placeholder
+const handleResetQuota = async (a: Account) => {
+  try {
+    const updated = await adminAPI.accounts.resetAccountQuota(a.id)
+    patchAccountInList(updated)
+    enterAutoRefreshSilentWindow()
+    appStore.showSuccess(t('common.success'))
+  placeholder catch (error) {
+    console.error('Failed to reset quota:', error)
   placeholder
 placeholder
 const handleDelete = (a: Account) => { deletingAcc.value = a; showDeleteDialog.value = true placeholder
@@ -1113,17 +1203,11 @@ const handleToggleSchedulable = async (a: Account) => {
   placeholder
 placeholder
 const handleShowTempUnsched = (a: Account) => { tempUnschedAcc.value = a; showTempUnsched.value = true placeholder
-const handleTempUnschedReset = async () => {
-  if(!tempUnschedAcc.value) return
-  try {
-    const updated = await adminAPI.accounts.clearError(tempUnschedAcc.value.id)
-    showTempUnsched.value = false
-    tempUnschedAcc.value = null
-    patchAccountInList(updated)
-    enterAutoRefreshSilentWindow()
-  placeholder catch (error) {
-    console.error('Failed to reset temp unscheduled:', error)
-  placeholder
+const handleTempUnschedReset = async (updated: Account) => {
+  showTempUnsched.value = false
+  tempUnschedAcc.value = null
+  patchAccountInList(updated)
+  enterAutoRefreshSilentWindow()
 placeholder
 const formatExpiresAt = (value: number | null) => {
   if (!value) return '-'
