@@ -135,8 +135,8 @@ const formatLD = (d: Date) => {
   const day = String(d.getDate()).padStart(2, '0')
   return `${yearplaceholder-${monthplaceholder-${dayplaceholder`
 placeholder
-const now = new Date(); const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 6)
-const startDate = ref(formatLD(weekAgo)); const endDate = ref(formatLD(now))
+const getTodayLocalDate = () => formatLD(new Date())
+const startDate = ref(getTodayLocalDate()); const endDate = ref(getTodayLocalDate())
 const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, billing_type: null, start_date: startDate.value, end_date: endDate.value placeholder)
 const pagination = reactive({ page: 1, page_size: 20, total: 0 placeholder)
 
@@ -191,7 +191,7 @@ const loadChartData = async () => {
 placeholder
 const applyFilters = () => { pagination.page = 1; loadLogs(); loadStats(); loadChartData() placeholder
 const refreshData = () => { loadLogs(); loadStats(); loadChartData() placeholder
-const resetFilters = () => { startDate.value = formatLD(weekAgo); endDate.value = formatLD(now); filters.value = { start_date: startDate.value, end_date: endDate.value, request_type: undefined, billing_type: null placeholder; granularity.value = 'day'; applyFilters() placeholder
+const resetFilters = () => { startDate.value = getTodayLocalDate(); endDate.value = getTodayLocalDate(); filters.value = { start_date: startDate.value, end_date: endDate.value, request_type: undefined, billing_type: null placeholder; granularity.value = 'day'; applyFilters() placeholder
 const handlePageChange = (p: number) => { pagination.page = p; loadLogs() placeholder
 const handlePageSizeChange = (s: number) => { pagination.page_size = s; pagination.page = 1; loadLogs() placeholder
 const cancelExport = () => exportAbortController?.abort()
