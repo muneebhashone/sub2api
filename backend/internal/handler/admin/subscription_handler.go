@@ -218,11 +218,12 @@ placeholder
 
 // ResetSubscriptionQuotaRequest represents the reset quota request
 type ResetSubscriptionQuotaRequest struct {
-	Daily  bool `json:"daily"`
-	Weekly bool `json:"weekly"`
+	Daily   bool `json:"daily"`
+	Weekly  bool `json:"weekly"`
+	Monthly bool `json:"monthly"`
 placeholder
 
-// ResetQuota resets daily and/or weekly usage for a subscription.
+// ResetQuota resets daily, weekly, and/or monthly usage for a subscription.
 // POST /api/v1/admin/subscriptions/:id/reset-quota
 func (h *SubscriptionHandler) ResetQuota(c *gin.Context) {
 	subscriptionID, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -235,11 +236,11 @@ placeholder
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 placeholder
-	if !req.Daily && !req.Weekly {
-		response.BadRequest(c, "At least one of 'daily' or 'weekly' must be true")
+	if !req.Daily && !req.Weekly && !req.Monthly {
+		response.BadRequest(c, "At least one of 'daily', 'weekly', or 'monthly' must be true")
 		return
 placeholder
-	sub, err := h.subscriptionService.AdminResetQuota(c.Request.Context(), subscriptionID, req.Daily, req.Weekly)
+	sub, err := h.subscriptionService.AdminResetQuota(c.Request.Context(), subscriptionID, req.Daily, req.Weekly, req.Monthly)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
