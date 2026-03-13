@@ -833,7 +833,8 @@ placeholder
 
 func isReservedEmail(email string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(email))
-	return strings.HasSuffix(normalized, LinuxDoConnectSyntheticEmailDomain)
+	return strings.HasSuffix(normalized, LinuxDoConnectSyntheticEmailDomain) ||
+		strings.HasSuffix(normalized, OIDCConnectSyntheticEmailDomain)
 placeholder
 
 // GenerateToken 生成JWT access token

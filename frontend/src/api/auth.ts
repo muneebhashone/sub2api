@@ -357,6 +357,28 @@ export async function completeLinuxDoOAuthRegistration(
   return data
 placeholder
 
+/**
+ * Complete OIDC OAuth registration by supplying an invitation code
+ * @param pendingOAuthToken - Short-lived JWT from the OAuth callback
+ * @param invitationCode - Invitation code entered by the user
+ * @returns Token pair on success
+ */
+export async function completeOIDCOAuthRegistration(
+  pendingOAuthToken: string,
+  invitationCode: string
+): Promise<{ access_token: string; refresh_token: string; expires_in: number; token_type: string placeholder> {
+  const { data placeholder = await apiClient.post<{
+    access_token: string
+    refresh_token: string
+    expires_in: number
+    token_type: string
+  placeholder>('/auth/oauth/oidc/complete-registration', {
+    pending_oauth_token: pendingOAuthToken,
+    invitation_code: invitationCode
+  placeholder)
+  return data
+placeholder
+
 export const authAPI = {
   login,
   login2FA,
@@ -380,7 +402,8 @@ export const authAPI = {
   resetPassword,
   refreshToken,
   revokeAllSessions,
-  completeLinuxDoOAuthRegistration
+  completeLinuxDoOAuthRegistration,
+  completeOIDCOAuthRegistration
 placeholder
 
 export default authAPI
