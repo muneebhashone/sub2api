@@ -21,6 +21,10 @@ type TokenRefreshService struct {
 	schedulerCache   SchedulerCache   // 用于同步更新调度器缓存，解决 token 刷新后缓存不一致问题
 	tempUnschedCache TempUnschedCache // 用于清除 Redis 中的临时不可调度缓存
 
+	// OpenAI privacy: 刷新成功后检查并设置 training opt-out
+	privacyClientFactory PrivacyClientFactory
+	proxyRepo            ProxyRepository
+
 	stopCh chan struct{placeholder
 	wg     sync.WaitGroup
 placeholder
@@ -70,6 +74,12 @@ func (s *TokenRefreshService) SetSoraAccountRepo(repo SoraAccountRepository) {
 			openaiRefresher.SetSoraAccountRepo(repo)
 	placeholder
 placeholder
+placeholder
+
+// SetPrivacyDeps 注入 OpenAI privacy opt-out 所需依赖
+func (s *TokenRefreshService) SetPrivacyDeps(factory PrivacyClientFactory, proxyRepo ProxyRepository) {
+	s.privacyClientFactory = factory
+	s.proxyRepo = proxyRepo
 placeholder
 
 // Start 启动后台刷新服务
@@ -277,6 +287,8 @@ func (s *TokenRefreshService) refreshWithRetry(ctx context.Context, account *Acc
 					slog.Debug("token_refresh.scheduler_cache_synced", "account_id", account.ID)
 			placeholder
 		placeholder
+			// OpenAI OAuth: 刷新成功后，检查是否已设置 privacy_mode，未设置则尝试关闭训练数据共享
+			s.ensureOpenAIPrivacy(ctx, account)
 			return nil
 	placeholder
 
@@ -340,4 +352,50 @@ placeholder
 	placeholder
 placeholder
 	return false
+placeholder
+
+// ensureOpenAIPrivacy 检查 OpenAI OAuth 账号是否已设置 privacy_mode，
+// 未设置则调用 disableOpenAITraining 并持久化结果到 Extra。
+func (s *TokenRefreshService) ensureOpenAIPrivacy(ctx context.Context, account *Account) {
+	if account.Platform != PlatformOpenAI || account.Type != AccountTypeOAuth {
+		return
+placeholder
+	if s.privacyClientFactory == nil {
+		return
+placeholder
+	// 已设置过则跳过
+	if account.Extra != nil {
+		if _, ok := account.Extra["privacy_mode"]; ok {
+			return
+	placeholder
+placeholder
+
+	token, _ := account.Credentials["access_token"].(string)
+	if token == "" {
+		return
+placeholder
+
+	var proxyURL string
+	if account.ProxyID != nil && s.proxyRepo != nil {
+		if p, err := s.proxyRepo.GetByID(ctx, *account.ProxyID); err == nil && p != nil {
+			proxyURL = p.URL()
+	placeholder
+placeholder
+
+	mode := disableOpenAITraining(ctx, s.privacyClientFactory, token, proxyURL)
+	if mode == "" {
+		return
+placeholder
+
+	if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{"privacy_mode": modeplaceholder); err != nil {
+		slog.Warn("token_refresh.update_privacy_mode_failed",
+			"account_id", account.ID,
+			"error", err,
+		)
+placeholder else {
+		slog.Info("token_refresh.privacy_mode_set",
+			"account_id", account.ID,
+			"privacy_mode", mode,
+		)
+placeholder
 placeholder
