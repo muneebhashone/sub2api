@@ -51,10 +51,7 @@ placeholder
 placeholder
 
 	// 3. Model mapping
-	mappedModel := account.GetMappedModel(originalModel)
-	if mappedModel == originalModel && defaultMappedModel != "" {
-		mappedModel = defaultMappedModel
-placeholder
+	mappedModel := resolveOpenAIForwardModel(account, originalModel, defaultMappedModel)
 	responsesReq.Model = mappedModel
 
 	logger.L().Debug("openai chat_completions: model mapping applied",
