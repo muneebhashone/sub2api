@@ -335,7 +335,7 @@ placeholder
 	placeholder,
 placeholder
 
-	body := []byte(`{"model":"gpt-5.1","stream":true,"previous_response_id":"resp_http_retry_wrapped","input":[{"type":"reasoning","encrypted_content":"gAAA","summary":[{"type":"summary_text","text":"keep me too"placeholder]placeholder,{"type":"input_text","text":"hello"placeholder]placeholder`)
+	body := []byte(`{"model":"gpt-5.1","stream":false,"previous_response_id":"resp_http_retry_wrapped","input":[{"type":"reasoning","encrypted_content":"gAAA","summary":[{"type":"summary_text","text":"keep me too"placeholder]placeholder,{"type":"input_text","text":"hello"placeholder]placeholder`)
 	result, err := svc.Forward(context.Background(), c, account, body)
 placeholder
 	require.NotNil(t, result)
@@ -598,6 +598,7 @@ placeholder
 func TestNewOpenAIGatewayService_InitializesOpenAIWSResolver(t *testing.T) {
 	cfg := &config.Config{placeholder
 	svc := NewOpenAIGatewayService(
+		nil,
 		nil,
 		nil,
 		nil,

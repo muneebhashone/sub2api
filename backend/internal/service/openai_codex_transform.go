@@ -129,6 +129,41 @@ placeholder {
 	placeholder
 placeholder
 
+	// 兼容遗留的 functions 和 function_call，转换为 tools 和 tool_choice
+	if functionsRaw, ok := reqBody["functions"]; ok {
+		if functions, k := functionsRaw.([]any); k {
+			tools := make([]any, 0, len(functions))
+			for _, f := range functions {
+				tools = append(tools, map[string]any{
+					"type":     "function",
+					"function": f,
+			placeholder)
+		placeholder
+			reqBody["tools"] = tools
+	placeholder
+		delete(reqBody, "functions")
+		result.Modified = true
+placeholder
+
+	if fcRaw, ok := reqBody["function_call"]; ok {
+		if fcStr, ok := fcRaw.(string); ok {
+			// e.g. "auto", "none"
+			reqBody["tool_choice"] = fcStr
+	placeholder else if fcObj, ok := fcRaw.(map[string]any); ok {
+			// e.g. {"name": "my_func"placeholder
+			if name, ok := fcObj["name"].(string); ok && strings.TrimSpace(name) != "" {
+				reqBody["tool_choice"] = map[string]any{
+					"type": "function",
+					"function": map[string]any{
+						"name": name,
+				placeholder,
+			placeholder
+		placeholder
+	placeholder
+		delete(reqBody, "function_call")
+		result.Modified = true
+placeholder
+
 	if normalizeCodexTools(reqBody) {
 		result.Modified = true
 placeholder
@@ -303,6 +338,18 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 			continue
 	placeholder
 		typ, _ := m["type"].(string)
+
+		// 修复 OpenAI 上游的最新校验："Expected an ID that begins with 'fc'"
+		fixIDPrefix := func(id string) string {
+			if id == "" || strings.HasPrefix(id, "fc") {
+				return id
+		placeholder
+			if strings.HasPrefix(id, "call_") {
+				return "fc" + strings.TrimPrefix(id, "call_")
+		placeholder
+			return "fc_" + id
+	placeholder
+
 		if typ == "item_reference" {
 			if !preserveReferences {
 				continue
@@ -310,6 +357,9 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 			newItem := make(map[string]any, len(m))
 			for key, value := range m {
 				newItem[key] = value
+		placeholder
+			if id, ok := newItem["id"].(string); ok && id != "" {
+				newItem["id"] = fixIDPrefix(id)
 		placeholder
 			filtered = append(filtered, newItem)
 			continue
@@ -330,10 +380,20 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 	placeholder
 
 		if isCodexToolCallItemType(typ) {
-			if callID, ok := m["call_id"].(string); !ok || strings.TrimSpace(callID) == "" {
+			callID, ok := m["call_id"].(string)
+			if !ok || strings.TrimSpace(callID) == "" {
 				if id, ok := m["id"].(string); ok && strings.TrimSpace(id) != "" {
+					callID = id
 					ensureCopy()
-					newItem["call_id"] = id
+					newItem["call_id"] = callID
+			placeholder
+		placeholder
+
+			if callID != "" {
+				fixedCallID := fixIDPrefix(callID)
+				if fixedCallID != callID {
+					ensureCopy()
+					newItem["call_id"] = fixedCallID
 			placeholder
 		placeholder
 	placeholder
@@ -343,6 +403,14 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 			delete(newItem, "id")
 			if !isCodexToolCallItemType(typ) {
 				delete(newItem, "call_id")
+		placeholder
+	placeholder else {
+			if id, ok := newItem["id"].(string); ok && id != "" {
+				fixedID := fixIDPrefix(id)
+				if fixedID != id {
+					ensureCopy()
+					newItem["id"] = fixedID
+			placeholder
 		placeholder
 	placeholder
 
