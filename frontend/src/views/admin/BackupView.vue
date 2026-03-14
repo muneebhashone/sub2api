@@ -1,5 +1,4 @@
 <template>
-  <AppLayout>
     <div class="space-y-6">
       <!-- S3 Storage Config -->
       <div class="card p-6">
@@ -275,13 +274,11 @@
         </div>
       </transition>
     </teleport>
-  </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import AppLayout from '@/components/layout/AppLayout.vue'
 import { adminAPI placeholder from '@/api'
 import { useAppStore placeholder from '@/stores'
 import type { BackupS3Config, BackupScheduleConfig, BackupRecord placeholder from '@/api/admin/backup'
