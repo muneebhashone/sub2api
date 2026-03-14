@@ -262,6 +262,42 @@ placeholder
 		SetKey(k.Key).
 		SetName(k.Name).
 		SetStatus(k.Status)
+	if k.Quota != 0 {
+		create.SetQuota(k.Quota)
+placeholder
+	if k.QuotaUsed != 0 {
+		create.SetQuotaUsed(k.QuotaUsed)
+placeholder
+	if k.RateLimit5h != 0 {
+		create.SetRateLimit5h(k.RateLimit5h)
+placeholder
+	if k.RateLimit1d != 0 {
+		create.SetRateLimit1d(k.RateLimit1d)
+placeholder
+	if k.RateLimit7d != 0 {
+		create.SetRateLimit7d(k.RateLimit7d)
+placeholder
+	if k.Usage5h != 0 {
+		create.SetUsage5h(k.Usage5h)
+placeholder
+	if k.Usage1d != 0 {
+		create.SetUsage1d(k.Usage1d)
+placeholder
+	if k.Usage7d != 0 {
+		create.SetUsage7d(k.Usage7d)
+placeholder
+	if k.Window5hStart != nil {
+		create.SetWindow5hStart(*k.Window5hStart)
+placeholder
+	if k.Window1dStart != nil {
+		create.SetWindow1dStart(*k.Window1dStart)
+placeholder
+	if k.Window7dStart != nil {
+		create.SetWindow7dStart(*k.Window7dStart)
+placeholder
+	if k.ExpiresAt != nil {
+		create.SetExpiresAt(*k.ExpiresAt)
+placeholder
 	if k.GroupID != nil {
 		create.SetGroupID(*k.GroupID)
 placeholder

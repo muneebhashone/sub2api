@@ -3,10 +3,14 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -15,14 +19,55 @@ import (
 	dbgroup "github.com/Wei-Shaw/sub2api/ent/group"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	dbusersub "github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/lib/pq"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 const usageLogSelectColumns = "id, user_id, api_key_id, account_id, request_id, model, group_id, subscription_id, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, cache_creation_5m_tokens, cache_creation_1h_tokens, input_cost, output_cost, cache_creation_cost, cache_read_cost, total_cost, actual_cost, rate_multiplier, account_rate_multiplier, billing_type, request_type, stream, openai_ws_mode, duration_ms, first_token_ms, user_agent, ip_address, image_count, image_size, media_type, service_tier, reasoning_effort, cache_ttl_overridden, created_at"
+
+var usageLogInsertArgTypes = [...]string{
+	"bigint",
+	"bigint",
+	"bigint",
+	"text",
+	"text",
+	"bigint",
+	"bigint",
+	"integer",
+	"integer",
+	"integer",
+	"integer",
+	"integer",
+	"integer",
+	"numeric",
+	"numeric",
+	"numeric",
+	"numeric",
+	"numeric",
+	"numeric",
+	"numeric",
+	"numeric",
+	"smallint",
+	"smallint",
+	"boolean",
+	"boolean",
+	"integer",
+	"integer",
+	"text",
+	"text",
+	"integer",
+	"text",
+	"text",
+	"text",
+	"text",
+	"boolean",
+	"timestamptz",
+placeholder
 
 // dateFormatWhitelist 将 granularity 参数映射为 PostgreSQL TO_CHAR 格式字符串，防止外部输入直接拼入 SQL
 var dateFormatWhitelist = map[string]string{
@@ -43,7 +88,76 @@ placeholder
 type usageLogRepository struct {
 	client *dbent.Client
 	sql    sqlExecutor
+	db     *sql.DB
+
+	createBatchOnce     sync.Once
+	createBatchCh       chan usageLogCreateRequest
+	bestEffortBatchOnce sync.Once
+	bestEffortBatchCh   chan usageLogBestEffortRequest
+	bestEffortRecent    *gocache.Cache
 placeholder
+
+const (
+	usageLogCreateBatchMaxSize  = 64
+	usageLogCreateBatchWindow   = 3 * time.Millisecond
+	usageLogCreateBatchQueueCap = 4096
+	usageLogCreateCancelWait    = 2 * time.Second
+
+	usageLogBestEffortBatchMaxSize  = 256
+	usageLogBestEffortBatchWindow   = 20 * time.Millisecond
+	usageLogBestEffortBatchQueueCap = 32768
+	usageLogBestEffortRecentTTL     = 30 * time.Second
+)
+
+type usageLogCreateRequest struct {
+	log      *service.UsageLog
+	prepared usageLogInsertPrepared
+	shared   *usageLogCreateShared
+	resultCh chan usageLogCreateResult
+placeholder
+
+type usageLogCreateResult struct {
+	inserted bool
+	err      error
+placeholder
+
+type usageLogBestEffortRequest struct {
+	prepared usageLogInsertPrepared
+	apiKeyID int64
+	resultCh chan error
+placeholder
+
+type usageLogInsertPrepared struct {
+	createdAt      time.Time
+	requestID      string
+	rateMultiplier float64
+	requestType    int16
+	args           []any
+placeholder
+
+type usageLogBatchState struct {
+	ID        int64
+	CreatedAt time.Time
+placeholder
+
+type usageLogBatchRow struct {
+	RequestID string    `json:"request_id"`
+	APIKeyID  int64     `json:"api_key_id"`
+	ID        int64     `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Inserted  bool      `json:"inserted"`
+placeholder
+
+type usageLogCreateShared struct {
+	state atomic.Int32
+placeholder
+
+const (
+	usageLogCreateStateQueued int32 = iota
+	usageLogCreateStateProcessing
+	usageLogCreateStateCompleted
+	usageLogCreateStateCanceled
+)
 
 func NewUsageLogRepository(client *dbent.Client, sqlDB *sql.DB) service.UsageLogRepository {
 	return newUsageLogRepositoryWithSQL(client, sqlDB)
@@ -51,7 +165,12 @@ placeholder
 
 func newUsageLogRepositoryWithSQL(client *dbent.Client, sqlq sqlExecutor) *usageLogRepository {
 	// 使用 scanSingleRow 替代 QueryRowContext，保证 ent.Tx 作为 sqlExecutor 可用。
-	return &usageLogRepository{client: client, sql: sqlqplaceholder
+	repo := &usageLogRepository{client: client, sql: sqlqplaceholder
+	if db, ok := sqlq.(*sql.DB); ok {
+		repo.db = db
+placeholder
+	repo.bestEffortRecent = gocache.New(usageLogBestEffortRecentTTL, time.Minute)
+	return repo
 placeholder
 
 // getPerformanceStats 获取 RPM 和 TPM（近5分钟平均值，可选按用户过滤）
@@ -82,24 +201,72 @@ func (r *usageLogRepository) Create(ctx context.Context, log *service.UsageLog) 
 		return false, nil
 placeholder
 
-	// 在事务上下文中，使用 tx 绑定的 ExecQuerier 执行原生 SQL，保证与其他更新同事务。
-	// 无事务时回退到默认的 *sql.DB 执行器。
-	sqlq := r.sql
 	if tx := dbent.TxFromContext(ctx); tx != nil {
-		sqlq = tx.Client()
+		return r.createSingle(ctx, tx.Client(), log)
 placeholder
-
-	createdAt := log.CreatedAt
-	if createdAt.IsZero() {
-		createdAt = time.Now()
-placeholder
-
 	requestID := strings.TrimSpace(log.RequestID)
+	if requestID == "" {
+		return r.createSingle(ctx, r.sql, log)
+placeholder
 	log.RequestID = requestID
+	return r.createBatched(ctx, log)
+placeholder
 
-	rateMultiplier := log.RateMultiplier
-	log.SyncRequestTypeAndLegacyFields()
-	requestType := int16(log.RequestType)
+func (r *usageLogRepository) CreateBestEffort(ctx context.Context, log *service.UsageLog) error {
+	if log == nil {
+		return nil
+placeholder
+
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		_, err := r.createSingle(ctx, tx.Client(), log)
+		return err
+placeholder
+	if r.db == nil {
+		_, err := r.createSingle(ctx, r.sql, log)
+		return err
+placeholder
+
+	r.ensureBestEffortBatcher()
+	if r.bestEffortBatchCh == nil {
+		_, err := r.createSingle(ctx, r.sql, log)
+		return err
+placeholder
+
+	req := usageLogBestEffortRequest{
+		prepared: prepareUsageLogInsert(log),
+		apiKeyID: log.APIKeyID,
+		resultCh: make(chan error, 1),
+placeholder
+	if key, ok := r.bestEffortRecentKey(req.prepared.requestID, req.apiKeyID); ok {
+		if _, exists := r.bestEffortRecent.Get(key); exists {
+			return nil
+	placeholder
+placeholder
+
+	select {
+	case r.bestEffortBatchCh <- req:
+	case <-ctx.Done():
+		return service.MarkUsageLogCreateDropped(ctx.Err())
+	default:
+		return service.MarkUsageLogCreateDropped(errors.New("usage log best-effort queue full"))
+placeholder
+
+	select {
+	case err := <-req.resultCh:
+		return err
+	case <-ctx.Done():
+		return service.MarkUsageLogCreateDropped(ctx.Err())
+placeholder
+placeholder
+
+func (r *usageLogRepository) createSingle(ctx context.Context, sqlq sqlExecutor, log *service.UsageLog) (bool, error) {
+	prepared := prepareUsageLogInsert(log)
+	if sqlq == nil {
+		sqlq = r.sql
+placeholder
+	if ctx != nil && ctx.Err() != nil {
+		return false, service.MarkUsageLogCreateNotPersisted(ctx.Err())
+placeholder
 
 	query := `
 		INSERT INTO usage_logs (
@@ -151,6 +318,779 @@ placeholder
 		RETURNING id, created_at
 	`
 
+	if err := scanSingleRow(ctx, sqlq, query, prepared.args, &log.ID, &log.CreatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) && prepared.requestID != "" {
+			selectQuery := "SELECT id, created_at FROM usage_logs WHERE request_id = $1 AND api_key_id = $2"
+			if err := scanSingleRow(ctx, sqlq, selectQuery, []any{prepared.requestID, log.APIKeyIDplaceholder, &log.ID, &log.CreatedAt); err != nil {
+				return false, err
+		placeholder
+			log.RateMultiplier = prepared.rateMultiplier
+			return false, nil
+	placeholder else {
+			return false, err
+	placeholder
+placeholder
+	log.RateMultiplier = prepared.rateMultiplier
+	return true, nil
+placeholder
+
+func (r *usageLogRepository) createBatched(ctx context.Context, log *service.UsageLog) (bool, error) {
+	if r.db == nil {
+		return r.createSingle(ctx, r.sql, log)
+placeholder
+	r.ensureCreateBatcher()
+	if r.createBatchCh == nil {
+		return r.createSingle(ctx, r.sql, log)
+placeholder
+
+	req := usageLogCreateRequest{
+		log:      log,
+		prepared: prepareUsageLogInsert(log),
+		shared:   &usageLogCreateShared{placeholder,
+		resultCh: make(chan usageLogCreateResult, 1),
+placeholder
+
+	select {
+	case r.createBatchCh <- req:
+	case <-ctx.Done():
+		return false, service.MarkUsageLogCreateNotPersisted(ctx.Err())
+	default:
+		return false, service.MarkUsageLogCreateNotPersisted(errors.New("usage log create batch queue full"))
+placeholder
+
+	select {
+	case res := <-req.resultCh:
+		return res.inserted, res.err
+	case <-ctx.Done():
+		if req.shared != nil && req.shared.state.CompareAndSwap(usageLogCreateStateQueued, usageLogCreateStateCanceled) {
+			return false, service.MarkUsageLogCreateNotPersisted(ctx.Err())
+	placeholder
+		timer := time.NewTimer(usageLogCreateCancelWait)
+		defer timer.Stop()
+		select {
+		case res := <-req.resultCh:
+			return res.inserted, res.err
+		case <-timer.C:
+			return false, ctx.Err()
+	placeholder
+placeholder
+placeholder
+
+func (r *usageLogRepository) ensureCreateBatcher() {
+	if r == nil || r.db == nil || r.createBatchCh != nil {
+		return
+placeholder
+	r.createBatchOnce.Do(func() {
+		r.createBatchCh = make(chan usageLogCreateRequest, usageLogCreateBatchQueueCap)
+		go r.runCreateBatcher(r.db)
+placeholder)
+placeholder
+
+func (r *usageLogRepository) ensureBestEffortBatcher() {
+	if r == nil || r.db == nil || r.bestEffortBatchCh != nil {
+		return
+placeholder
+	r.bestEffortBatchOnce.Do(func() {
+		r.bestEffortBatchCh = make(chan usageLogBestEffortRequest, usageLogBestEffortBatchQueueCap)
+		go r.runBestEffortBatcher(r.db)
+placeholder)
+placeholder
+
+func (r *usageLogRepository) runCreateBatcher(db *sql.DB) {
+	for {
+		first, ok := <-r.createBatchCh
+		if !ok {
+			return
+	placeholder
+
+		batch := make([]usageLogCreateRequest, 0, usageLogCreateBatchMaxSize)
+		batch = append(batch, first)
+
+		timer := time.NewTimer(usageLogCreateBatchWindow)
+	batchLoop:
+		for len(batch) < usageLogCreateBatchMaxSize {
+			select {
+			case req, ok := <-r.createBatchCh:
+				if !ok {
+					break batchLoop
+			placeholder
+				batch = append(batch, req)
+			case <-timer.C:
+				break batchLoop
+		placeholder
+	placeholder
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+		placeholder
+	placeholder
+
+		r.flushCreateBatch(db, batch)
+placeholder
+placeholder
+
+func (r *usageLogRepository) runBestEffortBatcher(db *sql.DB) {
+	for {
+		first, ok := <-r.bestEffortBatchCh
+		if !ok {
+			return
+	placeholder
+
+		batch := make([]usageLogBestEffortRequest, 0, usageLogBestEffortBatchMaxSize)
+		batch = append(batch, first)
+
+		timer := time.NewTimer(usageLogBestEffortBatchWindow)
+	bestEffortLoop:
+		for len(batch) < usageLogBestEffortBatchMaxSize {
+			select {
+			case req, ok := <-r.bestEffortBatchCh:
+				if !ok {
+					break bestEffortLoop
+			placeholder
+				batch = append(batch, req)
+			case <-timer.C:
+				break bestEffortLoop
+		placeholder
+	placeholder
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+		placeholder
+	placeholder
+
+		r.flushBestEffortBatch(db, batch)
+placeholder
+placeholder
+
+func (r *usageLogRepository) flushCreateBatch(db *sql.DB, batch []usageLogCreateRequest) {
+	if len(batch) == 0 {
+		return
+placeholder
+
+	uniqueOrder := make([]string, 0, len(batch))
+	preparedByKey := make(map[string]usageLogInsertPrepared, len(batch))
+	requestsByKey := make(map[string][]usageLogCreateRequest, len(batch))
+	fallback := make([]usageLogCreateRequest, 0)
+
+	for _, req := range batch {
+		if req.log == nil {
+			completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: false, err: nilplaceholder)
+			continue
+	placeholder
+		if req.shared != nil && !req.shared.state.CompareAndSwap(usageLogCreateStateQueued, usageLogCreateStateProcessing) {
+			if req.shared.state.Load() == usageLogCreateStateCanceled {
+				completeUsageLogCreateRequest(req, usageLogCreateResult{
+					inserted: false,
+					err:      service.MarkUsageLogCreateNotPersisted(context.Canceled),
+			placeholder)
+				continue
+		placeholder
+	placeholder
+		prepared := req.prepared
+		if prepared.requestID == "" {
+			fallback = append(fallback, req)
+			continue
+	placeholder
+		key := usageLogBatchKey(prepared.requestID, req.log.APIKeyID)
+		if _, exists := requestsByKey[key]; !exists {
+			uniqueOrder = append(uniqueOrder, key)
+			preparedByKey[key] = prepared
+	placeholder
+		requestsByKey[key] = append(requestsByKey[key], req)
+placeholder
+
+	if len(uniqueOrder) > 0 {
+		insertedMap, stateMap, safeFallback, err := r.batchInsertUsageLogs(db, uniqueOrder, preparedByKey)
+		if err != nil {
+			if safeFallback {
+				for _, key := range uniqueOrder {
+					fallback = append(fallback, requestsByKey[key]...)
+			placeholder
+		placeholder else {
+				for _, key := range uniqueOrder {
+					reqs := requestsByKey[key]
+					state, hasState := stateMap[key]
+					inserted := insertedMap[key]
+					for idx, req := range reqs {
+						req.log.RateMultiplier = preparedByKey[key].rateMultiplier
+						if hasState {
+							req.log.ID = state.ID
+							req.log.CreatedAt = state.CreatedAt
+					placeholder
+						switch {
+						case inserted && idx == 0:
+							completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: true, err: nilplaceholder)
+						case inserted:
+							completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: false, err: nilplaceholder)
+						case hasState:
+							completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: false, err: nilplaceholder)
+						case idx == 0:
+							completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: false, err: errplaceholder)
+						default:
+							completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: false, err: nilplaceholder)
+					placeholder
+				placeholder
+			placeholder
+		placeholder
+	placeholder else {
+			for _, key := range uniqueOrder {
+				reqs := requestsByKey[key]
+				state, ok := stateMap[key]
+				if !ok {
+					for _, req := range reqs {
+						completeUsageLogCreateRequest(req, usageLogCreateResult{
+							inserted: false,
+							err:      fmt.Errorf("usage log batch state missing for key=%s", key),
+					placeholder)
+				placeholder
+					continue
+			placeholder
+				for idx, req := range reqs {
+					req.log.ID = state.ID
+					req.log.CreatedAt = state.CreatedAt
+					req.log.RateMultiplier = preparedByKey[key].rateMultiplier
+					completeUsageLogCreateRequest(req, usageLogCreateResult{
+						inserted: idx == 0 && insertedMap[key],
+						err:      nil,
+				placeholder)
+			placeholder
+		placeholder
+	placeholder
+placeholder
+
+	if len(fallback) == 0 {
+		return
+placeholder
+
+	for _, req := range fallback {
+		fallbackCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		inserted, err := r.createSingle(fallbackCtx, db, req.log)
+		cancel()
+		completeUsageLogCreateRequest(req, usageLogCreateResult{inserted: inserted, err: errplaceholder)
+placeholder
+placeholder
+
+func (r *usageLogRepository) flushBestEffortBatch(db *sql.DB, batch []usageLogBestEffortRequest) {
+	if len(batch) == 0 {
+		return
+placeholder
+
+	type bestEffortGroup struct {
+		prepared usageLogInsertPrepared
+		apiKeyID int64
+		key      string
+		reqs     []usageLogBestEffortRequest
+placeholder
+
+	groupsByKey := make(map[string]*bestEffortGroup, len(batch))
+	groupOrder := make([]*bestEffortGroup, 0, len(batch))
+	preparedList := make([]usageLogInsertPrepared, 0, len(batch))
+
+	for idx, req := range batch {
+		prepared := req.prepared
+		key := fmt.Sprintf("__best_effort_%d", idx)
+		if prepared.requestID != "" {
+			key = usageLogBatchKey(prepared.requestID, req.apiKeyID)
+	placeholder
+		group, exists := groupsByKey[key]
+		if !exists {
+			group = &bestEffortGroup{
+				prepared: prepared,
+				apiKeyID: req.apiKeyID,
+				key:      key,
+		placeholder
+			groupsByKey[key] = group
+			groupOrder = append(groupOrder, group)
+			preparedList = append(preparedList, prepared)
+	placeholder
+		group.reqs = append(group.reqs, req)
+placeholder
+
+	if len(preparedList) == 0 {
+		for _, req := range batch {
+			sendUsageLogBestEffortResult(req.resultCh, nil)
+	placeholder
+		return
+placeholder
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	query, args := buildUsageLogBestEffortInsertQuery(preparedList)
+	if _, err := db.ExecContext(ctx, query, args...); err != nil {
+		logger.LegacyPrintf("repository.usage_log", "best-effort batch insert failed: %v", err)
+		for _, group := range groupOrder {
+			singleErr := execUsageLogInsertNoResult(ctx, db, group.prepared)
+			if singleErr != nil {
+				logger.LegacyPrintf("repository.usage_log", "best-effort single fallback insert failed: %v", singleErr)
+		placeholder else if group.prepared.requestID != "" && r != nil && r.bestEffortRecent != nil {
+				r.bestEffortRecent.SetDefault(group.key, struct{placeholder{placeholder)
+		placeholder
+			for _, req := range group.reqs {
+				sendUsageLogBestEffortResult(req.resultCh, singleErr)
+		placeholder
+	placeholder
+		return
+placeholder
+	for _, group := range groupOrder {
+		if group.prepared.requestID != "" && r != nil && r.bestEffortRecent != nil {
+			r.bestEffortRecent.SetDefault(group.key, struct{placeholder{placeholder)
+	placeholder
+		for _, req := range group.reqs {
+			sendUsageLogBestEffortResult(req.resultCh, nil)
+	placeholder
+placeholder
+placeholder
+
+func sendUsageLogBestEffortResult(ch chan error, err error) {
+	if ch == nil {
+		return
+placeholder
+	select {
+	case ch <- err:
+	default:
+placeholder
+placeholder
+
+func completeUsageLogCreateRequest(req usageLogCreateRequest, res usageLogCreateResult) {
+	if req.shared != nil {
+		req.shared.state.Store(usageLogCreateStateCompleted)
+placeholder
+	sendUsageLogCreateResult(req.resultCh, res)
+placeholder
+
+func (r *usageLogRepository) batchInsertUsageLogs(db *sql.DB, keys []string, preparedByKey map[string]usageLogInsertPrepared) (map[string]bool, map[string]usageLogBatchState, bool, error) {
+	if len(keys) == 0 {
+		return map[string]bool{placeholder, map[string]usageLogBatchState{placeholder, false, nil
+placeholder
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	query, args := buildUsageLogBatchInsertQuery(keys, preparedByKey)
+	var payload []byte
+	if err := db.QueryRowContext(ctx, query, args...).Scan(&payload); err != nil {
+		return nil, nil, true, err
+placeholder
+	var rows []usageLogBatchRow
+	if err := json.Unmarshal(payload, &rows); err != nil {
+		return nil, nil, false, err
+placeholder
+	insertedMap := make(map[string]bool, len(keys))
+	stateMap := make(map[string]usageLogBatchState, len(keys))
+	for _, row := range rows {
+		key := usageLogBatchKey(row.RequestID, row.APIKeyID)
+		insertedMap[key] = row.Inserted
+		stateMap[key] = usageLogBatchState{
+			ID:        row.ID,
+			CreatedAt: row.CreatedAt,
+	placeholder
+placeholder
+	if len(stateMap) != len(keys) {
+		return insertedMap, stateMap, false, fmt.Errorf("usage log batch state count mismatch: got=%d want=%d", len(stateMap), len(keys))
+placeholder
+	return insertedMap, stateMap, false, nil
+placeholder
+
+func buildUsageLogBatchInsertQuery(keys []string, preparedByKey map[string]usageLogInsertPrepared) (string, []any) {
+	var query strings.Builder
+	_, _ = query.WriteString(`
+		WITH input (
+			input_idx,
+			user_id,
+			api_key_id,
+			account_id,
+			request_id,
+			model,
+			group_id,
+			subscription_id,
+			input_tokens,
+			output_tokens,
+			cache_creation_tokens,
+			cache_read_tokens,
+			cache_creation_5m_tokens,
+			cache_creation_1h_tokens,
+			input_cost,
+			output_cost,
+			cache_creation_cost,
+			cache_read_cost,
+			total_cost,
+			actual_cost,
+			rate_multiplier,
+			account_rate_multiplier,
+			billing_type,
+			request_type,
+			stream,
+			openai_ws_mode,
+			duration_ms,
+			first_token_ms,
+			user_agent,
+			ip_address,
+			image_count,
+			image_size,
+			media_type,
+			service_tier,
+			reasoning_effort,
+			cache_ttl_overridden,
+			created_at
+		) AS (VALUES `)
+
+	args := make([]any, 0, len(keys)*37)
+	argPos := 1
+	for idx, key := range keys {
+		if idx > 0 {
+			_, _ = query.WriteString(",")
+	placeholder
+		_, _ = query.WriteString("(")
+		_, _ = query.WriteString("$")
+		_, _ = query.WriteString(strconv.Itoa(argPos))
+		args = append(args, idx)
+		argPos++
+		prepared := preparedByKey[key]
+		for i := 0; i < len(prepared.args); i++ {
+			_, _ = query.WriteString(",")
+			_, _ = query.WriteString("$")
+			_, _ = query.WriteString(strconv.Itoa(argPos))
+			if i < len(usageLogInsertArgTypes) {
+				_, _ = query.WriteString("::")
+				_, _ = query.WriteString(usageLogInsertArgTypes[i])
+		placeholder
+			argPos++
+	placeholder
+		_, _ = query.WriteString(")")
+		args = append(args, prepared.args...)
+placeholder
+	_, _ = query.WriteString(`
+		),
+		inserted AS (
+			INSERT INTO usage_logs (
+				user_id,
+				api_key_id,
+				account_id,
+				request_id,
+				model,
+				group_id,
+				subscription_id,
+				input_tokens,
+				output_tokens,
+				cache_creation_tokens,
+				cache_read_tokens,
+				cache_creation_5m_tokens,
+				cache_creation_1h_tokens,
+				input_cost,
+				output_cost,
+				cache_creation_cost,
+				cache_read_cost,
+				total_cost,
+				actual_cost,
+				rate_multiplier,
+				account_rate_multiplier,
+				billing_type,
+				request_type,
+				stream,
+				openai_ws_mode,
+				duration_ms,
+				first_token_ms,
+				user_agent,
+				ip_address,
+				image_count,
+				image_size,
+				media_type,
+				service_tier,
+				reasoning_effort,
+				cache_ttl_overridden,
+				created_at
+			)
+			SELECT
+				user_id,
+				api_key_id,
+				account_id,
+				request_id,
+				model,
+				group_id,
+				subscription_id,
+				input_tokens,
+				output_tokens,
+				cache_creation_tokens,
+				cache_read_tokens,
+				cache_creation_5m_tokens,
+				cache_creation_1h_tokens,
+				input_cost,
+				output_cost,
+				cache_creation_cost,
+				cache_read_cost,
+				total_cost,
+				actual_cost,
+				rate_multiplier,
+				account_rate_multiplier,
+				billing_type,
+				request_type,
+				stream,
+				openai_ws_mode,
+				duration_ms,
+				first_token_ms,
+				user_agent,
+				ip_address,
+				image_count,
+				image_size,
+				media_type,
+				service_tier,
+				reasoning_effort,
+				cache_ttl_overridden,
+				created_at
+			FROM input
+			ON CONFLICT (request_id, api_key_id) DO NOTHING
+			RETURNING request_id, api_key_id, id, created_at
+		),
+		resolved AS (
+			SELECT
+				input.input_idx,
+				input.request_id,
+				input.api_key_id,
+				COALESCE(inserted.id, existing.id) AS id,
+				COALESCE(inserted.created_at, existing.created_at) AS created_at,
+				(inserted.id IS NOT NULL) AS inserted
+			FROM input
+			LEFT JOIN inserted
+				ON inserted.request_id = input.request_id
+				AND inserted.api_key_id = input.api_key_id
+			LEFT JOIN usage_logs existing
+				ON existing.request_id = input.request_id
+				AND existing.api_key_id = input.api_key_id
+		)
+		SELECT COALESCE(
+			json_agg(
+				json_build_object(
+					'request_id', resolved.request_id,
+					'api_key_id', resolved.api_key_id,
+					'id', resolved.id,
+					'created_at', resolved.created_at,
+					'inserted', resolved.inserted
+				)
+				ORDER BY resolved.input_idx
+			),
+			'[]'::json
+		)
+		FROM resolved
+	`)
+	return query.String(), args
+placeholder
+
+func buildUsageLogBestEffortInsertQuery(preparedList []usageLogInsertPrepared) (string, []any) {
+	var query strings.Builder
+	_, _ = query.WriteString(`
+		WITH input (
+			user_id,
+			api_key_id,
+			account_id,
+			request_id,
+			model,
+			group_id,
+			subscription_id,
+			input_tokens,
+			output_tokens,
+			cache_creation_tokens,
+			cache_read_tokens,
+			cache_creation_5m_tokens,
+			cache_creation_1h_tokens,
+			input_cost,
+			output_cost,
+			cache_creation_cost,
+			cache_read_cost,
+			total_cost,
+			actual_cost,
+			rate_multiplier,
+			account_rate_multiplier,
+			billing_type,
+			request_type,
+			stream,
+			openai_ws_mode,
+			duration_ms,
+			first_token_ms,
+			user_agent,
+			ip_address,
+			image_count,
+			image_size,
+			media_type,
+			service_tier,
+			reasoning_effort,
+			cache_ttl_overridden,
+			created_at
+		) AS (VALUES `)
+
+	args := make([]any, 0, len(preparedList)*36)
+	argPos := 1
+	for idx, prepared := range preparedList {
+		if idx > 0 {
+			_, _ = query.WriteString(",")
+	placeholder
+		_, _ = query.WriteString("(")
+		for i := 0; i < len(prepared.args); i++ {
+			if i > 0 {
+				_, _ = query.WriteString(",")
+		placeholder
+			_, _ = query.WriteString("$")
+			_, _ = query.WriteString(strconv.Itoa(argPos))
+			if i < len(usageLogInsertArgTypes) {
+				_, _ = query.WriteString("::")
+				_, _ = query.WriteString(usageLogInsertArgTypes[i])
+		placeholder
+			argPos++
+	placeholder
+		_, _ = query.WriteString(")")
+		args = append(args, prepared.args...)
+placeholder
+
+	_, _ = query.WriteString(`
+		)
+		INSERT INTO usage_logs (
+			user_id,
+			api_key_id,
+			account_id,
+			request_id,
+			model,
+			group_id,
+			subscription_id,
+			input_tokens,
+			output_tokens,
+			cache_creation_tokens,
+			cache_read_tokens,
+			cache_creation_5m_tokens,
+			cache_creation_1h_tokens,
+			input_cost,
+			output_cost,
+			cache_creation_cost,
+			cache_read_cost,
+			total_cost,
+			actual_cost,
+			rate_multiplier,
+			account_rate_multiplier,
+			billing_type,
+			request_type,
+			stream,
+			openai_ws_mode,
+			duration_ms,
+			first_token_ms,
+			user_agent,
+			ip_address,
+			image_count,
+			image_size,
+			media_type,
+			service_tier,
+			reasoning_effort,
+			cache_ttl_overridden,
+			created_at
+		)
+		SELECT
+			user_id,
+			api_key_id,
+			account_id,
+			request_id,
+			model,
+			group_id,
+			subscription_id,
+			input_tokens,
+			output_tokens,
+			cache_creation_tokens,
+			cache_read_tokens,
+			cache_creation_5m_tokens,
+			cache_creation_1h_tokens,
+			input_cost,
+			output_cost,
+			cache_creation_cost,
+			cache_read_cost,
+			total_cost,
+			actual_cost,
+			rate_multiplier,
+			account_rate_multiplier,
+			billing_type,
+			request_type,
+			stream,
+			openai_ws_mode,
+			duration_ms,
+			first_token_ms,
+			user_agent,
+			ip_address,
+			image_count,
+			image_size,
+			media_type,
+			service_tier,
+			reasoning_effort,
+			cache_ttl_overridden,
+			created_at
+		FROM input
+		ON CONFLICT (request_id, api_key_id) DO NOTHING
+	`)
+
+	return query.String(), args
+placeholder
+
+func execUsageLogInsertNoResult(ctx context.Context, sqlq sqlExecutor, prepared usageLogInsertPrepared) error {
+	_, err := sqlq.ExecContext(ctx, `
+		INSERT INTO usage_logs (
+			user_id,
+			api_key_id,
+			account_id,
+			request_id,
+			model,
+			group_id,
+			subscription_id,
+			input_tokens,
+			output_tokens,
+			cache_creation_tokens,
+			cache_read_tokens,
+			cache_creation_5m_tokens,
+			cache_creation_1h_tokens,
+			input_cost,
+			output_cost,
+			cache_creation_cost,
+			cache_read_cost,
+			total_cost,
+			actual_cost,
+			rate_multiplier,
+			account_rate_multiplier,
+			billing_type,
+			request_type,
+			stream,
+			openai_ws_mode,
+			duration_ms,
+			first_token_ms,
+			user_agent,
+			ip_address,
+			image_count,
+			image_size,
+			media_type,
+			service_tier,
+			reasoning_effort,
+			cache_ttl_overridden,
+			created_at
+		) VALUES (
+			$1, $2, $3, $4, $5,
+			$6, $7,
+			$8, $9, $10, $11,
+			$12, $13,
+			$14, $15, $16, $17, $18, $19,
+			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36
+		)
+		ON CONFLICT (request_id, api_key_id) DO NOTHING
+	`, prepared.args...)
+	return err
+placeholder
+
+func prepareUsageLogInsert(log *service.UsageLog) usageLogInsertPrepared {
+	createdAt := log.CreatedAt
+	if createdAt.IsZero() {
+		createdAt = time.Now()
+placeholder
+
+	requestID := strings.TrimSpace(log.RequestID)
+	log.RequestID = requestID
+
+	rateMultiplier := log.RateMultiplier
+	log.SyncRequestTypeAndLegacyFields()
+	requestType := int16(log.RequestType)
+
 	groupID := nullInt64(log.GroupID)
 	subscriptionID := nullInt64(log.SubscriptionID)
 	duration := nullInt(log.DurationMs)
@@ -167,58 +1107,72 @@ placeholder
 		requestIDArg = requestID
 placeholder
 
-	args := []any{
-		log.UserID,
-		log.APIKeyID,
-		log.AccountID,
-		requestIDArg,
-		log.Model,
-		groupID,
-		subscriptionID,
-		log.InputTokens,
-		log.OutputTokens,
-		log.CacheCreationTokens,
-		log.CacheReadTokens,
-		log.CacheCreation5mTokens,
-		log.CacheCreation1hTokens,
-		log.InputCost,
-		log.OutputCost,
-		log.CacheCreationCost,
-		log.CacheReadCost,
-		log.TotalCost,
-		log.ActualCost,
-		rateMultiplier,
-		log.AccountRateMultiplier,
-		log.BillingType,
-		requestType,
-		log.Stream,
-		log.OpenAIWSMode,
-		duration,
-		firstToken,
-		userAgent,
-		ipAddress,
-		log.ImageCount,
-		imageSize,
-		mediaType,
-		serviceTier,
-		reasoningEffort,
-		log.CacheTTLOverridden,
-		createdAt,
+	return usageLogInsertPrepared{
+		createdAt:      createdAt,
+		requestID:      requestID,
+		rateMultiplier: rateMultiplier,
+		requestType:    requestType,
+		args: []any{
+			log.UserID,
+			log.APIKeyID,
+			log.AccountID,
+			requestIDArg,
+			log.Model,
+			groupID,
+			subscriptionID,
+			log.InputTokens,
+			log.OutputTokens,
+			log.CacheCreationTokens,
+			log.CacheReadTokens,
+			log.CacheCreation5mTokens,
+			log.CacheCreation1hTokens,
+			log.InputCost,
+			log.OutputCost,
+			log.CacheCreationCost,
+			log.CacheReadCost,
+			log.TotalCost,
+			log.ActualCost,
+			rateMultiplier,
+			log.AccountRateMultiplier,
+			log.BillingType,
+			requestType,
+			log.Stream,
+			log.OpenAIWSMode,
+			duration,
+			firstToken,
+			userAgent,
+			ipAddress,
+			log.ImageCount,
+			imageSize,
+			mediaType,
+			serviceTier,
+			reasoningEffort,
+			log.CacheTTLOverridden,
+			createdAt,
+	placeholder,
 placeholder
-	if err := scanSingleRow(ctx, sqlq, query, args, &log.ID, &log.CreatedAt); err != nil {
-		if errors.Is(err, sql.ErrNoRows) && requestID != "" {
-			selectQuery := "SELECT id, created_at FROM usage_logs WHERE request_id = $1 AND api_key_id = $2"
-			if err := scanSingleRow(ctx, sqlq, selectQuery, []any{requestID, log.APIKeyIDplaceholder, &log.ID, &log.CreatedAt); err != nil {
-				return false, err
-		placeholder
-			log.RateMultiplier = rateMultiplier
-			return false, nil
-	placeholder else {
-			return false, err
-	placeholder
 placeholder
-	log.RateMultiplier = rateMultiplier
-	return true, nil
+
+func usageLogBatchKey(requestID string, apiKeyID int64) string {
+	return requestID + "\x1f" + strconv.FormatInt(apiKeyID, 10)
+placeholder
+
+func sendUsageLogCreateResult(ch chan usageLogCreateResult, res usageLogCreateResult) {
+	if ch == nil {
+		return
+placeholder
+	select {
+	case ch <- res:
+	default:
+placeholder
+placeholder
+
+func (r *usageLogRepository) bestEffortRecentKey(requestID string, apiKeyID int64) (string, bool) {
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" || r == nil || r.bestEffortRecent == nil {
+		return "", false
+placeholder
+	return usageLogBatchKey(requestID, apiKeyID), true
 placeholder
 
 func (r *usageLogRepository) GetByID(ctx context.Context, id int64) (log *service.UsageLog, err error) {
@@ -1039,6 +1993,10 @@ type ModelStat = usagestats.ModelStat
 // UserUsageTrendPoint represents user usage trend data point
 type UserUsageTrendPoint = usagestats.UserUsageTrendPoint
 
+// UserSpendingRankingItem represents a user spending ranking row.
+type UserSpendingRankingItem = usagestats.UserSpendingRankingItem
+type UserSpendingRankingResponse = usagestats.UserSpendingRankingResponse
+
 // APIKeyUsageTrendPoint represents API key usage trend data point
 type APIKeyUsageTrendPoint = usagestats.APIKeyUsageTrendPoint
 
@@ -1114,6 +2072,7 @@ func (r *usageLogRepository) GetUserUsageTrend(ctx context.Context, startTime, e
 			TO_CHAR(u.created_at, '%s') as date,
 			u.user_id,
 			COALESCE(us.email, '') as email,
+			COALESCE(us.username, '') as username,
 			COUNT(*) as requests,
 			COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens,
 			COALESCE(SUM(u.total_cost), 0) as cost,
@@ -1122,7 +2081,7 @@ func (r *usageLogRepository) GetUserUsageTrend(ctx context.Context, startTime, e
 		LEFT JOIN users us ON u.user_id = us.id
 		WHERE u.user_id IN (SELECT user_id FROM top_users)
 		  AND u.created_at >= $4 AND u.created_at < $5
-		GROUP BY date, u.user_id, us.email
+		GROUP BY date, u.user_id, us.email, us.username
 		ORDER BY date ASC, tokens DESC
 	`, dateFormat)
 
@@ -1142,7 +2101,7 @@ placeholder()
 	results = make([]UserUsageTrendPoint, 0)
 	for rows.Next() {
 		var row UserUsageTrendPoint
-		if err = rows.Scan(&row.Date, &row.UserID, &row.Email, &row.Requests, &row.Tokens, &row.Cost, &row.ActualCost); err != nil {
+		if err = rows.Scan(&row.Date, &row.UserID, &row.Email, &row.Username, &row.Requests, &row.Tokens, &row.Cost, &row.ActualCost); err != nil {
 			return nil, err
 	placeholder
 		results = append(results, row)
@@ -1152,6 +2111,78 @@ placeholder
 placeholder
 
 	return results, nil
+placeholder
+
+// GetUserSpendingRanking returns user spending ranking aggregated within the time range.
+func (r *usageLogRepository) GetUserSpendingRanking(ctx context.Context, startTime, endTime time.Time, limit int) (result *UserSpendingRankingResponse, err error) {
+	if limit <= 0 {
+		limit = 12
+placeholder
+
+	query := `
+		WITH user_spend AS (
+			SELECT
+				u.user_id,
+				COALESCE(us.email, '') as email,
+				COALESCE(SUM(u.actual_cost), 0) as actual_cost,
+				COUNT(*) as requests,
+				COALESCE(SUM(u.input_tokens + u.output_tokens + u.cache_creation_tokens + u.cache_read_tokens), 0) as tokens
+			FROM usage_logs u
+			LEFT JOIN users us ON u.user_id = us.id
+			WHERE u.created_at >= $1 AND u.created_at < $2
+			GROUP BY u.user_id, us.email
+		),
+		ranked AS (
+			SELECT
+				user_id,
+				email,
+				actual_cost,
+				requests,
+				tokens,
+				COALESCE(SUM(actual_cost) OVER (), 0) as total_actual_cost
+			FROM user_spend
+			ORDER BY actual_cost DESC, tokens DESC, user_id ASC
+			LIMIT $3
+		)
+		SELECT
+			user_id,
+			email,
+			actual_cost,
+			requests,
+			tokens,
+			total_actual_cost
+		FROM ranked
+		ORDER BY actual_cost DESC, tokens DESC, user_id ASC
+	`
+
+	rows, err := r.sql.QueryContext(ctx, query, startTime, endTime, limit)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+			result = nil
+	placeholder
+placeholder()
+
+	ranking := make([]UserSpendingRankingItem, 0)
+	totalActualCost := 0.0
+	for rows.Next() {
+		var row UserSpendingRankingItem
+		if err = rows.Scan(&row.UserID, &row.Email, &row.ActualCost, &row.Requests, &row.Tokens, &totalActualCost); err != nil {
+			return nil, err
+	placeholder
+		ranking = append(ranking, row)
+placeholder
+	if err = rows.Err(); err != nil {
+		return nil, err
+placeholder
+
+	return &UserSpendingRankingResponse{
+		Ranking:         ranking,
+		TotalActualCost: totalActualCost,
+placeholder, nil
 placeholder
 
 // UserDashboardStats 用户仪表盘统计

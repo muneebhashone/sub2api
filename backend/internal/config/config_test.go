@@ -441,6 +441,9 @@ placeholder
 	if cfg.DashboardAgg.Retention.UsageLogsDays != 90 {
 		t.Fatalf("DashboardAgg.Retention.UsageLogsDays = %d, want 90", cfg.DashboardAgg.Retention.UsageLogsDays)
 placeholder
+	if cfg.DashboardAgg.Retention.UsageBillingDedupDays != 365 {
+		t.Fatalf("DashboardAgg.Retention.UsageBillingDedupDays = %d, want 365", cfg.DashboardAgg.Retention.UsageBillingDedupDays)
+placeholder
 	if cfg.DashboardAgg.Retention.HourlyDays != 180 {
 		t.Fatalf("DashboardAgg.Retention.HourlyDays = %d, want 180", cfg.DashboardAgg.Retention.HourlyDays)
 placeholder
@@ -1015,6 +1018,23 @@ placeholder{
 			name:    "dashboard aggregation retention",
 			mutate:  func(c *Config) { c.DashboardAgg.Enabled = true; c.DashboardAgg.Retention.UsageLogsDays = 0 placeholder,
 			wantErr: "dashboard_aggregation.retention.usage_logs_days",
+	placeholder,
+		{
+			name: "dashboard aggregation dedup retention",
+			mutate: func(c *Config) {
+				c.DashboardAgg.Enabled = true
+				c.DashboardAgg.Retention.UsageBillingDedupDays = 0
+		placeholder,
+			wantErr: "dashboard_aggregation.retention.usage_billing_dedup_days",
+	placeholder,
+		{
+			name: "dashboard aggregation dedup retention smaller than usage logs",
+			mutate: func(c *Config) {
+				c.DashboardAgg.Enabled = true
+				c.DashboardAgg.Retention.UsageLogsDays = 30
+				c.DashboardAgg.Retention.UsageBillingDedupDays = 29
+		placeholder,
+			wantErr: "dashboard_aggregation.retention.usage_billing_dedup_days",
 	placeholder,
 		{
 			name:    "dashboard aggregation disabled interval",

@@ -136,16 +136,18 @@ placeholder, "\n")
 	placeholder,
 placeholder
 
-	svc := &GatewayService{
-		cfg: &config.Config{
-			Gateway: config.GatewayConfig{
-				MaxLineSize: defaultMaxLineSize,
-		placeholder,
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
 	placeholder,
-		httpUpstream:        upstream,
-		rateLimitService:    &RateLimitService{placeholder,
-		deferredService:     &DeferredService{placeholder,
-		billingCacheService: nil,
+placeholder
+	svc := &GatewayService{
+		cfg:                  cfg,
+		responseHeaderFilter: compileResponseHeaderFilter(cfg),
+		httpUpstream:         upstream,
+		rateLimitService:     &RateLimitService{placeholder,
+		deferredService:      &DeferredService{placeholder,
+		billingCacheService:  nil,
 placeholder
 
 	account := &Account{
@@ -221,14 +223,16 @@ placeholder
 	placeholder,
 placeholder
 
-	svc := &GatewayService{
-		cfg: &config.Config{
-			Gateway: config.GatewayConfig{
-				MaxLineSize: defaultMaxLineSize,
-		placeholder,
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
 	placeholder,
-		httpUpstream:     upstream,
-		rateLimitService: &RateLimitService{placeholder,
+placeholder
+	svc := &GatewayService{
+		cfg:                  cfg,
+		responseHeaderFilter: compileResponseHeaderFilter(cfg),
+		httpUpstream:         upstream,
+		rateLimitService:     &RateLimitService{placeholder,
 placeholder
 
 	account := &Account{
@@ -727,6 +731,39 @@ placeholder
 	require.Equal(t, 5, result.usage.OutputTokens)
 placeholder
 
+func TestGatewayService_AnthropicAPIKeyPassthrough_MissingTerminalEventReturnsError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	svc := &GatewayService{
+		cfg: &config.Config{
+			Gateway: config.GatewayConfig{
+				MaxLineSize: defaultMaxLineSize,
+		placeholder,
+	placeholder,
+		rateLimitService: &RateLimitService{placeholder,
+placeholder
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			`data: {"type":"message_start","message":{"usage":{"input_tokens":11placeholderplaceholderplaceholder`,
+			"",
+			`data: {"type":"message_delta","usage":{"output_tokens":5placeholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+placeholder
+
+	result, err := svc.handleStreamingResponseAnthropicAPIKeyPassthrough(context.Background(), resp, c, &Account{ID: 1placeholder, time.Now(), "claude-3-7-sonnet-20250219")
+placeholder
+	require.Contains(t, err.Error(), "missing terminal event")
+	require.NotNil(t, result)
+placeholder
+
 func TestGatewayService_AnthropicAPIKeyPassthrough_ForwardDirect_NonStreamingSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
@@ -1075,6 +1112,7 @@ placeholder()
 	<-done
 
 placeholder
+	require.Contains(t, err.Error(), "stream usage incomplete after timeout")
 	require.NotNil(t, result)
 	require.True(t, result.clientDisconnect)
 	require.Equal(t, 9, result.usage.InputTokens)
@@ -1104,6 +1142,7 @@ placeholder
 
 	result, err := svc.handleStreamingResponseAnthropicAPIKeyPassthrough(context.Background(), resp, c, &Account{ID: 3placeholder, time.Now(), "claude-3-7-sonnet-20250219")
 placeholder
+	require.Contains(t, err.Error(), "stream usage incomplete")
 	require.NotNil(t, result)
 	require.True(t, result.clientDisconnect)
 placeholder
@@ -1134,6 +1173,7 @@ placeholder
 
 	result, err := svc.handleStreamingResponseAnthropicAPIKeyPassthrough(context.Background(), resp, c, &Account{ID: 4placeholder, time.Now(), "claude-3-7-sonnet-20250219")
 placeholder
+	require.Contains(t, err.Error(), "stream usage incomplete after disconnect")
 	require.NotNil(t, result)
 	require.True(t, result.clientDisconnect)
 	require.Equal(t, 8, result.usage.InputTokens)

@@ -182,6 +182,7 @@ placeholder()
 	result, err := svc.handleStreamingResponse(context.Background(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model", false)
 	_ = pr.Close()
 placeholder
+	require.Contains(t, err.Error(), "missing terminal event")
 	require.NotNil(t, result)
 placeholder
 
