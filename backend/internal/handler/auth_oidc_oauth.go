@@ -306,7 +306,7 @@ placeholder
 placeholder
 
 	identityKey := oidcIdentityKey(issuer, subject)
-	email := oidcSyntheticEmailFromIdentityKey(identityKey)
+	email := oidcSelectLoginEmail(userInfoClaims.Email, idClaims.Email, identityKey)
 	username := firstNonEmpty(
 		userInfoClaims.Username,
 		idClaims.PreferredUsername,
@@ -829,6 +829,14 @@ func oidcSyntheticEmailFromIdentityKey(identityKey string) string {
 placeholder
 	sum := sha256.Sum256([]byte(identityKey))
 	return "oidc-" + hex.EncodeToString(sum[:16]) + service.OIDCConnectSyntheticEmailDomain
+placeholder
+
+func oidcSelectLoginEmail(userInfoEmail, idTokenEmail, identityKey string) string {
+	email := strings.TrimSpace(firstNonEmpty(userInfoEmail, idTokenEmail))
+	if email != "" {
+		return email
+placeholder
+	return oidcSyntheticEmailFromIdentityKey(identityKey)
 placeholder
 
 func oidcFallbackUsername(subject string) string {
