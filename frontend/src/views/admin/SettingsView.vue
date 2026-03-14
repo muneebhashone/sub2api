@@ -1745,7 +1745,7 @@ const betaPolicyForm = reactive({
   rules: [] as Array<{
     beta_token: string
     action: 'pass' | 'filter' | 'block'
-    scope: 'all' | 'oauth' | 'apikey'
+    scope: 'all' | 'oauth' | 'apikey' | 'bedrock'
     error_message?: string
   placeholder>
 placeholder)
@@ -2297,7 +2297,8 @@ const betaPolicyActionOptions = computed(() => [
 const betaPolicyScopeOptions = computed(() => [
   { value: 'all', label: t('admin.settings.betaPolicy.scopeAll') placeholder,
   { value: 'oauth', label: t('admin.settings.betaPolicy.scopeOAuth') placeholder,
-  { value: 'apikey', label: t('admin.settings.betaPolicy.scopeAPIKey') placeholder
+  { value: 'apikey', label: t('admin.settings.betaPolicy.scopeAPIKey') placeholder,
+  { value: 'bedrock', label: t('admin.settings.betaPolicy.scopeBedrock') placeholder
 ])
 
 // Beta Policy 方法
