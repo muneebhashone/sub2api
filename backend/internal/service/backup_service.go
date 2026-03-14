@@ -662,12 +662,6 @@ placeholder
 	return records, nil
 placeholder
 
-func (s *BackupService) saveRecords(ctx context.Context, records []BackupRecord) error {
-	s.recordsMu.Lock()
-	defer s.recordsMu.Unlock()
-	return s.saveRecordsLocked(ctx, records)
-placeholder
-
 // saveRecordsLocked 在已持有 recordsMu 锁的情况下保存记录
 func (s *BackupService) saveRecordsLocked(ctx context.Context, records []BackupRecord) error {
 	data, err := json.Marshal(records)
