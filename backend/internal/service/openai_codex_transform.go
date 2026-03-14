@@ -339,8 +339,9 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 	placeholder
 		typ, _ := m["type"].(string)
 
-		// 修复 OpenAI 上游的最新校验："Expected an ID that begins with 'fc'"
-		fixIDPrefix := func(id string) string {
+		// 仅修正真正的 tool/function call 标识，避免误改普通 message/reasoning id；
+		// 若 item_reference 指向 legacy call_* 标识，则仅修正该引用本身。
+		fixCallIDPrefix := func(id string) string {
 			if id == "" || strings.HasPrefix(id, "fc") {
 				return id
 		placeholder
@@ -358,8 +359,8 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 			for key, value := range m {
 				newItem[key] = value
 		placeholder
-			if id, ok := newItem["id"].(string); ok && id != "" {
-				newItem["id"] = fixIDPrefix(id)
+			if id, ok := newItem["id"].(string); ok && strings.HasPrefix(id, "call_") {
+				newItem["id"] = fixCallIDPrefix(id)
 		placeholder
 			filtered = append(filtered, newItem)
 			continue
@@ -390,7 +391,7 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 		placeholder
 
 			if callID != "" {
-				fixedCallID := fixIDPrefix(callID)
+				fixedCallID := fixCallIDPrefix(callID)
 				if fixedCallID != callID {
 					ensureCopy()
 					newItem["call_id"] = fixedCallID
@@ -403,14 +404,6 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 			delete(newItem, "id")
 			if !isCodexToolCallItemType(typ) {
 				delete(newItem, "call_id")
-		placeholder
-	placeholder else {
-			if id, ok := newItem["id"].(string); ok && id != "" {
-				fixedID := fixIDPrefix(id)
-				if fixedID != id {
-					ensureCopy()
-					newItem["id"] = fixedID
-			placeholder
 		placeholder
 	placeholder
 
