@@ -371,6 +371,8 @@ func defaultOpsAdvancedSettings() *OpsAdvancedSettings {
 		IgnoreCountTokensErrors:   true,  // count_tokens 404 是预期行为，默认忽略
 		IgnoreContextCanceled:     true,  // Default to true - client disconnects are not errors
 		IgnoreNoAvailableAccounts: false, // Default to false - this is a real routing issue
+		DisplayOpenAITokenStats:   false,
+		DisplayAlertEvents:        true,
 		AutoRefreshEnabled:        false,
 		AutoRefreshIntervalSec:    30,
 placeholder
@@ -438,7 +440,7 @@ placeholder
 		return nil, err
 placeholder
 
-	cfg := &OpsAdvancedSettings{placeholder
+	cfg := defaultOpsAdvancedSettings()
 	if err := json.Unmarshal([]byte(raw), cfg); err != nil {
 		return defaultCfg, nil
 placeholder

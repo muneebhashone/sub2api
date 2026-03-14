@@ -27,34 +27,68 @@ placeholder
 
 func TestCheckErrorPolicy_401_DBFallback_Escalates(t *testing.T) {
 	// Scenario: cache account has empty TempUnschedulableReason (cache miss),
-	// but DB account has a previous 401 record → should escalate to ErrorPolicyNone.
-	repo := &dbFallbackRepoStub{
-		dbAccount: &Account{
-			ID:                      20,
-			TempUnschedulableReason: `{"status_code":401,"until_unix":1735689600placeholder`,
-	placeholder,
-placeholder
-	svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	// but DB account has a previous 401 record.
+	// Non-Antigravity: should escalate to ErrorPolicyNone (second 401 = permanent error).
+	// Antigravity: skips escalation logic (401 handled by applyErrorPolicy rules).
+	t.Run("gemini_escalates", func(t *testing.T) {
+		repo := &dbFallbackRepoStub{
+			dbAccount: &Account{
+				ID:                      20,
+				TempUnschedulableReason: `{"status_code":401,"until_unix":1735689600placeholder`,
+		placeholder,
+	placeholder
+		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
 
-	account := &Account{
-		ID:                      20,
-		Type:                    AccountTypeOAuth,
-		Platform:                PlatformAntigravity,
-		TempUnschedulableReason: "", // cache miss — reason is empty
-placeholder
-			"temp_unschedulable_enabled": true,
-			"temp_unschedulable_rules": []any{
-				map[string]any{
-					"error_code":       float64(401),
-					"keywords":         []any{"unauthorized"placeholder,
-					"duration_minutes": float64(10),
+		account := &Account{
+			ID:                      20,
+			Type:                    AccountTypeOAuth,
+			Platform:                PlatformGemini,
+			TempUnschedulableReason: "",
+	placeholder
+				"temp_unschedulable_enabled": true,
+				"temp_unschedulable_rules": []any{
+					map[string]any{
+						"error_code":       float64(401),
+						"keywords":         []any{"unauthorized"placeholder,
+						"duration_minutes": float64(10),
+				placeholder,
 			placeholder,
 		placeholder,
-	placeholder,
-placeholder
+	placeholder
 
-	result := svc.CheckErrorPolicy(context.Background(), account, http.StatusUnauthorized, []byte(`unauthorized`))
-	require.Equal(t, ErrorPolicyNone, result, "401 with DB fallback showing previous 401 should escalate to ErrorPolicyNone")
+		result := svc.CheckErrorPolicy(context.Background(), account, http.StatusUnauthorized, []byte(`unauthorized`))
+		require.Equal(t, ErrorPolicyNone, result, "gemini 401 with DB fallback showing previous 401 should escalate")
+placeholder)
+
+	t.Run("antigravity_stays_temp", func(t *testing.T) {
+		repo := &dbFallbackRepoStub{
+			dbAccount: &Account{
+				ID:                      20,
+				TempUnschedulableReason: `{"status_code":401,"until_unix":1735689600placeholder`,
+		placeholder,
+	placeholder
+		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+
+		account := &Account{
+			ID:                      20,
+			Type:                    AccountTypeOAuth,
+			Platform:                PlatformAntigravity,
+			TempUnschedulableReason: "",
+	placeholder
+				"temp_unschedulable_enabled": true,
+				"temp_unschedulable_rules": []any{
+					map[string]any{
+						"error_code":       float64(401),
+						"keywords":         []any{"unauthorized"placeholder,
+						"duration_minutes": float64(10),
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder
+
+		result := svc.CheckErrorPolicy(context.Background(), account, http.StatusUnauthorized, []byte(`unauthorized`))
+		require.Equal(t, ErrorPolicyTempUnscheduled, result, "antigravity 401 skips escalation, stays temp-unscheduled")
+placeholder)
 placeholder
 
 func TestCheckErrorPolicy_401_DBFallback_NoDBRecord_FirstHit(t *testing.T) {

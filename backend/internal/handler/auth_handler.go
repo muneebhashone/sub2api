@@ -194,6 +194,12 @@ placeholder
 		return
 placeholder
 
+	// Backend mode: only admin can login
+	if h.settingSvc.IsBackendModeEnabled(c.Request.Context()) && !user.IsAdmin() {
+		response.Forbidden(c, "Backend mode is active. Only admin login is allowed.")
+		return
+placeholder
+
 	h.respondWithTokenPair(c, user)
 placeholder
 
@@ -250,15 +256,21 @@ placeholder
 		return
 placeholder
 
-	// Delete the login session
-	_ = h.totpService.DeleteLoginSession(c.Request.Context(), req.TempToken)
-
-	// Get the user
+	// Get the user (before session deletion so we can check backend mode)
 	user, err := h.userService.GetByID(c.Request.Context(), session.UserID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
+
+	// Backend mode: only admin can login (check BEFORE deleting session)
+	if h.settingSvc.IsBackendModeEnabled(c.Request.Context()) && !user.IsAdmin() {
+		response.Forbidden(c, "Backend mode is active. Only admin login is allowed.")
+		return
+placeholder
+
+	// Delete the login session (only after all checks pass)
+	_ = h.totpService.DeleteLoginSession(c.Request.Context(), req.TempToken)
 
 	h.respondWithTokenPair(c, user)
 placeholder
@@ -522,16 +534,22 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 placeholder
 
-	tokenPair, err := h.authService.RefreshTokenPair(c.Request.Context(), req.RefreshToken)
+	result, err := h.authService.RefreshTokenPair(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
 
+	// Backend mode: block non-admin token refresh
+	if h.settingSvc.IsBackendModeEnabled(c.Request.Context()) && result.UserRole != "admin" {
+		response.Forbidden(c, "Backend mode is active. Only admin login is allowed.")
+		return
+placeholder
+
 	response.Success(c, RefreshTokenResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresIn:    tokenPair.ExpiresIn,
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    result.ExpiresIn,
 		TokenType:    "Bearer",
 placeholder)
 placeholder

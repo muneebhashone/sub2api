@@ -125,6 +125,7 @@ placeholder
 		OpsMetricsIntervalSeconds:            settings.OpsMetricsIntervalSeconds,
 		MinClaudeCodeVersion:                 settings.MinClaudeCodeVersion,
 		AllowUngroupedKeyScheduling:          settings.AllowUngroupedKeyScheduling,
+		BackendModeEnabled:                   settings.BackendModeEnabled,
 placeholder)
 placeholder
 
@@ -199,6 +200,9 @@ type UpdateSettingsRequest struct {
 
 	// 分组隔离
 	AllowUngroupedKeyScheduling bool `json:"allow_ungrouped_key_scheduling"`
+
+	// Backend Mode
+	BackendModeEnabled bool `json:"backend_mode_enabled"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -473,6 +477,7 @@ placeholder
 		IdentityPatchPrompt:              req.IdentityPatchPrompt,
 		MinClaudeCodeVersion:             req.MinClaudeCodeVersion,
 		AllowUngroupedKeyScheduling:      req.AllowUngroupedKeyScheduling,
+		BackendModeEnabled:               req.BackendModeEnabled,
 		OpsMonitoringEnabled: func() bool {
 			if req.OpsMonitoringEnabled != nil {
 				return *req.OpsMonitoringEnabled
@@ -571,6 +576,7 @@ placeholder
 		OpsMetricsIntervalSeconds:            updatedSettings.OpsMetricsIntervalSeconds,
 		MinClaudeCodeVersion:                 updatedSettings.MinClaudeCodeVersion,
 		AllowUngroupedKeyScheduling:          updatedSettings.AllowUngroupedKeyScheduling,
+		BackendModeEnabled:                   updatedSettings.BackendModeEnabled,
 placeholder)
 placeholder
 
@@ -724,6 +730,9 @@ placeholder
 placeholder
 	if before.AllowUngroupedKeyScheduling != after.AllowUngroupedKeyScheduling {
 		changed = append(changed, "allow_ungrouped_key_scheduling")
+placeholder
+	if before.BackendModeEnabled != after.BackendModeEnabled {
+		changed = append(changed, "backend_mode_enabled")
 placeholder
 	if before.PurchaseSubscriptionEnabled != after.PurchaseSubscriptionEnabled {
 		changed = append(changed, "purchase_subscription_enabled")
