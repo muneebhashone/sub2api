@@ -972,6 +972,76 @@ func BenchmarkParseGatewayRequest_Old_Large(b *testing.B) {
 placeholder
 placeholder
 
+func TestParseGatewayRequest_OutputEffort(t *testing.T) {
+	tests := []struct {
+		name       string
+		body       string
+		wantEffort string
+placeholder{
+		{
+			name:       "output_config.effort present",
+			body:       `{"model":"claude-opus-4-6","output_config":{"effort":"medium"placeholder,"messages":[]placeholder`,
+			wantEffort: "medium",
+	placeholder,
+		{
+			name:       "output_config.effort max",
+			body:       `{"model":"claude-opus-4-6","output_config":{"effort":"max"placeholder,"messages":[]placeholder`,
+			wantEffort: "max",
+	placeholder,
+		{
+			name:       "output_config without effort",
+			body:       `{"model":"claude-opus-4-6","output_config":{placeholder,"messages":[]placeholder`,
+			wantEffort: "",
+	placeholder,
+		{
+			name:       "no output_config",
+			body:       `{"model":"claude-opus-4-6","messages":[]placeholder`,
+			wantEffort: "",
+	placeholder,
+		{
+			name:       "effort with whitespace trimmed",
+			body:       `{"model":"claude-opus-4-6","output_config":{"effort":" high "placeholder,"messages":[]placeholder`,
+			wantEffort: "high",
+	placeholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := ParseGatewayRequest([]byte(tt.body), "")
+		placeholder
+			require.Equal(t, tt.wantEffort, parsed.OutputEffort)
+	placeholder)
+placeholder
+placeholder
+
+func TestNormalizeClaudeOutputEffort(t *testing.T) {
+	tests := []struct {
+		input string
+		want  *string
+placeholder{
+		{"low", strPtr("low")placeholder,
+		{"medium", strPtr("medium")placeholder,
+		{"high", strPtr("high")placeholder,
+		{"max", strPtr("max")placeholder,
+		{"LOW", strPtr("low")placeholder,
+		{"Max", strPtr("max")placeholder,
+		{" medium ", strPtr("medium")placeholder,
+		{"", nilplaceholder,
+		{"unknown", nilplaceholder,
+		{"xhigh", nilplaceholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeClaudeOutputEffort(tt.input)
+			if tt.want == nil {
+				require.Nil(t, got)
+		placeholder else {
+				require.NotNil(t, got)
+				require.Equal(t, *tt.want, *got)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func BenchmarkParseGatewayRequest_New_Large(b *testing.B) {
 	data := buildLargeJSON()
 	b.SetBytes(int64(len(data)))
