@@ -164,27 +164,10 @@
               </p>
             </div>
 
-            <!-- Model Checkbox List -->
-            <div class="mb-3 grid grid-cols-2 gap-2">
-              <label
-                v-for="model in filteredModels"
-                :key="model.value"
-                class="flex cursor-pointer items-center rounded-lg border p-3 transition-all hover:bg-gray-50 dark:border-dark-600 dark:hover:bg-dark-700"
-                :class="
-                  allowedModels.includes(model.value)
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200'
-                "
-              >
-                <input
-                  v-model="allowedModels"
-                  type="checkbox"
-                  :value="model.value"
-                  class="mr-2 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span class="text-sm text-gray-700 dark:text-gray-300">{{ model.label placeholderplaceholder</span>
-              </label>
-            </div>
+            <ModelWhitelistSelector
+              v-model="allowedModels"
+              :platforms="selectedPlatforms"
+            />
 
             <p class="text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.selectedModels', { count: allowedModels.length placeholder) placeholderplaceholder
@@ -832,8 +815,12 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import ProxySelector from '@/components/common/ProxySelector.vue'
 import GroupSelector from '@/components/common/GroupSelector.vue'
+import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { buildModelMappingObject as buildModelMappingPayload placeholder from '@/composables/useModelWhitelist'
+import {
+  buildModelMappingObject as buildModelMappingPayload,
+  getPresetMappingsByPlatform
+placeholder from '@/composables/useModelWhitelist'
 
 interface Props {
   show: boolean
@@ -865,26 +852,20 @@ const allAnthropicOAuthOrSetupToken = computed(() => {
   )
 placeholder)
 
-const platformModelPrefix: Record<string, string[]> = {
-  anthropic: ['claude-'],
-  antigravity: ['claude-', 'gemini-', 'gpt-oss-', 'tab_'],
-  openai: ['gpt-'],
-  gemini: ['gemini-'],
-  sora: []
-placeholder
-
-const filteredModels = computed(() => {
-  if (props.selectedPlatforms.length === 0) return allModels
-  const prefixes = [...new Set(props.selectedPlatforms.flatMap(p => platformModelPrefix[p] || []))]
-  if (prefixes.length === 0) return allModels
-  return allModels.filter(m => prefixes.some(prefix => m.value.startsWith(prefix)))
-placeholder)
-
 const filteredPresets = computed(() => {
-  if (props.selectedPlatforms.length === 0) return presetMappings
-  const prefixes = [...new Set(props.selectedPlatforms.flatMap(p => platformModelPrefix[p] || []))]
-  if (prefixes.length === 0) return presetMappings
-  return presetMappings.filter(m => prefixes.some(prefix => m.from.startsWith(prefix)))
+  if (props.selectedPlatforms.length === 0) return []
+
+  const dedupedPresets = new Map<string, ReturnType<typeof getPresetMappingsByPlatform>[number]>()
+  for (const platform of props.selectedPlatforms) {
+    for (const preset of getPresetMappingsByPlatform(platform)) {
+      const key = `${preset.fromplaceholder=>${preset.toplaceholder`
+      if (!dedupedPresets.has(key)) {
+        dedupedPresets.set(key, preset)
+      placeholder
+    placeholder
+  placeholder
+
+  return Array.from(dedupedPresets.values())
 placeholder)
 
 // Model mapping type
@@ -936,204 +917,6 @@ const umqModeOptions = computed(() => [
   { value: 'throttle', label: t('admin.accounts.quotaControl.rpmLimit.umqModeThrottle') placeholder,
   { value: 'serialize', label: t('admin.accounts.quotaControl.rpmLimit.umqModeSerialize') placeholder,
 ])
-
-// All models list (combined Anthropic + OpenAI + Gemini)
-const allModels = [
-  { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' placeholder,
-  { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' placeholder,
-  { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' placeholder,
-  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' placeholder,
-  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' placeholder,
-  { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' placeholder,
-  { value: 'placeholder', label: 'Claude Haiku 4.5' placeholder,
-  { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' placeholder,
-  { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' placeholder,
-  { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' placeholder,
-  { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' placeholder,
-  { value: 'gpt-5.3-codex-spark', label: 'GPT-5.3 Codex Spark' placeholder,
-  { value: 'gpt-5.4', label: 'GPT-5.4' placeholder,
-  { value: 'gpt-5.2-2025-12-11', label: 'GPT-5.2' placeholder,
-  { value: 'gpt-5.2-codex', label: 'GPT-5.2 Codex' placeholder,
-  { value: 'gpt-5.1-codex-max', label: 'GPT-5.1 Codex Max' placeholder,
-  { value: 'gpt-5.1-codex', label: 'GPT-5.1 Codex' placeholder,
-  { value: 'gpt-5.1-2025-11-13', label: 'GPT-5.1' placeholder,
-  { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini' placeholder,
-  { value: 'gpt-5-2025-08-07', label: 'GPT-5' placeholder,
-  { value: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image' placeholder,
-  { value: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image' placeholder,
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' placeholder,
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' placeholder,
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' placeholder,
-  { value: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image (Legacy)' placeholder,
-  { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' placeholder,
-  { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' placeholder
-]
-
-// Preset mappings (combined Anthropic + OpenAI + Gemini)
-const presetMappings = [
-  {
-    label: 'Sonnet 4',
-    from: 'claude-sonnet-4-20250514',
-    to: 'claude-sonnet-4-20250514',
-    color: 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
-  placeholder,
-  {
-    label: 'Sonnet 4.5',
-    from: 'claude-sonnet-4-5-20250929',
-    to: 'claude-sonnet-4-5-20250929',
-    color:
-      'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400'
-  placeholder,
-  {
-    label: 'Opus 4.5',
-    from: 'claude-opus-4-5-20251101',
-    to: 'claude-opus-4-5-20251101',
-    color:
-      'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
-  placeholder,
-  {
-    label: 'Opus 4.6',
-    from: 'claude-opus-4-6',
-    to: 'claude-opus-4-6-thinking',
-    color:
-      'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
-  placeholder,
-  {
-    label: 'Opus 4.6-thinking',
-    from: 'claude-opus-4-6-thinking',
-    to: 'claude-opus-4-6-thinking',
-    color:
-      'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
-  placeholder,
-  {
-    label: 'Sonnet 4.6',
-    from: 'claude-sonnet-4-6',
-    to: 'claude-sonnet-4-6',
-    color:
-      'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400'
-  placeholder,
-  {
-    label: 'Sonnet4→4.6',
-    from: 'claude-sonnet-4-20250514',
-    to: 'claude-sonnet-4-6',
-    color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400'
-  placeholder,
-  {
-    label: 'Sonnet4.5→4.6',
-    from: 'claude-sonnet-4-5-20250929',
-    to: 'claude-sonnet-4-6',
-    color: 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400'
-  placeholder,
-  {
-    label: 'Sonnet3.5→4.6',
-    from: 'claude-3-5-sonnet-20241022',
-    to: 'claude-sonnet-4-6',
-    color: 'bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-900/30 dark:text-teal-400'
-  placeholder,
-  {
-    label: 'Opus4.5→4.6',
-    from: 'claude-opus-4-5-20251101',
-    to: 'claude-opus-4-6-thinking',
-    color:
-      'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400'
-  placeholder,
-  {
-    label: 'Opus->Sonnet',
-    from: 'claude-opus-4-5-20251101',
-    to: 'claude-sonnet-4-5-20250929',
-    color: 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
-  placeholder,
-  {
-    label: 'Gemini 2.5 Image',
-    from: 'gemini-2.5-flash-image',
-    to: 'gemini-2.5-flash-image',
-    color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400'
-  placeholder,
-  {
-    label: 'Gemini 3.1 Image',
-    from: 'gemini-3.1-flash-image',
-    to: 'gemini-3.1-flash-image',
-    color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400'
-  placeholder,
-  {
-    label: 'G3 Image→3.1',
-    from: 'gemini-3-pro-image',
-    to: 'gemini-3.1-flash-image',
-    color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400'
-  placeholder,
-  {
-    label: 'GPT-5.3 Codex',
-    from: 'gpt-5.3-codex',
-    to: 'gpt-5.3-codex',
-    color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400'
-  placeholder,
-  {
-    label: 'GPT-5.3 Spark',
-    from: 'gpt-5.3-codex-spark',
-    to: 'gpt-5.3-codex-spark',
-    color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400'
-  placeholder,
-  {
-    label: 'GPT-5.4',
-    from: 'gpt-5.4',
-    to: 'gpt-5.4',
-    color: 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400'
-  placeholder,
-  {
-    label: '5.2→5.3',
-    from: 'gpt-5.2-codex',
-    to: 'gpt-5.3-codex',
-    color: 'bg-lime-100 text-lime-700 hover:bg-lime-200 dark:bg-lime-900/30 dark:text-lime-400'
-  placeholder,
-  {
-    label: 'GPT-5.2',
-    from: 'gpt-5.2-2025-12-11',
-    to: 'gpt-5.2-2025-12-11',
-    color: 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
-  placeholder,
-  {
-    label: 'GPT-5.2 Codex',
-    from: 'gpt-5.2-codex',
-    to: 'gpt-5.2-codex',
-    color: 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
-  placeholder,
-  {
-    label: 'Max->Codex',
-    from: 'gpt-5.1-codex-max',
-    to: 'gpt-5.1-codex',
-    color: 'bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900/30 dark:text-pink-400'
-  placeholder,
-  {
-    label: '3-Pro-Preview→3.1-Pro-High',
-    from: 'gemini-3-pro-preview',
-    to: 'gemini-3.1-pro-high',
-    color: 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
-  placeholder,
-  {
-    label: '3-Pro-High→3.1-Pro-High',
-    from: 'gemini-3-pro-high',
-    to: 'gemini-3.1-pro-high',
-    color: 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400'
-  placeholder,
-  {
-    label: '3-Pro-Low→3.1-Pro-Low',
-    from: 'gemini-3-pro-low',
-    to: 'gemini-3.1-pro-low',
-    color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
-  placeholder,
-  {
-    label: '3-Flash透传',
-    from: 'gemini-3-flash',
-    to: 'gemini-3-flash',
-    color: 'bg-lime-100 text-lime-700 hover:bg-lime-200 dark:bg-lime-900/30 dark:text-lime-400'
-  placeholder,
-  {
-    label: '2.5-Flash-Lite透传',
-    from: 'gemini-2.5-flash-lite',
-    to: 'gemini-2.5-flash-lite',
-    color: 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
-  placeholder
-]
 
 // Common HTTP error codes
 const commonErrorCodes = [
