@@ -13,6 +13,11 @@ func NewGeminiTokenRefresher(geminiOAuthService *GeminiOAuthService) *GeminiToke
 	return &GeminiTokenRefresher{geminiOAuthService: geminiOAuthServiceplaceholder
 placeholder
 
+// CacheKey 返回用于分布式锁的缓存键
+func (r *GeminiTokenRefresher) CacheKey(account *Account) string {
+	return GeminiTokenCacheKey(account)
+placeholder
+
 func (r *GeminiTokenRefresher) CanRefresh(account *Account) bool {
 	return account.Platform == PlatformGemini && account.Type == AccountTypeOAuth
 placeholder
@@ -35,11 +40,7 @@ func (r *GeminiTokenRefresher) Refresh(ctx context.Context, account *Account) (m
 placeholder
 
 	newCredentials := r.geminiOAuthService.BuildAccountCredentials(tokenInfo)
-	for k, v := range account.Credentials {
-		if _, exists := newCredentials[k]; !exists {
-			newCredentials[k] = v
-	placeholder
-placeholder
+	newCredentials = MergeCredentials(account.Credentials, newCredentials)
 
 	return newCredentials, nil
 placeholder
