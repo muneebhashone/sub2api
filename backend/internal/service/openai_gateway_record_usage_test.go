@@ -226,6 +226,41 @@ placeholder
 	require.Equal(t, 1, userRepo.deductCalls)
 placeholder
 
+func TestOpenAIGatewayServiceRecordUsage_IncludesEndpointMetadata(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+	userRepo := &openAIRecordUsageUserRepoStub{placeholder
+	subRepo := &openAIRecordUsageSubRepoStub{placeholder
+	rateRepo := &openAIUserGroupRateRepoStub{placeholder
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, subRepo, rateRepo)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID: "resp_endpoint_metadata",
+			Usage: OpenAIUsage{
+				InputTokens:  8,
+				OutputTokens: 2,
+		placeholder,
+			Model:    "gpt-5.1",
+			Duration: time.Second,
+	placeholder,
+		APIKey: &APIKey{
+			ID:    1002,
+			Group: &Group{RateMultiplier: 1placeholder,
+	placeholder,
+		User:             &User{ID: 2002placeholder,
+		Account:          &Account{ID: 3002placeholder,
+		InboundEndpoint:  " /v1/chat/completions ",
+		UpstreamEndpoint: " /v1/responses ",
+placeholder)
+
+placeholder
+	require.NotNil(t, usageRepo.lastLog)
+	require.NotNil(t, usageRepo.lastLog.InboundEndpoint)
+	require.Equal(t, "/v1/chat/completions", *usageRepo.lastLog.InboundEndpoint)
+	require.NotNil(t, usageRepo.lastLog.UpstreamEndpoint)
+	require.Equal(t, "/v1/responses", *usageRepo.lastLog.UpstreamEndpoint)
+placeholder
+
 func TestOpenAIGatewayServiceRecordUsage_FallsBackToGroupDefaultRateOnResolverError(t *testing.T) {
 	groupID := int64(12)
 	groupRate := 1.6
