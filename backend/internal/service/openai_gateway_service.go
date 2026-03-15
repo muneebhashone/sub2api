@@ -1312,7 +1312,7 @@ placeholder
 		return nil, err
 placeholder
 	if len(accounts) == 0 {
-		return nil, errors.New("no available accounts")
+		return nil, ErrNoAvailableAccounts
 placeholder
 
 	isExcluded := func(accountID int64) bool {
@@ -1382,7 +1382,7 @@ placeholder
 placeholder
 
 	if len(candidates) == 0 {
-		return nil, errors.New("no available accounts")
+		return nil, ErrNoAvailableAccounts
 placeholder
 
 	accountLoads := make([]AccountWithConcurrency, 0, len(candidates))
@@ -1489,7 +1489,7 @@ placeholder
 	placeholder, nil
 placeholder
 
-	return nil, errors.New("no available accounts")
+	return nil, ErrNoAvailableAccounts
 placeholder
 
 func (s *OpenAIGatewayService) listSchedulableAccounts(ctx context.Context, groupID *int64) ([]Account, error) {

@@ -467,7 +467,7 @@ placeholder
 			return &opsRetryExecution{status: opsRetryStatusFailed, errorMessage: selErr.Error()placeholder
 	placeholder
 		if selection == nil || selection.Account == nil {
-			return &opsRetryExecution{status: opsRetryStatusFailed, errorMessage: "no available accounts"placeholder
+			return &opsRetryExecution{status: opsRetryStatusFailed, errorMessage: ErrNoAvailableAccounts.Error()placeholder
 	placeholder
 
 		account := selection.Account

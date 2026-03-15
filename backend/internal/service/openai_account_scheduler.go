@@ -725,7 +725,7 @@ placeholder
 	placeholder, len(candidates), topK, loadSkew, nil
 placeholder
 
-	return nil, len(candidates), topK, loadSkew, errors.New("no available accounts")
+	return nil, len(candidates), topK, loadSkew, ErrNoAvailableAccounts
 placeholder
 
 func (s *defaultOpenAIAccountScheduler) isAccountTransportCompatible(account *Account, requiredTransport OpenAIUpstreamTransport) bool {
