@@ -1100,6 +1100,9 @@ placeholder
 	if err := s.accountRepo.ClearModelRateLimits(ctx, accountID); err != nil {
 		return err
 placeholder
+	if err := clearAntigravityCreditsOveragesState(ctx, s.accountRepo, accountID); err != nil {
+		return err
+placeholder
 	// 清除限流时一并清理临时不可调度状态，避免周限/窗口重置后仍被本地临时状态阻断。
 	if err := s.accountRepo.ClearTempUnschedulable(ctx, accountID); err != nil {
 		return err
@@ -1109,6 +1112,7 @@ placeholder
 			slog.Warn("temp_unsched_cache_delete_failed", "account_id", accountID, "error", err)
 	placeholder
 placeholder
+	clearCreditsExhausted(accountID)
 	return nil
 placeholder
 
@@ -1174,7 +1178,9 @@ placeholder
 	if len(account.Extra) == 0 {
 		return false
 placeholder
-	return hasNonEmptyMapValue(account.Extra, "model_rate_limits") || hasNonEmptyMapValue(account.Extra, "antigravity_quota_scopes")
+	return hasNonEmptyMapValue(account.Extra, "model_rate_limits") ||
+		hasNonEmptyMapValue(account.Extra, "antigravity_quota_scopes") ||
+		hasNonEmptyMapValue(account.Extra, antigravityCreditsOveragesKey)
 placeholder
 
 func hasNonEmptyMapValue(extra map[string]any, key string) bool {

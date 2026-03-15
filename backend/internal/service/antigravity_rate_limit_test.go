@@ -76,10 +76,16 @@ type modelRateLimitCall struct {
 	resetAt   time.Time
 placeholder
 
+type extraUpdateCall struct {
+	accountID int64
+	updates   map[string]any
+placeholder
+
 type stubAntigravityAccountRepo struct {
 	AccountRepository
 	rateCalls           []rateLimitCall
 	modelRateLimitCalls []modelRateLimitCall
+	extraUpdateCalls    []extraUpdateCall
 placeholder
 
 func (s *stubAntigravityAccountRepo) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
@@ -89,6 +95,11 @@ placeholder
 
 func (s *stubAntigravityAccountRepo) SetModelRateLimit(ctx context.Context, id int64, modelKey string, resetAt time.Time) error {
 	s.modelRateLimitCalls = append(s.modelRateLimitCalls, modelRateLimitCall{accountID: id, modelKey: modelKey, resetAt: resetAtplaceholder)
+	return nil
+placeholder
+
+func (s *stubAntigravityAccountRepo) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
+	s.extraUpdateCalls = append(s.extraUpdateCalls, extraUpdateCall{accountID: id, updates: updatesplaceholder)
 	return nil
 placeholder
 
