@@ -35,6 +35,19 @@
           </span>
         </template>
 
+        <template #cell-endpoint="{ row placeholder">
+          <div class="max-w-[320px] space-y-1 text-xs">
+            <div class="break-all text-gray-700 dark:text-gray-300">
+              <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('usage.inbound') placeholderplaceholder:</span>
+              <span class="ml-1">{{ row.inbound_endpoint?.trim() || '-' placeholderplaceholder</span>
+            </div>
+            <div class="break-all text-gray-700 dark:text-gray-300">
+              <span class="font-medium text-gray-500 dark:text-gray-400">{{ t('usage.upstream') placeholderplaceholder:</span>
+              <span class="ml-1">{{ row.upstream_endpoint?.trim() || '-' placeholderplaceholder</span>
+            </div>
+          </div>
+        </template>
+
         <template #cell-group="{ row placeholder">
           <span v-if="row.group" class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
             {{ row.group.name placeholderplaceholder
@@ -328,6 +341,7 @@ const getRequestTypeBadgeClass = (row: AdminUsageLog): string => {
   if (requestType === 'sync') return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
   return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
 placeholder
+
 const formatCacheTokens = (tokens: number): string => {
   if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)placeholderM`
   if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)placeholderK`
