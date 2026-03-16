@@ -1124,11 +1124,22 @@ func (s *OpenAIGatewayService) buildOpenAIWSHeaders(
 			headers.Set("accept-language", v)
 	placeholder
 placeholder
-	if sessionResolution.SessionID != "" {
-		headers.Set("session_id", sessionResolution.SessionID)
-placeholder
-	if sessionResolution.ConversationID != "" {
-		headers.Set("conversation_id", sessionResolution.ConversationID)
+	// OAuth 账号：将 apiKeyID 混入 session 标识符，防止跨用户会话碰撞。
+	if account != nil && account.Type == AccountTypeOAuth {
+		apiKeyID := getAPIKeyIDFromContext(c)
+		if sessionResolution.SessionID != "" {
+			headers.Set("session_id", isolateOpenAISessionID(apiKeyID, sessionResolution.SessionID))
+	placeholder
+		if sessionResolution.ConversationID != "" {
+			headers.Set("conversation_id", isolateOpenAISessionID(apiKeyID, sessionResolution.ConversationID))
+	placeholder
+placeholder else {
+		if sessionResolution.SessionID != "" {
+			headers.Set("session_id", sessionResolution.SessionID)
+	placeholder
+		if sessionResolution.ConversationID != "" {
+			headers.Set("conversation_id", sessionResolution.ConversationID)
+	placeholder
 placeholder
 	if state := strings.TrimSpace(turnState); state != "" {
 		headers.Set(openAIWSTurnStateHeader, state)
