@@ -47,6 +47,15 @@ func Created(c *gin.Context, data any) {
 placeholder)
 placeholder
 
+// Accepted 返回异步接受响应 (HTTP 202)
+func Accepted(c *gin.Context, data any) {
+	c.JSON(http.StatusAccepted, Response{
+		Code:    0,
+		Message: "accepted",
+		Data:    data,
+placeholder)
+placeholder
+
 // Error 返回错误响应
 func Error(c *gin.Context, statusCode int, message string) {
 	c.JSON(statusCode, Response{
