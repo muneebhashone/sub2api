@@ -122,7 +122,7 @@ type DistributionMetric = 'tokens' | 'actual_cost'
 type EndpointSource = 'inbound' | 'upstream' | 'path'
 const route = useRoute()
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<AdminUsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
-const trendData = ref<TrendDataPoint[]>([]); const modelStats = ref<ModelStat[]>([]); const groupStats = ref<GroupStat[]>([]); const chartsLoading = ref(false); const granularity = ref<'day' | 'hour'>('day')
+const trendData = ref<TrendDataPoint[]>([]); const modelStats = ref<ModelStat[]>([]); const groupStats = ref<GroupStat[]>([]); const chartsLoading = ref(false); const granularity = ref<'day' | 'hour'>('hour')
 const modelDistributionMetric = ref<DistributionMetric>('tokens')
 const groupDistributionMetric = ref<DistributionMetric>('tokens')
 const endpointDistributionMetric = ref<DistributionMetric>('tokens')
@@ -159,6 +159,7 @@ const formatLD = (d: Date) => {
   return `${yearplaceholder-${monthplaceholder-${dayplaceholder`
 placeholder
 const getTodayLocalDate = () => formatLD(new Date())
+const getGranularityForRange = (start: string, end: string): 'day' | 'hour' => start === end ? 'hour' : 'day'
 const startDate = ref(getTodayLocalDate()); const endDate = ref(getTodayLocalDate())
 const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, billing_type: null, start_date: startDate.value, end_date: endDate.value placeholder)
 const pagination = reactive({ page: 1, page_size: 20, total: 0 placeholder)
@@ -193,6 +194,7 @@ const applyRouteQueryFilters = () => {
     start_date: startDate.value,
     end_date: endDate.value
   placeholder
+  granularity.value = getGranularityForRange(startDate.value, endDate.value)
 placeholder
 
 const loadLogs = async () => {
@@ -258,7 +260,7 @@ const loadChartData = async () => {
 placeholder
 const applyFilters = () => { pagination.page = 1; loadLogs(); loadStats(); loadChartData() placeholder
 const refreshData = () => { loadLogs(); loadStats(); loadChartData() placeholder
-const resetFilters = () => { startDate.value = getTodayLocalDate(); endDate.value = getTodayLocalDate(); filters.value = { start_date: startDate.value, end_date: endDate.value, request_type: undefined, billing_type: null placeholder; granularity.value = 'day'; applyFilters() placeholder
+const resetFilters = () => { startDate.value = getTodayLocalDate(); endDate.value = getTodayLocalDate(); filters.value = { start_date: startDate.value, end_date: endDate.value, request_type: undefined, billing_type: null placeholder; granularity.value = getGranularityForRange(startDate.value, endDate.value); applyFilters() placeholder
 const handlePageChange = (p: number) => { pagination.page = p; loadLogs() placeholder
 const handlePageSizeChange = (s: number) => { pagination.page_size = s; pagination.page = 1; loadLogs() placeholder
 const cancelExport = () => exportAbortController?.abort()
