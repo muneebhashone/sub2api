@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach placeholder from 'vitest'
 import { flushPromises, mount placeholder from '@vue/test-utils'
 import AccountUsageCell from '../AccountUsageCell.vue'
+import type { Account placeholder from '@/types'
 
 const { getUsage placeholder = vi.hoisted(() => ({
   getUsage: vi.fn()
@@ -23,6 +24,35 @@ vi.mock('vue-i18n', async () => {
     placeholder)
   placeholder
 placeholder)
+
+function makeAccount(overrides: Partial<Account>): Account {
+  return {
+    id: 1,
+    name: 'account',
+    platform: 'antigravity',
+    type: 'oauth',
+    proxy_id: null,
+    concurrency: 1,
+    priority: 1,
+    status: 'active',
+    error_message: null,
+    last_used_at: null,
+    expires_at: null,
+    auto_pause_on_expired: true,
+    created_at: '2026-03-15T00:00:00Z',
+    updated_at: '2026-03-15T00:00:00Z',
+    schedulable: true,
+    rate_limited_at: null,
+    rate_limit_reset_at: null,
+    overload_until: null,
+    temp_unschedulable_until: null,
+    temp_unschedulable_reason: null,
+    session_window_start: null,
+    session_window_end: null,
+    session_window_status: null,
+    ...overrides,
+  placeholder
+placeholder
 
 describe('AccountUsageCell', () => {
   beforeEach(() => {
@@ -49,12 +79,12 @@ describe('AccountUsageCell', () => {
 
     const wrapper = mount(AccountUsageCell, {
       props: {
-        account: {
+        account: makeAccount({
           id: 1001,
           platform: 'antigravity',
           type: 'oauth',
           extra: {placeholder
-        placeholder as any
+        placeholder)
       placeholder,
       global: {
         stubs: {
@@ -70,6 +100,40 @@ describe('AccountUsageCell', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('admin.accounts.usageWindow.gemini3Image|70|2026-03-01T09:00:00Z')
+  placeholder)
+
+  it('Antigravity 会显示 AI Credits 余额信息', async () => {
+    getUsage.mockResolvedValue({
+      ai_credits: [
+        {
+          credit_type: 'GOOGLE_ONE_AI',
+          amount: 25,
+          minimum_balance: 5
+        placeholder
+      ]
+    placeholder)
+
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({
+          id: 1002,
+          platform: 'antigravity',
+          type: 'oauth',
+          extra: {placeholder
+        placeholder)
+      placeholder,
+      global: {
+        stubs: {
+          UsageProgressBar: true,
+          AccountQuotaInfo: true
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('admin.accounts.aiCreditsBalance')
+    expect(wrapper.text()).toContain('25')
   placeholder)
 
 
@@ -103,7 +167,7 @@ describe('AccountUsageCell', () => {
 
     const wrapper = mount(AccountUsageCell, {
       props: {
-        account: {
+        account: makeAccount({
           id: 2000,
           platform: 'openai',
           type: 'oauth',
@@ -114,7 +178,7 @@ describe('AccountUsageCell', () => {
             codex_7d_used_percent: 34,
             codex_7d_reset_at: '2026-03-13T12:00:00Z'
           placeholder
-        placeholder as any
+        placeholder)
       placeholder,
       global: {
         stubs: {
@@ -137,7 +201,7 @@ describe('AccountUsageCell', () => {
   it('OpenAI OAuth 有现成快照且未限额时不会首屏请求 usage', async () => {
     const wrapper = mount(AccountUsageCell, {
       props: {
-        account: {
+        account: makeAccount({
           id: 2001,
           platform: 'openai',
           type: 'oauth',
@@ -148,7 +212,7 @@ describe('AccountUsageCell', () => {
             codex_7d_used_percent: 34,
             codex_7d_reset_at: '2099-03-13T12:00:00Z'
           placeholder
-        placeholder as any
+        placeholder)
       placeholder,
       global: {
         stubs: {
@@ -196,15 +260,15 @@ describe('AccountUsageCell', () => {
 	  placeholder
 placeholder)
 
-	const wrapper = mount(AccountUsageCell, {
-	  props: {
-	    account: {
-	      id: 2002,
-	      platform: 'openai',
-	      type: 'oauth',
-	      extra: {placeholder
-	    placeholder as any
-	  placeholder,
+		const wrapper = mount(AccountUsageCell, {
+		  props: {
+		    account: makeAccount({
+		      id: 2002,
+		      platform: 'openai',
+		      type: 'oauth',
+		      extra: {placeholder
+		    placeholder)
+		  placeholder,
 	  global: {
 	    stubs: {
 	      UsageProgressBar: {
@@ -256,16 +320,16 @@ placeholder)
 	    seven_day: null
 	  placeholder)
 
-	const wrapper = mount(AccountUsageCell, {
-	  props: {
-	    account: {
-	      id: 2003,
-	      platform: 'openai',
-	      type: 'oauth',
-	      updated_at: '2026-03-07T10:00:00Z',
-	      extra: {placeholder
-	    placeholder as any
-	  placeholder,
+		const wrapper = mount(AccountUsageCell, {
+		  props: {
+		    account: makeAccount({
+		      id: 2003,
+		      platform: 'openai',
+		      type: 'oauth',
+		      updated_at: '2026-03-07T10:00:00Z',
+		      extra: {placeholder
+		    placeholder)
+		  placeholder,
 	  global: {
 	    stubs: {
 	      UsageProgressBar: {
@@ -324,19 +388,19 @@ placeholder)
 	  placeholder
 placeholder)
 
-	const wrapper = mount(AccountUsageCell, {
-	  props: {
-	    account: {
-	      id: 2004,
-	      platform: 'openai',
-	      type: 'oauth',
-	      rate_limit_reset_at: '2099-03-07T12:00:00Z',
-	      extra: {
-	        codex_5h_used_percent: 0,
-	        codex_7d_used_percent: 0
-	      placeholder
-	    placeholder as any
-	  placeholder,
+		const wrapper = mount(AccountUsageCell, {
+		  props: {
+		    account: makeAccount({
+		      id: 2004,
+		      platform: 'openai',
+		      type: 'oauth',
+		      rate_limit_reset_at: '2099-03-07T12:00:00Z',
+		      extra: {
+		        codex_5h_used_percent: 0,
+		        codex_7d_used_percent: 0
+		      placeholder
+		    placeholder)
+		  placeholder,
 	  global: {
 	    stubs: {
 	      UsageProgressBar: {
