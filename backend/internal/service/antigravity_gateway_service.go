@@ -3079,6 +3079,22 @@ placeholder
 		intervalCh = intervalTicker.C
 placeholder
 
+	// 下游 keepalive：防止代理/Cloudflare Tunnel 因连接空闲而断开
+	keepaliveInterval := time.Duration(0)
+	if s.settingService.cfg != nil && s.settingService.cfg.Gateway.StreamKeepaliveInterval > 0 {
+		keepaliveInterval = time.Duration(s.settingService.cfg.Gateway.StreamKeepaliveInterval) * time.Second
+placeholder
+	var keepaliveTicker *time.Ticker
+	if keepaliveInterval > 0 {
+		keepaliveTicker = time.NewTicker(keepaliveInterval)
+		defer keepaliveTicker.Stop()
+placeholder
+	var keepaliveCh <-chan time.Time
+	if keepaliveTicker != nil {
+		keepaliveCh = keepaliveTicker.C
+placeholder
+	lastDataAt := time.Now()
+
 	cw := newAntigravityClientWriter(c.Writer, flusher, "antigravity gemini")
 
 	// 仅发送一次错误事件，避免多次写入导致协议混乱
@@ -3110,6 +3126,8 @@ placeholder
 				sendErrorEvent("stream_read_error")
 				return nil, ev.err
 		placeholder
+
+			lastDataAt = time.Now()
 
 			line := ev.line
 			trimmed := strings.TrimRight(line, "\r\n")
@@ -3170,6 +3188,19 @@ placeholder
 			logger.LegacyPrintf("service.antigravity_gateway", "Stream data interval timeout (antigravity)")
 			sendErrorEvent("stream_timeout")
 			return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")
+
+		case <-keepaliveCh:
+			if cw.Disconnected() {
+				continue
+		placeholder
+			if time.Since(lastDataAt) < keepaliveInterval {
+				continue
+		placeholder
+			// SSE ping/keepalive：保持连接活跃防止 Cloudflare Tunnel 等代理断开
+			if !cw.Fprintf(":\n\n") {
+				logger.LegacyPrintf("service.antigravity_gateway", "Client disconnected during keepalive ping (antigravity gemini), continuing to drain upstream for billing")
+				continue
+		placeholder
 	placeholder
 placeholder
 placeholder
@@ -3895,6 +3926,22 @@ placeholder
 		intervalCh = intervalTicker.C
 placeholder
 
+	// 下游 keepalive：防止代理/Cloudflare Tunnel 因连接空闲而断开
+	keepaliveInterval := time.Duration(0)
+	if s.settingService.cfg != nil && s.settingService.cfg.Gateway.StreamKeepaliveInterval > 0 {
+		keepaliveInterval = time.Duration(s.settingService.cfg.Gateway.StreamKeepaliveInterval) * time.Second
+placeholder
+	var keepaliveTicker *time.Ticker
+	if keepaliveInterval > 0 {
+		keepaliveTicker = time.NewTicker(keepaliveInterval)
+		defer keepaliveTicker.Stop()
+placeholder
+	var keepaliveCh <-chan time.Time
+	if keepaliveTicker != nil {
+		keepaliveCh = keepaliveTicker.C
+placeholder
+	lastDataAt := time.Now()
+
 	cw := newAntigravityClientWriter(c.Writer, flusher, "antigravity claude")
 
 	// 仅发送一次错误事件，避免多次写入导致协议混乱
@@ -3947,6 +3994,8 @@ placeholder
 				return nil, fmt.Errorf("stream read error: %w", ev.err)
 		placeholder
 
+			lastDataAt = time.Now()
+
 			// 处理 SSE 行，转换为 Claude 格式
 			claudeEvents := processor.ProcessLine(strings.TrimRight(ev.line, "\r\n"))
 			if len(claudeEvents) > 0 {
@@ -3969,6 +4018,20 @@ placeholder
 			logger.LegacyPrintf("service.antigravity_gateway", "Stream data interval timeout (antigravity)")
 			sendErrorEvent("stream_timeout")
 			return &antigravityStreamResult{usage: convertUsage(nil), firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")
+
+		case <-keepaliveCh:
+			if cw.Disconnected() {
+				continue
+		placeholder
+			if time.Since(lastDataAt) < keepaliveInterval {
+				continue
+		placeholder
+			// SSE ping 事件：Anthropic 原生格式，客户端会正确处理，
+			// 同时保持连接活跃防止 Cloudflare Tunnel 等代理断开
+			if !cw.Fprintf("event: ping\ndata: {\"type\": \"ping\"placeholder\n\n") {
+				logger.LegacyPrintf("service.antigravity_gateway", "Client disconnected during keepalive ping (antigravity claude), continuing to drain upstream for billing")
+				continue
+		placeholder
 	placeholder
 placeholder
 placeholder
@@ -4299,6 +4362,22 @@ placeholder
 		intervalCh = intervalTicker.C
 placeholder
 
+	// 下游 keepalive：防止代理/Cloudflare Tunnel 因连接空闲而断开
+	keepaliveInterval := time.Duration(0)
+	if s.settingService.cfg != nil && s.settingService.cfg.Gateway.StreamKeepaliveInterval > 0 {
+		keepaliveInterval = time.Duration(s.settingService.cfg.Gateway.StreamKeepaliveInterval) * time.Second
+placeholder
+	var keepaliveTicker *time.Ticker
+	if keepaliveInterval > 0 {
+		keepaliveTicker = time.NewTicker(keepaliveInterval)
+		defer keepaliveTicker.Stop()
+placeholder
+	var keepaliveCh <-chan time.Time
+	if keepaliveTicker != nil {
+		keepaliveCh = keepaliveTicker.C
+placeholder
+	lastDataAt := time.Now()
+
 	flusher, _ := c.Writer.(http.Flusher)
 	cw := newAntigravityClientWriter(c.Writer, flusher, "antigravity upstream")
 
@@ -4315,6 +4394,8 @@ placeholder
 				logger.LegacyPrintf("service.antigravity_gateway", "Stream read error (antigravity upstream): %v", ev.err)
 				return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMsplaceholder
 		placeholder
+
+			lastDataAt = time.Now()
 
 			line := ev.line
 
@@ -4341,6 +4422,20 @@ placeholder
 		placeholder
 			logger.LegacyPrintf("service.antigravity_gateway", "Stream data interval timeout (antigravity upstream)")
 			return &antigravityStreamResult{usage: usage, firstTokenMs: firstTokenMsplaceholder
+
+		case <-keepaliveCh:
+			if cw.Disconnected() {
+				continue
+		placeholder
+			if time.Since(lastDataAt) < keepaliveInterval {
+				continue
+		placeholder
+			// SSE ping 事件：Anthropic 原生格式，客户端会正确处理，
+			// 同时保持连接活跃防止 Cloudflare Tunnel 等代理断开
+			if !cw.Fprintf("event: ping\ndata: {\"type\": \"ping\"placeholder\n\n") {
+				logger.LegacyPrintf("service.antigravity_gateway", "Client disconnected during keepalive ping (antigravity upstream), continuing to drain upstream for billing")
+				continue
+		placeholder
 	placeholder
 placeholder
 placeholder
