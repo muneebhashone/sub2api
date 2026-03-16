@@ -56,7 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed placeholder from 'vue'
+import { computed, ref placeholder from 'vue'
+import { useIntervalFn placeholder from '@vueuse/core'
 import { useI18n placeholder from 'vue-i18n'
 import type { WindowStats placeholder from '@/types'
 import { formatCompactNumber placeholder from '@/utils/format'
@@ -70,6 +71,12 @@ const props = defineProps<{
 placeholder>()
 
 const { t placeholder = useI18n()
+
+// Reactive clock for countdown (updates every 60s)
+const now = ref(new Date())
+useIntervalFn(() => {
+  now.value = new Date()
+placeholder, 60_000)
 
 // Label background colors
 const labelClass = computed(() => {
@@ -119,8 +126,7 @@ placeholder)
 const formatResetTime = computed(() => {
   if (!props.resetsAt) return '-'
   const date = new Date(props.resetsAt)
-  const now = new Date()
-  const diffMs = date.getTime() - now.getTime()
+  const diffMs = date.getTime() - now.value.getTime()
 
   if (diffMs <= 0) return '现在'
 
