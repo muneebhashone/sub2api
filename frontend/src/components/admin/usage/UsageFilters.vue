@@ -139,17 +139,6 @@
           <Select v-model="filters.group_id" :options="groupOptions" searchable @change="emitChange" />
         </div>
 
-        <!-- Date Range Filter -->
-        <div class="w-full sm:w-auto [&_.date-picker-trigger]:w-full">
-          <label class="input-label">{{ t('usage.timeRange') placeholderplaceholder</label>
-          <DateRangePicker
-            :start-date="startDate"
-            :end-date="endDate"
-            @update:startDate="updateStartDate"
-            @update:endDate="updateEndDate"
-            @change="emitChange"
-          />
-        </div>
       </div>
 
       <!-- Right: actions -->
@@ -177,7 +166,6 @@ import { ref, onMounted, onUnmounted, toRef, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import Select, { type SelectOption placeholder from '@/components/common/Select.vue'
-import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import type { SimpleApiKey, SimpleUser placeholder from '@/api/admin/usage'
 
 type ModelValue = Record<string, any>
@@ -195,8 +183,6 @@ const props = withDefaults(defineProps<Props>(), {
 placeholder)
 const emit = defineEmits([
   'update:modelValue',
-  'update:startDate',
-  'update:endDate',
   'change',
   'refresh',
   'reset',
@@ -247,16 +233,6 @@ const billingTypeOptions = ref<SelectOption[]>([
 ])
 
 const emitChange = () => emit('change')
-
-const updateStartDate = (value: string) => {
-  emit('update:startDate', value)
-  filters.value.start_date = value
-placeholder
-
-const updateEndDate = (value: string) => {
-  emit('update:endDate', value)
-  filters.value.end_date = value
-placeholder
 
 const debounceUserSearch = () => {
   if (userSearchTimeout) clearTimeout(userSearchTimeout)
@@ -441,7 +417,11 @@ onMounted(async () => {
     groupOptions.value.push(...gs.items.map((g: any) => ({ value: g.id, label: g.name placeholder)))
 
     const uniqueModels = new Set<string>()
-    ms.models?.forEach((s: any) => s.model && uniqueModels.add(s.model))
+    ms.models?.forEach((s: any) => {
+      if (s.model) {
+        uniqueModels.add(s.model)
+      placeholder
+    placeholder)
     modelOptions.value.push(
       ...Array.from(uniqueModels)
         .sort()
