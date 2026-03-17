@@ -44,6 +44,7 @@ placeholder
 			log.AccountID,
 			log.RequestID,
 			log.Model,
+			sqlmock.AnyArg(), // upstream_model
 			sqlmock.AnyArg(), // group_id
 			sqlmock.AnyArg(), // subscription_id
 			log.InputTokens,
@@ -114,6 +115,7 @@ placeholder
 			log.AccountID,
 			log.RequestID,
 			log.Model,
+			sqlmock.AnyArg(),
 			sqlmock.AnyArg(),
 			sqlmock.AnyArg(),
 			log.InputTokens,
@@ -353,6 +355,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			int64(30), // account_id
 			sql.NullString{Valid: true, String: "req-1"placeholder,
 			"gpt-5",           // model
+			sql.NullString{placeholder,  // upstream_model
 			sql.NullInt64{placeholder,   // group_id
 			sql.NullInt64{placeholder,   // subscription_id
 			1,                 // input_tokens
@@ -404,6 +407,7 @@ placeholder)
 			int64(31),
 			sql.NullString{Valid: true, String: "req-2"placeholder,
 			"gpt-5",
+			sql.NullString{placeholder,
 			sql.NullInt64{placeholder,
 			sql.NullInt64{placeholder,
 			1, 2, 3, 4, 5, 6,
@@ -445,6 +449,7 @@ placeholder)
 			int64(32),
 			sql.NullString{Valid: true, String: "req-3"placeholder,
 			"gpt-5.4",
+			sql.NullString{placeholder,
 			sql.NullInt64{placeholder,
 			sql.NullInt64{placeholder,
 			1, 2, 3, 4, 5, 6,
