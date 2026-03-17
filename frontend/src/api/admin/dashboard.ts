@@ -12,6 +12,7 @@ import type {
   ApiKeyUsageTrendPoint,
   UserUsageTrendPoint,
   UserSpendingRankingResponse,
+  UserBreakdownItem,
   UsageRequestType
 placeholder from '@/types'
 
@@ -153,6 +154,29 @@ placeholder
  */
 export async function getGroupStats(params?: GroupStatsParams): Promise<GroupStatsResponse> {
   const { data placeholder = await apiClient.get<GroupStatsResponse>('/admin/dashboard/groups', { params placeholder)
+  return data
+placeholder
+
+export interface UserBreakdownParams {
+  start_date?: string
+  end_date?: string
+  group_id?: number
+  model?: string
+  endpoint?: string
+  endpoint_type?: 'inbound' | 'upstream' | 'path'
+  limit?: number
+placeholder
+
+export interface UserBreakdownResponse {
+  users: UserBreakdownItem[]
+  start_date: string
+  end_date: string
+placeholder
+
+export async function getUserBreakdown(params: UserBreakdownParams): Promise<UserBreakdownResponse> {
+  const { data placeholder = await apiClient.get<UserBreakdownResponse>('/admin/dashboard/user-breakdown', {
+    params
+  placeholder)
   return data
 placeholder
 

@@ -49,30 +49,46 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="group in displayGroupStats"
-              :key="group.group_id"
-              class="border-t border-gray-100 dark:border-gray-700"
-            >
-              <td
-                class="max-w-[100px] truncate py-1.5 font-medium text-gray-900 dark:text-white"
-                :title="group.group_name || String(group.group_id)"
+            <template v-for="group in displayGroupStats" :key="group.group_id">
+              <tr
+                class="border-t border-gray-100 transition-colors dark:border-gray-700"
+                :class="group.group_id > 0 ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-700/40' : ''"
+                @click="group.group_id > 0 && toggleBreakdown('group', group.group_id)"
               >
-                {{ group.group_name || t('admin.dashboard.noGroup') placeholderplaceholder
-              </td>
-              <td class="py-1.5 text-right text-gray-600 dark:text-gray-400">
-                {{ formatNumber(group.requests) placeholderplaceholder
-              </td>
-              <td class="py-1.5 text-right text-gray-600 dark:text-gray-400">
-                {{ formatTokens(group.total_tokens) placeholderplaceholder
-              </td>
-              <td class="py-1.5 text-right text-green-600 dark:text-green-400">
-                ${{ formatCost(group.actual_cost) placeholderplaceholder
-              </td>
-              <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
-                ${{ formatCost(group.cost) placeholderplaceholder
-              </td>
-            </tr>
+                <td
+                  class="max-w-[100px] truncate py-1.5 font-medium"
+                  :class="group.group_id > 0 ? 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300' : 'text-gray-900 dark:text-white'"
+                  :title="group.group_name || String(group.group_id)"
+                >
+                  <span class="inline-flex items-center gap-1">
+                    <svg v-if="group.group_id > 0 && expandedKey === `group-${group.group_idplaceholder`" class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <svg v-else-if="group.group_id > 0" class="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    {{ group.group_name || t('admin.dashboard.noGroup') placeholderplaceholder
+                  </span>
+                </td>
+                <td class="py-1.5 text-right text-gray-600 dark:text-gray-400">
+                  {{ formatNumber(group.requests) placeholderplaceholder
+                </td>
+                <td class="py-1.5 text-right text-gray-600 dark:text-gray-400">
+                  {{ formatTokens(group.total_tokens) placeholderplaceholder
+                </td>
+                <td class="py-1.5 text-right text-green-600 dark:text-green-400">
+                  ${{ formatCost(group.actual_cost) placeholderplaceholder
+                </td>
+                <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
+                  ${{ formatCost(group.cost) placeholderplaceholder
+                </td>
+              </tr>
+              <!-- User breakdown sub-rows -->
+              <tr v-if="expandedKey === `group-${group.group_idplaceholder`">
+                <td colspan="5" class="p-0">
+                  <UserBreakdownSubTable
+                    :items="breakdownItems"
+                    :loading="breakdownLoading"
+                  />
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -87,12 +103,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed placeholder from 'vue'
+import { computed, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend placeholder from 'chart.js'
 import { Doughnut placeholder from 'vue-chartjs'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
-import type { GroupStat placeholder from '@/types'
+import UserBreakdownSubTable from './UserBreakdownSubTable.vue'
+import type { GroupStat, UserBreakdownItem placeholder from '@/types'
+import { getUserBreakdown placeholder from '@/api/admin/dashboard'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -105,6 +123,8 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   metric?: DistributionMetric
   showMetricToggle?: boolean
+  startDate?: string
+  endDate?: string
 placeholder>(), {
   loading: false,
   metric: 'tokens',
@@ -114,6 +134,33 @@ placeholder)
 const emit = defineEmits<{
   'update:metric': [value: DistributionMetric]
 placeholder>()
+
+const expandedKey = ref<string | null>(null)
+const breakdownItems = ref<UserBreakdownItem[]>([])
+const breakdownLoading = ref(false)
+
+const toggleBreakdown = async (type: string, id: number | string) => {
+  const key = `${typeplaceholder-${idplaceholder`
+  if (expandedKey.value === key) {
+    expandedKey.value = null
+    return
+  placeholder
+  expandedKey.value = key
+  breakdownLoading.value = true
+  breakdownItems.value = []
+  try {
+    const res = await getUserBreakdown({
+      start_date: props.startDate,
+      end_date: props.endDate,
+      group_id: Number(id),
+    placeholder)
+    breakdownItems.value = res.users || []
+  placeholder catch {
+    breakdownItems.value = []
+  placeholder finally {
+    breakdownLoading.value = false
+  placeholder
+placeholder
 
 const chartColors = [
   '#3b82f6',
