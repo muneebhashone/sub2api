@@ -29,6 +29,10 @@ export interface BackupRecord {
   started_at: string
   finished_at?: string
   expires_at?: string
+  progress?: string
+  restore_status?: string
+  restore_error?: string
+  restored_at?: string
 placeholder
 
 export interface CreateBackupRequest {
@@ -69,7 +73,7 @@ placeholder
 
 // Backup operations
 export async function createBackup(req?: CreateBackupRequest): Promise<BackupRecord> {
-  const { data placeholder = await apiClient.post<BackupRecord>('/admin/backups', req || {placeholder, { timeout: 600000 placeholder)
+  const { data placeholder = await apiClient.post<BackupRecord>('/admin/backups', req || {placeholder)
   return data
 placeholder
 
@@ -93,8 +97,9 @@ export async function getDownloadURL(id: string): Promise<{ url: string placehol
 placeholder
 
 // Restore
-export async function restoreBackup(id: string, password: string): Promise<void> {
-  await apiClient.post(`/admin/backups/${idplaceholder/restore`, { password placeholder, { timeout: 600000 placeholder)
+export async function restoreBackup(id: string, password: string): Promise<BackupRecord> {
+  const { data placeholder = await apiClient.post<BackupRecord>(`/admin/backups/${idplaceholder/restore`, { password placeholder)
+  return data
 placeholder
 
 export const backupAPI = {

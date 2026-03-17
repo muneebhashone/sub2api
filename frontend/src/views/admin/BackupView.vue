@@ -139,7 +139,9 @@
                     class="rounded px-2 py-0.5 text-xs"
                     :class="statusClass(record.status)"
                   >
-                    {{ t(`admin.backup.status.${record.statusplaceholder`) placeholderplaceholder
+                    {{ record.status === 'running' && record.progress
+                      ? t(`admin.backup.progress.${record.progressplaceholder`)
+                      : t(`admin.backup.status.${record.statusplaceholder`) placeholderplaceholder
                   </span>
                 </td>
                 <td class="py-3 pr-4 text-xs">{{ record.file_name placeholderplaceholder</td>
@@ -277,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref placeholder from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api'
 import { useAppStore placeholder from '@/stores'
@@ -315,6 +317,111 @@ const loadingBackups = ref(false)
 const creatingBackup = ref(false)
 const restoringId = ref('')
 const manualExpireDays = ref(14)
+
+// Polling
+const pollingTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const restoringPollingTimer = ref<ReturnType<typeof setInterval> | null>(null)
+const MAX_POLL_COUNT = 900
+
+function updateRecordInList(updated: BackupRecord) {
+  const idx = backups.value.findIndex(r => r.id === updated.id)
+  if (idx >= 0) {
+    backups.value[idx] = updated
+  placeholder
+placeholder
+
+function startPolling(backupId: string) {
+  stopPolling()
+  let count = 0
+  pollingTimer.value = setInterval(async () => {
+    if (count++ >= MAX_POLL_COUNT) {
+      stopPolling()
+      creatingBackup.value = false
+      appStore.showWarning(t('admin.backup.operations.backupRunning'))
+      return
+    placeholder
+    try {
+      const record = await adminAPI.backup.getBackup(backupId)
+      updateRecordInList(record)
+      if (record.status === 'completed' || record.status === 'failed') {
+        stopPolling()
+        creatingBackup.value = false
+        if (record.status === 'completed') {
+          appStore.showSuccess(t('admin.backup.operations.backupCreated'))
+        placeholder else {
+          appStore.showError(record.error_message || t('admin.backup.operations.backupFailed'))
+        placeholder
+        await loadBackups()
+      placeholder
+    placeholder catch {
+      // 轮询失败时不中断
+    placeholder
+  placeholder, 2000)
+placeholder
+
+function stopPolling() {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  placeholder
+placeholder
+
+function startRestorePolling(backupId: string) {
+  stopRestorePolling()
+  let count = 0
+  restoringPollingTimer.value = setInterval(async () => {
+    if (count++ >= MAX_POLL_COUNT) {
+      stopRestorePolling()
+      restoringId.value = ''
+      appStore.showWarning(t('admin.backup.operations.restoreRunning'))
+      return
+    placeholder
+    try {
+      const record = await adminAPI.backup.getBackup(backupId)
+      updateRecordInList(record)
+      if (record.restore_status === 'completed' || record.restore_status === 'failed') {
+        stopRestorePolling()
+        restoringId.value = ''
+        if (record.restore_status === 'completed') {
+          appStore.showSuccess(t('admin.backup.actions.restoreSuccess'))
+        placeholder else {
+          appStore.showError(record.restore_error || t('admin.backup.operations.restoreFailed'))
+        placeholder
+        await loadBackups()
+      placeholder
+    placeholder catch {
+      // 轮询失败时不中断
+    placeholder
+  placeholder, 2000)
+placeholder
+
+function stopRestorePolling() {
+  if (restoringPollingTimer.value) {
+    clearInterval(restoringPollingTimer.value)
+    restoringPollingTimer.value = null
+  placeholder
+placeholder
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopPolling()
+    stopRestorePolling()
+  placeholder else {
+    // 标签页恢复时刷新列表，检查是否仍有活跃操作
+    loadBackups().then(() => {
+      const running = backups.value.find(r => r.status === 'running')
+      if (running) {
+        creatingBackup.value = true
+        startPolling(running.id)
+      placeholder
+      const restoring = backups.value.find(r => r.restore_status === 'running')
+      if (restoring) {
+        restoringId.value = restoring.id
+        startRestorePolling(restoring.id)
+      placeholder
+    placeholder)
+  placeholder
+placeholder
 
 // R2 guide
 const showR2Guide = ref(false)
@@ -416,12 +523,16 @@ placeholder
 async function createBackup() {
   creatingBackup.value = true
   try {
-    await adminAPI.backup.createBackup({ expire_days: manualExpireDays.value placeholder)
-    appStore.showSuccess(t('admin.backup.operations.backupCreated'))
-    await loadBackups()
-  placeholder catch (error) {
-    appStore.showError((error as { message?: string placeholder)?.message || t('errors.networkError'))
-  placeholder finally {
+    const record = await adminAPI.backup.createBackup({ expire_days: manualExpireDays.value placeholder)
+    // 插入到列表顶部
+    backups.value.unshift(record)
+    startPolling(record.id)
+  placeholder catch (error: any) {
+    if (error?.response?.status === 409) {
+      appStore.showWarning(t('admin.backup.operations.alreadyInProgress'))
+    placeholder else {
+      appStore.showError(error?.message || t('errors.networkError'))
+    placeholder
     creatingBackup.value = false
   placeholder
 placeholder
@@ -441,11 +552,15 @@ async function restoreBackup(id: string) {
   if (!password) return
   restoringId.value = id
   try {
-    await adminAPI.backup.restoreBackup(id, password)
-    appStore.showSuccess(t('admin.backup.actions.restoreSuccess'))
-  placeholder catch (error) {
-    appStore.showError((error as { message?: string placeholder)?.message || t('errors.networkError'))
-  placeholder finally {
+    const record = await adminAPI.backup.restoreBackup(id, password)
+    updateRecordInList(record)
+    startRestorePolling(id)
+  placeholder catch (error: any) {
+    if (error?.response?.status === 409) {
+      appStore.showWarning(t('admin.backup.operations.restoreRunning'))
+    placeholder else {
+      appStore.showError(error?.message || t('errors.networkError'))
+    placeholder
     restoringId.value = ''
   placeholder
 placeholder
@@ -489,7 +604,26 @@ function formatDate(value?: string): string {
 placeholder
 
 onMounted(async () => {
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   await Promise.all([loadS3Config(), loadSchedule(), loadBackups()])
+
+  // 如果有正在 running 的备份，恢复轮询
+  const runningBackup = backups.value.find(r => r.status === 'running')
+  if (runningBackup) {
+    creatingBackup.value = true
+    startPolling(runningBackup.id)
+  placeholder
+  const restoringBackup = backups.value.find(r => r.restore_status === 'running')
+  if (restoringBackup) {
+    restoringId.value = restoringBackup.id
+    startRestorePolling(restoringBackup.id)
+  placeholder
+placeholder)
+
+onBeforeUnmount(() => {
+  stopPolling()
+  stopRestorePolling()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 placeholder)
 </script>
 
