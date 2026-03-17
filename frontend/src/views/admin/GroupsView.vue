@@ -178,6 +178,19 @@
             </div>
           </template>
 
+          <template #cell-capacity="{ row placeholder">
+            <GroupCapacityBadge
+              v-if="capacityMap.get(row.id)"
+              :concurrency-used="capacityMap.get(row.id)!.concurrencyUsed"
+              :concurrency-max="capacityMap.get(row.id)!.concurrencyMax"
+              :sessions-used="capacityMap.get(row.id)!.sessionsUsed"
+              :sessions-max="capacityMap.get(row.id)!.sessionsMax"
+              :rpm-used="capacityMap.get(row.id)!.rpmUsed"
+              :rpm-max="capacityMap.get(row.id)!.rpmMax"
+            />
+            <span v-else class="text-xs text-gray-400">—</span>
+          </template>
+
           <template #cell-usage="{ row placeholder">
             <div v-if="usageLoading" class="text-xs text-gray-400">—</div>
             <div v-else class="space-y-0.5 text-xs">
@@ -1838,6 +1851,7 @@ import Select from '@/components/common/Select.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
 import GroupRateMultipliersModal from '@/components/admin/group/GroupRateMultipliersModal.vue'
+import GroupCapacityBadge from '@/components/common/GroupCapacityBadge.vue'
 import { VueDraggable placeholder from 'vue-draggable-plus'
 import { createStableObjectKeyResolver placeholder from '@/utils/stableObjectKey'
 import { useKeyedDebouncedSearch placeholder from '@/composables/useKeyedDebouncedSearch'
@@ -1853,6 +1867,7 @@ const columns = computed<Column[]>(() => [
   { key: 'rate_multiplier', label: t('admin.groups.columns.rateMultiplier'), sortable: true placeholder,
   { key: 'is_exclusive', label: t('admin.groups.columns.type'), sortable: true placeholder,
   { key: 'account_count', label: t('admin.groups.columns.accounts'), sortable: true placeholder,
+  { key: 'capacity', label: t('admin.groups.columns.capacity'), sortable: false placeholder,
   { key: 'usage', label: t('admin.groups.columns.usage'), sortable: false placeholder,
   { key: 'status', label: t('admin.groups.columns.status'), sortable: true placeholder,
   { key: 'actions', label: t('admin.groups.columns.actions'), sortable: false placeholder
@@ -1992,6 +2007,7 @@ const groups = ref<AdminGroup[]>([])
 const loading = ref(false)
 const usageMap = ref<Map<number, { today_cost: number; total_cost: number placeholder>>(new Map())
 const usageLoading = ref(false)
+const capacityMap = ref<Map<number, { concurrencyUsed: number; concurrencyMax: number; sessionsUsed: number; sessionsMax: number; rpmUsed: number; rpmMax: number placeholder>>(new Map())
 const searchQuery = ref('')
 const filters = reactive({
   platform: '',
@@ -2331,6 +2347,7 @@ const loadGroups = async () => {
     pagination.total = response.total
     pagination.pages = response.pages
     loadUsageSummary()
+    loadCapacitySummary()
   placeholder catch (error: any) {
     if (signal.aborted || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
       return
@@ -2364,6 +2381,26 @@ const loadUsageSummary = async () => {
     console.error('Error loading group usage summary:', error)
   placeholder finally {
     usageLoading.value = false
+  placeholder
+placeholder
+
+const loadCapacitySummary = async () => {
+  try {
+    const data = await adminAPI.groups.getCapacitySummary()
+    const map = new Map<number, { concurrencyUsed: number; concurrencyMax: number; sessionsUsed: number; sessionsMax: number; rpmUsed: number; rpmMax: number placeholder>()
+    for (const item of data) {
+      map.set(item.group_id, {
+        concurrencyUsed: item.concurrency_used,
+        concurrencyMax: item.concurrency_max,
+        sessionsUsed: item.sessions_used,
+        sessionsMax: item.sessions_max,
+        rpmUsed: item.rpm_used,
+        rpmMax: item.rpm_max
+      placeholder)
+    placeholder
+    capacityMap.value = map
+  placeholder catch (error) {
+    console.error('Error loading group capacity summary:', error)
   placeholder
 placeholder
 
