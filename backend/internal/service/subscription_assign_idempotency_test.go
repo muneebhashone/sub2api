@@ -40,7 +40,7 @@ placeholder
 func (groupRepoNoop) ExistsByName(context.Context, string) (bool, error) {
 	panic("unexpected ExistsByName call")
 placeholder
-func (groupRepoNoop) GetAccountCount(context.Context, int64) (int64, error) {
+func (groupRepoNoop) GetAccountCount(context.Context, int64) (int64, int64, error) {
 	panic("unexpected GetAccountCount call")
 placeholder
 func (groupRepoNoop) DeleteAccountGroupsByGroupID(context.Context, int64) (int64, error) {

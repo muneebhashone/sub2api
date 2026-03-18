@@ -158,12 +158,51 @@
             </span>
           </template>
 
-          <template #cell-account_count="{ value placeholder">
-            <span
-              class="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-dark-600 dark:text-gray-300"
-            >
-              {{ t('admin.groups.accountsCount', { count: value || 0 placeholder) placeholderplaceholder
-            </span>
+          <template #cell-account_count="{ row placeholder">
+            <div class="space-y-0.5 text-xs">
+              <div>
+                <span class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.accountsAvailable') placeholderplaceholder</span>
+                <span class="ml-1 font-medium text-emerald-600 dark:text-emerald-400">{{ (row.active_account_count || 0) - (row.rate_limited_account_count || 0) placeholderplaceholder</span>
+                <span class="ml-1 inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-800 dark:bg-dark-600 dark:text-gray-300">{{ t('admin.groups.accountsUnit') placeholderplaceholder</span>
+              </div>
+              <div v-if="row.rate_limited_account_count">
+                <span class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.accountsRateLimited') placeholderplaceholder</span>
+                <span class="ml-1 font-medium text-amber-600 dark:text-amber-400">{{ row.rate_limited_account_count placeholderplaceholder</span>
+                <span class="ml-1 inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-800 dark:bg-dark-600 dark:text-gray-300">{{ t('admin.groups.accountsUnit') placeholderplaceholder</span>
+              </div>
+              <div>
+                <span class="text-gray-500 dark:text-gray-400">{{ t('admin.groups.accountsTotal') placeholderplaceholder</span>
+                <span class="ml-1 font-medium text-gray-700 dark:text-gray-300">{{ row.account_count || 0 placeholderplaceholder</span>
+                <span class="ml-1 inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-800 dark:bg-dark-600 dark:text-gray-300">{{ t('admin.groups.accountsUnit') placeholderplaceholder</span>
+              </div>
+            </div>
+          </template>
+
+          <template #cell-capacity="{ row placeholder">
+            <GroupCapacityBadge
+              v-if="capacityMap.get(row.id)"
+              :concurrency-used="capacityMap.get(row.id)!.concurrencyUsed"
+              :concurrency-max="capacityMap.get(row.id)!.concurrencyMax"
+              :sessions-used="capacityMap.get(row.id)!.sessionsUsed"
+              :sessions-max="capacityMap.get(row.id)!.sessionsMax"
+              :rpm-used="capacityMap.get(row.id)!.rpmUsed"
+              :rpm-max="capacityMap.get(row.id)!.rpmMax"
+            />
+            <span v-else class="text-xs text-gray-400">—</span>
+          </template>
+
+          <template #cell-usage="{ row placeholder">
+            <div v-if="usageLoading" class="text-xs text-gray-400">—</div>
+            <div v-else class="space-y-0.5 text-xs">
+              <div class="text-gray-500 dark:text-gray-400">
+                <span class="text-gray-400 dark:text-gray-500">{{ t('admin.groups.usageToday') placeholderplaceholder</span>
+                <span class="ml-1 font-medium text-gray-700 dark:text-gray-300">${{ formatCost(usageMap.get(row.id)?.today_cost ?? 0) placeholderplaceholder</span>
+              </div>
+              <div class="text-gray-500 dark:text-gray-400">
+                <span class="text-gray-400 dark:text-gray-500">{{ t('admin.groups.usageTotal') placeholderplaceholder</span>
+                <span class="ml-1 font-medium text-gray-700 dark:text-gray-300">${{ formatCost(usageMap.get(row.id)?.total_cost ?? 0) placeholderplaceholder</span>
+              </div>
+            </div>
           </template>
 
           <template #cell-status="{ value placeholder">
@@ -1812,6 +1851,7 @@ import Select from '@/components/common/Select.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
 import GroupRateMultipliersModal from '@/components/admin/group/GroupRateMultipliersModal.vue'
+import GroupCapacityBadge from '@/components/common/GroupCapacityBadge.vue'
 import { VueDraggable placeholder from 'vue-draggable-plus'
 import { createStableObjectKeyResolver placeholder from '@/utils/stableObjectKey'
 import { useKeyedDebouncedSearch placeholder from '@/composables/useKeyedDebouncedSearch'
@@ -1827,6 +1867,8 @@ const columns = computed<Column[]>(() => [
   { key: 'rate_multiplier', label: t('admin.groups.columns.rateMultiplier'), sortable: true placeholder,
   { key: 'is_exclusive', label: t('admin.groups.columns.type'), sortable: true placeholder,
   { key: 'account_count', label: t('admin.groups.columns.accounts'), sortable: true placeholder,
+  { key: 'capacity', label: t('admin.groups.columns.capacity'), sortable: false placeholder,
+  { key: 'usage', label: t('admin.groups.columns.usage'), sortable: false placeholder,
   { key: 'status', label: t('admin.groups.columns.status'), sortable: true placeholder,
   { key: 'actions', label: t('admin.groups.columns.actions'), sortable: false placeholder
 ])
@@ -1963,6 +2005,9 @@ placeholder)
 
 const groups = ref<AdminGroup[]>([])
 const loading = ref(false)
+const usageMap = ref<Map<number, { today_cost: number; total_cost: number placeholder>>(new Map())
+const usageLoading = ref(false)
+const capacityMap = ref<Map<number, { concurrencyUsed: number; concurrencyMax: number; sessionsUsed: number; sessionsMax: number; rpmUsed: number; rpmMax: number placeholder>>(new Map())
 const searchQuery = ref('')
 const filters = reactive({
   platform: '',
@@ -2301,6 +2346,8 @@ const loadGroups = async () => {
     groups.value = response.items
     pagination.total = response.total
     pagination.pages = response.pages
+    loadUsageSummary()
+    loadCapacitySummary()
   placeholder catch (error: any) {
     if (signal.aborted || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
       return
@@ -2311,6 +2358,49 @@ const loadGroups = async () => {
     if (abortController === currentController && !signal.aborted) {
       loading.value = false
     placeholder
+  placeholder
+placeholder
+
+const formatCost = (cost: number): string => {
+  if (cost >= 1000) return cost.toFixed(0)
+  if (cost >= 100) return cost.toFixed(1)
+  return cost.toFixed(2)
+placeholder
+
+const loadUsageSummary = async () => {
+  usageLoading.value = true
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const data = await adminAPI.groups.getUsageSummary(tz)
+    const map = new Map<number, { today_cost: number; total_cost: number placeholder>()
+    for (const item of data) {
+      map.set(item.group_id, { today_cost: item.today_cost, total_cost: item.total_cost placeholder)
+    placeholder
+    usageMap.value = map
+  placeholder catch (error) {
+    console.error('Error loading group usage summary:', error)
+  placeholder finally {
+    usageLoading.value = false
+  placeholder
+placeholder
+
+const loadCapacitySummary = async () => {
+  try {
+    const data = await adminAPI.groups.getCapacitySummary()
+    const map = new Map<number, { concurrencyUsed: number; concurrencyMax: number; sessionsUsed: number; sessionsMax: number; rpmUsed: number; rpmMax: number placeholder>()
+    for (const item of data) {
+      map.set(item.group_id, {
+        concurrencyUsed: item.concurrency_used,
+        concurrencyMax: item.concurrency_max,
+        sessionsUsed: item.sessions_used,
+        sessionsMax: item.sessions_max,
+        rpmUsed: item.rpm_used,
+        rpmMax: item.rpm_max
+      placeholder)
+    placeholder
+    capacityMap.value = map
+  placeholder catch (error) {
+    console.error('Error loading group capacity summary:', error)
   placeholder
 placeholder
 
