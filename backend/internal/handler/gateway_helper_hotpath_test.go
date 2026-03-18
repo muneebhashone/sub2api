@@ -136,7 +136,7 @@ func validClaudeCodeBodyJSON() []byte {
 	return []byte(`{
 		"model":"claude-3-5-sonnet-20241022",
 		"system":[{"text":"You are Claude Code, Anthropic's official CLI for Claude."placeholder],
-		"metadata":{"user_id":"user_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_account__session_abc-123"placeholder
+		"metadata":{"user_id":"user_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_account__session_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"placeholder
 placeholder`)
 placeholder
 
@@ -190,7 +190,7 @@ func TestSetClaudeCodeClientContext_ReuseParsedRequestAndContextCache(t *testing
 			System: []any{
 				map[string]any{"text": "You are Claude Code, Anthropic's official CLI for Claude."placeholder,
 		placeholder,
-			MetadataUserID: "user_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_account__session_abc-123",
+			MetadataUserID: "user_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_account__session_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 	placeholder
 
 		// body 非法 JSON，如果函数复用 parsedReq 成功则仍应判定为 Claude Code。
@@ -209,7 +209,7 @@ placeholder)
 			"system": []any{
 				map[string]any{"text": "You are Claude Code, Anthropic's official CLI for Claude."placeholder,
 		placeholder,
-			"metadata": map[string]any{"user_id": "user_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_account__session_abc-123"placeholder,
+			"metadata": map[string]any{"user_id": "user_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_account__session_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"placeholder,
 	placeholder)
 
 		SetClaudeCodeClientContext(c, []byte(`{invalid`), nil)
