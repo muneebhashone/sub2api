@@ -788,7 +788,7 @@ placeholder
 		rateLimitService: &RateLimitService{placeholder,
 placeholder
 
-	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, newAnthropicAPIKeyAccountForTest(), body, "claude-3-5-sonnet-latest", false, time.Now())
+	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, newAnthropicAPIKeyAccountForTest(), body, "claude-3-5-sonnet-latest", "claude-3-5-sonnet-latest", false, time.Now())
 placeholder
 	require.NotNil(t, result)
 	require.Equal(t, 12, result.Usage.InputTokens)
@@ -815,7 +815,7 @@ placeholder
 placeholder
 	svc := &GatewayService{placeholder
 
-	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, account, []byte(`{placeholder`), "claude-3-5-sonnet-latest", false, time.Now())
+	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, account, []byte(`{placeholder`), "claude-3-5-sonnet-latest", "claude-3-5-sonnet-latest", false, time.Now())
 	require.Nil(t, result)
 placeholder
 	require.Contains(t, err.Error(), "requires apikey token")
@@ -840,7 +840,7 @@ placeholder
 placeholder
 	account := newAnthropicAPIKeyAccountForTest()
 
-	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, account, []byte(`{"model":"x"placeholder`), "x", false, time.Now())
+	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, account, []byte(`{"model":"x"placeholder`), "x", "x", false, time.Now())
 	require.Nil(t, result)
 placeholder
 	require.Contains(t, err.Error(), "upstream request failed")
@@ -873,7 +873,7 @@ placeholder
 		httpUpstream: upstream,
 placeholder
 
-	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, newAnthropicAPIKeyAccountForTest(), []byte(`{"model":"x"placeholder`), "x", false, time.Now())
+	result, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, newAnthropicAPIKeyAccountForTest(), []byte(`{"model":"x"placeholder`), "x", "x", false, time.Now())
 	require.Nil(t, result)
 placeholder
 	require.Contains(t, err.Error(), "empty response")

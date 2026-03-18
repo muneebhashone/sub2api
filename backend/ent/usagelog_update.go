@@ -102,6 +102,26 @@ placeholder
 	return _u
 placeholder
 
+// SetUpstreamModel sets the "upstream_model" field.
+func (_u *UsageLogUpdate) SetUpstreamModel(v string) *UsageLogUpdate {
+	_u.mutation.SetUpstreamModel(v)
+	return _u
+placeholder
+
+// SetNillableUpstreamModel sets the "upstream_model" field if the given value is not nil.
+func (_u *UsageLogUpdate) SetNillableUpstreamModel(v *string) *UsageLogUpdate {
+	if v != nil {
+		_u.SetUpstreamModel(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearUpstreamModel clears the value of the "upstream_model" field.
+func (_u *UsageLogUpdate) ClearUpstreamModel() *UsageLogUpdate {
+	_u.mutation.ClearUpstreamModel()
+	return _u
+placeholder
+
 // SetGroupID sets the "group_id" field.
 func (_u *UsageLogUpdate) SetGroupID(v int64) *UsageLogUpdate {
 	_u.mutation.SetGroupID(v)
@@ -745,6 +765,11 @@ placeholder
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.UpstreamModel(); ok {
+		if err := usagelog.UpstreamModelValidator(v); err != nil {
+			return &ValidationError{Name: "upstream_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.upstream_model": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.UserAgent(); ok {
 		if err := usagelog.UserAgentValidator(v); err != nil {
 			return &ValidationError{Name: "user_agent", err: fmt.Errorf(`ent: validator failed for field "UsageLog.user_agent": %w`, err)placeholder
@@ -794,6 +819,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.UpstreamModel(); ok {
+		_spec.SetField(usagelog.FieldUpstreamModel, field.TypeString, value)
+placeholder
+	if _u.mutation.UpstreamModelCleared() {
+		_spec.ClearField(usagelog.FieldUpstreamModel, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.InputTokens(); ok {
 		_spec.SetField(usagelog.FieldInputTokens, field.TypeInt, value)
@@ -1174,6 +1205,26 @@ func (_u *UsageLogUpdateOne) SetNillableModel(v *string) *UsageLogUpdateOne {
 	if v != nil {
 		_u.SetModel(*v)
 placeholder
+	return _u
+placeholder
+
+// SetUpstreamModel sets the "upstream_model" field.
+func (_u *UsageLogUpdateOne) SetUpstreamModel(v string) *UsageLogUpdateOne {
+	_u.mutation.SetUpstreamModel(v)
+	return _u
+placeholder
+
+// SetNillableUpstreamModel sets the "upstream_model" field if the given value is not nil.
+func (_u *UsageLogUpdateOne) SetNillableUpstreamModel(v *string) *UsageLogUpdateOne {
+	if v != nil {
+		_u.SetUpstreamModel(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearUpstreamModel clears the value of the "upstream_model" field.
+func (_u *UsageLogUpdateOne) ClearUpstreamModel() *UsageLogUpdateOne {
+	_u.mutation.ClearUpstreamModel()
 	return _u
 placeholder
 
@@ -1833,6 +1884,11 @@ placeholder
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.UpstreamModel(); ok {
+		if err := usagelog.UpstreamModelValidator(v); err != nil {
+			return &ValidationError{Name: "upstream_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.upstream_model": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.UserAgent(); ok {
 		if err := usagelog.UserAgentValidator(v); err != nil {
 			return &ValidationError{Name: "user_agent", err: fmt.Errorf(`ent: validator failed for field "UsageLog.user_agent": %w`, err)placeholder
@@ -1899,6 +1955,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.UpstreamModel(); ok {
+		_spec.SetField(usagelog.FieldUpstreamModel, field.TypeString, value)
+placeholder
+	if _u.mutation.UpstreamModelCleared() {
+		_spec.ClearField(usagelog.FieldUpstreamModel, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.InputTokens(); ok {
 		_spec.SetField(usagelog.FieldInputTokens, field.TypeInt, value)
