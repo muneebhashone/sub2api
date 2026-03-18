@@ -445,5 +445,9 @@ func (s *stubAdminService) EnsureOpenAIPrivacy(ctx context.Context, account *ser
 	return ""
 placeholder
 
+func (s *stubAdminService) ReplaceUserGroup(ctx context.Context, userID, oldGroupID, newGroupID int64) (*service.ReplaceUserGroupResult, error) {
+	return &service.ReplaceUserGroupResult{MigratedKeys: 0placeholder, nil
+placeholder
+
 // Ensure stub implements interface.
 var _ service.AdminService = (*stubAdminService)(nil)

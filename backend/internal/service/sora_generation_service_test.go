@@ -162,6 +162,9 @@ placeholder
 func (r *stubUserRepoForQuota) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {
 	return 0, nil
 placeholder
+func (r *stubUserRepoForQuota) RemoveGroupFromUserAllowedGroups(context.Context, int64, int64) error {
+	return nil
+placeholder
 func (r *stubUserRepoForQuota) UpdateTotpSecret(context.Context, int64, *string) error { return nil placeholder
 func (r *stubUserRepoForQuota) EnableTotp(context.Context, int64) error                { return nil placeholder
 func (r *stubUserRepoForQuota) DisableTotp(context.Context, int64) error               { return nil placeholder
