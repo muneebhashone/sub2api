@@ -383,6 +383,7 @@ import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useClipboard placeholder from '@/composables/useClipboard'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import { adminAPI placeholder from '@/api/admin'
 import { formatDateTime placeholder from '@/utils/format'
 import type { PromoCode, PromoCodeUsage placeholder from '@/types'
@@ -414,7 +415,7 @@ placeholder)
 
 const pagination = reactive({
   page: 1,
-  page_size: 20,
+  page_size: getPersistedPageSize(),
   total: 0
 placeholder)
 

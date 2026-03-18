@@ -69,6 +69,7 @@ import { adminAPI placeholder from '@/api/admin'
 import { formatDateTime placeholder from '@/utils/format'
 import type { AnnouncementUserReadStatus placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -92,7 +93,7 @@ const search = ref('')
 
 const pagination = reactive({
   page: 1,
-  page_size: 20,
+  page_size: getPersistedPageSize(),
   total: 0,
   pages: 0
 placeholder)

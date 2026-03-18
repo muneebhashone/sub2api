@@ -1035,6 +1035,7 @@
 	import { useAppStore placeholder from '@/stores/app'
 	import { useOnboardingStore placeholder from '@/stores/onboarding'
 	import { useClipboard placeholder from '@/composables/useClipboard'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 
 const { t placeholder = useI18n()
 import { keysAPI, authAPI, usageAPI, userGroupsAPI placeholder from '@/api'
@@ -1101,7 +1102,7 @@ const userGroupRates = ref<Record<number, number>>({placeholder)
 
 const pagination = ref({
   page: 1,
-  page_size: 10,
+  page_size: getPersistedPageSize(),
   total: 0,
   pages: 0
 placeholder)

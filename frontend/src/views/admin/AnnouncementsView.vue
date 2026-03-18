@@ -239,6 +239,7 @@
 import { computed, onMounted, reactive, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import { adminAPI placeholder from '@/api/admin'
 import { formatDateTime, formatDateTimeLocalInput, parseDateTimeLocalInput placeholder from '@/utils/format'
 import type { AdminGroup, Announcement, AnnouncementTargeting placeholder from '@/types'
@@ -270,7 +271,7 @@ const searchQuery = ref('')
 
 const pagination = reactive({
   page: 1,
-  page_size: 20,
+  page_size: getPersistedPageSize(),
   total: 0,
   pages: 0
 placeholder)

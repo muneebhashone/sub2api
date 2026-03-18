@@ -496,6 +496,7 @@ import Icon from '@/components/icons/Icon.vue'
 import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
 import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import { formatTokenPricePerMillion placeholder from '@/utils/usagePricing'
 import { getUsageServiceTierLabel placeholder from '@/utils/usageServiceTier'
 import { resolveUsageRequestType placeholder from '@/utils/usageRequestType'
@@ -584,7 +585,7 @@ placeholder
 
 const pagination = reactive({
   page: 1,
-  page_size: 20,
+  page_size: getPersistedPageSize(),
   total: 0,
   pages: 0
 placeholder)
