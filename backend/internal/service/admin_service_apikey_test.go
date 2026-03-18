@@ -194,7 +194,7 @@ placeholder
 func (s *groupRepoStubForGroupUpdate) ExistsByName(context.Context, string) (bool, error) {
 	panic("unexpected")
 placeholder
-func (s *groupRepoStubForGroupUpdate) GetAccountCount(context.Context, int64) (int64, error) {
+func (s *groupRepoStubForGroupUpdate) GetAccountCount(context.Context, int64) (int64, int64, error) {
 	panic("unexpected")
 placeholder
 func (s *groupRepoStubForGroupUpdate) DeleteAccountGroupsByGroupID(context.Context, int64) (int64, error) {

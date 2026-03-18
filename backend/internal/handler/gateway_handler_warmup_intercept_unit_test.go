@@ -76,7 +76,7 @@ func (f *fakeGroupRepo) ListActiveByPlatform(context.Context, string) ([]service
 	return nil, nil
 placeholder
 func (f *fakeGroupRepo) ExistsByName(context.Context, string) (bool, error)    { return false, nil placeholder
-func (f *fakeGroupRepo) GetAccountCount(context.Context, int64) (int64, error) { return 0, nil placeholder
+func (f *fakeGroupRepo) GetAccountCount(context.Context, int64) (int64, int64, error) { return 0, 0, nil placeholder
 func (f *fakeGroupRepo) DeleteAccountGroupsByGroupID(context.Context, int64) (int64, error) {
 	return 0, nil
 placeholder
