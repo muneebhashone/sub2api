@@ -242,6 +242,33 @@ export async function deleteAdminApiKey(): Promise<{ message: string placeholder
   return data
 placeholder
 
+// ==================== Overload Cooldown Settings ====================
+
+/**
+ * Overload cooldown settings interface (529 handling)
+ */
+export interface OverloadCooldownSettings {
+  enabled: boolean
+  cooldown_minutes: number
+placeholder
+
+export async function getOverloadCooldownSettings(): Promise<OverloadCooldownSettings> {
+  const { data placeholder = await apiClient.get<OverloadCooldownSettings>('/admin/settings/overload-cooldown')
+  return data
+placeholder
+
+export async function updateOverloadCooldownSettings(
+  settings: OverloadCooldownSettings
+): Promise<OverloadCooldownSettings> {
+  const { data placeholder = await apiClient.put<OverloadCooldownSettings>(
+    '/admin/settings/overload-cooldown',
+    settings
+  )
+  return data
+placeholder
+
+// ==================== Stream Timeout Settings ====================
+
 /**
  * Stream timeout settings interface
  */
@@ -499,6 +526,8 @@ export const settingsAPI = {
   getAdminApiKey,
   regenerateAdminApiKey,
   deleteAdminApiKey,
+  getOverloadCooldownSettings,
+  updateOverloadCooldownSettings,
   getStreamTimeoutSettings,
   updateStreamTimeoutSettings,
   getRectifierSettings,
