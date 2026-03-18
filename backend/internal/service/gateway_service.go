@@ -326,7 +326,6 @@ placeholder
 // Some upstream APIs return non-standard "data:" without space (should be "data: ").
 var (
 	sseDataRe            = regexp.MustCompile(`^data:\s*`)
-	sessionIDRegex       = regexp.MustCompile(`session_([a-f0-9-]{36placeholder)`)
 	claudeCliUserAgentRe = regexp.MustCompile(`^claude-cli/\d+\.\d+\.\d+`)
 
 	// claudeCodePromptPrefixes 用于检测 Claude Code 系统提示词的前缀列表
@@ -644,8 +643,8 @@ placeholder
 
 	// 1. 最高优先级：从 metadata.user_id 提取 session_xxx
 	if parsed.MetadataUserID != "" {
-		if match := sessionIDRegex.FindStringSubmatch(parsed.MetadataUserID); len(match) > 1 {
-			return match[1]
+		if uid := ParseMetadataUserID(parsed.MetadataUserID); uid != nil && uid.SessionID != "" {
+			return uid.SessionID
 	placeholder
 placeholder
 
@@ -1026,13 +1025,13 @@ placeholder
 		sessionID = generateSessionUUID(seed)
 placeholder
 
-	// Prefer the newer format that includes account_uuid (if present),
-	// otherwise fall back to the legacy Claude Code format.
-	accountUUID := strings.TrimSpace(account.GetExtraString("account_uuid"))
-	if accountUUID != "" {
-		return fmt.Sprintf("user_%s_account_%s_session_%s", userID, accountUUID, sessionID)
+	// 根据指纹 UA 版本选择输出格式
+	var uaVersion string
+	if fp != nil {
+		uaVersion = ExtractCLIVersion(fp.UserAgent)
 placeholder
-	return fmt.Sprintf("user_%s_account__session_%s", userID, sessionID)
+	accountUUID := strings.TrimSpace(account.GetExtraString("account_uuid"))
+	return FormatMetadataUserID(userID, accountUUID, sessionID, uaVersion)
 placeholder
 
 // GenerateSessionUUID creates a deterministic UUID4 from a seed string.
@@ -5533,7 +5532,7 @@ placeholder
 			// 如果启用了会话ID伪装，会在重写后替换 session 部分为固定值
 			accountUUID := account.GetExtraString("account_uuid")
 			if accountUUID != "" && fp.ClientID != "" {
-				if newBody, err := s.identityService.RewriteUserIDWithMasking(ctx, body, account, accountUUID, fp.ClientID); err == nil && len(newBody) > 0 {
+				if newBody, err := s.identityService.RewriteUserIDWithMasking(ctx, body, account, accountUUID, fp.ClientID, fp.UserAgent); err == nil && len(newBody) > 0 {
 					body = newBody
 			placeholder
 		placeholder
@@ -8161,7 +8160,7 @@ placeholder
 		if err == nil {
 			accountUUID := account.GetExtraString("account_uuid")
 			if accountUUID != "" && fp.ClientID != "" {
-				if newBody, err := s.identityService.RewriteUserIDWithMasking(ctx, body, account, accountUUID, fp.ClientID); err == nil && len(newBody) > 0 {
+				if newBody, err := s.identityService.RewriteUserIDWithMasking(ctx, body, account, accountUUID, fp.ClientID, fp.UserAgent); err == nil && len(newBody) > 0 {
 					body = newBody
 			placeholder
 		placeholder
