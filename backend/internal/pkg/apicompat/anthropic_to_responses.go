@@ -409,8 +409,41 @@ func convertAnthropicToolsToResponses(tools []AnthropicTool) []ResponsesTool {
 			Type:        "function",
 			Name:        t.Name,
 			Description: t.Description,
-			Parameters:  t.InputSchema,
+			Parameters:  normalizeToolParameters(t.InputSchema),
 	placeholder)
+placeholder
+	return out
+placeholder
+
+// normalizeToolParameters ensures the tool parameter schema is valid for
+// OpenAI's Responses API, which requires "properties" on object schemas.
+//
+//   - nil/empty → {"type":"object","properties":{placeholderplaceholder
+//   - type=object without properties → adds "properties": {placeholder
+//   - otherwise → returned unchanged
+func normalizeToolParameters(schema json.RawMessage) json.RawMessage {
+	if len(schema) == 0 || string(schema) == "null" {
+		return json.RawMessage(`{"type":"object","properties":{placeholderplaceholder`)
+placeholder
+
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(schema, &m); err != nil {
+		return schema
+placeholder
+
+	typ := m["type"]
+	if string(typ) != `"object"` {
+		return schema
+placeholder
+
+	if _, ok := m["properties"]; ok {
+		return schema
+placeholder
+
+	m["properties"] = json.RawMessage(`{placeholder`)
+	out, err := json.Marshal(m)
+	if err != nil {
+		return schema
 placeholder
 	return out
 placeholder
