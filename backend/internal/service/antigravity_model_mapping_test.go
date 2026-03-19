@@ -57,16 +57,16 @@ placeholder{
 			expected:       "claude-opus-4-6-thinking",
 	placeholder,
 		{
-			name:           "默认映射 - claude-haiku-4-5 → claude-sonnet-4-5",
+			name:           "默认映射 - claude-haiku-4-5 → claude-sonnet-4-6",
 			requestedModel: "claude-haiku-4-5",
 			accountMapping: nil,
-			expected:       "claude-sonnet-4-5",
+			expected:       "claude-sonnet-4-6",
 	placeholder,
 		{
-			name:           "默认映射 - placeholder → claude-sonnet-4-5",
+			name:           "默认映射 - placeholder → claude-sonnet-4-6",
 			requestedModel: "placeholder",
 			accountMapping: nil,
-			expected:       "claude-sonnet-4-5",
+			expected:       "claude-sonnet-4-6",
 	placeholder,
 		{
 			name:           "默认映射 - claude-sonnet-4-5-20250929 → claude-sonnet-4-5",

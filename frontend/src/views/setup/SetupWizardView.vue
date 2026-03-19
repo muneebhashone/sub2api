@@ -565,7 +565,7 @@ const canProceed = computed(() => {
     case 2:
       return (
         formData.admin.email &&
-        formData.admin.password.length >= 6 &&
+        formData.admin.password.length >= 8 &&
         formData.admin.password === confirmPassword.value
       )
     default:
@@ -582,8 +582,9 @@ async function testDatabaseConnection() {
     await testDatabase(formData.database)
     dbConnected.value = true
   placeholder catch (error: unknown) {
-    const err = error as { response?: { data?: { detail?: string placeholder placeholder; message?: string placeholder
-    errorMessage.value = err.response?.data?.detail || err.message || 'Connection failed'
+    const err = error as { response?: { data?: { detail?: string; message?: string placeholder placeholder; message?: string placeholder
+    errorMessage.value =
+      err.response?.data?.detail || err.response?.data?.message || err.message || 'Connection failed'
   placeholder finally {
     testingDb.value = false
   placeholder
@@ -598,8 +599,9 @@ async function testRedisConnection() {
     await testRedis(formData.redis)
     redisConnected.value = true
   placeholder catch (error: unknown) {
-    const err = error as { response?: { data?: { detail?: string placeholder placeholder; message?: string placeholder
-    errorMessage.value = err.response?.data?.detail || err.message || 'Connection failed'
+    const err = error as { response?: { data?: { detail?: string; message?: string placeholder placeholder; message?: string placeholder
+    errorMessage.value =
+      err.response?.data?.detail || err.response?.data?.message || err.message || 'Connection failed'
   placeholder finally {
     testingRedis.value = false
   placeholder
@@ -622,8 +624,9 @@ async function performInstall() {
     // Start polling for service restart
     waitForServiceRestart()
   placeholder catch (error: unknown) {
-    const err = error as { response?: { data?: { detail?: string placeholder placeholder; message?: string placeholder
-    errorMessage.value = err.response?.data?.detail || err.message || 'Installation failed'
+    const err = error as { response?: { data?: { detail?: string; message?: string placeholder placeholder; message?: string placeholder
+    errorMessage.value =
+      err.response?.data?.detail || err.response?.data?.message || err.message || 'Installation failed'
   placeholder finally {
     installing.value = false
   placeholder

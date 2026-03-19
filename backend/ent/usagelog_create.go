@@ -57,6 +57,20 @@ func (_c *UsageLogCreate) SetModel(v string) *UsageLogCreate {
 	return _c
 placeholder
 
+// SetUpstreamModel sets the "upstream_model" field.
+func (_c *UsageLogCreate) SetUpstreamModel(v string) *UsageLogCreate {
+	_c.mutation.SetUpstreamModel(v)
+	return _c
+placeholder
+
+// SetNillableUpstreamModel sets the "upstream_model" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableUpstreamModel(v *string) *UsageLogCreate {
+	if v != nil {
+		_c.SetUpstreamModel(*v)
+placeholder
+	return _c
+placeholder
+
 // SetGroupID sets the "group_id" field.
 func (_c *UsageLogCreate) SetGroupID(v int64) *UsageLogCreate {
 	_c.mutation.SetGroupID(v)
@@ -596,6 +610,11 @@ placeholder
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _c.mutation.UpstreamModel(); ok {
+		if err := usagelog.UpstreamModelValidator(v); err != nil {
+			return &ValidationError{Name: "upstream_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.upstream_model": %w`, err)placeholder
+	placeholder
+placeholder
 	if _, ok := _c.mutation.InputTokens(); !ok {
 		return &ValidationError{Name: "input_tokens", err: errors.New(`ent: missing required field "UsageLog.input_tokens"`)placeholder
 placeholder
@@ -713,6 +732,10 @@ placeholder
 	if value, ok := _c.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
 		_node.Model = value
+placeholder
+	if value, ok := _c.mutation.UpstreamModel(); ok {
+		_spec.SetField(usagelog.FieldUpstreamModel, field.TypeString, value)
+		_node.UpstreamModel = &value
 placeholder
 	if value, ok := _c.mutation.InputTokens(); ok {
 		_spec.SetField(usagelog.FieldInputTokens, field.TypeInt, value)
@@ -1008,6 +1031,24 @@ placeholder
 // UpdateModel sets the "model" field to the value that was provided on create.
 func (u *UsageLogUpsert) UpdateModel() *UsageLogUpsert {
 	u.SetExcluded(usagelog.FieldModel)
+	return u
+placeholder
+
+// SetUpstreamModel sets the "upstream_model" field.
+func (u *UsageLogUpsert) SetUpstreamModel(v string) *UsageLogUpsert {
+	u.Set(usagelog.FieldUpstreamModel, v)
+	return u
+placeholder
+
+// UpdateUpstreamModel sets the "upstream_model" field to the value that was provided on create.
+func (u *UsageLogUpsert) UpdateUpstreamModel() *UsageLogUpsert {
+	u.SetExcluded(usagelog.FieldUpstreamModel)
+	return u
+placeholder
+
+// ClearUpstreamModel clears the value of the "upstream_model" field.
+func (u *UsageLogUpsert) ClearUpstreamModel() *UsageLogUpsert {
+	u.SetNull(usagelog.FieldUpstreamModel)
 	return u
 placeholder
 
@@ -1597,6 +1638,27 @@ placeholder
 func (u *UsageLogUpsertOne) UpdateModel() *UsageLogUpsertOne {
 	return u.Update(func(s *UsageLogUpsert) {
 		s.UpdateModel()
+placeholder)
+placeholder
+
+// SetUpstreamModel sets the "upstream_model" field.
+func (u *UsageLogUpsertOne) SetUpstreamModel(v string) *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.SetUpstreamModel(v)
+placeholder)
+placeholder
+
+// UpdateUpstreamModel sets the "upstream_model" field to the value that was provided on create.
+func (u *UsageLogUpsertOne) UpdateUpstreamModel() *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.UpdateUpstreamModel()
+placeholder)
+placeholder
+
+// ClearUpstreamModel clears the value of the "upstream_model" field.
+func (u *UsageLogUpsertOne) ClearUpstreamModel() *UsageLogUpsertOne {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.ClearUpstreamModel()
 placeholder)
 placeholder
 
@@ -2431,6 +2493,27 @@ placeholder
 func (u *UsageLogUpsertBulk) UpdateModel() *UsageLogUpsertBulk {
 	return u.Update(func(s *UsageLogUpsert) {
 		s.UpdateModel()
+placeholder)
+placeholder
+
+// SetUpstreamModel sets the "upstream_model" field.
+func (u *UsageLogUpsertBulk) SetUpstreamModel(v string) *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.SetUpstreamModel(v)
+placeholder)
+placeholder
+
+// UpdateUpstreamModel sets the "upstream_model" field to the value that was provided on create.
+func (u *UsageLogUpsertBulk) UpdateUpstreamModel() *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.UpdateUpstreamModel()
+placeholder)
+placeholder
+
+// ClearUpstreamModel clears the value of the "upstream_model" field.
+func (u *UsageLogUpsertBulk) ClearUpstreamModel() *UsageLogUpsertBulk {
+	return u.Update(func(s *UsageLogUpsert) {
+		s.ClearUpstreamModel()
 placeholder)
 placeholder
 

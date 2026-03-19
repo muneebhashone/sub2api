@@ -40,7 +40,7 @@ placeholder
 func (groupRepoNoop) ExistsByName(context.Context, string) (bool, error) {
 	panic("unexpected ExistsByName call")
 placeholder
-func (groupRepoNoop) GetAccountCount(context.Context, int64) (int64, error) {
+func (groupRepoNoop) GetAccountCount(context.Context, int64) (int64, int64, error) {
 	panic("unexpected GetAccountCount call")
 placeholder
 func (groupRepoNoop) DeleteAccountGroupsByGroupID(context.Context, int64) (int64, error) {
@@ -92,7 +92,7 @@ placeholder
 func (userSubRepoNoop) ListByGroupID(context.Context, int64, pagination.PaginationParams) ([]UserSubscription, *pagination.PaginationResult, error) {
 	panic("unexpected ListByGroupID call")
 placeholder
-func (userSubRepoNoop) List(context.Context, pagination.PaginationParams, *int64, *int64, string, string, string) ([]UserSubscription, *pagination.PaginationResult, error) {
+func (userSubRepoNoop) List(context.Context, pagination.PaginationParams, *int64, *int64, string, string, string, string) ([]UserSubscription, *pagination.PaginationResult, error) {
 	panic("unexpected List call")
 placeholder
 func (userSubRepoNoop) ExistsByUserIDAndGroupID(context.Context, int64, int64) (bool, error) {

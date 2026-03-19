@@ -25,8 +25,16 @@
           <span class="text-sm text-gray-900 dark:text-white">{{ row.account?.name || '-' placeholderplaceholder</span>
         </template>
 
-        <template #cell-model="{ value placeholder">
-          <span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span>
+        <template #cell-model="{ row placeholder">
+          <div v-if="row.upstream_model && row.upstream_model !== row.model" class="space-y-0.5 text-xs">
+            <div class="break-all font-medium text-gray-900 dark:text-white">
+              {{ row.model placeholderplaceholder
+            </div>
+            <div class="break-all text-gray-500 dark:text-gray-400">
+              <span class="mr-0.5">↳</span>{{ row.upstream_model placeholderplaceholder
+            </div>
+          </div>
+          <span v-else class="font-medium text-gray-900 dark:text-white">{{ row.model placeholderplaceholder</span>
         </template>
 
         <template #cell-reasoning_effort="{ row placeholder">
