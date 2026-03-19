@@ -26,5 +26,9 @@ const updateGroup = (value: string | number | boolean | null) => { emit('update:
 const pOpts = computed(() => [{ value: '', label: t('admin.accounts.allPlatforms') placeholder, { value: 'anthropic', label: 'Anthropic' placeholder, { value: 'openai', label: 'OpenAI' placeholder, { value: 'gemini', label: 'Gemini' placeholder, { value: 'antigravity', label: 'Antigravity' placeholder, { value: 'sora', label: 'Sora' placeholder])
 const tOpts = computed(() => [{ value: '', label: t('admin.accounts.allTypes') placeholder, { value: 'oauth', label: t('admin.accounts.oauthType') placeholder, { value: 'setup-token', label: t('admin.accounts.setupToken') placeholder, { value: 'apikey', label: t('admin.accounts.apiKey') placeholder, { value: 'bedrock', label: 'AWS Bedrock' placeholder])
 const sOpts = computed(() => [{ value: '', label: t('admin.accounts.allStatus') placeholder, { value: 'active', label: t('admin.accounts.status.active') placeholder, { value: 'inactive', label: t('admin.accounts.status.inactive') placeholder, { value: 'error', label: t('admin.accounts.status.error') placeholder, { value: 'rate_limited', label: t('admin.accounts.status.rateLimited') placeholder, { value: 'temp_unschedulable', label: t('admin.accounts.status.tempUnschedulable') placeholder])
-const gOpts = computed(() => [{ value: '', label: t('admin.accounts.allGroups') placeholder, ...(props.groups || []).map(g => ({ value: String(g.id), label: g.name placeholder))])
+const gOpts = computed(() => [
+  { value: '', label: t('admin.accounts.allGroups') placeholder,
+  { value: 'ungrouped', label: t('admin.accounts.ungroupedGroup') placeholder,
+  ...(props.groups || []).map(g => ({ value: String(g.id), label: g.name placeholder))
+])
 </script>
