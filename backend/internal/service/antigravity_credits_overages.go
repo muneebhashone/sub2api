@@ -45,6 +45,7 @@ placeholder
 		"minimumcreditamountforusage",
 		"minimum credit amount for usage",
 		"minimum credit",
+		"resource has been exhausted",
 placeholder
 )
 
@@ -147,9 +148,9 @@ placeholder
 	if resp.StatusCode >= 500 || resp.StatusCode == http.StatusRequestTimeout {
 		return false
 placeholder
-	if isURLLevelRateLimit(respBody) {
-		return false
-placeholder
+	// 注意：不再检查 isURLLevelRateLimit。此函数仅在积分重试失败后调用，
+	// 如果注入 enabledCreditTypes 后仍返回 "Resource has been exhausted"，
+	// 说明积分也已耗尽，应该标记。clearCreditsExhausted 会在后续成功时自动清除。
 	if info := parseAntigravitySmartRetryInfo(respBody); info != nil {
 		return false
 placeholder
