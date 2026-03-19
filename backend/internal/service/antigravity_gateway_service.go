@@ -1359,7 +1359,10 @@ placeholder
 placeholder
 	accessToken, err := s.tokenProvider.GetAccessToken(ctx, account)
 	if err != nil {
-		return nil, s.writeClaudeError(c, http.StatusBadGateway, "authentication_error", "Failed to get upstream access token")
+		return nil, &UpstreamFailoverError{
+			StatusCode:   http.StatusBadGateway,
+			ResponseBody: []byte(`{"error":{"type":"authentication_error","message":"Failed to get upstream access token"placeholder,"type":"error"placeholder`),
+	placeholder
 placeholder
 
 	// 获取 project_id（部分账户类型可能没有）
@@ -2101,7 +2104,10 @@ placeholder
 placeholder
 	accessToken, err := s.tokenProvider.GetAccessToken(ctx, account)
 	if err != nil {
-		return nil, s.writeGoogleError(c, http.StatusBadGateway, "Failed to get upstream access token")
+		return nil, &UpstreamFailoverError{
+			StatusCode:   http.StatusBadGateway,
+			ResponseBody: []byte(`{"error":{"message":"Failed to get upstream access token","status":"UNAVAILABLE"placeholderplaceholder`),
+	placeholder
 placeholder
 
 	// 获取 project_id（部分账户类型可能没有）
