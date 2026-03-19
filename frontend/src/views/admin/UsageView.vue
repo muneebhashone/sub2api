@@ -124,6 +124,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { saveAs placeholder from 'file-saver'
 import { useRoute placeholder from 'vue-router'
 import { useAppStore placeholder from '@/stores/app'; import { adminAPI placeholder from '@/api/admin'; import { adminUsageAPI placeholder from '@/api/admin/usage'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import { formatReasoningEffort placeholder from '@/utils/format'
 import { resolveUsageRequestType, requestTypeToLegacyStream placeholder from '@/utils/usageRequestType'
 import AppLayout from '@/components/layout/AppLayout.vue'; import Pagination from '@/components/common/Pagination.vue'; import Select from '@/components/common/Select.vue'; import DateRangePicker from '@/components/common/DateRangePicker.vue'
@@ -203,7 +204,7 @@ placeholder
 const defaultRange = getLast24HoursRangeDates()
 const startDate = ref(defaultRange.start); const endDate = ref(defaultRange.end)
 const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, billing_type: null, start_date: startDate.value, end_date: endDate.value placeholder)
-const pagination = reactive({ page: 1, page_size: 20, total: 0 placeholder)
+const pagination = reactive({ page: 1, page_size: getPersistedPageSize(), total: 0 placeholder)
 
 const getSingleQueryValue = (value: string | null | Array<string | null> | undefined): string | undefined => {
   if (Array.isArray(value)) return value.find((item): item is string => typeof item === 'string' && item.length > 0)

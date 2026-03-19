@@ -744,6 +744,7 @@ import type { UserSubscription, Group, GroupPlatform, SubscriptionType placehold
 import type { SimpleUser placeholder from '@/api/admin/usage'
 import type { Column placeholder from '@/components/common/types'
 import { formatDateOnly placeholder from '@/utils/format'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -928,7 +929,7 @@ placeholder)
 
 const pagination = reactive({
   page: 1,
-  page_size: 20,
+  page_size: getPersistedPageSize(),
   total: 0,
   pages: 0
 placeholder)

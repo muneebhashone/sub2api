@@ -1855,6 +1855,7 @@ import GroupCapacityBadge from '@/components/common/GroupCapacityBadge.vue'
 import { VueDraggable placeholder from 'vue-draggable-plus'
 import { createStableObjectKeyResolver placeholder from '@/utils/stableObjectKey'
 import { useKeyedDebouncedSearch placeholder from '@/composables/useKeyedDebouncedSearch'
+import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -2016,7 +2017,7 @@ const filters = reactive({
 placeholder)
 const pagination = reactive({
   page: 1,
-  page_size: 20,
+  page_size: getPersistedPageSize(),
   total: 0,
   pages: 0
 placeholder)
