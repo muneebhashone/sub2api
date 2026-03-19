@@ -51,6 +51,7 @@ const (
 	defaultUserGroupRateCacheTTL = 30 * time.Second
 	defaultModelsListCacheTTL    = 15 * time.Second
 	postUsageBillingTimeout      = 15 * time.Second
+	debugGatewayBodyEnv          = "SUB2API_DEBUG_GATEWAY_BODY"
 )
 
 const (
@@ -338,12 +339,6 @@ var (
 		"You are a helpful AI assistant tasked with summarizing conversations", // Compact 版
 placeholder
 )
-
-// systemBlockFilterPrefixes 需要从 system 中过滤的文本前缀列表
-// OAuth/SetupToken 账号转发时，匹配这些前缀的 system 元素会被移除
-var systemBlockFilterPrefixes = []string{
-	"x-anthropic-billing-header",
-placeholder
 
 // ErrNoAvailableAccounts 表示没有可用的账号
 var ErrNoAvailableAccounts = errors.New("no available accounts")
@@ -840,20 +835,30 @@ func (s *GatewayService) hashContent(content string) string {
 	return strconv.FormatUint(h, 36)
 placeholder
 
+type anthropicCacheControlPayload struct {
+	Type string `json:"type"`
+placeholder
+
+type anthropicSystemTextBlockPayload struct {
+	Type         string                        `json:"type"`
+	Text         string                        `json:"text"`
+	CacheControl *anthropicCacheControlPayload `json:"cache_control,omitempty"`
+placeholder
+
+type anthropicMetadataPayload struct {
+	UserID string `json:"user_id"`
+placeholder
+
 // replaceModelInBody 替换请求体中的model字段
-// 使用 json.RawMessage 保留其他字段的原始字节，避免 thinking 块等内容被修改
+// 优先使用定点修改，尽量保持客户端原始字段顺序。
 func (s *GatewayService) replaceModelInBody(body []byte, newModel string) []byte {
-	var req map[string]json.RawMessage
-	if err := json.Unmarshal(body, &req); err != nil {
+	if len(body) == 0 {
 		return body
 placeholder
-	// 只序列化 model 字段
-	modelBytes, err := json.Marshal(newModel)
-	if err != nil {
+	if current := gjson.GetBytes(body, "model"); current.Exists() && current.String() == newModel {
 		return body
 placeholder
-	req["model"] = modelBytes
-	newBody, err := json.Marshal(req)
+	newBody, err := sjson.SetBytes(body, "model", newModel)
 	if err != nil {
 		return body
 placeholder
@@ -884,24 +889,146 @@ placeholder
 	return text
 placeholder
 
-func stripCacheControlFromSystemBlocks(system any) bool {
-	blocks, ok := system.([]any)
-	if !ok {
-		return false
+func marshalAnthropicSystemTextBlock(text string, includeCacheControl bool) ([]byte, error) {
+	block := anthropicSystemTextBlockPayload{
+		Type: "text",
+		Text: text,
 placeholder
-	changed := false
-	for _, item := range blocks {
-		block, ok := item.(map[string]any)
-		if !ok {
-			continue
-	placeholder
-		if _, exists := block["cache_control"]; !exists {
-			continue
-	placeholder
-		delete(block, "cache_control")
-		changed = true
+	if includeCacheControl {
+		block.CacheControl = &anthropicCacheControlPayload{Type: "ephemeral"placeholder
 placeholder
-	return changed
+	return json.Marshal(block)
+placeholder
+
+func marshalAnthropicMetadata(userID string) ([]byte, error) {
+	return json.Marshal(anthropicMetadataPayload{UserID: userIDplaceholder)
+placeholder
+
+func buildJSONArrayRaw(items [][]byte) []byte {
+	if len(items) == 0 {
+		return []byte("[]")
+placeholder
+
+	total := 2
+	for _, item := range items {
+		total += len(item)
+placeholder
+	total += len(items) - 1
+
+	buf := make([]byte, 0, total)
+	buf = append(buf, '[')
+	for i, item := range items {
+		if i > 0 {
+			buf = append(buf, ',')
+	placeholder
+		buf = append(buf, item...)
+placeholder
+	buf = append(buf, ']')
+	return buf
+placeholder
+
+func setJSONValueBytes(body []byte, path string, value any) ([]byte, bool) {
+	next, err := sjson.SetBytes(body, path, value)
+	if err != nil {
+		return body, false
+placeholder
+	return next, true
+placeholder
+
+func setJSONRawBytes(body []byte, path string, raw []byte) ([]byte, bool) {
+	next, err := sjson.SetRawBytes(body, path, raw)
+	if err != nil {
+		return body, false
+placeholder
+	return next, true
+placeholder
+
+func deleteJSONPathBytes(body []byte, path string) ([]byte, bool) {
+	next, err := sjson.DeleteBytes(body, path)
+	if err != nil {
+		return body, false
+placeholder
+	return next, true
+placeholder
+
+func normalizeClaudeOAuthSystemBody(body []byte, opts claudeOAuthNormalizeOptions) ([]byte, bool) {
+	sys := gjson.GetBytes(body, "system")
+	if !sys.Exists() {
+		return body, false
+placeholder
+
+	out := body
+	modified := false
+
+	switch {
+	case sys.Type == gjson.String:
+		sanitized := sanitizeSystemText(sys.String())
+		if sanitized != sys.String() {
+			if next, ok := setJSONValueBytes(out, "system", sanitized); ok {
+				out = next
+				modified = true
+		placeholder
+	placeholder
+	case sys.IsArray():
+		index := 0
+		sys.ForEach(func(_, item gjson.Result) bool {
+			if item.Get("type").String() == "text" {
+				textResult := item.Get("text")
+				if textResult.Exists() && textResult.Type == gjson.String {
+					text := textResult.String()
+					sanitized := sanitizeSystemText(text)
+					if sanitized != text {
+						if next, ok := setJSONValueBytes(out, fmt.Sprintf("system.%d.text", index), sanitized); ok {
+							out = next
+							modified = true
+					placeholder
+				placeholder
+			placeholder
+		placeholder
+
+			if opts.stripSystemCacheControl && item.Get("cache_control").Exists() {
+				if next, ok := deleteJSONPathBytes(out, fmt.Sprintf("system.%d.cache_control", index)); ok {
+					out = next
+					modified = true
+			placeholder
+		placeholder
+
+			index++
+			return true
+	placeholder)
+placeholder
+
+	return out, modified
+placeholder
+
+func ensureClaudeOAuthMetadataUserID(body []byte, userID string) ([]byte, bool) {
+	if strings.TrimSpace(userID) == "" {
+		return body, false
+placeholder
+
+	metadata := gjson.GetBytes(body, "metadata")
+	if !metadata.Exists() || metadata.Type == gjson.Null {
+		raw, err := marshalAnthropicMetadata(userID)
+		if err != nil {
+			return body, false
+	placeholder
+		return setJSONRawBytes(body, "metadata", raw)
+placeholder
+
+	trimmedRaw := strings.TrimSpace(metadata.Raw)
+	if strings.HasPrefix(trimmedRaw, "{") {
+		existing := metadata.Get("user_id")
+		if existing.Exists() && existing.Type == gjson.String && existing.String() != "" {
+			return body, false
+	placeholder
+		return setJSONValueBytes(body, "metadata.user_id", userID)
+placeholder
+
+	raw, err := marshalAnthropicMetadata(userID)
+	if err != nil {
+		return body, false
+placeholder
+	return setJSONRawBytes(body, "metadata", raw)
 placeholder
 
 func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAuthNormalizeOptions) ([]byte, string) {
@@ -909,96 +1036,59 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 		return body, modelID
 placeholder
 
-	// 解析为 map[string]any 用于修改字段
-	var req map[string]any
-	if err := json.Unmarshal(body, &req); err != nil {
-		return body, modelID
-placeholder
-
+	out := body
 	modified := false
 
-	if system, ok := req["system"]; ok {
-		switch v := system.(type) {
-		case string:
-			sanitized := sanitizeSystemText(v)
-			if sanitized != v {
-				req["system"] = sanitized
-				modified = true
-		placeholder
-		case []any:
-			for _, item := range v {
-				block, ok := item.(map[string]any)
-				if !ok {
-					continue
-			placeholder
-				if blockType, _ := block["type"].(string); blockType != "text" {
-					continue
-			placeholder
-				text, ok := block["text"].(string)
-				if !ok || text == "" {
-					continue
-			placeholder
-				sanitized := sanitizeSystemText(text)
-				if sanitized != text {
-					block["text"] = sanitized
-					modified = true
-			placeholder
-		placeholder
-	placeholder
+	if next, changed := normalizeClaudeOAuthSystemBody(out, opts); changed {
+		out = next
+		modified = true
 placeholder
 
-	if rawModel, ok := req["model"].(string); ok {
-		normalized := claude.NormalizeModelID(rawModel)
-		if normalized != rawModel {
-			req["model"] = normalized
+	rawModel := gjson.GetBytes(out, "model")
+	if rawModel.Exists() && rawModel.Type == gjson.String {
+		normalized := claude.NormalizeModelID(rawModel.String())
+		if normalized != rawModel.String() {
+			if next, ok := setJSONValueBytes(out, "model", normalized); ok {
+				out = next
+				modified = true
+		placeholder
 			modelID = normalized
-			modified = true
 	placeholder
 placeholder
 
 	// 确保 tools 字段存在（即使为空数组）
-	if _, exists := req["tools"]; !exists {
-		req["tools"] = []any{placeholder
-		modified = true
-placeholder
-
-	if opts.stripSystemCacheControl {
-		if system, ok := req["system"]; ok {
-			_ = stripCacheControlFromSystemBlocks(system)
+	if !gjson.GetBytes(out, "tools").Exists() {
+		if next, ok := setJSONRawBytes(out, "tools", []byte("[]")); ok {
+			out = next
 			modified = true
 	placeholder
 placeholder
 
 	if opts.injectMetadata && opts.metadataUserID != "" {
-		metadata, ok := req["metadata"].(map[string]any)
-		if !ok {
-			metadata = map[string]any{placeholder
-			req["metadata"] = metadata
-	placeholder
-		if existing, ok := metadata["user_id"].(string); !ok || existing == "" {
-			metadata["user_id"] = opts.metadataUserID
+		if next, changed := ensureClaudeOAuthMetadataUserID(out, opts.metadataUserID); changed {
+			out = next
 			modified = true
 	placeholder
 placeholder
 
-	if _, hasTemp := req["temperature"]; hasTemp {
-		delete(req, "temperature")
-		modified = true
+	if gjson.GetBytes(out, "temperature").Exists() {
+		if next, ok := deleteJSONPathBytes(out, "temperature"); ok {
+			out = next
+			modified = true
+	placeholder
 placeholder
-	if _, hasChoice := req["tool_choice"]; hasChoice {
-		delete(req, "tool_choice")
-		modified = true
+	if gjson.GetBytes(out, "tool_choice").Exists() {
+		if next, ok := deleteJSONPathBytes(out, "tool_choice"); ok {
+			out = next
+			modified = true
+	placeholder
 placeholder
 
 	if !modified {
 		return body, modelID
 placeholder
 
-	newBody, err := json.Marshal(req)
-	if err != nil {
-		return body, modelID
-placeholder
-	return newBody, modelID
+	return out, modelID
 placeholder
 
 func (s *GatewayService) buildOAuthMetadataUserID(parsed *ParsedRequest, account *Account, fp *Fingerprint) string {
@@ -3676,82 +3766,28 @@ placeholder
 	return false
 placeholder
 
-// matchesFilterPrefix 检查文本是否匹配任一过滤前缀
-func matchesFilterPrefix(text string) bool {
-	for _, prefix := range systemBlockFilterPrefixes {
-		if strings.HasPrefix(text, prefix) {
-			return true
-	placeholder
-placeholder
-	return false
-placeholder
-
-// filterSystemBlocksByPrefix 从 body 的 system 中移除文本匹配 systemBlockFilterPrefixes 前缀的元素
-// 直接从 body 解析 system，不依赖外部传入的 parsed.System（因为前置步骤可能已修改 body 中的 system）
-func filterSystemBlocksByPrefix(body []byte) []byte {
-	sys := gjson.GetBytes(body, "system")
-	if !sys.Exists() {
-		return body
-placeholder
-
-	switch {
-	case sys.Type == gjson.String:
-		if matchesFilterPrefix(sys.Str) {
-			result, err := sjson.DeleteBytes(body, "system")
-			if err != nil {
-				return body
-		placeholder
-			return result
-	placeholder
-	case sys.IsArray():
-		var parsed []any
-		if err := json.Unmarshal([]byte(sys.Raw), &parsed); err != nil {
-			return body
-	placeholder
-		filtered := make([]any, 0, len(parsed))
-		changed := false
-		for _, item := range parsed {
-			if m, ok := item.(map[string]any); ok {
-				if text, ok := m["text"].(string); ok && matchesFilterPrefix(text) {
-					changed = true
-					continue
-			placeholder
-		placeholder
-			filtered = append(filtered, item)
-	placeholder
-		if changed {
-			result, err := sjson.SetBytes(body, "system", filtered)
-			if err != nil {
-				return body
-		placeholder
-			return result
-	placeholder
-placeholder
-	return body
-placeholder
-
 // injectClaudeCodePrompt 在 system 开头注入 Claude Code 提示词
 // 处理 null、字符串、数组三种格式
 func injectClaudeCodePrompt(body []byte, system any) []byte {
-	claudeCodeBlock := map[string]any{
-		"type":          "text",
-		"text":          claudeCodeSystemPrompt,
-		"cache_control": map[string]string{"type": "ephemeral"placeholder,
+	claudeCodeBlock, err := marshalAnthropicSystemTextBlock(claudeCodeSystemPrompt, true)
+	if err != nil {
+		logger.LegacyPrintf("service.gateway", "Warning: failed to build Claude Code prompt block: %v", err)
+		return body
 placeholder
 	// Opencode plugin applies an extra safeguard: it not only prepends the Claude Code
 	// banner, it also prefixes the next system instruction with the same banner plus
 	// a blank line. This helps when upstream concatenates system instructions.
 	claudeCodePrefix := strings.TrimSpace(claudeCodeSystemPrompt)
 
-	var newSystem []any
+	var items [][]byte
 
 	switch v := system.(type) {
 	case nil:
-		newSystem = []any{claudeCodeBlockplaceholder
+		items = [][]byte{claudeCodeBlockplaceholder
 	case string:
 		// Be tolerant of older/newer clients that may differ only by trailing whitespace/newlines.
 		if strings.TrimSpace(v) == "" || strings.TrimSpace(v) == strings.TrimSpace(claudeCodeSystemPrompt) {
-			newSystem = []any{claudeCodeBlockplaceholder
+			items = [][]byte{claudeCodeBlockplaceholder
 	placeholder else {
 			// Mirror opencode behavior: keep the banner as a separate system entry,
 			// but also prefix the next system text with the banner.
@@ -3759,18 +3795,54 @@ placeholder
 			if !strings.HasPrefix(v, claudeCodePrefix) {
 				merged = claudeCodePrefix + "\n\n" + v
 		placeholder
-			newSystem = []any{claudeCodeBlock, map[string]any{"type": "text", "text": mergedplaceholderplaceholder
+			nextBlock, buildErr := marshalAnthropicSystemTextBlock(merged, false)
+			if buildErr != nil {
+				logger.LegacyPrintf("service.gateway", "Warning: failed to build prefixed Claude Code system block: %v", buildErr)
+				return body
+		placeholder
+			items = [][]byte{claudeCodeBlock, nextBlockplaceholder
 	placeholder
 	case []any:
-		newSystem = make([]any, 0, len(v)+1)
-		newSystem = append(newSystem, claudeCodeBlock)
+		items = make([][]byte, 0, len(v)+1)
+		items = append(items, claudeCodeBlock)
 		prefixedNext := false
-		for _, item := range v {
-			if m, ok := item.(map[string]any); ok {
+		systemResult := gjson.GetBytes(body, "system")
+		if systemResult.IsArray() {
+			systemResult.ForEach(func(_, item gjson.Result) bool {
+				textResult := item.Get("text")
+				if textResult.Exists() && textResult.Type == gjson.String &&
+					strings.TrimSpace(textResult.String()) == strings.TrimSpace(claudeCodeSystemPrompt) {
+					return true
+			placeholder
+
+				raw := []byte(item.Raw)
+				// Prefix the first subsequent text system block once.
+				if !prefixedNext && item.Get("type").String() == "text" && textResult.Exists() && textResult.Type == gjson.String {
+					text := textResult.String()
+					if strings.TrimSpace(text) != "" && !strings.HasPrefix(text, claudeCodePrefix) {
+						next, setErr := sjson.SetBytes(raw, "text", claudeCodePrefix+"\n\n"+text)
+						if setErr == nil {
+							raw = next
+							prefixedNext = true
+					placeholder
+				placeholder
+			placeholder
+				items = append(items, raw)
+				return true
+		placeholder)
+	placeholder else {
+			for _, item := range v {
+				m, ok := item.(map[string]any)
+				if !ok {
+					raw, marshalErr := json.Marshal(item)
+					if marshalErr == nil {
+						items = append(items, raw)
+				placeholder
+					continue
+			placeholder
 				if text, ok := m["text"].(string); ok && strings.TrimSpace(text) == strings.TrimSpace(claudeCodeSystemPrompt) {
 					continue
 			placeholder
-				// Prefix the first subsequent text system block once.
 				if !prefixedNext {
 					if blockType, _ := m["type"].(string); blockType == "text" {
 						if text, ok := m["text"].(string); ok && strings.TrimSpace(text) != "" && !strings.HasPrefix(text, claudeCodePrefix) {
@@ -3779,197 +3851,150 @@ placeholder
 					placeholder
 				placeholder
 			placeholder
+				raw, marshalErr := json.Marshal(m)
+				if marshalErr == nil {
+					items = append(items, raw)
+			placeholder
 		placeholder
-			newSystem = append(newSystem, item)
 	placeholder
 	default:
-		newSystem = []any{claudeCodeBlockplaceholder
+		items = [][]byte{claudeCodeBlockplaceholder
 placeholder
 
-	result, err := sjson.SetBytes(body, "system", newSystem)
-	if err != nil {
-		logger.LegacyPrintf("service.gateway", "Warning: failed to inject Claude Code prompt: %v", err)
+	result, ok := setJSONRawBytes(body, "system", buildJSONArrayRaw(items))
+	if !ok {
+		logger.LegacyPrintf("service.gateway", "Warning: failed to inject Claude Code prompt")
 		return body
 placeholder
 	return result
+placeholder
+
+type cacheControlPath struct {
+	path string
+	log  string
+placeholder
+
+func collectCacheControlPaths(body []byte) (invalidThinking []cacheControlPath, messagePaths []string, systemPaths []string) {
+	system := gjson.GetBytes(body, "system")
+	if system.IsArray() {
+		sysIndex := 0
+		system.ForEach(func(_, item gjson.Result) bool {
+			if item.Get("cache_control").Exists() {
+				path := fmt.Sprintf("system.%d.cache_control", sysIndex)
+				if item.Get("type").String() == "thinking" {
+					invalidThinking = append(invalidThinking, cacheControlPath{
+						path: path,
+						log:  "[Warning] Removed illegal cache_control from thinking block in system",
+				placeholder)
+			placeholder else {
+					systemPaths = append(systemPaths, path)
+			placeholder
+		placeholder
+			sysIndex++
+			return true
+	placeholder)
+placeholder
+
+	messages := gjson.GetBytes(body, "messages")
+	if messages.IsArray() {
+		msgIndex := 0
+		messages.ForEach(func(_, msg gjson.Result) bool {
+			content := msg.Get("content")
+			if content.IsArray() {
+				contentIndex := 0
+				content.ForEach(func(_, item gjson.Result) bool {
+					if item.Get("cache_control").Exists() {
+						path := fmt.Sprintf("messages.%d.content.%d.cache_control", msgIndex, contentIndex)
+						if item.Get("type").String() == "thinking" {
+							invalidThinking = append(invalidThinking, cacheControlPath{
+								path: path,
+								log:  fmt.Sprintf("[Warning] Removed illegal cache_control from thinking block in messages[%d].content[%d]", msgIndex, contentIndex),
+						placeholder)
+					placeholder else {
+							messagePaths = append(messagePaths, path)
+					placeholder
+				placeholder
+					contentIndex++
+					return true
+			placeholder)
+		placeholder
+			msgIndex++
+			return true
+	placeholder)
+placeholder
+
+	return invalidThinking, messagePaths, systemPaths
 placeholder
 
 // enforceCacheControlLimit 强制执行 cache_control 块数量限制（最多 4 个）
 // 超限时优先从 messages 中移除 cache_control，保护 system 中的缓存控制
 func enforceCacheControlLimit(body []byte) []byte {
-	var data map[string]any
-	if err := json.Unmarshal(body, &data); err != nil {
+	if len(body) == 0 {
 		return body
 placeholder
 
-	// 清理 thinking 块中的非法 cache_control（thinking 块不支持该字段）
-	removeCacheControlFromThinkingBlocks(data)
+	invalidThinking, messagePaths, systemPaths := collectCacheControlPaths(body)
+	out := body
+	modified := false
 
-	// 计算当前 cache_control 块数量
-	count := countCacheControlBlocks(data)
+	// 先清理 thinking 块中的非法 cache_control（thinking 块不支持该字段）
+	for _, item := range invalidThinking {
+		if !gjson.GetBytes(out, item.path).Exists() {
+			continue
+	placeholder
+		next, ok := deleteJSONPathBytes(out, item.path)
+		if !ok {
+			continue
+	placeholder
+		out = next
+		modified = true
+		logger.LegacyPrintf("service.gateway", "%s", item.log)
+placeholder
+
+	count := len(messagePaths) + len(systemPaths)
 	if count <= maxCacheControlBlocks {
+		if modified {
+			return out
+	placeholder
 		return body
 placeholder
 
 	// 超限：优先从 messages 中移除，再从 system 中移除
-	for count > maxCacheControlBlocks {
-		if removeCacheControlFromMessages(data) {
-			count--
+	remaining := count - maxCacheControlBlocks
+	for _, path := range messagePaths {
+		if remaining <= 0 {
+			break
+	placeholder
+		if !gjson.GetBytes(out, path).Exists() {
 			continue
 	placeholder
-		if removeCacheControlFromSystem(data) {
-			count--
-			continue
-	placeholder
-		break
-placeholder
-
-	result, err := json.Marshal(data)
-	if err != nil {
-		return body
-placeholder
-	return result
-placeholder
-
-// countCacheControlBlocks 统计 system 和 messages 中的 cache_control 块数量
-// 注意：thinking 块不支持 cache_control，统计时跳过
-func countCacheControlBlocks(data map[string]any) int {
-	count := 0
-
-	// 统计 system 中的块
-	if system, ok := data["system"].([]any); ok {
-		for _, item := range system {
-			if m, ok := item.(map[string]any); ok {
-				// thinking 块不支持 cache_control，跳过
-				if blockType, _ := m["type"].(string); blockType == "thinking" {
-					continue
-			placeholder
-				if _, has := m["cache_control"]; has {
-					count++
-			placeholder
-		placeholder
-	placeholder
-placeholder
-
-	// 统计 messages 中的块
-	if messages, ok := data["messages"].([]any); ok {
-		for _, msg := range messages {
-			if msgMap, ok := msg.(map[string]any); ok {
-				if content, ok := msgMap["content"].([]any); ok {
-					for _, item := range content {
-						if m, ok := item.(map[string]any); ok {
-							// thinking 块不支持 cache_control，跳过
-							if blockType, _ := m["type"].(string); blockType == "thinking" {
-								continue
-						placeholder
-							if _, has := m["cache_control"]; has {
-								count++
-						placeholder
-					placeholder
-				placeholder
-			placeholder
-		placeholder
-	placeholder
-placeholder
-
-	return count
-placeholder
-
-// removeCacheControlFromMessages 从 messages 中移除一个 cache_control（从头开始）
-// 返回 true 表示成功移除，false 表示没有可移除的
-// 注意：跳过 thinking 块（它不支持 cache_control）
-func removeCacheControlFromMessages(data map[string]any) bool {
-	messages, ok := data["messages"].([]any)
-	if !ok {
-		return false
-placeholder
-
-	for _, msg := range messages {
-		msgMap, ok := msg.(map[string]any)
+		next, ok := deleteJSONPathBytes(out, path)
 		if !ok {
 			continue
 	placeholder
-		content, ok := msgMap["content"].([]any)
+		out = next
+		modified = true
+		remaining--
+placeholder
+
+	for i := len(systemPaths) - 1; i >= 0 && remaining > 0; i-- {
+		path := systemPaths[i]
+		if !gjson.GetBytes(out, path).Exists() {
+			continue
+	placeholder
+		next, ok := deleteJSONPathBytes(out, path)
 		if !ok {
 			continue
 	placeholder
-		for _, item := range content {
-			if m, ok := item.(map[string]any); ok {
-				// thinking 块不支持 cache_control，跳过
-				if blockType, _ := m["type"].(string); blockType == "thinking" {
-					continue
-			placeholder
-				if _, has := m["cache_control"]; has {
-					delete(m, "cache_control")
-					return true
-			placeholder
-		placeholder
-	placeholder
-placeholder
-	return false
+		out = next
+		modified = true
+		remaining--
 placeholder
 
-// removeCacheControlFromSystem 从 system 中移除一个 cache_control（从尾部开始，保护注入的 prompt）
-// 返回 true 表示成功移除，false 表示没有可移除的
-// 注意：跳过 thinking 块（它不支持 cache_control）
-func removeCacheControlFromSystem(data map[string]any) bool {
-	system, ok := data["system"].([]any)
-	if !ok {
-		return false
+	if modified {
+		return out
 placeholder
-
-	// 从尾部开始移除，保护开头注入的 Claude Code prompt
-	for i := len(system) - 1; i >= 0; i-- {
-		if m, ok := system[i].(map[string]any); ok {
-			// thinking 块不支持 cache_control，跳过
-			if blockType, _ := m["type"].(string); blockType == "thinking" {
-				continue
-		placeholder
-			if _, has := m["cache_control"]; has {
-				delete(m, "cache_control")
-				return true
-		placeholder
-	placeholder
-placeholder
-	return false
-placeholder
-
-// removeCacheControlFromThinkingBlocks 强制清理所有 thinking 块中的非法 cache_control
-// thinking 块不支持 cache_control 字段，这个函数确保所有 thinking 块都不含该字段
-func removeCacheControlFromThinkingBlocks(data map[string]any) {
-	// 清理 system 中的 thinking 块
-	if system, ok := data["system"].([]any); ok {
-		for _, item := range system {
-			if m, ok := item.(map[string]any); ok {
-				if blockType, _ := m["type"].(string); blockType == "thinking" {
-					if _, has := m["cache_control"]; has {
-						delete(m, "cache_control")
-						logger.LegacyPrintf("service.gateway", "[Warning] Removed illegal cache_control from thinking block in system")
-				placeholder
-			placeholder
-		placeholder
-	placeholder
-placeholder
-
-	// 清理 messages 中的 thinking 块
-	if messages, ok := data["messages"].([]any); ok {
-		for msgIdx, msg := range messages {
-			if msgMap, ok := msg.(map[string]any); ok {
-				if content, ok := msgMap["content"].([]any); ok {
-					for contentIdx, item := range content {
-						if m, ok := item.(map[string]any); ok {
-							if blockType, _ := m["type"].(string); blockType == "thinking" {
-								if _, has := m["cache_control"]; has {
-									delete(m, "cache_control")
-									logger.LegacyPrintf("service.gateway", "[Warning] Removed illegal cache_control from thinking block in messages[%d].content[%d]", msgIdx, contentIdx)
-							placeholder
-						placeholder
-					placeholder
-				placeholder
-			placeholder
-		placeholder
-	placeholder
-placeholder
+	return body
 placeholder
 
 // Forward 转发请求到Claude API
@@ -4021,6 +4046,9 @@ placeholder
 	reqStream := parsed.Stream
 	originalModel := reqModel
 
+	// === DEBUG: 打印客户端原始请求 body ===
+	debugLogRequestBody("CLIENT_ORIGINAL", body)
+
 	isClaudeCode := isClaudeCodeRequest(ctx, c, parsed)
 	shouldMimicClaudeCode := account.IsOAuth() && !isClaudeCode
 
@@ -4044,12 +4072,6 @@ placeholder
 	placeholder
 
 		body, reqModel = normalizeClaudeOAuthRequestBody(body, reqModel, normalizeOpts)
-placeholder
-
-	// OAuth/SetupToken 账号：移除黑名单前缀匹配的 system 元素（如客户端注入的计费元数据）
-	// 放在 inject/normalize 之后，确保不会被覆盖
-	if account.IsOAuth() {
-		body = filterSystemBlocksByPrefix(body)
 placeholder
 
 	// 强制执行 cache_control 块数量限制（最多 4 个）
@@ -5572,6 +5594,9 @@ placeholder
 		placeholder
 	placeholder
 placeholder
+
+	// === DEBUG: 打印转发给上游的 body（metadata 已重写） ===
+	debugLogRequestBody("UPSTREAM_FORWARD", body)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewReader(body))
 	if err != nil {
@@ -8446,4 +8471,44 @@ placeholder
 placeholder
 	usage["cache_read_input_tokens"] = cached
 	return true
+placeholder
+
+func debugGatewayBodyLoggingEnabled() bool {
+	raw := strings.TrimSpace(os.Getenv(debugGatewayBodyEnv))
+	if raw == "" {
+		return false
+placeholder
+
+	switch strings.ToLower(raw) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+// debugLogRequestBody 打印请求 body 用于调试 metadata.user_id 重写。
+// 默认关闭，仅在设置环境变量时启用：
+//
+//	SUB2API_DEBUG_GATEWAY_BODY=1
+func debugLogRequestBody(tag string, body []byte) {
+	if !debugGatewayBodyLoggingEnabled() {
+		return
+placeholder
+
+	if len(body) == 0 {
+		logger.LegacyPrintf("service.gateway", "[DEBUG_%s] body is empty", tag)
+		return
+placeholder
+
+	// 提取 metadata 字段完整打印
+	metadataResult := gjson.GetBytes(body, "metadata")
+	if metadataResult.Exists() {
+		logger.LegacyPrintf("service.gateway", "[DEBUG_%s] metadata = %s", tag, metadataResult.Raw)
+placeholder else {
+		logger.LegacyPrintf("service.gateway", "[DEBUG_%s] metadata field not found", tag)
+placeholder
+
+	// 全量打印 body
+	logger.LegacyPrintf("service.gateway", "[DEBUG_%s] body (%d bytes) = %s", tag, len(body), string(body))
 placeholder

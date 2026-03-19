@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 // 预编译正则表达式（避免每次调用重新编译）
@@ -215,25 +216,20 @@ func (s *IdentityService) RewriteUserID(body []byte, accountID int64, accountUUI
 		return body, nil
 placeholder
 
-	// 使用 RawMessage 保留其他字段的原始字节
-	var reqMap map[string]json.RawMessage
-	if err := json.Unmarshal(body, &reqMap); err != nil {
+	metadata := gjson.GetBytes(body, "metadata")
+	if !metadata.Exists() || metadata.Type == gjson.Null {
+		return body, nil
+placeholder
+	if !strings.HasPrefix(strings.TrimSpace(metadata.Raw), "{") {
 		return body, nil
 placeholder
 
-	// 解析 metadata 字段
-	metadataRaw, ok := reqMap["metadata"]
-	if !ok {
+	userIDResult := metadata.Get("user_id")
+	if !userIDResult.Exists() || userIDResult.Type != gjson.String {
 		return body, nil
 placeholder
-
-	var metadata map[string]any
-	if err := json.Unmarshal(metadataRaw, &metadata); err != nil {
-		return body, nil
-placeholder
-
-	userID, ok := metadata["user_id"].(string)
-	if !ok || userID == "" {
+	userID := userIDResult.String()
+	if userID == "" {
 		return body, nil
 placeholder
 
@@ -252,17 +248,15 @@ placeholder
 	// 根据客户端版本选择输出格式
 	version := ExtractCLIVersion(fingerprintUA)
 	newUserID := FormatMetadataUserID(cachedClientID, accountUUID, newSessionHash, version)
+	if newUserID == userID {
+		return body, nil
+placeholder
 
-	metadata["user_id"] = newUserID
-
-	// 只重新序列化 metadata 字段
-	newMetadataRaw, err := json.Marshal(metadata)
+	newBody, err := sjson.SetBytes(body, "metadata.user_id", newUserID)
 	if err != nil {
 		return body, nil
 placeholder
-	reqMap["metadata"] = newMetadataRaw
-
-	return json.Marshal(reqMap)
+	return newBody, nil
 placeholder
 
 // RewriteUserIDWithMasking 重写body中的metadata.user_id，支持会话ID伪装
@@ -283,25 +277,20 @@ placeholder
 		return newBody, nil
 placeholder
 
-	// 使用 RawMessage 保留其他字段的原始字节
-	var reqMap map[string]json.RawMessage
-	if err := json.Unmarshal(newBody, &reqMap); err != nil {
+	metadata := gjson.GetBytes(newBody, "metadata")
+	if !metadata.Exists() || metadata.Type == gjson.Null {
+		return newBody, nil
+placeholder
+	if !strings.HasPrefix(strings.TrimSpace(metadata.Raw), "{") {
 		return newBody, nil
 placeholder
 
-	// 解析 metadata 字段
-	metadataRaw, ok := reqMap["metadata"]
-	if !ok {
+	userIDResult := metadata.Get("user_id")
+	if !userIDResult.Exists() || userIDResult.Type != gjson.String {
 		return newBody, nil
 placeholder
-
-	var metadata map[string]any
-	if err := json.Unmarshal(metadataRaw, &metadata); err != nil {
-		return newBody, nil
-placeholder
-
-	userID, ok := metadata["user_id"].(string)
-	if !ok || userID == "" {
+	userID := userIDResult.String()
+	if userID == "" {
 		return newBody, nil
 placeholder
 
@@ -339,16 +328,15 @@ placeholder
 		"after", newUserID,
 	)
 
-	metadata["user_id"] = newUserID
-
-	// 只重新序列化 metadata 字段
-	newMetadataRaw, marshalErr := json.Marshal(metadata)
-	if marshalErr != nil {
+	if newUserID == userID {
 		return newBody, nil
 placeholder
-	reqMap["metadata"] = newMetadataRaw
 
-	return json.Marshal(reqMap)
+	maskedBody, setErr := sjson.SetBytes(newBody, "metadata.user_id", newUserID)
+	if setErr != nil {
+		return newBody, nil
+placeholder
+	return maskedBody, nil
 placeholder
 
 // generateRandomUUID 生成随机 UUID v4 格式字符串
