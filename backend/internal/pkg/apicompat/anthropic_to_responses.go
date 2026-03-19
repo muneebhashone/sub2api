@@ -431,7 +431,7 @@ placeholder
 		return schema
 placeholder
 
-	typ, _ := m["type"]
+	typ := m["type"]
 	if string(typ) != `"object"` {
 		return schema
 placeholder
