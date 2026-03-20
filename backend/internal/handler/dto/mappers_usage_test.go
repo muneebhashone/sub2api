@@ -133,6 +133,21 @@ placeholder
 	require.Contains(t, string(adminJSON), `"upstream_model":"claude-sonnet-4-20250514"`)
 placeholder
 
+func TestUsageLogFromService_FallsBackToLegacyModelWhenRequestedModelMissing(t *testing.T) {
+	t.Parallel()
+
+	log := &service.UsageLog{
+		RequestID: "req_legacy",
+		Model:     "claude-3",
+placeholder
+
+	userDTO := UsageLogFromService(log)
+	adminDTO := UsageLogFromServiceAdmin(log)
+
+	require.Equal(t, "claude-3", userDTO.Model)
+	require.Equal(t, "claude-3", adminDTO.Model)
+placeholder
+
 func f64Ptr(value float64) *float64 {
 	return &value
 placeholder
