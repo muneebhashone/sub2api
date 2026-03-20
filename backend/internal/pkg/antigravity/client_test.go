@@ -274,8 +274,8 @@ placeholder
 	if client.httpClient == nil {
 		t.Fatal("httpClient 为 nil")
 placeholder
-	if client.httpClient.Timeout != 30*time.Second {
-		t.Errorf("Timeout 不匹配: got %v, want 30s", client.httpClient.Timeout)
+	if client.httpClient.Timeout != clientTimeout {
+		t.Errorf("Timeout 不匹配: got %v, want %v", client.httpClient.Timeout, clientTimeout)
 placeholder
 	// 无代理时 Transport 应为 nil（使用默认）
 	if client.httpClient.Transport != nil {
@@ -322,11 +322,11 @@ placeholder
 placeholder
 
 // ---------------------------------------------------------------------------
-// isConnectionError
+// IsConnectionError
 // ---------------------------------------------------------------------------
 
 func TestIsConnectionError_nil(t *testing.T) {
-	if isConnectionError(nil) {
+	if IsConnectionError(nil) {
 		t.Error("nil 错误不应判定为连接错误")
 placeholder
 placeholder
@@ -338,7 +338,7 @@ func TestIsConnectionError_超时错误(t *testing.T) {
 		Net: "tcp",
 		Err: &timeoutError{placeholder,
 placeholder
-	if !isConnectionError(err) {
+	if !IsConnectionError(err) {
 		t.Error("超时错误应判定为连接错误")
 placeholder
 placeholder
@@ -356,7 +356,7 @@ func TestIsConnectionError_netOpError(t *testing.T) {
 		Net: "tcp",
 		Err: fmt.Errorf("connection refused"),
 placeholder
-	if !isConnectionError(err) {
+	if !IsConnectionError(err) {
 		t.Error("net.OpError 应判定为连接错误")
 placeholder
 placeholder
@@ -367,14 +367,14 @@ func TestIsConnectionError_urlError(t *testing.T) {
 		URL: "https://example.com",
 		Err: fmt.Errorf("some error"),
 placeholder
-	if !isConnectionError(err) {
+	if !IsConnectionError(err) {
 		t.Error("url.Error 应判定为连接错误")
 placeholder
 placeholder
 
 func TestIsConnectionError_普通错误(t *testing.T) {
 	err := fmt.Errorf("some random error")
-	if isConnectionError(err) {
+	if IsConnectionError(err) {
 		t.Error("普通错误不应判定为连接错误")
 placeholder
 placeholder
@@ -386,7 +386,7 @@ func TestIsConnectionError_包装的netOpError(t *testing.T) {
 		Err: fmt.Errorf("connection refused"),
 placeholder
 	err := fmt.Errorf("wrapping: %w", inner)
-	if !isConnectionError(err) {
+	if !IsConnectionError(err) {
 		t.Error("被包装的 net.OpError 应判定为连接错误")
 placeholder
 placeholder
