@@ -11,6 +11,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
+	dbgroup "github.com/Wei-Shaw/sub2api/ent/group"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
@@ -198,6 +199,12 @@ placeholder
 				dbuser.HasAPIKeysWith(apikey.KeyContainsFold(filters.Search)),
 			),
 		)
+placeholder
+
+	if filters.GroupName != "" {
+		q = q.Where(dbuser.HasAllowedGroupsWith(
+			dbgroup.NameContainsFold(filters.GroupName),
+		))
 placeholder
 
 	// If attribute filters are specified, we need to filter by user IDs first
@@ -451,6 +458,15 @@ func (r *userRepository) RemoveGroupFromAllowedGroups(ctx context.Context, group
 		return 0, err
 placeholder
 	return int64(affected), nil
+placeholder
+
+// RemoveGroupFromUserAllowedGroups 移除单个用户的指定分组权限
+func (r *userRepository) RemoveGroupFromUserAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
+	client := clientFromContext(ctx, r.client)
+	_, err := client.UserAllowedGroup.Delete().
+		Where(userallowedgroup.UserIDEQ(userID), userallowedgroup.GroupIDEQ(groupID)).
+		Exec(ctx)
+	return err
 placeholder
 
 func (r *userRepository) GetFirstAdmin(ctx context.Context) (*service.User, error) {

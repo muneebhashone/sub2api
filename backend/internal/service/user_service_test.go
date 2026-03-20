@@ -46,7 +46,10 @@ func (m *mockUserRepo) RemoveGroupFromAllowedGroups(context.Context, int64) (int
 	return 0, nil
 placeholder
 func (m *mockUserRepo) AddGroupToAllowedGroups(context.Context, int64, int64) error { return nil placeholder
-func (m *mockUserRepo) UpdateTotpSecret(context.Context, int64, *string) error      { return nil placeholder
+func (m *mockUserRepo) RemoveGroupFromUserAllowedGroups(context.Context, int64, int64) error {
+	return nil
+placeholder
+func (m *mockUserRepo) UpdateTotpSecret(context.Context, int64, *string) error { return nil placeholder
 func (m *mockUserRepo) EnableTotp(context.Context, int64) error                { return nil placeholder
 func (m *mockUserRepo) DisableTotp(context.Context, int64) error               { return nil placeholder
 
