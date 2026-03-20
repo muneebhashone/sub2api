@@ -276,11 +276,17 @@ placeholder
 		if limit := a.GetQuotaDailyLimit(); limit > 0 {
 			out.QuotaDailyLimit = &limit
 			used := a.GetQuotaDailyUsed()
+			if a.IsDailyQuotaPeriodExpired() {
+				used = 0
+		placeholder
 			out.QuotaDailyUsed = &used
 	placeholder
 		if limit := a.GetQuotaWeeklyLimit(); limit > 0 {
 			out.QuotaWeeklyLimit = &limit
 			used := a.GetQuotaWeeklyUsed()
+			if a.IsWeeklyQuotaPeriodExpired() {
+				used = 0
+		placeholder
 			out.QuotaWeeklyUsed = &used
 	placeholder
 		// 固定时间重置配置
