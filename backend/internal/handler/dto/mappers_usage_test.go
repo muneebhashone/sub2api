@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -104,6 +105,32 @@ placeholder
 	require.Equal(t, upstreamEndpoint, *adminDTO.UpstreamEndpoint)
 	require.NotNil(t, adminDTO.AccountRateMultiplier)
 	require.InDelta(t, 1.5, *adminDTO.AccountRateMultiplier, 1e-12)
+placeholder
+
+func TestUsageLogFromService_UsesRequestedModelAndKeepsUpstreamAdminOnly(t *testing.T) {
+	t.Parallel()
+
+	upstreamModel := "claude-sonnet-4-20250514"
+	log := &service.UsageLog{
+		RequestID:      "req_4",
+		Model:          upstreamModel,
+		RequestedModel: "claude-sonnet-4",
+		UpstreamModel:  &upstreamModel,
+placeholder
+
+	userDTO := UsageLogFromService(log)
+	adminDTO := UsageLogFromServiceAdmin(log)
+
+	require.Equal(t, "claude-sonnet-4", userDTO.Model)
+	require.Equal(t, "claude-sonnet-4", adminDTO.Model)
+
+	userJSON, err := json.Marshal(userDTO)
+placeholder
+	require.NotContains(t, string(userJSON), "upstream_model")
+
+	adminJSON, err := json.Marshal(adminDTO)
+placeholder
+	require.Contains(t, string(adminJSON), `"upstream_model":"claude-sonnet-4-20250514"`)
 placeholder
 
 func f64Ptr(value float64) *float64 {
