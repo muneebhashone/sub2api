@@ -102,6 +102,26 @@ placeholder
 	return _u
 placeholder
 
+// SetRequestedModel sets the "requested_model" field.
+func (_u *UsageLogUpdate) SetRequestedModel(v string) *UsageLogUpdate {
+	_u.mutation.SetRequestedModel(v)
+	return _u
+placeholder
+
+// SetNillableRequestedModel sets the "requested_model" field if the given value is not nil.
+func (_u *UsageLogUpdate) SetNillableRequestedModel(v *string) *UsageLogUpdate {
+	if v != nil {
+		_u.SetRequestedModel(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearRequestedModel clears the value of the "requested_model" field.
+func (_u *UsageLogUpdate) ClearRequestedModel() *UsageLogUpdate {
+	_u.mutation.ClearRequestedModel()
+	return _u
+placeholder
+
 // SetUpstreamModel sets the "upstream_model" field.
 func (_u *UsageLogUpdate) SetUpstreamModel(v string) *UsageLogUpdate {
 	_u.mutation.SetUpstreamModel(v)
@@ -765,6 +785,11 @@ placeholder
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.RequestedModel(); ok {
+		if err := usagelog.RequestedModelValidator(v); err != nil {
+			return &ValidationError{Name: "requested_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.requested_model": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.UpstreamModel(); ok {
 		if err := usagelog.UpstreamModelValidator(v); err != nil {
 			return &ValidationError{Name: "upstream_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.upstream_model": %w`, err)placeholder
@@ -819,6 +844,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.RequestedModel(); ok {
+		_spec.SetField(usagelog.FieldRequestedModel, field.TypeString, value)
+placeholder
+	if _u.mutation.RequestedModelCleared() {
+		_spec.ClearField(usagelog.FieldRequestedModel, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.UpstreamModel(); ok {
 		_spec.SetField(usagelog.FieldUpstreamModel, field.TypeString, value)
@@ -1205,6 +1236,26 @@ func (_u *UsageLogUpdateOne) SetNillableModel(v *string) *UsageLogUpdateOne {
 	if v != nil {
 		_u.SetModel(*v)
 placeholder
+	return _u
+placeholder
+
+// SetRequestedModel sets the "requested_model" field.
+func (_u *UsageLogUpdateOne) SetRequestedModel(v string) *UsageLogUpdateOne {
+	_u.mutation.SetRequestedModel(v)
+	return _u
+placeholder
+
+// SetNillableRequestedModel sets the "requested_model" field if the given value is not nil.
+func (_u *UsageLogUpdateOne) SetNillableRequestedModel(v *string) *UsageLogUpdateOne {
+	if v != nil {
+		_u.SetRequestedModel(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearRequestedModel clears the value of the "requested_model" field.
+func (_u *UsageLogUpdateOne) ClearRequestedModel() *UsageLogUpdateOne {
+	_u.mutation.ClearRequestedModel()
 	return _u
 placeholder
 
@@ -1884,6 +1935,11 @@ placeholder
 			return &ValidationError{Name: "model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.model": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.RequestedModel(); ok {
+		if err := usagelog.RequestedModelValidator(v); err != nil {
+			return &ValidationError{Name: "requested_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.requested_model": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.UpstreamModel(); ok {
 		if err := usagelog.UpstreamModelValidator(v); err != nil {
 			return &ValidationError{Name: "upstream_model", err: fmt.Errorf(`ent: validator failed for field "UsageLog.upstream_model": %w`, err)placeholder
@@ -1955,6 +2011,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Model(); ok {
 		_spec.SetField(usagelog.FieldModel, field.TypeString, value)
+placeholder
+	if value, ok := _u.mutation.RequestedModel(); ok {
+		_spec.SetField(usagelog.FieldRequestedModel, field.TypeString, value)
+placeholder
+	if _u.mutation.RequestedModelCleared() {
+		_spec.ClearField(usagelog.FieldRequestedModel, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.UpstreamModel(); ok {
 		_spec.SetField(usagelog.FieldUpstreamModel, field.TypeString, value)

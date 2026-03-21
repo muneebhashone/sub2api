@@ -1028,14 +1028,15 @@ placeholder
 placeholder
 
 	return &ForwardResult{
-		RequestID:    requestID,
-		Usage:        *usage,
-		Model:        originalModel,
-		Stream:       req.Stream,
-		Duration:     time.Since(startTime),
-		FirstTokenMs: firstTokenMs,
-		ImageCount:   imageCount,
-		ImageSize:    imageSize,
+		RequestID:     requestID,
+		Usage:         *usage,
+		Model:         originalModel,
+		UpstreamModel: mappedModel,
+		Stream:        req.Stream,
+		Duration:      time.Since(startTime),
+		FirstTokenMs:  firstTokenMs,
+		ImageCount:    imageCount,
+		ImageSize:     imageSize,
 placeholder, nil
 placeholder
 
@@ -1241,12 +1242,13 @@ placeholder
 				estimated := estimateGeminiCountTokens(body)
 				c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
 				return &ForwardResult{
-					RequestID:    "",
-					Usage:        ClaudeUsage{placeholder,
-					Model:        originalModel,
-					Stream:       false,
-					Duration:     time.Since(startTime),
-					FirstTokenMs: nil,
+					RequestID:     "",
+					Usage:         ClaudeUsage{placeholder,
+					Model:         originalModel,
+					UpstreamModel: mappedModel,
+					Stream:        false,
+					Duration:      time.Since(startTime),
+					FirstTokenMs:  nil,
 			placeholder, nil
 		placeholder
 			setOpsUpstreamError(c, 0, safeErr, "")
@@ -1310,12 +1312,13 @@ placeholder
 				estimated := estimateGeminiCountTokens(body)
 				c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
 				return &ForwardResult{
-					RequestID:    "",
-					Usage:        ClaudeUsage{placeholder,
-					Model:        originalModel,
-					Stream:       false,
-					Duration:     time.Since(startTime),
-					FirstTokenMs: nil,
+					RequestID:     "",
+					Usage:         ClaudeUsage{placeholder,
+					Model:         originalModel,
+					UpstreamModel: mappedModel,
+					Stream:        false,
+					Duration:      time.Since(startTime),
+					FirstTokenMs:  nil,
 			placeholder, nil
 		placeholder
 			// Final attempt: surface the upstream error body (passed through below) instead of a generic retry error.
@@ -1350,12 +1353,13 @@ placeholder
 			estimated := estimateGeminiCountTokens(body)
 			c.JSON(http.StatusOK, map[string]any{"totalTokens": estimatedplaceholder)
 			return &ForwardResult{
-				RequestID:    requestID,
-				Usage:        ClaudeUsage{placeholder,
-				Model:        originalModel,
-				Stream:       false,
-				Duration:     time.Since(startTime),
-				FirstTokenMs: nil,
+				RequestID:     requestID,
+				Usage:         ClaudeUsage{placeholder,
+				Model:         originalModel,
+				UpstreamModel: mappedModel,
+				Stream:        false,
+				Duration:      time.Since(startTime),
+				FirstTokenMs:  nil,
 		placeholder, nil
 	placeholder
 
@@ -1527,14 +1531,15 @@ placeholder
 placeholder
 
 	return &ForwardResult{
-		RequestID:    requestID,
-		Usage:        *usage,
-		Model:        originalModel,
-		Stream:       stream,
-		Duration:     time.Since(startTime),
-		FirstTokenMs: firstTokenMs,
-		ImageCount:   imageCount,
-		ImageSize:    imageSize,
+		RequestID:     requestID,
+		Usage:         *usage,
+		Model:         originalModel,
+		UpstreamModel: mappedModel,
+		Stream:        stream,
+		Duration:      time.Since(startTime),
+		FirstTokenMs:  firstTokenMs,
+		ImageCount:    imageCount,
+		ImageSize:     imageSize,
 placeholder, nil
 placeholder
 

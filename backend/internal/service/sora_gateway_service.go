@@ -148,10 +148,13 @@ placeholder
 		s.writeSoraError(c, http.StatusBadRequest, "invalid_request_error", "model is required", clientStream)
 		return nil, errors.New("model is required")
 placeholder
+	originalModel := reqModel
 
 	mappedModel := account.GetMappedModel(reqModel)
+	var upstreamModel string
 	if mappedModel != "" && mappedModel != reqModel {
 		reqModel = mappedModel
+		upstreamModel = mappedModel
 placeholder
 
 	modelCfg, ok := GetSoraModelConfig(reqModel)
@@ -213,13 +216,14 @@ placeholder
 			c.JSON(http.StatusOK, buildSoraNonStreamResponse(content, reqModel))
 	placeholder
 		return &ForwardResult{
-			RequestID:    "",
-			Model:        reqModel,
-			Stream:       clientStream,
-			Duration:     time.Since(startTime),
-			FirstTokenMs: firstTokenMs,
-			Usage:        ClaudeUsage{placeholder,
-			MediaType:    "prompt",
+			RequestID:     "",
+			Model:         originalModel,
+			UpstreamModel: upstreamModel,
+			Stream:        clientStream,
+			Duration:      time.Since(startTime),
+			FirstTokenMs:  firstTokenMs,
+			Usage:         ClaudeUsage{placeholder,
+			MediaType:     "prompt",
 	placeholder, nil
 placeholder
 
@@ -269,13 +273,14 @@ placeholder
 				c.JSON(http.StatusOK, resp)
 		placeholder
 			return &ForwardResult{
-				RequestID:    "",
-				Model:        reqModel,
-				Stream:       clientStream,
-				Duration:     time.Since(startTime),
-				FirstTokenMs: firstTokenMs,
-				Usage:        ClaudeUsage{placeholder,
-				MediaType:    "prompt",
+				RequestID:     "",
+				Model:         originalModel,
+				UpstreamModel: upstreamModel,
+				Stream:        clientStream,
+				Duration:      time.Since(startTime),
+				FirstTokenMs:  firstTokenMs,
+				Usage:         ClaudeUsage{placeholder,
+				MediaType:     "prompt",
 		placeholder, nil
 	placeholder
 		if characterResult != nil && strings.TrimSpace(characterResult.Username) != "" {
@@ -419,16 +424,17 @@ placeholder else if c != nil {
 placeholder
 
 	return &ForwardResult{
-		RequestID:    taskID,
-		Model:        reqModel,
-		Stream:       clientStream,
-		Duration:     time.Since(startTime),
-		FirstTokenMs: firstTokenMs,
-		Usage:        ClaudeUsage{placeholder,
-		MediaType:    mediaType,
-		MediaURL:     firstMediaURL(finalURLs),
-		ImageCount:   imageCount,
-		ImageSize:    imageSize,
+		RequestID:     taskID,
+		Model:         originalModel,
+		UpstreamModel: upstreamModel,
+		Stream:        clientStream,
+		Duration:      time.Since(startTime),
+		FirstTokenMs:  firstTokenMs,
+		Usage:         ClaudeUsage{placeholder,
+		MediaType:     mediaType,
+		MediaURL:      firstMediaURL(finalURLs),
+		ImageCount:    imageCount,
+		ImageSize:     imageSize,
 placeholder, nil
 placeholder
 
