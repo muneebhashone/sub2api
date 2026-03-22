@@ -2635,10 +2635,8 @@ placeholder
 	if s.privacyClientFactory == nil {
 		return ""
 placeholder
-	if account.Extra != nil {
-		if _, ok := account.Extra["privacy_mode"]; ok {
-			return ""
-	placeholder
+	if shouldSkipOpenAIPrivacyEnsure(account.Extra) {
+		return ""
 placeholder
 
 	token, _ := account.Credentials["access_token"].(string)
