@@ -84,6 +84,61 @@ placeholder
 	require.Equal(t, int64(32002), account.ID)
 placeholder
 
+func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyDBRuntimeRecheckSkipsStaleCachedAccount(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10103)
+	rateLimitedUntil := time.Now().Add(30 * time.Minute)
+	staleSticky := &Account{ID: 33001, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0placeholder
+	staleBackup := &Account{ID: 33002, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 5placeholder
+	dbSticky := Account{ID: 33001, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0, RateLimitResetAt: &rateLimitedUntilplaceholder
+	dbBackup := Account{ID: 33002, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 5placeholder
+	cache := &stubGatewayCache{sessionBindings: map[string]int64{"openai:session_hash_db_runtime_recheck": 33001placeholderplaceholder
+	snapshotCache := &openAISnapshotCacheStub{
+		snapshotAccounts: []*Account{staleSticky, staleBackupplaceholder,
+		accountsByID:     map[int64]*Account{33001: staleSticky, 33002: staleBackupplaceholder,
+placeholder
+	snapshotService := &SchedulerSnapshotService{cache: snapshotCacheplaceholder
+	svc := &OpenAIGatewayService{
+		accountRepo:        stubOpenAIAccountRepo{accounts: []Account{dbSticky, dbBackupplaceholderplaceholder,
+		cache:              cache,
+		cfg:                &config.Config{placeholder,
+		schedulerSnapshot:  snapshotService,
+		concurrencyService: NewConcurrencyService(stubConcurrencyCache{placeholder),
+placeholder
+
+	selection, decision, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_db_runtime_recheck", "gpt-5.1", nil, OpenAIUpstreamTransportAny)
+placeholder
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, int64(33002), selection.Account.ID)
+	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
+placeholder
+
+func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_DBRuntimeRecheckSkipsStaleCachedCandidate(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10104)
+	rateLimitedUntil := time.Now().Add(30 * time.Minute)
+	stalePrimary := &Account{ID: 34001, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0placeholder
+	staleSecondary := &Account{ID: 34002, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 5placeholder
+	dbPrimary := Account{ID: 34001, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0, RateLimitResetAt: &rateLimitedUntilplaceholder
+	dbSecondary := Account{ID: 34002, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 5placeholder
+	snapshotCache := &openAISnapshotCacheStub{
+		snapshotAccounts: []*Account{stalePrimary, staleSecondaryplaceholder,
+		accountsByID:     map[int64]*Account{34001: stalePrimary, 34002: staleSecondaryplaceholder,
+placeholder
+	snapshotService := &SchedulerSnapshotService{cache: snapshotCacheplaceholder
+	svc := &OpenAIGatewayService{
+		accountRepo:       stubOpenAIAccountRepo{accounts: []Account{dbPrimary, dbSecondaryplaceholderplaceholder,
+		cfg:               &config.Config{placeholder,
+		schedulerSnapshot: snapshotService,
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "gpt-5.1", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, int64(34002), account.ID)
+placeholder
+
 func TestOpenAIGatewayService_SelectAccountWithScheduler_PreviousResponseSticky(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(9)
