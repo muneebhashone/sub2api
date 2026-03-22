@@ -205,6 +205,118 @@ placeholder
 	return []byte(r.Raw)
 placeholder
 
+// stripEmptyTextBlocksFromSlice removes empty text blocks from a content slice (including nested tool_result content).
+// Returns (cleaned slice, true) if any blocks were removed, or (original, false) if unchanged.
+func stripEmptyTextBlocksFromSlice(blocks []any) ([]any, bool) {
+	var result []any
+	changed := false
+	for i, block := range blocks {
+		blockMap, ok := block.(map[string]any)
+		if !ok {
+			if result != nil {
+				result = append(result, block)
+		placeholder
+			continue
+	placeholder
+		blockType, _ := blockMap["type"].(string)
+
+		// Strip empty text blocks
+		if blockType == "text" {
+			if txt, _ := blockMap["text"].(string); txt == "" {
+				if result == nil {
+					result = make([]any, 0, len(blocks))
+					result = append(result, blocks[:i]...)
+			placeholder
+				changed = true
+				continue
+		placeholder
+	placeholder
+
+		// Recurse into tool_result nested content
+		if blockType == "tool_result" {
+			if nestedContent, ok := blockMap["content"].([]any); ok {
+				if cleaned, nestedChanged := stripEmptyTextBlocksFromSlice(nestedContent); nestedChanged {
+					if result == nil {
+						result = make([]any, 0, len(blocks))
+						result = append(result, blocks[:i]...)
+				placeholder
+					changed = true
+					blockCopy := make(map[string]any, len(blockMap))
+					for k, v := range blockMap {
+						blockCopy[k] = v
+				placeholder
+					blockCopy["content"] = cleaned
+					result = append(result, blockCopy)
+					continue
+			placeholder
+		placeholder
+	placeholder
+
+		if result != nil {
+			result = append(result, block)
+	placeholder
+placeholder
+	if !changed {
+		return blocks, false
+placeholder
+	return result, true
+placeholder
+
+// StripEmptyTextBlocks removes empty text blocks from the request body (including nested tool_result content).
+// This is a lightweight pre-filter for the initial request path to prevent upstream 400 errors.
+// Returns the original body unchanged if no empty text blocks are found.
+func StripEmptyTextBlocks(body []byte) []byte {
+	// Fast path: check if body contains empty text patterns
+	hasEmptyTextBlock := bytes.Contains(body, patternEmptyText) ||
+		bytes.Contains(body, patternEmptyTextSpaced) ||
+		bytes.Contains(body, patternEmptyTextSp1) ||
+		bytes.Contains(body, patternEmptyTextSp2)
+	if !hasEmptyTextBlock {
+		return body
+placeholder
+
+	jsonStr := *(*string)(unsafe.Pointer(&body))
+	msgsRes := gjson.Get(jsonStr, "messages")
+	if !msgsRes.Exists() || !msgsRes.IsArray() {
+		return body
+placeholder
+
+	var messages []any
+	if err := json.Unmarshal(sliceRawFromBody(body, msgsRes), &messages); err != nil {
+		return body
+placeholder
+
+	modified := false
+	for _, msg := range messages {
+		msgMap, ok := msg.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		content, ok := msgMap["content"].([]any)
+		if !ok {
+			continue
+	placeholder
+		if cleaned, changed := stripEmptyTextBlocksFromSlice(content); changed {
+			modified = true
+			msgMap["content"] = cleaned
+	placeholder
+placeholder
+
+	if !modified {
+		return body
+placeholder
+
+	msgsBytes, err := json.Marshal(messages)
+	if err != nil {
+		return body
+placeholder
+	out, err := sjson.SetRawBytes(body, "messages", msgsBytes)
+	if err != nil {
+		return body
+placeholder
+	return out
+placeholder
+
 // FilterThinkingBlocks removes thinking blocks from request body
 // Returns filtered body or original body if filtering fails (fail-safe)
 // This prevents 400 errors from invalid thinking block signatures
@@ -375,6 +487,23 @@ placeholder
 					placeholder
 				placeholder
 					continue
+			placeholder
+		placeholder
+
+			// Recursively strip empty text blocks from tool_result nested content.
+			if blockType == "tool_result" {
+				if nestedContent, ok := blockMap["content"].([]any); ok {
+					if cleaned, changed := stripEmptyTextBlocksFromSlice(nestedContent); changed {
+						modifiedThisMsg = true
+						ensureNewContent(bi)
+						blockCopy := make(map[string]any, len(blockMap))
+						for k, v := range blockMap {
+							blockCopy[k] = v
+					placeholder
+						blockCopy["content"] = cleaned
+						newContent = append(newContent, blockCopy)
+						continue
+				placeholder
 			placeholder
 		placeholder
 

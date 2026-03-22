@@ -435,6 +435,122 @@ placeholder`)
 	require.NotEmpty(t, block1["text"])
 placeholder
 
+func TestFilterThinkingBlocksForRetry_StripsNestedEmptyTextInToolResult(t *testing.T) {
+	// Empty text blocks nested inside tool_result content should also be stripped
+	input := []byte(`{
+		"messages":[
+			{"role":"user","content":[
+				{"type":"tool_result","tool_use_id":"t1","content":[
+					{"type":"text","text":"valid result"placeholder,
+					{"type":"text","text":""placeholder
+				]placeholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	msgs := req["messages"].([]any)
+	msg0 := msgs[0].(map[string]any)
+	content0 := msg0["content"].([]any)
+	require.Len(t, content0, 1)
+	toolResult := content0[0].(map[string]any)
+	require.Equal(t, "tool_result", toolResult["type"])
+	nestedContent := toolResult["content"].([]any)
+	require.Len(t, nestedContent, 1)
+	require.Equal(t, "valid result", nestedContent[0].(map[string]any)["text"])
+placeholder
+
+func TestFilterThinkingBlocksForRetry_NestedAllEmptyGetsEmptySlice(t *testing.T) {
+	// If all nested content blocks in tool_result are empty text, content becomes empty slice
+	input := []byte(`{
+		"messages":[
+			{"role":"user","content":[
+				{"type":"tool_result","tool_use_id":"t1","content":[
+					{"type":"text","text":""placeholder
+				]placeholder,
+				{"type":"text","text":"hello"placeholder
+			]placeholder
+		]
+placeholder`)
+
+	out := FilterThinkingBlocksForRetry(input)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(out, &req))
+	msgs := req["messages"].([]any)
+	msg0 := msgs[0].(map[string]any)
+	content0 := msg0["content"].([]any)
+	require.Len(t, content0, 2)
+	toolResult := content0[0].(map[string]any)
+	nestedContent := toolResult["content"].([]any)
+	require.Len(t, nestedContent, 0)
+placeholder
+
+func TestStripEmptyTextBlocks(t *testing.T) {
+	t.Run("strips top-level empty text", func(t *testing.T) {
+		input := []byte(`{"messages":[{"role":"user","content":[{"type":"text","text":"hello"placeholder,{"type":"text","text":""placeholder]placeholder]placeholder`)
+		out := StripEmptyTextBlocks(input)
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(out, &req))
+		msgs := req["messages"].([]any)
+		content := msgs[0].(map[string]any)["content"].([]any)
+		require.Len(t, content, 1)
+		require.Equal(t, "hello", content[0].(map[string]any)["text"])
+placeholder)
+
+	t.Run("strips nested empty text in tool_result", func(t *testing.T) {
+		input := []byte(`{"messages":[{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":[{"type":"text","text":"ok"placeholder,{"type":"text","text":""placeholder]placeholder]placeholder]placeholder`)
+		out := StripEmptyTextBlocks(input)
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(out, &req))
+		msgs := req["messages"].([]any)
+		content := msgs[0].(map[string]any)["content"].([]any)
+		toolResult := content[0].(map[string]any)
+		nestedContent := toolResult["content"].([]any)
+		require.Len(t, nestedContent, 1)
+		require.Equal(t, "ok", nestedContent[0].(map[string]any)["text"])
+placeholder)
+
+	t.Run("no-op when no empty text", func(t *testing.T) {
+		input := []byte(`{"messages":[{"role":"user","content":[{"type":"text","text":"hello"placeholder]placeholder]placeholder`)
+		out := StripEmptyTextBlocks(input)
+		require.Equal(t, input, out)
+placeholder)
+
+	t.Run("preserves non-map blocks in content", func(t *testing.T) {
+		// tool_result content can be a string; non-map blocks should pass through unchanged
+		input := []byte(`{"messages":[{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"string content"placeholder,{"type":"text","text":""placeholder]placeholder]placeholder`)
+		out := StripEmptyTextBlocks(input)
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(out, &req))
+		msgs := req["messages"].([]any)
+		content := msgs[0].(map[string]any)["content"].([]any)
+		require.Len(t, content, 1)
+		toolResult := content[0].(map[string]any)
+		require.Equal(t, "tool_result", toolResult["type"])
+		require.Equal(t, "string content", toolResult["content"])
+placeholder)
+
+	t.Run("handles deeply nested tool_result", func(t *testing.T) {
+		// Recursive: tool_result containing another tool_result with empty text
+		input := []byte(`{"messages":[{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":[{"type":"tool_result","tool_use_id":"t2","content":[{"type":"text","text":""placeholder,{"type":"text","text":"deep"placeholder]placeholder]placeholder]placeholder]placeholder`)
+		out := StripEmptyTextBlocks(input)
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(out, &req))
+		msgs := req["messages"].([]any)
+		content := msgs[0].(map[string]any)["content"].([]any)
+		outer := content[0].(map[string]any)
+		innerContent := outer["content"].([]any)
+		inner := innerContent[0].(map[string]any)
+		deepContent := inner["content"].([]any)
+		require.Len(t, deepContent, 1)
+		require.Equal(t, "deep", deepContent[0].(map[string]any)["text"])
+placeholder)
+placeholder
+
 func TestFilterThinkingBlocksForRetry_PreservesNonEmptyTextBlocks(t *testing.T) {
 	// Non-empty text blocks should pass through unchanged
 	input := []byte(`{
