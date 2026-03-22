@@ -16,10 +16,11 @@ import (
 // refreshAPIAccountRepo implements AccountRepository for OAuthRefreshAPI tests.
 type refreshAPIAccountRepo struct {
 	mockAccountRepoForGemini
-	account   *Account   // returned by GetByID
-	getByIDErr error
-	updateErr  error
-	updateCalls int
+	account                *Account // returned by GetByID
+	getByIDErr             error
+	updateErr              error
+	updateCalls            int
+	updateCredentialsCalls int
 placeholder
 
 func (r *refreshAPIAccountRepo) GetByID(_ context.Context, _ int64) (*Account, error) {
@@ -32,6 +33,19 @@ placeholder
 func (r *refreshAPIAccountRepo) Update(_ context.Context, _ *Account) error {
 	r.updateCalls++
 	return r.updateErr
+placeholder
+
+func (r *refreshAPIAccountRepo) UpdateCredentials(_ context.Context, id int64, credentials map[string]any) error {
+	r.updateCalls++
+	r.updateCredentialsCalls++
+	if r.updateErr != nil {
+		return r.updateErr
+placeholder
+	if r.account == nil || r.account.ID != id {
+		r.account = &Account{ID: idplaceholder
+placeholder
+	r.account.Credentials = cloneCredentials(credentials)
+	return nil
 placeholder
 
 // refreshAPIExecutorStub implements OAuthRefreshExecutor for tests.
@@ -106,8 +120,34 @@ placeholder
 	require.Equal(t, "new-token", result.NewCredentials["access_token"])
 	require.NotNil(t, result.NewCredentials["_token_version"]) // version stamp set
 	require.Equal(t, 1, repo.updateCalls)                      // DB updated
-	require.Equal(t, 1, cache.releaseCalls)                    // lock released
+	require.Equal(t, 1, repo.updateCredentialsCalls)
+	require.Equal(t, 1, cache.releaseCalls) // lock released
 	require.Equal(t, 1, executor.refreshCalls)
+placeholder
+
+func TestRefreshIfNeeded_UpdateCredentialsPreservesRateLimitState(t *testing.T) {
+	resetAt := time.Now().Add(45 * time.Minute)
+	account := &Account{
+		ID:               11,
+		Platform:         PlatformGemini,
+		Type:             AccountTypeOAuth,
+		RateLimitResetAt: &resetAt,
+placeholder
+	repo := &refreshAPIAccountRepo{account: accountplaceholder
+	cache := &refreshAPICacheStub{lockResult: trueplaceholder
+	executor := &refreshAPIExecutorStub{
+		needsRefresh: true,
+		credentials:  map[string]any{"access_token": "safe-token"placeholder,
+placeholder
+
+	api := NewOAuthRefreshAPI(repo, cache)
+	result, err := api.RefreshIfNeeded(context.Background(), account, executor, 3*time.Minute)
+
+placeholder
+	require.True(t, result.Refreshed)
+	require.Equal(t, 1, repo.updateCredentialsCalls)
+	require.NotNil(t, repo.account.RateLimitResetAt)
+	require.WithinDuration(t, resetAt, *repo.account.RateLimitResetAt, time.Second)
 placeholder
 
 func TestRefreshIfNeeded_LockHeld(t *testing.T) {
@@ -193,7 +233,7 @@ placeholder
 placeholder
 	require.Nil(t, result)
 	require.Contains(t, err.Error(), "invalid_grant")
-	require.Equal(t, 0, repo.updateCalls) // no DB update on refresh error
+	require.Equal(t, 0, repo.updateCalls)   // no DB update on refresh error
 	require.Equal(t, 1, cache.releaseCalls) // lock still released via defer
 placeholder
 
@@ -299,8 +339,8 @@ func TestMergeCredentials_NewOverridesOld(t *testing.T) {
 
 	result := MergeCredentials(old, new)
 
-	require.Equal(t, "new-token", result["access_token"])     // overridden
-	require.Equal(t, "old-refresh", result["refresh_token"])  // preserved
+	require.Equal(t, "new-token", result["access_token"])    // overridden
+	require.Equal(t, "old-refresh", result["refresh_token"]) // preserved
 placeholder
 
 // ========== BuildClaudeAccountCredentials tests ==========

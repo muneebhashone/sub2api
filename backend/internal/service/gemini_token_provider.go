@@ -135,7 +135,7 @@ placeholder
 			if tierID != "" {
 				account.Credentials["tier_id"] = tierID
 		placeholder
-			_ = p.accountRepo.Update(ctx, account)
+			_ = persistAccountCredentials(ctx, p.accountRepo, account, account.Credentials)
 	placeholder
 placeholder
 

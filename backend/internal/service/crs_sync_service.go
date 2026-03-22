@@ -367,8 +367,7 @@ placeholder
 			// 🔄 Refresh OAuth token after creation
 			if targetType == AccountTypeOAuth {
 				if refreshedCreds := s.refreshOAuthToken(ctx, account); refreshedCreds != nil {
-					account.Credentials = refreshedCreds
-					_ = s.accountRepo.Update(ctx, account)
+					_ = persistAccountCredentials(ctx, s.accountRepo, account, refreshedCreds)
 			placeholder
 		placeholder
 			item.Action = "created"
@@ -402,8 +401,7 @@ placeholder
 		// 🔄 Refresh OAuth token after update
 		if targetType == AccountTypeOAuth {
 			if refreshedCreds := s.refreshOAuthToken(ctx, existing); refreshedCreds != nil {
-				existing.Credentials = refreshedCreds
-				_ = s.accountRepo.Update(ctx, existing)
+				_ = persistAccountCredentials(ctx, s.accountRepo, existing, refreshedCreds)
 		placeholder
 	placeholder
 
@@ -620,8 +618,7 @@ placeholder
 		placeholder
 			// 🔄 Refresh OAuth token after creation
 			if refreshedCreds := s.refreshOAuthToken(ctx, account); refreshedCreds != nil {
-				account.Credentials = refreshedCreds
-				_ = s.accountRepo.Update(ctx, account)
+				_ = persistAccountCredentials(ctx, s.accountRepo, account, refreshedCreds)
 		placeholder
 			item.Action = "created"
 			result.Created++
@@ -652,8 +649,7 @@ placeholder
 
 		// 🔄 Refresh OAuth token after update
 		if refreshedCreds := s.refreshOAuthToken(ctx, existing); refreshedCreds != nil {
-			existing.Credentials = refreshedCreds
-			_ = s.accountRepo.Update(ctx, existing)
+			_ = persistAccountCredentials(ctx, s.accountRepo, existing, refreshedCreds)
 	placeholder
 
 		item.Action = "updated"
@@ -862,8 +858,7 @@ placeholder
 				continue
 		placeholder
 			if refreshedCreds := s.refreshOAuthToken(ctx, account); refreshedCreds != nil {
-				account.Credentials = refreshedCreds
-				_ = s.accountRepo.Update(ctx, account)
+				_ = persistAccountCredentials(ctx, s.accountRepo, account, refreshedCreds)
 		placeholder
 			item.Action = "created"
 			result.Created++
@@ -893,8 +888,7 @@ placeholder
 	placeholder
 
 		if refreshedCreds := s.refreshOAuthToken(ctx, existing); refreshedCreds != nil {
-			existing.Credentials = refreshedCreds
-			_ = s.accountRepo.Update(ctx, existing)
+			_ = persistAccountCredentials(ctx, s.accountRepo, existing, refreshedCreds)
 	placeholder
 
 		item.Action = "updated"

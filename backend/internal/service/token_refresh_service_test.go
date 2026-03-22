@@ -14,17 +14,38 @@ import (
 
 type tokenRefreshAccountRepo struct {
 	mockAccountRepoForGemini
-	updateCalls    int
-	setErrorCalls  int
-	clearTempCalls int
-	lastAccount    *Account
-	updateErr      error
+	updateCalls            int
+	fullUpdateCalls        int
+	updateCredentialsCalls int
+	setErrorCalls          int
+	clearTempCalls         int
+	lastAccount            *Account
+	updateErr              error
 placeholder
 
 func (r *tokenRefreshAccountRepo) Update(ctx context.Context, account *Account) error {
 	r.updateCalls++
+	r.fullUpdateCalls++
 	r.lastAccount = account
 	return r.updateErr
+placeholder
+
+func (r *tokenRefreshAccountRepo) UpdateCredentials(ctx context.Context, id int64, credentials map[string]any) error {
+	r.updateCalls++
+	r.updateCredentialsCalls++
+	if r.updateErr != nil {
+		return r.updateErr
+placeholder
+	cloned := cloneCredentials(credentials)
+	if r.accountsByID != nil {
+		if acc, ok := r.accountsByID[id]; ok && acc != nil {
+			acc.Credentials = cloned
+			r.lastAccount = acc
+			return nil
+	placeholder
+placeholder
+	r.lastAccount = &Account{ID: id, Credentials: clonedplaceholder
+	return nil
 placeholder
 
 func (r *tokenRefreshAccountRepo) SetError(ctx context.Context, id int64, errorMsg string) error {
@@ -112,6 +133,8 @@ placeholder
 	err := service.refreshWithRetry(context.Background(), account, refresher, refresher, time.Hour)
 placeholder
 	require.Equal(t, 1, repo.updateCalls)
+	require.Equal(t, 1, repo.updateCredentialsCalls)
+	require.Equal(t, 0, repo.fullUpdateCalls)
 	require.Equal(t, 1, invalidator.calls)
 	require.Equal(t, "new-token", account.GetCredential("access_token"))
 placeholder
@@ -249,7 +272,41 @@ placeholder
 	err := service.refreshWithRetry(context.Background(), account, refresher, refresher, time.Hour)
 placeholder
 	require.Equal(t, 1, repo.updateCalls)
+	require.Equal(t, 1, repo.updateCredentialsCalls)
 	require.Equal(t, 1, invalidator.calls) // 所有 OAuth 账户刷新后触发缓存失效
+placeholder
+
+func TestTokenRefreshService_RefreshWithRetry_UsesCredentialsUpdater(t *testing.T) {
+	repo := &tokenRefreshAccountRepo{placeholder
+	cfg := &config.Config{
+		TokenRefresh: config.TokenRefreshConfig{
+			MaxRetries:          1,
+			RetryBackoffSeconds: 0,
+	placeholder,
+placeholder
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, nil, nil, cfg, nil)
+	resetAt := time.Now().Add(30 * time.Minute)
+	account := &Account{
+		ID:               17,
+		Platform:         PlatformOpenAI,
+		Type:             AccountTypeOAuth,
+		RateLimitResetAt: &resetAt,
+placeholder
+			"access_token": "old-token",
+	placeholder,
+placeholder
+	refresher := &tokenRefresherStub{
+		credentials: map[string]any{
+			"access_token": "new-token",
+	placeholder,
+placeholder
+
+	err := service.refreshWithRetry(context.Background(), account, refresher, refresher, time.Hour)
+placeholder
+	require.Equal(t, 1, repo.updateCredentialsCalls)
+	require.Equal(t, 0, repo.fullUpdateCalls)
+	require.NotNil(t, account.RateLimitResetAt)
+	require.WithinDuration(t, resetAt, *account.RateLimitResetAt, time.Second)
 placeholder
 
 // TestTokenRefreshService_RefreshWithRetry_UpdateFailed 测试更新失败的情况
@@ -390,7 +447,7 @@ placeholder
 	err := service.refreshWithRetry(context.Background(), account, refresher, refresher, time.Hour)
 placeholder
 	require.Equal(t, 1, repo.updateCalls)
-	require.Equal(t, 1, repo.clearTempCalls)  // DB 清除
+	require.Equal(t, 1, repo.clearTempCalls)   // DB 清除
 	require.Equal(t, 1, tempCache.deleteCalls) // Redis 缓存也应清除
 placeholder
 
