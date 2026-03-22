@@ -59,7 +59,28 @@
         <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
           <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.model') placeholderplaceholder</div>
           <div class="mt-1 text-sm font-medium text-gray-900 dark:text-white">
-            {{ detail.model || '—' placeholderplaceholder
+            <template v-if="detail.requested_model && detail.upstream_model && detail.requested_model !== detail.upstream_model">
+              <span class="font-mono">{{ detail.requested_model placeholderplaceholder</span>
+              <span class="mx-1 text-gray-400">→</span>
+              <span class="font-mono text-primary-600 dark:text-primary-400">{{ detail.upstream_model placeholderplaceholder</span>
+            </template>
+            <template v-else>
+              {{ detail.requested_model || detail.model || '—' placeholderplaceholder
+            </template>
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
+          <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.inboundEndpoint') placeholderplaceholder</div>
+          <div class="mt-1 break-all font-mono text-sm font-medium text-gray-900 dark:text-white">
+            {{ detail.inbound_endpoint || '—' placeholderplaceholder
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
+          <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.upstreamEndpoint') placeholderplaceholder</div>
+          <div class="mt-1 break-all font-mono text-sm font-medium text-gray-900 dark:text-white">
+            {{ detail.upstream_endpoint || '—' placeholderplaceholder
           </div>
         </div>
 
@@ -69,6 +90,13 @@
             <span :class="['inline-flex items-center rounded-lg px-2 py-1 text-xs font-black ring-1 ring-inset shadow-sm', statusClass]">
               {{ detail.status_code placeholderplaceholder
             </span>
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-gray-50 p-4 dark:bg-dark-900">
+          <div class="text-xs font-bold uppercase tracking-wider text-gray-400">{{ t('admin.ops.errorDetail.requestType') placeholderplaceholder</div>
+          <div class="mt-1 text-sm font-medium text-gray-900 dark:text-white">
+            {{ formatRequestTypeLabel(detail.request_type) placeholderplaceholder
           </div>
         </div>
 
@@ -211,6 +239,15 @@ function isUpstreamError(d: OpsErrorDetail | null): boolean {
   const phase = String(d.phase || '').toLowerCase()
   const owner = String(d.error_owner || '').toLowerCase()
   return phase === 'upstream' && owner === 'provider'
+placeholder
+
+function formatRequestTypeLabel(type: number | null | undefined): string {
+  switch (type) {
+    case 1: return t('admin.ops.errorDetail.requestTypeSync')
+    case 2: return t('admin.ops.errorDetail.requestTypeStream')
+    case 3: return t('admin.ops.errorDetail.requestTypeWs')
+    default: return t('admin.ops.errorDetail.requestTypeUnknown')
+  placeholder
 placeholder
 
 const correlatedUpstream = ref<OpsErrorDetail[]>([])
