@@ -581,7 +581,7 @@ const {
   handlePageSizeChange: baseHandlePageSizeChange
 placeholder = useTableLoader<Account, any>({
   fetchFn: adminAPI.accounts.list,
-  initialParams: { platform: '', type: '', status: '', group: '', search: '' placeholder
+  initialParams: { platform: '', type: '', status: '', privacy_mode: '', group: '', search: '' placeholder
 placeholder)
 
 const {
@@ -758,6 +758,7 @@ const refreshAccountsIncrementally = async () => {
         platform?: string
         type?: string
         status?: string
+        privacy_mode?: string
         group?: string
         search?: string
 
