@@ -24,7 +24,7 @@ placeholder
 		accounts, pageInfo, err := s.accountRepo.ListWithFilters(ctx, pagination.PaginationParams{
 			Page:     page,
 			PageSize: opsAccountsPageSize,
-	placeholder, platformFilter, "", "", "", 0)
+	placeholder, platformFilter, "", "", "", 0, "")
 		if err != nil {
 			return nil, err
 	placeholder
