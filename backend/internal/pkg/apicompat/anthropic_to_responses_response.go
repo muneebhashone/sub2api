@@ -397,11 +397,6 @@ func anthToResHandleMessageDelta(evt *AnthropicStreamEvent, state *AnthropicEven
 	placeholder
 placeholder
 
-	// Extract stop_reason from delta
-	if evt.Delta != nil && evt.Delta.StopReason != "" {
-		// We'll use this in message_stop
-placeholder
-
 	return nil
 placeholder
 
