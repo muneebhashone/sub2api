@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
+	"sort"
 	"strings"
 	"unsafe"
 
@@ -34,6 +36,9 @@ var (
 	patternEmptyTextSpaced = []byte(`"text": ""`)
 	patternEmptyTextSp1    = []byte(`"text" : ""`)
 	patternEmptyTextSp2    = []byte(`"text" :""`)
+
+	sessionUserAgentProductPattern = regexp.MustCompile(`([A-Za-z0-9._-]+)/[A-Za-z0-9._-]+`)
+	sessionUserAgentVersionPattern = regexp.MustCompile(`\bv?\d+(?:\.\d+){1,3placeholder\b`)
 )
 
 // SessionContext 粘性会话上下文，用于区分不同来源的请求。
@@ -73,6 +78,49 @@ type ParsedRequest struct {
 	// OnUpstreamAccepted 上游接受请求后立即调用（用于提前释放串行锁）
 	// 流式请求在收到 2xx 响应头后调用，避免持锁等流完成
 	OnUpstreamAccepted func()
+placeholder
+
+// NormalizeSessionUserAgent reduces UA noise for sticky-session and digest hashing.
+// It preserves the set of product names from Product/Version tokens while
+// discarding version-only changes and incidental comments.
+func NormalizeSessionUserAgent(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+placeholder
+
+	matches := sessionUserAgentProductPattern.FindAllStringSubmatch(raw, -1)
+	if len(matches) == 0 {
+		return normalizeSessionUserAgentFallback(raw)
+placeholder
+
+	products := make([]string, 0, len(matches))
+	seen := make(map[string]struct{placeholder, len(matches))
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+	placeholder
+		product := strings.ToLower(strings.TrimSpace(match[1]))
+		if product == "" {
+			continue
+	placeholder
+		if _, exists := seen[product]; exists {
+			continue
+	placeholder
+		seen[product] = struct{placeholder{placeholder
+		products = append(products, product)
+placeholder
+	if len(products) == 0 {
+		return normalizeSessionUserAgentFallback(raw)
+placeholder
+	sort.Strings(products)
+	return strings.Join(products, "+")
+placeholder
+
+func normalizeSessionUserAgentFallback(raw string) string {
+	normalized := strings.ToLower(strings.Join(strings.Fields(raw), " "))
+	normalized = sessionUserAgentVersionPattern.ReplaceAllString(normalized, "")
+	return strings.Join(strings.Fields(normalized), " ")
 placeholder
 
 // ParseGatewayRequest 解析网关请求体并返回结构化结果。
@@ -203,6 +251,118 @@ func sliceRawFromBody(body []byte, r gjson.Result) []byte {
 placeholder
 	// fallback: 不影响正确性，但会产生一次拷贝
 	return []byte(r.Raw)
+placeholder
+
+// stripEmptyTextBlocksFromSlice removes empty text blocks from a content slice (including nested tool_result content).
+// Returns (cleaned slice, true) if any blocks were removed, or (original, false) if unchanged.
+func stripEmptyTextBlocksFromSlice(blocks []any) ([]any, bool) {
+	var result []any
+	changed := false
+	for i, block := range blocks {
+		blockMap, ok := block.(map[string]any)
+		if !ok {
+			if result != nil {
+				result = append(result, block)
+		placeholder
+			continue
+	placeholder
+		blockType, _ := blockMap["type"].(string)
+
+		// Strip empty text blocks
+		if blockType == "text" {
+			if txt, _ := blockMap["text"].(string); txt == "" {
+				if result == nil {
+					result = make([]any, 0, len(blocks))
+					result = append(result, blocks[:i]...)
+			placeholder
+				changed = true
+				continue
+		placeholder
+	placeholder
+
+		// Recurse into tool_result nested content
+		if blockType == "tool_result" {
+			if nestedContent, ok := blockMap["content"].([]any); ok {
+				if cleaned, nestedChanged := stripEmptyTextBlocksFromSlice(nestedContent); nestedChanged {
+					if result == nil {
+						result = make([]any, 0, len(blocks))
+						result = append(result, blocks[:i]...)
+				placeholder
+					changed = true
+					blockCopy := make(map[string]any, len(blockMap))
+					for k, v := range blockMap {
+						blockCopy[k] = v
+				placeholder
+					blockCopy["content"] = cleaned
+					result = append(result, blockCopy)
+					continue
+			placeholder
+		placeholder
+	placeholder
+
+		if result != nil {
+			result = append(result, block)
+	placeholder
+placeholder
+	if !changed {
+		return blocks, false
+placeholder
+	return result, true
+placeholder
+
+// StripEmptyTextBlocks removes empty text blocks from the request body (including nested tool_result content).
+// This is a lightweight pre-filter for the initial request path to prevent upstream 400 errors.
+// Returns the original body unchanged if no empty text blocks are found.
+func StripEmptyTextBlocks(body []byte) []byte {
+	// Fast path: check if body contains empty text patterns
+	hasEmptyTextBlock := bytes.Contains(body, patternEmptyText) ||
+		bytes.Contains(body, patternEmptyTextSpaced) ||
+		bytes.Contains(body, patternEmptyTextSp1) ||
+		bytes.Contains(body, patternEmptyTextSp2)
+	if !hasEmptyTextBlock {
+		return body
+placeholder
+
+	jsonStr := *(*string)(unsafe.Pointer(&body))
+	msgsRes := gjson.Get(jsonStr, "messages")
+	if !msgsRes.Exists() || !msgsRes.IsArray() {
+		return body
+placeholder
+
+	var messages []any
+	if err := json.Unmarshal(sliceRawFromBody(body, msgsRes), &messages); err != nil {
+		return body
+placeholder
+
+	modified := false
+	for _, msg := range messages {
+		msgMap, ok := msg.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		content, ok := msgMap["content"].([]any)
+		if !ok {
+			continue
+	placeholder
+		if cleaned, changed := stripEmptyTextBlocksFromSlice(content); changed {
+			modified = true
+			msgMap["content"] = cleaned
+	placeholder
+placeholder
+
+	if !modified {
+		return body
+placeholder
+
+	msgsBytes, err := json.Marshal(messages)
+	if err != nil {
+		return body
+placeholder
+	out, err := sjson.SetRawBytes(body, "messages", msgsBytes)
+	if err != nil {
+		return body
+placeholder
+	return out
 placeholder
 
 // FilterThinkingBlocks removes thinking blocks from request body
@@ -375,6 +535,23 @@ placeholder
 					placeholder
 				placeholder
 					continue
+			placeholder
+		placeholder
+
+			// Recursively strip empty text blocks from tool_result nested content.
+			if blockType == "tool_result" {
+				if nestedContent, ok := blockMap["content"].([]any); ok {
+					if cleaned, changed := stripEmptyTextBlocksFromSlice(nestedContent); changed {
+						modifiedThisMsg = true
+						ensureNewContent(bi)
+						blockCopy := make(map[string]any, len(blockMap))
+						for k, v := range blockMap {
+							blockCopy[k] = v
+					placeholder
+						blockCopy["content"] = cleaned
+						newContent = append(newContent, blockCopy)
+						continue
+				placeholder
 			placeholder
 		placeholder
 
