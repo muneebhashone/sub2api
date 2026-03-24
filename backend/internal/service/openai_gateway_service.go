@@ -1201,6 +1201,11 @@ placeholder
 	if requestedModel != "" && !account.IsModelSupported(requestedModel) {
 		return nil
 placeholder
+	account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel)
+	if account == nil {
+		_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
+		return nil
+placeholder
 
 	// 刷新会话 TTL 并返回账号
 	// Refresh session TTL and return account
@@ -1226,6 +1231,10 @@ func (s *OpenAIGatewayService) selectBestAccount(ctx context.Context, accounts [
 	placeholder
 
 		fresh := s.resolveFreshSchedulableOpenAIAccount(ctx, acc, requestedModel)
+		if fresh == nil {
+			continue
+	placeholder
+		fresh = s.recheckSelectedOpenAIAccountFromDB(ctx, fresh, requestedModel)
 		if fresh == nil {
 			continue
 	placeholder
@@ -1353,27 +1362,32 @@ placeholder
 			placeholder
 				if !clearSticky && account.IsSchedulable() && account.IsOpenAI() &&
 					(requestedModel == "" || account.IsModelSupported(requestedModel)) {
-					result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
-					if err == nil && result.Acquired {
-						_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
-						return &AccountSelectionResult{
-							Account:     account,
-							Acquired:    true,
-							ReleaseFunc: result.ReleaseFunc,
-					placeholder, nil
-				placeholder
+					account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel)
+					if account == nil {
+						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
+				placeholder else {
+						result, err := s.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
+						if err == nil && result.Acquired {
+							_ = s.refreshStickySessionTTL(ctx, groupID, sessionHash, openaiStickySessionTTL)
+							return &AccountSelectionResult{
+								Account:     account,
+								Acquired:    true,
+								ReleaseFunc: result.ReleaseFunc,
+						placeholder, nil
+					placeholder
 
-					waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, accountID)
-					if waitingCount < cfg.StickySessionMaxWaiting {
-						return &AccountSelectionResult{
-							Account: account,
-							WaitPlan: &AccountWaitPlan{
-								AccountID:      accountID,
-								MaxConcurrency: account.Concurrency,
-								Timeout:        cfg.StickySessionWaitTimeout,
-								MaxWaiting:     cfg.StickySessionMaxWaiting,
-						placeholder,
-					placeholder, nil
+						waitingCount, _ := s.concurrencyService.GetAccountWaitingCount(ctx, accountID)
+						if waitingCount < cfg.StickySessionMaxWaiting {
+							return &AccountSelectionResult{
+								Account: account,
+								WaitPlan: &AccountWaitPlan{
+									AccountID:      accountID,
+									MaxConcurrency: account.Concurrency,
+									Timeout:        cfg.StickySessionWaitTimeout,
+									MaxWaiting:     cfg.StickySessionMaxWaiting,
+							placeholder,
+						placeholder, nil
+					placeholder
 				placeholder
 			placeholder
 		placeholder
@@ -1558,6 +1572,28 @@ placeholder
 		return nil
 placeholder
 	return fresh
+placeholder
+
+func (s *OpenAIGatewayService) recheckSelectedOpenAIAccountFromDB(ctx context.Context, account *Account, requestedModel string) *Account {
+	if account == nil {
+		return nil
+placeholder
+	if s.schedulerSnapshot == nil || s.accountRepo == nil {
+		return account
+placeholder
+
+	latest, err := s.accountRepo.GetByID(ctx, account.ID)
+	if err != nil || latest == nil {
+		return nil
+placeholder
+	syncOpenAICodexRateLimitFromExtra(ctx, s.accountRepo, latest, time.Now())
+	if !latest.IsSchedulable() || !latest.IsOpenAI() {
+		return nil
+placeholder
+	if requestedModel != "" && !latest.IsModelSupported(requestedModel) {
+		return nil
+placeholder
+	return latest
 placeholder
 
 func (s *OpenAIGatewayService) getSchedulableAccount(ctx context.Context, accountID int64) (*Account, error) {
