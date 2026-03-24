@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"regexp"
+	"sort"
 	"strings"
 	"unsafe"
 
@@ -34,6 +36,9 @@ var (
 	patternEmptyTextSpaced = []byte(`"text": ""`)
 	patternEmptyTextSp1    = []byte(`"text" : ""`)
 	patternEmptyTextSp2    = []byte(`"text" :""`)
+
+	sessionUserAgentProductPattern = regexp.MustCompile(`([A-Za-z0-9._-]+)/[A-Za-z0-9._-]+`)
+	sessionUserAgentVersionPattern = regexp.MustCompile(`\bv?\d+(?:\.\d+){1,3placeholder\b`)
 )
 
 // SessionContext 粘性会话上下文，用于区分不同来源的请求。
@@ -73,6 +78,49 @@ type ParsedRequest struct {
 	// OnUpstreamAccepted 上游接受请求后立即调用（用于提前释放串行锁）
 	// 流式请求在收到 2xx 响应头后调用，避免持锁等流完成
 	OnUpstreamAccepted func()
+placeholder
+
+// NormalizeSessionUserAgent reduces UA noise for sticky-session and digest hashing.
+// It preserves the set of product names from Product/Version tokens while
+// discarding version-only changes and incidental comments.
+func NormalizeSessionUserAgent(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+placeholder
+
+	matches := sessionUserAgentProductPattern.FindAllStringSubmatch(raw, -1)
+	if len(matches) == 0 {
+		return normalizeSessionUserAgentFallback(raw)
+placeholder
+
+	products := make([]string, 0, len(matches))
+	seen := make(map[string]struct{placeholder, len(matches))
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+	placeholder
+		product := strings.ToLower(strings.TrimSpace(match[1]))
+		if product == "" {
+			continue
+	placeholder
+		if _, exists := seen[product]; exists {
+			continue
+	placeholder
+		seen[product] = struct{placeholder{placeholder
+		products = append(products, product)
+placeholder
+	if len(products) == 0 {
+		return normalizeSessionUserAgentFallback(raw)
+placeholder
+	sort.Strings(products)
+	return strings.Join(products, "+")
+placeholder
+
+func normalizeSessionUserAgentFallback(raw string) string {
+	normalized := strings.ToLower(strings.Join(strings.Fields(raw), " "))
+	normalized = sessionUserAgentVersionPattern.ReplaceAllString(normalized, "")
+	return strings.Join(strings.Fields(normalized), " ")
 placeholder
 
 // ParseGatewayRequest 解析网关请求体并返回结构化结果。
