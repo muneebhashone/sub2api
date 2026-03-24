@@ -879,6 +879,7 @@ placeholder)
 placeholder
 	require.NotNil(t, usageRepo.lastLog)
 	require.Equal(t, "gpt-5.1", usageRepo.lastLog.Model)
+	require.Equal(t, "gpt-5.1", usageRepo.lastLog.RequestedModel)
 	require.NotNil(t, usageRepo.lastLog.UpstreamModel)
 	require.Equal(t, "gpt-5.1-codex", *usageRepo.lastLog.UpstreamModel)
 	require.NotNil(t, usageRepo.lastLog.ServiceTier)
@@ -892,6 +893,40 @@ placeholder
 	require.NotNil(t, usageRepo.lastLog.GroupID)
 	require.Equal(t, int64(11), *usageRepo.lastLog.GroupID)
 	require.Equal(t, 1, userRepo.deductCalls)
+placeholder
+
+func TestOpenAIGatewayServiceRecordUsage_BillsMappedRequestsUsingUpstreamModelFallback(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+	userRepo := &openAIRecordUsageUserRepoStub{placeholder
+	subRepo := &openAIRecordUsageSubRepoStub{placeholder
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, subRepo, nil)
+	usage := OpenAIUsage{InputTokens: 20, OutputTokens: 10placeholder
+
+	expectedCost, err := svc.billingService.CalculateCost("gpt-5.1-codex", UsageTokens{
+		InputTokens:  20,
+		OutputTokens: 10,
+placeholder, 1.1)
+placeholder
+
+	err = svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:     "resp_upstream_model_billing_fallback",
+			Model:         "gpt-5.1",
+			UpstreamModel: "gpt-5.1-codex",
+			Usage:         usage,
+			Duration:      time.Second,
+	placeholder,
+		APIKey:  &APIKey{ID: 10placeholder,
+		User:    &User{ID: 20placeholder,
+		Account: &Account{ID: 30placeholder,
+placeholder)
+
+placeholder
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, "gpt-5.1", usageRepo.lastLog.Model)
+	require.Equal(t, expectedCost.ActualCost, usageRepo.lastLog.ActualCost)
+	require.Equal(t, expectedCost.TotalCost, usageRepo.lastLog.TotalCost)
+	require.Equal(t, expectedCost.ActualCost, userRepo.lastAmount)
 placeholder
 
 func TestOpenAIGatewayServiceRecordUsage_SubscriptionBillingSetsSubscriptionFields(t *testing.T) {

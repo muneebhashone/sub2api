@@ -482,10 +482,12 @@ placeholder
 
 // ForwardResult 转发结果
 type ForwardResult struct {
-	RequestID        string
-	Usage            ClaudeUsage
-	Model            string
-	UpstreamModel    string // Actual upstream model after mapping (empty = no mapping)
+	RequestID string
+	Usage     ClaudeUsage
+	Model     string
+	// UpstreamModel is the actual upstream model after mapping.
+	// Prefer empty when it is identical to Model; persistence normalizes equal values away as no-op mappings.
+	UpstreamModel    string
 	Stream           bool
 	Duration         time.Duration
 	FirstTokenMs     *int // 首字时间（流式请求）
@@ -4197,7 +4199,7 @@ placeholder
 						resp.Body = io.NopCloser(bytes.NewReader(respBody))
 						break
 				placeholder
-					logger.LegacyPrintf("service.gateway", "Account %d: detected thinking block signature error, retrying with filtered thinking blocks", account.ID)
+					logger.LegacyPrintf("service.gateway", "[warn] Account %d: thinking blocks have invalid signature, retrying with filtered blocks", account.ID)
 
 					// Conservative two-stage fallback:
 					// 1) Disable thinking + thinking->text (preserve content)
@@ -4212,7 +4214,7 @@ placeholder
 						retryResp, retryErr := s.httpUpstream.DoWithTLS(retryReq, proxyURL, account.ID, account.Concurrency, account.IsTLSFingerprintEnabled())
 						if retryErr == nil {
 							if retryResp.StatusCode < 400 {
-								logger.LegacyPrintf("service.gateway", "Account %d: signature error retry succeeded (thinking downgraded)", account.ID)
+								logger.LegacyPrintf("service.gateway", "Account %d: thinking block retry succeeded (blocks downgraded)", account.ID)
 								resp = retryResp
 								break
 						placeholder
@@ -6102,13 +6104,9 @@ func (s *GatewayService) isThinkingBlockSignatureError(respBody []byte) bool {
 		return false
 placeholder
 
-	// Log for debugging
-	logger.LegacyPrintf("service.gateway", "[SignatureCheck] Checking error message: %s", msg)
-
 	// 检测signature相关的错误（更宽松的匹配）
 	// 例如: "Invalid `signature` in `thinking` block", "***.signature" 等
 	if strings.Contains(msg, "signature") {
-		logger.LegacyPrintf("service.gateway", "[SignatureCheck] Detected signature error")
 		return true
 placeholder
 
@@ -7516,6 +7514,7 @@ placeholder
 placeholder
 
 	var cost *CostBreakdown
+	billingModel := forwardResultBillingModel(result.Model, result.UpstreamModel)
 
 	// 根据请求类型选择计费方式
 	if result.MediaType == "image" || result.MediaType == "video" {
@@ -7531,7 +7530,7 @@ placeholder
 		if result.MediaType == "image" {
 			cost = s.billingService.CalculateSoraImageCost(result.ImageSize, result.ImageCount, soraConfig, multiplier)
 	placeholder else {
-			cost = s.billingService.CalculateSoraVideoCost(result.Model, soraConfig, multiplier)
+			cost = s.billingService.CalculateSoraVideoCost(billingModel, soraConfig, multiplier)
 	placeholder
 placeholder else if result.MediaType == "prompt" {
 		cost = &CostBreakdown{placeholder
@@ -7545,7 +7544,7 @@ placeholder else if result.ImageCount > 0 {
 				Price4K: apiKey.Group.ImagePrice4K,
 		placeholder
 	placeholder
-		cost = s.billingService.CalculateImageCost(result.Model, result.ImageSize, result.ImageCount, groupConfig, multiplier)
+		cost = s.billingService.CalculateImageCost(billingModel, result.ImageSize, result.ImageCount, groupConfig, multiplier)
 placeholder else {
 		// Token 计费
 		tokens := UsageTokens{
@@ -7557,7 +7556,7 @@ placeholder else {
 			CacheCreation1hTokens: result.Usage.CacheCreation1hTokens,
 	placeholder
 		var err error
-		cost, err = s.billingService.CalculateCost(result.Model, tokens, multiplier)
+		cost, err = s.billingService.CalculateCost(billingModel, tokens, multiplier)
 		if err != nil {
 			logger.LegacyPrintf("service.gateway", "Calculate cost failed: %v", err)
 			cost = &CostBreakdown{ActualCost: 0placeholder
@@ -7589,6 +7588,7 @@ placeholder
 		AccountID:             account.ID,
 		RequestID:             requestID,
 		Model:                 result.Model,
+		RequestedModel:        result.Model,
 		UpstreamModel:         optionalNonEqualStringPtr(result.UpstreamModel, result.Model),
 		ReasoningEffort:       result.ReasoningEffort,
 		InboundEndpoint:       optionalTrimmedStringPtr(input.InboundEndpoint),
@@ -7719,6 +7719,7 @@ placeholder
 placeholder
 
 	var cost *CostBreakdown
+	billingModel := forwardResultBillingModel(result.Model, result.UpstreamModel)
 
 	// 根据请求类型选择计费方式
 	if result.ImageCount > 0 {
@@ -7731,7 +7732,7 @@ placeholder
 				Price4K: apiKey.Group.ImagePrice4K,
 		placeholder
 	placeholder
-		cost = s.billingService.CalculateImageCost(result.Model, result.ImageSize, result.ImageCount, groupConfig, multiplier)
+		cost = s.billingService.CalculateImageCost(billingModel, result.ImageSize, result.ImageCount, groupConfig, multiplier)
 placeholder else {
 		// Token 计费（使用长上下文计费方法）
 		tokens := UsageTokens{
@@ -7743,7 +7744,7 @@ placeholder else {
 			CacheCreation1hTokens: result.Usage.CacheCreation1hTokens,
 	placeholder
 		var err error
-		cost, err = s.billingService.CalculateCostWithLongContext(result.Model, tokens, multiplier, input.LongContextThreshold, input.LongContextMultiplier)
+		cost, err = s.billingService.CalculateCostWithLongContext(billingModel, tokens, multiplier, input.LongContextThreshold, input.LongContextMultiplier)
 		if err != nil {
 			logger.LegacyPrintf("service.gateway", "Calculate cost failed: %v", err)
 			cost = &CostBreakdown{ActualCost: 0placeholder
@@ -7771,6 +7772,7 @@ placeholder
 		AccountID:             account.ID,
 		RequestID:             requestID,
 		Model:                 result.Model,
+		RequestedModel:        result.Model,
 		UpstreamModel:         optionalNonEqualStringPtr(result.UpstreamModel, result.Model),
 		ReasoningEffort:       result.ReasoningEffort,
 		InboundEndpoint:       optionalTrimmedStringPtr(input.InboundEndpoint),

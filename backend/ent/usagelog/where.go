@@ -80,6 +80,11 @@ func Model(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldModel, v))
 placeholder
 
+// RequestedModel applies equality check predicate on the "requested_model" field. It's identical to RequestedModelEQ.
+func RequestedModel(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldRequestedModel, v))
+placeholder
+
 // UpstreamModel applies equality check predicate on the "upstream_model" field. It's identical to UpstreamModelEQ.
 func UpstreamModel(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldUpstreamModel, v))
@@ -408,6 +413,81 @@ placeholder
 // ModelContainsFold applies the ContainsFold predicate on the "model" field.
 func ModelContainsFold(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldContainsFold(FieldModel, v))
+placeholder
+
+// RequestedModelEQ applies the EQ predicate on the "requested_model" field.
+func RequestedModelEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelNEQ applies the NEQ predicate on the "requested_model" field.
+func RequestedModelNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelIn applies the In predicate on the "requested_model" field.
+func RequestedModelIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldRequestedModel, vs...))
+placeholder
+
+// RequestedModelNotIn applies the NotIn predicate on the "requested_model" field.
+func RequestedModelNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldRequestedModel, vs...))
+placeholder
+
+// RequestedModelGT applies the GT predicate on the "requested_model" field.
+func RequestedModelGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelGTE applies the GTE predicate on the "requested_model" field.
+func RequestedModelGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelLT applies the LT predicate on the "requested_model" field.
+func RequestedModelLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelLTE applies the LTE predicate on the "requested_model" field.
+func RequestedModelLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelContains applies the Contains predicate on the "requested_model" field.
+func RequestedModelContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelHasPrefix applies the HasPrefix predicate on the "requested_model" field.
+func RequestedModelHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelHasSuffix applies the HasSuffix predicate on the "requested_model" field.
+func RequestedModelHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelIsNil applies the IsNil predicate on the "requested_model" field.
+func RequestedModelIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldRequestedModel))
+placeholder
+
+// RequestedModelNotNil applies the NotNil predicate on the "requested_model" field.
+func RequestedModelNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldRequestedModel))
+placeholder
+
+// RequestedModelEqualFold applies the EqualFold predicate on the "requested_model" field.
+func RequestedModelEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldRequestedModel, v))
+placeholder
+
+// RequestedModelContainsFold applies the ContainsFold predicate on the "requested_model" field.
+func RequestedModelContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldRequestedModel, v))
 placeholder
 
 // UpstreamModelEQ applies the EQ predicate on the "upstream_model" field.
