@@ -36,27 +36,3 @@ placeholder
 		PlanType: antigravity.TierIDToPlanType(tierID),
 placeholder
 placeholder
-
-func applyAntigravitySubscriptionResult(account *Account, result AntigravitySubscriptionResult) (map[string]any, map[string]any) {
-	credentials := make(map[string]any)
-	for k, v := range account.Credentials {
-		credentials[k] = v
-placeholder
-	credentials["plan_type"] = result.PlanType
-
-	extra := make(map[string]any)
-	for k, v := range account.Extra {
-		extra[k] = v
-placeholder
-	if result.SubscriptionStatus != "" {
-		extra["subscription_status"] = result.SubscriptionStatus
-placeholder else {
-		delete(extra, "subscription_status")
-placeholder
-	if result.SubscriptionError != "" {
-		extra["subscription_error"] = result.SubscriptionError
-placeholder else {
-		delete(extra, "subscription_error")
-placeholder
-	return credentials, extra
-placeholder

@@ -2740,4 +2740,3 @@ placeholder
 	applyAntigravityPrivacyMode(account, mode)
 	return mode
 placeholder
-
