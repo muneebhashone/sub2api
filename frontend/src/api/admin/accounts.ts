@@ -627,6 +627,16 @@ export async function batchRefresh(accountIds: number[]): Promise<BatchOperation
   return data
 placeholder
 
+/**
+ * Set privacy for an Antigravity OAuth account
+ * @param id - Account ID
+ * @returns Updated account
+ */
+export async function setPrivacy(id: number): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/set-privacy`)
+  return data
+placeholder
+
 export const accountsAPI = {
   list,
   listWithEtag,
@@ -663,7 +673,8 @@ export const accountsAPI = {
   importData,
   getAntigravityDefaultModelMapping,
   batchClearError,
-  batchRefresh
+  batchRefresh,
+  setPrivacy
 placeholder
 
 export default accountsAPI

@@ -250,6 +250,27 @@ func TestGetTier_两者都为nil(t *testing.T) {
 placeholder
 placeholder
 
+func TestTierIDToPlanType(t *testing.T) {
+	tests := []struct {
+		tierID string
+		want   string
+placeholder{
+		{"free-tier", "Free"placeholder,
+		{"g1-pro-tier", "Pro"placeholder,
+		{"g1-ultra-tier", "Ultra"placeholder,
+		{"FREE-TIER", "Free"placeholder,
+		{"", "Free"placeholder,
+		{"unknown-tier", "unknown-tier"placeholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.tierID, func(t *testing.T) {
+			if got := TierIDToPlanType(tt.tierID); got != tt.want {
+				t.Errorf("TierIDToPlanType(%q) = %q, want %q", tt.tierID, got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 // ---------------------------------------------------------------------------
 // NewClient
 // ---------------------------------------------------------------------------
@@ -800,6 +821,12 @@ type redirectRoundTripper struct {
 	transport http.RoundTripper
 placeholder
 
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+placeholder
+
 func (rt *redirectRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	originalURL := req.URL.String()
 	for prefix, target := range rt.redirects {
@@ -1270,6 +1297,12 @@ func TestClient_LoadCodeAssist_Success_RealCall(t *testing.T) {
 	placeholder
 		if reqBody.Metadata.IDEType != "ANTIGRAVITY" {
 			t.Errorf("IDEType 不匹配: got %s, want ANTIGRAVITY", reqBody.Metadata.IDEType)
+	placeholder
+		if strings.TrimSpace(reqBody.Metadata.IDEVersion) == "" {
+			t.Errorf("IDEVersion 不应为空")
+	placeholder
+		if reqBody.Metadata.IDEName != "antigravity" {
+			t.Errorf("IDEName 不匹配: got %s, want antigravity", reqBody.Metadata.IDEName)
 	placeholder
 
 		w.Header().Set("Content-Type", "application/json")

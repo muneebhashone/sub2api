@@ -78,7 +78,9 @@ placeholder
 // LoadCodeAssistRequest loadCodeAssist 请求
 type LoadCodeAssistRequest struct {
 	Metadata struct {
-		IDEType string `json:"ideType"`
+		IDEType    string `json:"ideType"`
+		IDEVersion string `json:"ideVersion"`
+		IDEName    string `json:"ideName"`
 placeholder `json:"metadata"`
 placeholder
 
@@ -221,6 +223,23 @@ func (r *LoadCodeAssistResponse) GetAvailableCredits() []AvailableCredit {
 		return nil
 placeholder
 	return r.PaidTier.AvailableCredits
+placeholder
+
+// TierIDToPlanType 将 tier ID 映射为用户可见的套餐名。
+func TierIDToPlanType(tierID string) string {
+	switch strings.ToLower(strings.TrimSpace(tierID)) {
+	case "free-tier":
+		return "Free"
+	case "g1-pro-tier":
+		return "Pro"
+	case "g1-ultra-tier":
+		return "Ultra"
+	default:
+		if tierID == "" {
+			return "Free"
+	placeholder
+		return tierID
+placeholder
 placeholder
 
 // Client Antigravity API 客户端
@@ -421,6 +440,8 @@ placeholder
 func (c *Client) LoadCodeAssist(ctx context.Context, accessToken string) (*LoadCodeAssistResponse, map[string]any, error) {
 	reqBody := LoadCodeAssistRequest{placeholder
 	reqBody.Metadata.IDEType = "ANTIGRAVITY"
+	reqBody.Metadata.IDEVersion = "1.20.6"
+	reqBody.Metadata.IDEName = "antigravity"
 
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
@@ -703,4 +724,140 @@ placeholder
 placeholder
 
 	return nil, nil, lastErr
+placeholder
+
+// ── Privacy API ──────────────────────────────────────────────────────
+
+// privacyBaseURL 隐私设置 API 仅使用 daily 端点（与 Antigravity 客户端行为一致）
+const privacyBaseURL = antigravityDailyBaseURL
+
+// SetUserSettingsRequest setUserSettings 请求体
+type SetUserSettingsRequest struct {
+	UserSettings map[string]any `json:"user_settings"`
+placeholder
+
+// FetchUserInfoRequest fetchUserInfo 请求体
+type FetchUserInfoRequest struct {
+	Project string `json:"project"`
+placeholder
+
+// FetchUserInfoResponse fetchUserInfo 响应体
+type FetchUserInfoResponse struct {
+	UserSettings map[string]any `json:"userSettings,omitempty"`
+	RegionCode   string         `json:"regionCode,omitempty"`
+placeholder
+
+// IsPrivate 判断隐私是否已设置：userSettings 为空或不含 telemetryEnabled 表示已设置
+func (r *FetchUserInfoResponse) IsPrivate() bool {
+	if r == nil || r.UserSettings == nil {
+		return true
+placeholder
+	_, hasTelemetry := r.UserSettings["telemetryEnabled"]
+	return !hasTelemetry
+placeholder
+
+// SetUserSettingsResponse setUserSettings 响应体
+type SetUserSettingsResponse struct {
+	UserSettings map[string]any `json:"userSettings,omitempty"`
+placeholder
+
+// IsSuccess 判断 setUserSettings 是否成功：返回 {"userSettings":{placeholderplaceholder 且无 telemetryEnabled
+func (r *SetUserSettingsResponse) IsSuccess() bool {
+	if r == nil {
+		return false
+placeholder
+	// userSettings 为 nil 或空 map 均视为成功
+	if len(r.UserSettings) == 0 {
+		return true
+placeholder
+	// 如果包含 telemetryEnabled 字段，说明未成功清除
+	_, hasTelemetry := r.UserSettings["telemetryEnabled"]
+	return !hasTelemetry
+placeholder
+
+// SetUserSettings 调用 setUserSettings API 设置用户隐私，返回解析后的响应
+func (c *Client) SetUserSettings(ctx context.Context, accessToken string) (*SetUserSettingsResponse, error) {
+	// 发送空 user_settings 以清除隐私设置
+	payload := SetUserSettingsRequest{UserSettings: map[string]any{placeholderplaceholder
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("序列化请求失败: %w", err)
+placeholder
+
+	apiURL := privacyBaseURL + "/v1internal:setUserSettings"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("创建请求失败: %w", err)
+placeholder
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", GetUserAgent())
+	req.Header.Set("X-Goog-Api-Client", "gl-node/22.21.1")
+	req.Host = "daily-cloudcode-pa.googleapis.com"
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("setUserSettings 请求失败: %w", err)
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应失败: %w", err)
+placeholder
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("setUserSettings 失败 (HTTP %d): %s", resp.StatusCode, string(respBody))
+placeholder
+
+	var result SetUserSettingsResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("响应解析失败: %w", err)
+placeholder
+
+	return &result, nil
+placeholder
+
+// FetchUserInfo 调用 fetchUserInfo API 获取用户隐私设置状态
+func (c *Client) FetchUserInfo(ctx context.Context, accessToken, projectID string) (*FetchUserInfoResponse, error) {
+	reqBody := FetchUserInfoRequest{Project: projectIDplaceholder
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("序列化请求失败: %w", err)
+placeholder
+
+	apiURL := privacyBaseURL + "/v1internal:fetchUserInfo"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("创建请求失败: %w", err)
+placeholder
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", GetUserAgent())
+	req.Header.Set("X-Goog-Api-Client", "gl-node/22.21.1")
+	req.Host = "daily-cloudcode-pa.googleapis.com"
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetchUserInfo 请求失败: %w", err)
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应失败: %w", err)
+placeholder
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetchUserInfo 失败 (HTTP %d): %s", resp.StatusCode, string(respBody))
+placeholder
+
+	var result FetchUserInfoResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return nil, fmt.Errorf("响应解析失败: %w", err)
+placeholder
+
+	return &result, nil
 placeholder
