@@ -27,6 +27,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
+	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -60,6 +61,7 @@ const (
 	TypeRedeemCode              = "RedeemCode"
 	TypeSecuritySecret          = "SecuritySecret"
 	TypeSetting                 = "Setting"
+	TypeTLSFingerprintProfile   = "TLSFingerprintProfile"
 	TypeUsageCleanupTask        = "UsageCleanupTask"
 	TypeUsageLog                = "UsageLog"
 	TypeUser                    = "User"
@@ -17146,6 +17148,1380 @@ placeholder
 // It returns an error if the edge is not defined in the schema.
 func (m *SettingMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Setting edge %s", name)
+placeholder
+
+// TLSFingerprintProfileMutation represents an operation that mutates the TLSFingerprintProfile nodes in the graph.
+type TLSFingerprintProfileMutation struct {
+	config
+	op                         Op
+	typ                        string
+	id                         *int64
+	created_at                 *time.Time
+	updated_at                 *time.Time
+	name                       *string
+	description                *string
+	enable_grease              *bool
+	cipher_suites              *[]uint16
+	appendcipher_suites        []uint16
+	curves                     *[]uint16
+	appendcurves               []uint16
+	point_formats              *[]uint16
+	appendpoint_formats        []uint16
+	signature_algorithms       *[]uint16
+	appendsignature_algorithms []uint16
+	alpn_protocols             *[]string
+	appendalpn_protocols       []string
+	supported_versions         *[]uint16
+	appendsupported_versions   []uint16
+	key_share_groups           *[]uint16
+	appendkey_share_groups     []uint16
+	psk_modes                  *[]uint16
+	appendpsk_modes            []uint16
+	extensions                 *[]uint16
+	appendextensions           []uint16
+	clearedFields              map[string]struct{placeholder
+	done                       bool
+	oldValue                   func(context.Context) (*TLSFingerprintProfile, error)
+	predicates                 []predicate.TLSFingerprintProfile
+placeholder
+
+var _ ent.Mutation = (*TLSFingerprintProfileMutation)(nil)
+
+// tlsfingerprintprofileOption allows management of the mutation configuration using functional options.
+type tlsfingerprintprofileOption func(*TLSFingerprintProfileMutation)
+
+// newTLSFingerprintProfileMutation creates new mutation for the TLSFingerprintProfile entity.
+func newTLSFingerprintProfileMutation(c config, op Op, opts ...tlsfingerprintprofileOption) *TLSFingerprintProfileMutation {
+	m := &TLSFingerprintProfileMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeTLSFingerprintProfile,
+		clearedFields: make(map[string]struct{placeholder),
+placeholder
+	for _, opt := range opts {
+		opt(m)
+placeholder
+	return m
+placeholder
+
+// withTLSFingerprintProfileID sets the ID field of the mutation.
+func withTLSFingerprintProfileID(id int64) tlsfingerprintprofileOption {
+	return func(m *TLSFingerprintProfileMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *TLSFingerprintProfile
+		)
+		m.oldValue = func(ctx context.Context) (*TLSFingerprintProfile, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+			placeholder else {
+					value, err = m.Client().TLSFingerprintProfile.Get(ctx, id)
+			placeholder
+		placeholder)
+			return value, err
+	placeholder
+		m.id = &id
+placeholder
+placeholder
+
+// withTLSFingerprintProfile sets the old TLSFingerprintProfile of the mutation.
+func withTLSFingerprintProfile(node *TLSFingerprintProfile) tlsfingerprintprofileOption {
+	return func(m *TLSFingerprintProfileMutation) {
+		m.oldValue = func(context.Context) (*TLSFingerprintProfile, error) {
+			return node, nil
+	placeholder
+		m.id = &node.ID
+placeholder
+placeholder
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m TLSFingerprintProfileMutation) Client() *Client {
+	client := &Client{config: m.configplaceholder
+	client.init()
+	return client
+placeholder
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m TLSFingerprintProfileMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+placeholder
+	tx := &Tx{config: m.configplaceholder
+	tx.init()
+	return tx, nil
+placeholder
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *TLSFingerprintProfileMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+placeholder
+	return *m.id, true
+placeholder
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *TLSFingerprintProfileMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{idplaceholder, nil
+	placeholder
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().TLSFingerprintProfile.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+placeholder
+placeholder
+
+// SetCreatedAt sets the "created_at" field.
+func (m *TLSFingerprintProfileMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+placeholder
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *TLSFingerprintProfileMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCreatedAt returns the old "created_at" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+placeholder
+	return oldValue.CreatedAt, nil
+placeholder
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *TLSFingerprintProfileMutation) ResetCreatedAt() {
+	m.created_at = nil
+placeholder
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *TLSFingerprintProfileMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+placeholder
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *TLSFingerprintProfileMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldUpdatedAt returns the old "updated_at" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+placeholder
+	return oldValue.UpdatedAt, nil
+placeholder
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *TLSFingerprintProfileMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+placeholder
+
+// SetName sets the "name" field.
+func (m *TLSFingerprintProfileMutation) SetName(s string) {
+	m.name = &s
+placeholder
+
+// Name returns the value of the "name" field in the mutation.
+func (m *TLSFingerprintProfileMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldName returns the old "name" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+placeholder
+	return oldValue.Name, nil
+placeholder
+
+// ResetName resets all changes to the "name" field.
+func (m *TLSFingerprintProfileMutation) ResetName() {
+	m.name = nil
+placeholder
+
+// SetDescription sets the "description" field.
+func (m *TLSFingerprintProfileMutation) SetDescription(s string) {
+	m.description = &s
+placeholder
+
+// Description returns the value of the "description" field in the mutation.
+func (m *TLSFingerprintProfileMutation) Description() (r string, exists bool) {
+	v := m.description
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldDescription returns the old "description" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldDescription(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDescription is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDescription requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDescription: %w", err)
+placeholder
+	return oldValue.Description, nil
+placeholder
+
+// ClearDescription clears the value of the "description" field.
+func (m *TLSFingerprintProfileMutation) ClearDescription() {
+	m.description = nil
+	m.clearedFields[tlsfingerprintprofile.FieldDescription] = struct{placeholder{placeholder
+placeholder
+
+// DescriptionCleared returns if the "description" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) DescriptionCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldDescription]
+	return ok
+placeholder
+
+// ResetDescription resets all changes to the "description" field.
+func (m *TLSFingerprintProfileMutation) ResetDescription() {
+	m.description = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldDescription)
+placeholder
+
+// SetEnableGrease sets the "enable_grease" field.
+func (m *TLSFingerprintProfileMutation) SetEnableGrease(b bool) {
+	m.enable_grease = &b
+placeholder
+
+// EnableGrease returns the value of the "enable_grease" field in the mutation.
+func (m *TLSFingerprintProfileMutation) EnableGrease() (r bool, exists bool) {
+	v := m.enable_grease
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldEnableGrease returns the old "enable_grease" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldEnableGrease(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnableGrease is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnableGrease requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnableGrease: %w", err)
+placeholder
+	return oldValue.EnableGrease, nil
+placeholder
+
+// ResetEnableGrease resets all changes to the "enable_grease" field.
+func (m *TLSFingerprintProfileMutation) ResetEnableGrease() {
+	m.enable_grease = nil
+placeholder
+
+// SetCipherSuites sets the "cipher_suites" field.
+func (m *TLSFingerprintProfileMutation) SetCipherSuites(u []uint16) {
+	m.cipher_suites = &u
+	m.appendcipher_suites = nil
+placeholder
+
+// CipherSuites returns the value of the "cipher_suites" field in the mutation.
+func (m *TLSFingerprintProfileMutation) CipherSuites() (r []uint16, exists bool) {
+	v := m.cipher_suites
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCipherSuites returns the old "cipher_suites" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldCipherSuites(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCipherSuites is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCipherSuites requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCipherSuites: %w", err)
+placeholder
+	return oldValue.CipherSuites, nil
+placeholder
+
+// AppendCipherSuites adds u to the "cipher_suites" field.
+func (m *TLSFingerprintProfileMutation) AppendCipherSuites(u []uint16) {
+	m.appendcipher_suites = append(m.appendcipher_suites, u...)
+placeholder
+
+// AppendedCipherSuites returns the list of values that were appended to the "cipher_suites" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedCipherSuites() ([]uint16, bool) {
+	if len(m.appendcipher_suites) == 0 {
+		return nil, false
+placeholder
+	return m.appendcipher_suites, true
+placeholder
+
+// ClearCipherSuites clears the value of the "cipher_suites" field.
+func (m *TLSFingerprintProfileMutation) ClearCipherSuites() {
+	m.cipher_suites = nil
+	m.appendcipher_suites = nil
+	m.clearedFields[tlsfingerprintprofile.FieldCipherSuites] = struct{placeholder{placeholder
+placeholder
+
+// CipherSuitesCleared returns if the "cipher_suites" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) CipherSuitesCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldCipherSuites]
+	return ok
+placeholder
+
+// ResetCipherSuites resets all changes to the "cipher_suites" field.
+func (m *TLSFingerprintProfileMutation) ResetCipherSuites() {
+	m.cipher_suites = nil
+	m.appendcipher_suites = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldCipherSuites)
+placeholder
+
+// SetCurves sets the "curves" field.
+func (m *TLSFingerprintProfileMutation) SetCurves(u []uint16) {
+	m.curves = &u
+	m.appendcurves = nil
+placeholder
+
+// Curves returns the value of the "curves" field in the mutation.
+func (m *TLSFingerprintProfileMutation) Curves() (r []uint16, exists bool) {
+	v := m.curves
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCurves returns the old "curves" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldCurves(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCurves is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCurves requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCurves: %w", err)
+placeholder
+	return oldValue.Curves, nil
+placeholder
+
+// AppendCurves adds u to the "curves" field.
+func (m *TLSFingerprintProfileMutation) AppendCurves(u []uint16) {
+	m.appendcurves = append(m.appendcurves, u...)
+placeholder
+
+// AppendedCurves returns the list of values that were appended to the "curves" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedCurves() ([]uint16, bool) {
+	if len(m.appendcurves) == 0 {
+		return nil, false
+placeholder
+	return m.appendcurves, true
+placeholder
+
+// ClearCurves clears the value of the "curves" field.
+func (m *TLSFingerprintProfileMutation) ClearCurves() {
+	m.curves = nil
+	m.appendcurves = nil
+	m.clearedFields[tlsfingerprintprofile.FieldCurves] = struct{placeholder{placeholder
+placeholder
+
+// CurvesCleared returns if the "curves" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) CurvesCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldCurves]
+	return ok
+placeholder
+
+// ResetCurves resets all changes to the "curves" field.
+func (m *TLSFingerprintProfileMutation) ResetCurves() {
+	m.curves = nil
+	m.appendcurves = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldCurves)
+placeholder
+
+// SetPointFormats sets the "point_formats" field.
+func (m *TLSFingerprintProfileMutation) SetPointFormats(u []uint16) {
+	m.point_formats = &u
+	m.appendpoint_formats = nil
+placeholder
+
+// PointFormats returns the value of the "point_formats" field in the mutation.
+func (m *TLSFingerprintProfileMutation) PointFormats() (r []uint16, exists bool) {
+	v := m.point_formats
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPointFormats returns the old "point_formats" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldPointFormats(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPointFormats is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPointFormats requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPointFormats: %w", err)
+placeholder
+	return oldValue.PointFormats, nil
+placeholder
+
+// AppendPointFormats adds u to the "point_formats" field.
+func (m *TLSFingerprintProfileMutation) AppendPointFormats(u []uint16) {
+	m.appendpoint_formats = append(m.appendpoint_formats, u...)
+placeholder
+
+// AppendedPointFormats returns the list of values that were appended to the "point_formats" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedPointFormats() ([]uint16, bool) {
+	if len(m.appendpoint_formats) == 0 {
+		return nil, false
+placeholder
+	return m.appendpoint_formats, true
+placeholder
+
+// ClearPointFormats clears the value of the "point_formats" field.
+func (m *TLSFingerprintProfileMutation) ClearPointFormats() {
+	m.point_formats = nil
+	m.appendpoint_formats = nil
+	m.clearedFields[tlsfingerprintprofile.FieldPointFormats] = struct{placeholder{placeholder
+placeholder
+
+// PointFormatsCleared returns if the "point_formats" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) PointFormatsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldPointFormats]
+	return ok
+placeholder
+
+// ResetPointFormats resets all changes to the "point_formats" field.
+func (m *TLSFingerprintProfileMutation) ResetPointFormats() {
+	m.point_formats = nil
+	m.appendpoint_formats = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldPointFormats)
+placeholder
+
+// SetSignatureAlgorithms sets the "signature_algorithms" field.
+func (m *TLSFingerprintProfileMutation) SetSignatureAlgorithms(u []uint16) {
+	m.signature_algorithms = &u
+	m.appendsignature_algorithms = nil
+placeholder
+
+// SignatureAlgorithms returns the value of the "signature_algorithms" field in the mutation.
+func (m *TLSFingerprintProfileMutation) SignatureAlgorithms() (r []uint16, exists bool) {
+	v := m.signature_algorithms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldSignatureAlgorithms returns the old "signature_algorithms" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldSignatureAlgorithms(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSignatureAlgorithms is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSignatureAlgorithms requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSignatureAlgorithms: %w", err)
+placeholder
+	return oldValue.SignatureAlgorithms, nil
+placeholder
+
+// AppendSignatureAlgorithms adds u to the "signature_algorithms" field.
+func (m *TLSFingerprintProfileMutation) AppendSignatureAlgorithms(u []uint16) {
+	m.appendsignature_algorithms = append(m.appendsignature_algorithms, u...)
+placeholder
+
+// AppendedSignatureAlgorithms returns the list of values that were appended to the "signature_algorithms" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedSignatureAlgorithms() ([]uint16, bool) {
+	if len(m.appendsignature_algorithms) == 0 {
+		return nil, false
+placeholder
+	return m.appendsignature_algorithms, true
+placeholder
+
+// ClearSignatureAlgorithms clears the value of the "signature_algorithms" field.
+func (m *TLSFingerprintProfileMutation) ClearSignatureAlgorithms() {
+	m.signature_algorithms = nil
+	m.appendsignature_algorithms = nil
+	m.clearedFields[tlsfingerprintprofile.FieldSignatureAlgorithms] = struct{placeholder{placeholder
+placeholder
+
+// SignatureAlgorithmsCleared returns if the "signature_algorithms" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) SignatureAlgorithmsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldSignatureAlgorithms]
+	return ok
+placeholder
+
+// ResetSignatureAlgorithms resets all changes to the "signature_algorithms" field.
+func (m *TLSFingerprintProfileMutation) ResetSignatureAlgorithms() {
+	m.signature_algorithms = nil
+	m.appendsignature_algorithms = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldSignatureAlgorithms)
+placeholder
+
+// SetAlpnProtocols sets the "alpn_protocols" field.
+func (m *TLSFingerprintProfileMutation) SetAlpnProtocols(s []string) {
+	m.alpn_protocols = &s
+	m.appendalpn_protocols = nil
+placeholder
+
+// AlpnProtocols returns the value of the "alpn_protocols" field in the mutation.
+func (m *TLSFingerprintProfileMutation) AlpnProtocols() (r []string, exists bool) {
+	v := m.alpn_protocols
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldAlpnProtocols returns the old "alpn_protocols" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldAlpnProtocols(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAlpnProtocols is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAlpnProtocols requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAlpnProtocols: %w", err)
+placeholder
+	return oldValue.AlpnProtocols, nil
+placeholder
+
+// AppendAlpnProtocols adds s to the "alpn_protocols" field.
+func (m *TLSFingerprintProfileMutation) AppendAlpnProtocols(s []string) {
+	m.appendalpn_protocols = append(m.appendalpn_protocols, s...)
+placeholder
+
+// AppendedAlpnProtocols returns the list of values that were appended to the "alpn_protocols" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedAlpnProtocols() ([]string, bool) {
+	if len(m.appendalpn_protocols) == 0 {
+		return nil, false
+placeholder
+	return m.appendalpn_protocols, true
+placeholder
+
+// ClearAlpnProtocols clears the value of the "alpn_protocols" field.
+func (m *TLSFingerprintProfileMutation) ClearAlpnProtocols() {
+	m.alpn_protocols = nil
+	m.appendalpn_protocols = nil
+	m.clearedFields[tlsfingerprintprofile.FieldAlpnProtocols] = struct{placeholder{placeholder
+placeholder
+
+// AlpnProtocolsCleared returns if the "alpn_protocols" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) AlpnProtocolsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldAlpnProtocols]
+	return ok
+placeholder
+
+// ResetAlpnProtocols resets all changes to the "alpn_protocols" field.
+func (m *TLSFingerprintProfileMutation) ResetAlpnProtocols() {
+	m.alpn_protocols = nil
+	m.appendalpn_protocols = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldAlpnProtocols)
+placeholder
+
+// SetSupportedVersions sets the "supported_versions" field.
+func (m *TLSFingerprintProfileMutation) SetSupportedVersions(u []uint16) {
+	m.supported_versions = &u
+	m.appendsupported_versions = nil
+placeholder
+
+// SupportedVersions returns the value of the "supported_versions" field in the mutation.
+func (m *TLSFingerprintProfileMutation) SupportedVersions() (r []uint16, exists bool) {
+	v := m.supported_versions
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldSupportedVersions returns the old "supported_versions" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldSupportedVersions(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSupportedVersions is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSupportedVersions requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSupportedVersions: %w", err)
+placeholder
+	return oldValue.SupportedVersions, nil
+placeholder
+
+// AppendSupportedVersions adds u to the "supported_versions" field.
+func (m *TLSFingerprintProfileMutation) AppendSupportedVersions(u []uint16) {
+	m.appendsupported_versions = append(m.appendsupported_versions, u...)
+placeholder
+
+// AppendedSupportedVersions returns the list of values that were appended to the "supported_versions" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedSupportedVersions() ([]uint16, bool) {
+	if len(m.appendsupported_versions) == 0 {
+		return nil, false
+placeholder
+	return m.appendsupported_versions, true
+placeholder
+
+// ClearSupportedVersions clears the value of the "supported_versions" field.
+func (m *TLSFingerprintProfileMutation) ClearSupportedVersions() {
+	m.supported_versions = nil
+	m.appendsupported_versions = nil
+	m.clearedFields[tlsfingerprintprofile.FieldSupportedVersions] = struct{placeholder{placeholder
+placeholder
+
+// SupportedVersionsCleared returns if the "supported_versions" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) SupportedVersionsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldSupportedVersions]
+	return ok
+placeholder
+
+// ResetSupportedVersions resets all changes to the "supported_versions" field.
+func (m *TLSFingerprintProfileMutation) ResetSupportedVersions() {
+	m.supported_versions = nil
+	m.appendsupported_versions = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldSupportedVersions)
+placeholder
+
+// SetKeyShareGroups sets the "key_share_groups" field.
+func (m *TLSFingerprintProfileMutation) SetKeyShareGroups(u []uint16) {
+	m.key_share_groups = &u
+	m.appendkey_share_groups = nil
+placeholder
+
+// KeyShareGroups returns the value of the "key_share_groups" field in the mutation.
+func (m *TLSFingerprintProfileMutation) KeyShareGroups() (r []uint16, exists bool) {
+	v := m.key_share_groups
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldKeyShareGroups returns the old "key_share_groups" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldKeyShareGroups(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKeyShareGroups is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKeyShareGroups requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKeyShareGroups: %w", err)
+placeholder
+	return oldValue.KeyShareGroups, nil
+placeholder
+
+// AppendKeyShareGroups adds u to the "key_share_groups" field.
+func (m *TLSFingerprintProfileMutation) AppendKeyShareGroups(u []uint16) {
+	m.appendkey_share_groups = append(m.appendkey_share_groups, u...)
+placeholder
+
+// AppendedKeyShareGroups returns the list of values that were appended to the "key_share_groups" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedKeyShareGroups() ([]uint16, bool) {
+	if len(m.appendkey_share_groups) == 0 {
+		return nil, false
+placeholder
+	return m.appendkey_share_groups, true
+placeholder
+
+// ClearKeyShareGroups clears the value of the "key_share_groups" field.
+func (m *TLSFingerprintProfileMutation) ClearKeyShareGroups() {
+	m.key_share_groups = nil
+	m.appendkey_share_groups = nil
+	m.clearedFields[tlsfingerprintprofile.FieldKeyShareGroups] = struct{placeholder{placeholder
+placeholder
+
+// KeyShareGroupsCleared returns if the "key_share_groups" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) KeyShareGroupsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldKeyShareGroups]
+	return ok
+placeholder
+
+// ResetKeyShareGroups resets all changes to the "key_share_groups" field.
+func (m *TLSFingerprintProfileMutation) ResetKeyShareGroups() {
+	m.key_share_groups = nil
+	m.appendkey_share_groups = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldKeyShareGroups)
+placeholder
+
+// SetPskModes sets the "psk_modes" field.
+func (m *TLSFingerprintProfileMutation) SetPskModes(u []uint16) {
+	m.psk_modes = &u
+	m.appendpsk_modes = nil
+placeholder
+
+// PskModes returns the value of the "psk_modes" field in the mutation.
+func (m *TLSFingerprintProfileMutation) PskModes() (r []uint16, exists bool) {
+	v := m.psk_modes
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPskModes returns the old "psk_modes" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldPskModes(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPskModes is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPskModes requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPskModes: %w", err)
+placeholder
+	return oldValue.PskModes, nil
+placeholder
+
+// AppendPskModes adds u to the "psk_modes" field.
+func (m *TLSFingerprintProfileMutation) AppendPskModes(u []uint16) {
+	m.appendpsk_modes = append(m.appendpsk_modes, u...)
+placeholder
+
+// AppendedPskModes returns the list of values that were appended to the "psk_modes" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedPskModes() ([]uint16, bool) {
+	if len(m.appendpsk_modes) == 0 {
+		return nil, false
+placeholder
+	return m.appendpsk_modes, true
+placeholder
+
+// ClearPskModes clears the value of the "psk_modes" field.
+func (m *TLSFingerprintProfileMutation) ClearPskModes() {
+	m.psk_modes = nil
+	m.appendpsk_modes = nil
+	m.clearedFields[tlsfingerprintprofile.FieldPskModes] = struct{placeholder{placeholder
+placeholder
+
+// PskModesCleared returns if the "psk_modes" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) PskModesCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldPskModes]
+	return ok
+placeholder
+
+// ResetPskModes resets all changes to the "psk_modes" field.
+func (m *TLSFingerprintProfileMutation) ResetPskModes() {
+	m.psk_modes = nil
+	m.appendpsk_modes = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldPskModes)
+placeholder
+
+// SetExtensions sets the "extensions" field.
+func (m *TLSFingerprintProfileMutation) SetExtensions(u []uint16) {
+	m.extensions = &u
+	m.appendextensions = nil
+placeholder
+
+// Extensions returns the value of the "extensions" field in the mutation.
+func (m *TLSFingerprintProfileMutation) Extensions() (r []uint16, exists bool) {
+	v := m.extensions
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldExtensions returns the old "extensions" field's value of the TLSFingerprintProfile entity.
+// If the TLSFingerprintProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TLSFingerprintProfileMutation) OldExtensions(ctx context.Context) (v []uint16, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExtensions is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExtensions requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExtensions: %w", err)
+placeholder
+	return oldValue.Extensions, nil
+placeholder
+
+// AppendExtensions adds u to the "extensions" field.
+func (m *TLSFingerprintProfileMutation) AppendExtensions(u []uint16) {
+	m.appendextensions = append(m.appendextensions, u...)
+placeholder
+
+// AppendedExtensions returns the list of values that were appended to the "extensions" field in this mutation.
+func (m *TLSFingerprintProfileMutation) AppendedExtensions() ([]uint16, bool) {
+	if len(m.appendextensions) == 0 {
+		return nil, false
+placeholder
+	return m.appendextensions, true
+placeholder
+
+// ClearExtensions clears the value of the "extensions" field.
+func (m *TLSFingerprintProfileMutation) ClearExtensions() {
+	m.extensions = nil
+	m.appendextensions = nil
+	m.clearedFields[tlsfingerprintprofile.FieldExtensions] = struct{placeholder{placeholder
+placeholder
+
+// ExtensionsCleared returns if the "extensions" field was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) ExtensionsCleared() bool {
+	_, ok := m.clearedFields[tlsfingerprintprofile.FieldExtensions]
+	return ok
+placeholder
+
+// ResetExtensions resets all changes to the "extensions" field.
+func (m *TLSFingerprintProfileMutation) ResetExtensions() {
+	m.extensions = nil
+	m.appendextensions = nil
+	delete(m.clearedFields, tlsfingerprintprofile.FieldExtensions)
+placeholder
+
+// Where appends a list predicates to the TLSFingerprintProfileMutation builder.
+func (m *TLSFingerprintProfileMutation) Where(ps ...predicate.TLSFingerprintProfile) {
+	m.predicates = append(m.predicates, ps...)
+placeholder
+
+// WhereP appends storage-level predicates to the TLSFingerprintProfileMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *TLSFingerprintProfileMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.TLSFingerprintProfile, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+placeholder
+	m.Where(p...)
+placeholder
+
+// Op returns the operation name.
+func (m *TLSFingerprintProfileMutation) Op() Op {
+	return m.op
+placeholder
+
+// SetOp allows setting the mutation operation.
+func (m *TLSFingerprintProfileMutation) SetOp(op Op) {
+	m.op = op
+placeholder
+
+// Type returns the node type of this mutation (TLSFingerprintProfile).
+func (m *TLSFingerprintProfileMutation) Type() string {
+	return m.typ
+placeholder
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *TLSFingerprintProfileMutation) Fields() []string {
+	fields := make([]string, 0, 14)
+	if m.created_at != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldCreatedAt)
+placeholder
+	if m.updated_at != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldUpdatedAt)
+placeholder
+	if m.name != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldName)
+placeholder
+	if m.description != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldDescription)
+placeholder
+	if m.enable_grease != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldEnableGrease)
+placeholder
+	if m.cipher_suites != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldCipherSuites)
+placeholder
+	if m.curves != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldCurves)
+placeholder
+	if m.point_formats != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldPointFormats)
+placeholder
+	if m.signature_algorithms != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldSignatureAlgorithms)
+placeholder
+	if m.alpn_protocols != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldAlpnProtocols)
+placeholder
+	if m.supported_versions != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldSupportedVersions)
+placeholder
+	if m.key_share_groups != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldKeyShareGroups)
+placeholder
+	if m.psk_modes != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldPskModes)
+placeholder
+	if m.extensions != nil {
+		fields = append(fields, tlsfingerprintprofile.FieldExtensions)
+placeholder
+	return fields
+placeholder
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *TLSFingerprintProfileMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case tlsfingerprintprofile.FieldCreatedAt:
+		return m.CreatedAt()
+	case tlsfingerprintprofile.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case tlsfingerprintprofile.FieldName:
+		return m.Name()
+	case tlsfingerprintprofile.FieldDescription:
+		return m.Description()
+	case tlsfingerprintprofile.FieldEnableGrease:
+		return m.EnableGrease()
+	case tlsfingerprintprofile.FieldCipherSuites:
+		return m.CipherSuites()
+	case tlsfingerprintprofile.FieldCurves:
+		return m.Curves()
+	case tlsfingerprintprofile.FieldPointFormats:
+		return m.PointFormats()
+	case tlsfingerprintprofile.FieldSignatureAlgorithms:
+		return m.SignatureAlgorithms()
+	case tlsfingerprintprofile.FieldAlpnProtocols:
+		return m.AlpnProtocols()
+	case tlsfingerprintprofile.FieldSupportedVersions:
+		return m.SupportedVersions()
+	case tlsfingerprintprofile.FieldKeyShareGroups:
+		return m.KeyShareGroups()
+	case tlsfingerprintprofile.FieldPskModes:
+		return m.PskModes()
+	case tlsfingerprintprofile.FieldExtensions:
+		return m.Extensions()
+placeholder
+	return nil, false
+placeholder
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *TLSFingerprintProfileMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case tlsfingerprintprofile.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case tlsfingerprintprofile.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case tlsfingerprintprofile.FieldName:
+		return m.OldName(ctx)
+	case tlsfingerprintprofile.FieldDescription:
+		return m.OldDescription(ctx)
+	case tlsfingerprintprofile.FieldEnableGrease:
+		return m.OldEnableGrease(ctx)
+	case tlsfingerprintprofile.FieldCipherSuites:
+		return m.OldCipherSuites(ctx)
+	case tlsfingerprintprofile.FieldCurves:
+		return m.OldCurves(ctx)
+	case tlsfingerprintprofile.FieldPointFormats:
+		return m.OldPointFormats(ctx)
+	case tlsfingerprintprofile.FieldSignatureAlgorithms:
+		return m.OldSignatureAlgorithms(ctx)
+	case tlsfingerprintprofile.FieldAlpnProtocols:
+		return m.OldAlpnProtocols(ctx)
+	case tlsfingerprintprofile.FieldSupportedVersions:
+		return m.OldSupportedVersions(ctx)
+	case tlsfingerprintprofile.FieldKeyShareGroups:
+		return m.OldKeyShareGroups(ctx)
+	case tlsfingerprintprofile.FieldPskModes:
+		return m.OldPskModes(ctx)
+	case tlsfingerprintprofile.FieldExtensions:
+		return m.OldExtensions(ctx)
+placeholder
+	return nil, fmt.Errorf("unknown TLSFingerprintProfile field %s", name)
+placeholder
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TLSFingerprintProfileMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case tlsfingerprintprofile.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCreatedAt(v)
+		return nil
+	case tlsfingerprintprofile.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetUpdatedAt(v)
+		return nil
+	case tlsfingerprintprofile.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetName(v)
+		return nil
+	case tlsfingerprintprofile.FieldDescription:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetDescription(v)
+		return nil
+	case tlsfingerprintprofile.FieldEnableGrease:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetEnableGrease(v)
+		return nil
+	case tlsfingerprintprofile.FieldCipherSuites:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCipherSuites(v)
+		return nil
+	case tlsfingerprintprofile.FieldCurves:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCurves(v)
+		return nil
+	case tlsfingerprintprofile.FieldPointFormats:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPointFormats(v)
+		return nil
+	case tlsfingerprintprofile.FieldSignatureAlgorithms:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetSignatureAlgorithms(v)
+		return nil
+	case tlsfingerprintprofile.FieldAlpnProtocols:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetAlpnProtocols(v)
+		return nil
+	case tlsfingerprintprofile.FieldSupportedVersions:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetSupportedVersions(v)
+		return nil
+	case tlsfingerprintprofile.FieldKeyShareGroups:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetKeyShareGroups(v)
+		return nil
+	case tlsfingerprintprofile.FieldPskModes:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPskModes(v)
+		return nil
+	case tlsfingerprintprofile.FieldExtensions:
+		v, ok := value.([]uint16)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetExtensions(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown TLSFingerprintProfile field %s", name)
+placeholder
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *TLSFingerprintProfileMutation) AddedFields() []string {
+	return nil
+placeholder
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *TLSFingerprintProfileMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+placeholder
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *TLSFingerprintProfileMutation) AddField(name string, value ent.Value) error {
+	switch name {
+placeholder
+	return fmt.Errorf("unknown TLSFingerprintProfile numeric field %s", name)
+placeholder
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *TLSFingerprintProfileMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(tlsfingerprintprofile.FieldDescription) {
+		fields = append(fields, tlsfingerprintprofile.FieldDescription)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldCipherSuites) {
+		fields = append(fields, tlsfingerprintprofile.FieldCipherSuites)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldCurves) {
+		fields = append(fields, tlsfingerprintprofile.FieldCurves)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldPointFormats) {
+		fields = append(fields, tlsfingerprintprofile.FieldPointFormats)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldSignatureAlgorithms) {
+		fields = append(fields, tlsfingerprintprofile.FieldSignatureAlgorithms)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldAlpnProtocols) {
+		fields = append(fields, tlsfingerprintprofile.FieldAlpnProtocols)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldSupportedVersions) {
+		fields = append(fields, tlsfingerprintprofile.FieldSupportedVersions)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldKeyShareGroups) {
+		fields = append(fields, tlsfingerprintprofile.FieldKeyShareGroups)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldPskModes) {
+		fields = append(fields, tlsfingerprintprofile.FieldPskModes)
+placeholder
+	if m.FieldCleared(tlsfingerprintprofile.FieldExtensions) {
+		fields = append(fields, tlsfingerprintprofile.FieldExtensions)
+placeholder
+	return fields
+placeholder
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+placeholder
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *TLSFingerprintProfileMutation) ClearField(name string) error {
+	switch name {
+	case tlsfingerprintprofile.FieldDescription:
+		m.ClearDescription()
+		return nil
+	case tlsfingerprintprofile.FieldCipherSuites:
+		m.ClearCipherSuites()
+		return nil
+	case tlsfingerprintprofile.FieldCurves:
+		m.ClearCurves()
+		return nil
+	case tlsfingerprintprofile.FieldPointFormats:
+		m.ClearPointFormats()
+		return nil
+	case tlsfingerprintprofile.FieldSignatureAlgorithms:
+		m.ClearSignatureAlgorithms()
+		return nil
+	case tlsfingerprintprofile.FieldAlpnProtocols:
+		m.ClearAlpnProtocols()
+		return nil
+	case tlsfingerprintprofile.FieldSupportedVersions:
+		m.ClearSupportedVersions()
+		return nil
+	case tlsfingerprintprofile.FieldKeyShareGroups:
+		m.ClearKeyShareGroups()
+		return nil
+	case tlsfingerprintprofile.FieldPskModes:
+		m.ClearPskModes()
+		return nil
+	case tlsfingerprintprofile.FieldExtensions:
+		m.ClearExtensions()
+		return nil
+placeholder
+	return fmt.Errorf("unknown TLSFingerprintProfile nullable field %s", name)
+placeholder
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *TLSFingerprintProfileMutation) ResetField(name string) error {
+	switch name {
+	case tlsfingerprintprofile.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case tlsfingerprintprofile.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case tlsfingerprintprofile.FieldName:
+		m.ResetName()
+		return nil
+	case tlsfingerprintprofile.FieldDescription:
+		m.ResetDescription()
+		return nil
+	case tlsfingerprintprofile.FieldEnableGrease:
+		m.ResetEnableGrease()
+		return nil
+	case tlsfingerprintprofile.FieldCipherSuites:
+		m.ResetCipherSuites()
+		return nil
+	case tlsfingerprintprofile.FieldCurves:
+		m.ResetCurves()
+		return nil
+	case tlsfingerprintprofile.FieldPointFormats:
+		m.ResetPointFormats()
+		return nil
+	case tlsfingerprintprofile.FieldSignatureAlgorithms:
+		m.ResetSignatureAlgorithms()
+		return nil
+	case tlsfingerprintprofile.FieldAlpnProtocols:
+		m.ResetAlpnProtocols()
+		return nil
+	case tlsfingerprintprofile.FieldSupportedVersions:
+		m.ResetSupportedVersions()
+		return nil
+	case tlsfingerprintprofile.FieldKeyShareGroups:
+		m.ResetKeyShareGroups()
+		return nil
+	case tlsfingerprintprofile.FieldPskModes:
+		m.ResetPskModes()
+		return nil
+	case tlsfingerprintprofile.FieldExtensions:
+		m.ResetExtensions()
+		return nil
+placeholder
+	return fmt.Errorf("unknown TLSFingerprintProfile field %s", name)
+placeholder
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *TLSFingerprintProfileMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+placeholder
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *TLSFingerprintProfileMutation) AddedIDs(name string) []ent.Value {
+	return nil
+placeholder
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *TLSFingerprintProfileMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+placeholder
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *TLSFingerprintProfileMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+placeholder
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+placeholder
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *TLSFingerprintProfileMutation) EdgeCleared(name string) bool {
+	return false
+placeholder
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *TLSFingerprintProfileMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown TLSFingerprintProfile unique edge %s", name)
+placeholder
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *TLSFingerprintProfileMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown TLSFingerprintProfile edge %s", name)
 placeholder
 
 // UsageCleanupTaskMutation represents an operation that mutates the UsageCleanupTask nodes in the graph.
