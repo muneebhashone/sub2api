@@ -23,6 +23,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
+	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
@@ -466,6 +467,33 @@ placeholder
 	return fmt.Errorf("unexpected query type %T. expect *ent.SettingQuery", q)
 placeholder
 
+// The TLSFingerprintProfileFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TLSFingerprintProfileFunc func(context.Context, *ent.TLSFingerprintProfileQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TLSFingerprintProfileFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TLSFingerprintProfileQuery); ok {
+		return f(ctx, q)
+placeholder
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TLSFingerprintProfileQuery", q)
+placeholder
+
+// The TraverseTLSFingerprintProfile type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTLSFingerprintProfile func(context.Context, *ent.TLSFingerprintProfileQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTLSFingerprintProfile) Intercept(next ent.Querier) ent.Querier {
+	return next
+placeholder
+
+// Traverse calls f(ctx, q).
+func (f TraverseTLSFingerprintProfile) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TLSFingerprintProfileQuery); ok {
+		return f(ctx, q)
+placeholder
+	return fmt.Errorf("unexpected query type %T. expect *ent.TLSFingerprintProfileQuery", q)
+placeholder
+
 // The UsageCleanupTaskFunc type is an adapter to allow the use of ordinary function as a Querier.
 type UsageCleanupTaskFunc func(context.Context, *ent.UsageCleanupTaskQuery) (ent.Value, error)
 
@@ -686,6 +714,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.SecuritySecretQuery, predicate.SecuritySecret, securitysecret.OrderOption]{typ: ent.TypeSecuritySecret, tq: qplaceholder, nil
 	case *ent.SettingQuery:
 		return &query[*ent.SettingQuery, predicate.Setting, setting.OrderOption]{typ: ent.TypeSetting, tq: qplaceholder, nil
+	case *ent.TLSFingerprintProfileQuery:
+		return &query[*ent.TLSFingerprintProfileQuery, predicate.TLSFingerprintProfile, tlsfingerprintprofile.OrderOption]{typ: ent.TypeTLSFingerprintProfile, tq: qplaceholder, nil
 	case *ent.UsageCleanupTaskQuery:
 		return &query[*ent.UsageCleanupTaskQuery, predicate.UsageCleanupTask, usagecleanuptask.OrderOption]{typ: ent.TypeUsageCleanupTask, tq: qplaceholder, nil
 	case *ent.UsageLogQuery:

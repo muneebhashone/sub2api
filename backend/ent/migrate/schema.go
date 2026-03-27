@@ -673,6 +673,30 @@ placeholder
 		Columns:    SettingsColumns,
 		PrimaryKey: []*schema.Column{SettingsColumns[0]placeholder,
 placeholder
+	// TLSFingerprintProfilesColumns holds the columns for the "tls_fingerprint_profiles" table.
+	TLSFingerprintProfilesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "name", Type: field.TypeString, Unique: true, Size: 100placeholder,
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647placeholder,
+		{Name: "enable_grease", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "cipher_suites", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "curves", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "point_formats", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "signature_algorithms", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "alpn_protocols", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "supported_versions", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "key_share_groups", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "psk_modes", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "extensions", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+placeholder
+	// TLSFingerprintProfilesTable holds the schema information for the "tls_fingerprint_profiles" table.
+	TLSFingerprintProfilesTable = &schema.Table{
+		Name:       "tls_fingerprint_profiles",
+		Columns:    TLSFingerprintProfilesColumns,
+		PrimaryKey: []*schema.Column{TLSFingerprintProfilesColumns[0]placeholder,
+placeholder
 	// UsageCleanupTasksColumns holds the columns for the "usage_cleanup_tasks" table.
 	UsageCleanupTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -1111,6 +1135,7 @@ placeholder
 		RedeemCodesTable,
 		SecuritySecretsTable,
 		SettingsTable,
+		TLSFingerprintProfilesTable,
 		UsageCleanupTasksTable,
 		UsageLogsTable,
 		UsersTable,
@@ -1174,6 +1199,9 @@ placeholder
 placeholder
 	SettingsTable.Annotation = &entsql.Annotation{
 		Table: "settings",
+placeholder
+	TLSFingerprintProfilesTable.Annotation = &entsql.Annotation{
+		Table: "tls_fingerprint_profiles",
 placeholder
 	UsageCleanupTasksTable.Annotation = &entsql.Annotation{
 		Table: "usage_cleanup_tasks",
