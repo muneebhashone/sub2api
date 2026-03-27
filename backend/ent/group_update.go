@@ -639,6 +639,34 @@ placeholder
 	return _u
 placeholder
 
+// SetRequireOauthOnly sets the "require_oauth_only" field.
+func (_u *GroupUpdate) SetRequireOauthOnly(v bool) *GroupUpdate {
+	_u.mutation.SetRequireOauthOnly(v)
+	return _u
+placeholder
+
+// SetNillableRequireOauthOnly sets the "require_oauth_only" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableRequireOauthOnly(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetRequireOauthOnly(*v)
+placeholder
+	return _u
+placeholder
+
+// SetRequirePrivacySet sets the "require_privacy_set" field.
+func (_u *GroupUpdate) SetRequirePrivacySet(v bool) *GroupUpdate {
+	_u.mutation.SetRequirePrivacySet(v)
+	return _u
+placeholder
+
+// SetNillableRequirePrivacySet sets the "require_privacy_set" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableRequirePrivacySet(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetRequirePrivacySet(*v)
+placeholder
+	return _u
+placeholder
+
 // SetDefaultMappedModel sets the "default_mapped_model" field.
 func (_u *GroupUpdate) SetDefaultMappedModel(v string) *GroupUpdate {
 	_u.mutation.SetDefaultMappedModel(v)
@@ -1145,6 +1173,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AllowMessagesDispatch(); ok {
 		_spec.SetField(group.FieldAllowMessagesDispatch, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.RequireOauthOnly(); ok {
+		_spec.SetField(group.FieldRequireOauthOnly, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.RequirePrivacySet(); ok {
+		_spec.SetField(group.FieldRequirePrivacySet, field.TypeBool, value)
 placeholder
 	if value, ok := _u.mutation.DefaultMappedModel(); ok {
 		_spec.SetField(group.FieldDefaultMappedModel, field.TypeString, value)
@@ -2067,6 +2101,34 @@ placeholder
 	return _u
 placeholder
 
+// SetRequireOauthOnly sets the "require_oauth_only" field.
+func (_u *GroupUpdateOne) SetRequireOauthOnly(v bool) *GroupUpdateOne {
+	_u.mutation.SetRequireOauthOnly(v)
+	return _u
+placeholder
+
+// SetNillableRequireOauthOnly sets the "require_oauth_only" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableRequireOauthOnly(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetRequireOauthOnly(*v)
+placeholder
+	return _u
+placeholder
+
+// SetRequirePrivacySet sets the "require_privacy_set" field.
+func (_u *GroupUpdateOne) SetRequirePrivacySet(v bool) *GroupUpdateOne {
+	_u.mutation.SetRequirePrivacySet(v)
+	return _u
+placeholder
+
+// SetNillableRequirePrivacySet sets the "require_privacy_set" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableRequirePrivacySet(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetRequirePrivacySet(*v)
+placeholder
+	return _u
+placeholder
+
 // SetDefaultMappedModel sets the "default_mapped_model" field.
 func (_u *GroupUpdateOne) SetDefaultMappedModel(v string) *GroupUpdateOne {
 	_u.mutation.SetDefaultMappedModel(v)
@@ -2603,6 +2665,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AllowMessagesDispatch(); ok {
 		_spec.SetField(group.FieldAllowMessagesDispatch, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.RequireOauthOnly(); ok {
+		_spec.SetField(group.FieldRequireOauthOnly, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.RequirePrivacySet(); ok {
+		_spec.SetField(group.FieldRequirePrivacySet, field.TypeBool, value)
 placeholder
 	if value, ok := _u.mutation.DefaultMappedModel(); ok {
 		_spec.SetField(group.FieldDefaultMappedModel, field.TypeString, value)
