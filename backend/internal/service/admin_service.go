@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -1585,6 +1586,18 @@ placeholder
 		if err := s.accountRepo.BindGroups(ctx, account.ID, groupIDs); err != nil {
 			return nil, err
 	placeholder
+placeholder
+
+	// Antigravity OAuth 账号：创建后异步设置隐私
+	if account.Platform == PlatformAntigravity && account.Type == AccountTypeOAuth {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("create_account_antigravity_privacy_panic", "account_id", account.ID, "recover", r)
+			placeholder
+		placeholder()
+			s.EnsureAntigravityPrivacy(context.Background(), account)
+	placeholder()
 placeholder
 
 	return account, nil
