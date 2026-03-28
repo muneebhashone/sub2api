@@ -21,8 +21,8 @@ placeholder
 placeholder
 
 func forwardResultBillingModel(requestedModel, upstreamModel string) string {
-	if trimmedUpstream := strings.TrimSpace(upstreamModel); trimmedUpstream != "" {
-		return trimmedUpstream
+	if trimmed := strings.TrimSpace(requestedModel); trimmed != "" {
+		return trimmed
 placeholder
-	return strings.TrimSpace(requestedModel)
+	return strings.TrimSpace(upstreamModel)
 placeholder
