@@ -287,7 +287,7 @@ import { useAppStore placeholder from '@/stores/app'
 import { adminAPI placeholder from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest placeholder from '@/api/admin/channels'
 import type { PricingFormEntry placeholder from '@/components/admin/channel/types'
-import { toNullableNumber, apiIntervalsToForm, formIntervalsToAPI placeholder from '@/components/admin/channel/types'
+import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI placeholder from '@/components/admin/channel/types'
 import type { AdminGroup placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -412,13 +412,12 @@ placeholder
 // ── Pricing helpers ──
 function addPricingEntry() {
   form.model_pricing.push({
-    modelsInput: '',
+    models: [],
     billing_mode: 'token',
     input_price: null,
     output_price: null,
     cache_write_price: null,
     cache_read_price: null,
-    per_request_price: null,
     image_output_price: null,
     intervals: []
   placeholder)
@@ -434,29 +433,28 @@ placeholder
 
 function formPricingToAPI(): ChannelModelPricing[] {
   return form.model_pricing
-    .filter(e => e.modelsInput.trim())
+    .filter(e => e.models.length > 0)
     .map(e => ({
-      models: e.modelsInput.split(',').map(m => m.trim()).filter(Boolean),
+      models: e.models,
       billing_mode: e.billing_mode,
-      input_price: toNullableNumber(e.input_price),
-      output_price: toNullableNumber(e.output_price),
-      cache_write_price: toNullableNumber(e.cache_write_price),
-      cache_read_price: toNullableNumber(e.cache_read_price),
-      image_output_price: toNullableNumber(e.image_output_price),
+      input_price: mTokToPerToken(e.input_price),
+      output_price: mTokToPerToken(e.output_price),
+      cache_write_price: mTokToPerToken(e.cache_write_price),
+      cache_read_price: mTokToPerToken(e.cache_read_price),
+      image_output_price: mTokToPerToken(e.image_output_price),
       intervals: formIntervalsToAPI(e.intervals || [])
     placeholder))
 placeholder
 
 function apiPricingToForm(pricing: ChannelModelPricing[]): PricingFormEntry[] {
   return pricing.map(p => ({
-    modelsInput: p.models.join(', '),
+    models: p.models || [],
     billing_mode: p.billing_mode,
-    input_price: p.input_price,
-    output_price: p.output_price,
-    cache_write_price: p.cache_write_price,
-    cache_read_price: p.cache_read_price,
-    per_request_price: null,
-    image_output_price: p.image_output_price,
+    input_price: perTokenToMTok(p.input_price),
+    output_price: perTokenToMTok(p.output_price),
+    cache_write_price: perTokenToMTok(p.cache_write_price),
+    cache_read_price: perTokenToMTok(p.cache_read_price),
+    image_output_price: perTokenToMTok(p.image_output_price),
     intervals: apiIntervalsToForm(p.intervals || [])
   placeholder))
 placeholder

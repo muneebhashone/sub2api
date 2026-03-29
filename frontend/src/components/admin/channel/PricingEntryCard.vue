@@ -1,22 +1,21 @@
 <template>
   <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-dark-600 dark:bg-dark-800">
     <!-- Header: Models + Billing Mode + Remove -->
-    <div class="mb-2 flex items-start gap-2">
+    <div class="mb-3 flex items-start gap-2">
       <div class="flex-1">
         <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-          {{ t('admin.channels.form.models', 'Models (comma separated, supports *)') placeholderplaceholder
+          {{ t('admin.channels.form.models', '模型列表') placeholderplaceholder
         </label>
-        <textarea
-          :value="entry.modelsInput"
-          @input="emit('update', { ...entry, modelsInput: ($event.target as HTMLTextAreaElement).value placeholder)"
-          rows="2"
-          class="input mt-1 text-sm"
-          :placeholder="t('admin.channels.form.modelsPlaceholder', 'claude-sonnet-4-20250514, claude-opus-4-20250514, *')"
-        ></textarea>
+        <ModelTagInput
+          :models="entry.models"
+          @update:models="emit('update', { ...entry, models: $event placeholder)"
+          :placeholder="t('admin.channels.form.modelsPlaceholder', '输入模型名后按回车添加，支持通配符 *')"
+          class="mt-1"
+        />
       </div>
       <div class="w-40">
         <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-          {{ t('admin.channels.form.billingMode', 'Billing Mode') placeholderplaceholder
+          {{ t('admin.channels.form.billingMode', '计费模式') placeholderplaceholder
         </label>
         <Select
           :modelValue="entry.billing_mode"
@@ -34,61 +33,38 @@
       </button>
     </div>
 
-    <!-- Token mode: flat prices + intervals -->
+    <!-- Token mode -->
     <div v-if="entry.billing_mode === 'token'">
-      <!-- Flat prices (used when no intervals) -->
-      <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <!-- Default prices (fallback when no interval matches) -->
+      <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+        {{ t('admin.channels.form.defaultPrices', '默认价格（未命中区间时使用）') placeholderplaceholder
+        <span class="ml-1 font-normal text-gray-400">$/MTok</span>
+      </label>
+      <div class="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-5">
         <div>
-          <label class="text-xs text-gray-500 dark:text-gray-400">
-            {{ t('admin.channels.form.inputPrice', 'Input Price') placeholderplaceholder
-          </label>
-          <input
-            :value="entry.input_price"
-            @input="emitField('input_price', ($event.target as HTMLInputElement).value)"
-            type="number"
-            step="any" min="0"
-            class="input mt-1 text-sm"
-            :placeholder="t('admin.channels.form.pricePlaceholder', 'Default')"
-          />
+          <label class="text-xs text-gray-400">{{ t('admin.channels.form.inputPrice', '输入') placeholderplaceholder</label>
+          <input :value="entry.input_price" @input="emitField('input_price', ($event.target as HTMLInputElement).value)"
+            type="number" step="any" min="0" class="input mt-0.5 text-sm" :placeholder="t('admin.channels.form.pricePlaceholder', '默认')" />
         </div>
         <div>
-          <label class="text-xs text-gray-500 dark:text-gray-400">
-            {{ t('admin.channels.form.outputPrice', 'Output Price') placeholderplaceholder
-          </label>
-          <input
-            :value="entry.output_price"
-            @input="emitField('output_price', ($event.target as HTMLInputElement).value)"
-            type="number"
-            step="any" min="0"
-            class="input mt-1 text-sm"
-            :placeholder="t('admin.channels.form.pricePlaceholder', 'Default')"
-          />
+          <label class="text-xs text-gray-400">{{ t('admin.channels.form.outputPrice', '输出') placeholderplaceholder</label>
+          <input :value="entry.output_price" @input="emitField('output_price', ($event.target as HTMLInputElement).value)"
+            type="number" step="any" min="0" class="input mt-0.5 text-sm" :placeholder="t('admin.channels.form.pricePlaceholder', '默认')" />
         </div>
         <div>
-          <label class="text-xs text-gray-500 dark:text-gray-400">
-            {{ t('admin.channels.form.cacheWritePrice', 'Cache Write') placeholderplaceholder
-          </label>
-          <input
-            :value="entry.cache_write_price"
-            @input="emitField('cache_write_price', ($event.target as HTMLInputElement).value)"
-            type="number"
-            step="any" min="0"
-            class="input mt-1 text-sm"
-            :placeholder="t('admin.channels.form.pricePlaceholder', 'Default')"
-          />
+          <label class="text-xs text-gray-400">{{ t('admin.channels.form.cacheWritePrice', '缓存写入') placeholderplaceholder</label>
+          <input :value="entry.cache_write_price" @input="emitField('cache_write_price', ($event.target as HTMLInputElement).value)"
+            type="number" step="any" min="0" class="input mt-0.5 text-sm" :placeholder="t('admin.channels.form.pricePlaceholder', '默认')" />
         </div>
         <div>
-          <label class="text-xs text-gray-500 dark:text-gray-400">
-            {{ t('admin.channels.form.cacheReadPrice', 'Cache Read') placeholderplaceholder
-          </label>
-          <input
-            :value="entry.cache_read_price"
-            @input="emitField('cache_read_price', ($event.target as HTMLInputElement).value)"
-            type="number"
-            step="any" min="0"
-            class="input mt-1 text-sm"
-            :placeholder="t('admin.channels.form.pricePlaceholder', 'Default')"
-          />
+          <label class="text-xs text-gray-400">{{ t('admin.channels.form.cacheReadPrice', '缓存读取') placeholderplaceholder</label>
+          <input :value="entry.cache_read_price" @input="emitField('cache_read_price', ($event.target as HTMLInputElement).value)"
+            type="number" step="any" min="0" class="input mt-0.5 text-sm" :placeholder="t('admin.channels.form.pricePlaceholder', '默认')" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-400">{{ t('admin.channels.form.imageTokenPrice', '图片输出') placeholderplaceholder</label>
+          <input :value="entry.image_output_price" @input="emitField('image_output_price', ($event.target as HTMLInputElement).value)"
+            type="number" step="any" min="0" class="input mt-0.5 text-sm" :placeholder="t('admin.channels.form.pricePlaceholder', '默认')" />
         </div>
       </div>
 
@@ -96,10 +72,11 @@
       <div class="mt-3">
         <div class="flex items-center justify-between">
           <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {{ t('admin.channels.form.intervals', 'Context Intervals (optional)') placeholderplaceholder
+            {{ t('admin.channels.form.intervals', '上下文区间定价（可选）') placeholderplaceholder
+            <span class="ml-1 font-normal text-gray-400">(min, max]</span>
           </label>
           <button type="button" @click="addInterval" class="text-xs text-primary-600 hover:text-primary-700">
-            + {{ t('admin.channels.form.addInterval', 'Add Interval') placeholderplaceholder
+            + {{ t('admin.channels.form.addInterval', '添加区间') placeholderplaceholder
           </button>
         </div>
         <div v-if="entry.intervals && entry.intervals.length > 0" class="mt-2 space-y-2">
@@ -115,14 +92,14 @@
       </div>
     </div>
 
-    <!-- Per-request mode: tiers -->
+    <!-- Per-request mode -->
     <div v-else-if="entry.billing_mode === 'per_request'">
       <div class="flex items-center justify-between">
         <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-          {{ t('admin.channels.form.requestTiers', 'Request Tiers') placeholderplaceholder
+          {{ t('admin.channels.form.requestTiers', '按次计费层级') placeholderplaceholder
         </label>
         <button type="button" @click="addInterval" class="text-xs text-primary-600 hover:text-primary-700">
-          + {{ t('admin.channels.form.addTier', 'Add Tier') placeholderplaceholder
+          + {{ t('admin.channels.form.addTier', '添加层级') placeholderplaceholder
         </button>
       </div>
       <div v-if="entry.intervals && entry.intervals.length > 0" class="mt-2 space-y-2">
@@ -136,18 +113,18 @@
         />
       </div>
       <div v-else class="mt-2 rounded border border-dashed border-gray-300 p-3 text-center text-xs text-gray-400 dark:border-dark-500">
-        {{ t('admin.channels.form.noTiersYet', 'No tiers. Add one to configure per-request pricing.') placeholderplaceholder
+        {{ t('admin.channels.form.noTiersYet', '暂无层级，点击添加配置按次计费价格') placeholderplaceholder
       </div>
     </div>
 
-    <!-- Image mode: tiers -->
+    <!-- Image mode (legacy per-request) -->
     <div v-else-if="entry.billing_mode === 'image'">
       <div class="flex items-center justify-between">
         <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-          {{ t('admin.channels.form.imageTiers', 'Image Tiers') placeholderplaceholder
+          {{ t('admin.channels.form.imageTiers', '图片计费层级（按次）') placeholderplaceholder
         </label>
         <button type="button" @click="addImageTier" class="text-xs text-primary-600 hover:text-primary-700">
-          + {{ t('admin.channels.form.addTier', 'Add Tier') placeholderplaceholder
+          + {{ t('admin.channels.form.addTier', '添加层级') placeholderplaceholder
         </button>
       </div>
       <div v-if="entry.intervals && entry.intervals.length > 0" class="mt-2 space-y-2">
@@ -161,20 +138,11 @@
         />
       </div>
       <div v-else>
-        <!-- Legacy image_output_price fallback -->
         <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400">
-              {{ t('admin.channels.form.imageOutputPrice', 'Image Output Price') placeholderplaceholder
-            </label>
-            <input
-              :value="entry.image_output_price"
-              @input="emitField('image_output_price', ($event.target as HTMLInputElement).value)"
-              type="number"
-              step="any" min="0"
-              class="input mt-1 text-sm"
-              :placeholder="t('admin.channels.form.pricePlaceholder', 'Default')"
-            />
+            <label class="text-xs text-gray-400">{{ t('admin.channels.form.imageOutputPrice', '图片输出价格') placeholderplaceholder</label>
+            <input :value="entry.image_output_price" @input="emitField('image_output_price', ($event.target as HTMLInputElement).value)"
+              type="number" step="any" min="0" class="input mt-0.5 text-sm" :placeholder="t('admin.channels.form.pricePlaceholder', '默认')" />
           </div>
         </div>
       </div>
@@ -188,6 +156,7 @@ import { useI18n placeholder from 'vue-i18n'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
 import IntervalRow from './IntervalRow.vue'
+import ModelTagInput from './ModelTagInput.vue'
 import type { PricingFormEntry, IntervalFormEntry placeholder from './types'
 import type { BillingMode placeholder from '@/api/admin/channels'
 
@@ -203,9 +172,9 @@ const emit = defineEmits<{
 placeholder>()
 
 const billingModeOptions = computed(() => [
-  { value: 'token', label: t('admin.channels.billingMode.token', 'Token') placeholder,
-  { value: 'per_request', label: t('admin.channels.billingMode.perRequest', 'Per Request') placeholder,
-  { value: 'image', label: t('admin.channels.billingMode.image', 'Image') placeholder
+  { value: 'token', label: 'Token' placeholder,
+  { value: 'per_request', label: t('admin.channels.billingMode.perRequest', '按次') placeholder,
+  { value: 'image', label: t('admin.channels.billingMode.image', '图片（按次）') placeholder
 ])
 
 function emitField(field: keyof PricingFormEntry, value: string) {
@@ -215,14 +184,9 @@ placeholder
 function addInterval() {
   const intervals = [...(props.entry.intervals || [])]
   intervals.push({
-    min_tokens: 0,
-    max_tokens: null,
-    tier_label: '',
-    input_price: null,
-    output_price: null,
-    cache_write_price: null,
-    cache_read_price: null,
-    per_request_price: null,
+    min_tokens: 0, max_tokens: null, tier_label: '',
+    input_price: null, output_price: null, cache_write_price: null,
+    cache_read_price: null, per_request_price: null,
     sort_order: intervals.length
   placeholder)
   emit('update', { ...props.entry, intervals placeholder)
@@ -231,16 +195,10 @@ placeholder
 function addImageTier() {
   const intervals = [...(props.entry.intervals || [])]
   const labels = ['1K', '2K', '4K', 'HD']
-  const nextLabel = labels[intervals.length] || ''
   intervals.push({
-    min_tokens: 0,
-    max_tokens: null,
-    tier_label: nextLabel,
-    input_price: null,
-    output_price: null,
-    cache_write_price: null,
-    cache_read_price: null,
-    per_request_price: null,
+    min_tokens: 0, max_tokens: null, tier_label: labels[intervals.length] || '',
+    input_price: null, output_price: null, cache_write_price: null,
+    cache_read_price: null, per_request_price: null,
     sort_order: intervals.length
   placeholder)
   emit('update', { ...props.entry, intervals placeholder)
