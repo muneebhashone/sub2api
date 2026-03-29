@@ -19,6 +19,7 @@ type tokenRefreshAccountRepo struct {
 	updateCredentialsCalls int
 	setErrorCalls          int
 	clearTempCalls         int
+	setTempUnschedCalls    int
 	lastAccount            *Account
 	updateErr              error
 placeholder
@@ -55,6 +56,11 @@ placeholder
 
 func (r *tokenRefreshAccountRepo) ClearTempUnschedulable(ctx context.Context, id int64) error {
 	r.clearTempCalls++
+	return nil
+placeholder
+
+func (r *tokenRefreshAccountRepo) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
+	r.setTempUnschedCalls++
 	return nil
 placeholder
 
@@ -490,6 +496,31 @@ placeholder
 placeholder
 placeholder
 
+func TestTokenRefreshService_RefreshWithRetry_NoRefreshTokenDoesNotTempUnschedule(t *testing.T) {
+	repo := &tokenRefreshAccountRepo{placeholder
+	cfg := &config.Config{
+		TokenRefresh: config.TokenRefreshConfig{
+			MaxRetries:          2,
+			RetryBackoffSeconds: 0,
+	placeholder,
+placeholder
+	service := NewTokenRefreshService(repo, nil, nil, nil, nil, nil, nil, cfg, nil)
+	account := &Account{
+		ID:       18,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+	refresher := &tokenRefresherStub{
+		err: errors.New("no refresh token available"),
+placeholder
+
+	err := service.refreshWithRetry(context.Background(), account, refresher, refresher, time.Hour)
+placeholder
+	require.Equal(t, 0, repo.updateCalls)
+	require.Equal(t, 0, repo.setTempUnschedCalls, "missing refresh token should not mark the account temp unschedulable")
+	require.Equal(t, 1, repo.setErrorCalls, "missing refresh token should be treated as a non-retryable credential state")
+placeholder
+
 // TestIsNonRetryableRefreshError 测试不可重试错误判断
 func TestIsNonRetryableRefreshError(t *testing.T) {
 	tests := []struct {
@@ -503,6 +534,7 @@ placeholder{
 		{name: "invalid_client", err: errors.New("invalid_client"), expected: trueplaceholder,
 		{name: "unauthorized_client", err: errors.New("unauthorized_client"), expected: trueplaceholder,
 		{name: "access_denied", err: errors.New("access_denied"), expected: trueplaceholder,
+		{name: "no_refresh_token", err: errors.New("no refresh token available"), expected: trueplaceholder,
 		{name: "invalid_grant_with_desc", err: errors.New("Error: invalid_grant - token revoked"), expected: trueplaceholder,
 		{name: "case_insensitive", err: errors.New("INVALID_GRANT"), expected: trueplaceholder,
 placeholder
