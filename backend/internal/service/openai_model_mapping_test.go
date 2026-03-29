@@ -58,6 +58,19 @@ placeholder{
 			defaultMappedModel: "gpt-4o-mini",
 			expectedModel:      "gpt-5.4",
 	placeholder,
+		{
+			name: "normalizes gpt reasoning alias before passthrough mapping",
+			account: &Account{
+		placeholder
+					"model_mapping": map[string]any{
+						"gpt-5.4": "gpt-5.4",
+				placeholder,
+			placeholder,
+		placeholder,
+			requestedModel:     "gpt-5.4-xhigh",
+			defaultMappedModel: "gpt-5.1",
+			expectedModel:      "gpt-5.4",
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
