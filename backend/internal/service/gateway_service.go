@@ -7863,6 +7863,17 @@ placeholder
 		CreatedAt:             time.Now(),
 placeholder
 
+	// 设置计费模式
+	if result.MediaType != "image" && result.MediaType != "video" && result.MediaType != "prompt" {
+		if result.ImageCount > 0 {
+			billingMode := "image"
+			usageLog.BillingMode = &billingMode
+	placeholder else {
+			billingMode := "token"
+			usageLog.BillingMode = &billingMode
+	placeholder
+placeholder
+
 	// 添加 UserAgent
 	if input.UserAgent != "" {
 		usageLog.UserAgent = &input.UserAgent
@@ -8071,6 +8082,15 @@ placeholder
 		ChannelID:             optionalInt64Ptr(input.ChannelID),
 		ModelMappingChain:     optionalTrimmedStringPtr(input.ModelMappingChain),
 		CreatedAt:             time.Now(),
+placeholder
+
+	// 设置计费模式
+	if result.ImageCount > 0 {
+		billingMode := "image"
+		usageLog.BillingMode = &billingMode
+placeholder else {
+		billingMode := "token"
+		usageLog.BillingMode = &billingMode
 placeholder
 
 	// 添加 UserAgent

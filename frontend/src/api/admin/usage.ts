@@ -80,6 +80,7 @@ placeholder
 export interface AdminUsageQueryParams extends UsageQueryParams {
   user_id?: number
   exact_total?: boolean
+  billing_mode?: string
 placeholder
 
 // ==================== API Functions ====================
