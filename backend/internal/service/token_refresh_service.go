@@ -32,8 +32,9 @@ type TokenRefreshService struct {
 	privacyClientFactory PrivacyClientFactory
 	proxyRepo            ProxyRepository
 
-	stopCh chan struct{placeholder
-	wg     sync.WaitGroup
+	stopCh   chan struct{placeholder
+	stopOnce sync.Once
+	wg       sync.WaitGroup
 placeholder
 
 // NewTokenRefreshService 创建token刷新服务
@@ -130,7 +131,9 @@ placeholder
 
 // Stop 停止刷新服务（可安全多次调用）
 func (s *TokenRefreshService) Stop() {
-	close(s.stopCh)
+	s.stopOnce.Do(func() {
+		close(s.stopCh)
+placeholder)
 	s.wg.Wait()
 	slog.Info("token_refresh.service_stopped")
 placeholder
