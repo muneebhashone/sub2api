@@ -466,6 +466,7 @@ placeholder)
 		nil, // settingService
 		nil, // tlsFPProfileService
 		nil, // channelService
+		nil, // resolver
 	)
 
 	soraClient := &stubSoraClient{imageURLs: []string{"https://example.com/a.png"placeholderplaceholder
