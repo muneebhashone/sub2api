@@ -256,6 +256,22 @@ placeholder{
 		placeholder,
 	placeholder,
 		{
+			name: "filter_by_status_active_excludes_rate_limited",
+			setup: func(client *dbent.Client) {
+				mustCreateAccount(s.T(), client, &service.Account{Name: "active-normal", Status: service.StatusActiveplaceholder)
+				rateLimited := mustCreateAccount(s.T(), client, &service.Account{Name: "active-rate-limited", Status: service.StatusActiveplaceholder)
+				err := client.Account.UpdateOneID(rateLimited.ID).
+					SetRateLimitResetAt(time.Now().Add(10 * time.Minute)).
+					Exec(context.Background())
+				s.Require().NoError(err)
+		placeholder,
+			status:    service.StatusActive,
+			wantCount: 1,
+			validate: func(accounts []service.Account) {
+				s.Require().Equal("active-normal", accounts[0].Name)
+		placeholder,
+	placeholder,
+		{
 			name: "filter_by_search",
 			setup: func(client *dbent.Client) {
 				mustCreateAccount(s.T(), client, &service.Account{Name: "alpha-account"placeholder)
