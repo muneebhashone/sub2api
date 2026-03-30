@@ -181,6 +181,13 @@
             </span>
           </template>
 
+          <template #cell-billing_mode="{ row placeholder">
+            <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+                  :class="getBillingModeBadgeClass(row.billing_mode)">
+              {{ getBillingModeLabel(row.billing_mode) placeholderplaceholder
+            </span>
+          </template>
+
           <template #cell-tokens="{ row placeholder">
             <!-- 图片生成请求 -->
             <div v-if="row.image_count > 0" class="flex items-center gap-1.5">
@@ -525,6 +532,7 @@ const columns = computed<Column[]>(() => [
   { key: 'reasoning_effort', label: t('usage.reasoningEffort'), sortable: false placeholder,
   { key: 'endpoint', label: t('usage.endpoint'), sortable: false placeholder,
   { key: 'stream', label: t('usage.type'), sortable: false placeholder,
+  { key: 'billing_mode', label: t('admin.usage.billingMode'), sortable: false placeholder,
   { key: 'tokens', label: t('usage.tokens'), sortable: false placeholder,
   { key: 'cost', label: t('usage.cost'), sortable: false placeholder,
   { key: 'first_token', label: t('usage.firstToken'), sortable: false placeholder,
@@ -613,6 +621,18 @@ const getRequestTypeBadgeClass = (log: UsageLog): string => {
   if (requestType === 'stream') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
   if (requestType === 'sync') return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
   return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+placeholder
+
+const getBillingModeLabel = (mode: string | null | undefined): string => {
+  if (mode === 'per_request') return t('admin.usage.billingModePerRequest')
+  if (mode === 'image') return t('admin.usage.billingModeImage')
+  return t('admin.usage.billingModeToken')
+placeholder
+
+const getBillingModeBadgeClass = (mode: string | null | undefined): string => {
+  if (mode === 'per_request') return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200'
+  if (mode === 'image') return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+  return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
 placeholder
 
 const getRequestTypeExportText = (log: UsageLog): string => {
@@ -804,6 +824,7 @@ const exportToCSV = async () => {
       'Reasoning Effort',
       'Inbound Endpoint',
       'Type',
+      'Billing Mode',
       'Input Tokens',
       'Output Tokens',
       'Cache Read Tokens',
@@ -822,6 +843,7 @@ const exportToCSV = async () => {
         formatReasoningEffort(log.reasoning_effort),
         log.inbound_endpoint || '',
         getRequestTypeExportText(log),
+        getBillingModeLabel(log.billing_mode),
         log.input_tokens,
         log.output_tokens,
         log.cache_read_tokens,
