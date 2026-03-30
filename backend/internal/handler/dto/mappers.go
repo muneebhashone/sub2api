@@ -604,6 +604,9 @@ placeholder
 	return &AdminUsageLog{
 		UsageLog:              usageLogFromServiceUser(l),
 		UpstreamModel:         l.UpstreamModel,
+		ChannelID:             l.ChannelID,
+		ModelMappingChain:     l.ModelMappingChain,
+		BillingTier:           l.BillingTier,
 		AccountRateMultiplier: l.AccountRateMultiplier,
 		IPAddress:             l.IPAddress,
 		Account:               AccountSummaryFromService(l.Account),
