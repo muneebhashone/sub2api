@@ -542,6 +542,11 @@ placeholder
 		unitPrice = input.Resolver.GetRequestTierPriceByContext(resolved, totalContext)
 placeholder
 
+	// 回退到默认按次价格
+	if unitPrice == 0 {
+		unitPrice = resolved.DefaultPerRequestPrice
+placeholder
+
 	totalCost := unitPrice * float64(count)
 	actualCost := totalCost * input.RateMultiplier
 
