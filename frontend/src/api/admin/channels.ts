@@ -128,5 +128,20 @@ export async function remove(id: number): Promise<void> {
   await apiClient.delete(`/admin/channels/${idplaceholder`)
 placeholder
 
-const channelsAPI = { list, getById, create, update, remove placeholder
+export interface ModelDefaultPricing {
+  found: boolean
+  input_price?: number    // per-token price
+  output_price?: number
+  cache_write_price?: number
+  cache_read_price?: number
+placeholder
+
+export async function getModelDefaultPricing(model: string): Promise<ModelDefaultPricing> {
+  const { data placeholder = await apiClient.get<ModelDefaultPricing>('/admin/channels/model-pricing', {
+    params: { model placeholder
+  placeholder)
+  return data
+placeholder
+
+const channelsAPI = { list, getById, create, update, remove, getModelDefaultPricing placeholder
 export default channelsAPI
