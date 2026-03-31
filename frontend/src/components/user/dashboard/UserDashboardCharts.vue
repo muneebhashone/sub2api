@@ -7,6 +7,9 @@
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('dashboard.timeRange') placeholderplaceholder:</span>
           <DateRangePicker :start-date="startDate" :end-date="endDate" @update:startDate="$emit('update:startDate', $event)" @update:endDate="$emit('update:endDate', $event)" @change="$emit('dateRangeChange', $event)" />
         </div>
+        <button @click="$emit('refresh')" :disabled="loading" class="btn btn-secondary">
+          {{ t('common.refresh') placeholderplaceholder
+        </button>
         <div class="ml-auto flex items-center gap-2">
           <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('dashboard.granularity') placeholderplaceholder:</span>
           <div class="w-28">
@@ -74,7 +77,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 const props = defineProps<{ loading: boolean, startDate: string, endDate: string, granularity: string, trend: TrendDataPoint[], models: ModelStat[] placeholder>()
-defineEmits(['update:startDate', 'update:endDate', 'update:granularity', 'dateRangeChange', 'granularityChange'])
+defineEmits(['update:startDate', 'update:endDate', 'update:granularity', 'dateRangeChange', 'granularityChange', 'refresh'])
 const { t placeholder = useI18n()
 
 const modelData = computed(() => !props.models?.length ? null : {
