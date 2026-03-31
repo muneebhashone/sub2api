@@ -8,13 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func channelTestPtrFloat64(v float64) *float64 { return &v placeholder
-func channelTestPtrInt(v int) *int             { return &v placeholder
-
 func TestGetModelPricing(t *testing.T) {
 	ch := &Channel{
 		ModelPricing: []ChannelModelPricing{
-			{ID: 1, Models: []string{"claude-sonnet-4"placeholder, BillingMode: BillingModeToken, InputPrice: channelTestPtrFloat64(3e-6)placeholder,
+			{ID: 1, Models: []string{"claude-sonnet-4"placeholder, BillingMode: BillingModeToken, InputPrice: testPtrFloat64(3e-6)placeholder,
 			{ID: 3, Models: []string{"gpt-5.1"placeholder, BillingMode: BillingModePerRequestplaceholder,
 	placeholder,
 placeholder
@@ -48,7 +45,7 @@ placeholder
 func TestGetModelPricing_ReturnsCopy(t *testing.T) {
 	ch := &Channel{
 		ModelPricing: []ChannelModelPricing{
-			{ID: 1, Models: []string{"claude-sonnet-4"placeholder, InputPrice: channelTestPtrFloat64(3e-6)placeholder,
+			{ID: 1, Models: []string{"claude-sonnet-4"placeholder, InputPrice: testPtrFloat64(3e-6)placeholder,
 	placeholder,
 placeholder
 
@@ -73,23 +70,23 @@ placeholder
 func TestGetIntervalForContext(t *testing.T) {
 	p := &ChannelModelPricing{
 		Intervals: []PricingInterval{
-			{MinTokens: 0, MaxTokens: channelTestPtrInt(128000), InputPrice: channelTestPtrFloat64(1e-6)placeholder,
-			{MinTokens: 128000, MaxTokens: nil, InputPrice: channelTestPtrFloat64(2e-6)placeholder,
+			{MinTokens: 0, MaxTokens: testPtrInt(128000), InputPrice: testPtrFloat64(1e-6)placeholder,
+			{MinTokens: 128000, MaxTokens: nil, InputPrice: testPtrFloat64(2e-6)placeholder,
 	placeholder,
 placeholder
 
 	tests := []struct {
-		name       string
-		tokens     int
-		wantPrice  *float64
-		wantNil    bool
+		name      string
+		tokens    int
+		wantPrice *float64
+		wantNil   bool
 placeholder{
-		{"first interval", 50000, channelTestPtrFloat64(1e-6), falseplaceholder,
+		{"first interval", 50000, testPtrFloat64(1e-6), falseplaceholder,
 		// (min, max] — 128000 在第一个区间的 max，包含，所以匹配第一个
-		{"boundary: max of first (inclusive)", 128000, channelTestPtrFloat64(1e-6), falseplaceholder,
+		{"boundary: max of first (inclusive)", 128000, testPtrFloat64(1e-6), falseplaceholder,
 		// 128001 > 128000，匹配第二个区间
-		{"boundary: just above first max", 128001, channelTestPtrFloat64(2e-6), falseplaceholder,
-		{"unbounded interval", 500000, channelTestPtrFloat64(2e-6), falseplaceholder,
+		{"boundary: just above first max", 128001, testPtrFloat64(2e-6), falseplaceholder,
+		{"unbounded interval", 500000, testPtrFloat64(2e-6), falseplaceholder,
 		// (0, max] — 0 不匹配任何区间（左开）
 		{"zero tokens: no match", 0, nil, trueplaceholder,
 placeholder
@@ -110,11 +107,11 @@ placeholder
 func TestGetIntervalForContext_NoMatch(t *testing.T) {
 	p := &ChannelModelPricing{
 		Intervals: []PricingInterval{
-			{MinTokens: 10000, MaxTokens: channelTestPtrInt(50000)placeholder,
+			{MinTokens: 10000, MaxTokens: testPtrInt(50000)placeholder,
 	placeholder,
 placeholder
-	require.Nil(t, p.GetIntervalForContext(5000))  // 5000 <= 10000, not > min
-	require.Nil(t, p.GetIntervalForContext(10000)) // 10000 not > 10000 (left-open)
+	require.Nil(t, p.GetIntervalForContext(5000))     // 5000 <= 10000, not > min
+	require.Nil(t, p.GetIntervalForContext(10000))    // 10000 not > 10000 (left-open)
 	require.NotNil(t, p.GetIntervalForContext(50000)) // 50000 <= 50000 (right-closed)
 	require.Nil(t, p.GetIntervalForContext(50001))    // 50001 > 50000
 placeholder
@@ -127,9 +124,9 @@ placeholder
 func TestGetTierByLabel(t *testing.T) {
 	p := &ChannelModelPricing{
 		Intervals: []PricingInterval{
-			{TierLabel: "1K", PerRequestPrice: channelTestPtrFloat64(0.04)placeholder,
-			{TierLabel: "2K", PerRequestPrice: channelTestPtrFloat64(0.08)placeholder,
-			{TierLabel: "HD", PerRequestPrice: channelTestPtrFloat64(0.12)placeholder,
+			{TierLabel: "1K", PerRequestPrice: testPtrFloat64(0.04)placeholder,
+			{TierLabel: "2K", PerRequestPrice: testPtrFloat64(0.08)placeholder,
+			{TierLabel: "HD", PerRequestPrice: testPtrFloat64(0.12)placeholder,
 	placeholder,
 placeholder
 
@@ -171,7 +168,7 @@ func TestChannelClone(t *testing.T) {
 			{
 				ID:         100,
 				Models:     []string{"model-a"placeholder,
-				InputPrice: channelTestPtrFloat64(5e-6),
+				InputPrice: testPtrFloat64(5e-6),
 		placeholder,
 	placeholder,
 placeholder
@@ -210,4 +207,103 @@ placeholder
 
 	cloned.Intervals[0].TierLabel = "hacked"
 	require.Equal(t, "tier1", original.Intervals[0].TierLabel)
+placeholder
+
+// --- BillingMode.IsValid ---
+
+func TestBillingModeIsValid(t *testing.T) {
+	tests := []struct {
+		name string
+		mode BillingMode
+		want bool
+placeholder{
+		{"token", BillingModeToken, trueplaceholder,
+		{"per_request", BillingModePerRequest, trueplaceholder,
+		{"image", BillingModeImage, trueplaceholder,
+		{"empty", BillingMode(""), trueplaceholder,
+		{"unknown", BillingMode("unknown"), falseplaceholder,
+		{"random", BillingMode("xyz"), falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.mode.IsValid())
+	placeholder)
+placeholder
+placeholder
+
+// --- Channel.IsActive ---
+
+func TestChannelIsActive(t *testing.T) {
+	tests := []struct {
+		name   string
+		status string
+		want   bool
+placeholder{
+		{"active", StatusActive, trueplaceholder,
+		{"disabled", "disabled", falseplaceholder,
+		{"empty", "", falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ch := &Channel{Status: tt.statusplaceholder
+			require.Equal(t, tt.want, ch.IsActive())
+	placeholder)
+placeholder
+placeholder
+
+// --- ChannelModelPricing.Clone edge cases ---
+
+func TestChannelModelPricingClone_EdgeCases(t *testing.T) {
+	t.Run("nil models", func(t *testing.T) {
+		original := ChannelModelPricing{Models: nilplaceholder
+		cloned := original.Clone()
+		require.Nil(t, cloned.Models)
+placeholder)
+
+	t.Run("nil intervals", func(t *testing.T) {
+		original := ChannelModelPricing{Intervals: nilplaceholder
+		cloned := original.Clone()
+		require.Nil(t, cloned.Intervals)
+placeholder)
+
+	t.Run("empty models", func(t *testing.T) {
+		original := ChannelModelPricing{Models: []string{placeholderplaceholder
+		cloned := original.Clone()
+		require.NotNil(t, cloned.Models)
+		require.Empty(t, cloned.Models)
+placeholder)
+placeholder
+
+// --- Channel.Clone edge cases ---
+
+func TestChannelClone_EdgeCases(t *testing.T) {
+	t.Run("nil model mapping", func(t *testing.T) {
+		original := &Channel{ID: 1, ModelMapping: nilplaceholder
+		cloned := original.Clone()
+		require.Nil(t, cloned.ModelMapping)
+placeholder)
+
+	t.Run("nil model pricing", func(t *testing.T) {
+		original := &Channel{ID: 1, ModelPricing: nilplaceholder
+		cloned := original.Clone()
+		require.Nil(t, cloned.ModelPricing)
+placeholder)
+
+	t.Run("deep copy model mapping", func(t *testing.T) {
+		original := &Channel{
+			ID: 1,
+			ModelMapping: map[string]map[string]string{
+				"openai": {"gpt-4": "gpt-4-turbo"placeholder,
+		placeholder,
+	placeholder
+		cloned := original.Clone()
+
+		// Modify the cloned nested map
+		cloned.ModelMapping["openai"]["gpt-4"] = "hacked"
+
+		// Original must remain unchanged
+		require.Equal(t, "gpt-4-turbo", original.ModelMapping["openai"]["gpt-4"])
+placeholder)
 placeholder

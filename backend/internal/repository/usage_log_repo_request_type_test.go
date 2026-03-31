@@ -80,6 +80,10 @@ placeholder
 			sqlmock.AnyArg(), // inbound_endpoint
 			sqlmock.AnyArg(), // upstream_endpoint
 			log.CacheTTLOverridden,
+			sqlmock.AnyArg(), // channel_id
+			sqlmock.AnyArg(), // model_mapping_chain
+			sqlmock.AnyArg(), // billing_tier
+			sqlmock.AnyArg(), // billing_mode
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"placeholder).AddRow(int64(99), createdAt))
@@ -153,6 +157,10 @@ placeholder
 			sqlmock.AnyArg(),
 			sqlmock.AnyArg(),
 			log.CacheTTLOverridden,
+			sqlmock.AnyArg(), // channel_id
+			sqlmock.AnyArg(), // model_mapping_chain
+			sqlmock.AnyArg(), // billing_tier
+			sqlmock.AnyArg(), // billing_mode
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"placeholder).AddRow(int64(100), createdAt))
@@ -463,6 +471,10 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			false,
+			sql.NullInt64{placeholder,  // channel_id
+			sql.NullString{placeholder, // model_mapping_chain
+			sql.NullString{placeholder, // billing_tier
+			sql.NullString{placeholder, // billing_mode
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -506,6 +518,10 @@ placeholder)
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			false,
+			sql.NullInt64{placeholder,  // channel_id
+			sql.NullString{placeholder, // model_mapping_chain
+			sql.NullString{placeholder, // billing_tier
+			sql.NullString{placeholder, // billing_mode
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -549,6 +565,10 @@ placeholder)
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			false,
+			sql.NullInt64{placeholder,  // channel_id
+			sql.NullString{placeholder, // model_mapping_chain
+			sql.NullString{placeholder, // billing_tier
+			sql.NullString{placeholder, // billing_mode
 			now,
 	placeholderplaceholder)
 	placeholder
