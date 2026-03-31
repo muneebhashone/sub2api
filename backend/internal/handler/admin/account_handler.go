@@ -839,6 +839,7 @@ placeholder else if account.Platform == service.PlatformAntigravity {
 			if updateErr != nil {
 				return nil, "", fmt.Errorf("failed to update credentials: %w", updateErr)
 		placeholder
+			h.adminService.EnsureAntigravityPrivacy(ctx, updatedAccount)
 			return updatedAccount, "missing_project_id_temporary", nil
 	placeholder
 

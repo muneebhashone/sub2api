@@ -91,6 +91,7 @@ type AntigravityTokenInfo struct {
 	ProjectID        string `json:"project_id,omitempty"`
 	ProjectIDMissing bool   `json:"-"`
 	PlanType         string `json:"-"`
+	PrivacyMode      string `json:"-"`
 placeholder
 
 // ExchangeCode 用 authorization code 交换 token
@@ -158,6 +159,9 @@ placeholder
 			result.PlanType = loadResult.Subscription.PlanType
 	placeholder
 placeholder
+
+	// 令牌刚获取，立即设置隐私（不依赖后续账号创建流程）
+	result.PrivacyMode = setAntigravityPrivacy(ctx, result.AccessToken, result.ProjectID, proxyURL)
 
 	return result, nil
 placeholder
@@ -247,6 +251,9 @@ placeholder
 			tokenInfo.PlanType = loadResult.Subscription.PlanType
 	placeholder
 placeholder
+
+	// 令牌刚获取，立即设置隐私
+	tokenInfo.PrivacyMode = setAntigravityPrivacy(ctx, tokenInfo.AccessToken, tokenInfo.ProjectID, proxyURL)
 
 	return tokenInfo, nil
 placeholder
