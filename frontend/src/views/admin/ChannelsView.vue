@@ -261,7 +261,7 @@
             <!-- Groups -->
             <div>
               <label class="input-label text-xs">
-                {{ t('admin.channels.form.groups', 'Associated Groups') placeholderplaceholder
+                {{ t('admin.channels.form.groups', 'Associated Groups') placeholderplaceholder <span class="text-red-500">*</span>
                 <span v-if="section.group_ids.length > 0" class="ml-1 font-normal text-gray-400">
                   ({{ t('admin.channels.form.selectedCount', { count: section.group_ids.length placeholder, `已选 ${section.group_ids.lengthplaceholder 个`) placeholderplaceholder)
                 </span>
@@ -857,6 +857,24 @@ async function handleSubmit() {
   if (!form.name.trim()) {
     appStore.showError(t('admin.channels.nameRequired', 'Please enter a channel name'))
     return
+  placeholder
+
+  // Check for pricing entries with empty models (would be silently skipped)
+  for (const section of form.platforms.filter(s => s.enabled)) {
+    if (section.group_ids.length === 0) {
+      const platformLabel = t('admin.groups.platforms.' + section.platform, section.platform)
+      appStore.showError(t('admin.channels.noGroupsSelected', { platform: platformLabel placeholder, `${platformLabelplaceholder 平台未选择分组，请至少选择一个分组或禁用该平台`))
+      activeTab.value = section.platform
+      return
+    placeholder
+    for (const entry of section.model_pricing) {
+      if (entry.models.length === 0) {
+        const platformLabel = t('admin.groups.platforms.' + section.platform, section.platform)
+        appStore.showError(t('admin.channels.emptyModelsInPricing', { platform: platformLabel placeholder, `${platformLabelplaceholder 平台下有定价条目未添加模型，请添加模型或删除该条目`))
+        activeTab.value = section.platform
+        return
+      placeholder
+    placeholder
   placeholder
 
   // Check duplicate models across all enabled platform sections
