@@ -261,6 +261,53 @@ placeholder
 	require.Contains(t, httpStub.lastReq.URL.String(), "/models/claude-sonnet-4-20250514:")
 placeholder
 
+func TestGeminiMessagesCompatServiceForward_NormalizesWebSearchToolForAIStudio(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	httpStub := &geminiCompatHTTPUpstreamStub{
+		response: &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"x-request-id": []string{"gemini-req-2"placeholderplaceholder,
+			Body:       io.NopCloser(strings.NewReader(`{"candidates":[{"content":{"parts":[{"text":"hello"placeholder]placeholderplaceholder],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":5placeholderplaceholder`)),
+	placeholder,
+placeholder
+	svc := &GeminiMessagesCompatService{httpUpstream: httpStub, cfg: &config.Config{placeholderplaceholder
+	account := &Account{
+		ID:   1,
+		Type: AccountTypeAPIKey,
+placeholder
+			"api_key": "test-key",
+	placeholder,
+placeholder
+	body := []byte(`{"model":"claude-sonnet-4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"tools":[{"name":"get_weather","description":"Get weather info","input_schema":{"type":"object"placeholderplaceholder,{"type":"web_search_20250305","name":"web_search"placeholder]placeholder`)
+
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.NotNil(t, httpStub.lastReq)
+
+	postedBody, err := io.ReadAll(httpStub.lastReq.Body)
+placeholder
+
+	var posted map[string]any
+	require.NoError(t, json.Unmarshal(postedBody, &posted))
+	tools, ok := posted["tools"].([]any)
+	require.True(t, ok)
+	require.Len(t, tools, 2)
+
+	searchTool, ok := tools[1].(map[string]any)
+	require.True(t, ok)
+	_, hasSnake := searchTool["google_search"]
+	_, hasCamel := searchTool["googleSearch"]
+	require.True(t, hasSnake)
+	require.False(t, hasCamel)
+	_, hasFuncDecl := searchTool["functionDeclarations"]
+	require.False(t, hasFuncDecl)
+placeholder
+
 func TestConvertClaudeMessagesToGeminiGenerateContent_AddsThoughtSignatureForToolUse(t *testing.T) {
 	claudeReq := map[string]any{
 		"model":      "placeholder",
