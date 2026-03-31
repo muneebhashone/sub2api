@@ -90,28 +90,47 @@ placeholder
 
 func TestGetRPMStickyBuffer(t *testing.T) {
 	tests := []struct {
-		name     string
-		extra    map[string]any
-		expected int
+		name        string
+		concurrency int
+		extra       map[string]any
+		expected    int
 placeholder{
-		{"nil extra", nil, 0placeholder,
-		{"no keys", map[string]any{placeholder, 0placeholder,
-		{"base_rpm=0", map[string]any{"base_rpm": 0placeholder, 0placeholder,
-		{"base_rpm=1 min buffer 1", map[string]any{"base_rpm": 1placeholder, 1placeholder,
-		{"base_rpm=4 min buffer 1", map[string]any{"base_rpm": 4placeholder, 1placeholder,
-		{"base_rpm=5 buffer 1", map[string]any{"base_rpm": 5placeholder, 1placeholder,
-		{"base_rpm=10 buffer 2", map[string]any{"base_rpm": 10placeholder, 2placeholder,
-		{"base_rpm=15 buffer 3", map[string]any{"base_rpm": 15placeholder, 3placeholder,
-		{"base_rpm=100 buffer 20", map[string]any{"base_rpm": 100placeholder, 20placeholder,
-		{"custom buffer=5", map[string]any{"base_rpm": 10, "rpm_sticky_buffer": 5placeholder, 5placeholder,
-		{"custom buffer=0 fallback to default", map[string]any{"base_rpm": 10, "rpm_sticky_buffer": 0placeholder, 2placeholder,
-		{"custom buffer negative fallback", map[string]any{"base_rpm": 10, "rpm_sticky_buffer": -1placeholder, 2placeholder,
-		{"custom buffer with float", map[string]any{"base_rpm": 10, "rpm_sticky_buffer": float64(7)placeholder, 7placeholder,
-		{"json.Number base_rpm", map[string]any{"base_rpm": json.Number("10")placeholder, 2placeholder,
+		// 基础退化
+		{"nil extra", 0, nil, 0placeholder,
+		{"no keys", 0, map[string]any{placeholder, 0placeholder,
+		{"base_rpm=0", 0, map[string]any{"base_rpm": 0placeholder, 0placeholder,
+
+		// 新公式: concurrency + maxSessions, floor = base/5
+		{"conc=3 sess=10 → 13", 3, map[string]any{"base_rpm": 15, "max_sessions": 10placeholder, 13placeholder,
+		{"conc=2 sess=5 → 7", 2, map[string]any{"base_rpm": 10, "max_sessions": 5placeholder, 7placeholder,
+		{"conc=3 sess=15 → 18", 3, map[string]any{"base_rpm": 30, "max_sessions": 15placeholder, 18placeholder,
+
+		// floor 生效 (conc+sess < base/5)
+		{"conc=0 sess=0 base=15 → floor 3", 0, map[string]any{"base_rpm": 15placeholder, 3placeholder,
+		{"conc=0 sess=0 base=10 → floor 2", 0, map[string]any{"base_rpm": 10placeholder, 2placeholder,
+		{"conc=0 sess=0 base=1 → floor 1", 0, map[string]any{"base_rpm": 1placeholder, 1placeholder,
+		{"conc=0 sess=0 base=4 → floor 1", 0, map[string]any{"base_rpm": 4placeholder, 1placeholder,
+		{"conc=1 sess=0 base=15 → floor 3", 1, map[string]any{"base_rpm": 15placeholder, 3placeholder,
+
+		// 手动 override
+		{"custom buffer=5", 3, map[string]any{"base_rpm": 10, "rpm_sticky_buffer": 5, "max_sessions": 10placeholder, 5placeholder,
+		{"custom buffer=0 fallback", 3, map[string]any{"base_rpm": 10, "rpm_sticky_buffer": 0, "max_sessions": 10placeholder, 13placeholder,
+		{"custom buffer negative fallback", 3, map[string]any{"base_rpm": 10, "rpm_sticky_buffer": -1, "max_sessions": 10placeholder, 13placeholder,
+		{"custom buffer with float", 3, map[string]any{"base_rpm": 10, "rpm_sticky_buffer": float64(7)placeholder, 7placeholder,
+
+		// 负值 clamp
+		{"negative concurrency clamped", -5, map[string]any{"base_rpm": 15, "max_sessions": 10placeholder, 10placeholder,
+		{"negative maxSessions clamped", 3, map[string]any{"base_rpm": 15, "max_sessions": -5placeholder, 3placeholder,
+
+		// 高并发低会话
+		{"conc=10 sess=5 → 15", 10, map[string]any{"base_rpm": 10, "max_sessions": 5placeholder, 15placeholder,
+
+		// json.Number
+		{"json.Number base_rpm", 3, map[string]any{"base_rpm": json.Number("10"), "max_sessions": json.Number("5")placeholder, 8placeholder,
 placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := &Account{Extra: tt.extraplaceholder
+			a := &Account{Concurrency: tt.concurrency, Extra: tt.extraplaceholder
 			if got := a.GetRPMStickyBuffer(); got != tt.expected {
 				t.Errorf("GetRPMStickyBuffer() = %d, want %d", got, tt.expected)
 		placeholder
