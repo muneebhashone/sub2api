@@ -163,6 +163,8 @@ type CreateGroupInput struct {
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch bool
 	DefaultMappedModel    string
+	RequireOAuthOnly      bool
+	RequirePrivacySet     bool
 	// 从指定分组复制账号（创建分组后在同一事务内绑定）
 	CopyAccountsFromGroupIDs []int64
 placeholder
@@ -202,6 +204,8 @@ type UpdateGroupInput struct {
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch *bool
 	DefaultMappedModel    *string
+	RequireOAuthOnly      *bool
+	RequirePrivacySet     *bool
 	// 从指定分组复制账号（同步操作：先清空当前分组的账号绑定，再绑定源分组的账号）
 	CopyAccountsFromGroupIDs []int64
 placeholder
@@ -942,10 +946,33 @@ placeholder
 		SupportedModelScopes:            input.SupportedModelScopes,
 		SoraStorageQuotaBytes:           input.SoraStorageQuotaBytes,
 		AllowMessagesDispatch:           input.AllowMessagesDispatch,
+		RequireOAuthOnly:                input.RequireOAuthOnly,
+		RequirePrivacySet:               input.RequirePrivacySet,
 		DefaultMappedModel:              input.DefaultMappedModel,
 placeholder
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return nil, err
+placeholder
+
+	// require_oauth_only: 过滤掉 apikey 类型账号
+	if group.RequireOAuthOnly && (group.Platform == PlatformOpenAI || group.Platform == PlatformAntigravity || group.Platform == PlatformAnthropic || group.Platform == PlatformGemini) && len(accountIDsToCopy) > 0 {
+		accounts, err := s.accountRepo.GetByIDs(ctx, accountIDsToCopy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch accounts for oauth filter: %w", err)
+	placeholder
+		oauthIDs := make(map[int64]struct{placeholder, len(accounts))
+		for _, acc := range accounts {
+			if acc.Type != AccountTypeAPIKey {
+				oauthIDs[acc.ID] = struct{placeholder{placeholder
+		placeholder
+	placeholder
+		var filtered []int64
+		for _, aid := range accountIDsToCopy {
+			if _, ok := oauthIDs[aid]; ok {
+				filtered = append(filtered, aid)
+		placeholder
+	placeholder
+		accountIDsToCopy = filtered
 placeholder
 
 	// 如果有需要复制的账号，绑定到新分组
@@ -1155,6 +1182,12 @@ placeholder
 	if input.AllowMessagesDispatch != nil {
 		group.AllowMessagesDispatch = *input.AllowMessagesDispatch
 placeholder
+	if input.RequireOAuthOnly != nil {
+		group.RequireOAuthOnly = *input.RequireOAuthOnly
+placeholder
+	if input.RequirePrivacySet != nil {
+		group.RequirePrivacySet = *input.RequirePrivacySet
+placeholder
 	if input.DefaultMappedModel != nil {
 		group.DefaultMappedModel = *input.DefaultMappedModel
 placeholder
@@ -1200,6 +1233,27 @@ placeholder
 		// 先清空当前分组的所有账号绑定
 		if _, err := s.groupRepo.DeleteAccountGroupsByGroupID(ctx, id); err != nil {
 			return nil, fmt.Errorf("failed to clear existing account bindings: %w", err)
+	placeholder
+
+		// require_oauth_only: 过滤掉 apikey 类型账号
+		if group.RequireOAuthOnly && (group.Platform == PlatformOpenAI || group.Platform == PlatformAntigravity || group.Platform == PlatformAnthropic || group.Platform == PlatformGemini) && len(accountIDsToCopy) > 0 {
+			accounts, err := s.accountRepo.GetByIDs(ctx, accountIDsToCopy)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch accounts for oauth filter: %w", err)
+		placeholder
+			oauthIDs := make(map[int64]struct{placeholder, len(accounts))
+			for _, acc := range accounts {
+				if acc.Type != AccountTypeAPIKey {
+					oauthIDs[acc.ID] = struct{placeholder{placeholder
+			placeholder
+		placeholder
+			var filtered []int64
+			for _, aid := range accountIDsToCopy {
+				if _, ok := oauthIDs[aid]; ok {
+					filtered = append(filtered, aid)
+			placeholder
+		placeholder
+			accountIDsToCopy = filtered
 	placeholder
 
 		// 再绑定源分组的账号
