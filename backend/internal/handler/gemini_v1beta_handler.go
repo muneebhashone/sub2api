@@ -121,7 +121,7 @@ placeholder
 		googleError(c, http.StatusBadGateway, err.Error())
 		return
 placeholder
-	if shouldFallbackGeminiModels(res) {
+	if shouldFallbackGeminiModel(modelName, res) {
 		c.JSON(http.StatusOK, gemini.FallbackModel(modelName))
 		return
 placeholder
@@ -672,6 +672,16 @@ placeholder
 		return true
 placeholder
 	return false
+placeholder
+
+func shouldFallbackGeminiModel(modelName string, res *service.UpstreamHTTPResult) bool {
+	if shouldFallbackGeminiModels(res) {
+		return true
+placeholder
+	if res == nil || res.StatusCode != http.StatusNotFound {
+		return false
+placeholder
+	return gemini.HasFallbackModel(modelName)
 placeholder
 
 // extractGeminiCLISessionHash 从 Gemini CLI 请求中提取会话标识。
