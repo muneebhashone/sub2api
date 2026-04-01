@@ -890,8 +890,9 @@ placeholder
 	actualCost := totalCost * rateMultiplier
 
 	return &CostBreakdown{
-		TotalCost:  totalCost,
-		ActualCost: actualCost,
+		TotalCost:   totalCost,
+		ActualCost:  actualCost,
+		BillingMode: string(BillingModeImage),
 placeholder
 placeholder
 
