@@ -585,3 +585,79 @@ placeholder
 	price2 := r.GetRequestTierPriceByContext(resolved, 128001)
 	require.InDelta(t, 0.10, price2, 1e-12)
 placeholder
+
+// ===========================================================================
+// 8. filterValidIntervals
+// ===========================================================================
+
+func TestFilterValidIntervals(t *testing.T) {
+	tests := []struct {
+		name      string
+		intervals []PricingInterval
+		wantLen   int
+placeholder{
+		{
+			name:      "empty list",
+			intervals: nil,
+			wantLen:   0,
+	placeholder,
+		{
+			name: "all-nil interval filtered out",
+			intervals: []PricingInterval{
+				{MinTokens: 0, MaxTokens: testPtrInt(128000)placeholder,
+		placeholder,
+			wantLen: 0,
+	placeholder,
+		{
+			name: "interval with only InputPrice kept",
+			intervals: []PricingInterval{
+				{MinTokens: 0, MaxTokens: testPtrInt(128000), InputPrice: testPtrFloat64(1e-6)placeholder,
+		placeholder,
+			wantLen: 1,
+	placeholder,
+		{
+			name: "interval with only OutputPrice kept",
+			intervals: []PricingInterval{
+				{MinTokens: 0, MaxTokens: testPtrInt(128000), OutputPrice: testPtrFloat64(2e-6)placeholder,
+		placeholder,
+			wantLen: 1,
+	placeholder,
+		{
+			name: "interval with only CacheWritePrice kept",
+			intervals: []PricingInterval{
+				{MinTokens: 0, CacheWritePrice: testPtrFloat64(3e-6)placeholder,
+		placeholder,
+			wantLen: 1,
+	placeholder,
+		{
+			name: "interval with only CacheReadPrice kept",
+			intervals: []PricingInterval{
+				{MinTokens: 0, CacheReadPrice: testPtrFloat64(0.5e-6)placeholder,
+		placeholder,
+			wantLen: 1,
+	placeholder,
+		{
+			name: "interval with only PerRequestPrice kept",
+			intervals: []PricingInterval{
+				{TierLabel: "1K", PerRequestPrice: testPtrFloat64(0.04)placeholder,
+		placeholder,
+			wantLen: 1,
+	placeholder,
+		{
+			name: "mixed valid and invalid",
+			intervals: []PricingInterval{
+				{MinTokens: 0, MaxTokens: testPtrInt(128000), InputPrice: testPtrFloat64(1e-6)placeholder,
+				{MinTokens: 128000, MaxTokens: nilplaceholder, // all-nil → filtered out
+				{MinTokens: 256000, OutputPrice: testPtrFloat64(5e-6)placeholder,
+		placeholder,
+			wantLen: 2,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := filterValidIntervals(tt.intervals)
+			require.Len(t, result, tt.wantLen)
+	placeholder)
+placeholder
+placeholder
