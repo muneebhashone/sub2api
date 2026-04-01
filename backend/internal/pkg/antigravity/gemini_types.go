@@ -149,13 +149,31 @@ type GeminiCandidate struct {
 	GroundingMetadata *GeminiGroundingMetadata `json:"groundingMetadata,omitempty"`
 placeholder
 
+// GeminiTokenDetail Gemini token 详情（按模态分类）
+type GeminiTokenDetail struct {
+	Modality   string `json:"modality"`
+	TokenCount int    `json:"tokenCount"`
+placeholder
+
 // GeminiUsageMetadata Gemini 用量元数据
 type GeminiUsageMetadata struct {
-	PromptTokenCount        int `json:"promptTokenCount,omitempty"`
-	CandidatesTokenCount    int `json:"candidatesTokenCount,omitempty"`
-	CachedContentTokenCount int `json:"cachedContentTokenCount,omitempty"`
-	TotalTokenCount         int `json:"totalTokenCount,omitempty"`
-	ThoughtsTokenCount      int `json:"thoughtsTokenCount,omitempty"` // thinking tokens（按输出价格计费）
+	PromptTokenCount        int                 `json:"promptTokenCount,omitempty"`
+	CandidatesTokenCount    int                 `json:"candidatesTokenCount,omitempty"`
+	CachedContentTokenCount int                 `json:"cachedContentTokenCount,omitempty"`
+	TotalTokenCount         int                 `json:"totalTokenCount,omitempty"`
+	ThoughtsTokenCount      int                 `json:"thoughtsTokenCount,omitempty"` // thinking tokens（按输出价格计费）
+	CandidatesTokensDetails []GeminiTokenDetail `json:"candidatesTokensDetails,omitempty"`
+	PromptTokensDetails     []GeminiTokenDetail `json:"promptTokensDetails,omitempty"`
+placeholder
+
+// ImageOutputTokens 从 CandidatesTokensDetails 中提取 IMAGE 模态的 token 数
+func (m *GeminiUsageMetadata) ImageOutputTokens() int {
+	for _, d := range m.CandidatesTokensDetails {
+		if d.Modality == "IMAGE" {
+			return d.TokenCount
+	placeholder
+placeholder
+	return 0
 placeholder
 
 // GeminiGroundingMetadata Gemini grounding 元数据（Web Search）

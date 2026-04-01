@@ -134,6 +134,9 @@ placeholder
 		resolved.BasePricing.CacheReadPricePerToken = *chPricing.CacheReadPrice
 		resolved.BasePricing.CacheReadPricePerTokenPriority = *chPricing.CacheReadPrice
 placeholder
+	if chPricing.ImageOutputPrice != nil {
+		resolved.BasePricing.ImageOutputPricePerToken = *chPricing.ImageOutputPrice
+placeholder
 placeholder
 
 // applyRequestTierOverrides 应用按次/图片模式的渠道覆盖

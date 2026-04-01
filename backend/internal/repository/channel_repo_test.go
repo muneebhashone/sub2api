@@ -97,7 +97,7 @@ placeholder{
 			wantNil: true,
 	placeholder,
 		{
-			name: "valid JSON",
+			name:  "valid JSON",
 			input: []byte(`{"openai":{"gpt-4":"gpt-4-turbo"placeholder,"anthropic":{"old":"new"placeholderplaceholder`),
 			want: map[string]map[string]string{
 				"openai":    {"gpt-4": "gpt-4-turbo"placeholder,
