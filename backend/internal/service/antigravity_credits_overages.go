@@ -140,6 +140,10 @@ placeholder
 placeholder); err != nil {
 		logger.LegacyPrintf("service.antigravity_gateway", "clear credits exhausted failed: account=%d err=%v", account.ID, err)
 placeholder
+	// 同步更新 Redis 调度快照，避免其他节点/请求延迟感知
+	if s.schedulerSnapshot != nil {
+		_ = s.schedulerSnapshot.UpdateAccountInCache(ctx, account)
+placeholder
 placeholder
 
 // classifyAntigravity429 将 Antigravity 的 429 响应归类为配额耗尽、限流或未知。
