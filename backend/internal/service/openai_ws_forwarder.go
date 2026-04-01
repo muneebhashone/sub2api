@@ -2515,12 +2515,9 @@ placeholder
 		placeholder
 			normalized = next
 	placeholder
-		mappedModel := account.GetMappedModel(originalModel)
-		if normalizedModel := normalizeCodexModel(mappedModel); normalizedModel != "" {
-			mappedModel = normalizedModel
-	placeholder
-		if mappedModel != originalModel {
-			next, setErr := applyPayloadMutation(normalized, "model", mappedModel)
+		upstreamModel := resolveOpenAIUpstreamModel(account.GetMappedModel(originalModel))
+		if upstreamModel != originalModel {
+			next, setErr := applyPayloadMutation(normalized, "model", upstreamModel)
 			if setErr != nil {
 				return openAIWSClientPayload{placeholder, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", setErr)
 		placeholder
@@ -2776,10 +2773,7 @@ placeholder
 		mappedModel := ""
 		var mappedModelBytes []byte
 		if originalModel != "" {
-			mappedModel = account.GetMappedModel(originalModel)
-			if normalizedModel := normalizeCodexModel(mappedModel); normalizedModel != "" {
-				mappedModel = normalizedModel
-		placeholder
+			mappedModel = resolveOpenAIUpstreamModel(account.GetMappedModel(originalModel))
 			needModelReplace = mappedModel != "" && mappedModel != originalModel
 			if needModelReplace {
 				mappedModelBytes = []byte(mappedModel)
