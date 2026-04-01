@@ -176,7 +176,11 @@ placeholder)
 	if err != nil {
 		return nil, err
 placeholder
-	return result.(*channelCache), nil
+	cache, ok := result.(*channelCache)
+	if !ok {
+		return nil, fmt.Errorf("unexpected cache type")
+placeholder
+	return cache, nil
 placeholder
 
 // buildCache 从数据库构建渠道缓存。

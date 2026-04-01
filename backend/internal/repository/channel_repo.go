@@ -443,7 +443,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("get group platforms: %w", err)
 placeholder
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 
 	result := make(map[int64]string, len(groupIDs))
 	for rows.Next() {
