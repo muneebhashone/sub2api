@@ -4290,7 +4290,7 @@ placeholder
 		billingMode := cost.BillingMode
 		usageLog.BillingMode = &billingMode
 placeholder else {
-		billingMode := "token"
+		billingMode := string(BillingModeToken)
 		usageLog.BillingMode = &billingMode
 placeholder
 	// 添加 UserAgent
