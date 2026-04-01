@@ -326,6 +326,7 @@
 import { ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
+import { formatCacheTokens, formatMultiplier placeholder from '@/utils/formatters'
 import { formatTokenPricePerMillion placeholder from '@/utils/usagePricing'
 import { getUsageServiceTierLabel placeholder from '@/utils/usageServiceTier'
 import { resolveUsageRequestType placeholder from '@/utils/usageRequestType'
@@ -376,19 +377,6 @@ const getBillingModeBadgeClass = (mode: string | null | undefined): string => {
   return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
 placeholder
 
-const formatCacheTokens = (tokens: number): string => {
-  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)placeholderM`
-  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)placeholderK`
-  return tokens.toString()
-placeholder
-
-// 自适应精度：保留足够位数显示有效数字（如 0.001 → "0.001"，1.5 → "1.50"）
-const formatMultiplier = (val: number): string => {
-  if (val >= 0.01) return val.toFixed(2)
-  if (val >= 0.001) return val.toFixed(3)
-  if (val >= 0.0001) return val.toFixed(4)
-  return val.toPrecision(2)
-placeholder
 
 const formatUserAgent = (ua: string): string => {
   return ua

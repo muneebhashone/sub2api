@@ -504,6 +504,7 @@ import type { UsageLog, ApiKey, UsageQueryParams, UsageStatsResponse placeholder
 import type { Column placeholder from '@/components/common/types'
 import { formatDateTime, formatReasoningEffort placeholder from '@/utils/format'
 import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
+import { formatCacheTokens, formatMultiplier placeholder from '@/utils/formatters'
 import { formatTokenPricePerMillion placeholder from '@/utils/usagePricing'
 import { getUsageServiceTierLabel placeholder from '@/utils/usageServiceTier'
 import { resolveUsageRequestType placeholder from '@/utils/usageRequestType'
@@ -659,22 +660,6 @@ const formatTokens = (value: number): string => {
   return value.toLocaleString()
 placeholder
 
-// Compact format for cache tokens in table cells
-const formatCacheTokens = (value: number): string => {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)placeholderM`
-  placeholder else if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)placeholderK`
-  placeholder
-  return value.toLocaleString()
-placeholder
-
-const formatMultiplier = (val: number): string => {
-  if (val >= 0.01) return val.toFixed(2)
-  if (val >= 0.001) return val.toFixed(3)
-  if (val >= 0.0001) return val.toFixed(4)
-  return val.toPrecision(2)
-placeholder
 
 const loadUsageLogs = async () => {
   if (abortController) {
