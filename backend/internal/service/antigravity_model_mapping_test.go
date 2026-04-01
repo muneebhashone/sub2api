@@ -268,6 +268,12 @@ placeholder{
 			requestedModel: "gemini-2.5-flash",
 			expected:       "gemini-2.5-flash",
 	placeholder,
+		{
+			name:           "customtools alias falls back to normalized preview mapping",
+			modelMapping:   map[string]any{"gemini-3.1-pro-preview": "gemini-3.1-pro-high"placeholder,
+			requestedModel: "gemini-3.1-pro-preview-customtools",
+			expected:       "gemini-3.1-pro-high",
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
