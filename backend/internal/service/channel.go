@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -175,6 +177,94 @@ placeholder
 	placeholder
 placeholder
 	return &cp
+placeholder
+
+// ValidateIntervals 校验区间列表的合法性。
+// 规则：MinTokens >= 0；MaxTokens 若非 nil 则 > 0 且 > MinTokens；
+// 所有价格字段 >= 0；区间按 MinTokens 排序后无重叠（(min, max] 语义）；
+// 无界区间（MaxTokens=nil）必须是最后一个。间隙允许（回退默认价格）。
+func ValidateIntervals(intervals []PricingInterval) error {
+	if len(intervals) == 0 {
+		return nil
+placeholder
+	sorted := make([]PricingInterval, len(intervals))
+	copy(sorted, intervals)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].MinTokens < sorted[j].MinTokens
+placeholder)
+
+	for i := range sorted {
+		if err := validateSingleInterval(&sorted[i], i); err != nil {
+			return err
+	placeholder
+placeholder
+	return validateIntervalOverlap(sorted)
+placeholder
+
+// validateSingleInterval 校验单个区间的字段合法性
+func validateSingleInterval(iv *PricingInterval, idx int) error {
+	if iv.MinTokens < 0 {
+		return fmt.Errorf("interval #%d: min_tokens (%d) must be >= 0", idx+1, iv.MinTokens)
+placeholder
+	if iv.MaxTokens != nil {
+		if *iv.MaxTokens <= 0 {
+			return fmt.Errorf("interval #%d: max_tokens (%d) must be > 0", idx+1, *iv.MaxTokens)
+	placeholder
+		if *iv.MaxTokens <= iv.MinTokens {
+			return fmt.Errorf("interval #%d: max_tokens (%d) must be > min_tokens (%d)",
+				idx+1, *iv.MaxTokens, iv.MinTokens)
+	placeholder
+placeholder
+	return validateIntervalPrices(iv, idx)
+placeholder
+
+// validateIntervalPrices 校验区间内所有价格字段 >= 0
+func validateIntervalPrices(iv *PricingInterval, idx int) error {
+	prices := []struct {
+		name string
+		val  *float64
+placeholder{
+		{"input_price", iv.InputPriceplaceholder,
+		{"output_price", iv.OutputPriceplaceholder,
+		{"cache_write_price", iv.CacheWritePriceplaceholder,
+		{"cache_read_price", iv.CacheReadPriceplaceholder,
+		{"per_request_price", iv.PerRequestPriceplaceholder,
+placeholder
+	for _, p := range prices {
+		if p.val != nil && *p.val < 0 {
+			return fmt.Errorf("interval #%d: %s must be >= 0", idx+1, p.name)
+	placeholder
+placeholder
+	return nil
+placeholder
+
+// validateIntervalOverlap 校验排序后的区间列表无重叠，且无界区间在最后
+func validateIntervalOverlap(sorted []PricingInterval) error {
+	for i, iv := range sorted {
+		// 无界区间必须是最后一个
+		if iv.MaxTokens == nil && i < len(sorted)-1 {
+			return fmt.Errorf("interval #%d: unbounded interval (max_tokens=null) must be the last one",
+				i+1)
+	placeholder
+		if i == 0 {
+			continue
+	placeholder
+		prev := sorted[i-1]
+		// 检查重叠：前一个区间的上界 > 当前区间的下界则重叠
+		// (min, max] 语义：prev 覆盖 (prev.Min, prev.Max]，cur 覆盖 (cur.Min, cur.Max]
+		if prev.MaxTokens == nil || *prev.MaxTokens > iv.MinTokens {
+			return fmt.Errorf("interval #%d and #%d overlap: prev max=%s > cur min=%d",
+				i, i+1, formatMaxTokensLabel(prev.MaxTokens), iv.MinTokens)
+	placeholder
+placeholder
+	return nil
+placeholder
+
+func formatMaxTokensLabel(max *int) string {
+	if max == nil {
+		return "∞"
+placeholder
+	return fmt.Sprintf("%d", *max)
 placeholder
 
 // ChannelUsageFields 渠道相关的使用记录字段（嵌入到各平台的 RecordUsageInput 中）
