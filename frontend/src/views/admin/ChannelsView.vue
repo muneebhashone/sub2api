@@ -499,6 +499,9 @@ const activeTab = ref<string>('basic')
 const allGroups = ref<AdminGroup[]>([])
 const groupsLoading = ref(false)
 
+// All channels for group-conflict detection (independent of current page)
+const allChannelsForConflict = ref<Channel[]>([])
+
 // Form data
 const form = reactive({
   name: '',
@@ -575,7 +578,7 @@ placeholder
 // ── Group helpers ──
 const groupToChannelMap = computed(() => {
   const map = new Map<number, Channel>()
-  for (const ch of channels.value) {
+  for (const ch of allChannelsForConflict.value) {
     if (editingChannel.value && ch.id === editingChannel.value.id) continue
     for (const gid of ch.group_ids || []) {
       map.set(gid, ch)
@@ -794,6 +797,16 @@ async function loadGroups() {
   placeholder
 placeholder
 
+async function loadAllChannelsForConflict() {
+  try {
+    const response = await adminAPI.channels.list(1, 1000)
+    allChannelsForConflict.value = response.items || []
+  placeholder catch (error) {
+    // Fallback to current page data
+    allChannelsForConflict.value = channels.value
+  placeholder
+placeholder
+
 let searchTimeout: ReturnType<typeof setTimeout>
 function handleSearch() {
   clearTimeout(searchTimeout)
@@ -828,7 +841,7 @@ placeholder
 async function openCreateDialog() {
   editingChannel.value = null
   resetForm()
-  await loadGroups()
+  await Promise.all([loadGroups(), loadAllChannelsForConflict()])
   showDialog.value = true
 placeholder
 
@@ -840,7 +853,7 @@ async function openEditDialog(channel: Channel) {
   form.restrict_models = channel.restrict_models || false
   form.billing_model_source = channel.billing_model_source || 'channel_mapped'
   // Must load groups first so apiToForm can map groupID → platform
-  await loadGroups()
+  await Promise.all([loadGroups(), loadAllChannelsForConflict()])
   form.platforms = apiToForm(channel)
   showDialog.value = true
 placeholder
@@ -985,7 +998,12 @@ async function toggleChannelStatus(channel: Channel) {
   const newStatus = channel.status === 'active' ? 'disabled' : 'active'
   try {
     await adminAPI.channels.update(channel.id, { status: newStatus placeholder)
-    channel.status = newStatus
+    if (filters.status && filters.status !== newStatus) {
+      // Item no longer matches the active filter — reload list
+      await loadChannels()
+    placeholder else {
+      channel.status = newStatus
+    placeholder
   placeholder catch (error) {
     appStore.showError(t('admin.channels.updateError', 'Failed to update channel'))
     console.error('Error toggling channel status:', error)
