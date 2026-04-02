@@ -76,32 +76,38 @@ placeholder)
 	assert.Equal(t, http.StatusBadRequest, code)
 placeholder
 
-func TestCreateAndRedeem_SubscriptionRequiresPositiveValidityDays(t *testing.T) {
+func TestCreateAndRedeem_SubscriptionRequiresNonZeroValidityDays(t *testing.T) {
 	groupID := int64(5)
 	h := newCreateAndRedeemHandler()
 
-	cases := []struct {
-		name         string
-		validityDays int
-placeholder{
-		{"zero", 0placeholder,
-		{"negative", -1placeholder,
-placeholder
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			code := postCreateAndRedeemValidation(t, h, map[string]any{
-				"code":          "test-sub-bad-days-" + tc.name,
-				"type":          "subscription",
-				"value":         29.9,
-				"user_id":       1,
-				"group_id":      groupID,
-				"validity_days": tc.validityDays,
-		placeholder)
-
-			assert.Equal(t, http.StatusBadRequest, code)
+	// zero should be rejected
+	t.Run("zero", func(t *testing.T) {
+		code := postCreateAndRedeemValidation(t, h, map[string]any{
+			"code":          "test-sub-bad-days-zero",
+			"type":          "subscription",
+			"value":         29.9,
+			"user_id":       1,
+			"group_id":      groupID,
+			"validity_days": 0,
 	placeholder)
-placeholder
+
+		assert.Equal(t, http.StatusBadRequest, code)
+placeholder)
+
+	// negative should pass validation (used for refund/reduction)
+	t.Run("negative_passes_validation", func(t *testing.T) {
+		code := postCreateAndRedeemValidation(t, h, map[string]any{
+			"code":          "test-sub-negative-days",
+			"type":          "subscription",
+			"value":         29.9,
+			"user_id":       1,
+			"group_id":      groupID,
+			"validity_days": -7,
+	placeholder)
+
+		assert.NotEqual(t, http.StatusBadRequest, code,
+			"negative validity_days should pass validation for refund")
+placeholder)
 placeholder
 
 func TestCreateAndRedeem_SubscriptionValidParamsPassValidation(t *testing.T) {
