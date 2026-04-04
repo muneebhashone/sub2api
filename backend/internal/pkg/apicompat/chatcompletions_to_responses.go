@@ -27,13 +27,12 @@ placeholder
 placeholder
 
 	out := &ResponsesRequest{
-		Model:        req.Model,
-		Instructions: req.Instructions,
-		Input:        inputJSON,
-		Temperature:  req.Temperature,
-		TopP:         req.TopP,
-		Stream:       true, // upstream always streams
-		Include:      []string{"reasoning.encrypted_content"placeholder,
+		Model:       req.Model,
+		Input:       inputJSON,
+		Temperature: req.Temperature,
+		TopP:        req.TopP,
+		Stream:      true, // upstream always streams
+		Include:     []string{"reasoning.encrypted_content"placeholder,
 		ServiceTier:  req.ServiceTier,
 placeholder
 
