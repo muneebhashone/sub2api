@@ -1,0 +1,148 @@
+/**
+ * Admin Channels API endpoints
+ * Handles channel management for administrators
+ */
+
+import { apiClient placeholder from '../client'
+
+export type BillingMode = 'token' | 'per_request' | 'image'
+
+export interface PricingInterval {
+  id?: number
+  min_tokens: number
+  max_tokens: number | null
+  tier_label: string
+  input_price: number | null
+  output_price: number | null
+  cache_write_price: number | null
+  cache_read_price: number | null
+  per_request_price: number | null
+  sort_order: number
+placeholder
+
+export interface ChannelModelPricing {
+  id?: number
+  platform: string
+  models: string[]
+  billing_mode: BillingMode
+  input_price: number | null
+  output_price: number | null
+  cache_write_price: number | null
+  cache_read_price: number | null
+  image_output_price: number | null
+  per_request_price: number | null
+  intervals: PricingInterval[]
+placeholder
+
+export interface Channel {
+  id: number
+  name: string
+  description: string
+  status: string
+  billing_model_source: string // "requested" | "upstream"
+  restrict_models: boolean
+  group_ids: number[]
+  model_pricing: ChannelModelPricing[]
+  model_mapping: Record<string, Record<string, string>> // platform → {src→dstplaceholder
+  created_at: string
+  updated_at: string
+placeholder
+
+export interface CreateChannelRequest {
+  name: string
+  description?: string
+  group_ids?: number[]
+  model_pricing?: ChannelModelPricing[]
+  model_mapping?: Record<string, Record<string, string>>
+  billing_model_source?: string
+  restrict_models?: boolean
+placeholder
+
+export interface UpdateChannelRequest {
+  name?: string
+  description?: string
+  status?: string
+  group_ids?: number[]
+  model_pricing?: ChannelModelPricing[]
+  model_mapping?: Record<string, Record<string, string>>
+  billing_model_source?: string
+  restrict_models?: boolean
+placeholder
+
+interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+placeholder
+
+/**
+ * List channels with pagination
+ */
+export async function list(
+  page: number = 1,
+  pageSize: number = 20,
+  filters?: {
+    status?: string
+    search?: string
+  placeholder,
+  options?: { signal?: AbortSignal placeholder
+): Promise<PaginatedResponse<Channel>> {
+  const { data placeholder = await apiClient.get<PaginatedResponse<Channel>>('/admin/channels', {
+    params: {
+      page,
+      page_size: pageSize,
+      ...filters
+    placeholder,
+    signal: options?.signal
+  placeholder)
+  return data
+placeholder
+
+/**
+ * Get channel by ID
+ */
+export async function getById(id: number): Promise<Channel> {
+  const { data placeholder = await apiClient.get<Channel>(`/admin/channels/${idplaceholder`)
+  return data
+placeholder
+
+/**
+ * Create a new channel
+ */
+export async function create(req: CreateChannelRequest): Promise<Channel> {
+  const { data placeholder = await apiClient.post<Channel>('/admin/channels', req)
+  return data
+placeholder
+
+/**
+ * Update a channel
+ */
+export async function update(id: number, req: UpdateChannelRequest): Promise<Channel> {
+  const { data placeholder = await apiClient.put<Channel>(`/admin/channels/${idplaceholder`, req)
+  return data
+placeholder
+
+/**
+ * Delete a channel
+ */
+export async function remove(id: number): Promise<void> {
+  await apiClient.delete(`/admin/channels/${idplaceholder`)
+placeholder
+
+export interface ModelDefaultPricing {
+  found: boolean
+  input_price?: number    // per-token price
+  output_price?: number
+  cache_write_price?: number
+  cache_read_price?: number
+  image_output_price?: number
+placeholder
+
+export async function getModelDefaultPricing(model: string): Promise<ModelDefaultPricing> {
+  const { data placeholder = await apiClient.get<ModelDefaultPricing>('/admin/channels/model-pricing', {
+    params: { model placeholder
+  placeholder)
+  return data
+placeholder
+
+const channelsAPI = { list, getById, create, update, remove, getModelDefaultPricing placeholder
+export default channelsAPI
