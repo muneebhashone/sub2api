@@ -33,7 +33,7 @@ placeholder
 		TopP:        req.TopP,
 		Stream:      true, // upstream always streams
 		Include:     []string{"reasoning.encrypted_content"placeholder,
-		ServiceTier:  req.ServiceTier,
+		ServiceTier: req.ServiceTier,
 placeholder
 
 	storeFalse := false
