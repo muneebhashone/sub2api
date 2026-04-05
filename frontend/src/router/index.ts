@@ -202,18 +202,6 @@ const routes: RouteRecordRaw[] = [
     placeholder
   placeholder,
   {
-    path: '/sora',
-    name: 'Sora',
-    component: () => import('@/views/user/SoraView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: false,
-      title: 'Sora',
-      titleKey: 'sora.title',
-      descriptionKey: 'sora.description'
-    placeholder
-  placeholder,
-  {
     path: '/custom/:id',
     name: 'CustomPage',
     component: () => import('@/views/user/CustomPageView.vue'),
