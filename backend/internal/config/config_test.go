@@ -1554,7 +1554,6 @@ placeholder
 placeholder
 placeholder
 
-
 func TestLoad_DefaultGatewayUsageRecordConfig(t *testing.T) {
 	resetViperWithJWTSecret(t)
 	cfg, err := Load()
