@@ -4277,7 +4277,7 @@ placeholder
 	if result.BillingModel != "" {
 		billingModel = strings.TrimSpace(result.BillingModel)
 placeholder
-	if input.BillingModelSource == BillingModelSourceChannelMapped && input.ChannelMappedModel != "" {
+	if input.BillingModelSource == BillingModelSourceChannelMapped && input.ChannelMappedModel != "" && input.ChannelMappedModel != input.OriginalModel {
 		billingModel = input.ChannelMappedModel
 placeholder
 	if input.BillingModelSource == BillingModelSourceRequested && input.OriginalModel != "" {
