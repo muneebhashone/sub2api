@@ -395,11 +395,6 @@ placeholder
 		{Name: "image_price_1k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "image_price_2k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "image_price_4k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
-		{Name: "sora_image_price_360", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
-		{Name: "sora_image_price_540", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
-		{Name: "sora_video_price_per_request", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
-		{Name: "sora_video_price_per_request_hd", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
-		{Name: "sora_storage_quota_bytes", Type: field.TypeInt64, Default: 0placeholder,
 		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "fallback_group_id_on_invalid_request", Type: field.TypeInt64, Nullable: trueplaceholder,
@@ -447,7 +442,7 @@ placeholder
 			{
 				Name:    "group_sort_order",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[30]placeholder,
+				Columns: []*schema.Column{GroupsColumns[25]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -770,7 +765,6 @@ placeholder
 		{Name: "ip_address", Type: field.TypeString, Nullable: true, Size: 45placeholder,
 		{Name: "image_count", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "image_size", Type: field.TypeString, Nullable: true, Size: 10placeholder,
-		{Name: "media_type", Type: field.TypeString, Nullable: true, Size: 16placeholder,
 		{Name: "cache_ttl_overridden", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "api_key_id", Type: field.TypeInt64placeholder,
@@ -787,31 +781,31 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[34]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[33]placeholder,
 				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[35]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[34]placeholder,
 				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[36]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[35]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[37]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[36]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[38]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[37]placeholder,
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -820,32 +814,32 @@ placeholder
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[37]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[36]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[34]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[33]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[35]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[34]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[36]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[35]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[38]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[37]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[33]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[32]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_model",
@@ -865,17 +859,17 @@ placeholder
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[37], UsageLogsColumns[33]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[36], UsageLogsColumns[32]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[34], UsageLogsColumns[33]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[33], UsageLogsColumns[32]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[36], UsageLogsColumns[33]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[35], UsageLogsColumns[32]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -896,8 +890,6 @@ placeholder
 		{Name: "totp_secret_encrypted", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "totp_enabled", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "totp_enabled_at", Type: field.TypeTime, Nullable: trueplaceholder,
-		{Name: "sora_storage_quota_bytes", Type: field.TypeInt64, Default: 0placeholder,
-		{Name: "sora_storage_used_bytes", Type: field.TypeInt64, Default: 0placeholder,
 placeholder
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
