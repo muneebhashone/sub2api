@@ -134,7 +134,7 @@ placeholder
 
 const (
 	channelCacheTTL       = 10 * time.Minute
-	channelErrorTTL       = 5 * time.Second  // DB 错误时的短缓存
+	channelErrorTTL       = 5 * time.Second // DB 错误时的短缓存
 	channelCacheDBTimeout = 10 * time.Second
 )
 
