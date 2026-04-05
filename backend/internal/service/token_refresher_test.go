@@ -243,12 +243,6 @@ placeholder{
 			want:     true,
 	placeholder,
 		{
-			name:     "sora oauth - cannot refresh directly",
-			platform: PlatformSora,
-			accType:  AccountTypeOAuth,
-			want:     false,
-	placeholder,
-		{
 			name:     "openai apikey - cannot refresh",
 			platform: PlatformOpenAI,
 			accType:  AccountTypeAPIKey,

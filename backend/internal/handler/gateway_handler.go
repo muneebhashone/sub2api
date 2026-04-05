@@ -859,14 +859,6 @@ placeholder
 		platform = forcedPlatform
 placeholder
 
-	if platform == service.PlatformSora {
-		c.JSON(http.StatusOK, gin.H{
-			"object": "list",
-			"data":   service.DefaultSoraModels(h.cfg),
-	placeholder)
-		return
-placeholder
-
 	// Get available models from account configurations (without platform filter)
 	availableModels := h.gatewayService.GetAvailableModels(c.Request.Context(), groupID, "")
 

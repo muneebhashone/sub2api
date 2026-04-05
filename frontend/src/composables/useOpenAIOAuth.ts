@@ -22,7 +22,7 @@ export interface OpenAITokenInfo {
   [key: string]: unknown
 placeholder
 
-export type OpenAIOAuthPlatform = 'openai' | 'sora'
+export type OpenAIOAuthPlatform = 'openai'
 
 interface UseOpenAIOAuthOptions {
   platform?: OpenAIOAuthPlatform
@@ -31,7 +31,7 @@ placeholder
 export function useOpenAIOAuth(options?: UseOpenAIOAuthOptions) {
   const appStore = useAppStore()
   const oauthPlatform = options?.platform ?? 'openai'
-  const endpointPrefix = oauthPlatform === 'sora' ? '/admin/sora' : '/admin/openai'
+  const endpointPrefix = '/admin/openai'
 
   // State
   const authUrl = ref('')
@@ -160,33 +160,6 @@ export function useOpenAIOAuth(options?: UseOpenAIOAuthOptions) {
     placeholder
   placeholder
 
-  // Validate Sora session token and get access token
-  const validateSessionToken = async (
-    sessionToken: string,
-    proxyId?: number | null
-  ): Promise<OpenAITokenInfo | null> => {
-    if (!sessionToken.trim()) {
-      error.value = 'Missing session token'
-      return null
-    placeholder
-    loading.value = true
-    error.value = ''
-    try {
-      const tokenInfo = await adminAPI.accounts.validateSoraSessionToken(
-        sessionToken.trim(),
-        proxyId,
-        `${endpointPrefixplaceholder/st2at`
-      )
-      return tokenInfo as OpenAITokenInfo
-    placeholder catch (err: any) {
-      error.value = err.response?.data?.detail || 'Failed to validate session token'
-      appStore.showError(error.value)
-      return null
-    placeholder finally {
-      loading.value = false
-    placeholder
-  placeholder
-
   // Build credentials for OpenAI OAuth account (aligned with backend BuildAccountCredentials)
   const buildCredentials = (tokenInfo: OpenAITokenInfo): Record<string, unknown> => {
     const creds: Record<string, unknown> = {
@@ -250,7 +223,6 @@ export function useOpenAIOAuth(options?: UseOpenAIOAuthOptions) {
     generateAuthUrl,
     exchangeAuthCode,
     validateRefreshToken,
-    validateSessionToken,
     buildCredentials,
     buildExtraInfo
   placeholder
