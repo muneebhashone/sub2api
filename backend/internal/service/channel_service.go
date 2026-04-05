@@ -584,6 +584,7 @@ placeholder
 		GroupIDs:           input.GroupIDs,
 		ModelPricing:       input.ModelPricing,
 		ModelMapping:       input.ModelMapping,
+		Features:           input.Features,
 placeholder
 	if channel.BillingModelSource == "" {
 		channel.BillingModelSource = BillingModelSourceChannelMapped
@@ -640,6 +641,9 @@ placeholder
 
 	if input.RestrictModels != nil {
 		channel.RestrictModels = *input.RestrictModels
+placeholder
+	if input.Features != nil {
+		channel.Features = *input.Features
 placeholder
 
 	// 检查分组冲突
@@ -842,6 +846,7 @@ type CreateChannelInput struct {
 	ModelMapping       map[string]map[string]string // platform → {src→dstplaceholder
 	BillingModelSource string
 	RestrictModels     bool
+	Features           string
 placeholder
 
 // UpdateChannelInput 更新渠道输入
@@ -854,4 +859,5 @@ type UpdateChannelInput struct {
 	ModelMapping       map[string]map[string]string // platform → {src→dstplaceholder
 	BillingModelSource string
 	RestrictModels     *bool
+	Features           *string
 placeholder

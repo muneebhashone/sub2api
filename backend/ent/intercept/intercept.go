@@ -336,6 +336,7 @@ placeholder
 	return fmt.Errorf("unexpected query type %T. expect *ent.PaymentAuditLogQuery", q)
 placeholder
 
+
 // The PaymentOrderFunc type is an adapter to allow the use of ordinary function as a Querier.
 type PaymentOrderFunc func(context.Context, *ent.PaymentOrderQuery) (ent.Value, error)
 

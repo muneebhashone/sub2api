@@ -2,13 +2,16 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
+	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
 const (
@@ -23,8 +26,6 @@ const (
 	SettingBalancePayDisabled  = "BALANCE_PAYMENT_DISABLED"
 	SettingProductNamePrefix   = "PRODUCT_NAME_PREFIX"
 	SettingProductNameSuffix   = "PRODUCT_NAME_SUFFIX"
-	SettingHelpImageURL        = "PAYMENT_HELP_IMAGE_URL"
-	SettingHelpText            = "PAYMENT_HELP_TEXT"
 	SettingCancelRateLimitOn   = "CANCEL_RATE_LIMIT_ENABLED"
 	SettingCancelRateLimitMax  = "CANCEL_RATE_LIMIT_MAX"
 	SettingCancelWindowSize    = "CANCEL_RATE_LIMIT_WINDOW"
@@ -32,126 +33,91 @@ const (
 	SettingCancelWindowMode    = "CANCEL_RATE_LIMIT_WINDOW_MODE"
 )
 
-// Default values for payment configuration settings.
-const (
-	defaultOrderTimeoutMin  = 30
-	defaultMaxPendingOrders = 3
-)
-
 // PaymentConfig holds the payment system configuration.
 type PaymentConfig struct {
-	Enabled              bool     `json:"enabled"`
-	MinAmount            float64  `json:"min_amount"`
-	MaxAmount            float64  `json:"max_amount"`
-	DailyLimit           float64  `json:"daily_limit"`
-	OrderTimeoutMin      int      `json:"order_timeout_minutes"`
-	MaxPendingOrders     int      `json:"max_pending_orders"`
-	EnabledTypes         []string `json:"enabled_payment_types"`
-	BalanceDisabled      bool     `json:"balance_disabled"`
-	LoadBalanceStrategy  string   `json:"load_balance_strategy"`
-	ProductNamePrefix    string   `json:"product_name_prefix"`
-	ProductNameSuffix    string   `json:"product_name_suffix"`
-	HelpImageURL         string   `json:"help_image_url"`
-	HelpText             string   `json:"help_text"`
-	StripePublishableKey string   `json:"stripe_publishable_key,omitempty"`
-
-	// Cancel rate limit settings
-	CancelRateLimitEnabled bool   `json:"cancel_rate_limit_enabled"`
-	CancelRateLimitMax     int    `json:"cancel_rate_limit_max"`
-	CancelRateLimitWindow  int    `json:"cancel_rate_limit_window"`
-	CancelRateLimitUnit    string `json:"cancel_rate_limit_unit"`
-	CancelRateLimitMode    string `json:"cancel_rate_limit_window_mode"`
+	Enabled             bool     `json:"enabled"`
+	MinAmount           float64  `json:"minAmount"`
+	MaxAmount           float64  `json:"maxAmount"`
+	DailyLimit          float64  `json:"dailyLimit"`
+	OrderTimeoutMin     int      `json:"orderTimeoutMinutes"`
+	MaxPendingOrders    int      `json:"maxPendingOrders"`
+	EnabledTypes        []string `json:"enabledTypes"`
+	BalanceDisabled     bool     `json:"balanceDisabled"`
+	LoadBalanceStrategy string   `json:"loadBalanceStrategy"`
+	ProductNamePrefix   string   `json:"productNamePrefix"`
+	ProductNameSuffix   string   `json:"productNameSuffix"`
 placeholder
 
 // UpdatePaymentConfigRequest contains fields to update payment configuration.
 type UpdatePaymentConfigRequest struct {
 	Enabled             *bool    `json:"enabled"`
-	MinAmount           *float64 `json:"min_amount"`
-	MaxAmount           *float64 `json:"max_amount"`
-	DailyLimit          *float64 `json:"daily_limit"`
-	OrderTimeoutMin     *int     `json:"order_timeout_minutes"`
-	MaxPendingOrders    *int     `json:"max_pending_orders"`
-	EnabledTypes        []string `json:"enabled_payment_types"`
-	BalanceDisabled     *bool    `json:"balance_disabled"`
-	LoadBalanceStrategy *string  `json:"load_balance_strategy"`
-	ProductNamePrefix   *string  `json:"product_name_prefix"`
-	ProductNameSuffix   *string  `json:"product_name_suffix"`
-	HelpImageURL        *string  `json:"help_image_url"`
-	HelpText            *string  `json:"help_text"`
-
-	// Cancel rate limit settings
-	CancelRateLimitEnabled *bool   `json:"cancel_rate_limit_enabled"`
-	CancelRateLimitMax     *int    `json:"cancel_rate_limit_max"`
-	CancelRateLimitWindow  *int    `json:"cancel_rate_limit_window"`
-	CancelRateLimitUnit    *string `json:"cancel_rate_limit_unit"`
-	CancelRateLimitMode    *string `json:"cancel_rate_limit_window_mode"`
+	MinAmount           *float64 `json:"minAmount"`
+	MaxAmount           *float64 `json:"maxAmount"`
+	DailyLimit          *float64 `json:"dailyLimit"`
+	OrderTimeoutMin     *int     `json:"orderTimeoutMinutes"`
+	MaxPendingOrders    *int     `json:"maxPendingOrders"`
+	EnabledTypes        []string `json:"enabledTypes"`
+	BalanceDisabled     *bool    `json:"balanceDisabled"`
+	LoadBalanceStrategy *string  `json:"loadBalanceStrategy"`
+	ProductNamePrefix   *string  `json:"productNamePrefix"`
+	ProductNameSuffix   *string  `json:"productNameSuffix"`
 placeholder
 
 // MethodLimits holds per-payment-type limits.
 type MethodLimits struct {
-	PaymentType string  `json:"payment_type"`
-	FeeRate     float64 `json:"fee_rate"`
-	DailyLimit  float64 `json:"daily_limit"`
-	SingleMin   float64 `json:"single_min"`
-	SingleMax   float64 `json:"single_max"`
-placeholder
-
-// MethodLimitsResponse is the full response for the user-facing /limits API.
-// It includes per-method limits and the global widest range (union of all methods).
-type MethodLimitsResponse struct {
-	Methods   map[string]MethodLimits `json:"methods"`
-	GlobalMin float64                 `json:"global_min"` // 0 = no minimum
-	GlobalMax float64                 `json:"global_max"` // 0 = no maximum
+	PaymentType string  `json:"paymentType"`
+	FeeRate     float64 `json:"feeRate"`
+	DailyLimit  float64 `json:"dailyLimit"`
+	SingleMin   float64 `json:"singleMin"`
+	SingleMax   float64 `json:"singleMax"`
 placeholder
 
 type CreateProviderInstanceRequest struct {
-	ProviderKey    string            `json:"provider_key"`
+	ProviderKey    string            `json:"providerKey"`
 	Name           string            `json:"name"`
 	Config         map[string]string `json:"config"`
-	SupportedTypes []string          `json:"supported_types"`
+	SupportedTypes string            `json:"supportedTypes"`
 	Enabled        bool              `json:"enabled"`
-	PaymentMode    string            `json:"payment_mode"`
-	SortOrder      int               `json:"sort_order"`
+	SortOrder      int               `json:"sortOrder"`
 	Limits         string            `json:"limits"`
-	RefundEnabled  bool              `json:"refund_enabled"`
+	RefundEnabled  bool              `json:"refundEnabled"`
 placeholder
 
 type UpdateProviderInstanceRequest struct {
 	Name           *string           `json:"name"`
 	Config         map[string]string `json:"config"`
-	SupportedTypes []string          `json:"supported_types"`
+	SupportedTypes *string           `json:"supportedTypes"`
 	Enabled        *bool             `json:"enabled"`
-	PaymentMode    *string           `json:"payment_mode"`
-	SortOrder      *int              `json:"sort_order"`
+	SortOrder      *int              `json:"sortOrder"`
 	Limits         *string           `json:"limits"`
-	RefundEnabled  *bool             `json:"refund_enabled"`
+	RefundEnabled  *bool             `json:"refundEnabled"`
 placeholder
 type CreatePlanRequest struct {
-	GroupID       int64    `json:"group_id"`
+	GroupID       int64    `json:"groupId"`
 	Name          string   `json:"name"`
 	Description   string   `json:"description"`
 	Price         float64  `json:"price"`
-	OriginalPrice *float64 `json:"original_price"`
-	ValidityDays  int      `json:"validity_days"`
-	ValidityUnit  string   `json:"validity_unit"`
+	OriginalPrice *float64 `json:"originalPrice"`
+	ValidityDays  int      `json:"validityDays"`
+	ValidityUnit  string   `json:"validityUnit"`
 	Features      string   `json:"features"`
-	ProductName   string   `json:"product_name"`
-	ForSale       bool     `json:"for_sale"`
-	SortOrder     int      `json:"sort_order"`
+	ProductName   string   `json:"productName"`
+	ForSale       bool     `json:"forSale"`
+	SortOrder     int      `json:"sortOrder"`
 placeholder
 
 type UpdatePlanRequest struct {
-	GroupID       *int64   `json:"group_id"`
+	GroupID       *int64   `json:"groupId"`
 	Name          *string  `json:"name"`
 	Description   *string  `json:"description"`
 	Price         *float64 `json:"price"`
-	OriginalPrice *float64 `json:"original_price"`
-	ValidityDays  *int     `json:"validity_days"`
-	ValidityUnit  *string  `json:"validity_unit"`
+	OriginalPrice *float64 `json:"originalPrice"`
+	ValidityDays  *int     `json:"validityDays"`
+	ValidityUnit  *string  `json:"validityUnit"`
 	Features      *string  `json:"features"`
-	ProductName   *string  `json:"product_name"`
-	ForSale       *bool    `json:"for_sale"`
-	SortOrder     *int     `json:"sort_order"`
+	ProductName   *string  `json:"productName"`
+	ForSale       *bool    `json:"forSale"`
+	SortOrder     *int     `json:"sortOrder"`
 placeholder
 
 // PaymentConfigService manages payment configuration and CRUD for
@@ -183,43 +149,29 @@ func (s *PaymentConfigService) GetPaymentConfig(ctx context.Context) (*PaymentCo
 		SettingDailyRechargeLimit, SettingOrderTimeoutMinutes, SettingMaxPendingOrders,
 		SettingEnabledPaymentTypes, SettingBalancePayDisabled, SettingLoadBalanceStrategy,
 		SettingProductNamePrefix, SettingProductNameSuffix,
-		SettingHelpImageURL, SettingHelpText,
-		SettingCancelRateLimitOn, SettingCancelRateLimitMax,
-		SettingCancelWindowSize, SettingCancelWindowUnit, SettingCancelWindowMode,
 placeholder
 	vals, err := s.settingRepo.GetMultiple(ctx, keys)
 	if err != nil {
 		return nil, fmt.Errorf("get payment config settings: %w", err)
 placeholder
-	cfg := s.parsePaymentConfig(vals)
-	// Load Stripe publishable key from the first enabled Stripe provider instance
-	cfg.StripePublishableKey = s.getStripePublishableKey(ctx)
-	return cfg, nil
+	return s.parsePaymentConfig(vals), nil
 placeholder
 
 func (s *PaymentConfigService) parsePaymentConfig(vals map[string]string) *PaymentConfig {
 	cfg := &PaymentConfig{
 		Enabled:             vals[SettingPaymentEnabled] == "true",
 		MinAmount:           pcParseFloat(vals[SettingMinRechargeAmount], 1),
-		MaxAmount:           pcParseFloat(vals[SettingMaxRechargeAmount], 0),
+		MaxAmount:           pcParseFloat(vals[SettingMaxRechargeAmount], 99999999.99),
 		DailyLimit:          pcParseFloat(vals[SettingDailyRechargeLimit], 0),
-		OrderTimeoutMin:     pcParseInt(vals[SettingOrderTimeoutMinutes], defaultOrderTimeoutMin),
-		MaxPendingOrders:    pcParseInt(vals[SettingMaxPendingOrders], defaultMaxPendingOrders),
+		OrderTimeoutMin:     pcParseInt(vals[SettingOrderTimeoutMinutes], 30),
+		MaxPendingOrders:    pcParseInt(vals[SettingMaxPendingOrders], 3),
 		BalanceDisabled:     vals[SettingBalancePayDisabled] == "true",
 		LoadBalanceStrategy: vals[SettingLoadBalanceStrategy],
 		ProductNamePrefix:   vals[SettingProductNamePrefix],
 		ProductNameSuffix:   vals[SettingProductNameSuffix],
-		HelpImageURL:        vals[SettingHelpImageURL],
-		HelpText:            vals[SettingHelpText],
-
-		CancelRateLimitEnabled: vals[SettingCancelRateLimitOn] == "true",
-		CancelRateLimitMax:     pcParseInt(vals[SettingCancelRateLimitMax], 10),
-		CancelRateLimitWindow:  pcParseInt(vals[SettingCancelWindowSize], 1),
-		CancelRateLimitUnit:    vals[SettingCancelWindowUnit],
-		CancelRateLimitMode:    vals[SettingCancelWindowMode],
 placeholder
 	if cfg.LoadBalanceStrategy == "" {
-		cfg.LoadBalanceStrategy = payment.DefaultLoadBalanceStrategy
+		cfg.LoadBalanceStrategy = "round-robin"
 placeholder
 	if raw := vals[SettingEnabledPaymentTypes]; raw != "" {
 		for _, t := range strings.Split(raw, ",") {
@@ -232,100 +184,242 @@ placeholder
 	return cfg
 placeholder
 
-// getStripePublishableKey finds the publishable key from the first enabled Stripe provider instance.
-func (s *PaymentConfigService) getStripePublishableKey(ctx context.Context) string {
-	instances, err := s.entClient.PaymentProviderInstance.Query().
-		Where(
-			paymentproviderinstance.EnabledEQ(true),
-			paymentproviderinstance.ProviderKeyEQ(payment.TypeStripe),
-		).Limit(1).All(ctx)
-	if err != nil || len(instances) == 0 {
-		return ""
-placeholder
-	cfg, err := s.decryptConfig(instances[0].Config)
-	if err != nil || cfg == nil {
-		return ""
-placeholder
-	return cfg[payment.ConfigKeyPublishableKey]
-placeholder
-
 // UpdatePaymentConfig updates the payment configuration settings.
-// NOTE: This function exceeds 30 lines because each field requires an independent
-// nil-check before serialisation — this is inherent to patch-style update patterns
-// and cannot be meaningfully decomposed without introducing unnecessary abstraction.
 func (s *PaymentConfigService) UpdatePaymentConfig(ctx context.Context, req UpdatePaymentConfigRequest) error {
-	m := map[string]string{
-		SettingPaymentEnabled:      formatBoolOrEmpty(req.Enabled),
-		SettingMinRechargeAmount:   formatPositiveFloat(req.MinAmount),
-		SettingMaxRechargeAmount:   formatPositiveFloat(req.MaxAmount),
-		SettingDailyRechargeLimit:  formatPositiveFloat(req.DailyLimit),
-		SettingOrderTimeoutMinutes: formatPositiveInt(req.OrderTimeoutMin),
-		SettingMaxPendingOrders:    formatPositiveInt(req.MaxPendingOrders),
-		SettingBalancePayDisabled:  formatBoolOrEmpty(req.BalanceDisabled),
-		SettingLoadBalanceStrategy: derefStr(req.LoadBalanceStrategy),
-		SettingProductNamePrefix:   derefStr(req.ProductNamePrefix),
-		SettingProductNameSuffix:   derefStr(req.ProductNameSuffix),
-		SettingHelpImageURL:        derefStr(req.HelpImageURL),
-		SettingHelpText:            derefStr(req.HelpText),
-		SettingCancelRateLimitOn:   formatBoolOrEmpty(req.CancelRateLimitEnabled),
-		SettingCancelRateLimitMax:  formatPositiveInt(req.CancelRateLimitMax),
-		SettingCancelWindowSize:    formatPositiveInt(req.CancelRateLimitWindow),
-		SettingCancelWindowUnit:    derefStr(req.CancelRateLimitUnit),
-		SettingCancelWindowMode:    derefStr(req.CancelRateLimitMode),
+	m := make(map[string]string)
+	if req.Enabled != nil {
+		m[SettingPaymentEnabled] = strconv.FormatBool(*req.Enabled)
+placeholder
+	if req.MinAmount != nil {
+		m[SettingMinRechargeAmount] = strconv.FormatFloat(*req.MinAmount, 'f', 2, 64)
+placeholder
+	if req.MaxAmount != nil {
+		m[SettingMaxRechargeAmount] = strconv.FormatFloat(*req.MaxAmount, 'f', 2, 64)
+placeholder
+	if req.DailyLimit != nil {
+		m[SettingDailyRechargeLimit] = strconv.FormatFloat(*req.DailyLimit, 'f', 2, 64)
+placeholder
+	if req.OrderTimeoutMin != nil {
+		m[SettingOrderTimeoutMinutes] = strconv.Itoa(*req.OrderTimeoutMin)
+placeholder
+	if req.MaxPendingOrders != nil {
+		m[SettingMaxPendingOrders] = strconv.Itoa(*req.MaxPendingOrders)
 placeholder
 	if req.EnabledTypes != nil {
 		m[SettingEnabledPaymentTypes] = strings.Join(req.EnabledTypes, ",")
-placeholder else {
-		m[SettingEnabledPaymentTypes] = ""
+placeholder
+	if req.BalanceDisabled != nil {
+		m[SettingBalancePayDisabled] = strconv.FormatBool(*req.BalanceDisabled)
+placeholder
+	if req.LoadBalanceStrategy != nil {
+		m[SettingLoadBalanceStrategy] = *req.LoadBalanceStrategy
+placeholder
+	if req.ProductNamePrefix != nil {
+		m[SettingProductNamePrefix] = *req.ProductNamePrefix
+placeholder
+	if req.ProductNameSuffix != nil {
+		m[SettingProductNameSuffix] = *req.ProductNameSuffix
+placeholder
+	if len(m) == 0 {
+		return nil
 placeholder
 	return s.settingRepo.SetMultiple(ctx, m)
 placeholder
 
-func formatBoolOrEmpty(v *bool) string {
-	if v == nil {
-		return ""
-placeholder
-	return strconv.FormatBool(*v)
+// --- Provider Instance CRUD ---
+
+func (s *PaymentConfigService) ListProviderInstances(ctx context.Context) ([]*dbent.PaymentProviderInstance, error) {
+	return s.entClient.PaymentProviderInstance.Query().Order(paymentproviderinstance.BySortOrder()).All(ctx)
 placeholder
 
-func formatPositiveFloat(v *float64) string {
-	if v == nil || *v <= 0 {
-		return "" // empty → parsePaymentConfig uses default
+func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req CreateProviderInstanceRequest) (*dbent.PaymentProviderInstance, error) {
+	enc, err := s.encryptConfig(req.Config)
+	if err != nil {
+		return nil, err
 placeholder
-	return strconv.FormatFloat(*v, 'f', 2, 64)
-placeholder
-
-func formatPositiveInt(v *int) string {
-	if v == nil || *v <= 0 {
-		return ""
-placeholder
-	return strconv.Itoa(*v)
+	return s.entClient.PaymentProviderInstance.Create().
+		SetProviderKey(req.ProviderKey).SetName(req.Name).SetConfig(enc).
+		SetSupportedTypes(req.SupportedTypes).SetEnabled(req.Enabled).
+		SetSortOrder(req.SortOrder).SetLimits(req.Limits).SetRefundEnabled(req.RefundEnabled).
+		Save(ctx)
 placeholder
 
-func derefStr(v *string) string {
-	if v == nil {
-		return ""
+func (s *PaymentConfigService) UpdateProviderInstance(ctx context.Context, id int64, req UpdateProviderInstanceRequest) (*dbent.PaymentProviderInstance, error) {
+	u := s.entClient.PaymentProviderInstance.UpdateOneID(id)
+	if req.Name != nil {
+		u.SetName(*req.Name)
 placeholder
-	return *v
+	if req.Config != nil {
+		enc, err := s.encryptConfig(req.Config)
+		if err != nil {
+			return nil, err
+	placeholder
+		u.SetConfig(enc)
+placeholder
+	if req.SupportedTypes != nil {
+		u.SetSupportedTypes(*req.SupportedTypes)
+placeholder
+	if req.Enabled != nil {
+		u.SetEnabled(*req.Enabled)
+placeholder
+	if req.SortOrder != nil {
+		u.SetSortOrder(*req.SortOrder)
+placeholder
+	if req.Limits != nil {
+		u.SetLimits(*req.Limits)
+placeholder
+	if req.RefundEnabled != nil {
+		u.SetRefundEnabled(*req.RefundEnabled)
+placeholder
+	return u.Save(ctx)
 placeholder
 
-func splitTypes(s string) []string {
-	if s == "" {
-		return nil
+func (s *PaymentConfigService) DeleteProviderInstance(ctx context.Context, id int64) error {
+	return s.entClient.PaymentProviderInstance.DeleteOneID(id).Exec(ctx)
 placeholder
-	parts := strings.Split(s, ",")
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			result = append(result, p)
+
+func (s *PaymentConfigService) encryptConfig(cfg map[string]string) (string, error) {
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		return "", fmt.Errorf("marshal config: %w", err)
+placeholder
+	enc, err := payment.Encrypt(string(data), s.encryptionKey)
+	if err != nil {
+		return "", fmt.Errorf("encrypt config: %w", err)
+placeholder
+	return enc, nil
+placeholder
+
+// --- Channel CRUD ---
+
+
+// --- Plan CRUD ---
+
+func (s *PaymentConfigService) ListPlans(ctx context.Context) ([]*dbent.SubscriptionPlan, error) {
+	return s.entClient.SubscriptionPlan.Query().Order(subscriptionplan.BySortOrder()).All(ctx)
+placeholder
+
+func (s *PaymentConfigService) ListPlansForSale(ctx context.Context) ([]*dbent.SubscriptionPlan, error) {
+	return s.entClient.SubscriptionPlan.Query().Where(subscriptionplan.ForSaleEQ(true)).Order(subscriptionplan.BySortOrder()).All(ctx)
+placeholder
+
+func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanRequest) (*dbent.SubscriptionPlan, error) {
+	b := s.entClient.SubscriptionPlan.Create().
+		SetGroupID(req.GroupID).SetName(req.Name).SetDescription(req.Description).
+		SetPrice(req.Price).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
+		SetFeatures(req.Features).SetProductName(req.ProductName).
+		SetForSale(req.ForSale).SetSortOrder(req.SortOrder)
+	if req.OriginalPrice != nil {
+		b.SetOriginalPrice(*req.OriginalPrice)
+placeholder
+	return b.Save(ctx)
+placeholder
+
+func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req UpdatePlanRequest) (*dbent.SubscriptionPlan, error) {
+	u := s.entClient.SubscriptionPlan.UpdateOneID(id)
+	if req.GroupID != nil {
+		u.SetGroupID(*req.GroupID)
+placeholder
+	if req.Name != nil {
+		u.SetName(*req.Name)
+placeholder
+	if req.Description != nil {
+		u.SetDescription(*req.Description)
+placeholder
+	if req.Price != nil {
+		u.SetPrice(*req.Price)
+placeholder
+	if req.OriginalPrice != nil {
+		u.SetOriginalPrice(*req.OriginalPrice)
+placeholder
+	if req.ValidityDays != nil {
+		u.SetValidityDays(*req.ValidityDays)
+placeholder
+	if req.ValidityUnit != nil {
+		u.SetValidityUnit(*req.ValidityUnit)
+placeholder
+	if req.Features != nil {
+		u.SetFeatures(*req.Features)
+placeholder
+	if req.ProductName != nil {
+		u.SetProductName(*req.ProductName)
+placeholder
+	if req.ForSale != nil {
+		u.SetForSale(*req.ForSale)
+placeholder
+	if req.SortOrder != nil {
+		u.SetSortOrder(*req.SortOrder)
+placeholder
+	return u.Save(ctx)
+placeholder
+
+func (s *PaymentConfigService) DeletePlan(ctx context.Context, id int64) error {
+	return s.entClient.SubscriptionPlan.DeleteOneID(id).Exec(ctx)
+placeholder
+
+// GetPlan returns a subscription plan by ID.
+func (s *PaymentConfigService) GetPlan(ctx context.Context, id int64) (*dbent.SubscriptionPlan, error) {
+	plan, err := s.entClient.SubscriptionPlan.Get(ctx, id)
+	if err != nil {
+		return nil, infraerrors.NotFound("PLAN_NOT_FOUND", "subscription plan not found")
+placeholder
+	return plan, nil
+placeholder
+
+// GetMethodLimits returns per-payment-type limits from enabled provider instances.
+func (s *PaymentConfigService) GetMethodLimits(ctx context.Context, types []string) ([]MethodLimits, error) {
+	instances, err := s.entClient.PaymentProviderInstance.Query().
+		Where(paymentproviderinstance.EnabledEQ(true)).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query provider instances: %w", err)
+placeholder
+	result := make([]MethodLimits, 0, len(types))
+	for _, pt := range types {
+		ml := MethodLimits{PaymentType: ptplaceholder
+		for _, inst := range instances {
+			if !pcInstanceSupportsType(inst, pt) {
+				continue
+		placeholder
+			pcApplyInstanceLimits(inst, pt, &ml)
+	placeholder
+		result = append(result, ml)
+placeholder
+	return result, nil
+placeholder
+
+func pcInstanceSupportsType(inst *dbent.PaymentProviderInstance, pt string) bool {
+	if inst.SupportedTypes == "" {
+		return true
+placeholder
+	for _, t := range strings.Split(inst.SupportedTypes, ",") {
+		if strings.TrimSpace(t) == pt {
+			return true
 	placeholder
 placeholder
-	return result
+	return false
 placeholder
 
-func joinTypes(types []string) string {
-	return strings.Join(types, ",")
+func pcApplyInstanceLimits(inst *dbent.PaymentProviderInstance, pt string, ml *MethodLimits) {
+	if inst.Limits == "" {
+		return
+placeholder
+	var limits payment.InstanceLimits
+	if err := json.Unmarshal([]byte(inst.Limits), &limits); err != nil {
+		return
+placeholder
+	cl, ok := limits[pt]
+	if !ok {
+		return
+placeholder
+	if cl.DailyLimit > 0 && (ml.DailyLimit == 0 || cl.DailyLimit < ml.DailyLimit) {
+		ml.DailyLimit = cl.DailyLimit
+placeholder
+	if cl.SingleMin > 0 && (ml.SingleMin == 0 || cl.SingleMin > ml.SingleMin) {
+		ml.SingleMin = cl.SingleMin
+placeholder
+	if cl.SingleMax > 0 && (ml.SingleMax == 0 || cl.SingleMax < ml.SingleMax) {
+		ml.SingleMax = cl.SingleMax
+placeholder
 placeholder
 
 func pcParseFloat(s string, defaultVal float64) float64 {
