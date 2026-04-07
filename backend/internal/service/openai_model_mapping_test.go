@@ -99,3 +99,39 @@ placeholder
 	placeholder
 placeholder
 placeholder
+
+func TestNormalizeOpenAIModelForUpstream(t *testing.T) {
+	tests := []struct {
+		name    string
+		account *Account
+		model   string
+		want    string
+placeholder{
+		{
+			name:    "oauth keeps codex normalization behavior",
+			account: &Account{Type: AccountTypeOAuthplaceholder,
+			model:   "gemini-3-flash-preview",
+			want:    "gpt-5.1",
+	placeholder,
+		{
+			name:    "apikey preserves custom compatible model",
+			account: &Account{Type: AccountTypeAPIKeyplaceholder,
+			model:   "gemini-3-flash-preview",
+			want:    "gemini-3-flash-preview",
+	placeholder,
+		{
+			name:    "apikey preserves official non codex model",
+			account: &Account{Type: AccountTypeAPIKeyplaceholder,
+			model:   "gpt-4.1",
+			want:    "gpt-4.1",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := normalizeOpenAIModelForUpstream(tt.account, tt.model); got != tt.want {
+				t.Fatalf("normalizeOpenAIModelForUpstream(...) = %q, want %q", got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder

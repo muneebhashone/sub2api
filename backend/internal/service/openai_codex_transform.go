@@ -275,6 +275,13 @@ placeholder
 	return "gpt-5.1"
 placeholder
 
+func normalizeOpenAIModelForUpstream(account *Account, model string) string {
+	if account == nil || account.Type == AccountTypeOAuth {
+		return normalizeCodexModel(model)
+placeholder
+	return strings.TrimSpace(model)
+placeholder
+
 func SupportsVerbosity(model string) bool {
 	if !strings.HasPrefix(model, "gpt-") {
 		return true
