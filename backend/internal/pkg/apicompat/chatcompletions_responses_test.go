@@ -876,3 +876,182 @@ placeholder
 		assert.Equal(t, "resp_rt", c.ID)
 placeholder
 placeholder
+
+// ---------------------------------------------------------------------------
+// BufferedResponseAccumulator tests
+// ---------------------------------------------------------------------------
+
+func TestBufferedResponseAccumulator_TextOnly(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.output_text.delta", Delta: "Hello"placeholder)
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.output_text.delta", Delta: ", world!"placeholder)
+
+	assert.True(t, acc.HasContent())
+
+	output := acc.BuildOutput()
+	require.Len(t, output, 1)
+	assert.Equal(t, "message", output[0].Type)
+	assert.Equal(t, "assistant", output[0].Role)
+	require.Len(t, output[0].Content, 1)
+	assert.Equal(t, "output_text", output[0].Content[0].Type)
+	assert.Equal(t, "Hello, world!", output[0].Content[0].Text)
+placeholder
+
+func TestBufferedResponseAccumulator_ToolCalls(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+
+	// Add function call at output_index=1
+	acc.ProcessEvent(&ResponsesStreamEvent{
+		Type:        "response.output_item.added",
+		OutputIndex: 1,
+		Item: &ResponsesOutput{
+			Type:   "function_call",
+			CallID: "call_abc",
+			Name:   "get_weather",
+	placeholder,
+placeholder)
+	acc.ProcessEvent(&ResponsesStreamEvent{
+		Type:        "response.function_call_arguments.delta",
+		OutputIndex: 1,
+		Delta:       `{"city":`,
+placeholder)
+	acc.ProcessEvent(&ResponsesStreamEvent{
+		Type:        "response.function_call_arguments.delta",
+		OutputIndex: 1,
+		Delta:       `"NYC"placeholder`,
+placeholder)
+
+	assert.True(t, acc.HasContent())
+
+	output := acc.BuildOutput()
+	require.Len(t, output, 1)
+	assert.Equal(t, "function_call", output[0].Type)
+	assert.Equal(t, "call_abc", output[0].CallID)
+	assert.Equal(t, "get_weather", output[0].Name)
+	assert.Equal(t, `{"city":"NYC"placeholder`, output[0].Arguments)
+placeholder
+
+func TestBufferedResponseAccumulator_Reasoning(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.reasoning_summary_text.delta", Delta: "Step 1: "placeholder)
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.reasoning_summary_text.delta", Delta: "think about it"placeholder)
+
+	assert.True(t, acc.HasContent())
+
+	output := acc.BuildOutput()
+	require.Len(t, output, 1)
+	assert.Equal(t, "reasoning", output[0].Type)
+	require.Len(t, output[0].Summary, 1)
+	assert.Equal(t, "summary_text", output[0].Summary[0].Type)
+	assert.Equal(t, "Step 1: think about it", output[0].Summary[0].Text)
+placeholder
+
+func TestBufferedResponseAccumulator_Mixed(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+
+	// Reasoning first
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.reasoning_summary_text.delta", Delta: "I thought about it."placeholder)
+
+	// Then text
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.output_text.delta", Delta: "The answer is 42."placeholder)
+
+	// Then a tool call
+	acc.ProcessEvent(&ResponsesStreamEvent{
+		Type:        "response.output_item.added",
+		OutputIndex: 2,
+		Item: &ResponsesOutput{
+			Type:   "function_call",
+			CallID: "call_1",
+			Name:   "verify",
+	placeholder,
+placeholder)
+	acc.ProcessEvent(&ResponsesStreamEvent{
+		Type:        "response.function_call_arguments.delta",
+		OutputIndex: 2,
+		Delta:       `{placeholder`,
+placeholder)
+
+	assert.True(t, acc.HasContent())
+
+	output := acc.BuildOutput()
+	// Order: reasoning → message → function_calls
+	require.Len(t, output, 3)
+	assert.Equal(t, "reasoning", output[0].Type)
+	assert.Equal(t, "message", output[1].Type)
+	assert.Equal(t, "function_call", output[2].Type)
+	assert.Equal(t, "The answer is 42.", output[1].Content[0].Text)
+	assert.Equal(t, "verify", output[2].Name)
+placeholder
+
+func TestBufferedResponseAccumulator_SupplementEmptyOutput(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.output_text.delta", Delta: "Hello"placeholder)
+
+	resp := &ResponsesResponse{
+		ID:     "resp_1",
+		Status: "completed",
+		Output: nil, // empty output
+		Usage:  &ResponsesUsage{InputTokens: 10, OutputTokens: 5placeholder,
+placeholder
+
+	acc.SupplementResponseOutput(resp)
+
+	require.Len(t, resp.Output, 1)
+	assert.Equal(t, "message", resp.Output[0].Type)
+	assert.Equal(t, "Hello", resp.Output[0].Content[0].Text)
+	// Usage should be untouched
+	assert.Equal(t, 10, resp.Usage.InputTokens)
+placeholder
+
+func TestBufferedResponseAccumulator_NoSupplementWhenOutputExists(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.output_text.delta", Delta: "from deltas"placeholder)
+
+	resp := &ResponsesResponse{
+		ID:     "resp_2",
+		Status: "completed",
+		Output: []ResponsesOutput{
+			{
+				Type: "message",
+				Content: []ResponsesContentPart{
+					{Type: "output_text", Text: "from terminal event"placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	acc.SupplementResponseOutput(resp)
+
+	// Output should NOT be overwritten
+	require.Len(t, resp.Output, 1)
+	assert.Equal(t, "from terminal event", resp.Output[0].Content[0].Text)
+placeholder
+
+func TestBufferedResponseAccumulator_EmptyDeltas(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+
+	// Process events with empty delta — should not accumulate
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.output_text.delta", Delta: ""placeholder)
+	acc.ProcessEvent(&ResponsesStreamEvent{Type: "response.created"placeholder)
+
+	assert.False(t, acc.HasContent())
+
+	resp := &ResponsesResponse{ID: "resp_3", Status: "completed"placeholder
+	acc.SupplementResponseOutput(resp)
+	assert.Nil(t, resp.Output)
+placeholder
+
+func TestBufferedResponseAccumulator_IgnoresNonFunctionCallItems(t *testing.T) {
+	acc := NewBufferedResponseAccumulator()
+
+	// output_item.added with type "message" should be ignored
+	acc.ProcessEvent(&ResponsesStreamEvent{
+		Type:        "response.output_item.added",
+		OutputIndex: 0,
+		Item:        &ResponsesOutput{Type: "message"placeholder,
+placeholder)
+
+	assert.False(t, acc.HasContent())
+placeholder
