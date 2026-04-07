@@ -1527,6 +1527,18 @@ placeholder
 		if !validScopes[rule.Scope] {
 			return fmt.Errorf("rule[%d]: invalid scope %q", i, rule.Scope)
 	placeholder
+		// Validate model_whitelist patterns
+		for j, pattern := range rule.ModelWhitelist {
+			trimmed := strings.TrimSpace(pattern)
+			if trimmed == "" {
+				return fmt.Errorf("rule[%d]: model_whitelist[%d] cannot be empty", i, j)
+		placeholder
+			settings.Rules[i].ModelWhitelist[j] = trimmed
+	placeholder
+		// Validate fallback_action
+		if rule.FallbackAction != "" && !validActions[rule.FallbackAction] {
+			return fmt.Errorf("rule[%d]: invalid fallback_action %q", i, rule.FallbackAction)
+	placeholder
 placeholder
 
 	data, err := json.Marshal(settings)
