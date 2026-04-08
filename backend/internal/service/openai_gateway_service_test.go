@@ -1797,7 +1797,7 @@ placeholder, "\n")
 	require.Contains(t, string(finalResp), `"input_tokens":11`)
 placeholder
 
-func TestHandleOAuthSSEToJSON_CompletedEventReturnsJSON(t *testing.T) {
+func TestHandleSSEToJSON_CompletedEventReturnsJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -1814,7 +1814,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleOAuthSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
 placeholder
 	require.NotNil(t, usage)
 	require.Equal(t, 7, usage.InputTokens)
@@ -1826,7 +1826,7 @@ placeholder
 	require.NotContains(t, rec.Body.String(), "data:")
 placeholder
 
-func TestHandleOAuthSSEToJSON_NoFinalResponseKeepsSSEBody(t *testing.T) {
+func TestHandleSSEToJSON_NoFinalResponseKeepsSSEBody(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -1842,7 +1842,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleOAuthSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
 placeholder
 	require.NotNil(t, usage)
 	require.Equal(t, 0, usage.InputTokens)
@@ -1850,7 +1850,7 @@ placeholder
 	require.Contains(t, rec.Body.String(), `data: {"type":"response.in_progress"`)
 placeholder
 
-func TestHandleOAuthSSEToJSON_ResponseFailedReturnsProtocolError(t *testing.T) {
+func TestHandleSSEToJSON_ResponseFailedReturnsProtocolError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -1866,7 +1866,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleOAuthSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
 	require.Nil(t, usage)
 placeholder
 	require.Equal(t, http.StatusBadGateway, rec.Code)
