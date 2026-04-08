@@ -730,13 +730,14 @@ placeholder
 	placeholder)
 placeholder
 
-	if len(funcDecls) == 0 {
-		if !hasWebSearch {
-			return nil
-	placeholder
-
-		// Web Search 工具映射
-		return []GeminiToolDeclaration{{
+	var declarations []GeminiToolDeclaration
+	if len(funcDecls) > 0 {
+		declarations = append(declarations, GeminiToolDeclaration{
+			FunctionDeclarations: funcDecls,
+	placeholder)
+placeholder
+	if hasWebSearch {
+		declarations = append(declarations, GeminiToolDeclaration{
 			GoogleSearch: &GeminiGoogleSearch{
 				EnhancedContent: &GeminiEnhancedContent{
 					ImageSearch: &GeminiImageSearch{
@@ -744,10 +745,11 @@ placeholder
 				placeholder,
 			placeholder,
 		placeholder,
-	placeholderplaceholder
+	placeholder)
+placeholder
+	if len(declarations) == 0 {
+		return nil
 placeholder
 
-	return []GeminiToolDeclaration{{
-		FunctionDeclarations: funcDecls,
-placeholderplaceholder
+	return declarations
 placeholder

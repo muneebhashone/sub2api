@@ -612,7 +612,8 @@ placeholder
 				fullURL += "?alt=sse"
 		placeholder
 
-			upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(geminiReq))
+			restGeminiReq := normalizeGeminiRequestForAIStudio(geminiReq)
+			upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(restGeminiReq))
 			if err != nil {
 				return nil, "", err
 		placeholder
@@ -685,7 +686,8 @@ placeholder
 					fullURL += "?alt=sse"
 			placeholder
 
-				upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(geminiReq))
+				restGeminiReq := normalizeGeminiRequestForAIStudio(geminiReq)
+				upstreamReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(restGeminiReq))
 				if err != nil {
 					return nil, "", err
 			placeholder
@@ -3184,10 +3186,15 @@ func convertClaudeToolsToGeminiTools(tools any) []any {
 		return nil
 placeholder
 
+	hasWebSearch := false
 	funcDecls := make([]any, 0, len(arr))
 	for _, t := range arr {
 		tm, ok := t.(map[string]any)
 		if !ok {
+			continue
+	placeholder
+		if isClaudeWebSearchToolMap(tm) {
+			hasWebSearch = true
 			continue
 	placeholder
 
@@ -3233,13 +3240,75 @@ placeholder
 	placeholder)
 placeholder
 
-	if len(funcDecls) == 0 {
+	out := make([]any, 0, 2)
+	if len(funcDecls) > 0 {
+		out = append(out, map[string]any{
+			"functionDeclarations": funcDecls,
+	placeholder)
+placeholder
+	if hasWebSearch {
+		out = append(out, map[string]any{
+			"googleSearch": map[string]any{placeholder,
+	placeholder)
+placeholder
+	if len(out) == 0 {
 		return nil
 placeholder
-	return []any{
-		map[string]any{
-			"functionDeclarations": funcDecls,
-	placeholder,
+	return out
+placeholder
+
+func normalizeGeminiRequestForAIStudio(body []byte) []byte {
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return body
+placeholder
+
+	tools, ok := payload["tools"].([]any)
+	if !ok || len(tools) == 0 {
+		return body
+placeholder
+
+	modified := false
+	for _, rawTool := range tools {
+		tool, ok := rawTool.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		googleSearch, ok := tool["googleSearch"]
+		if !ok {
+			continue
+	placeholder
+		if _, exists := tool["google_search"]; exists {
+			continue
+	placeholder
+		tool["google_search"] = googleSearch
+		delete(tool, "googleSearch")
+		modified = true
+placeholder
+
+	if !modified {
+		return body
+placeholder
+
+	normalized, err := json.Marshal(payload)
+	if err != nil {
+		return body
+placeholder
+	return normalized
+placeholder
+
+func isClaudeWebSearchToolMap(tool map[string]any) bool {
+	toolType, _ := tool["type"].(string)
+	if strings.HasPrefix(toolType, "web_search") || toolType == "google_search" {
+		return true
+placeholder
+
+	name, _ := tool["name"].(string)
+	switch strings.TrimSpace(name) {
+	case "web_search", "google_search", "web_search_20250305":
+		return true
+	default:
+		return false
 placeholder
 placeholder
 
