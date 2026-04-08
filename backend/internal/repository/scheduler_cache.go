@@ -15,19 +15,39 @@ const (
 	schedulerBucketSetKey       = "sched:buckets"
 	schedulerOutboxWatermarkKey = "sched:outbox:watermark"
 	schedulerAccountPrefix      = "sched:acc:"
+	schedulerAccountMetaPrefix  = "sched:meta:"
 	schedulerActivePrefix       = "sched:active:"
 	schedulerReadyPrefix        = "sched:ready:"
 	schedulerVersionPrefix      = "sched:ver:"
 	schedulerSnapshotPrefix     = "sched:"
 	schedulerLockPrefix         = "sched:lock:"
+
+	defaultSchedulerSnapshotMGetChunkSize  = 128
+	defaultSchedulerSnapshotWriteChunkSize = 256
 )
 
 type schedulerCache struct {
-	rdb *redis.Client
+	rdb            *redis.Client
+	mgetChunkSize  int
+	writeChunkSize int
 placeholder
 
 func NewSchedulerCache(rdb *redis.Client) service.SchedulerCache {
-	return &schedulerCache{rdb: rdbplaceholder
+	return newSchedulerCacheWithChunkSizes(rdb, defaultSchedulerSnapshotMGetChunkSize, defaultSchedulerSnapshotWriteChunkSize)
+placeholder
+
+func newSchedulerCacheWithChunkSizes(rdb *redis.Client, mgetChunkSize, writeChunkSize int) service.SchedulerCache {
+	if mgetChunkSize <= 0 {
+		mgetChunkSize = defaultSchedulerSnapshotMGetChunkSize
+placeholder
+	if writeChunkSize <= 0 {
+		writeChunkSize = defaultSchedulerSnapshotWriteChunkSize
+placeholder
+	return &schedulerCache{
+		rdb:            rdb,
+		mgetChunkSize:  mgetChunkSize,
+		writeChunkSize: writeChunkSize,
+placeholder
 placeholder
 
 func (c *schedulerCache) GetSnapshot(ctx context.Context, bucket service.SchedulerBucket) ([]*service.Account, bool, error) {
@@ -65,9 +85,9 @@ placeholder
 
 	keys := make([]string, 0, len(ids))
 	for _, id := range ids {
-		keys = append(keys, schedulerAccountKey(id))
+		keys = append(keys, schedulerAccountMetaKey(id))
 placeholder
-	values, err := c.rdb.MGet(ctx, keys...).Result()
+	values, err := c.mgetChunked(ctx, keys)
 	if err != nil {
 		return nil, false, err
 placeholder
@@ -100,14 +120,11 @@ placeholder
 	versionStr := strconv.FormatInt(version, 10)
 	snapshotKey := schedulerSnapshotKey(bucket, versionStr)
 
-	pipe := c.rdb.Pipeline()
-	for _, account := range accounts {
-		payload, err := json.Marshal(account)
-		if err != nil {
-			return err
-	placeholder
-		pipe.Set(ctx, schedulerAccountKey(strconv.FormatInt(account.ID, 10)), payload, 0)
+	if err := c.writeAccounts(ctx, accounts); err != nil {
+		return err
 placeholder
+
+	pipe := c.rdb.Pipeline()
 	if len(accounts) > 0 {
 		// 使用序号作为 score，保持数据库返回的排序语义。
 		members := make([]redis.Z, 0, len(accounts))
@@ -117,7 +134,13 @@ placeholder
 				Member: strconv.FormatInt(account.ID, 10),
 		placeholder)
 	placeholder
-		pipe.ZAdd(ctx, snapshotKey, members...)
+		for start := 0; start < len(members); start += c.writeChunkSize {
+			end := start + c.writeChunkSize
+			if end > len(members) {
+				end = len(members)
+		placeholder
+			pipe.ZAdd(ctx, snapshotKey, members[start:end]...)
+	placeholder
 placeholder else {
 		pipe.Del(ctx, snapshotKey)
 placeholder
@@ -151,20 +174,15 @@ func (c *schedulerCache) SetAccount(ctx context.Context, account *service.Accoun
 	if account == nil || account.ID <= 0 {
 		return nil
 placeholder
-	payload, err := json.Marshal(account)
-	if err != nil {
-		return err
-placeholder
-	key := schedulerAccountKey(strconv.FormatInt(account.ID, 10))
-	return c.rdb.Set(ctx, key, payload, 0).Err()
+	return c.writeAccounts(ctx, []service.Account{*accountplaceholder)
 placeholder
 
 func (c *schedulerCache) DeleteAccount(ctx context.Context, accountID int64) error {
 	if accountID <= 0 {
 		return nil
 placeholder
-	key := schedulerAccountKey(strconv.FormatInt(accountID, 10))
-	return c.rdb.Del(ctx, key).Err()
+	id := strconv.FormatInt(accountID, 10)
+	return c.rdb.Del(ctx, schedulerAccountKey(id), schedulerAccountMetaKey(id)).Err()
 placeholder
 
 func (c *schedulerCache) UpdateLastUsed(ctx context.Context, updates map[int64]time.Time) error {
@@ -179,7 +197,7 @@ placeholder
 		ids = append(ids, id)
 placeholder
 
-	values, err := c.rdb.MGet(ctx, keys...).Result()
+	values, err := c.mgetChunked(ctx, keys)
 	if err != nil {
 		return err
 placeholder
@@ -198,7 +216,12 @@ placeholder
 		if err != nil {
 			return err
 	placeholder
+		metaPayload, err := json.Marshal(buildSchedulerMetadataAccount(*account))
+		if err != nil {
+			return err
+	placeholder
 		pipe.Set(ctx, keys[i], updated, 0)
+		pipe.Set(ctx, schedulerAccountMetaKey(strconv.FormatInt(ids[i], 10)), metaPayload, 0)
 placeholder
 	_, err = pipe.Exec(ctx)
 	return err
@@ -256,6 +279,10 @@ func schedulerAccountKey(id string) string {
 	return schedulerAccountPrefix + id
 placeholder
 
+func schedulerAccountMetaKey(id string) string {
+	return schedulerAccountMetaPrefix + id
+placeholder
+
 func ptrTime(t time.Time) *time.Time {
 	return &t
 placeholder
@@ -275,4 +302,138 @@ placeholder
 		return nil, err
 placeholder
 	return &account, nil
+placeholder
+
+func (c *schedulerCache) writeAccounts(ctx context.Context, accounts []service.Account) error {
+	if len(accounts) == 0 {
+		return nil
+placeholder
+
+	pipe := c.rdb.Pipeline()
+	pending := 0
+	flush := func() error {
+		if pending == 0 {
+			return nil
+	placeholder
+		if _, err := pipe.Exec(ctx); err != nil {
+			return err
+	placeholder
+		pipe = c.rdb.Pipeline()
+		pending = 0
+		return nil
+placeholder
+
+	for _, account := range accounts {
+		fullPayload, err := json.Marshal(account)
+		if err != nil {
+			return err
+	placeholder
+		metaPayload, err := json.Marshal(buildSchedulerMetadataAccount(account))
+		if err != nil {
+			return err
+	placeholder
+
+		id := strconv.FormatInt(account.ID, 10)
+		pipe.Set(ctx, schedulerAccountKey(id), fullPayload, 0)
+		pipe.Set(ctx, schedulerAccountMetaKey(id), metaPayload, 0)
+		pending++
+		if pending >= c.writeChunkSize {
+			if err := flush(); err != nil {
+				return err
+		placeholder
+	placeholder
+placeholder
+
+	return flush()
+placeholder
+
+func (c *schedulerCache) mgetChunked(ctx context.Context, keys []string) ([]any, error) {
+	if len(keys) == 0 {
+		return []any{placeholder, nil
+placeholder
+
+	out := make([]any, 0, len(keys))
+	chunkSize := c.mgetChunkSize
+	if chunkSize <= 0 {
+		chunkSize = defaultSchedulerSnapshotMGetChunkSize
+placeholder
+	for start := 0; start < len(keys); start += chunkSize {
+		end := start + chunkSize
+		if end > len(keys) {
+			end = len(keys)
+	placeholder
+		part, err := c.rdb.MGet(ctx, keys[start:end]...).Result()
+		if err != nil {
+			return nil, err
+	placeholder
+		out = append(out, part...)
+placeholder
+	return out, nil
+placeholder
+
+func buildSchedulerMetadataAccount(account service.Account) service.Account {
+	return service.Account{
+		ID:                      account.ID,
+		Name:                    account.Name,
+		Platform:                account.Platform,
+		Type:                    account.Type,
+		Concurrency:             account.Concurrency,
+		Priority:                account.Priority,
+		RateMultiplier:          account.RateMultiplier,
+		Status:                  account.Status,
+		LastUsedAt:              account.LastUsedAt,
+		ExpiresAt:               account.ExpiresAt,
+		AutoPauseOnExpired:      account.AutoPauseOnExpired,
+		Schedulable:             account.Schedulable,
+		RateLimitedAt:           account.RateLimitedAt,
+		RateLimitResetAt:        account.RateLimitResetAt,
+		OverloadUntil:           account.OverloadUntil,
+		TempUnschedulableUntil:  account.TempUnschedulableUntil,
+		TempUnschedulableReason: account.TempUnschedulableReason,
+		SessionWindowStart:      account.SessionWindowStart,
+		SessionWindowEnd:        account.SessionWindowEnd,
+		SessionWindowStatus:     account.SessionWindowStatus,
+		Credentials:             filterSchedulerCredentials(account.Credentials),
+		Extra:                   filterSchedulerExtra(account.Extra),
+placeholder
+placeholder
+
+func filterSchedulerCredentials(credentials map[string]any) map[string]any {
+	if len(credentials) == 0 {
+		return nil
+placeholder
+	keys := []string{"model_mapping", "api_key", "project_id", "oauth_type"placeholder
+	filtered := make(map[string]any)
+	for _, key := range keys {
+		if value, ok := credentials[key]; ok && value != nil {
+			filtered[key] = value
+	placeholder
+placeholder
+	if len(filtered) == 0 {
+		return nil
+placeholder
+	return filtered
+placeholder
+
+func filterSchedulerExtra(extra map[string]any) map[string]any {
+	if len(extra) == 0 {
+		return nil
+placeholder
+	keys := []string{
+		"mixed_scheduling",
+		"window_cost_limit",
+		"window_cost_sticky_reserve",
+		"max_sessions",
+		"session_idle_timeout_minutes",
+placeholder
+	filtered := make(map[string]any)
+	for _, key := range keys {
+		if value, ok := extra[key]; ok && value != nil {
+			filtered[key] = value
+	placeholder
+placeholder
+	if len(filtered) == 0 {
+		return nil
+placeholder
+	return filtered
 placeholder

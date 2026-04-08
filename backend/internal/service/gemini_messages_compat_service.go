@@ -137,7 +137,7 @@ placeholder
 		_ = s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), cacheKey, selected.ID, geminiStickySessionTTL)
 placeholder
 
-	return selected, nil
+	return s.hydrateSelectedAccount(ctx, selected)
 placeholder
 
 // resolvePlatformAndSchedulingMode 解析目标平台和调度模式。
@@ -416,6 +416,20 @@ placeholder
 	return s.accountRepo.GetByID(ctx, accountID)
 placeholder
 
+func (s *GeminiMessagesCompatService) hydrateSelectedAccount(ctx context.Context, account *Account) (*Account, error) {
+	if account == nil || s.schedulerSnapshot == nil {
+		return account, nil
+placeholder
+	hydrated, err := s.schedulerSnapshot.GetAccount(ctx, account.ID)
+	if err != nil {
+		return nil, err
+placeholder
+	if hydrated == nil {
+		return nil, fmt.Errorf("selected gemini account %d not found during hydration", account.ID)
+placeholder
+	return hydrated, nil
+placeholder
+
 func (s *GeminiMessagesCompatService) listSchedulableAccountsOnce(ctx context.Context, groupID *int64, platform string, hasForcePlatform bool) ([]Account, error) {
 	if s.schedulerSnapshot != nil {
 		accounts, _, err := s.schedulerSnapshot.ListSchedulableAccounts(ctx, groupID, platform, hasForcePlatform)
@@ -546,7 +560,7 @@ placeholder
 	if selected == nil {
 		return nil, errors.New("no available Gemini accounts")
 placeholder
-	return selected, nil
+	return s.hydrateSelectedAccount(ctx, selected)
 placeholder
 
 func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*ForwardResult, error) {
