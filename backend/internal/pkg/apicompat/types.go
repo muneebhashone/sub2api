@@ -28,7 +28,7 @@ placeholder
 
 // AnthropicOutputConfig controls output generation parameters.
 type AnthropicOutputConfig struct {
-	Effort string `json:"effort,omitempty"` // "low" | "medium" | "high"
+	Effort string `json:"effort,omitempty"` // "low" | "medium" | "high" | "max"
 placeholder
 
 // AnthropicThinking configures extended thinking in the Anthropic API.
@@ -167,7 +167,7 @@ placeholder
 
 // ResponsesReasoning configures reasoning effort in the Responses API.
 type ResponsesReasoning struct {
-	Effort  string `json:"effort"`            // "low" | "medium" | "high"
+	Effort  string `json:"effort"`            // "low" | "medium" | "high" | "xhigh"
 	Summary string `json:"summary,omitempty"` // "auto" | "concise" | "detailed"
 placeholder
 
@@ -345,7 +345,7 @@ type ChatCompletionsRequest struct {
 	StreamOptions       *ChatStreamOptions `json:"stream_options,omitempty"`
 	Tools               []ChatTool         `json:"tools,omitempty"`
 	ToolChoice          json.RawMessage    `json:"tool_choice,omitempty"`
-	ReasoningEffort     string             `json:"reasoning_effort,omitempty"` // "low" | "medium" | "high"
+	ReasoningEffort     string             `json:"reasoning_effort,omitempty"` // "low" | "medium" | "high" | "xhigh"
 	ServiceTier         string             `json:"service_tier,omitempty"`
 	Stop                json.RawMessage    `json:"stop,omitempty"` // string or []string
 
