@@ -165,7 +165,12 @@ placeholder
 		endTime = &t
 placeholder
 
-	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
+	params := pagination.PaginationParams{
+		Page:      page,
+		PageSize:  pageSize,
+		SortBy:    c.DefaultQuery("sort_by", "created_at"),
+		SortOrder: c.DefaultQuery("sort_order", "desc"),
+placeholder
 	filters := usagestats.UsageLogFilters{
 		UserID:      userID,
 		APIKeyID:    apiKeyID,
@@ -339,7 +344,7 @@ func (h *UsageHandler) SearchUsers(c *gin.Context) {
 placeholder
 
 	// Limit to 30 results
-	users, _, err := h.adminService.ListUsers(c.Request.Context(), 1, 30, service.UserListFilters{Search: keywordplaceholder)
+	users, _, err := h.adminService.ListUsers(c.Request.Context(), 1, 30, service.UserListFilters{Search: keywordplaceholder, "email", "asc")
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

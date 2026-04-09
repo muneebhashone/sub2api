@@ -29,6 +29,8 @@ export async function list(
     protocol?: string
     status?: 'active' | 'inactive'
     search?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
   placeholder,
   options?: {
     signal?: AbortSignal
@@ -227,16 +229,20 @@ export async function exportData(options?: {
     protocol?: string
     status?: 'active' | 'inactive'
     search?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
   placeholder
 placeholder): Promise<AdminDataPayload> {
   const params: Record<string, string> = {placeholder
   if (options?.ids && options.ids.length > 0) {
     params.ids = options.ids.join(',')
   placeholder else if (options?.filters) {
-    const { protocol, status, search placeholder = options.filters
+    const { protocol, status, search, sort_by, sort_order placeholder = options.filters
     if (protocol) params.protocol = protocol
     if (status) params.status = status
     if (search) params.search = search
+    if (sort_by) params.sort_by = sort_by
+    if (sort_order) params.sort_order = sort_order
   placeholder
   const { data placeholder = await apiClient.get<AdminDataPayload>('/admin/proxies/data', { params placeholder)
   return data

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
@@ -224,4 +225,13 @@ placeholder
 			require.Equal(t, tt.want, isUniqueViolation(tt.err))
 	placeholder)
 placeholder
+placeholder
+
+func TestChannelListOrderBy_AllowsDescendingIDSort(t *testing.T) {
+	params := pagination.PaginationParams{
+		SortBy:    "id",
+		SortOrder: "desc",
+placeholder
+
+	require.Equal(t, "c.id DESC, c.id DESC", channelListOrderBy(params))
 placeholder

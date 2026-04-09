@@ -39,7 +39,15 @@
       </template>
 
       <template #table>
-        <DataTable :columns="columns" :data="announcements" :loading="loading">
+        <DataTable
+          :columns="columns"
+          :data="announcements"
+          :loading="loading"
+          :server-side-sort="true"
+          default-sort-key="created_at"
+          default-sort-order="desc"
+          @sort="handleSort"
+        >
           <template #cell-title="{ value, row placeholder">
             <div class="min-w-0">
               <div class="flex items-center gap-2">
@@ -68,7 +76,7 @@
             </span>
           </template>
 
-          <template #cell-notifyMode="{ row placeholder">
+          <template #cell-notify_mode="{ row placeholder">
             <span
               :class="[
                 'badge',
@@ -100,7 +108,7 @@
             </div>
           </template>
 
-          <template #cell-createdAt="{ value placeholder">
+          <template #cell-created_at="{ value placeholder">
             <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatDateTime(value) placeholderplaceholder</span>
           </template>
 
@@ -236,7 +244,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref placeholder from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
@@ -276,6 +284,11 @@ const pagination = reactive({
   pages: 0
 placeholder)
 
+const sortState = reactive({
+  sort_by: 'created_at',
+  sort_order: 'desc' as 'asc' | 'desc'
+placeholder)
+
 const statusFilterOptions = computed(() => [
   { value: '', label: t('admin.announcements.allStatus') placeholder,
   { value: 'draft', label: t('admin.announcements.statusLabels.draft') placeholder,
@@ -295,12 +308,12 @@ const notifyModeOptions = computed(() => [
 ])
 
 const columns = computed<Column[]>(() => [
-  { key: 'title', label: t('admin.announcements.columns.title') placeholder,
-  { key: 'status', label: t('admin.announcements.columns.status') placeholder,
-  { key: 'notifyMode', label: t('admin.announcements.columns.notifyMode') placeholder,
+  { key: 'title', label: t('admin.announcements.columns.title'), sortable: true placeholder,
+  { key: 'status', label: t('admin.announcements.columns.status'), sortable: true placeholder,
+  { key: 'notify_mode', label: t('admin.announcements.columns.notifyMode'), sortable: true placeholder,
   { key: 'targeting', label: t('admin.announcements.columns.targeting') placeholder,
   { key: 'timeRange', label: t('admin.announcements.columns.timeRange') placeholder,
-  { key: 'createdAt', label: t('admin.announcements.columns.createdAt') placeholder,
+  { key: 'created_at', label: t('admin.announcements.columns.createdAt'), sortable: true placeholder,
   { key: 'actions', label: t('admin.announcements.columns.actions') placeholder
 ])
 
@@ -321,15 +334,21 @@ placeholder
 let currentController: AbortController | null = null
 
 async function loadAnnouncements() {
-  if (currentController) currentController.abort()
-  currentController = new AbortController()
+  currentController?.abort()
+  const requestController = new AbortController()
+  currentController = requestController
+  const { signal placeholder = requestController
 
   try {
     loading.value = true
     const res = await adminAPI.announcements.list(pagination.page, pagination.page_size, {
       status: filters.status || undefined,
-      search: searchQuery.value || undefined
-    placeholder)
+      search: searchQuery.value || undefined,
+      sort_by: sortState.sort_by,
+      sort_order: sortState.sort_order
+    placeholder, { signal placeholder)
+
+    if (signal.aborted || currentController !== requestController) return
 
     announcements.value = res.items
     pagination.total = res.total
@@ -337,11 +356,21 @@ async function loadAnnouncements() {
     pagination.page = res.page
     pagination.page_size = res.page_size
   placeholder catch (error: any) {
-    if (currentController.signal.aborted || error?.name === 'AbortError') return
+    if (
+      signal.aborted ||
+      currentController !== requestController ||
+      error?.name === 'AbortError' ||
+      error?.code === 'ERR_CANCELED'
+    ) {
+      return
+    placeholder
     console.error('Error loading announcements:', error)
     appStore.showError(error.response?.data?.detail || t('admin.announcements.failedToLoad'))
   placeholder finally {
-    loading.value = false
+    if (currentController === requestController) {
+      loading.value = false
+      currentController = null
+    placeholder
   placeholder
 placeholder
 
@@ -357,6 +386,13 @@ function handlePageSizeChange(pageSize: number) {
 placeholder
 
 function handleStatusChange() {
+  pagination.page = 1
+  loadAnnouncements()
+placeholder
+
+function handleSort(key: string, order: 'asc' | 'desc') {
+  sortState.sort_by = key
+  sortState.sort_order = order
   pagination.page = 1
   loadAnnouncements()
 placeholder
@@ -561,5 +597,10 @@ placeholder
 onMounted(async () => {
   await loadSubscriptionGroups()
   await loadAnnouncements()
+placeholder)
+
+onUnmounted(() => {
+  if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer)
+  currentController?.abort()
 placeholder)
 </script>
