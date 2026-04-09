@@ -8246,6 +8246,7 @@ type GroupMutation struct {
 	require_oauth_only                      *bool
 	require_privacy_set                     *bool
 	default_mapped_model                    *string
+	messages_dispatch_model_config          *domain.OpenAIMessagesDispatchModelConfig
 	clearedFields                           map[string]struct{placeholder
 	api_keys                                map[int64]struct{placeholder
 	removedapi_keys                         map[int64]struct{placeholder
@@ -9798,6 +9799,42 @@ func (m *GroupMutation) ResetDefaultMappedModel() {
 	m.default_mapped_model = nil
 placeholder
 
+// SetMessagesDispatchModelConfig sets the "messages_dispatch_model_config" field.
+func (m *GroupMutation) SetMessagesDispatchModelConfig(damdmc domain.OpenAIMessagesDispatchModelConfig) {
+	m.messages_dispatch_model_config = &damdmc
+placeholder
+
+// MessagesDispatchModelConfig returns the value of the "messages_dispatch_model_config" field in the mutation.
+func (m *GroupMutation) MessagesDispatchModelConfig() (r domain.OpenAIMessagesDispatchModelConfig, exists bool) {
+	v := m.messages_dispatch_model_config
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldMessagesDispatchModelConfig returns the old "messages_dispatch_model_config" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldMessagesDispatchModelConfig(ctx context.Context) (v domain.OpenAIMessagesDispatchModelConfig, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessagesDispatchModelConfig is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessagesDispatchModelConfig requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessagesDispatchModelConfig: %w", err)
+placeholder
+	return oldValue.MessagesDispatchModelConfig, nil
+placeholder
+
+// ResetMessagesDispatchModelConfig resets all changes to the "messages_dispatch_model_config" field.
+func (m *GroupMutation) ResetMessagesDispatchModelConfig() {
+	m.messages_dispatch_model_config = nil
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -10156,7 +10193,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 29)
+	fields := make([]string, 0, 30)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 placeholder
@@ -10244,6 +10281,9 @@ placeholder
 	if m.default_mapped_model != nil {
 		fields = append(fields, group.FieldDefaultMappedModel)
 placeholder
+	if m.messages_dispatch_model_config != nil {
+		fields = append(fields, group.FieldMessagesDispatchModelConfig)
+placeholder
 	return fields
 placeholder
 
@@ -10310,6 +10350,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.RequirePrivacySet()
 	case group.FieldDefaultMappedModel:
 		return m.DefaultMappedModel()
+	case group.FieldMessagesDispatchModelConfig:
+		return m.MessagesDispatchModelConfig()
 placeholder
 	return nil, false
 placeholder
@@ -10377,6 +10419,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldRequirePrivacySet(ctx)
 	case group.FieldDefaultMappedModel:
 		return m.OldDefaultMappedModel(ctx)
+	case group.FieldMessagesDispatchModelConfig:
+		return m.OldMessagesDispatchModelConfig(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown Group field %s", name)
 placeholder
@@ -10588,6 +10632,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 	placeholder
 		m.SetDefaultMappedModel(v)
+		return nil
+	case group.FieldMessagesDispatchModelConfig:
+		v, ok := value.(domain.OpenAIMessagesDispatchModelConfig)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetMessagesDispatchModelConfig(v)
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)
@@ -10928,6 +10979,9 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldDefaultMappedModel:
 		m.ResetDefaultMappedModel()
+		return nil
+	case group.FieldMessagesDispatchModelConfig:
+		m.ResetMessagesDispatchModelConfig()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Group field %s", name)

@@ -407,6 +407,7 @@ placeholder
 		{Name: "require_oauth_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "require_privacy_set", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "default_mapped_model", Type: field.TypeString, Size: 100, Default: ""placeholder,
+		{Name: "messages_dispatch_model_config", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
