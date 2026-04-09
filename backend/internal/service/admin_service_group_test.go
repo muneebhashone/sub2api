@@ -349,7 +349,7 @@ placeholder
 	svc := &adminServiceImpl{groupRepo: repoplaceholder
 
 	group, err := svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{
-		Platform: ptrString(PlatformAnthropic),
+		Platform: PlatformAnthropic,
 placeholder)
 placeholder
 	require.NotNil(t, group)
