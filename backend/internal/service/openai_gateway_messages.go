@@ -86,6 +86,24 @@ placeholder
 			return nil, fmt.Errorf("unmarshal for codex transform: %w", err)
 	placeholder
 		codexResult := applyCodexOAuthTransform(reqBody, false, false)
+		forcedTemplateText := ""
+		if s.cfg != nil {
+			forcedTemplateText = s.cfg.Gateway.ForcedCodexInstructionsTemplate
+	placeholder
+		templateUpstreamModel := upstreamModel
+		if codexResult.NormalizedModel != "" {
+			templateUpstreamModel = codexResult.NormalizedModel
+	placeholder
+		existingInstructions, _ := reqBody["instructions"].(string)
+		if _, err := applyForcedCodexInstructionsTemplate(reqBody, forcedTemplateText, forcedCodexInstructionsTemplateData{
+			ExistingInstructions: strings.TrimSpace(existingInstructions),
+			OriginalModel:        originalModel,
+			NormalizedModel:      normalizedModel,
+			BillingModel:         billingModel,
+			UpstreamModel:        templateUpstreamModel,
+	placeholder); err != nil {
+			return nil, err
+	placeholder
 		if codexResult.NormalizedModel != "" {
 			upstreamModel = codexResult.NormalizedModel
 	placeholder

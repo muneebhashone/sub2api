@@ -1,0 +1,873 @@
+package handler
+
+import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"math/big"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
+	"github.com/Wei-Shaw/sub2api/internal/service"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/imroc/req/v3"
+	"github.com/tidwall/gjson"
+)
+
+const (
+	oidcOAuthCookiePath        = "/api/v1/auth/oauth/oidc"
+	oidcOAuthStateCookieName   = "oidc_oauth_state"
+	oidcOAuthVerifierCookie    = "oidc_oauth_verifier"
+	oidcOAuthRedirectCookie    = "oidc_oauth_redirect"
+	oidcOAuthNonceCookie       = "oidc_oauth_nonce"
+	oidcOAuthCookieMaxAgeSec   = 10 * 60 // 10 minutes
+	oidcOAuthDefaultRedirectTo = "/dashboard"
+	oidcOAuthDefaultFrontendCB = "/auth/oidc/callback"
+)
+
+type oidcTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int64  `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	Scope        string `json:"scope,omitempty"`
+	IDToken      string `json:"id_token,omitempty"`
+placeholder
+
+type oidcTokenExchangeError struct {
+	StatusCode          int
+	ProviderError       string
+	ProviderDescription string
+	Body                string
+placeholder
+
+func (e *oidcTokenExchangeError) Error() string {
+	if e == nil {
+		return ""
+placeholder
+	parts := []string{fmt.Sprintf("token exchange status=%d", e.StatusCode)placeholder
+	if strings.TrimSpace(e.ProviderError) != "" {
+		parts = append(parts, "error="+strings.TrimSpace(e.ProviderError))
+placeholder
+	if strings.TrimSpace(e.ProviderDescription) != "" {
+		parts = append(parts, "error_description="+strings.TrimSpace(e.ProviderDescription))
+placeholder
+	return strings.Join(parts, " ")
+placeholder
+
+type oidcIDTokenClaims struct {
+	Email             string `json:"email,omitempty"`
+	EmailVerified     *bool  `json:"email_verified,omitempty"`
+	PreferredUsername string `json:"preferred_username,omitempty"`
+	Name              string `json:"name,omitempty"`
+	Nonce             string `json:"nonce,omitempty"`
+	Azp               string `json:"azp,omitempty"`
+	jwt.RegisteredClaims
+placeholder
+
+type oidcUserInfoClaims struct {
+	Email         string
+	Username      string
+	Subject       string
+	EmailVerified *bool
+placeholder
+
+type oidcJWKSet struct {
+	Keys []oidcJWK `json:"keys"`
+placeholder
+
+type oidcJWK struct {
+	Kty string `json:"kty"`
+	Kid string `json:"kid"`
+	Use string `json:"use"`
+	Alg string `json:"alg"`
+
+	N string `json:"n"`
+	E string `json:"e"`
+
+	Crv string `json:"crv"`
+	X   string `json:"x"`
+	Y   string `json:"y"`
+placeholder
+
+// OIDCOAuthStart 启动通用 OIDC OAuth 登录流程。
+// GET /api/v1/auth/oauth/oidc/start?redirect=/dashboard
+func (h *AuthHandler) OIDCOAuthStart(c *gin.Context) {
+	cfg, err := h.getOIDCOAuthConfig(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	state, err := oauth.GenerateState()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
+		return
+placeholder
+
+	redirectTo := sanitizeFrontendRedirectPath(c.Query("redirect"))
+	if redirectTo == "" {
+		redirectTo = oidcOAuthDefaultRedirectTo
+placeholder
+
+	secureCookie := isRequestHTTPS(c)
+	oidcSetCookie(c, oidcOAuthStateCookieName, encodeCookieValue(state), oidcOAuthCookieMaxAgeSec, secureCookie)
+	oidcSetCookie(c, oidcOAuthRedirectCookie, encodeCookieValue(redirectTo), oidcOAuthCookieMaxAgeSec, secureCookie)
+
+	codeChallenge := ""
+	if cfg.UsePKCE {
+		verifier, genErr := oauth.GenerateCodeVerifier()
+		if genErr != nil {
+			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(genErr))
+			return
+	placeholder
+		codeChallenge = oauth.GenerateCodeChallenge(verifier)
+		oidcSetCookie(c, oidcOAuthVerifierCookie, encodeCookieValue(verifier), oidcOAuthCookieMaxAgeSec, secureCookie)
+placeholder
+
+	nonce := ""
+	if cfg.ValidateIDToken {
+		nonce, err = oauth.GenerateState()
+		if err != nil {
+			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_NONCE_GEN_FAILED", "failed to generate oauth nonce").WithCause(err))
+			return
+	placeholder
+		oidcSetCookie(c, oidcOAuthNonceCookie, encodeCookieValue(nonce), oidcOAuthCookieMaxAgeSec, secureCookie)
+placeholder
+
+	redirectURI := strings.TrimSpace(cfg.RedirectURL)
+	if redirectURI == "" {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "oauth redirect url not configured"))
+		return
+placeholder
+
+	authURL, err := buildOIDCAuthorizeURL(cfg, state, nonce, codeChallenge, redirectURI)
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BUILD_URL_FAILED", "failed to build oauth authorization url").WithCause(err))
+		return
+placeholder
+
+	c.Redirect(http.StatusFound, authURL)
+placeholder
+
+// OIDCOAuthCallback 处理 OIDC 回调：校验 id_token、创建/登录用户并重定向到前端。
+// GET /api/v1/auth/oauth/oidc/callback?code=...&state=...
+func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
+	cfg, cfgErr := h.getOIDCOAuthConfig(c.Request.Context())
+	if cfgErr != nil {
+		response.ErrorFrom(c, cfgErr)
+		return
+placeholder
+
+	frontendCallback := strings.TrimSpace(cfg.FrontendRedirectURL)
+	if frontendCallback == "" {
+		frontendCallback = oidcOAuthDefaultFrontendCB
+placeholder
+
+	if providerErr := strings.TrimSpace(c.Query("error")); providerErr != "" {
+		redirectOAuthError(c, frontendCallback, "provider_error", providerErr, c.Query("error_description"))
+		return
+placeholder
+
+	code := strings.TrimSpace(c.Query("code"))
+	state := strings.TrimSpace(c.Query("state"))
+	if code == "" || state == "" {
+		redirectOAuthError(c, frontendCallback, "missing_params", "missing code/state", "")
+		return
+placeholder
+
+	secureCookie := isRequestHTTPS(c)
+	defer func() {
+		oidcClearCookie(c, oidcOAuthStateCookieName, secureCookie)
+		oidcClearCookie(c, oidcOAuthVerifierCookie, secureCookie)
+		oidcClearCookie(c, oidcOAuthRedirectCookie, secureCookie)
+		oidcClearCookie(c, oidcOAuthNonceCookie, secureCookie)
+placeholder()
+
+	expectedState, err := readCookieDecoded(c, oidcOAuthStateCookieName)
+	if err != nil || expectedState == "" || state != expectedState {
+		redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth state", "")
+		return
+placeholder
+
+	redirectTo, _ := readCookieDecoded(c, oidcOAuthRedirectCookie)
+	redirectTo = sanitizeFrontendRedirectPath(redirectTo)
+	if redirectTo == "" {
+		redirectTo = oidcOAuthDefaultRedirectTo
+placeholder
+
+	codeVerifier := ""
+	if cfg.UsePKCE {
+		codeVerifier, _ = readCookieDecoded(c, oidcOAuthVerifierCookie)
+		if codeVerifier == "" {
+			redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
+			return
+	placeholder
+placeholder
+
+	expectedNonce := ""
+	if cfg.ValidateIDToken {
+		expectedNonce, _ = readCookieDecoded(c, oidcOAuthNonceCookie)
+		if expectedNonce == "" {
+			redirectOAuthError(c, frontendCallback, "missing_nonce", "missing oauth nonce", "")
+			return
+	placeholder
+placeholder
+
+	redirectURI := strings.TrimSpace(cfg.RedirectURL)
+	if redirectURI == "" {
+		redirectOAuthError(c, frontendCallback, "config_error", "oauth redirect url not configured", "")
+		return
+placeholder
+
+	tokenResp, err := oidcExchangeCode(c.Request.Context(), cfg, code, redirectURI, codeVerifier)
+	if err != nil {
+		description := ""
+		var exchangeErr *oidcTokenExchangeError
+		if errors.As(err, &exchangeErr) && exchangeErr != nil {
+			log.Printf(
+				"[OIDC OAuth] token exchange failed: status=%d provider_error=%q provider_description=%q body=%s",
+				exchangeErr.StatusCode,
+				exchangeErr.ProviderError,
+				exchangeErr.ProviderDescription,
+				truncateLogValue(exchangeErr.Body, 2048),
+			)
+			description = exchangeErr.Error()
+	placeholder else {
+			log.Printf("[OIDC OAuth] token exchange failed: %v", err)
+			description = err.Error()
+	placeholder
+		redirectOAuthError(c, frontendCallback, "token_exchange_failed", "failed to exchange oauth code", singleLine(description))
+		return
+placeholder
+
+	if cfg.ValidateIDToken && strings.TrimSpace(tokenResp.IDToken) == "" {
+		redirectOAuthError(c, frontendCallback, "missing_id_token", "missing id_token", "")
+		return
+placeholder
+
+	idClaims, err := oidcParseAndValidateIDToken(c.Request.Context(), cfg, tokenResp.IDToken, expectedNonce)
+	if err != nil {
+		log.Printf("[OIDC OAuth] id_token validation failed: %v", err)
+		redirectOAuthError(c, frontendCallback, "invalid_id_token", "failed to validate id_token", "")
+		return
+placeholder
+
+	userInfoClaims, err := oidcFetchUserInfo(c.Request.Context(), cfg, tokenResp)
+	if err != nil {
+		log.Printf("[OIDC OAuth] userinfo fetch failed: %v", err)
+		redirectOAuthError(c, frontendCallback, "userinfo_failed", "failed to fetch user info", "")
+		return
+placeholder
+
+	subject := strings.TrimSpace(idClaims.Subject)
+	if subject == "" {
+		subject = strings.TrimSpace(userInfoClaims.Subject)
+placeholder
+	if subject == "" {
+		redirectOAuthError(c, frontendCallback, "missing_subject", "missing subject claim", "")
+		return
+placeholder
+	issuer := strings.TrimSpace(idClaims.Issuer)
+	if issuer == "" {
+		issuer = strings.TrimSpace(cfg.IssuerURL)
+placeholder
+	if issuer == "" {
+		redirectOAuthError(c, frontendCallback, "missing_issuer", "missing issuer claim", "")
+		return
+placeholder
+
+	emailVerified := userInfoClaims.EmailVerified
+	if emailVerified == nil {
+		emailVerified = idClaims.EmailVerified
+placeholder
+	if cfg.RequireEmailVerified {
+		if emailVerified == nil || !*emailVerified {
+			redirectOAuthError(c, frontendCallback, "email_not_verified", "email is not verified", "")
+			return
+	placeholder
+placeholder
+
+	identityKey := oidcIdentityKey(issuer, subject)
+	email := oidcSelectLoginEmail(userInfoClaims.Email, idClaims.Email, identityKey)
+	username := firstNonEmpty(
+		userInfoClaims.Username,
+		idClaims.PreferredUsername,
+		idClaims.Name,
+		oidcFallbackUsername(subject),
+	)
+
+	// 传入空邀请码；如果需要邀请码，服务层返回 ErrOAuthInvitationRequired
+	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
+	if err != nil {
+		if errors.Is(err, service.ErrOAuthInvitationRequired) {
+			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
+			if tokenErr != nil {
+				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")
+				return
+		placeholder
+			fragment := url.Values{placeholder
+			fragment.Set("error", "invitation_required")
+			fragment.Set("pending_oauth_token", pendingToken)
+			fragment.Set("redirect", redirectTo)
+			redirectWithFragment(c, frontendCallback, fragment)
+			return
+	placeholder
+		redirectOAuthError(c, frontendCallback, "login_failed", infraerrors.Reason(err), infraerrors.Message(err))
+		return
+placeholder
+
+	fragment := url.Values{placeholder
+	fragment.Set("access_token", tokenPair.AccessToken)
+	fragment.Set("refresh_token", tokenPair.RefreshToken)
+	fragment.Set("expires_in", fmt.Sprintf("%d", tokenPair.ExpiresIn))
+	fragment.Set("token_type", "Bearer")
+	fragment.Set("redirect", redirectTo)
+	redirectWithFragment(c, frontendCallback, fragment)
+placeholder
+
+type completeOIDCOAuthRequest struct {
+	PendingOAuthToken string `json:"pending_oauth_token" binding:"required"`
+	InvitationCode    string `json:"invitation_code"     binding:"required"`
+placeholder
+
+// CompleteOIDCOAuthRegistration completes a pending OAuth registration by validating
+// the invitation code and creating the user account.
+// POST /api/v1/auth/oauth/oidc/complete-registration
+func (h *AuthHandler) CompleteOIDCOAuthRegistration(c *gin.Context) {
+	var req completeOIDCOAuthRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_REQUEST", "message": err.Error()placeholder)
+		return
+placeholder
+
+	email, username, err := h.authService.VerifyPendingOAuthToken(req.PendingOAuthToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "INVALID_TOKEN", "message": "invalid or expired registration token"placeholder)
+		return
+placeholder
+
+	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  tokenPair.AccessToken,
+		"refresh_token": tokenPair.RefreshToken,
+		"expires_in":    tokenPair.ExpiresIn,
+		"token_type":    "Bearer",
+placeholder)
+placeholder
+
+func (h *AuthHandler) getOIDCOAuthConfig(ctx context.Context) (config.OIDCConnectConfig, error) {
+	if h != nil && h.settingSvc != nil {
+		return h.settingSvc.GetOIDCConnectOAuthConfig(ctx)
+placeholder
+	if h == nil || h.cfg == nil {
+		return config.OIDCConnectConfig{placeholder, infraerrors.ServiceUnavailable("CONFIG_NOT_READY", "config not loaded")
+placeholder
+	if !h.cfg.OIDC.Enabled {
+		return config.OIDCConnectConfig{placeholder, infraerrors.NotFound("OAUTH_DISABLED", "oauth login is disabled")
+placeholder
+	return h.cfg.OIDC, nil
+placeholder
+
+func oidcExchangeCode(
+	ctx context.Context,
+	cfg config.OIDCConnectConfig,
+	code string,
+	redirectURI string,
+	codeVerifier string,
+) (*oidcTokenResponse, error) {
+	client := req.C().SetTimeout(30 * time.Second)
+
+	form := url.Values{placeholder
+	form.Set("grant_type", "authorization_code")
+	form.Set("client_id", cfg.ClientID)
+	form.Set("code", code)
+	form.Set("redirect_uri", redirectURI)
+	if cfg.UsePKCE {
+		form.Set("code_verifier", codeVerifier)
+placeholder
+
+	r := client.R().
+		SetContext(ctx).
+		SetHeader("Accept", "application/json")
+
+	switch strings.ToLower(strings.TrimSpace(cfg.TokenAuthMethod)) {
+	case "", "client_secret_post":
+		form.Set("client_secret", cfg.ClientSecret)
+	case "client_secret_basic":
+		r.SetBasicAuth(cfg.ClientID, cfg.ClientSecret)
+	case "none":
+	default:
+		return nil, fmt.Errorf("unsupported token_auth_method: %s", cfg.TokenAuthMethod)
+placeholder
+
+	resp, err := r.SetFormDataFromValues(form).Post(cfg.TokenURL)
+	if err != nil {
+		return nil, fmt.Errorf("request token: %w", err)
+placeholder
+	body := strings.TrimSpace(resp.String())
+	if !resp.IsSuccessState() {
+		providerErr, providerDesc := parseOAuthProviderError(body)
+		return nil, &oidcTokenExchangeError{
+			StatusCode:          resp.StatusCode,
+			ProviderError:       providerErr,
+			ProviderDescription: providerDesc,
+			Body:                body,
+	placeholder
+placeholder
+
+	tokenResp, ok := oidcParseTokenResponse(body)
+	if !ok {
+		return nil, &oidcTokenExchangeError{StatusCode: resp.StatusCode, Body: bodyplaceholder
+placeholder
+	if strings.TrimSpace(tokenResp.TokenType) == "" {
+		tokenResp.TokenType = "Bearer"
+placeholder
+	if strings.TrimSpace(tokenResp.AccessToken) == "" && strings.TrimSpace(tokenResp.IDToken) == "" {
+		return nil, &oidcTokenExchangeError{StatusCode: resp.StatusCode, Body: bodyplaceholder
+placeholder
+	return tokenResp, nil
+placeholder
+
+func oidcParseTokenResponse(body string) (*oidcTokenResponse, bool) {
+	body = strings.TrimSpace(body)
+	if body == "" {
+		return nil, false
+placeholder
+
+	accessToken := strings.TrimSpace(getGJSON(body, "access_token"))
+	idToken := strings.TrimSpace(getGJSON(body, "id_token"))
+	if accessToken != "" || idToken != "" {
+		tokenType := strings.TrimSpace(getGJSON(body, "token_type"))
+		refreshToken := strings.TrimSpace(getGJSON(body, "refresh_token"))
+		scope := strings.TrimSpace(getGJSON(body, "scope"))
+		expiresIn := gjson.Get(body, "expires_in").Int()
+		return &oidcTokenResponse{
+			AccessToken:  accessToken,
+			TokenType:    tokenType,
+			ExpiresIn:    expiresIn,
+			RefreshToken: refreshToken,
+			Scope:        scope,
+			IDToken:      idToken,
+	placeholder, true
+placeholder
+
+	values, err := url.ParseQuery(body)
+	if err != nil {
+		return nil, false
+placeholder
+	accessToken = strings.TrimSpace(values.Get("access_token"))
+	idToken = strings.TrimSpace(values.Get("id_token"))
+	if accessToken == "" && idToken == "" {
+		return nil, false
+placeholder
+	expiresIn := int64(0)
+	if raw := strings.TrimSpace(values.Get("expires_in")); raw != "" {
+		if v, parseErr := strconv.ParseInt(raw, 10, 64); parseErr == nil {
+			expiresIn = v
+	placeholder
+placeholder
+	return &oidcTokenResponse{
+		AccessToken:  accessToken,
+		TokenType:    strings.TrimSpace(values.Get("token_type")),
+		ExpiresIn:    expiresIn,
+		RefreshToken: strings.TrimSpace(values.Get("refresh_token")),
+		Scope:        strings.TrimSpace(values.Get("scope")),
+		IDToken:      idToken,
+placeholder, true
+placeholder
+
+func oidcFetchUserInfo(
+	ctx context.Context,
+	cfg config.OIDCConnectConfig,
+	token *oidcTokenResponse,
+) (*oidcUserInfoClaims, error) {
+	if strings.TrimSpace(cfg.UserInfoURL) == "" {
+		return &oidcUserInfoClaims{placeholder, nil
+placeholder
+	if token == nil || strings.TrimSpace(token.AccessToken) == "" {
+		return nil, errors.New("missing access_token for userinfo request")
+placeholder
+
+	client := req.C().SetTimeout(30 * time.Second)
+	authorization, err := buildBearerAuthorization(token.TokenType, token.AccessToken)
+	if err != nil {
+		return nil, fmt.Errorf("invalid token for userinfo request: %w", err)
+placeholder
+
+	resp, err := client.R().
+		SetContext(ctx).
+		SetHeader("Accept", "application/json").
+		SetHeader("Authorization", authorization).
+		Get(cfg.UserInfoURL)
+	if err != nil {
+		return nil, fmt.Errorf("request userinfo: %w", err)
+placeholder
+	if !resp.IsSuccessState() {
+		return nil, fmt.Errorf("userinfo status=%d", resp.StatusCode)
+placeholder
+
+	return oidcParseUserInfo(resp.String(), cfg), nil
+placeholder
+
+func oidcParseUserInfo(body string, cfg config.OIDCConnectConfig) *oidcUserInfoClaims {
+	claims := &oidcUserInfoClaims{placeholder
+	claims.Email = firstNonEmpty(
+		getGJSON(body, cfg.UserInfoEmailPath),
+		getGJSON(body, "email"),
+		getGJSON(body, "user.email"),
+		getGJSON(body, "data.email"),
+		getGJSON(body, "attributes.email"),
+	)
+	claims.Username = firstNonEmpty(
+		getGJSON(body, cfg.UserInfoUsernamePath),
+		getGJSON(body, "preferred_username"),
+		getGJSON(body, "username"),
+		getGJSON(body, "name"),
+		getGJSON(body, "user.username"),
+		getGJSON(body, "user.name"),
+	)
+	claims.Subject = firstNonEmpty(
+		getGJSON(body, cfg.UserInfoIDPath),
+		getGJSON(body, "sub"),
+		getGJSON(body, "id"),
+		getGJSON(body, "user_id"),
+		getGJSON(body, "uid"),
+		getGJSON(body, "user.id"),
+	)
+	if verified, ok := getGJSONBool(body, "email_verified"); ok {
+		claims.EmailVerified = &verified
+placeholder
+	claims.Email = strings.TrimSpace(claims.Email)
+	claims.Username = strings.TrimSpace(claims.Username)
+	claims.Subject = strings.TrimSpace(claims.Subject)
+	return claims
+placeholder
+
+func getGJSONBool(body string, path string) (bool, bool) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return false, false
+placeholder
+	res := gjson.Get(body, path)
+	if !res.Exists() {
+		return false, false
+placeholder
+	return res.Bool(), true
+placeholder
+
+func buildOIDCAuthorizeURL(cfg config.OIDCConnectConfig, state, nonce, codeChallenge, redirectURI string) (string, error) {
+	u, err := url.Parse(cfg.AuthorizeURL)
+	if err != nil {
+		return "", fmt.Errorf("parse authorize_url: %w", err)
+placeholder
+
+	q := u.Query()
+	q.Set("response_type", "code")
+	q.Set("client_id", cfg.ClientID)
+	q.Set("redirect_uri", redirectURI)
+	if strings.TrimSpace(cfg.Scopes) != "" {
+		q.Set("scope", cfg.Scopes)
+placeholder
+	q.Set("state", state)
+	if strings.TrimSpace(nonce) != "" {
+		q.Set("nonce", nonce)
+placeholder
+	if cfg.UsePKCE {
+		q.Set("code_challenge", codeChallenge)
+		q.Set("code_challenge_method", "S256")
+placeholder
+
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+placeholder
+
+func oidcParseAndValidateIDToken(ctx context.Context, cfg config.OIDCConnectConfig, idToken string, expectedNonce string) (*oidcIDTokenClaims, error) {
+	idToken = strings.TrimSpace(idToken)
+	if idToken == "" {
+		return nil, errors.New("missing id_token")
+placeholder
+	allowed := oidcAllowedSigningAlgs(cfg.AllowedSigningAlgs)
+	if len(allowed) == 0 {
+		return nil, errors.New("empty allowed signing algorithms")
+placeholder
+
+	jwks, err := oidcFetchJWKSet(ctx, cfg.JWKSURL)
+	if err != nil {
+		return nil, err
+placeholder
+	leeway := time.Duration(cfg.ClockSkewSeconds) * time.Second
+	claims := &oidcIDTokenClaims{placeholder
+
+	parsed, err := jwt.ParseWithClaims(
+		idToken,
+		claims,
+		func(token *jwt.Token) (any, error) {
+			alg := strings.TrimSpace(token.Method.Alg())
+			if !containsString(allowed, alg) {
+				return nil, fmt.Errorf("unexpected signing algorithm: %s", alg)
+		placeholder
+			kid, _ := token.Header["kid"].(string)
+			return oidcFindPublicKey(jwks, strings.TrimSpace(kid), alg)
+	placeholder,
+		jwt.WithValidMethods(allowed),
+		jwt.WithAudience(cfg.ClientID),
+		jwt.WithIssuer(cfg.IssuerURL),
+		jwt.WithLeeway(leeway),
+	)
+	if err != nil {
+		return nil, err
+placeholder
+	if !parsed.Valid {
+		return nil, errors.New("id_token invalid")
+placeholder
+	if strings.TrimSpace(claims.Subject) == "" {
+		return nil, errors.New("id_token missing sub")
+placeholder
+	if expectedNonce != "" && strings.TrimSpace(claims.Nonce) != strings.TrimSpace(expectedNonce) {
+		return nil, errors.New("id_token nonce mismatch")
+placeholder
+	if len(claims.Audience) > 1 {
+		if strings.TrimSpace(claims.Azp) == "" || strings.TrimSpace(claims.Azp) != strings.TrimSpace(cfg.ClientID) {
+			return nil, errors.New("id_token azp mismatch")
+	placeholder
+placeholder
+	return claims, nil
+placeholder
+
+func oidcAllowedSigningAlgs(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{"RS256", "ES256", "PS256"placeholder
+placeholder
+	seen := make(map[string]struct{placeholder)
+	out := make([]string, 0, 4)
+	for _, part := range strings.Split(raw, ",") {
+		alg := strings.ToUpper(strings.TrimSpace(part))
+		if alg == "" {
+			continue
+	placeholder
+		if _, ok := seen[alg]; ok {
+			continue
+	placeholder
+		seen[alg] = struct{placeholder{placeholder
+		out = append(out, alg)
+placeholder
+	return out
+placeholder
+
+func oidcFetchJWKSet(ctx context.Context, jwksURL string) (*oidcJWKSet, error) {
+	jwksURL = strings.TrimSpace(jwksURL)
+	if jwksURL == "" {
+		return nil, errors.New("missing jwks_url")
+placeholder
+	resp, err := req.C().
+		SetTimeout(30*time.Second).
+		R().
+		SetContext(ctx).
+		SetHeader("Accept", "application/json").
+		Get(jwksURL)
+	if err != nil {
+		return nil, fmt.Errorf("request jwks: %w", err)
+placeholder
+	if !resp.IsSuccessState() {
+		return nil, fmt.Errorf("jwks status=%d", resp.StatusCode)
+placeholder
+	set := &oidcJWKSet{placeholder
+	if err := json.Unmarshal(resp.Bytes(), set); err != nil {
+		return nil, fmt.Errorf("parse jwks: %w", err)
+placeholder
+	if len(set.Keys) == 0 {
+		return nil, errors.New("jwks empty keys")
+placeholder
+	return set, nil
+placeholder
+
+func oidcFindPublicKey(set *oidcJWKSet, kid, alg string) (any, error) {
+	if set == nil {
+		return nil, errors.New("jwks not loaded")
+placeholder
+	alg = strings.ToUpper(strings.TrimSpace(alg))
+	kid = strings.TrimSpace(kid)
+
+	var lastErr error
+	for i := range set.Keys {
+		k := set.Keys[i]
+		if strings.TrimSpace(k.Use) != "" && !strings.EqualFold(strings.TrimSpace(k.Use), "sig") {
+			continue
+	placeholder
+		if kid != "" && strings.TrimSpace(k.Kid) != kid {
+			continue
+	placeholder
+		if strings.TrimSpace(k.Alg) != "" && !strings.EqualFold(strings.TrimSpace(k.Alg), alg) {
+			continue
+	placeholder
+		pk, err := k.publicKey()
+		if err != nil {
+			lastErr = err
+			continue
+	placeholder
+		if pk != nil {
+			return pk, nil
+	placeholder
+placeholder
+	if lastErr != nil {
+		return nil, lastErr
+placeholder
+	if kid != "" {
+		return nil, fmt.Errorf("jwk not found for kid=%s", kid)
+placeholder
+	return nil, errors.New("jwk not found")
+placeholder
+
+func (k oidcJWK) publicKey() (any, error) {
+	switch strings.ToUpper(strings.TrimSpace(k.Kty)) {
+	case "RSA":
+		n, err := decodeBase64URLBigInt(k.N)
+		if err != nil {
+			return nil, fmt.Errorf("decode rsa n: %w", err)
+	placeholder
+		eBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(k.E))
+		if err != nil {
+			return nil, fmt.Errorf("decode rsa e: %w", err)
+	placeholder
+		if len(eBytes) == 0 {
+			return nil, errors.New("empty rsa e")
+	placeholder
+		e := 0
+		for _, b := range eBytes {
+			e = (e << 8) | int(b)
+	placeholder
+		if e <= 0 {
+			return nil, errors.New("invalid rsa exponent")
+	placeholder
+		if n.Sign() <= 0 {
+			return nil, errors.New("invalid rsa modulus")
+	placeholder
+		return &rsa.PublicKey{N: n, E: eplaceholder, nil
+	case "EC":
+		var curve elliptic.Curve
+		switch strings.TrimSpace(k.Crv) {
+		case "P-256":
+			curve = elliptic.P256()
+		case "P-384":
+			curve = elliptic.P384()
+		case "P-521":
+			curve = elliptic.P521()
+		default:
+			return nil, fmt.Errorf("unsupported ec curve: %s", k.Crv)
+	placeholder
+		x, err := decodeBase64URLBigInt(k.X)
+		if err != nil {
+			return nil, fmt.Errorf("decode ec x: %w", err)
+	placeholder
+		y, err := decodeBase64URLBigInt(k.Y)
+		if err != nil {
+			return nil, fmt.Errorf("decode ec y: %w", err)
+	placeholder
+		if !curve.IsOnCurve(x, y) {
+			return nil, errors.New("ec point is not on curve")
+	placeholder
+		return &ecdsa.PublicKey{Curve: curve, X: x, Y: yplaceholder, nil
+	default:
+		return nil, fmt.Errorf("unsupported jwk kty: %s", k.Kty)
+placeholder
+placeholder
+
+func decodeBase64URLBigInt(raw string) (*big.Int, error) {
+	buf, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(raw))
+	if err != nil {
+		return nil, err
+placeholder
+	if len(buf) == 0 {
+		return nil, errors.New("empty value")
+placeholder
+	return new(big.Int).SetBytes(buf), nil
+placeholder
+
+func containsString(values []string, target string) bool {
+	target = strings.TrimSpace(target)
+	for _, v := range values {
+		if strings.EqualFold(strings.TrimSpace(v), target) {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func oidcIdentityKey(issuer, subject string) string {
+	issuer = strings.TrimSpace(strings.ToLower(issuer))
+	subject = strings.TrimSpace(subject)
+	return issuer + "\x1f" + subject
+placeholder
+
+func oidcSyntheticEmailFromIdentityKey(identityKey string) string {
+	identityKey = strings.TrimSpace(identityKey)
+	if identityKey == "" {
+		return ""
+placeholder
+	sum := sha256.Sum256([]byte(identityKey))
+	return "oidc-" + hex.EncodeToString(sum[:16]) + service.OIDCConnectSyntheticEmailDomain
+placeholder
+
+func oidcSelectLoginEmail(userInfoEmail, idTokenEmail, identityKey string) string {
+	email := strings.TrimSpace(firstNonEmpty(userInfoEmail, idTokenEmail))
+	if email != "" {
+		return email
+placeholder
+	return oidcSyntheticEmailFromIdentityKey(identityKey)
+placeholder
+
+func oidcFallbackUsername(subject string) string {
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
+		return "oidc_user"
+placeholder
+	sum := sha256.Sum256([]byte(subject))
+	return "oidc_" + hex.EncodeToString(sum[:])[:12]
+placeholder
+
+func oidcSetCookie(c *gin.Context, name, value string, maxAgeSec int, secure bool) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		Path:     oidcOAuthCookiePath,
+		MaxAge:   maxAgeSec,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+placeholder)
+placeholder
+
+func oidcClearCookie(c *gin.Context, name string, secure bool) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     name,
+		Value:    "",
+		Path:     oidcOAuthCookiePath,
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+placeholder)
+placeholder
