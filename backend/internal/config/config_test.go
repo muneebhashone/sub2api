@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -221,6 +223,23 @@ placeholder
 	if cfg.Gateway.Scheduling.StickySessionMaxWaiting != 5 {
 		t.Fatalf("StickySessionMaxWaiting = %d, want 5", cfg.Gateway.Scheduling.StickySessionMaxWaiting)
 placeholder
+placeholder
+
+func TestLoadForcedCodexInstructionsTemplate(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	tempDir := t.TempDir()
+	templatePath := filepath.Join(tempDir, "codex-instructions.md.tmpl")
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	require.NoError(t, os.WriteFile(templatePath, []byte("server-prefix\n\n{{ .ExistingInstructions placeholderplaceholder"), 0o644))
+	require.NoError(t, os.WriteFile(configPath, []byte("gateway:\n  forced_codex_instructions_template_file: \""+templatePath+"\"\n"), 0o644))
+	t.Setenv("DATA_DIR", tempDir)
+
+	cfg, err := Load()
+placeholder
+	require.Equal(t, templatePath, cfg.Gateway.ForcedCodexInstructionsTemplateFile)
+	require.Equal(t, "server-prefix\n\n{{ .ExistingInstructions placeholderplaceholder", cfg.Gateway.ForcedCodexInstructionsTemplate)
 placeholder
 
 func TestLoadDefaultSecurityToggles(t *testing.T) {
