@@ -1109,7 +1109,6 @@ placeholder
 	return defaultPageSize, normalizedOptions
 placeholder
 
-
 // getStringOrDefault 获取字符串值或默认值
 func (s *SettingService) getStringOrDefault(settings map[string]string, key, defaultValue string) string {
 	if value, ok := settings[key]; ok && value != "" {
