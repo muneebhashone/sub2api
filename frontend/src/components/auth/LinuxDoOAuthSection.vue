@@ -29,10 +29,10 @@
       {{ t('auth.linuxdo.signIn') placeholderplaceholder
     </button>
 
-    <div class="flex items-center gap-3">
+    <div v-if="showDivider" class="flex items-center gap-3">
       <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
       <span class="text-xs text-gray-500 dark:text-dark-400">
-        {{ t('auth.linuxdo.orContinue') placeholderplaceholder
+        {{ t('auth.oauthOrContinue') placeholderplaceholder
       </span>
       <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
     </div>
@@ -43,9 +43,12 @@
 import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 
-defineProps<{
+withDefaults(defineProps<{
   disabled?: boolean
-placeholder>()
+  showDivider?: boolean
+placeholder>(), {
+  showDivider: true
+placeholder)
 
 const route = useRoute()
 const { t placeholder = useI18n()
@@ -58,4 +61,3 @@ function startLogin(): void {
   window.location.href = startURL
 placeholder
 </script>
-
