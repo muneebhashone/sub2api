@@ -374,7 +374,7 @@ onMounted(async () => {
     if (checkout.value.balance_disabled) {
       activeTab.value = 'subscription'
     placeholder
-  placeholder catch (err: unknown) { console.error('Failed to load checkout info:', err) placeholder
+  placeholder catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
   finally { loading.value = false placeholder
 placeholder)
 </script>

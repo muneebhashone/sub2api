@@ -27,8 +27,6 @@ const (
 	maxEasypayResponseSize = 1 << 20 // 1MB
 	tradeStatusSuccess     = "TRADE_SUCCESS"
 	signTypeMD5            = "MD5"
-	paymentModePopup       = "popup"
-	deviceMobile           = "mobile"
 )
 
 // EasyPay implements payment.Provider for the EasyPay aggregation platform.
@@ -63,7 +61,7 @@ func (e *EasyPay) CreatePayment(ctx context.Context, req payment.CreatePaymentRe
 	// Payment mode determined by instance config, not payment type.
 	// "popup" → hosted page (submit.php); "qrcode"/default → API call (mapi.php).
 	mode := e.config["paymentMode"]
-	if mode == paymentModePopup {
+	if mode == "popup" {
 		return e.createRedirectPayment(req)
 placeholder
 	return e.createAPIPayment(ctx, req)
@@ -82,9 +80,6 @@ func (e *EasyPay) createRedirectPayment(req payment.CreatePaymentRequest) (*paym
 placeholder
 	if cid := e.resolveCID(req.PaymentType); cid != "" {
 		params["cid"] = cid
-placeholder
-	if req.IsMobile {
-		params["device"] = deviceMobile
 placeholder
 	params["sign"] = easyPaySign(params, e.config["pkey"])
 	params["sign_type"] = signTypeMD5
@@ -111,7 +106,7 @@ placeholder
 		params["cid"] = cid
 placeholder
 	if req.IsMobile {
-		params["device"] = deviceMobile
+		params["device"] = "mobile"
 placeholder
 	params["sign"] = easyPaySign(params, e.config["pkey"])
 	params["sign_type"] = signTypeMD5
@@ -125,7 +120,6 @@ placeholder
 		Msg     string `json:"msg"`
 		TradeNo string `json:"trade_no"`
 		PayURL  string `json:"payurl"`
-		PayURL2 string `json:"payurl2"` // H5 mobile payment URL
 		QRCode  string `json:"qrcode"`
 placeholder
 	if err := json.Unmarshal(body, &resp); err != nil {
@@ -134,11 +128,7 @@ placeholder
 	if resp.Code != easypayCodeSuccess {
 		return nil, fmt.Errorf("easypay error: %s", resp.Msg)
 placeholder
-	payURL := resp.PayURL
-	if req.IsMobile && resp.PayURL2 != "" {
-		payURL = resp.PayURL2
-placeholder
-	return &payment.CreatePaymentResponse{TradeNo: resp.TradeNo, PayURL: payURL, QRCode: resp.QRCodeplaceholder, nil
+	return &payment.CreatePaymentResponse{TradeNo: resp.TradeNo, PayURL: resp.PayURL, QRCode: resp.QRCodeplaceholder, nil
 placeholder
 
 // resolveURLs returns (notifyURL, returnURL) preferring request values,
@@ -168,7 +158,6 @@ placeholder
 		Code   int    `json:"code"`
 		Msg    string `json:"msg"`
 		Status int    `json:"status"`
-		Money  string `json:"money"`
 placeholder
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("easypay parse query: %w", err)
@@ -177,8 +166,7 @@ placeholder
 	if resp.Status == easypayStatusPaid {
 		status = payment.ProviderStatusPaid
 placeholder
-	amount, _ := strconv.ParseFloat(resp.Money, 64)
-	return &payment.QueryOrderResponse{TradeNo: tradeNo, Status: status, Amount: amountplaceholder, nil
+	return &payment.QueryOrderResponse{TradeNo: tradeNo, Status: statusplaceholder, nil
 placeholder
 
 func (e *EasyPay) VerifyNotification(_ context.Context, rawBody string, _ map[string]string) (*payment.PaymentNotification, error) {
@@ -186,10 +174,9 @@ func (e *EasyPay) VerifyNotification(_ context.Context, rawBody string, _ map[st
 	if err != nil {
 		return nil, fmt.Errorf("parse notify: %w", err)
 placeholder
-	// url.ParseQuery already decodes values — no additional decode needed.
 	params := make(map[string]string)
 	for k := range values {
-		params[k] = values.Get(k)
+		params[k] = decodeURLValue(values.Get(k))
 placeholder
 	sign := params["sign"]
 	if sign == "" {
@@ -285,4 +272,13 @@ placeholder
 
 func easyPayVerifySign(params map[string]string, pkey string, sign string) bool {
 	return hmac.Equal([]byte(easyPaySign(params, pkey)), []byte(sign))
+placeholder
+
+// decodeURLValue URL-decodes a string once.
+func decodeURLValue(s string) string {
+	decoded, err := url.QueryUnescape(s)
+	if err != nil {
+		return s
+placeholder
+	return decoded
 placeholder

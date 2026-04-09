@@ -10,6 +10,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/payment/provider"
@@ -70,9 +71,6 @@ func (s *PaymentService) validateOrderInput(ctx context.Context, req CreateOrder
 placeholder
 	if req.OrderType == payment.OrderTypeSubscription {
 		return s.validateSubOrder(ctx, req)
-placeholder
-	if math.IsNaN(req.Amount) || math.IsInf(req.Amount, 0) || req.Amount <= 0 {
-		return nil, infraerrors.BadRequest("INVALID_AMOUNT", "amount must be a positive number")
 placeholder
 	if (cfg.MinAmount > 0 && req.Amount < cfg.MinAmount) || (cfg.MaxAmount > 0 && req.Amount > cfg.MaxAmount) {
 		return nil, infraerrors.BadRequest("INVALID_AMOUNT", "amount out of range").
@@ -169,6 +167,68 @@ placeholder
 	return nil
 placeholder
 
+func (s *PaymentService) checkCancelRateLimit(ctx context.Context, userID int64, cfg *PaymentConfig) error {
+	if !cfg.CancelRateLimitEnabled || cfg.CancelRateLimitMax <= 0 {
+		return nil
+placeholder
+	windowStart := cancelRateLimitWindowStart(cfg)
+	operator := fmt.Sprintf("user:%d", userID)
+	count, err := s.entClient.PaymentAuditLog.Query().
+		Where(
+			paymentauditlog.ActionEQ("ORDER_CANCELLED"),
+			paymentauditlog.OperatorEQ(operator),
+			paymentauditlog.CreatedAtGTE(windowStart),
+		).Count(ctx)
+	if err != nil {
+		slog.Error("check cancel rate limit failed", "userID", userID, "error", err)
+		return nil // fail open
+placeholder
+	if count >= cfg.CancelRateLimitMax {
+		return infraerrors.TooManyRequests("CANCEL_RATE_LIMITED", "cancel rate limited").
+			WithMetadata(map[string]string{
+				"max":    strconv.Itoa(cfg.CancelRateLimitMax),
+				"window": strconv.Itoa(cfg.CancelRateLimitWindow),
+				"unit":   cfg.CancelRateLimitUnit,
+		placeholder)
+placeholder
+	return nil
+placeholder
+
+func cancelRateLimitWindowStart(cfg *PaymentConfig) time.Time {
+	now := time.Now()
+	w := cfg.CancelRateLimitWindow
+	if w <= 0 {
+		w = 1
+placeholder
+	unit := cfg.CancelRateLimitUnit
+	if unit == "" {
+		unit = "day"
+placeholder
+	if cfg.CancelRateLimitMode == "fixed" {
+		switch unit {
+		case "minute":
+			t := now.Truncate(time.Minute)
+			return t.Add(-time.Duration(w-1) * time.Minute)
+		case "day":
+			y, m, d := now.Date()
+			t := time.Date(y, m, d, 0, 0, 0, 0, now.Location())
+			return t.AddDate(0, 0, -(w - 1))
+		default: // hour
+			t := now.Truncate(time.Hour)
+			return t.Add(-time.Duration(w-1) * time.Hour)
+	placeholder
+placeholder
+	// rolling window
+	switch unit {
+	case "minute":
+		return now.Add(-time.Duration(w) * time.Minute)
+	case "day":
+		return now.AddDate(0, 0, -w)
+	default: // hour
+		return now.Add(-time.Duration(w) * time.Hour)
+placeholder
+placeholder
+
 func (s *PaymentService) checkDailyLimit(ctx context.Context, tx *dbent.Tx, userID int64, amount, limit float64) error {
 	if limit <= 0 {
 		return nil
@@ -189,16 +249,19 @@ placeholder
 placeholder
 
 func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.PaymentOrder, req CreateOrderRequest, cfg *PaymentConfig, payAmountStr string, payAmount float64, plan *dbent.SubscriptionPlan) (*CreateOrderResponse, error) {
-	// Select an instance across all providers that support the requested payment type.
-	// This enables cross-provider load balancing (e.g. EasyPay + Alipay direct for "alipay").
-	sel, err := s.loadBalancer.SelectInstance(ctx, "", req.PaymentType, payment.Strategy(cfg.LoadBalanceStrategy), payAmount)
-	if err != nil {
+	s.EnsureProviders(ctx)
+	providerKey := s.registry.GetProviderKey(req.PaymentType)
+	if providerKey == "" {
 		return nil, infraerrors.ServiceUnavailable("PAYMENT_GATEWAY_ERROR", fmt.Sprintf("payment method (%s) is not configured", req.PaymentType))
+placeholder
+	sel, err := s.loadBalancer.SelectInstance(ctx, providerKey, req.PaymentType, payment.Strategy(cfg.LoadBalanceStrategy), payAmount)
+	if err != nil {
+		return nil, fmt.Errorf("select provider instance: %w", err)
 placeholder
 	if sel == nil {
 		return nil, infraerrors.TooManyRequests("NO_AVAILABLE_INSTANCE", "no available payment instance")
 placeholder
-	prov, err := provider.CreateProvider(sel.ProviderKey, sel.InstanceID, sel.Config)
+	prov, err := provider.CreateProvider(providerKey, sel.InstanceID, sel.Config)
 	if err != nil {
 		return nil, infraerrors.ServiceUnavailable("PAYMENT_GATEWAY_ERROR", "payment method is temporarily unavailable")
 placeholder
@@ -206,7 +269,7 @@ placeholder
 	outTradeNo := order.OutTradeNo
 	pr, err := prov.CreatePayment(ctx, payment.CreatePaymentRequest{OrderID: outTradeNo, Amount: payAmountStr, PaymentType: req.PaymentType, Subject: subject, ClientIP: req.ClientIP, IsMobile: req.IsMobile, InstanceSubMethods: sel.SupportedTypesplaceholder)
 	if err != nil {
-		slog.Error("[PaymentService] CreatePayment failed", "provider", sel.ProviderKey, "instance", sel.InstanceID, "error", err)
+		slog.Error("[PaymentService] CreatePayment failed", "provider", providerKey, "instance", sel.InstanceID, "error", err)
 		return nil, infraerrors.ServiceUnavailable("PAYMENT_GATEWAY_ERROR", fmt.Sprintf("payment gateway error: %s", err.Error()))
 placeholder
 	_, err = s.entClient.PaymentOrder.UpdateOneID(order.ID).SetNillablePaymentTradeNo(psNilIfEmpty(pr.TradeNo)).SetNillablePayURL(psNilIfEmpty(pr.PayURL)).SetNillableQrCode(psNilIfEmpty(pr.QRCode)).SetNillableProviderInstanceID(psNilIfEmpty(sel.InstanceID)).Save(ctx)
@@ -291,13 +354,6 @@ placeholder
 	if p.PaymentType != "" {
 		q = q.Where(paymentorder.PaymentTypeEQ(p.PaymentType))
 placeholder
-	if p.Keyword != "" {
-		q = q.Where(paymentorder.Or(
-			paymentorder.OutTradeNoContainsFold(p.Keyword),
-			paymentorder.UserEmailContainsFold(p.Keyword),
-			paymentorder.UserNameContainsFold(p.Keyword),
-		))
-placeholder
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count admin orders: %w", err)
@@ -308,4 +364,141 @@ placeholder
 		return nil, 0, fmt.Errorf("query admin orders: %w", err)
 placeholder
 	return orders, total, nil
+placeholder
+
+// --- Cancel & Expire ---
+
+func (s *PaymentService) CancelOrder(ctx context.Context, orderID, userID int64) (string, error) {
+	o, err := s.entClient.PaymentOrder.Get(ctx, orderID)
+	if err != nil {
+		return "", infraerrors.NotFound("NOT_FOUND", "order not found")
+placeholder
+	if o.UserID != userID {
+		return "", infraerrors.Forbidden("FORBIDDEN", "no permission for this order")
+placeholder
+	if o.Status != OrderStatusPending {
+		return "", infraerrors.BadRequest("INVALID_STATUS", "order cannot be cancelled in current status")
+placeholder
+	return s.cancelCore(ctx, o, OrderStatusCancelled, fmt.Sprintf("user:%d", userID), "user cancelled order")
+placeholder
+
+func (s *PaymentService) AdminCancelOrder(ctx context.Context, orderID int64) (string, error) {
+	o, err := s.entClient.PaymentOrder.Get(ctx, orderID)
+	if err != nil {
+		return "", infraerrors.NotFound("NOT_FOUND", "order not found")
+placeholder
+	if o.Status != OrderStatusPending {
+		return "", infraerrors.BadRequest("INVALID_STATUS", "order cannot be cancelled in current status")
+placeholder
+	return s.cancelCore(ctx, o, OrderStatusCancelled, "admin", "admin cancelled order")
+placeholder
+
+func (s *PaymentService) cancelCore(ctx context.Context, o *dbent.PaymentOrder, fs, op, ad string) (string, error) {
+	if o.PaymentTradeNo != "" && o.PaymentType != "" {
+		if s.checkPaid(ctx, o) == "already_paid" {
+			return "already_paid", nil
+	placeholder
+placeholder
+	c, err := s.entClient.PaymentOrder.Update().Where(paymentorder.IDEQ(o.ID), paymentorder.StatusEQ(OrderStatusPending)).SetStatus(fs).Save(ctx)
+	if err != nil {
+		return "", fmt.Errorf("update order status: %w", err)
+placeholder
+	if c > 0 {
+		s.writeAuditLog(ctx, o.ID, "ORDER_CANCELLED", op, map[string]any{"detail": adplaceholder)
+placeholder
+	return "cancelled", nil
+placeholder
+
+func (s *PaymentService) checkPaid(ctx context.Context, o *dbent.PaymentOrder) string {
+	s.EnsureProviders(ctx)
+	prov, err := s.registry.GetProvider(o.PaymentType)
+	if err != nil {
+		return ""
+placeholder
+	// Use OutTradeNo as fallback when PaymentTradeNo is empty
+	// (e.g. EasyPay popup mode where trade_no arrives only via notify callback)
+	tradeNo := o.PaymentTradeNo
+	if tradeNo == "" {
+		tradeNo = o.OutTradeNo
+placeholder
+	resp, err := prov.QueryOrder(ctx, tradeNo)
+	if err != nil {
+		slog.Warn("query upstream failed", "orderID", o.ID, "error", err)
+		return ""
+placeholder
+	if resp.Status == payment.ProviderStatusPaid {
+		_ = s.HandlePaymentNotification(ctx, &payment.PaymentNotification{TradeNo: o.PaymentTradeNo, OrderID: o.OutTradeNo, Amount: resp.Amount, Status: payment.ProviderStatusSuccessplaceholder, prov.ProviderKey())
+		return "already_paid"
+placeholder
+	if cp, ok := prov.(payment.CancelableProvider); ok {
+		_ = cp.CancelPayment(ctx, o.PaymentTradeNo)
+placeholder
+	return ""
+placeholder
+
+// VerifyOrderByOutTradeNo actively queries the upstream provider to check
+// if a payment was made, and processes it if so. This handles the case where
+// the provider's notify callback was missed (e.g. EasyPay popup mode).
+func (s *PaymentService) VerifyOrderByOutTradeNo(ctx context.Context, outTradeNo string, userID int64) (*dbent.PaymentOrder, error) {
+	o, err := s.entClient.PaymentOrder.Query().
+		Where(paymentorder.OutTradeNo(outTradeNo)).
+		Only(ctx)
+	if err != nil {
+		return nil, infraerrors.NotFound("NOT_FOUND", "order not found")
+placeholder
+	if o.UserID != userID {
+		return nil, infraerrors.Forbidden("FORBIDDEN", "no permission for this order")
+placeholder
+	// Only verify orders that are still pending or recently expired
+	if o.Status == OrderStatusPending || o.Status == OrderStatusExpired {
+		result := s.checkPaid(ctx, o)
+		if result == "already_paid" {
+			// Reload order to get updated status
+			o, err = s.entClient.PaymentOrder.Get(ctx, o.ID)
+			if err != nil {
+				return nil, fmt.Errorf("reload order: %w", err)
+		placeholder
+	placeholder
+placeholder
+	return o, nil
+placeholder
+
+func (s *PaymentService) ExpireTimedOutOrders(ctx context.Context) (int, error) {
+	now := time.Now()
+	orders, err := s.entClient.PaymentOrder.Query().Where(paymentorder.StatusEQ(OrderStatusPending), paymentorder.ExpiresAtLTE(now)).All(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("query expired: %w", err)
+placeholder
+	n := 0
+	for _, o := range orders {
+		// Cancel upstream payment (e.g. Stripe PaymentIntent) before marking expired
+		s.cancelUpstreamPayment(ctx, o)
+		c, e := s.entClient.PaymentOrder.Update().Where(paymentorder.IDEQ(o.ID), paymentorder.StatusEQ(OrderStatusPending)).SetStatus(OrderStatusExpired).Save(ctx)
+		if e != nil {
+			slog.Warn("expire failed", "orderID", o.ID, "error", e)
+			continue
+	placeholder
+		if c > 0 {
+			s.writeAuditLog(ctx, o.ID, "ORDER_EXPIRED", "system", map[string]any{"expiresAt": o.ExpiresAt.Format(time.RFC3339)placeholder)
+			n++
+	placeholder
+placeholder
+	return n, nil
+placeholder
+
+// cancelUpstreamPayment attempts to cancel the upstream provider payment (e.g. Stripe PaymentIntent).
+func (s *PaymentService) cancelUpstreamPayment(ctx context.Context, o *dbent.PaymentOrder) {
+	if o.PaymentTradeNo == "" || o.PaymentType == "" {
+		return
+placeholder
+	s.EnsureProviders(ctx)
+	prov, err := s.registry.GetProvider(o.PaymentType)
+	if err != nil {
+		return
+placeholder
+	if cp, ok := prov.(payment.CancelableProvider); ok {
+		if err := cp.CancelPayment(ctx, o.PaymentTradeNo); err != nil {
+			slog.Warn("cancel upstream payment failed", "orderID", o.ID, "tradeNo", o.PaymentTradeNo, "error", err)
+	placeholder
+placeholder
 placeholder
