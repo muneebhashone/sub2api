@@ -57,6 +57,7 @@ import { computed, ref, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useRoute placeholder from 'vue-router'
 import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { isMobileDevice placeholder from '@/utils/device'
 
 interface StripeWithWechatPay {
   confirmWechatPayPayment(clientSecret: string, options: Record<string, unknown>): Promise<{ error?: { message?: string placeholder; paymentIntent?: { status: string placeholder placeholder>
@@ -129,7 +130,7 @@ async function initStripe(clientSecret: string, publishableKey: string) {
       // WeChat: Stripe shows its built-in QR dialog, user scans, promise resolves
       hint.value = t('payment.stripePopup.loadingQr')
       const result = await (stripe as unknown as StripeWithWechatPay).confirmWechatPayPayment(clientSecret, {
-        payment_method_options: { wechat_pay: { client: 'web' placeholder placeholder,
+        payment_method_options: { wechat_pay: { client: isMobileDevice() ? 'mobile_web' : 'web' placeholder placeholder,
       placeholder)
       if (result.error) {
         error.value = result.error.message || t('payment.result.failed')

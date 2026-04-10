@@ -83,6 +83,9 @@ placeholder
 	if cid := e.resolveCID(req.PaymentType); cid != "" {
 		params["cid"] = cid
 placeholder
+	if req.IsMobile {
+		params["device"] = deviceMobile
+placeholder
 	params["sign"] = easyPaySign(params, e.config["pkey"])
 	params["sign_type"] = signTypeMD5
 
@@ -122,6 +125,7 @@ placeholder
 		Msg     string `json:"msg"`
 		TradeNo string `json:"trade_no"`
 		PayURL  string `json:"payurl"`
+		PayURL2 string `json:"payurl2"` // H5 mobile payment URL
 		QRCode  string `json:"qrcode"`
 placeholder
 	if err := json.Unmarshal(body, &resp); err != nil {
@@ -130,7 +134,11 @@ placeholder
 	if resp.Code != easypayCodeSuccess {
 		return nil, fmt.Errorf("easypay error: %s", resp.Msg)
 placeholder
-	return &payment.CreatePaymentResponse{TradeNo: resp.TradeNo, PayURL: resp.PayURL, QRCode: resp.QRCodeplaceholder, nil
+	payURL := resp.PayURL
+	if req.IsMobile && resp.PayURL2 != "" {
+		payURL = resp.PayURL2
+placeholder
+	return &payment.CreatePaymentResponse{TradeNo: resp.TradeNo, PayURL: payURL, QRCode: resp.QRCodeplaceholder, nil
 placeholder
 
 // resolveURLs returns (notifyURL, returnURL) preferring request values,
