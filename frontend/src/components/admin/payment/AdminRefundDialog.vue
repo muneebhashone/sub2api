@@ -164,6 +164,7 @@ import { reactive, computed, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import type { PaymentOrder placeholder from '@/types/payment'
+import { formatOrderDateTime placeholder from '@/components/payment/orderUtils'
 
 const { t placeholder = useI18n()
 
@@ -222,8 +223,7 @@ watch(() => props.show, (val) => {
 placeholder)
 
 function formatDateTime(dateStr: string): string {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleString()
+  return formatOrderDateTime(dateStr)
 placeholder
 
 function handleSubmit() {
