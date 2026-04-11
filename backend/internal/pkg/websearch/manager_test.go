@@ -3,6 +3,7 @@ package websearch
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -146,4 +147,135 @@ placeholder
 func TestQuotaRedisKey_Format(t *testing.T) {
 	key := quotaRedisKey("brave", QuotaRefreshDaily)
 	require.Contains(t, key, "websearch:quota:brave:")
+placeholder
+
+// --- isProviderAvailable ---
+
+func TestIsProviderAvailable_EmptyAPIKey(t *testing.T) {
+	m := NewManager(nil, nil)
+	require.False(t, m.isProviderAvailable(ProviderConfig{APIKey: ""placeholder))
+placeholder
+
+func TestIsProviderAvailable_Expired(t *testing.T) {
+	m := NewManager(nil, nil)
+	past := time.Now().Add(-1 * time.Hour).Unix()
+	require.False(t, m.isProviderAvailable(ProviderConfig{APIKey: "k", ExpiresAt: &pastplaceholder))
+placeholder
+
+func TestIsProviderAvailable_Valid(t *testing.T) {
+	m := NewManager(nil, nil)
+	future := time.Now().Add(1 * time.Hour).Unix()
+	require.True(t, m.isProviderAvailable(ProviderConfig{APIKey: "k", ExpiresAt: &futureplaceholder))
+	require.True(t, m.isProviderAvailable(ProviderConfig{APIKey: "k"placeholder)) // no expiry
+placeholder
+
+// --- resolveProxyID ---
+
+func TestResolveProxyID_AccountProxyOverrides(t *testing.T) {
+	cfg := ProviderConfig{ProxyID: 42placeholder
+	// account proxy present → return 0 (account proxy has no config-level ID)
+	require.Equal(t, int64(0), resolveProxyID(cfg, "http://account-proxy:8080"))
+	// no account proxy → return provider's proxy ID
+	require.Equal(t, int64(42), resolveProxyID(cfg, ""))
+placeholder
+
+// --- isProxyError ---
+
+func TestIsProxyError_Nil(t *testing.T) {
+	require.False(t, isProxyError(nil))
+placeholder
+
+func TestIsProxyError_ConnectionRefused(t *testing.T) {
+	err := fmt.Errorf("dial tcp: connection refused")
+	require.True(t, isProxyError(err))
+placeholder
+
+func TestIsProxyError_Timeout(t *testing.T) {
+	err := fmt.Errorf("i/o timeout while connecting to proxy")
+	require.True(t, isProxyError(err))
+placeholder
+
+func TestIsProxyError_SOCKS(t *testing.T) {
+	err := fmt.Errorf("socks connect failed")
+	require.True(t, isProxyError(err))
+placeholder
+
+func TestIsProxyError_TLSHandshake(t *testing.T) {
+	err := fmt.Errorf("tls handshake timeout")
+	require.True(t, isProxyError(err))
+placeholder
+
+func TestIsProxyError_APIError_NotProxy(t *testing.T) {
+	err := fmt.Errorf("API rate limit exceeded")
+	require.False(t, isProxyError(err))
+placeholder
+
+// --- isProxyAvailable (nil Redis) ---
+
+func TestIsProxyAvailable_NilRedis(t *testing.T) {
+	m := NewManager(nil, nil)
+	require.True(t, m.isProxyAvailable(context.Background(), 42))
+placeholder
+
+func TestIsProxyAvailable_ZeroID(t *testing.T) {
+	m := NewManager(nil, nil)
+	require.True(t, m.isProxyAvailable(context.Background(), 0))
+placeholder
+
+// --- selectByQuotaWeight ---
+
+func TestSelectByQuotaWeight_NoQuotaLast(t *testing.T) {
+	m := NewManager(nil, nil) // nil Redis → GetUsage returns 0
+	candidates := []ProviderConfig{
+		{Type: "brave", APIKey: "k1", QuotaLimit: 0placeholder,    // no limit → weight 0
+		{Type: "tavily", APIKey: "k2", QuotaLimit: 100placeholder, // remaining 100
+placeholder
+	result := m.selectByQuotaWeight(context.Background(), candidates)
+	require.Len(t, result, 2)
+	// tavily (with quota) should come first
+	require.Equal(t, "tavily", result[0].Type)
+	require.Equal(t, "brave", result[1].Type)
+placeholder
+
+func TestSelectByQuotaWeight_AllNoQuota(t *testing.T) {
+	m := NewManager(nil, nil)
+	candidates := []ProviderConfig{
+		{Type: "brave", APIKey: "k1", QuotaLimit: 0placeholder,
+		{Type: "tavily", APIKey: "k2", QuotaLimit: 0placeholder,
+placeholder
+	result := m.selectByQuotaWeight(context.Background(), candidates)
+	require.Len(t, result, 2)
+	// both have weight 0, original order preserved
+placeholder
+
+func TestSelectByQuotaWeight_Empty(t *testing.T) {
+	m := NewManager(nil, nil)
+	result := m.selectByQuotaWeight(context.Background(), nil)
+	require.Empty(t, result)
+placeholder
+
+// --- newHTTPClient ---
+
+func TestNewHTTPClient_NoProxy(t *testing.T) {
+	c, err := newHTTPClient("")
+placeholder
+	require.NotNil(t, c)
+placeholder
+
+func TestNewHTTPClient_InvalidProxy(t *testing.T) {
+	_, err := newHTTPClient("://bad-url")
+placeholder
+	require.Contains(t, err.Error(), "invalid proxy URL")
+placeholder
+
+func TestNewHTTPClient_ValidHTTPProxy(t *testing.T) {
+	c, err := newHTTPClient("http://proxy.example.com:8080")
+placeholder
+	require.NotNil(t, c)
+placeholder
+
+func TestNewHTTPClient_ValidSOCKS5Proxy(t *testing.T) {
+	c, err := newHTTPClient("socks5://proxy.example.com:1080")
+placeholder
+	require.NotNil(t, c)
 placeholder
