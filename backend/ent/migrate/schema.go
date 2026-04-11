@@ -485,6 +485,158 @@ placeholder
 		placeholder,
 	placeholder,
 placeholder
+	// PaymentAuditLogsColumns holds the columns for the "payment_audit_logs" table.
+	PaymentAuditLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "order_id", Type: field.TypeString, Size: 64placeholder,
+		{Name: "action", Type: field.TypeString, Size: 50placeholder,
+		{Name: "detail", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "operator", Type: field.TypeString, Size: 100, Default: "system"placeholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// PaymentAuditLogsTable holds the schema information for the "payment_audit_logs" table.
+	PaymentAuditLogsTable = &schema.Table{
+		Name:       "payment_audit_logs",
+		Columns:    PaymentAuditLogsColumns,
+		PrimaryKey: []*schema.Column{PaymentAuditLogsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentauditlog_order_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentAuditLogsColumns[1]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// PaymentOrdersColumns holds the columns for the "payment_orders" table.
+	PaymentOrdersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "user_email", Type: field.TypeString, Size: 255placeholder,
+		{Name: "user_name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "user_notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
+		{Name: "pay_amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
+		{Name: "fee_rate", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
+		{Name: "recharge_code", Type: field.TypeString, Size: 64placeholder,
+		{Name: "out_trade_no", Type: field.TypeString, Size: 64, Default: ""placeholder,
+		{Name: "payment_type", Type: field.TypeString, Size: 30placeholder,
+		{Name: "payment_trade_no", Type: field.TypeString, Size: 128placeholder,
+		{Name: "pay_url", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "qr_code", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "qr_code_img", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "order_type", Type: field.TypeString, Size: 20, Default: "balance"placeholder,
+		{Name: "plan_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "subscription_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "subscription_days", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "provider_instance_id", Type: field.TypeString, Nullable: true, Size: 64placeholder,
+		{Name: "status", Type: field.TypeString, Size: 30, Default: "PENDING"placeholder,
+		{Name: "refund_amount", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
+		{Name: "refund_reason", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "refund_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "force_refund", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "refund_requested_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "refund_request_reason", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "refund_requested_by", Type: field.TypeString, Nullable: true, Size: 20placeholder,
+		{Name: "expires_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "paid_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "failed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "failed_reason", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "client_ip", Type: field.TypeString, Size: 50placeholder,
+		{Name: "src_host", Type: field.TypeString, Size: 255placeholder,
+		{Name: "src_url", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+placeholder
+	// PaymentOrdersTable holds the schema information for the "payment_orders" table.
+	PaymentOrdersTable = &schema.Table{
+		Name:       "payment_orders",
+		Columns:    PaymentOrdersColumns,
+		PrimaryKey: []*schema.Column{PaymentOrdersColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_orders_users_payment_orders",
+				Columns:    []*schema.Column{PaymentOrdersColumns[37]placeholder,
+				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentorder_out_trade_no",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[8]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[37]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_status",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[19]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[27]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[35]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_paid_at",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[28]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_payment_type_paid_at",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[9], PaymentOrdersColumns[28]placeholder,
+		placeholder,
+			{
+				Name:    "paymentorder_order_type",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentOrdersColumns[14]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// PaymentProviderInstancesColumns holds the columns for the "payment_provider_instances" table.
+	PaymentProviderInstancesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "provider_key", Type: field.TypeString, Size: 30placeholder,
+		{Name: "name", Type: field.TypeString, Size: 100, Default: ""placeholder,
+		{Name: "config", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "supported_types", Type: field.TypeString, Size: 200, Default: ""placeholder,
+		{Name: "enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "payment_mode", Type: field.TypeString, Size: 20, Default: ""placeholder,
+		{Name: "sort_order", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "limits", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "refund_enabled", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// PaymentProviderInstancesTable holds the schema information for the "payment_provider_instances" table.
+	PaymentProviderInstancesTable = &schema.Table{
+		Name:       "payment_provider_instances",
+		Columns:    PaymentProviderInstancesColumns,
+		PrimaryKey: []*schema.Column{PaymentProviderInstancesColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentproviderinstance_provider_key",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentProviderInstancesColumns[1]placeholder,
+		placeholder,
+			{
+				Name:    "paymentproviderinstance_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentProviderInstancesColumns[5]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// PromoCodesColumns holds the columns for the "promo_codes" table.
 	PromoCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -670,6 +822,41 @@ placeholder
 		Name:       "settings",
 		Columns:    SettingsColumns,
 		PrimaryKey: []*schema.Column{SettingsColumns[0]placeholder,
+placeholder
+	// SubscriptionPlansColumns holds the columns for the "subscription_plans" table.
+	SubscriptionPlansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "group_id", Type: field.TypeInt64placeholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "price", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
+		{Name: "original_price", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
+		{Name: "validity_days", Type: field.TypeInt, Default: 30placeholder,
+		{Name: "validity_unit", Type: field.TypeString, Size: 10, Default: "day"placeholder,
+		{Name: "features", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "product_name", Type: field.TypeString, Size: 100, Default: ""placeholder,
+		{Name: "for_sale", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "sort_order", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// SubscriptionPlansTable holds the schema information for the "subscription_plans" table.
+	SubscriptionPlansTable = &schema.Table{
+		Name:       "subscription_plans",
+		Columns:    SubscriptionPlansColumns,
+		PrimaryKey: []*schema.Column{SubscriptionPlansColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "subscriptionplan_group_id",
+				Unique:  false,
+				Columns: []*schema.Column{SubscriptionPlansColumns[1]placeholder,
+		placeholder,
+			{
+				Name:    "subscriptionplan_for_sale",
+				Unique:  false,
+				Columns: []*schema.Column{SubscriptionPlansColumns[10]placeholder,
+		placeholder,
+	placeholder,
 placeholder
 	// TLSFingerprintProfilesColumns holds the columns for the "tls_fingerprint_profiles" table.
 	TLSFingerprintProfilesColumns = []*schema.Column{
@@ -1128,12 +1315,16 @@ placeholder
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
+		PaymentAuditLogsTable,
+		PaymentOrdersTable,
+		PaymentProviderInstancesTable,
 		PromoCodesTable,
 		PromoCodeUsagesTable,
 		ProxiesTable,
 		RedeemCodesTable,
 		SecuritySecretsTable,
 		SettingsTable,
+		SubscriptionPlansTable,
 		TLSFingerprintProfilesTable,
 		UsageCleanupTasksTable,
 		UsageLogsTable,
@@ -1177,6 +1368,16 @@ placeholder
 	IdempotencyRecordsTable.Annotation = &entsql.Annotation{
 		Table: "idempotency_records",
 placeholder
+	PaymentAuditLogsTable.Annotation = &entsql.Annotation{
+		Table: "payment_audit_logs",
+placeholder
+	PaymentOrdersTable.ForeignKeys[0].RefTable = UsersTable
+	PaymentOrdersTable.Annotation = &entsql.Annotation{
+		Table: "payment_orders",
+placeholder
+	PaymentProviderInstancesTable.Annotation = &entsql.Annotation{
+		Table: "payment_provider_instances",
+placeholder
 	PromoCodesTable.Annotation = &entsql.Annotation{
 		Table: "promo_codes",
 placeholder
@@ -1198,6 +1399,9 @@ placeholder
 placeholder
 	SettingsTable.Annotation = &entsql.Annotation{
 		Table: "settings",
+placeholder
+	SubscriptionPlansTable.Annotation = &entsql.Annotation{
+		Table: "subscription_plans",
 placeholder
 	TLSFingerprintProfilesTable.Annotation = &entsql.Annotation{
 		Table: "tls_fingerprint_profiles",

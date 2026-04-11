@@ -170,6 +170,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyBackendModeEnabled,
 		SettingKeyOIDCConnectEnabled,
 		SettingKeyOIDCConnectProviderName,
+		SettingPaymentEnabled,
 placeholder
 
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
@@ -236,6 +237,7 @@ placeholder
 		BackendModeEnabled:               settings[SettingKeyBackendModeEnabled] == "true",
 		OIDCOAuthEnabled:                 oidcEnabled,
 		OIDCOAuthProviderName:            oidcProviderName,
+		PaymentEnabled:                   settings[SettingPaymentEnabled] == "true",
 placeholder, nil
 placeholder
 
@@ -287,6 +289,7 @@ placeholder
 		BackendModeEnabled               bool            `json:"backend_mode_enabled"`
 		OIDCOAuthEnabled                 bool            `json:"oidc_oauth_enabled"`
 		OIDCOAuthProviderName            string          `json:"oidc_oauth_provider_name"`
+		PaymentEnabled                   bool            `json:"payment_enabled"`
 		Version                          string          `json:"version,omitempty"`
 placeholder{
 		RegistrationEnabled:              settings.RegistrationEnabled,
@@ -316,6 +319,7 @@ placeholder{
 		BackendModeEnabled:               settings.BackendModeEnabled,
 		OIDCOAuthEnabled:                 settings.OIDCOAuthEnabled,
 		OIDCOAuthProviderName:            settings.OIDCOAuthProviderName,
+		PaymentEnabled:                   settings.PaymentEnabled,
 		Version:                          s.version,
 placeholder, nil
 placeholder

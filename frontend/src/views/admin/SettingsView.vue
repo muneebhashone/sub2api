@@ -1989,70 +1989,6 @@
           </div>
         </div>
 
-        <!-- Purchase Subscription Page -->
-        <div class="card">
-          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-              {{ t('admin.settings.purchase.title') placeholderplaceholder
-            </h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {{ t('admin.settings.purchase.description') placeholderplaceholder
-            </p>
-          </div>
-          <div class="space-y-6 p-6">
-            <!-- Enable Toggle -->
-            <div class="flex items-center justify-between">
-              <div>
-                <label class="font-medium text-gray-900 dark:text-white">{{
-                  t('admin.settings.purchase.enabled')
-                placeholderplaceholder</label>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ t('admin.settings.purchase.enabledHint') placeholderplaceholder
-                </p>
-              </div>
-              <Toggle v-model="form.purchase_subscription_enabled" />
-            </div>
-
-            <!-- URL -->
-            <div>
-              <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {{ t('admin.settings.purchase.url') placeholderplaceholder
-              </label>
-              <input
-                v-model="form.purchase_subscription_url"
-                type="url"
-                class="input font-mono text-sm"
-                :placeholder="t('admin.settings.purchase.urlPlaceholder')"
-              />
-              <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                {{ t('admin.settings.purchase.urlHint') placeholderplaceholder
-              </p>
-              <p class="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                {{ t('admin.settings.purchase.iframeWarning') placeholderplaceholder
-              </p>
-            </div>
-
-            <!-- Integration Docs -->
-            <div class="flex items-center gap-2 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <a
-                href="https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/docs/ADMIN_PAYMENT_INTEGRATION_API.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-blue-600 hover:underline dark:text-blue-400"
-                download="ADMIN_PAYMENT_INTEGRATION_API.md"
-              >
-                {{ t('admin.settings.purchase.integrationDoc') placeholderplaceholder
-              </a>
-              <span class="text-gray-400 dark:text-gray-500">—</span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">
-                {{ t('admin.settings.purchase.integrationDocHint') placeholderplaceholder
-              </span>
-            </div>
-          </div>
-        </div>
 
         <!-- Custom Menu Items -->
         <div class="card">
@@ -2178,6 +2114,124 @@
         </div><!-- /Tab: General -->
 
         <!-- Tab: Email -->
+<!-- Tab: Payment -->
+        <div v-show="activeTab === 'payment'" class="space-y-6">
+
+        <!-- Payment System Settings -->
+        <div class="card">
+          <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('admin.settings.payment.title') placeholderplaceholder</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('admin.settings.payment.description') placeholderplaceholder</p>
+          </div>
+          <div class="space-y-4 p-6">
+            <!-- Enable toggle -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="font-medium text-gray-900 dark:text-white">{{ t('admin.settings.payment.enabled') placeholderplaceholder</label>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('admin.settings.payment.enabledHint') placeholderplaceholder</p>
+              </div>
+              <Toggle v-model="form.payment_enabled" />
+            </div>
+            <template v-if="form.payment_enabled">
+              <!-- Row 1: Product name -->
+              <div class="grid grid-cols-3 gap-3">
+                <div><label class="input-label">{{ t('admin.settings.payment.productNamePrefix') placeholderplaceholder</label><input v-model="form.payment_product_name_prefix" type="text" class="input" placeholder="Sub2API" /></div>
+                <div><label class="input-label">{{ t('admin.settings.payment.productNameSuffix') placeholderplaceholder</label><input v-model="form.payment_product_name_suffix" type="text" class="input" placeholder="CNY" /></div>
+                <div><label class="input-label">{{ t('admin.settings.payment.preview') placeholderplaceholder</label><div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-dark-600 dark:bg-dark-800 dark:text-gray-300">{{ (form.payment_product_name_prefix || 'Sub2API') + ' 100 ' + (form.payment_product_name_suffix || 'CNY') placeholderplaceholder</div></div>
+              </div>
+              <!-- Row 2: Balance toggle + amounts -->
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div><label class="input-label">{{ t('admin.settings.payment.minAmount') placeholderplaceholder</label><input :value="form.payment_min_amount || ''" @input="form.payment_min_amount = parseFloat(($event.target as HTMLInputElement).value) || 0" type="number" step="0.01" min="0" class="input" :placeholder="t('admin.settings.payment.noLimit')" /></div>
+                <div><label class="input-label">{{ t('admin.settings.payment.maxAmount') placeholderplaceholder</label><input :value="form.payment_max_amount || ''" @input="form.payment_max_amount = parseFloat(($event.target as HTMLInputElement).value) || 0" type="number" step="0.01" min="0" class="input" :placeholder="t('admin.settings.payment.noLimit')" /></div>
+                <div><label class="input-label">{{ t('admin.settings.payment.dailyLimit') placeholderplaceholder</label><input :value="form.payment_daily_limit || ''" @input="form.payment_daily_limit = parseFloat(($event.target as HTMLInputElement).value) || 0" type="number" step="0.01" min="0" class="input" :placeholder="t('admin.settings.payment.noLimit')" /></div>
+                <div><label class="input-label">{{ t('admin.settings.payment.orderTimeout') placeholderplaceholder <span class="text-red-500">*</span></label><input v-model.number="form.payment_order_timeout_minutes" type="number" min="1" class="input" required /><p class="mt-0.5 text-xs text-gray-400">{{ t('admin.settings.payment.orderTimeoutHint') placeholderplaceholder</p></div>
+              </div>
+              <!-- Row 3: Pending orders + load balance + cancel rate limit (all in one row) -->
+              <div class="flex flex-wrap items-end gap-4">
+                <div class="w-28"><label class="input-label">{{ t('admin.settings.payment.maxPendingOrders') placeholderplaceholder</label><input v-model.number="form.payment_max_pending_orders" type="number" min="1" class="input" /></div>
+                <div>
+                  <label class="input-label">{{ t('admin.settings.payment.loadBalanceStrategy') placeholderplaceholder</label>
+                  <Select v-model="form.payment_load_balance_strategy" :options="loadBalanceOptions" class="w-40" />
+                </div>
+                <div>
+                  <label class="input-label">{{ t('admin.settings.payment.cancelRateLimit') placeholderplaceholder</label>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      :class="[
+                        'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+                        form.payment_cancel_rate_limit_enabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600'
+                      ]"
+                      @click="form.payment_cancel_rate_limit_enabled = !form.payment_cancel_rate_limit_enabled"
+                    >
+                      <span :class="[
+                        'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                        form.payment_cancel_rate_limit_enabled ? 'translate-x-5' : 'translate-x-0'
+                      ]" />
+                    </button>
+                    <Select v-model="form.payment_cancel_rate_limit_window_mode" :options="cancelRateLimitModeOptions" class="w-24" :disabled="!form.payment_cancel_rate_limit_enabled" />
+                    <span :class="['text-sm whitespace-nowrap', form.payment_cancel_rate_limit_enabled ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600']">{{ t('admin.settings.payment.cancelRateLimitEvery') placeholderplaceholder</span>
+                    <input v-model.number="form.payment_cancel_rate_limit_window" type="number" min="1" required class="input w-14 text-center" :disabled="!form.payment_cancel_rate_limit_enabled" />
+                    <Select v-model="form.payment_cancel_rate_limit_unit" :options="cancelRateLimitUnitOptions" class="w-28" :disabled="!form.payment_cancel_rate_limit_enabled" />
+                    <span :class="['text-sm whitespace-nowrap', form.payment_cancel_rate_limit_enabled ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600']">{{ t('admin.settings.payment.cancelRateLimitAllowMax') placeholderplaceholder</span>
+                    <input v-model.number="form.payment_cancel_rate_limit_max" type="number" min="1" required class="input w-14 text-center" :disabled="!form.payment_cancel_rate_limit_enabled" />
+                    <span :class="['text-sm whitespace-nowrap', form.payment_cancel_rate_limit_enabled ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600']">{{ t('admin.settings.payment.cancelRateLimitTimes') placeholderplaceholder</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Row 4: Enabled payment types (provider badges like sub2apipay) -->
+              <div>
+                <label class="input-label">{{ t('admin.settings.payment.enabledPaymentTypes') placeholderplaceholder</label>
+                <div class="mt-1.5 flex flex-wrap gap-2">
+                  <button
+                    v-for="pt in allPaymentTypes"
+                    :key="pt.value"
+                    type="button"
+                    @click="togglePaymentType(pt.value)"
+                    :class="[
+                      'rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
+                      isPaymentTypeEnabled(pt.value)
+                        ? 'border-primary-500 bg-primary-500 text-white shadow-sm'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-dark-600 dark:bg-dark-800 dark:text-gray-300 dark:hover:border-dark-500',
+                    ]"
+                  >{{ pt.label placeholderplaceholder</button>
+                </div>
+              </div>
+              <!-- Row 5: Help image + text -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="input-label">{{ t('admin.settings.payment.helpImage') placeholderplaceholder</label>
+                  <ImageUpload v-model="form.payment_help_image_url" :placeholder="t('admin.settings.payment.helpImagePlaceholder')" />
+                </div>
+                <div>
+                  <label class="input-label">{{ t('admin.settings.payment.helpText') placeholderplaceholder</label>
+                  <textarea v-model="form.payment_help_text" rows="3" class="input" :placeholder="t('admin.settings.payment.helpTextPlaceholder')"></textarea>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Provider Management -->
+        <PaymentProviderList
+          v-if="form.payment_enabled"
+          :providers="providers"
+          :loading="providersLoading"
+          :can-create="hasAnyPaymentTypeEnabled"
+          :enabled-payment-types="form.payment_enabled_types"
+          :all-payment-types="allPaymentTypes"
+          :redirect-label="t('admin.settings.payment.easypayRedirect')"
+          @refresh="loadProviders"
+          @create="openCreateProvider"
+          @edit="openEditProvider"
+          @delete="confirmDeleteProvider"
+          @toggle-field="handleToggleField"
+          @toggle-type="handleToggleType"
+          @reorder="handleReorderProviders"
+        />
+
+        </div>
+
         <div v-show="activeTab === 'email'" class="space-y-6">
         <!-- Email disabled hint - show when email_verify_enabled is off -->
         <div v-if="!form.email_verify_enabled" class="card">
@@ -2430,6 +2484,21 @@
           </button>
         </div>
       </form>
+
+      <!-- Provider dialogs placed outside the settings form to prevent form submission bubbling -->
+      <PaymentProviderDialog
+        ref="providerDialogRef"
+        :show="showProviderDialog"
+        :saving="providerSaving"
+        :editing="editingProvider"
+        :all-key-options="providerKeyOptions"
+        :enabled-key-options="enabledProviderKeyOptions"
+        :all-payment-types="allPaymentTypes"
+        :redirect-label="t('admin.settings.payment.easypayRedirect')"
+        @close="showProviderDialog = false"
+        @save="handleSaveProvider"
+      />
+      <ConfirmDialog :show="showDeleteProviderDialog" :title="t('admin.settings.payment.deleteProvider')" :message="t('admin.settings.payment.deleteProviderConfirm')" :confirm-text="t('common.delete')" danger @confirm="handleDeleteProvider" @cancel="showDeleteProviderDialog = false" />
     </div>
   </AppLayout>
 </template>
@@ -2444,15 +2513,20 @@ import type {
   DefaultSubscriptionSetting
 placeholder from '@/api/admin/settings'
 import type { AdminGroup placeholder from '@/types'
+import type { ProviderInstance placeholder from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import Select from '@/components/common/Select.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import PaymentProviderList from '@/components/payment/PaymentProviderList.vue'
+import PaymentProviderDialog from '@/components/payment/PaymentProviderDialog.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import BackupSettings from '@/views/admin/BackupView.vue'
 import { useClipboard placeholder from '@/composables/useClipboard'
+import { extractApiErrorMessage placeholder from '@/utils/apiError'
 import { useAppStore placeholder from '@/stores'
 import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 import {
@@ -2466,13 +2540,14 @@ const { t placeholder = useI18n()
 const appStore = useAppStore()
 const adminSettingsStore = useAdminSettingsStore()
 
-type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'email' | 'backup'
+type SettingsTab = 'general' | 'security' | 'users' | 'gateway' | 'payment' | 'email' | 'backup'
 const activeTab = ref<SettingsTab>('general')
 const settingsTabs = [
   { key: 'general'  as SettingsTab, icon: 'home'   as const placeholder,
   { key: 'security' as SettingsTab, icon: 'shield' as const placeholder,
   { key: 'users'    as SettingsTab, icon: 'user'   as const placeholder,
   { key: 'gateway'  as SettingsTab, icon: 'server' as const placeholder,
+  { key: 'payment'  as SettingsTab, icon: 'creditCard' as const placeholder,
   { key: 'email'    as SettingsTab, icon: 'mail'   as const placeholder,
   { key: 'backup'   as SettingsTab, icon: 'database' as const placeholder,
 ]
@@ -2584,8 +2659,7 @@ const form = reactive<SettingsForm>({
   home_content: '',
   backend_mode_enabled: false,
   hide_ccs_import_button: false,
-  purchase_subscription_enabled: false,
-  purchase_subscription_url: '',
+  payment_enabled: false,  payment_min_amount: 1,  payment_max_amount: 10000,  payment_daily_limit: 50000,  payment_max_pending_orders: 3,  payment_order_timeout_minutes: 30,  payment_balance_disabled: false,  payment_enabled_types: [],  payment_help_image_url: '',  payment_help_text: '',  payment_product_name_prefix: '',  payment_product_name_suffix: '',  payment_load_balance_strategy: 'round-robin',  payment_cancel_rate_limit_enabled: false,  payment_cancel_rate_limit_max: 10,  payment_cancel_rate_limit_window: 1,  payment_cancel_rate_limit_unit: 'day',  payment_cancel_rate_limit_window_mode: 'rolling',
   table_default_page_size: tablePageSizeDefault,
   table_page_size_options: [10, 20, 50, 100],
   custom_menu_items: [] as Array<{id: string; label: string; icon_svg: string; url: string; visibility: 'user' | 'admin'; sort_order: numberplaceholder>,
@@ -2845,7 +2919,13 @@ async function loadSettings() {
   loadFailed.value = false
   try {
     const settings = await adminAPI.settings.getSettings()
-    Object.assign(form, settings)
+    settings.payment_load_balance_strategy = settings.payment_load_balance_strategy || 'round-robin'
+    // Only assign non-null values from backend (null means unconfigured, keep defaults)
+    for (const [key, value] of Object.entries(settings)) {
+      if (value !== null && value !== undefined) {
+        (form as Record<string, unknown>)[key] = value
+      placeholder
+    placeholder
     form.backend_mode_enabled = settings.backend_mode_enabled
     form.default_subscriptions = Array.isArray(settings.default_subscriptions)
       ? settings.default_subscriptions
@@ -2867,11 +2947,9 @@ async function loadSettings() {
     form.turnstile_secret_key = ''
     form.linuxdo_connect_client_secret = ''
     form.oidc_connect_client_secret = ''
-  placeholder catch (error: any) {
+  placeholder catch (error: unknown) {
     loadFailed.value = true
-    appStore.showError(
-      t('admin.settings.failedToLoad') + ': ' + (error.message || t('common.unknownError'))
-    )
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.failedToLoad')))
   placeholder finally {
     loading.value = false
   placeholder
@@ -2883,8 +2961,7 @@ async function loadSubscriptionGroups() {
     subscriptionGroups.value = groups.filter(
       (group) => group.subscription_type === 'subscription' && group.status === 'active'
     )
-  placeholder catch (error) {
-    console.error('Failed to load subscription groups:', error)
+  placeholder catch (_error: unknown) {
     subscriptionGroups.value = []
   placeholder
 placeholder
@@ -2975,21 +3052,6 @@ async function saveSettings() {
     // Optional URL fields: auto-clear invalid values so they don't cause backend 400 errors
     if (!isValidHttpUrl(form.frontend_url)) form.frontend_url = ''
     if (!isValidHttpUrl(form.doc_url)) form.doc_url = ''
-    // Purchase URL: required when enabled; auto-clear when disabled to avoid backend rejection
-    if (form.purchase_subscription_enabled) {
-      if (!form.purchase_subscription_url) {
-        appStore.showError(t('admin.settings.purchase.url') + ': URL is required when purchase is enabled')
-        saving.value = false
-        return
-      placeholder
-      if (!isValidHttpUrl(form.purchase_subscription_url)) {
-        appStore.showError(t('admin.settings.purchase.url') + ': must be an absolute http(s) URL (e.g. https://example.com)')
-        saving.value = false
-        return
-      placeholder
-    placeholder else if (!isValidHttpUrl(form.purchase_subscription_url)) {
-      form.purchase_subscription_url = ''
-    placeholder
 
     const payload: UpdateSettingsRequest = {
       registration_enabled: form.registration_enabled,
@@ -3013,8 +3075,6 @@ async function saveSettings() {
       home_content: form.home_content,
       backend_mode_enabled: form.backend_mode_enabled,
       hide_ccs_import_button: form.hide_ccs_import_button,
-      purchase_subscription_enabled: form.purchase_subscription_enabled,
-      purchase_subscription_url: form.purchase_subscription_url,
       table_default_page_size: form.table_default_page_size,
       table_page_size_options: form.table_page_size_options,
       custom_menu_items: form.custom_menu_items,
@@ -3068,10 +3128,34 @@ async function saveSettings() {
       allow_ungrouped_key_scheduling: form.allow_ungrouped_key_scheduling,
       enable_fingerprint_unification: form.enable_fingerprint_unification,
       enable_metadata_passthrough: form.enable_metadata_passthrough,
-      enable_cch_signing: form.enable_cch_signing
+      enable_cch_signing: form.enable_cch_signing,
+      // Payment configuration
+      payment_enabled: form.payment_enabled,
+      payment_min_amount: Number(form.payment_min_amount) || 0,
+      payment_max_amount: Number(form.payment_max_amount) || 0,
+      payment_daily_limit: Number(form.payment_daily_limit) || 0,
+      payment_max_pending_orders: Number(form.payment_max_pending_orders) || 0,
+      payment_order_timeout_minutes: Number(form.payment_order_timeout_minutes) || 0,
+      payment_balance_disabled: form.payment_balance_disabled,
+      payment_enabled_types: form.payment_enabled_types,
+      payment_load_balance_strategy: form.payment_load_balance_strategy,
+      payment_product_name_prefix: form.payment_product_name_prefix,
+      payment_product_name_suffix: form.payment_product_name_suffix,
+      payment_help_image_url: form.payment_help_image_url,
+      payment_help_text: form.payment_help_text,
+      payment_cancel_rate_limit_enabled: form.payment_cancel_rate_limit_enabled,
+      payment_cancel_rate_limit_max: Number(form.payment_cancel_rate_limit_max) || 10,
+      payment_cancel_rate_limit_window: Number(form.payment_cancel_rate_limit_window) || 1,
+      payment_cancel_rate_limit_unit: form.payment_cancel_rate_limit_unit,
+      payment_cancel_rate_limit_window_mode: form.payment_cancel_rate_limit_window_mode,
     placeholder
+
     const updated = await adminAPI.settings.updateSettings(payload)
-    Object.assign(form, updated)
+    for (const [key, value] of Object.entries(updated)) {
+      if (value !== null && value !== undefined) {
+        (form as Record<string, unknown>)[key] = value
+      placeholder
+    placeholder
     registrationEmailSuffixWhitelistTags.value = normalizeRegistrationEmailSuffixDomains(
       updated.registration_email_suffix_whitelist
     )
@@ -3088,10 +3172,8 @@ async function saveSettings() {
     await appStore.fetchPublicSettings(true)
     await adminSettingsStore.fetch(true)
     appStore.showSuccess(t('admin.settings.settingsSaved'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.failedToSave') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.failedToSave')))
   placeholder finally {
     saving.value = false
   placeholder
@@ -3110,10 +3192,8 @@ async function testSmtpConnection() {
     placeholder)
     // API returns { message: "..." placeholder on success, errors are thrown as exceptions
     appStore.showSuccess(result.message || t('admin.settings.smtpConnectionSuccess'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.failedToTestSmtp') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.failedToTestSmtp')))
   placeholder finally {
     testingSmtp.value = false
   placeholder
@@ -3140,10 +3220,8 @@ async function sendTestEmail() {
     placeholder)
     // API returns { message: "..." placeholder on success, errors are thrown as exceptions
     appStore.showSuccess(result.message || t('admin.settings.testEmailSent'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.failedToSendTestEmail') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.failedToSendTestEmail')))
   placeholder finally {
     sendingTestEmail.value = false
   placeholder
@@ -3156,8 +3234,8 @@ async function loadAdminApiKey() {
     const status = await adminAPI.settings.getAdminApiKey()
     adminApiKeyExists.value = status.exists
     adminApiKeyMasked.value = status.masked_key
-  placeholder catch (error: any) {
-    console.error('Failed to load admin API key status:', error)
+  placeholder catch (_error: unknown) {
+    // Silent fail - admin API key status is non-critical
   placeholder finally {
     adminApiKeyLoading.value = false
   placeholder
@@ -3171,8 +3249,8 @@ async function createAdminApiKey() {
     adminApiKeyExists.value = true
     adminApiKeyMasked.value = result.key.substring(0, 10) + '...' + result.key.slice(-4)
     appStore.showSuccess(t('admin.settings.adminApiKey.keyGenerated'))
-  placeholder catch (error: any) {
-    appStore.showError(error.message || t('common.error'))
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
   placeholder finally {
     adminApiKeyOperating.value = false
   placeholder
@@ -3192,8 +3270,8 @@ async function deleteAdminApiKey() {
     adminApiKeyMasked.value = ''
     newAdminApiKey.value = ''
     appStore.showSuccess(t('admin.settings.adminApiKey.keyDeleted'))
-  placeholder catch (error: any) {
-    appStore.showError(error.message || t('common.error'))
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
   placeholder finally {
     adminApiKeyOperating.value = false
   placeholder
@@ -3216,8 +3294,8 @@ async function loadOverloadCooldownSettings() {
   try {
     const settings = await adminAPI.settings.getOverloadCooldownSettings()
     Object.assign(overloadCooldownForm, settings)
-  placeholder catch (error: any) {
-    console.error('Failed to load overload cooldown settings:', error)
+  placeholder catch (_error: unknown) {
+    // Silent fail - settings will use defaults
   placeholder finally {
     overloadCooldownLoading.value = false
   placeholder
@@ -3232,10 +3310,8 @@ async function saveOverloadCooldownSettings() {
     placeholder)
     Object.assign(overloadCooldownForm, updated)
     appStore.showSuccess(t('admin.settings.overloadCooldown.saved'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.overloadCooldown.saveFailed') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.overloadCooldown.saveFailed')))
   placeholder finally {
     overloadCooldownSaving.value = false
   placeholder
@@ -3247,8 +3323,8 @@ async function loadStreamTimeoutSettings() {
   try {
     const settings = await adminAPI.settings.getStreamTimeoutSettings()
     Object.assign(streamTimeoutForm, settings)
-  placeholder catch (error: any) {
-    console.error('Failed to load stream timeout settings:', error)
+  placeholder catch (_error: unknown) {
+    // Silent fail - settings will use defaults
   placeholder finally {
     streamTimeoutLoading.value = false
   placeholder
@@ -3266,10 +3342,8 @@ async function saveStreamTimeoutSettings() {
     placeholder)
     Object.assign(streamTimeoutForm, updated)
     appStore.showSuccess(t('admin.settings.streamTimeout.saved'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.streamTimeout.saveFailed') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.streamTimeout.saveFailed')))
   placeholder finally {
     streamTimeoutSaving.value = false
   placeholder
@@ -3285,8 +3359,8 @@ async function loadRectifierSettings() {
     if (!Array.isArray(rectifierForm.apikey_signature_patterns)) {
       rectifierForm.apikey_signature_patterns = []
     placeholder
-  placeholder catch (error: any) {
-    console.error('Failed to load rectifier settings:', error)
+  placeholder catch (_error: unknown) {
+    // Silent fail - settings will use defaults
   placeholder finally {
     rectifierLoading.value = false
   placeholder
@@ -3309,10 +3383,8 @@ async function saveRectifierSettings() {
       rectifierForm.apikey_signature_patterns = []
     placeholder
     appStore.showSuccess(t('admin.settings.rectifier.saved'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.rectifier.saveFailed') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.rectifier.saveFailed')))
   placeholder finally {
     rectifierSaving.value = false
   placeholder
@@ -3384,8 +3456,8 @@ async function loadBetaPolicySettings() {
   try {
     const settings = await adminAPI.settings.getBetaPolicySettings()
     betaPolicyForm.rules = settings.rules
-  placeholder catch (error: any) {
-    console.error('Failed to load beta policy settings:', error)
+  placeholder catch (_error: unknown) {
+    // Silent fail - settings will use defaults
   placeholder finally {
     betaPolicyLoading.value = false
   placeholder
@@ -3413,13 +3485,180 @@ async function saveBetaPolicySettings() {
     placeholder)
     betaPolicyForm.rules = updated.rules
     appStore.showSuccess(t('admin.settings.betaPolicy.saved'))
-  placeholder catch (error: any) {
-    appStore.showError(
-      t('admin.settings.betaPolicy.saveFailed') + ': ' + (error.message || t('common.unknownError'))
-    )
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.settings.betaPolicy.saveFailed')))
   placeholder finally {
     betaPolicySaving.value = false
   placeholder
+placeholder
+
+// ==================== Provider Management ====================
+
+const allPaymentTypes = computed(() => [
+  { value: 'easypay', label: t('payment.methods.easypay') placeholder,
+  { value: 'alipay', label: t('payment.methods.alipay') placeholder,
+  { value: 'wxpay', label: t('payment.methods.wxpay') placeholder,
+  { value: 'stripe', label: t('payment.methods.stripe') placeholder,
+])
+
+function isPaymentTypeEnabled(type: string): boolean {
+  return form.payment_enabled_types.includes(type)
+placeholder
+
+const hasAnyPaymentTypeEnabled = computed(() => form.payment_enabled_types.length > 0)
+
+function togglePaymentType(type: string) {
+  if (form.payment_enabled_types.includes(type)) {
+    form.payment_enabled_types = form.payment_enabled_types.filter(t => t !== type)
+    // Disable all provider instances matching this type
+    disableProvidersByType(type)
+  placeholder else {
+    form.payment_enabled_types = [...form.payment_enabled_types, type]
+  placeholder
+placeholder
+
+async function disableProvidersByType(type: string) {
+  const matching = providers.value.filter(p => p.provider_key === type && p.enabled)
+  for (const p of matching) {
+    try {
+      await adminAPI.payment.updateProvider(p.id, { enabled: false placeholder)
+      p.enabled = false
+    placeholder catch (err: unknown) {
+      slog('disable provider failed', p.id, err)
+    placeholder
+  placeholder
+placeholder
+
+function slog(...args: unknown[]) { console.warn('[payment]', ...args) placeholder
+
+const providersLoading = ref(false)
+const providerSaving = ref(false)
+const providers = ref<ProviderInstance[]>([])
+const showProviderDialog = ref(false)
+const showDeleteProviderDialog = ref(false)
+const editingProvider = ref<ProviderInstance | null>(null)
+const deletingProviderId = ref<number | null>(null)
+const providerDialogRef = ref<InstanceType<typeof PaymentProviderDialog> | null>(null)
+
+const providerKeyOptions = computed(() => [
+  { value: 'easypay', label: t('admin.settings.payment.providerEasypay') placeholder,
+  { value: 'alipay', label: t('admin.settings.payment.providerAlipay') placeholder,
+  { value: 'wxpay', label: t('admin.settings.payment.providerWxpay') placeholder,
+  { value: 'stripe', label: t('admin.settings.payment.providerStripe') placeholder,
+])
+
+const enabledProviderKeyOptions = computed(() => {
+  const enabled = form.payment_enabled_types
+  return providerKeyOptions.value.filter(opt => enabled.includes(opt.value))
+placeholder)
+
+const loadBalanceOptions = computed(() => [
+  { value: 'round-robin', label: t('admin.settings.payment.strategyRoundRobin') placeholder,
+  { value: 'least-amount', label: t('admin.settings.payment.strategyLeastAmount') placeholder,
+])
+
+const cancelRateLimitUnitOptions = computed(() => [
+  { value: 'minute', label: t('admin.settings.payment.cancelRateLimitUnitMinute') placeholder,
+  { value: 'hour', label: t('admin.settings.payment.cancelRateLimitUnitHour') placeholder,
+  { value: 'day', label: t('admin.settings.payment.cancelRateLimitUnitDay') placeholder,
+])
+
+const cancelRateLimitModeOptions = computed(() => [
+  { value: 'rolling', label: t('admin.settings.payment.cancelRateLimitWindowModeRolling') placeholder,
+  { value: 'fixed', label: t('admin.settings.payment.cancelRateLimitWindowModeFixed') placeholder,
+])
+
+const paymentErrorMap = computed(() => ({
+  PENDING_ORDERS: t('payment.errors.PENDING_ORDERS'),
+placeholder))
+
+async function loadProviders() {
+  providersLoading.value = true
+  try { const res = await adminAPI.payment.getProviders(); providers.value = res.data || [] placeholder
+  catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  finally { providersLoading.value = false placeholder
+placeholder
+
+function openCreateProvider() {
+  editingProvider.value = null
+  providerDialogRef.value?.reset(enabledProviderKeyOptions.value[0]?.value || 'easypay')
+  showProviderDialog.value = true
+placeholder
+
+function openEditProvider(provider: ProviderInstance) {
+  editingProvider.value = provider
+  providerDialogRef.value?.loadProvider(provider)
+  showProviderDialog.value = true
+placeholder
+
+async function handleSaveProvider(payload: Partial<ProviderInstance>) {
+  providerSaving.value = true
+  try {
+    if (editingProvider.value) {
+      await adminAPI.payment.updateProvider(editingProvider.value.id, payload)
+    placeholder else {
+      await adminAPI.payment.createProvider(payload)
+    placeholder
+    showProviderDialog.value = false
+    // Reload full list (API returns decrypted/formatted data with correct sort order)
+    await loadProviders()
+    // Auto-save settings so provider changes take effect immediately
+    await saveSettings()
+  placeholder catch (err: unknown) {
+    appStore.showError(extractApiErrorMessage(err, t('common.error'), paymentErrorMap.value))
+  placeholder finally {
+    providerSaving.value = false
+  placeholder
+placeholder
+
+async function handleToggleField(provider: ProviderInstance, field: 'enabled' | 'refund_enabled') {
+  const newValue = field === 'enabled' ? !provider.enabled : !provider.refund_enabled
+  try {
+    await adminAPI.payment.updateProvider(provider.id, { [field]: newValue placeholder)
+    if (field === 'enabled') provider.enabled = newValue
+    else provider.refund_enabled = newValue
+  placeholder catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'), paymentErrorMap.value)) placeholder
+placeholder
+
+async function handleToggleType(provider: ProviderInstance, type: string) {
+  const updated = provider.supported_types.includes(type)
+    ? provider.supported_types.filter(t => t !== type)
+    : [...provider.supported_types, type]
+  try {
+    await adminAPI.payment.updateProvider(provider.id, { supported_types: updated placeholder as any)
+    provider.supported_types = updated
+  placeholder catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'), paymentErrorMap.value)) placeholder
+placeholder
+
+function confirmDeleteProvider(provider: ProviderInstance) {
+  deletingProviderId.value = provider.id
+  showDeleteProviderDialog.value = true
+placeholder
+
+async function handleReorderProviders(updates: { id: number; sort_order: number placeholder[]) {
+  try {
+    await Promise.all(
+      updates.map(u => adminAPI.payment.updateProvider(u.id, { sort_order: u.sort_order placeholder as Partial<ProviderInstance>))
+    )
+    // Update local state to match new order
+    for (const u of updates) {
+      const p = providers.value.find(p => p.id === u.id)
+      if (p) p.sort_order = u.sort_order
+    placeholder
+  placeholder catch (err: unknown) {
+    appStore.showError(extractApiErrorMessage(err, t('common.error')))
+    loadProviders()
+  placeholder
+placeholder
+
+async function handleDeleteProvider() {
+  if (!deletingProviderId.value) return
+  try {
+    await adminAPI.payment.deleteProvider(deletingProviderId.value)
+    appStore.showSuccess(t('common.deleted'))
+    showDeleteProviderDialog.value = false
+    loadProviders()
+  placeholder catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'), paymentErrorMap.value)) placeholder
 placeholder
 
 onMounted(() => {
@@ -3430,6 +3669,7 @@ onMounted(() => {
   loadStreamTimeoutSettings()
   loadRectifierSettings()
   loadBetaPolicySettings()
+  loadProviders()
 placeholder)
 </script>
 
