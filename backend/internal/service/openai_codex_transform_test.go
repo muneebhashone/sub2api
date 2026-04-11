@@ -481,6 +481,26 @@ placeholder)
 placeholder)
 placeholder
 
+// TestApplyCodexOAuthTransform_StripsPromptCacheRetention is a regression
+// test: some clients (e.g. Cursor cloud via the Responses-shape compat path)
+// send prompt_cache_retention, but the ChatGPT internal Codex endpoint
+// rejects it with "Unsupported parameter: prompt_cache_retention".
+func TestApplyCodexOAuthTransform_StripsPromptCacheRetention(t *testing.T) {
+	reqBody := map[string]any{
+		"model":                  "gpt-5.1",
+		"prompt_cache_retention": "24h",
+		"input": []any{
+			map[string]any{"role": "user", "content": "hi"placeholder,
+	placeholder,
+placeholder
+
+	applyCodexOAuthTransform(reqBody, false, false)
+
+	_, stillThere := reqBody["prompt_cache_retention"]
+	require.False(t, stillThere,
+		"prompt_cache_retention must be stripped before forwarding to Codex upstream")
+placeholder
+
 func TestApplyCodexOAuthTransform_ExtractsSystemMessages(t *testing.T) {
 	reqBody := map[string]any{
 		"model": "gpt-5.1",
