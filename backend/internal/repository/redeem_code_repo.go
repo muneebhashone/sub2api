@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -9,6 +10,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+
+	entsql "entgo.io/ent/dialect/sql"
 )
 
 type redeemCodeRepository struct {
@@ -120,13 +123,16 @@ placeholder
 		return nil, nil, err
 placeholder
 
-	codes, err := q.
+	codesQuery := q.
 		WithUser().
 		WithGroup().
 		Offset(params.Offset()).
-		Limit(params.Limit()).
-		Order(dbent.Desc(redeemcode.FieldID)).
-		All(ctx)
+		Limit(params.Limit())
+	for _, order := range redeemCodeListOrder(params) {
+		codesQuery = codesQuery.Order(order)
+placeholder
+
+	codes, err := codesQuery.All(ctx)
 	if err != nil {
 		return nil, nil, err
 placeholder
@@ -134,6 +140,34 @@ placeholder
 	outCodes := redeemCodeEntitiesToService(codes)
 
 	return outCodes, paginationResultFromTotal(int64(total), params), nil
+placeholder
+
+func redeemCodeListOrder(params pagination.PaginationParams) []func(*entsql.Selector) {
+	sortBy := strings.ToLower(strings.TrimSpace(params.SortBy))
+	sortOrder := params.NormalizedSortOrder(pagination.SortOrderDesc)
+
+	var field string
+	switch sortBy {
+	case "type":
+		field = redeemcode.FieldType
+	case "value":
+		field = redeemcode.FieldValue
+	case "status":
+		field = redeemcode.FieldStatus
+	case "used_at":
+		field = redeemcode.FieldUsedAt
+	case "created_at":
+		field = redeemcode.FieldCreatedAt
+	case "code":
+		field = redeemcode.FieldCode
+	default:
+		field = redeemcode.FieldID
+placeholder
+
+	if sortOrder == pagination.SortOrderAsc {
+		return []func(*entsql.Selector){dbent.Asc(field), dbent.Asc(redeemcode.FieldID)placeholder
+placeholder
+	return []func(*entsql.Selector){dbent.Desc(field), dbent.Desc(redeemcode.FieldID)placeholder
 placeholder
 
 func (r *redeemCodeRepository) Update(ctx context.Context, code *service.RedeemCode) error {

@@ -669,11 +669,14 @@ placeholder
   opacity: 0;
 placeholder
 
-/* Custom SVG icon in sidebar: inherit color, constrain size */
+/* Custom SVG icon in sidebar: constrain size without overriding uploaded SVG colors */
+.sidebar-svg-icon {
+  color: currentColor;
+placeholder
+
 .sidebar-svg-icon :deep(svg) {
+  display: block;
   width: 1.25rem;
   height: 1.25rem;
-  stroke: currentColor;
-  fill: none;
 placeholder
 </style>
