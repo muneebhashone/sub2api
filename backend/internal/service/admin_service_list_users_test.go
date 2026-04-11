@@ -13,11 +13,13 @@ import (
 
 type userRepoStubForListUsers struct {
 	userRepoStub
-	users []User
-	err   error
+	users                 []User
+	err                   error
+	listWithFiltersParams pagination.PaginationParams
 placeholder
 
 func (s *userRepoStubForListUsers) ListWithFilters(_ context.Context, params pagination.PaginationParams, _ UserListFilters) ([]User, *pagination.PaginationResult, error) {
+	s.listWithFiltersParams = params
 	if s.err != nil {
 		return nil, nil, s.err
 placeholder
@@ -103,7 +105,7 @@ placeholder
 		userGroupRateRepo: rateRepo,
 placeholder
 
-	users, total, err := svc.ListUsers(context.Background(), 1, 20, UserListFilters{placeholder)
+	users, total, err := svc.ListUsers(context.Background(), 1, 20, UserListFilters{placeholder, "", "")
 placeholder
 	require.Equal(t, int64(2), total)
 	require.Len(t, users, 2)
@@ -111,4 +113,20 @@ placeholder
 	require.ElementsMatch(t, []int64{101, 202placeholder, rateRepo.singleCall)
 	require.Equal(t, 1.1, users[0].GroupRates[11])
 	require.Equal(t, 2.2, users[1].GroupRates[22])
+placeholder
+
+func TestAdminService_ListUsers_PassesSortParams(t *testing.T) {
+	userRepo := &userRepoStubForListUsers{
+		users: []User{{ID: 1, Email: "a@example.com"placeholderplaceholder,
+placeholder
+	svc := &adminServiceImpl{userRepo: userRepoplaceholder
+
+	_, _, err := svc.ListUsers(context.Background(), 2, 50, UserListFilters{placeholder, "email", "ASC")
+placeholder
+	require.Equal(t, pagination.PaginationParams{
+		Page:      2,
+		PageSize:  50,
+		SortBy:    "email",
+		SortOrder: "ASC",
+placeholder, userRepo.listWithFiltersParams)
 placeholder
