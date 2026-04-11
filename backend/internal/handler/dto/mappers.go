@@ -13,16 +13,19 @@ func UserFromServiceShallow(u *service.User) *User {
 		return nil
 placeholder
 	return &User{
-		ID:            u.ID,
-		Email:         u.Email,
-		Username:      u.Username,
-		Role:          u.Role,
-		Balance:       u.Balance,
-		Concurrency:   u.Concurrency,
-		Status:        u.Status,
-		AllowedGroups: u.AllowedGroups,
-		CreatedAt:     u.CreatedAt,
-		UpdatedAt:     u.UpdatedAt,
+		ID:                       u.ID,
+		Email:                    u.Email,
+		Username:                 u.Username,
+		Role:                     u.Role,
+		Balance:                  u.Balance,
+		Concurrency:              u.Concurrency,
+		Status:                   u.Status,
+		AllowedGroups:            u.AllowedGroups,
+		CreatedAt:                u.CreatedAt,
+		UpdatedAt:                u.UpdatedAt,
+		BalanceNotifyEnabled:     u.BalanceNotifyEnabled,
+		BalanceNotifyThreshold:   u.BalanceNotifyThreshold,
+		BalanceNotifyExtraEmails: u.BalanceNotifyExtraEmails,
 placeholder
 placeholder
 
@@ -321,6 +324,26 @@ placeholder
 			if v, ok := a.Extra["quota_weekly_reset_at"].(string); ok && v != "" {
 				out.QuotaWeeklyResetAt = &v
 		placeholder
+	placeholder
+
+		// 配额通知配置
+		if enabled := a.GetQuotaNotifyDailyEnabled(); enabled {
+			out.QuotaNotifyDailyEnabled = &enabled
+	placeholder
+		if threshold := a.GetQuotaNotifyDailyThreshold(); threshold > 0 {
+			out.QuotaNotifyDailyThreshold = &threshold
+	placeholder
+		if enabled := a.GetQuotaNotifyWeeklyEnabled(); enabled {
+			out.QuotaNotifyWeeklyEnabled = &enabled
+	placeholder
+		if threshold := a.GetQuotaNotifyWeeklyThreshold(); threshold > 0 {
+			out.QuotaNotifyWeeklyThreshold = &threshold
+	placeholder
+		if enabled := a.GetQuotaNotifyTotalEnabled(); enabled {
+			out.QuotaNotifyTotalEnabled = &enabled
+	placeholder
+		if threshold := a.GetQuotaNotifyTotalThreshold(); threshold > 0 {
+			out.QuotaNotifyTotalThreshold = &threshold
 	placeholder
 placeholder
 

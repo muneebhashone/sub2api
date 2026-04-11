@@ -175,7 +175,9 @@ placeholder
 		EnableFingerprintUnification:         settings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            settings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     settings.EnableCCHSigning,
-		WebSearchEmulationEnabled:            settings.WebSearchEmulationEnabled,
+		BalanceLowNotifyEnabled:              settings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:            settings.BalanceLowNotifyThreshold,
+		AccountQuotaNotifyEmails:             settings.AccountQuotaNotifyEmails,
 		PaymentEnabled:                       paymentCfg.Enabled,
 		PaymentMinAmount:                     paymentCfg.MinAmount,
 		PaymentMaxAmount:                     paymentCfg.MaxAmount,
@@ -304,6 +306,11 @@ type UpdateSettingsRequest struct {
 	EnableFingerprintUnification *bool `json:"enable_fingerprint_unification"`
 	EnableMetadataPassthrough    *bool `json:"enable_metadata_passthrough"`
 	EnableCCHSigning             *bool `json:"enable_cch_signing"`
+
+	// Balance low notification
+	BalanceLowNotifyEnabled   *bool     `json:"balance_low_notify_enabled"`
+	BalanceLowNotifyThreshold *float64  `json:"balance_low_notify_threshold"`
+	AccountQuotaNotifyEmails  *[]string `json:"account_quota_notify_emails"`
 
 	// Payment configuration (integrated into settings, full replace)
 	PaymentEnabled           *bool    `json:"payment_enabled"`
@@ -882,6 +889,24 @@ placeholder
 		placeholder
 			return previousSettings.EnableCCHSigning
 	placeholder(),
+		BalanceLowNotifyEnabled: func() bool {
+			if req.BalanceLowNotifyEnabled != nil {
+				return *req.BalanceLowNotifyEnabled
+		placeholder
+			return previousSettings.BalanceLowNotifyEnabled
+	placeholder(),
+		BalanceLowNotifyThreshold: func() float64 {
+			if req.BalanceLowNotifyThreshold != nil {
+				return *req.BalanceLowNotifyThreshold
+		placeholder
+			return previousSettings.BalanceLowNotifyThreshold
+	placeholder(),
+		AccountQuotaNotifyEmails: func() []string {
+			if req.AccountQuotaNotifyEmails != nil {
+				return *req.AccountQuotaNotifyEmails
+		placeholder
+			return previousSettings.AccountQuotaNotifyEmails
+	placeholder(),
 placeholder
 
 	if err := h.settingService.UpdateSettings(c.Request.Context(), settings); err != nil {
@@ -1028,6 +1053,9 @@ placeholder
 		EnableFingerprintUnification:         updatedSettings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            updatedSettings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     updatedSettings.EnableCCHSigning,
+		BalanceLowNotifyEnabled:              updatedSettings.BalanceLowNotifyEnabled,
+		BalanceLowNotifyThreshold:            updatedSettings.BalanceLowNotifyThreshold,
+		AccountQuotaNotifyEmails:             updatedSettings.AccountQuotaNotifyEmails,
 		PaymentEnabled:                       updatedPaymentCfg.Enabled,
 		PaymentMinAmount:                     updatedPaymentCfg.MinAmount,
 		PaymentMaxAmount:                     updatedPaymentCfg.MaxAmount,
@@ -1847,38 +1875,4 @@ placeholder
 		ThresholdCount:         updatedSettings.ThresholdCount,
 		ThresholdWindowMinutes: updatedSettings.ThresholdWindowMinutes,
 placeholder)
-placeholder
-
-// GetWebSearchEmulationConfig 获取 Web Search 模拟配置
-// GET /api/v1/admin/settings/web-search-emulation
-func (h *SettingHandler) GetWebSearchEmulationConfig(c *gin.Context) {
-	cfg, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-placeholder
-	response.Success(c, service.SanitizeWebSearchConfig(cfg))
-placeholder
-
-// UpdateWebSearchEmulationConfig 更新 Web Search 模拟配置
-// PUT /api/v1/admin/settings/web-search-emulation
-func (h *SettingHandler) UpdateWebSearchEmulationConfig(c *gin.Context) {
-	var cfg service.WebSearchEmulationConfig
-	if err := c.ShouldBindJSON(&cfg); err != nil {
-		response.BadRequest(c, "Invalid request: "+err.Error())
-		return
-placeholder
-
-	if err := h.settingService.SaveWebSearchEmulationConfig(c.Request.Context(), &cfg); err != nil {
-		response.ErrorFrom(c, err)
-		return
-placeholder
-
-	// Re-read (with sanitized api keys) to return current state
-	updated, err := h.settingService.GetWebSearchEmulationConfig(c.Request.Context())
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
-placeholder
-	response.Success(c, service.SanitizeWebSearchConfig(updated))
 placeholder
