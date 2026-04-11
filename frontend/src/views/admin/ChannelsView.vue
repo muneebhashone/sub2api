@@ -306,6 +306,24 @@
               </div>
             </div>
 
+            <!-- Web Search Emulation (Anthropic only) -->
+            <div v-if="section.platform === 'anthropic'" class="border-t border-gray-200 pt-3 dark:border-dark-600">
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="text-xs font-medium text-orange-600 dark:text-orange-400">
+                    {{ t('admin.channels.form.webSearchEmulation') placeholderplaceholder
+                  </label>
+                  <p v-if="webSearchGlobalEnabled" class="mt-0.5 text-[11px] text-amber-500 dark:text-amber-400">
+                    {{ t('admin.channels.form.webSearchEmulationHint') placeholderplaceholder
+                  </p>
+                  <p v-else class="mt-0.5 text-[11px] text-gray-400">
+                    {{ t('admin.channels.form.webSearchEmulationGlobalDisabled') placeholderplaceholder
+                  </p>
+                </div>
+                <Toggle v-model="section.web_search_emulation" :disabled="!webSearchGlobalEnabled" />
+              </div>
+            </div>
+
             <!-- Model Mapping -->
             <div>
               <div class="mb-1 flex items-center justify-between">
@@ -423,6 +441,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
+import { extractApiErrorMessage placeholder from '@/utils/apiError'
 import { adminAPI placeholder from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest placeholder from '@/api/admin/channels'
 import type { PricingFormEntry placeholder from '@/components/admin/channel/types'
@@ -446,6 +465,18 @@ import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSi
 const { t placeholder = useI18n()
 const appStore = useAppStore()
 
+// Web Search global enabled state (loaded once on mount)
+const webSearchGlobalEnabled = ref(false)
+async function loadWebSearchGlobalState() {
+  try {
+    const cfg = await adminAPI.settings.getWebSearchEmulationConfig()
+    webSearchGlobalEnabled.value = cfg?.enabled === true && (cfg?.providers?.length ?? 0) > 0
+  placeholder catch (err: unknown) {
+    console.warn('Failed to load web search global state:', err)
+    webSearchGlobalEnabled.value = false
+  placeholder
+placeholder
+
 // ── Platform Section type ──
 interface PlatformSection {
   platform: GroupPlatform
@@ -454,6 +485,7 @@ interface PlatformSection {
   group_ids: number[]
   model_mapping: Record<string, string>
   model_pricing: PricingFormEntry[]
+  web_search_emulation: boolean
 placeholder
 
 // ── Table columns ──
@@ -565,7 +597,8 @@ function addPlatformSection(platform: GroupPlatform) {
     collapsed: false,
     group_ids: [],
     model_mapping: {placeholder,
-    model_pricing: []
+    model_pricing: [],
+    web_search_emulation: false,
   placeholder)
 placeholder
 
@@ -679,10 +712,14 @@ function renameMappingKey(sectionIdx: number, oldKey: string, newKey: string) {
 placeholder
 
 // ── Form ↔ API conversion ──
-function formToAPI(): { group_ids: number[], model_pricing: ChannelModelPricing[], model_mapping: Record<string, Record<string, string>> placeholder {
+function formToAPI(): { group_ids: number[], model_pricing: ChannelModelPricing[], model_mapping: Record<string, Record<string, string>>, features_config: Record<string, unknown> placeholder {
   const group_ids: number[] = []
   const model_pricing: ChannelModelPricing[] = []
   const model_mapping: Record<string, Record<string, string>> = {placeholder
+  // Preserve existing features_config fields not managed by the form
+  const featuresConfig: Record<string, unknown> = editingChannel.value?.features_config
+    ? { ...editingChannel.value.features_config placeholder
+    : {placeholder
 
   for (const section of form.platforms) {
     if (!section.enabled) continue
@@ -711,7 +748,19 @@ function formToAPI(): { group_ids: number[], model_pricing: ChannelModelPricing[
     placeholder
   placeholder
 
-  return { group_ids, model_pricing, model_mapping placeholder
+  // Collect web_search_emulation (only anthropic platform supports it)
+  const wsEmulation: Record<string, boolean> = {placeholder
+  for (const section of form.platforms) {
+    if (!section.enabled) continue
+    if (section.web_search_emulation && section.platform === 'anthropic') {
+      wsEmulation[section.platform] = true
+    placeholder
+  placeholder
+  if (Object.keys(wsEmulation).length > 0) {
+    featuresConfig.web_search_emulation = wsEmulation
+  placeholder
+
+  return { group_ids, model_pricing, model_mapping, features_config: featuresConfig placeholder
 placeholder
 
 function apiToForm(channel: Channel): PlatformSection[] {
@@ -755,13 +804,19 @@ function apiToForm(channel: Channel): PlatformSection[] {
         intervals: apiIntervalsToForm(p.intervals || [])
       placeholder as PricingFormEntry))
 
+    // Read web_search_emulation from features_config
+    const fc = channel.features_config
+    const wsEmulation = fc?.web_search_emulation as Record<string, boolean> | undefined
+    const webSearchEnabled = wsEmulation?.[platform] === true
+
     sections.push({
       platform,
       enabled: true,
       collapsed: false,
       group_ids: groupIds,
       model_mapping: { ...mapping placeholder,
-      model_pricing: pricing
+      model_pricing: pricing,
+      web_search_emulation: webSearchEnabled,
     placeholder)
   placeholder
 
@@ -786,10 +841,10 @@ async function loadChannels() {
     if (ctrl.signal.aborted || abortController !== ctrl) return
     channels.value = response.items || []
     pagination.total = response.total
-  placeholder catch (error: any) {
-    if (error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') return
-    appStore.showError(t('admin.channels.loadError', 'Failed to load channels'))
-    console.error('Error loading channels:', error)
+  placeholder catch (error: unknown) {
+    const e = error as { name?: string; code?: string placeholder
+    if (e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') return
+    appStore.showError(extractApiErrorMessage(error, t('admin.channels.loadError', 'Failed to load channels')))
   placeholder finally {
     if (abortController === ctrl) {
       loading.value = false
@@ -969,8 +1024,7 @@ async function handleSubmit() {
     placeholder
   placeholder
 
-  const { group_ids, model_pricing, model_mapping placeholder = formToAPI()
-  console.log('[handleSubmit] model_pricing to send:', JSON.stringify(model_pricing))
+  const { group_ids, model_pricing, model_mapping, features_config placeholder = formToAPI()
 
   submitting.value = true
   try {
@@ -983,7 +1037,8 @@ async function handleSubmit() {
         model_pricing,
         model_mapping: Object.keys(model_mapping).length > 0 ? model_mapping : {placeholder,
         billing_model_source: form.billing_model_source,
-        restrict_models: form.restrict_models
+        restrict_models: form.restrict_models,
+        features_config,
       placeholder
       await adminAPI.channels.update(editingChannel.value.id, req)
       appStore.showSuccess(t('admin.channels.updateSuccess', 'Channel updated'))
@@ -995,19 +1050,18 @@ async function handleSubmit() {
         model_pricing,
         model_mapping: Object.keys(model_mapping).length > 0 ? model_mapping : {placeholder,
         billing_model_source: form.billing_model_source,
-        restrict_models: form.restrict_models
+        restrict_models: form.restrict_models,
+        features_config,
       placeholder
       await adminAPI.channels.create(req)
       appStore.showSuccess(t('admin.channels.createSuccess', 'Channel created'))
     placeholder
     closeDialog()
     loadChannels()
-  placeholder catch (error: any) {
-    const msg = error.response?.data?.detail || (editingChannel.value
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, editingChannel.value
       ? t('admin.channels.updateError', 'Failed to update channel')
-      : t('admin.channels.createError', 'Failed to create channel'))
-    appStore.showError(msg)
-    console.error('Error saving channel:', error)
+      : t('admin.channels.createError', 'Failed to create channel')))
   placeholder finally {
     submitting.value = false
   placeholder
@@ -1045,9 +1099,8 @@ async function confirmDelete() {
     showDeleteDialog.value = false
     deletingChannel.value = null
     loadChannels()
-  placeholder catch (error: any) {
-    appStore.showError(error.response?.data?.detail || t('admin.channels.deleteError', 'Failed to delete channel'))
-    console.error('Error deleting channel:', error)
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('admin.channels.deleteError', 'Failed to delete channel')))
   placeholder
 placeholder
 
@@ -1055,6 +1108,7 @@ placeholder
 onMounted(() => {
   loadChannels()
   loadGroups()
+  loadWebSearchGlobalState()
 placeholder)
 
 onUnmounted(() => {
