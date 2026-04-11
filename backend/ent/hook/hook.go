@@ -105,6 +105,42 @@ placeholder
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.IdempotencyRecordMutation", m)
 placeholder
 
+// The PaymentAuditLogFunc type is an adapter to allow the use of ordinary
+// function as PaymentAuditLog mutator.
+type PaymentAuditLogFunc func(context.Context, *ent.PaymentAuditLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PaymentAuditLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PaymentAuditLogMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentAuditLogMutation", m)
+placeholder
+
+// The PaymentOrderFunc type is an adapter to allow the use of ordinary
+// function as PaymentOrder mutator.
+type PaymentOrderFunc func(context.Context, *ent.PaymentOrderMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PaymentOrderFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PaymentOrderMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentOrderMutation", m)
+placeholder
+
+// The PaymentProviderInstanceFunc type is an adapter to allow the use of ordinary
+// function as PaymentProviderInstance mutator.
+type PaymentProviderInstanceFunc func(context.Context, *ent.PaymentProviderInstanceMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PaymentProviderInstanceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PaymentProviderInstanceMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentProviderInstanceMutation", m)
+placeholder
+
 // The PromoCodeFunc type is an adapter to allow the use of ordinary
 // function as PromoCode mutator.
 type PromoCodeFunc func(context.Context, *ent.PromoCodeMutation) (ent.Value, error)
@@ -175,6 +211,18 @@ func (f SettingFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 placeholder
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SettingMutation", m)
+placeholder
+
+// The SubscriptionPlanFunc type is an adapter to allow the use of ordinary
+// function as SubscriptionPlan mutator.
+type SubscriptionPlanFunc func(context.Context, *ent.SubscriptionPlanMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SubscriptionPlanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SubscriptionPlanMutation); ok {
+		return f(ctx, mv)
+placeholder
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SubscriptionPlanMutation", m)
 placeholder
 
 // The TLSFingerprintProfileFunc type is an adapter to allow the use of ordinary

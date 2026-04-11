@@ -27,6 +27,8 @@ export async function list(
     status?: 'active' | 'inactive'
     is_exclusive?: boolean
     search?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
   placeholder,
   options?: {
     signal?: AbortSignal

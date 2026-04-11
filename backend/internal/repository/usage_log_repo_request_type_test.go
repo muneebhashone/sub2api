@@ -330,6 +330,15 @@ placeholder
 			"total_account_cost",
 			"avg_duration_ms",
 	placeholder).AddRow(int64(1), int64(2), int64(3), int64(4), 1.2, 1.0, 1.2, 20.0))
+	mock.ExpectQuery("SELECT COALESCE\\(NULLIF\\(TRIM\\(inbound_endpoint\\), ''\\), 'unknown'\\) AS endpoint").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), requestType).
+		WillReturnRows(sqlmock.NewRows([]string{"endpoint", "requests", "total_tokens", "cost", "actual_cost"placeholder))
+	mock.ExpectQuery("SELECT COALESCE\\(NULLIF\\(TRIM\\(upstream_endpoint\\), ''\\), 'unknown'\\) AS endpoint").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), requestType).
+		WillReturnRows(sqlmock.NewRows([]string{"endpoint", "requests", "total_tokens", "cost", "actual_cost"placeholder))
+	mock.ExpectQuery("SELECT CONCAT\\(").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), requestType).
+		WillReturnRows(sqlmock.NewRows([]string{"endpoint", "requests", "total_tokens", "cost", "actual_cost"placeholder))
 
 	stats, err := repo.GetStatsWithFilters(context.Background(), filters)
 placeholder

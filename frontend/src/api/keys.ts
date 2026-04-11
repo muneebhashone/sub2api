@@ -17,7 +17,13 @@ import type { ApiKey, CreateApiKeyRequest, UpdateApiKeyRequest, PaginatedRespons
 export async function list(
   page: number = 1,
   pageSize: number = 10,
-  filters?: { search?: string; status?: string; group_id?: number | string placeholder,
+  filters?: {
+    search?: string
+    status?: string
+    group_id?: number | string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
+  placeholder,
   options?: {
     signal?: AbortSignal
   placeholder

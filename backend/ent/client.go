@@ -23,12 +23,16 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
+	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
+	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
+	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
 	"github.com/Wei-Shaw/sub2api/ent/promocode"
 	"github.com/Wei-Shaw/sub2api/ent/promocodeusage"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
+	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
 	"github.com/Wei-Shaw/sub2api/ent/usagecleanuptask"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
@@ -62,6 +66,12 @@ type Client struct {
 	Group *GroupClient
 	// IdempotencyRecord is the client for interacting with the IdempotencyRecord builders.
 	IdempotencyRecord *IdempotencyRecordClient
+	// PaymentAuditLog is the client for interacting with the PaymentAuditLog builders.
+	PaymentAuditLog *PaymentAuditLogClient
+	// PaymentOrder is the client for interacting with the PaymentOrder builders.
+	PaymentOrder *PaymentOrderClient
+	// PaymentProviderInstance is the client for interacting with the PaymentProviderInstance builders.
+	PaymentProviderInstance *PaymentProviderInstanceClient
 	// PromoCode is the client for interacting with the PromoCode builders.
 	PromoCode *PromoCodeClient
 	// PromoCodeUsage is the client for interacting with the PromoCodeUsage builders.
@@ -74,6 +84,8 @@ type Client struct {
 	SecuritySecret *SecuritySecretClient
 	// Setting is the client for interacting with the Setting builders.
 	Setting *SettingClient
+	// SubscriptionPlan is the client for interacting with the SubscriptionPlan builders.
+	SubscriptionPlan *SubscriptionPlanClient
 	// TLSFingerprintProfile is the client for interacting with the TLSFingerprintProfile builders.
 	TLSFingerprintProfile *TLSFingerprintProfileClient
 	// UsageCleanupTask is the client for interacting with the UsageCleanupTask builders.
@@ -109,12 +121,16 @@ func (c *Client) init() {
 	c.ErrorPassthroughRule = NewErrorPassthroughRuleClient(c.config)
 	c.Group = NewGroupClient(c.config)
 	c.IdempotencyRecord = NewIdempotencyRecordClient(c.config)
+	c.PaymentAuditLog = NewPaymentAuditLogClient(c.config)
+	c.PaymentOrder = NewPaymentOrderClient(c.config)
+	c.PaymentProviderInstance = NewPaymentProviderInstanceClient(c.config)
 	c.PromoCode = NewPromoCodeClient(c.config)
 	c.PromoCodeUsage = NewPromoCodeUsageClient(c.config)
 	c.Proxy = NewProxyClient(c.config)
 	c.RedeemCode = NewRedeemCodeClient(c.config)
 	c.SecuritySecret = NewSecuritySecretClient(c.config)
 	c.Setting = NewSettingClient(c.config)
+	c.SubscriptionPlan = NewSubscriptionPlanClient(c.config)
 	c.TLSFingerprintProfile = NewTLSFingerprintProfileClient(c.config)
 	c.UsageCleanupTask = NewUsageCleanupTaskClient(c.config)
 	c.UsageLog = NewUsageLogClient(c.config)
@@ -223,12 +239,16 @@ placeholder
 		ErrorPassthroughRule:    NewErrorPassthroughRuleClient(cfg),
 		Group:                   NewGroupClient(cfg),
 		IdempotencyRecord:       NewIdempotencyRecordClient(cfg),
+		PaymentAuditLog:         NewPaymentAuditLogClient(cfg),
+		PaymentOrder:            NewPaymentOrderClient(cfg),
+		PaymentProviderInstance: NewPaymentProviderInstanceClient(cfg),
 		PromoCode:               NewPromoCodeClient(cfg),
 		PromoCodeUsage:          NewPromoCodeUsageClient(cfg),
 		Proxy:                   NewProxyClient(cfg),
 		RedeemCode:              NewRedeemCodeClient(cfg),
 		SecuritySecret:          NewSecuritySecretClient(cfg),
 		Setting:                 NewSettingClient(cfg),
+		SubscriptionPlan:        NewSubscriptionPlanClient(cfg),
 		TLSFingerprintProfile:   NewTLSFingerprintProfileClient(cfg),
 		UsageCleanupTask:        NewUsageCleanupTaskClient(cfg),
 		UsageLog:                NewUsageLogClient(cfg),
@@ -264,12 +284,16 @@ placeholder
 		ErrorPassthroughRule:    NewErrorPassthroughRuleClient(cfg),
 		Group:                   NewGroupClient(cfg),
 		IdempotencyRecord:       NewIdempotencyRecordClient(cfg),
+		PaymentAuditLog:         NewPaymentAuditLogClient(cfg),
+		PaymentOrder:            NewPaymentOrderClient(cfg),
+		PaymentProviderInstance: NewPaymentProviderInstanceClient(cfg),
 		PromoCode:               NewPromoCodeClient(cfg),
 		PromoCodeUsage:          NewPromoCodeUsageClient(cfg),
 		Proxy:                   NewProxyClient(cfg),
 		RedeemCode:              NewRedeemCodeClient(cfg),
 		SecuritySecret:          NewSecuritySecretClient(cfg),
 		Setting:                 NewSettingClient(cfg),
+		SubscriptionPlan:        NewSubscriptionPlanClient(cfg),
 		TLSFingerprintProfile:   NewTLSFingerprintProfileClient(cfg),
 		UsageCleanupTask:        NewUsageCleanupTaskClient(cfg),
 		UsageLog:                NewUsageLogClient(cfg),
@@ -308,8 +332,9 @@ placeholder
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) placeholder{
 		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
-		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PromoCode,
-		c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting,
+		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PaymentAuditLog,
+		c.PaymentOrder, c.PaymentProviderInstance, c.PromoCode, c.PromoCodeUsage,
+		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
 		c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog, c.User,
 		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
 		c.UserSubscription,
@@ -323,8 +348,9 @@ placeholder
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) placeholder{
 		c.APIKey, c.Account, c.AccountGroup, c.Announcement, c.AnnouncementRead,
-		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PromoCode,
-		c.PromoCodeUsage, c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting,
+		c.ErrorPassthroughRule, c.Group, c.IdempotencyRecord, c.PaymentAuditLog,
+		c.PaymentOrder, c.PaymentProviderInstance, c.PromoCode, c.PromoCodeUsage,
+		c.Proxy, c.RedeemCode, c.SecuritySecret, c.Setting, c.SubscriptionPlan,
 		c.TLSFingerprintProfile, c.UsageCleanupTask, c.UsageLog, c.User,
 		c.UserAllowedGroup, c.UserAttributeDefinition, c.UserAttributeValue,
 		c.UserSubscription,
@@ -352,6 +378,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Group.mutate(ctx, m)
 	case *IdempotencyRecordMutation:
 		return c.IdempotencyRecord.mutate(ctx, m)
+	case *PaymentAuditLogMutation:
+		return c.PaymentAuditLog.mutate(ctx, m)
+	case *PaymentOrderMutation:
+		return c.PaymentOrder.mutate(ctx, m)
+	case *PaymentProviderInstanceMutation:
+		return c.PaymentProviderInstance.mutate(ctx, m)
 	case *PromoCodeMutation:
 		return c.PromoCode.mutate(ctx, m)
 	case *PromoCodeUsageMutation:
@@ -364,6 +396,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.SecuritySecret.mutate(ctx, m)
 	case *SettingMutation:
 		return c.Setting.mutate(ctx, m)
+	case *SubscriptionPlanMutation:
+		return c.SubscriptionPlan.mutate(ctx, m)
 	case *TLSFingerprintProfileMutation:
 		return c.TLSFingerprintProfile.mutate(ctx, m)
 	case *UsageCleanupTaskMutation:
@@ -1726,6 +1760,421 @@ func (c *IdempotencyRecordClient) mutate(ctx context.Context, m *IdempotencyReco
 placeholder
 placeholder
 
+// PaymentAuditLogClient is a client for the PaymentAuditLog schema.
+type PaymentAuditLogClient struct {
+	config
+placeholder
+
+// NewPaymentAuditLogClient returns a client for the PaymentAuditLog from the given config.
+func NewPaymentAuditLogClient(c config) *PaymentAuditLogClient {
+	return &PaymentAuditLogClient{config: cplaceholder
+placeholder
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentauditlog.Hooks(f(g(h())))`.
+func (c *PaymentAuditLogClient) Use(hooks ...Hook) {
+	c.hooks.PaymentAuditLog = append(c.hooks.PaymentAuditLog, hooks...)
+placeholder
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentauditlog.Intercept(f(g(h())))`.
+func (c *PaymentAuditLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentAuditLog = append(c.inters.PaymentAuditLog, interceptors...)
+placeholder
+
+// Create returns a builder for creating a PaymentAuditLog entity.
+func (c *PaymentAuditLogClient) Create() *PaymentAuditLogCreate {
+	mutation := newPaymentAuditLogMutation(c.config, OpCreate)
+	return &PaymentAuditLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// CreateBulk returns a builder for creating a bulk of PaymentAuditLog entities.
+func (c *PaymentAuditLogClient) CreateBulk(builders ...*PaymentAuditLogCreate) *PaymentAuditLogCreateBulk {
+	return &PaymentAuditLogCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentAuditLogClient) MapCreateBulk(slice any, setFunc func(*PaymentAuditLogCreate, int)) *PaymentAuditLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentAuditLogCreateBulk{err: fmt.Errorf("calling to PaymentAuditLogClient.MapCreateBulk with wrong type %T, need slice", slice)placeholder
+placeholder
+	builders := make([]*PaymentAuditLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+placeholder
+	return &PaymentAuditLogCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// Update returns an update builder for PaymentAuditLog.
+func (c *PaymentAuditLogClient) Update() *PaymentAuditLogUpdate {
+	mutation := newPaymentAuditLogMutation(c.config, OpUpdate)
+	return &PaymentAuditLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentAuditLogClient) UpdateOne(_m *PaymentAuditLog) *PaymentAuditLogUpdateOne {
+	mutation := newPaymentAuditLogMutation(c.config, OpUpdateOne, withPaymentAuditLog(_m))
+	return &PaymentAuditLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentAuditLogClient) UpdateOneID(id int64) *PaymentAuditLogUpdateOne {
+	mutation := newPaymentAuditLogMutation(c.config, OpUpdateOne, withPaymentAuditLogID(id))
+	return &PaymentAuditLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// Delete returns a delete builder for PaymentAuditLog.
+func (c *PaymentAuditLogClient) Delete() *PaymentAuditLogDelete {
+	mutation := newPaymentAuditLogMutation(c.config, OpDelete)
+	return &PaymentAuditLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentAuditLogClient) DeleteOne(_m *PaymentAuditLog) *PaymentAuditLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+placeholder
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentAuditLogClient) DeleteOneID(id int64) *PaymentAuditLogDeleteOne {
+	builder := c.Delete().Where(paymentauditlog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentAuditLogDeleteOne{builderplaceholder
+placeholder
+
+// Query returns a query builder for PaymentAuditLog.
+func (c *PaymentAuditLogClient) Query() *PaymentAuditLogQuery {
+	return &PaymentAuditLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentAuditLogplaceholder,
+		inters: c.Interceptors(),
+placeholder
+placeholder
+
+// Get returns a PaymentAuditLog entity by its id.
+func (c *PaymentAuditLogClient) Get(ctx context.Context, id int64) (*PaymentAuditLog, error) {
+	return c.Query().Where(paymentauditlog.ID(id)).Only(ctx)
+placeholder
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentAuditLogClient) GetX(ctx context.Context, id int64) *PaymentAuditLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+placeholder
+	return obj
+placeholder
+
+// Hooks returns the client hooks.
+func (c *PaymentAuditLogClient) Hooks() []Hook {
+	return c.hooks.PaymentAuditLog
+placeholder
+
+// Interceptors returns the client interceptors.
+func (c *PaymentAuditLogClient) Interceptors() []Interceptor {
+	return c.inters.PaymentAuditLog
+placeholder
+
+func (c *PaymentAuditLogClient) mutate(ctx context.Context, m *PaymentAuditLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentAuditLogCreate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdate:
+		return (&PaymentAuditLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentAuditLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentAuditLogDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentAuditLog mutation op: %q", m.Op())
+placeholder
+placeholder
+
+// PaymentOrderClient is a client for the PaymentOrder schema.
+type PaymentOrderClient struct {
+	config
+placeholder
+
+// NewPaymentOrderClient returns a client for the PaymentOrder from the given config.
+func NewPaymentOrderClient(c config) *PaymentOrderClient {
+	return &PaymentOrderClient{config: cplaceholder
+placeholder
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentorder.Hooks(f(g(h())))`.
+func (c *PaymentOrderClient) Use(hooks ...Hook) {
+	c.hooks.PaymentOrder = append(c.hooks.PaymentOrder, hooks...)
+placeholder
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentorder.Intercept(f(g(h())))`.
+func (c *PaymentOrderClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentOrder = append(c.inters.PaymentOrder, interceptors...)
+placeholder
+
+// Create returns a builder for creating a PaymentOrder entity.
+func (c *PaymentOrderClient) Create() *PaymentOrderCreate {
+	mutation := newPaymentOrderMutation(c.config, OpCreate)
+	return &PaymentOrderCreate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// CreateBulk returns a builder for creating a bulk of PaymentOrder entities.
+func (c *PaymentOrderClient) CreateBulk(builders ...*PaymentOrderCreate) *PaymentOrderCreateBulk {
+	return &PaymentOrderCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentOrderClient) MapCreateBulk(slice any, setFunc func(*PaymentOrderCreate, int)) *PaymentOrderCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentOrderCreateBulk{err: fmt.Errorf("calling to PaymentOrderClient.MapCreateBulk with wrong type %T, need slice", slice)placeholder
+placeholder
+	builders := make([]*PaymentOrderCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+placeholder
+	return &PaymentOrderCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// Update returns an update builder for PaymentOrder.
+func (c *PaymentOrderClient) Update() *PaymentOrderUpdate {
+	mutation := newPaymentOrderMutation(c.config, OpUpdate)
+	return &PaymentOrderUpdate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentOrderClient) UpdateOne(_m *PaymentOrder) *PaymentOrderUpdateOne {
+	mutation := newPaymentOrderMutation(c.config, OpUpdateOne, withPaymentOrder(_m))
+	return &PaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentOrderClient) UpdateOneID(id int64) *PaymentOrderUpdateOne {
+	mutation := newPaymentOrderMutation(c.config, OpUpdateOne, withPaymentOrderID(id))
+	return &PaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// Delete returns a delete builder for PaymentOrder.
+func (c *PaymentOrderClient) Delete() *PaymentOrderDelete {
+	mutation := newPaymentOrderMutation(c.config, OpDelete)
+	return &PaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentOrderClient) DeleteOne(_m *PaymentOrder) *PaymentOrderDeleteOne {
+	return c.DeleteOneID(_m.ID)
+placeholder
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentOrderClient) DeleteOneID(id int64) *PaymentOrderDeleteOne {
+	builder := c.Delete().Where(paymentorder.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentOrderDeleteOne{builderplaceholder
+placeholder
+
+// Query returns a query builder for PaymentOrder.
+func (c *PaymentOrderClient) Query() *PaymentOrderQuery {
+	return &PaymentOrderQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentOrderplaceholder,
+		inters: c.Interceptors(),
+placeholder
+placeholder
+
+// Get returns a PaymentOrder entity by its id.
+func (c *PaymentOrderClient) Get(ctx context.Context, id int64) (*PaymentOrder, error) {
+	return c.Query().Where(paymentorder.ID(id)).Only(ctx)
+placeholder
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentOrderClient) GetX(ctx context.Context, id int64) *PaymentOrder {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+placeholder
+	return obj
+placeholder
+
+// QueryUser queries the user edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryUser(_m *PaymentOrder) *UserQuery {
+	query := (&UserClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.UserTable, paymentorder.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
+// Hooks returns the client hooks.
+func (c *PaymentOrderClient) Hooks() []Hook {
+	return c.hooks.PaymentOrder
+placeholder
+
+// Interceptors returns the client interceptors.
+func (c *PaymentOrderClient) Interceptors() []Interceptor {
+	return c.inters.PaymentOrder
+placeholder
+
+func (c *PaymentOrderClient) mutate(ctx context.Context, m *PaymentOrderMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentOrderCreate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdate:
+		return (&PaymentOrderUpdate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentOrderUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentOrderDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentOrder mutation op: %q", m.Op())
+placeholder
+placeholder
+
+// PaymentProviderInstanceClient is a client for the PaymentProviderInstance schema.
+type PaymentProviderInstanceClient struct {
+	config
+placeholder
+
+// NewPaymentProviderInstanceClient returns a client for the PaymentProviderInstance from the given config.
+func NewPaymentProviderInstanceClient(c config) *PaymentProviderInstanceClient {
+	return &PaymentProviderInstanceClient{config: cplaceholder
+placeholder
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `paymentproviderinstance.Hooks(f(g(h())))`.
+func (c *PaymentProviderInstanceClient) Use(hooks ...Hook) {
+	c.hooks.PaymentProviderInstance = append(c.hooks.PaymentProviderInstance, hooks...)
+placeholder
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `paymentproviderinstance.Intercept(f(g(h())))`.
+func (c *PaymentProviderInstanceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PaymentProviderInstance = append(c.inters.PaymentProviderInstance, interceptors...)
+placeholder
+
+// Create returns a builder for creating a PaymentProviderInstance entity.
+func (c *PaymentProviderInstanceClient) Create() *PaymentProviderInstanceCreate {
+	mutation := newPaymentProviderInstanceMutation(c.config, OpCreate)
+	return &PaymentProviderInstanceCreate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// CreateBulk returns a builder for creating a bulk of PaymentProviderInstance entities.
+func (c *PaymentProviderInstanceClient) CreateBulk(builders ...*PaymentProviderInstanceCreate) *PaymentProviderInstanceCreateBulk {
+	return &PaymentProviderInstanceCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PaymentProviderInstanceClient) MapCreateBulk(slice any, setFunc func(*PaymentProviderInstanceCreate, int)) *PaymentProviderInstanceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PaymentProviderInstanceCreateBulk{err: fmt.Errorf("calling to PaymentProviderInstanceClient.MapCreateBulk with wrong type %T, need slice", slice)placeholder
+placeholder
+	builders := make([]*PaymentProviderInstanceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+placeholder
+	return &PaymentProviderInstanceCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// Update returns an update builder for PaymentProviderInstance.
+func (c *PaymentProviderInstanceClient) Update() *PaymentProviderInstanceUpdate {
+	mutation := newPaymentProviderInstanceMutation(c.config, OpUpdate)
+	return &PaymentProviderInstanceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PaymentProviderInstanceClient) UpdateOne(_m *PaymentProviderInstance) *PaymentProviderInstanceUpdateOne {
+	mutation := newPaymentProviderInstanceMutation(c.config, OpUpdateOne, withPaymentProviderInstance(_m))
+	return &PaymentProviderInstanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PaymentProviderInstanceClient) UpdateOneID(id int64) *PaymentProviderInstanceUpdateOne {
+	mutation := newPaymentProviderInstanceMutation(c.config, OpUpdateOne, withPaymentProviderInstanceID(id))
+	return &PaymentProviderInstanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// Delete returns a delete builder for PaymentProviderInstance.
+func (c *PaymentProviderInstanceClient) Delete() *PaymentProviderInstanceDelete {
+	mutation := newPaymentProviderInstanceMutation(c.config, OpDelete)
+	return &PaymentProviderInstanceDelete{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PaymentProviderInstanceClient) DeleteOne(_m *PaymentProviderInstance) *PaymentProviderInstanceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+placeholder
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PaymentProviderInstanceClient) DeleteOneID(id int64) *PaymentProviderInstanceDeleteOne {
+	builder := c.Delete().Where(paymentproviderinstance.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PaymentProviderInstanceDeleteOne{builderplaceholder
+placeholder
+
+// Query returns a query builder for PaymentProviderInstance.
+func (c *PaymentProviderInstanceClient) Query() *PaymentProviderInstanceQuery {
+	return &PaymentProviderInstanceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePaymentProviderInstanceplaceholder,
+		inters: c.Interceptors(),
+placeholder
+placeholder
+
+// Get returns a PaymentProviderInstance entity by its id.
+func (c *PaymentProviderInstanceClient) Get(ctx context.Context, id int64) (*PaymentProviderInstance, error) {
+	return c.Query().Where(paymentproviderinstance.ID(id)).Only(ctx)
+placeholder
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PaymentProviderInstanceClient) GetX(ctx context.Context, id int64) *PaymentProviderInstance {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+placeholder
+	return obj
+placeholder
+
+// Hooks returns the client hooks.
+func (c *PaymentProviderInstanceClient) Hooks() []Hook {
+	return c.hooks.PaymentProviderInstance
+placeholder
+
+// Interceptors returns the client interceptors.
+func (c *PaymentProviderInstanceClient) Interceptors() []Interceptor {
+	return c.inters.PaymentProviderInstance
+placeholder
+
+func (c *PaymentProviderInstanceClient) mutate(ctx context.Context, m *PaymentProviderInstanceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PaymentProviderInstanceCreate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdate:
+		return (&PaymentProviderInstanceUpdate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdateOne:
+		return (&PaymentProviderInstanceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PaymentProviderInstanceDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PaymentProviderInstance mutation op: %q", m.Op())
+placeholder
+placeholder
+
 // PromoCodeClient is a client for the PromoCode schema.
 type PromoCodeClient struct {
 	config
@@ -2622,6 +3071,139 @@ func (c *SettingClient) mutate(ctx context.Context, m *SettingMutation) (Value, 
 placeholder
 placeholder
 
+// SubscriptionPlanClient is a client for the SubscriptionPlan schema.
+type SubscriptionPlanClient struct {
+	config
+placeholder
+
+// NewSubscriptionPlanClient returns a client for the SubscriptionPlan from the given config.
+func NewSubscriptionPlanClient(c config) *SubscriptionPlanClient {
+	return &SubscriptionPlanClient{config: cplaceholder
+placeholder
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `subscriptionplan.Hooks(f(g(h())))`.
+func (c *SubscriptionPlanClient) Use(hooks ...Hook) {
+	c.hooks.SubscriptionPlan = append(c.hooks.SubscriptionPlan, hooks...)
+placeholder
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `subscriptionplan.Intercept(f(g(h())))`.
+func (c *SubscriptionPlanClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SubscriptionPlan = append(c.inters.SubscriptionPlan, interceptors...)
+placeholder
+
+// Create returns a builder for creating a SubscriptionPlan entity.
+func (c *SubscriptionPlanClient) Create() *SubscriptionPlanCreate {
+	mutation := newSubscriptionPlanMutation(c.config, OpCreate)
+	return &SubscriptionPlanCreate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// CreateBulk returns a builder for creating a bulk of SubscriptionPlan entities.
+func (c *SubscriptionPlanClient) CreateBulk(builders ...*SubscriptionPlanCreate) *SubscriptionPlanCreateBulk {
+	return &SubscriptionPlanCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SubscriptionPlanClient) MapCreateBulk(slice any, setFunc func(*SubscriptionPlanCreate, int)) *SubscriptionPlanCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SubscriptionPlanCreateBulk{err: fmt.Errorf("calling to SubscriptionPlanClient.MapCreateBulk with wrong type %T, need slice", slice)placeholder
+placeholder
+	builders := make([]*SubscriptionPlanCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+placeholder
+	return &SubscriptionPlanCreateBulk{config: c.config, builders: buildersplaceholder
+placeholder
+
+// Update returns an update builder for SubscriptionPlan.
+func (c *SubscriptionPlanClient) Update() *SubscriptionPlanUpdate {
+	mutation := newSubscriptionPlanMutation(c.config, OpUpdate)
+	return &SubscriptionPlanUpdate{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SubscriptionPlanClient) UpdateOne(_m *SubscriptionPlan) *SubscriptionPlanUpdateOne {
+	mutation := newSubscriptionPlanMutation(c.config, OpUpdateOne, withSubscriptionPlan(_m))
+	return &SubscriptionPlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SubscriptionPlanClient) UpdateOneID(id int64) *SubscriptionPlanUpdateOne {
+	mutation := newSubscriptionPlanMutation(c.config, OpUpdateOne, withSubscriptionPlanID(id))
+	return &SubscriptionPlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// Delete returns a delete builder for SubscriptionPlan.
+func (c *SubscriptionPlanClient) Delete() *SubscriptionPlanDelete {
+	mutation := newSubscriptionPlanMutation(c.config, OpDelete)
+	return &SubscriptionPlanDelete{config: c.config, hooks: c.Hooks(), mutation: mutationplaceholder
+placeholder
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SubscriptionPlanClient) DeleteOne(_m *SubscriptionPlan) *SubscriptionPlanDeleteOne {
+	return c.DeleteOneID(_m.ID)
+placeholder
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SubscriptionPlanClient) DeleteOneID(id int64) *SubscriptionPlanDeleteOne {
+	builder := c.Delete().Where(subscriptionplan.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SubscriptionPlanDeleteOne{builderplaceholder
+placeholder
+
+// Query returns a query builder for SubscriptionPlan.
+func (c *SubscriptionPlanClient) Query() *SubscriptionPlanQuery {
+	return &SubscriptionPlanQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSubscriptionPlanplaceholder,
+		inters: c.Interceptors(),
+placeholder
+placeholder
+
+// Get returns a SubscriptionPlan entity by its id.
+func (c *SubscriptionPlanClient) Get(ctx context.Context, id int64) (*SubscriptionPlan, error) {
+	return c.Query().Where(subscriptionplan.ID(id)).Only(ctx)
+placeholder
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SubscriptionPlanClient) GetX(ctx context.Context, id int64) *SubscriptionPlan {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+placeholder
+	return obj
+placeholder
+
+// Hooks returns the client hooks.
+func (c *SubscriptionPlanClient) Hooks() []Hook {
+	return c.hooks.SubscriptionPlan
+placeholder
+
+// Interceptors returns the client interceptors.
+func (c *SubscriptionPlanClient) Interceptors() []Interceptor {
+	return c.inters.SubscriptionPlan
+placeholder
+
+func (c *SubscriptionPlanClient) mutate(ctx context.Context, m *SubscriptionPlanMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SubscriptionPlanCreate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdate:
+		return (&SubscriptionPlanUpdate{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpUpdateOne:
+		return (&SubscriptionPlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SubscriptionPlanDelete{config: c.config, hooks: c.Hooks(), mutation: mplaceholder).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SubscriptionPlan mutation op: %q", m.Op())
+placeholder
+placeholder
+
 // TLSFingerprintProfileClient is a client for the TLSFingerprintProfile schema.
 type TLSFingerprintProfileClient struct {
 	config
@@ -3353,6 +3935,22 @@ placeholder
 	return query
 placeholder
 
+// QueryPaymentOrders queries the payment_orders edge of a User.
+func (c *UserClient) QueryPaymentOrders(_m *User) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PaymentOrdersTable, user.PaymentOrdersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
 // QueryUserAllowedGroups queries the user_allowed_groups edge of a User.
 func (c *UserClient) QueryUserAllowedGroups(_m *User) *UserAllowedGroupQuery {
 	query := (&UserAllowedGroupClient{config: c.configplaceholder).Query()
@@ -4031,15 +4629,17 @@ placeholder
 type (
 	hooks struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead,
-		ErrorPassthroughRule, Group, IdempotencyRecord, PromoCode, PromoCodeUsage,
-		Proxy, RedeemCode, SecuritySecret, Setting, TLSFingerprintProfile,
+		ErrorPassthroughRule, Group, IdempotencyRecord, PaymentAuditLog, PaymentOrder,
+		PaymentProviderInstance, PromoCode, PromoCodeUsage, Proxy, RedeemCode,
+		SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
 		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
 		UserAttributeValue, UserSubscription []ent.Hook
 placeholder
 	inters struct {
 		APIKey, Account, AccountGroup, Announcement, AnnouncementRead,
-		ErrorPassthroughRule, Group, IdempotencyRecord, PromoCode, PromoCodeUsage,
-		Proxy, RedeemCode, SecuritySecret, Setting, TLSFingerprintProfile,
+		ErrorPassthroughRule, Group, IdempotencyRecord, PaymentAuditLog, PaymentOrder,
+		PaymentProviderInstance, PromoCode, PromoCodeUsage, Proxy, RedeemCode,
+		SecuritySecret, Setting, SubscriptionPlan, TLSFingerprintProfile,
 		UsageCleanupTask, UsageLog, User, UserAllowedGroup, UserAttributeDefinition,
 		UserAttributeValue, UserSubscription []ent.Interceptor
 placeholder

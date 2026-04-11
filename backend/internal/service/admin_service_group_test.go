@@ -125,6 +125,22 @@ func (s *groupRepoStubForAdmin) UpdateSortOrders(_ context.Context, _ []GroupSor
 	return nil
 placeholder
 
+func TestAdminService_ListGroups_PassesSortParams(t *testing.T) {
+	repo := &groupRepoStubForAdmin{
+		listWithFiltersGroups: []Group{{ID: 1, Name: "g1"placeholderplaceholder,
+placeholder
+	svc := &adminServiceImpl{groupRepo: repoplaceholder
+
+	_, _, err := svc.ListGroups(context.Background(), 3, 25, PlatformOpenAI, StatusActive, "needle", nil, "account_count", "ASC")
+placeholder
+	require.Equal(t, pagination.PaginationParams{
+		Page:      3,
+		PageSize:  25,
+		SortBy:    "account_count",
+		SortOrder: "ASC",
+placeholder, repo.listWithFiltersParams)
+placeholder
+
 // TestAdminService_CreateGroup_WithImagePricing 测试创建分组时 ImagePrice 字段正确传递
 func TestAdminService_CreateGroup_WithImagePricing(t *testing.T) {
 	repo := &groupRepoStubForAdmin{placeholder
@@ -373,7 +389,7 @@ func TestAdminService_ListGroups_WithSearch(t *testing.T) {
 	placeholder
 		svc := &adminServiceImpl{groupRepo: repoplaceholder
 
-		groups, total, err := svc.ListGroups(context.Background(), 1, 20, "", "", "alpha", nil)
+		groups, total, err := svc.ListGroups(context.Background(), 1, 20, "", "", "alpha", nil, "", "")
 	placeholder
 		require.Equal(t, int64(1), total)
 		require.Equal(t, []Group{{ID: 1, Name: "alpha"placeholderplaceholder, groups)
@@ -391,7 +407,7 @@ placeholder)
 	placeholder
 		svc := &adminServiceImpl{groupRepo: repoplaceholder
 
-		groups, total, err := svc.ListGroups(context.Background(), 2, 10, "", "", "", nil)
+		groups, total, err := svc.ListGroups(context.Background(), 2, 10, "", "", "", nil, "", "")
 	placeholder
 		require.Empty(t, groups)
 		require.Equal(t, int64(0), total)
@@ -410,7 +426,7 @@ placeholder)
 	placeholder
 		svc := &adminServiceImpl{groupRepo: repoplaceholder
 
-		groups, total, err := svc.ListGroups(context.Background(), 3, 50, PlatformAntigravity, StatusActive, "beta", &isExclusive)
+		groups, total, err := svc.ListGroups(context.Background(), 3, 50, PlatformAntigravity, StatusActive, "beta", &isExclusive, "", "")
 	placeholder
 		require.Equal(t, int64(42), total)
 		require.Equal(t, []Group{{ID: 2, Name: "beta"placeholderplaceholder, groups)

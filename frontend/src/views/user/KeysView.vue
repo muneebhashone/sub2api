@@ -49,7 +49,15 @@
       </template>
 
       <template #table>
-        <DataTable :columns="columns" :data="apiKeys" :loading="loading">
+        <DataTable
+          :columns="columns"
+          :data="apiKeys"
+          :loading="loading"
+          :server-side-sort="true"
+          default-sort-key="created_at"
+          default-sort-order="desc"
+          @sort="handleSort"
+        >
           <template #cell-key="{ value, row placeholder">
             <div class="flex items-center gap-2">
               <code class="code text-xs">
@@ -1114,6 +1122,10 @@ const pagination = ref({
   total: 0,
   pages: 0
 placeholder)
+const sortState = ref({
+  sort_by: 'created_at',
+  sort_order: 'desc' as 'asc' | 'desc'
+placeholder)
 
 // Filter state
 const filterSearch = ref('')
@@ -1277,10 +1289,18 @@ const loadApiKeys = async () => {
   loading.value = true
   try {
     // Build filters
-    const filters: { search?: string; status?: string; group_id?: number | string placeholder = {placeholder
+    const filters: {
+      search?: string
+      status?: string
+      group_id?: number | string
+      sort_by?: string
+      sort_order?: 'asc' | 'desc'
+    placeholder = {placeholder
     if (filterSearch.value) filters.search = filterSearch.value
     if (filterStatus.value) filters.status = filterStatus.value
     if (filterGroupId.value !== '') filters.group_id = filterGroupId.value
+    filters.sort_by = sortState.value.sort_by
+    filters.sort_order = sortState.value.sort_order
 
     const response = await keysAPI.list(pagination.value.page, pagination.value.page_size, filters, {
       signal
@@ -1356,6 +1376,13 @@ placeholder
 
 const handlePageSizeChange = (pageSize: number) => {
   pagination.value.page_size = pageSize
+  pagination.value.page = 1
+  loadApiKeys()
+placeholder
+
+const handleSort = (key: string, order: 'asc' | 'desc') => {
+  sortState.value.sort_by = key
+  sortState.value.sort_order = order
   pagination.value.page = 1
   loadApiKeys()
 placeholder
