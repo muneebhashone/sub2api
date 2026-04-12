@@ -47,30 +47,21 @@ func (s *BalanceNotifyService) CheckBalanceAfterDeduction(ctx context.Context, u
 	if user == nil || s.emailService == nil || s.settingRepo == nil {
 		return
 placeholder
-
-	// Check user-level switch
 	if !user.BalanceNotifyEnabled {
 		return
 placeholder
 
-	// Check global switch
-	globalEnabled, threshold := s.getBalanceNotifyConfig(ctx)
+	globalEnabled, globalThresholdType, globalThresholdValue := s.getBalanceNotifyConfig(ctx)
 	if !globalEnabled {
 		return
 placeholder
 
-	// User custom threshold overrides system default
-	if user.BalanceNotifyThreshold != nil {
-		threshold = *user.BalanceNotifyThreshold
-placeholder
-
+	threshold := s.resolveEffectiveThreshold(user, globalThresholdType, globalThresholdValue)
 	if threshold <= 0 {
 		return
 placeholder
 
 	newBalance := oldBalance - cost
-
-	// Only notify on first crossing
 	if oldBalance >= threshold && newBalance < threshold {
 		siteName := s.getSiteName(ctx)
 		recipients := s.collectBalanceNotifyRecipients(user)
@@ -83,6 +74,30 @@ placeholder
 			s.sendBalanceLowEmails(recipients, user.Username, user.Email, newBalance, threshold, siteName)
 	placeholder()
 placeholder
+placeholder
+
+// resolveEffectiveThreshold computes the actual USD threshold based on type and user settings.
+func (s *BalanceNotifyService) resolveEffectiveThreshold(user *User, globalType string, globalValue float64) float64 {
+	// User-level override takes full precedence
+	if user.BalanceNotifyThreshold != nil {
+		thresholdType := user.BalanceNotifyThresholdType
+		if thresholdType == "" {
+			thresholdType = globalType
+	placeholder
+		return computeThreshold(thresholdType, *user.BalanceNotifyThreshold, user.TotalRecharged)
+placeholder
+	return computeThreshold(globalType, globalValue, user.TotalRecharged)
+placeholder
+
+// computeThreshold converts a threshold value to USD based on type.
+func computeThreshold(thresholdType string, value, totalRecharged float64) float64 {
+	if thresholdType == ThresholdTypePercentage {
+		if totalRecharged <= 0 {
+			return 0 // no recharge history → skip percentage check
+	placeholder
+		return totalRecharged * value / 100
+placeholder
+	return value // fixed USD amount
 placeholder
 
 // quotaDim describes one quota dimension for notification checking.
@@ -139,13 +154,21 @@ placeholder()
 placeholder
 
 // getBalanceNotifyConfig reads global balance notification settings.
-func (s *BalanceNotifyService) getBalanceNotifyConfig(ctx context.Context) (enabled bool, threshold float64) {
-	keys := []string{SettingKeyBalanceLowNotifyEnabled, SettingKeyBalanceLowNotifyThresholdplaceholder
+func (s *BalanceNotifyService) getBalanceNotifyConfig(ctx context.Context) (enabled bool, thresholdType string, threshold float64) {
+	keys := []string{
+		SettingKeyBalanceLowNotifyEnabled,
+		SettingKeyBalanceLowNotifyThresholdType,
+		SettingKeyBalanceLowNotifyThreshold,
+placeholder
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
 	if err != nil {
-		return false, 0
+		return false, ThresholdTypeFixed, 0
 placeholder
 	enabled = settings[SettingKeyBalanceLowNotifyEnabled] == "true"
+	thresholdType = settings[SettingKeyBalanceLowNotifyThresholdType]
+	if thresholdType == "" {
+		thresholdType = ThresholdTypeFixed
+placeholder
 	if v := settings[SettingKeyBalanceLowNotifyThreshold]; v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			threshold = f
