@@ -145,7 +145,9 @@ placeholder
 		user.BalanceNotifyEnabled = *req.BalanceNotifyEnabled
 placeholder
 	if req.BalanceNotifyThresholdType != nil {
-		user.BalanceNotifyThresholdType = *req.BalanceNotifyThresholdType
+		if *req.BalanceNotifyThresholdType == ThresholdTypeFixed || *req.BalanceNotifyThresholdType == ThresholdTypePercentage {
+			user.BalanceNotifyThresholdType = *req.BalanceNotifyThresholdType
+	placeholder
 placeholder
 	if req.BalanceNotifyThreshold != nil {
 		if *req.BalanceNotifyThreshold <= 0 {

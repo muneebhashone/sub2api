@@ -709,6 +709,12 @@ placeholder
 		return nil, fmt.Errorf("balance cannot be negative, current balance: %.2f, requested operation would result in: %.2f", oldBalance, user.Balance)
 placeholder
 
+	// Track cumulative recharge for percentage-based balance notifications
+	balanceDelta := user.Balance - oldBalance
+	if balanceDelta > 0 {
+		user.TotalRecharged += balanceDelta
+placeholder
+
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
 placeholder

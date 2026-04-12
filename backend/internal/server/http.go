@@ -59,7 +59,7 @@ placeholder else {
 placeholder
 
 	// Wire up websearch Manager builder so it initializes on startup and rebuilds on config save.
-	settingService.SetWebSearchManagerBuilder(context.Background(), func(cfg *service.WebSearchEmulationConfig) {
+	settingService.SetWebSearchManagerBuilder(context.Background(), func(cfg *service.WebSearchEmulationConfig, proxyURLs map[int64]string) {
 		if cfg == nil || !cfg.Enabled || len(cfg.Providers) == 0 {
 			service.SetWebSearchManager(nil)
 			return
@@ -80,6 +80,9 @@ placeholder
 		placeholder
 			if p.ProxyID != nil {
 				pc.ProxyID = *p.ProxyID
+				if u, ok := proxyURLs[*p.ProxyID]; ok {
+					pc.ProxyURL = u
+			placeholder
 		placeholder
 			configs = append(configs, pc)
 	placeholder
