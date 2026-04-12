@@ -214,3 +214,39 @@ placeholder
 
 	response.Success(c, dto.UserFromService(updatedUser))
 placeholder
+
+// ToggleNotifyEmailRequest represents the request to toggle a notify email's disabled state
+type ToggleNotifyEmailRequest struct {
+	Email    string `json:"email"`    // empty string for primary email placeholder
+	Disabled bool   `json:"disabled"`
+placeholder
+
+// ToggleNotifyEmail toggles the disabled state of a notification email
+// PUT /api/v1/user/notify-email/toggle
+func (h *UserHandler) ToggleNotifyEmail(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+
+	var req ToggleNotifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	err := h.userService.ToggleNotifyEmail(c.Request.Context(), subject.UserID, req.Email, req.Disabled)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	updatedUser, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.UserFromService(updatedUser))
+placeholder

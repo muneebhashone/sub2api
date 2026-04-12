@@ -4,7 +4,7 @@
  */
 
 import { apiClient placeholder from './client'
-import type { User, ChangePasswordRequest placeholder from '@/types'
+import type { User, ChangePasswordRequest, NotifyEmailEntry placeholder from '@/types'
 
 /**
  * Get current user profile
@@ -24,7 +24,7 @@ export async function updateProfile(profile: {
   username?: string
   balance_notify_enabled?: boolean
   balance_notify_threshold?: number | null
-  balance_notify_extra_emails?: string[]
+  balance_notify_extra_emails?: NotifyEmailEntry[]
 placeholder): Promise<User> {
   const { data placeholder = await apiClient.put<User>('/user', profile)
   return data
@@ -73,13 +73,24 @@ export async function removeNotifyEmail(email: string): Promise<void> {
   await apiClient.delete('/user/notify-email', { data: { email placeholder placeholder)
 placeholder
 
+/**
+ * Toggle a notify email's disabled state
+ * @param email - Email address (empty string for primary email placeholder)
+ * @param disabled - Whether to disable the email
+ */
+export async function toggleNotifyEmail(email: string, disabled: boolean): Promise<User> {
+  const { data placeholder = await apiClient.put<User>('/user/notify-email/toggle', { email, disabled placeholder)
+  return data
+placeholder
+
 export const userAPI = {
   getProfile,
   updateProfile,
   changePassword,
   sendNotifyEmailCode,
   verifyNotifyEmail,
-  removeNotifyEmail
+  removeNotifyEmail,
+  toggleNotifyEmail
 placeholder
 
 export default userAPI
