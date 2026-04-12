@@ -1432,6 +1432,14 @@ placeholder
 	return ""
 placeholder
 
+// getExtraStringDefault 从 Extra 中读取指定 key 的字符串值，不存在时返回 defaultVal
+func (a *Account) getExtraStringDefault(key, defaultVal string) string {
+	if v := a.getExtraString(key); v != "" {
+		return v
+placeholder
+	return defaultVal
+placeholder
+
 // getExtraInt 从 Extra 中读取指定 key 的 int 值
 func (a *Account) getExtraInt(key string) int {
 	if a.Extra == nil {
@@ -1498,6 +1506,10 @@ func (a *Account) GetQuotaNotifyDailyThreshold() float64 {
 	return a.getExtraFloat64("quota_notify_daily_threshold")
 placeholder
 
+func (a *Account) GetQuotaNotifyDailyThresholdType() string {
+	return a.getExtraStringDefault("quota_notify_daily_threshold_type", "fixed")
+placeholder
+
 func (a *Account) GetQuotaNotifyWeeklyEnabled() bool {
 	return a.getExtraBool("quota_notify_weekly_enabled")
 placeholder
@@ -1506,12 +1518,20 @@ func (a *Account) GetQuotaNotifyWeeklyThreshold() float64 {
 	return a.getExtraFloat64("quota_notify_weekly_threshold")
 placeholder
 
+func (a *Account) GetQuotaNotifyWeeklyThresholdType() string {
+	return a.getExtraStringDefault("quota_notify_weekly_threshold_type", "fixed")
+placeholder
+
 func (a *Account) GetQuotaNotifyTotalEnabled() bool {
 	return a.getExtraBool("quota_notify_total_enabled")
 placeholder
 
 func (a *Account) GetQuotaNotifyTotalThreshold() float64 {
 	return a.getExtraFloat64("quota_notify_total_threshold")
+placeholder
+
+func (a *Account) GetQuotaNotifyTotalThresholdType() string {
+	return a.getExtraStringDefault("quota_notify_total_threshold_type", "fixed")
 placeholder
 
 // nextFixedDailyReset 计算在 after 之后的下一个每日固定重置时间点
