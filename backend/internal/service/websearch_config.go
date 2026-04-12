@@ -235,6 +235,7 @@ placeholder
 placeholder
 	proxies, err := s.proxyRepo.ListByIDs(ctx, ids)
 	if err != nil {
+		slog.Warn("websearch: failed to resolve proxy URLs", "error", err)
 		return nil
 placeholder
 	result := make(map[int64]string, len(proxies))
