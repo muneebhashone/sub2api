@@ -51,12 +51,16 @@ placeholder
 		return
 placeholder
 
-	globalEnabled, globalThresholdType, globalThresholdValue := s.getBalanceNotifyConfig(ctx)
+	globalEnabled, globalThreshold := s.getBalanceNotifyConfig(ctx)
 	if !globalEnabled {
 		return
 placeholder
 
-	threshold := s.resolveEffectiveThreshold(user, globalThresholdType, globalThresholdValue)
+	// User custom threshold overrides system default
+	threshold := globalThreshold
+	if user.BalanceNotifyThreshold != nil {
+		threshold = *user.BalanceNotifyThreshold
+placeholder
 	if threshold <= 0 {
 		return
 placeholder
@@ -74,30 +78,6 @@ placeholder
 			s.sendBalanceLowEmails(recipients, user.Username, user.Email, newBalance, threshold, siteName)
 	placeholder()
 placeholder
-placeholder
-
-// resolveEffectiveThreshold computes the actual USD threshold based on type and user settings.
-// When user sets a custom threshold, their type is used independently (defaults to "fixed" if unset).
-func (s *BalanceNotifyService) resolveEffectiveThreshold(user *User, globalType string, globalValue float64) float64 {
-	if user.BalanceNotifyThreshold != nil {
-		thresholdType := user.BalanceNotifyThresholdType
-		if thresholdType == "" {
-			thresholdType = ThresholdTypeFixed // user custom value defaults to fixed, not inherited
-	placeholder
-		return computeThreshold(thresholdType, *user.BalanceNotifyThreshold, user.TotalRecharged)
-placeholder
-	return computeThreshold(globalType, globalValue, user.TotalRecharged)
-placeholder
-
-// computeThreshold converts a threshold value to USD based on type.
-func computeThreshold(thresholdType string, value, totalRecharged float64) float64 {
-	if thresholdType == ThresholdTypePercentage {
-		if totalRecharged <= 0 {
-			return 0 // no recharge history → skip percentage check
-	placeholder
-		return totalRecharged * value / 100
-placeholder
-	return value // fixed USD amount
 placeholder
 
 // quotaDim describes one quota dimension for notification checking.
@@ -154,21 +134,13 @@ placeholder()
 placeholder
 
 // getBalanceNotifyConfig reads global balance notification settings.
-func (s *BalanceNotifyService) getBalanceNotifyConfig(ctx context.Context) (enabled bool, thresholdType string, threshold float64) {
-	keys := []string{
-		SettingKeyBalanceLowNotifyEnabled,
-		SettingKeyBalanceLowNotifyThresholdType,
-		SettingKeyBalanceLowNotifyThreshold,
-placeholder
+func (s *BalanceNotifyService) getBalanceNotifyConfig(ctx context.Context) (enabled bool, threshold float64) {
+	keys := []string{SettingKeyBalanceLowNotifyEnabled, SettingKeyBalanceLowNotifyThresholdplaceholder
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
 	if err != nil {
-		return false, ThresholdTypeFixed, 0
+		return false, 0
 placeholder
 	enabled = settings[SettingKeyBalanceLowNotifyEnabled] == "true"
-	thresholdType = settings[SettingKeyBalanceLowNotifyThresholdType]
-	if thresholdType == "" {
-		thresholdType = ThresholdTypeFixed
-placeholder
 	if v := settings[SettingKeyBalanceLowNotifyThreshold]; v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			threshold = f

@@ -62,12 +62,11 @@ placeholder
 
 // UpdateProfileRequest 更新用户资料请求
 type UpdateProfileRequest struct {
-	Email                      *string  `json:"email"`
-	Username                   *string  `json:"username"`
-	Concurrency                *int     `json:"concurrency"`
-	BalanceNotifyEnabled       *bool    `json:"balance_notify_enabled"`
-	BalanceNotifyThresholdType *string  `json:"balance_notify_threshold_type"`
-	BalanceNotifyThreshold     *float64 `json:"balance_notify_threshold"`
+	Email                  *string  `json:"email"`
+	Username               *string  `json:"username"`
+	Concurrency            *int     `json:"concurrency"`
+	BalanceNotifyEnabled   *bool    `json:"balance_notify_enabled"`
+	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
 placeholder
 
 // ChangePasswordRequest 修改密码请求
@@ -143,11 +142,6 @@ placeholder
 
 	if req.BalanceNotifyEnabled != nil {
 		user.BalanceNotifyEnabled = *req.BalanceNotifyEnabled
-placeholder
-	if req.BalanceNotifyThresholdType != nil {
-		if *req.BalanceNotifyThresholdType == ThresholdTypeFixed || *req.BalanceNotifyThresholdType == ThresholdTypePercentage {
-			user.BalanceNotifyThresholdType = *req.BalanceNotifyThresholdType
-	placeholder
 placeholder
 	if req.BalanceNotifyThreshold != nil {
 		if *req.BalanceNotifyThreshold <= 0 {
