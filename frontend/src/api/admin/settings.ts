@@ -497,9 +497,8 @@ export interface WebSearchProviderConfig {
   type: 'brave' | 'tavily'
   api_key: string
   api_key_configured: boolean
-  priority: number
   quota_limit: number
-  quota_refresh_interval: 'daily' | 'weekly' | 'monthly'
+  subscribed_at: number | null
   quota_used?: number
   proxy_id: number | null
   expires_at: number | null
@@ -508,6 +507,12 @@ placeholder
 export interface WebSearchEmulationConfig {
   enabled: boolean
   providers: WebSearchProviderConfig[]
+placeholder
+
+export interface WebSearchTestResult {
+  provider: string
+  results: { url: string; title: string; snippet: string; page_age?: string placeholder[]
+  query: string
 placeholder
 
 export async function getWebSearchEmulationConfig(): Promise<WebSearchEmulationConfig> {
@@ -523,6 +528,16 @@ export async function updateWebSearchEmulationConfig(
   const { data placeholder = await apiClient.put<WebSearchEmulationConfig>(
     '/admin/settings/web-search-emulation',
     config
+  )
+  return data
+placeholder
+
+export async function testWebSearchEmulation(
+  query: string
+): Promise<WebSearchTestResult> {
+  const { data placeholder = await apiClient.post<WebSearchTestResult>(
+    '/admin/settings/web-search-emulation/test',
+    { query placeholder
   )
   return data
 placeholder
@@ -544,7 +559,8 @@ export const settingsAPI = {
   getBetaPolicySettings,
   updateBetaPolicySettings,
   getWebSearchEmulationConfig,
-  updateWebSearchEmulationConfig
+  updateWebSearchEmulationConfig,
+  testWebSearchEmulation
 placeholder
 
 export default settingsAPI

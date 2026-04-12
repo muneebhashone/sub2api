@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,8 +17,8 @@ func TestValidateWebSearchConfig_Valid(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Enabled: true,
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", Priority: 1, QuotaLimit: 1000, QuotaRefreshInterval: "monthly"placeholder,
-			{Type: "tavily", Priority: 2, QuotaLimit: 500, QuotaRefreshInterval: "daily"placeholder,
+			{Type: "brave", QuotaLimit: 1000placeholder,
+			{Type: "tavily", QuotaLimit: 500placeholder,
 	placeholder,
 placeholder
 	require.NoError(t, validateWebSearchConfig(cfg))
@@ -39,13 +40,6 @@ placeholder
 	require.ErrorContains(t, validateWebSearchConfig(cfg), "invalid type")
 placeholder
 
-func TestValidateWebSearchConfig_InvalidQuotaInterval(t *testing.T) {
-	cfg := &WebSearchEmulationConfig{
-		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaRefreshInterval: "hourly"placeholderplaceholder,
-placeholder
-	require.ErrorContains(t, validateWebSearchConfig(cfg), "invalid quota_refresh_interval")
-placeholder
-
 func TestValidateWebSearchConfig_NegativeQuotaLimit(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaLimit: -1placeholderplaceholder,
@@ -56,18 +50,11 @@ placeholder
 func TestValidateWebSearchConfig_DuplicateType(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", Priority: 1placeholder,
-			{Type: "brave", Priority: 2placeholder,
+			{Type: "brave"placeholder,
+			{Type: "brave"placeholder,
 	placeholder,
 placeholder
 	require.ErrorContains(t, validateWebSearchConfig(cfg), "duplicate type")
-placeholder
-
-func TestValidateWebSearchConfig_EmptyQuotaInterval(t *testing.T) {
-	cfg := &WebSearchEmulationConfig{
-		Providers: []WebSearchProviderConfig{{Type: "brave", QuotaRefreshInterval: ""placeholderplaceholder,
-placeholder
-	require.NoError(t, validateWebSearchConfig(cfg))
 placeholder
 
 func TestValidateWebSearchConfig_ZeroQuotaLimit(t *testing.T) {
@@ -99,6 +86,15 @@ func TestParseWebSearchConfigJSON_InvalidJSON(t *testing.T) {
 	require.Empty(t, cfg.Providers)
 placeholder
 
+func TestParseWebSearchConfigJSON_BackwardCompatibility(t *testing.T) {
+	// Old config with priority and quota_refresh_interval should parse without error
+	raw := `{"enabled":true,"providers":[{"type":"brave","priority":1,"quota_refresh_interval":"monthly","quota_limit":1000placeholder]placeholder`
+	cfg := parseWebSearchConfigJSON(raw)
+	require.True(t, cfg.Enabled)
+	require.Len(t, cfg.Providers, 1)
+	require.Equal(t, int64(1000), cfg.Providers[0].QuotaLimit)
+placeholder
+
 // --- SanitizeWebSearchConfig ---
 
 func TestSanitizeWebSearchConfig_MaskAPIKey(t *testing.T) {
@@ -108,7 +104,7 @@ func TestSanitizeWebSearchConfig_MaskAPIKey(t *testing.T) {
 			{Type: "brave", APIKey: "sk-secret-xxx"placeholder,
 	placeholder,
 placeholder
-	out := SanitizeWebSearchConfig(cfg)
+	out := SanitizeWebSearchConfig(context.Background(), cfg)
 	require.Equal(t, "", out.Providers[0].APIKey)
 	require.True(t, out.Providers[0].APIKeyConfigured)
 placeholder
@@ -117,25 +113,24 @@ func TestSanitizeWebSearchConfig_NoAPIKey(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Providers: []WebSearchProviderConfig{{Type: "brave", APIKey: ""placeholderplaceholder,
 placeholder
-	out := SanitizeWebSearchConfig(cfg)
+	out := SanitizeWebSearchConfig(context.Background(), cfg)
 	require.Equal(t, "", out.Providers[0].APIKey)
 	require.False(t, out.Providers[0].APIKeyConfigured)
 placeholder
 
 func TestSanitizeWebSearchConfig_Nil(t *testing.T) {
-	require.Nil(t, SanitizeWebSearchConfig(nil))
+	require.Nil(t, SanitizeWebSearchConfig(context.Background(), nil))
 placeholder
 
 func TestSanitizeWebSearchConfig_PreservesOtherFields(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Enabled: true,
 		Providers: []WebSearchProviderConfig{
-			{Type: "brave", APIKey: "secret", Priority: 10, QuotaLimit: 1000placeholder,
+			{Type: "brave", APIKey: "secret", QuotaLimit: 1000placeholder,
 	placeholder,
 placeholder
-	out := SanitizeWebSearchConfig(cfg)
+	out := SanitizeWebSearchConfig(context.Background(), cfg)
 	require.True(t, out.Enabled)
-	require.Equal(t, 10, out.Providers[0].Priority)
 	require.Equal(t, int64(1000), out.Providers[0].QuotaLimit)
 placeholder
 
@@ -143,6 +138,6 @@ func TestSanitizeWebSearchConfig_DoesNotMutateOriginal(t *testing.T) {
 	cfg := &WebSearchEmulationConfig{
 		Providers: []WebSearchProviderConfig{{Type: "brave", APIKey: "secret"placeholderplaceholder,
 placeholder
-	_ = SanitizeWebSearchConfig(cfg)
+	_ = SanitizeWebSearchConfig(context.Background(), cfg)
 	require.Equal(t, "secret", cfg.Providers[0].APIKey)
 placeholder
