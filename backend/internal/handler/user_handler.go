@@ -205,5 +205,12 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, gin.H{"message": "Email removed successfully"placeholder)
+	// Return updated user
+	updatedUser, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.UserFromService(updatedUser))
 placeholder
