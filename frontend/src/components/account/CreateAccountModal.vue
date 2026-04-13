@@ -2375,7 +2375,7 @@
               {{ t('admin.accounts.anthropic.webSearchEmulationDesc') placeholderplaceholder
             </p>
           </div>
-          <select v-model="webSearchEmulationMode" class="input w-32 text-sm">
+          <select v-model="webSearchEmulationMode" class="input w-24 text-sm">
             <option value="default">{{ t('admin.accounts.anthropic.webSearchDefault') placeholderplaceholder</option>
             <option value="enabled">{{ t('admin.accounts.anthropic.webSearchEnabled') placeholderplaceholder</option>
             <option value="disabled">{{ t('admin.accounts.anthropic.webSearchDisabled') placeholderplaceholder</option>
