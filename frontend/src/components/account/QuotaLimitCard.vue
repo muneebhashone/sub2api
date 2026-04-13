@@ -203,28 +203,28 @@ placeholder
               :placeholder="t('admin.accounts.quotaLimitPlaceholder')"
             />
           </div>
-          <!-- 日配额重置模式 -->
-          <div class="mt-2 flex items-center gap-2">
+          <!-- 日配额：重置方式 + 告警阈值同行 -->
+          <div class="mt-2 flex items-center gap-2 flex-wrap">
             <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaResetMode') placeholderplaceholder</label>
             <select
               :value="dailyResetMode || 'rolling'"
               @change="onDailyModeChange"
-              class="input py-1 text-xs"
+              class="input py-1 text-xs w-auto"
             >
               <option value="rolling">{{ t('admin.accounts.quotaResetModeRolling') placeholderplaceholder</option>
               <option value="fixed">{{ t('admin.accounts.quotaResetModeFixed') placeholderplaceholder</option>
             </select>
-          </div>
-          <!-- 固定模式：小时选择 -->
-          <div v-if="dailyResetMode === 'fixed'" class="mt-2 flex items-center gap-2">
-            <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaResetHour') placeholderplaceholder</label>
-            <select
-              :value="dailyResetHour ?? 0"
-              @change="emit('update:dailyResetHour', Number(($event.target as HTMLSelectElement).value))"
-              class="input py-1 text-xs w-24"
-            >
-              <option v-for="h in hourOptions" :key="h" :value="h">{{ String(h).padStart(2, '0') placeholderplaceholder:00</option>
-            </select>
+            <!-- 固定模式：小时选择 -->
+            <template v-if="dailyResetMode === 'fixed'">
+              <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaResetHour') placeholderplaceholder</label>
+              <select
+                :value="dailyResetHour ?? 0"
+                @change="emit('update:dailyResetHour', Number(($event.target as HTMLSelectElement).value))"
+                class="input py-1 text-xs w-24"
+              >
+                <option v-for="h in hourOptions" :key="h" :value="h">{{ String(h).padStart(2, '0') placeholderplaceholder:00</option>
+              </select>
+            </template>
           </div>
           <p class="input-hint">
             <template v-if="dailyResetMode === 'fixed'">
@@ -234,7 +234,6 @@ placeholder
               {{ t('admin.accounts.quotaDailyLimitHint') placeholderplaceholder
             </template>
           </p>
-          <!-- 日配额告警 -->
           <QuotaNotifyToggle
             v-if="quotaNotifyGlobalEnabled && dailyLimit && dailyLimit > 0"
             :enabled="props.quotaNotifyDailyEnabled"
@@ -261,36 +260,36 @@ placeholder
               :placeholder="t('admin.accounts.quotaLimitPlaceholder')"
             />
           </div>
-          <!-- 周配额重置模式 -->
-          <div class="mt-2 flex items-center gap-2">
+          <!-- 周配额：重置方式 + 告警阈值同行 -->
+          <div class="mt-2 flex items-center gap-2 flex-wrap">
             <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaResetMode') placeholderplaceholder</label>
             <select
               :value="weeklyResetMode || 'rolling'"
               @change="onWeeklyModeChange"
-              class="input py-1 text-xs"
+              class="input py-1 text-xs w-auto"
             >
               <option value="rolling">{{ t('admin.accounts.quotaResetModeRolling') placeholderplaceholder</option>
               <option value="fixed">{{ t('admin.accounts.quotaResetModeFixed') placeholderplaceholder</option>
             </select>
-          </div>
-          <!-- 固定模式：星期几 + 小时 -->
-          <div v-if="weeklyResetMode === 'fixed'" class="mt-2 flex items-center gap-2 flex-wrap">
-            <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaWeeklyResetDay') placeholderplaceholder</label>
-            <select
-              :value="weeklyResetDay ?? 1"
-              @change="emit('update:weeklyResetDay', Number(($event.target as HTMLSelectElement).value))"
-              class="input py-1 text-xs w-28"
-            >
-              <option v-for="d in dayOptions" :key="d.value" :value="d.value">{{ t('admin.accounts.dayOfWeek.' + d.key) placeholderplaceholder</option>
-            </select>
-            <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaResetHour') placeholderplaceholder</label>
-            <select
-              :value="weeklyResetHour ?? 0"
-              @change="emit('update:weeklyResetHour', Number(($event.target as HTMLSelectElement).value))"
-              class="input py-1 text-xs w-24"
-            >
-              <option v-for="h in hourOptions" :key="h" :value="h">{{ String(h).padStart(2, '0') placeholderplaceholder:00</option>
-            </select>
+            <!-- 固定模式：星期几 + 小时 -->
+            <template v-if="weeklyResetMode === 'fixed'">
+              <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaWeeklyResetDay') placeholderplaceholder</label>
+              <select
+                :value="weeklyResetDay ?? 1"
+                @change="emit('update:weeklyResetDay', Number(($event.target as HTMLSelectElement).value))"
+                class="input py-1 text-xs w-28"
+              >
+                <option v-for="d in dayOptions" :key="d.value" :value="d.value">{{ t('admin.accounts.dayOfWeek.' + d.key) placeholderplaceholder</option>
+              </select>
+              <label class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ t('admin.accounts.quotaResetHour') placeholderplaceholder</label>
+              <select
+                :value="weeklyResetHour ?? 0"
+                @change="emit('update:weeklyResetHour', Number(($event.target as HTMLSelectElement).value))"
+                class="input py-1 text-xs w-24"
+              >
+                <option v-for="h in hourOptions" :key="h" :value="h">{{ String(h).padStart(2, '0') placeholderplaceholder:00</option>
+              </select>
+            </template>
           </div>
           <p class="input-hint">
             <template v-if="weeklyResetMode === 'fixed'">
@@ -300,7 +299,6 @@ placeholder
               {{ t('admin.accounts.quotaWeeklyLimitHint') placeholderplaceholder
             </template>
           </p>
-          <!-- 周配额告警 -->
           <QuotaNotifyToggle
             v-if="quotaNotifyGlobalEnabled && weeklyLimit && weeklyLimit > 0"
             :enabled="props.quotaNotifyWeeklyEnabled"
