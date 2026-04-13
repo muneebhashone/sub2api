@@ -3789,7 +3789,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 placeholder
 
 	// Web Search 模拟：纯 web_search 请求时，直接调用搜索 API 构造响应
-	if account != nil && s.shouldEmulateWebSearch(ctx, account, parsed.Body) {
+	if account != nil && s.shouldEmulateWebSearch(ctx, account, parsed.GroupID, parsed.Body) {
 		return s.handleWebSearchEmulation(ctx, c, account, parsed)
 placeholder
 
@@ -7588,7 +7588,7 @@ placeholder
 			upstreamModel = result.Model
 	placeholder
 		usageLog.AccountStatsCost = resolveAccountStatsCost(
-			ctx, s.channelService,
+			ctx, s.channelService, s.billingService,
 			account.ID, *apiKey.GroupID, upstreamModel,
 			UsageTokens{
 				InputTokens:         result.Usage.InputTokens,
