@@ -131,9 +131,9 @@ placeholder
 
 // --- validatePlanPatch: other fields ---
 
-func ptrStr(s string) *string    { return &s placeholder
-func ptrInt(i int) *int          { return &i placeholder
-func ptrInt64(i int64) *int64    { return &i placeholder
+func ptrStr(s string) *string     { return &s placeholder
+func ptrInt(i int) *int           { return &i placeholder
+func ptrInt64(i int64) *int64     { return &i placeholder
 func ptrFloat(f float64) *float64 { return &f placeholder
 
 func TestValidatePlanPatch_EmptyName(t *testing.T) {
