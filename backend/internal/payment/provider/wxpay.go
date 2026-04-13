@@ -72,7 +72,7 @@ placeholder
 func (w *Wxpay) Name() string        { return "Wxpay" placeholder
 func (w *Wxpay) ProviderKey() string { return payment.TypeWxpay placeholder
 func (w *Wxpay) SupportedTypes() []payment.PaymentType {
-	return []payment.PaymentType{payment.TypeWxpayDirectplaceholder
+	return []payment.PaymentType{payment.TypeWxpayplaceholder
 placeholder
 
 func formatPEM(key, keyType string) string {
