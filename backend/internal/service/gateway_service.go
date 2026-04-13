@@ -7598,6 +7598,7 @@ placeholder
 				ImageOutputTokens:   result.Usage.ImageOutputTokens,
 		placeholder,
 			1, // requestCount
+			cost.TotalCost,
 		)
 placeholder
 
