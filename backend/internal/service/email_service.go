@@ -196,6 +196,14 @@ placeholder
 placeholder
 	defer func() { _ = client.Close() placeholder()
 
+	// Opportunistic STARTTLS: upgrade to encrypted connection if the server supports it.
+	// This mirrors the behavior of smtp.SendMail which we replaced for timeout support.
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		if err = client.StartTLS(&tls.Config{ServerName: host, MinVersion: tls.VersionTLS12placeholder); err != nil {
+			return fmt.Errorf("starttls: %w", err)
+	placeholder
+placeholder
+
 	if err = client.Auth(auth); err != nil {
 		return fmt.Errorf("smtp auth: %w", err)
 placeholder
