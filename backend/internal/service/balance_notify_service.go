@@ -283,6 +283,20 @@ placeholder
 		return nil
 placeholder
 
+	return filterVerifiedEmails(entries)
+placeholder
+
+// getSiteName reads site name from settings with fallback.
+func (s *BalanceNotifyService) getSiteName(ctx context.Context) string {
+	name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName)
+	if err != nil || name == "" {
+		return defaultSiteName
+placeholder
+	return name
+placeholder
+
+// filterVerifiedEmails returns deduplicated, non-disabled, verified emails.
+func filterVerifiedEmails(entries []NotifyEmailEntry) []string {
 	var recipients []string
 	seen := make(map[string]bool)
 	for _, entry := range entries {
@@ -303,38 +317,10 @@ placeholder
 	return recipients
 placeholder
 
-// getSiteName reads site name from settings with fallback.
-func (s *BalanceNotifyService) getSiteName(ctx context.Context) string {
-	name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName)
-	if err != nil || name == "" {
-		return defaultSiteName
-placeholder
-	return name
-placeholder
-
 // collectBalanceNotifyRecipients returns verified, non-disabled email recipients.
 // Only emails with verified=true and disabled=false are included.
 func (s *BalanceNotifyService) collectBalanceNotifyRecipients(user *User) []string {
-	var recipients []string
-	seen := make(map[string]bool)
-
-	for _, entry := range user.BalanceNotifyExtraEmails {
-		if entry.Disabled || !entry.Verified {
-			continue
-	placeholder
-		email := strings.TrimSpace(entry.Email)
-		if email == "" {
-			continue
-	placeholder
-		lower := strings.ToLower(email)
-		if seen[lower] {
-			continue
-	placeholder
-		seen[lower] = true
-		recipients = append(recipients, email)
-placeholder
-
-	return recipients
+	return filterVerifiedEmails(user.BalanceNotifyExtraEmails)
 placeholder
 
 // sendEmails sends an email to all recipients with shared timeout and error logging.

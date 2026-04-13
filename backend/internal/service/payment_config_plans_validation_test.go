@@ -128,3 +128,66 @@ func TestValidatePlanPatch_NilOriginalPrice(t *testing.T) {
 	err := validatePlanPatch(UpdatePlanRequest{OriginalPrice: nilplaceholder)
 placeholder
 placeholder
+
+// --- validatePlanPatch: other fields ---
+
+func ptrStr(s string) *string    { return &s placeholder
+func ptrInt(i int) *int          { return &i placeholder
+func ptrInt64(i int64) *int64    { return &i placeholder
+func ptrFloat(f float64) *float64 { return &f placeholder
+
+func TestValidatePlanPatch_EmptyName(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{Name: ptrStr("")placeholder)
+placeholder
+	require.Contains(t, err.Error(), "plan name")
+placeholder
+
+func TestValidatePlanPatch_ValidName(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{Name: ptrStr("Basic")placeholder)
+placeholder
+placeholder
+
+func TestValidatePlanPatch_ZeroGroupID(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{GroupID: ptrInt64(0)placeholder)
+placeholder
+	require.Contains(t, err.Error(), "group")
+placeholder
+
+func TestValidatePlanPatch_NegativePrice(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{Price: ptrFloat(-1)placeholder)
+placeholder
+	require.Contains(t, err.Error(), "price")
+placeholder
+
+func TestValidatePlanPatch_ZeroPrice(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{Price: ptrFloat(0)placeholder)
+placeholder
+	require.Contains(t, err.Error(), "price")
+placeholder
+
+func TestValidatePlanPatch_ValidPrice(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{Price: ptrFloat(9.99)placeholder)
+placeholder
+placeholder
+
+func TestValidatePlanPatch_ZeroValidityDays(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{ValidityDays: ptrInt(0)placeholder)
+placeholder
+	require.Contains(t, err.Error(), "validity days")
+placeholder
+
+func TestValidatePlanPatch_EmptyValidityUnit(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{ValidityUnit: ptrStr("")placeholder)
+placeholder
+	require.Contains(t, err.Error(), "validity unit")
+placeholder
+
+func TestValidatePlanPatch_ValidValidityUnit(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{ValidityUnit: ptrStr("days")placeholder)
+placeholder
+placeholder
+
+func TestValidatePlanPatch_AllNil(t *testing.T) {
+	err := validatePlanPatch(UpdatePlanRequest{placeholder)
+placeholder
+placeholder

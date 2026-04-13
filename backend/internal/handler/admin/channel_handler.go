@@ -357,6 +357,11 @@ placeholder
 				fmt.Sprintf("pricing rule #%d must have at least one group or account", i+1)))
 			return
 	placeholder
+		if len(r.Pricing) == 0 {
+			response.ErrorFrom(c, infraerrors.BadRequest("PRICING_RULE_EMPTY_PRICING",
+				fmt.Sprintf("pricing rule #%d must have at least one pricing entry", i+1)))
+			return
+	placeholder
 		rule := accountStatsPricingRuleRequestToService(r)
 		rule.SortOrder = i
 		statsRules = append(statsRules, rule)
@@ -418,6 +423,11 @@ placeholder
 			if len(r.GroupIDs) == 0 && len(r.AccountIDs) == 0 {
 				response.ErrorFrom(c, infraerrors.BadRequest("PRICING_RULE_EMPTY_SCOPE",
 					fmt.Sprintf("pricing rule #%d must have at least one group or account", i+1)))
+				return
+		placeholder
+			if len(r.Pricing) == 0 {
+				response.ErrorFrom(c, infraerrors.BadRequest("PRICING_RULE_EMPTY_PRICING",
+					fmt.Sprintf("pricing rule #%d must have at least one pricing entry", i+1)))
 				return
 		placeholder
 			rule := accountStatsPricingRuleRequestToService(r)

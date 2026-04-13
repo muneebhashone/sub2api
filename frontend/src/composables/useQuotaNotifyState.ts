@@ -1,6 +1,6 @@
 import { reactive, ref placeholder from 'vue'
 import { adminAPI placeholder from '@/api/admin'
-import { QUOTA_THRESHOLD_TYPE_FIXED placeholder from '@/constants/account'
+import { QUOTA_THRESHOLD_TYPE_FIXED, type QuotaThresholdType placeholder from '@/constants/account'
 
 export const QUOTA_NOTIFY_DIMS = ['daily', 'weekly', 'total'] as const
 export type QuotaNotifyDim = (typeof QUOTA_NOTIFY_DIMS)[number]
@@ -8,7 +8,7 @@ export type QuotaNotifyDim = (typeof QUOTA_NOTIFY_DIMS)[number]
 interface DimState {
   enabled: boolean | null
   threshold: number | null
-  thresholdType: string | null
+  thresholdType: QuotaThresholdType | null
 placeholder
 
 export function useQuotaNotifyState() {
@@ -34,7 +34,7 @@ export function useQuotaNotifyState() {
     for (const d of QUOTA_NOTIFY_DIMS) {
       state[d].enabled = (extra?.[`quota_notify_${dplaceholder_enabled`] as boolean) ?? null
       state[d].threshold = (extra?.[`quota_notify_${dplaceholder_threshold`] as number) ?? null
-      state[d].thresholdType = (extra?.[`quota_notify_${dplaceholder_threshold_type`] as string) ?? null
+      state[d].thresholdType = (extra?.[`quota_notify_${dplaceholder_threshold_type`] as QuotaThresholdType) ?? null
     placeholder
   placeholder
 
