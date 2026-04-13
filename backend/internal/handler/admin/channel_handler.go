@@ -249,9 +249,6 @@ func pricingRequestToService(reqs []channelModelPricingRequest) []service.Channe
 			billingMode = service.BillingModeToken
 	placeholder
 		platform := r.Platform
-		if platform == "" {
-			platform = service.PlatformAnthropic
-	placeholder
 		intervals := make([]service.PricingInterval, 0, len(r.Intervals))
 		for _, iv := range r.Intervals {
 			intervals = append(intervals, service.PricingInterval{
@@ -349,6 +346,12 @@ func (h *ChannelHandler) Create(c *gin.Context) {
 placeholder
 
 	pricing := pricingRequestToService(req.ModelPricing)
+	// Main model_pricing requires a platform; default to anthropic for backward compatibility.
+	for i := range pricing {
+		if pricing[i].Platform == "" {
+			pricing[i].Platform = service.PlatformAnthropic
+	placeholder
+placeholder
 
 	var statsRules []service.AccountStatsPricingRule
 	for i, r := range req.AccountStatsPricingRules {
@@ -415,6 +418,11 @@ placeholder
 placeholder
 	if req.ModelPricing != nil {
 		pricing := pricingRequestToService(*req.ModelPricing)
+		for i := range pricing {
+			if pricing[i].Platform == "" {
+				pricing[i].Platform = service.PlatformAnthropic
+		placeholder
+	placeholder
 		input.ModelPricing = &pricing
 placeholder
 	if req.AccountStatsPricingRules != nil {

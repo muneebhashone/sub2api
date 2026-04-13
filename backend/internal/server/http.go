@@ -4,6 +4,7 @@ package server
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -82,6 +83,11 @@ placeholder
 				pc.ProxyID = *p.ProxyID
 				if u, ok := proxyURLs[*p.ProxyID]; ok {
 					pc.ProxyURL = u
+			placeholder else {
+					// Proxy configured but not found — skip this provider to prevent direct connection.
+					slog.Warn("websearch: proxy not found for provider, skipping",
+						"provider", p.Type, "proxy_id", *p.ProxyID)
+					continue
 			placeholder
 		placeholder
 			configs = append(configs, pc)

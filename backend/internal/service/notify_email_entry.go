@@ -79,4 +79,3 @@ placeholder
 placeholder
 	return string(data)
 placeholder
-
