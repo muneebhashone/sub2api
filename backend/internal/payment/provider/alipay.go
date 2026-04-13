@@ -76,7 +76,7 @@ placeholder
 func (a *Alipay) Name() string        { return "Alipay" placeholder
 func (a *Alipay) ProviderKey() string { return payment.TypeAlipay placeholder
 func (a *Alipay) SupportedTypes() []payment.PaymentType {
-	return []payment.PaymentType{payment.TypeAlipayDirectplaceholder
+	return []payment.PaymentType{payment.TypeAlipayplaceholder
 placeholder
 
 // CreatePayment creates an Alipay payment page URL.
