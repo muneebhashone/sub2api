@@ -87,7 +87,7 @@
 
         <template #cell-billing_mode="{ row placeholder">
           <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium" :class="getBillingModeBadgeClass(row.billing_mode)">
-            {{ getBillingModeLabel(row.billing_mode) placeholderplaceholder
+            {{ getBillingModeLabel(row.billing_mode, t) placeholderplaceholder
           </span>
         </template>
 
@@ -346,6 +346,7 @@ import { formatCacheTokens, formatMultiplier placeholder from '@/utils/formatter
 import { formatTokenPricePerMillion placeholder from '@/utils/usagePricing'
 import { getUsageServiceTierLabel placeholder from '@/utils/usageServiceTier'
 import { resolveUsageRequestType placeholder from '@/utils/usageRequestType'
+import { getBillingModeLabel, getBillingModeBadgeClass placeholder from '@/utils/billingMode'
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -399,17 +400,6 @@ const getRequestTypeBadgeClass = (row: AdminUsageLog): string => {
   return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
 placeholder
 
-const getBillingModeLabel = (mode: string | null | undefined): string => {
-  if (mode === 'per_request') return t('admin.usage.billingModePerRequest')
-  if (mode === 'image') return t('admin.usage.billingModeImage')
-  return t('admin.usage.billingModeToken')
-placeholder
-
-const getBillingModeBadgeClass = (mode: string | null | undefined): string => {
-  if (mode === 'per_request') return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-  if (mode === 'image') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-  return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-placeholder
 
 
 const formatUserAgent = (ua: string): string => {
