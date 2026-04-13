@@ -13,7 +13,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-const apiKeyAuthSnapshotVersion = 4 // v4: added balance notification fields to UserSnapshot
+const apiKeyAuthSnapshotVersion = 5 // v5: added TotalRecharged for percentage threshold
 
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
@@ -230,6 +230,7 @@ placeholder
 			BalanceNotifyThresholdType: apiKey.User.BalanceNotifyThresholdType,
 			BalanceNotifyThreshold:     apiKey.User.BalanceNotifyThreshold,
 			BalanceNotifyExtraEmails:   apiKey.User.BalanceNotifyExtraEmails,
+			TotalRecharged:             apiKey.User.TotalRecharged,
 	placeholder,
 placeholder
 	if apiKey.Group != nil {
@@ -291,6 +292,7 @@ placeholder
 			BalanceNotifyThresholdType: snapshot.User.BalanceNotifyThresholdType,
 			BalanceNotifyThreshold:     snapshot.User.BalanceNotifyThreshold,
 			BalanceNotifyExtraEmails:   snapshot.User.BalanceNotifyExtraEmails,
+			TotalRecharged:             snapshot.User.TotalRecharged,
 	placeholder,
 placeholder
 	if snapshot.Group != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -13,12 +13,19 @@ import (
 )
 
 var (
-	ErrUserNotFound      = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
-	ErrPasswordIncorrect = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
-	ErrInsufficientPerms = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrUserNotFound           = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
+	ErrPasswordIncorrect      = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
+	ErrInsufficientPerms      = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrNotifyCodeUserRateLimit = infraerrors.TooManyRequests("NOTIFY_CODE_USER_RATE_LIMIT", "too many verification codes requested, please try again later")
 )
 
-const maxNotifyEmails = 3 // Total limit: primary (email="") + up to 2 extra
+const (
+	maxNotifyEmails = 3 // Maximum number of notification emails per user
+
+	// User-level rate limiting for notify email verification codes
+	notifyCodeUserRateLimit  = 5
+	notifyCodeUserRateWindow = 10 * time.Minute
+)
 
 // UserListFilters contains all filter options for listing users
 type UserListFilters struct {
@@ -220,7 +227,7 @@ placeholder
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if err := s.billingCache.InvalidateUserBalance(cacheCtx, userID); err != nil {
-				log.Printf("invalidate user balance cache failed: user_id=%d err=%v", userID, err)
+				slog.Error("invalidate user balance cache failed", "user_id", userID, "error", err)
 		placeholder
 	placeholder()
 placeholder
@@ -270,21 +277,44 @@ placeholder
 
 // SendNotifyEmailCode sends a verification code to the extra notification email.
 func (s *UserService) SendNotifyEmailCode(ctx context.Context, userID int64, email string, emailService *EmailService, cache EmailCache) error {
-	// Check cooldown
+	if err := checkNotifyCodeRateLimit(ctx, cache, userID, email); err != nil {
+		return err
+placeholder
+
+	code, err := emailService.GenerateVerifyCode()
+	if err != nil {
+		return fmt.Errorf("generate code: %w", err)
+placeholder
+
+	if err := saveNotifyVerifyCode(ctx, cache, email, code); err != nil {
+		return err
+placeholder
+
+	// Increment user-level counter after successful save
+	if _, err := cache.IncrNotifyCodeUserRate(ctx, userID, notifyCodeUserRateWindow); err != nil {
+		slog.Error("failed to increment notify code user rate", "user_id", userID, "error", err)
+placeholder
+
+	return s.sendNotifyVerifyEmail(ctx, emailService, email, code)
+placeholder
+
+// checkNotifyCodeRateLimit checks both email cooldown and user-level rate limit.
+func checkNotifyCodeRateLimit(ctx context.Context, cache EmailCache, userID int64, email string) error {
 	existing, err := cache.GetNotifyVerifyCode(ctx, email)
 	if err == nil && existing != nil {
 		if time.Since(existing.CreatedAt) < verifyCodeCooldown {
 			return ErrVerifyCodeTooFrequent
 	placeholder
 placeholder
-
-	// Generate code
-	code, err := emailService.GenerateVerifyCode()
-	if err != nil {
-		return fmt.Errorf("generate code: %w", err)
+	count, err := cache.GetNotifyCodeUserRate(ctx, userID)
+	if err == nil && count >= notifyCodeUserRateLimit {
+		return ErrNotifyCodeUserRateLimit
+placeholder
+	return nil
 placeholder
 
-	// Save to cache
+// saveNotifyVerifyCode saves the verification code to cache.
+func saveNotifyVerifyCode(ctx context.Context, cache EmailCache, email, code string) error {
 	data := &VerificationCodeData{
 		Code:      code,
 		Attempts:  0,
@@ -293,16 +323,17 @@ placeholder
 	if err := cache.SetNotifyVerifyCode(ctx, email, data, verifyCodeTTL); err != nil {
 		return fmt.Errorf("save verify code: %w", err)
 placeholder
+	return nil
+placeholder
 
-	// Get site name
+// sendNotifyVerifyEmail builds and sends the verification email.
+func (s *UserService) sendNotifyVerifyEmail(ctx context.Context, emailService *EmailService, email, code string) error {
 	siteName := "Sub2API"
 	if s.settingRepo != nil {
 		if name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName); err == nil && name != "" {
 			siteName = name
 	placeholder
 placeholder
-
-	// Build and send email
 	subject := fmt.Sprintf("[%s] 通知邮箱验证码 / Notification Email Verification", siteName)
 	body := buildNotifyVerifyEmailBody(code, siteName)
 	return emailService.SendEmail(ctx, email, subject, body)
@@ -310,7 +341,15 @@ placeholder
 
 // VerifyAndAddNotifyEmail verifies the code and adds the email to user's extra emails.
 func (s *UserService) VerifyAndAddNotifyEmail(ctx context.Context, userID int64, email, code string, cache EmailCache) error {
-	// Verify code
+	if err := verifyNotifyCode(ctx, cache, email, code); err != nil {
+		return err
+placeholder
+	_ = cache.DeleteNotifyVerifyCode(ctx, email)
+	return s.addOrVerifyNotifyEmail(ctx, userID, email)
+placeholder
+
+// verifyNotifyCode validates the verification code against the cached data.
+func verifyNotifyCode(ctx context.Context, cache EmailCache, email, code string) error {
 	data, err := cache.GetNotifyVerifyCode(ctx, email)
 	if err != nil || data == nil {
 		return ErrInvalidVerifyCode
@@ -326,17 +365,18 @@ placeholder
 	placeholder
 		return ErrInvalidVerifyCode
 placeholder
+	return nil
+placeholder
 
-	// Delete code after verification
-	_ = cache.DeleteNotifyVerifyCode(ctx, email)
-
-	// Add to user's extra emails
+// addOrVerifyNotifyEmail adds the email to user's extra notification emails or marks it as verified.
+// Note: concurrent calls for the same user could race on the read-modify-write of
+// BalanceNotifyExtraEmails. The window is small (requires two verify flows completing
+// simultaneously), and the worst case is a duplicate entry which is harmless.
+func (s *UserService) addOrVerifyNotifyEmail(ctx context.Context, userID int64, email string) error {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return err
 placeholder
-
-	// Check if already exists — if unverified, mark as verified
 	for i, e := range user.BalanceNotifyExtraEmails {
 		if strings.EqualFold(e.Email, email) {
 			if !e.Verified {
@@ -346,12 +386,9 @@ placeholder
 			return nil // Already verified
 	placeholder
 placeholder
-
-	// Check limit
 	if len(user.BalanceNotifyExtraEmails) >= maxNotifyEmails {
 		return infraerrors.BadRequest("TOO_MANY_NOTIFY_EMAILS", fmt.Sprintf("maximum %d notification emails allowed", maxNotifyEmails))
 placeholder
-
 	user.BalanceNotifyExtraEmails = append(user.BalanceNotifyExtraEmails, NotifyEmailEntry{
 		Email:    email,
 		Disabled: false,
@@ -399,10 +436,9 @@ placeholder
 	return s.userRepo.Update(ctx, user)
 placeholder
 
-// buildNotifyVerifyEmailBody builds the HTML email body for notify email verification.
-func buildNotifyVerifyEmailBody(code, siteName string) string {
-	return fmt.Sprintf(`
-<!DOCTYPE html>
+// notifyVerifyEmailTemplate is the HTML template for notify email verification.
+// Format args: siteName, code.
+const notifyVerifyEmailTemplate = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -439,6 +475,9 @@ func buildNotifyVerifyEmailBody(code, siteName string) string {
         </div>
     </div>
 </body>
-</html>
-`, siteName, code)
+</html>`
+
+// buildNotifyVerifyEmailBody builds the HTML email body for notify email verification.
+func buildNotifyVerifyEmailBody(code, siteName string) string {
+	return fmt.Sprintf(notifyVerifyEmailTemplate, siteName, code)
 placeholder
