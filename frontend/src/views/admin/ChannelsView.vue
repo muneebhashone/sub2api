@@ -511,7 +511,7 @@
                         :class="{ 'opacity-50': rule.account_ids.includes(account.id) placeholder"
                         :disabled="rule.account_ids.includes(account.id)"
                       >
-                        <span>{{ account.name placeholderplaceholder</span>
+                        <span :class="platformTextClass(account.platform)">{{ account.name placeholderplaceholder</span>
                         <span class="ml-2 text-xs text-gray-400">#{{ account.id placeholderplaceholder</span>
                       </button>
                     </div>
@@ -595,6 +595,7 @@ import type { PricingFormEntry placeholder from '@/components/admin/channel/type
 import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI, findModelConflict, validateIntervals placeholder from '@/components/admin/channel/types'
 import type { AdminGroup, GroupPlatform placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
+import { platformTextClass placeholder from '@/utils/platformColors'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import DataTable from '@/components/common/DataTable.vue'
@@ -911,7 +912,7 @@ function getGroupNameById(groupId: number): string {
 placeholder
 
 // ── Account search for pricing rules ──
-interface SimpleAccount { id: number; name: string placeholder
+interface SimpleAccount { id: number; name: string; platform: string placeholder
 
 const ruleAccountSearchKeyword = ref<Record<string, string>>({placeholder)
 const ruleAccountSearchResults = ref<Record<string, SimpleAccount[]>>({placeholder)
@@ -924,7 +925,7 @@ const ruleAccountSearchRunner = useKeyedDebouncedSearch<SimpleAccount[]>({
   search: async (keyword, { key, signal placeholder) => {
     const platform = key.split('-')[0]
     const res = await adminAPI.accounts.list(1, 20, { platform, search: keyword placeholder, { signal placeholder)
-    return res.items.map(a => ({ id: a.id, name: a.name placeholder))
+    return res.items.map(a => ({ id: a.id, name: a.name, platform: a.platform placeholder))
   placeholder,
   onSuccess: (key, result) => { ruleAccountSearchResults.value[key] = result placeholder,
   onError: (key) => { ruleAccountSearchResults.value[key] = [] placeholder,

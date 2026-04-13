@@ -111,9 +111,18 @@ placeholder
 		placeholder
 			if isProxyError(err) {
 				m.markProxyUnavailable(ctx, cfg, req.ProxyURL)
-				slog.Warn("websearch: proxy error, marking unavailable",
+				if req.ProxyURL != "" {
+					// Account-level proxy is shared by all providers — no point
+					// trying others with the same broken proxy; signal account switch.
+					slog.Warn("websearch: account proxy error, aborting failover",
+						"provider", cfg.Type, "error", err)
+					return nil, "", fmt.Errorf("%w: %s", ErrProxyUnavailable, err.Error())
+			placeholder
+				// Provider-specific proxy failed — try the next provider which
+				// may use a different (or no) proxy.
+				slog.Warn("websearch: provider proxy error, trying next provider",
 					"provider", cfg.Type, "error", err)
-				return nil, "", fmt.Errorf("%w: %s", ErrProxyUnavailable, err.Error())
+				continue
 		placeholder
 			slog.Warn("websearch: provider search failed",
 				"provider", cfg.Type, "error", err)
