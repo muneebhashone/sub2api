@@ -85,6 +85,7 @@ placeholder
 			sqlmock.AnyArg(), // model_mapping_chain
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
+			sqlmock.AnyArg(), // account_stats_cost
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"placeholder).AddRow(int64(99), createdAt))
@@ -163,6 +164,7 @@ placeholder
 			sqlmock.AnyArg(), // model_mapping_chain
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
+			sqlmock.AnyArg(), // account_stats_cost
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"placeholder).AddRow(int64(100), createdAt))
@@ -483,10 +485,11 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			false,
-			sql.NullInt64{placeholder,  // channel_id
-			sql.NullString{placeholder, // model_mapping_chain
-			sql.NullString{placeholder, // billing_tier
-			sql.NullString{placeholder, // billing_mode
+			sql.NullInt64{placeholder,   // channel_id
+			sql.NullString{placeholder,  // model_mapping_chain
+			sql.NullString{placeholder,  // billing_tier
+			sql.NullString{placeholder,  // billing_mode
+			sql.NullFloat64{placeholder, // account_stats_cost
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -530,10 +533,11 @@ placeholder)
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			false,
-			sql.NullInt64{placeholder,  // channel_id
-			sql.NullString{placeholder, // model_mapping_chain
-			sql.NullString{placeholder, // billing_tier
-			sql.NullString{placeholder, // billing_mode
+			sql.NullInt64{placeholder,   // channel_id
+			sql.NullString{placeholder,  // model_mapping_chain
+			sql.NullString{placeholder,  // billing_tier
+			sql.NullString{placeholder,  // billing_mode
+			sql.NullFloat64{placeholder, // account_stats_cost
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -577,10 +581,11 @@ placeholder)
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			false,
-			sql.NullInt64{placeholder,  // channel_id
-			sql.NullString{placeholder, // model_mapping_chain
-			sql.NullString{placeholder, // billing_tier
-			sql.NullString{placeholder, // billing_mode
+			sql.NullInt64{placeholder,   // channel_id
+			sql.NullString{placeholder,  // model_mapping_chain
+			sql.NullString{placeholder,  // billing_tier
+			sql.NullString{placeholder,  // billing_mode
+			sql.NullFloat64{placeholder, // account_stats_cost
 			now,
 	placeholderplaceholder)
 	placeholder

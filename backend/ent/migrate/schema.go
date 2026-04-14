@@ -616,6 +616,7 @@ placeholder
 		{Name: "sort_order", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "limits", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "refund_enabled", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "allow_user_refund", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 placeholder
@@ -1078,6 +1079,11 @@ placeholder
 		{Name: "totp_secret_encrypted", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "totp_enabled", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "totp_enabled_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "balance_notify_enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "balance_notify_threshold_type", Type: field.TypeString, Default: "fixed"placeholder,
+		{Name: "balance_notify_threshold", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "balance_notify_extra_emails", Type: field.TypeString, Default: "[]", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "total_recharged", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 placeholder
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{

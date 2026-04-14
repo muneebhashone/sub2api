@@ -273,13 +273,13 @@ placeholder{
 			wantValue: string(service.BillingModeToken),
 	placeholder,
 		{
-			name: "empty platform defaults to anthropic",
+			name: "empty platform stays empty",
 			req: channelModelPricingRequest{
 				Models:   []string{"m1"placeholder,
 				Platform: "",
 		placeholder,
 			wantField: "Platform",
-			wantValue: "anthropic",
+			wantValue: "",
 	placeholder,
 placeholder
 

@@ -41,10 +41,14 @@ func (r *channelRepository) Create(ctx context.Context, channel *service.Channel
 		if err != nil {
 			return err
 	placeholder
+		featuresConfigJSON, err := marshalFeaturesConfig(channel.FeaturesConfig)
+		if err != nil {
+			return err
+	placeholder
 		err = tx.QueryRowContext(ctx,
-			`INSERT INTO channels (name, description, status, model_mapping, billing_model_source, restrict_models) VALUES ($1, $2, $3, $4, $5, $6)
+			`INSERT INTO channels (name, description, status, model_mapping, billing_model_source, restrict_models, features, features_config, apply_pricing_to_account_stats) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			 RETURNING id, created_at, updated_at`,
-			channel.Name, channel.Description, channel.Status, modelMappingJSON, channel.BillingModelSource, channel.RestrictModels,
+			channel.Name, channel.Description, channel.Status, modelMappingJSON, channel.BillingModelSource, channel.RestrictModels, channel.Features, featuresConfigJSON, channel.ApplyPricingToAccountStats,
 		).Scan(&channel.ID, &channel.CreatedAt, &channel.UpdatedAt)
 		if err != nil {
 			if isUniqueViolation(err) {
@@ -67,17 +71,24 @@ func (r *channelRepository) Create(ctx context.Context, channel *service.Channel
 		placeholder
 	placeholder
 
+		// 设置账号统计定价规则
+		if len(channel.AccountStatsPricingRules) > 0 {
+			if err := replaceAccountStatsPricingRulesTx(ctx, tx, channel.ID, channel.AccountStatsPricingRules); err != nil {
+				return err
+		placeholder
+	placeholder
+
 		return nil
 placeholder)
 placeholder
 
 func (r *channelRepository) GetByID(ctx context.Context, id int64) (*service.Channel, error) {
 	ch := &service.Channel{placeholder
-	var modelMappingJSON []byte
+	var modelMappingJSON, featuresConfigJSON []byte
 	err := r.db.QueryRowContext(ctx,
-		`SELECT id, name, description, status, model_mapping, billing_model_source, restrict_models, created_at, updated_at
+		`SELECT id, name, description, status, model_mapping, billing_model_source, restrict_models, features, features_config, apply_pricing_to_account_stats, created_at, updated_at
 		 FROM channels WHERE id = $1`, id,
-	).Scan(&ch.ID, &ch.Name, &ch.Description, &ch.Status, &modelMappingJSON, &ch.BillingModelSource, &ch.RestrictModels, &ch.CreatedAt, &ch.UpdatedAt)
+	).Scan(&ch.ID, &ch.Name, &ch.Description, &ch.Status, &modelMappingJSON, &ch.BillingModelSource, &ch.RestrictModels, &ch.Features, &featuresConfigJSON, &ch.ApplyPricingToAccountStats, &ch.CreatedAt, &ch.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, service.ErrChannelNotFound
 placeholder
@@ -85,6 +96,7 @@ placeholder
 		return nil, fmt.Errorf("get channel: %w", err)
 placeholder
 	ch.ModelMapping = unmarshalModelMapping(modelMappingJSON)
+	ch.FeaturesConfig = unmarshalFeaturesConfig(featuresConfigJSON)
 
 	groupIDs, err := r.GetGroupIDs(ctx, id)
 	if err != nil {
@@ -98,6 +110,12 @@ placeholder
 placeholder
 	ch.ModelPricing = pricing
 
+	statsPricingRules, err := r.loadAccountStatsPricingRules(ctx, id)
+	if err != nil {
+		return nil, err
+placeholder
+	ch.AccountStatsPricingRules = statsPricingRules
+
 	return ch, nil
 placeholder
 
@@ -107,10 +125,14 @@ func (r *channelRepository) Update(ctx context.Context, channel *service.Channel
 		if err != nil {
 			return err
 	placeholder
+		featuresConfigJSON, err := marshalFeaturesConfig(channel.FeaturesConfig)
+		if err != nil {
+			return err
+	placeholder
 		result, err := tx.ExecContext(ctx,
-			`UPDATE channels SET name = $1, description = $2, status = $3, model_mapping = $4, billing_model_source = $5, restrict_models = $6, updated_at = NOW()
-			 WHERE id = $7`,
-			channel.Name, channel.Description, channel.Status, modelMappingJSON, channel.BillingModelSource, channel.RestrictModels, channel.ID,
+			`UPDATE channels SET name = $1, description = $2, status = $3, model_mapping = $4, billing_model_source = $5, restrict_models = $6, features = $7, features_config = $8, apply_pricing_to_account_stats = $9, updated_at = NOW()
+			 WHERE id = $10`,
+			channel.Name, channel.Description, channel.Status, modelMappingJSON, channel.BillingModelSource, channel.RestrictModels, channel.Features, featuresConfigJSON, channel.ApplyPricingToAccountStats, channel.ID,
 		)
 		if err != nil {
 			if isUniqueViolation(err) {
@@ -133,6 +155,13 @@ func (r *channelRepository) Update(ctx context.Context, channel *service.Channel
 		// 更新模型定价
 		if channel.ModelPricing != nil {
 			if err := replaceModelPricingTx(ctx, tx, channel.ID, channel.ModelPricing); err != nil {
+				return err
+		placeholder
+	placeholder
+
+		// 更新账号统计定价规则
+		if channel.AccountStatsPricingRules != nil {
+			if err := replaceAccountStatsPricingRulesTx(ctx, tx, channel.ID, channel.AccountStatsPricingRules); err != nil {
 				return err
 		placeholder
 	placeholder
@@ -187,7 +216,7 @@ placeholder
 
 	// 查询 channel 列表
 	dataQuery := fmt.Sprintf(
-		`SELECT c.id, c.name, c.description, c.status, c.model_mapping, c.billing_model_source, c.restrict_models, c.created_at, c.updated_at
+		`SELECT c.id, c.name, c.description, c.status, c.model_mapping, c.billing_model_source, c.restrict_models, c.features, c.features_config, c.apply_pricing_to_account_stats, c.created_at, c.updated_at
 		 FROM channels c WHERE %s ORDER BY %s LIMIT $%d OFFSET $%d`,
 		whereClause, channelListOrderBy(params), argIdx, argIdx+1,
 	)
@@ -203,11 +232,12 @@ placeholder
 	var channelIDs []int64
 	for rows.Next() {
 		var ch service.Channel
-		var modelMappingJSON []byte
-		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Description, &ch.Status, &modelMappingJSON, &ch.BillingModelSource, &ch.RestrictModels, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
+		var modelMappingJSON, featuresConfigJSON []byte
+		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Description, &ch.Status, &modelMappingJSON, &ch.BillingModelSource, &ch.RestrictModels, &ch.Features, &featuresConfigJSON, &ch.ApplyPricingToAccountStats, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
 			return nil, nil, fmt.Errorf("scan channel: %w", err)
 	placeholder
 		ch.ModelMapping = unmarshalModelMapping(modelMappingJSON)
+		ch.FeaturesConfig = unmarshalFeaturesConfig(featuresConfigJSON)
 		channels = append(channels, ch)
 		channelIDs = append(channelIDs, ch.ID)
 placeholder
@@ -225,9 +255,14 @@ placeholder
 		if err != nil {
 			return nil, nil, err
 	placeholder
+		statsRulesMap, err := r.batchLoadAccountStatsPricingRules(ctx, channelIDs)
+		if err != nil {
+			return nil, nil, err
+	placeholder
 		for i := range channels {
 			channels[i].GroupIDs = groupMap[channels[i].ID]
 			channels[i].ModelPricing = pricingMap[channels[i].ID]
+			channels[i].AccountStatsPricingRules = statsRulesMap[channels[i].ID]
 	placeholder
 placeholder
 
@@ -273,7 +308,7 @@ placeholder
 
 func (r *channelRepository) ListAll(ctx context.Context) ([]service.Channel, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, description, status, model_mapping, billing_model_source, restrict_models, created_at, updated_at FROM channels ORDER BY id`,
+		`SELECT id, name, description, status, model_mapping, billing_model_source, restrict_models, features, features_config, apply_pricing_to_account_stats, created_at, updated_at FROM channels ORDER BY id`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query all channels: %w", err)
@@ -284,11 +319,12 @@ placeholder
 	var channelIDs []int64
 	for rows.Next() {
 		var ch service.Channel
-		var modelMappingJSON []byte
-		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Description, &ch.Status, &modelMappingJSON, &ch.BillingModelSource, &ch.RestrictModels, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
+		var modelMappingJSON, featuresConfigJSON []byte
+		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Description, &ch.Status, &modelMappingJSON, &ch.BillingModelSource, &ch.RestrictModels, &ch.Features, &featuresConfigJSON, &ch.ApplyPricingToAccountStats, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan channel: %w", err)
 	placeholder
 		ch.ModelMapping = unmarshalModelMapping(modelMappingJSON)
+		ch.FeaturesConfig = unmarshalFeaturesConfig(featuresConfigJSON)
 		channels = append(channels, ch)
 		channelIDs = append(channelIDs, ch.ID)
 placeholder
@@ -312,9 +348,16 @@ placeholder
 		return nil, err
 placeholder
 
+	// 批量加载账号统计定价规则
+	statsRulesMap, err := r.batchLoadAccountStatsPricingRules(ctx, channelIDs)
+	if err != nil {
+		return nil, err
+placeholder
+
 	for i := range channels {
 		channels[i].GroupIDs = groupMap[channels[i].ID]
 		channels[i].ModelPricing = pricingMap[channels[i].ID]
+		channels[i].AccountStatsPricingRules = statsRulesMap[channels[i].ID]
 placeholder
 
 	return channels, nil
@@ -450,6 +493,28 @@ func unmarshalModelMapping(data []byte) map[string]map[string]string {
 		return nil
 placeholder
 	var m map[string]map[string]string
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil
+placeholder
+	return m
+placeholder
+
+func marshalFeaturesConfig(m map[string]any) ([]byte, error) {
+	if len(m) == 0 {
+		return []byte("{placeholder"), nil
+placeholder
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("marshal features_config: %w", err)
+placeholder
+	return data, nil
+placeholder
+
+func unmarshalFeaturesConfig(data []byte) map[string]any {
+	if len(data) == 0 {
+		return nil
+placeholder
+	var m map[string]any
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil
 placeholder

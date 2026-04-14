@@ -137,7 +137,7 @@ placeholder else {
 		txClient = r.client
 placeholder
 
-	updated, err := txClient.User.UpdateOneID(userIn.ID).
+	updateOp := txClient.User.UpdateOneID(userIn.ID).
 		SetEmail(userIn.Email).
 		SetUsername(userIn.Username).
 		SetNotes(userIn.Notes).
@@ -146,7 +146,15 @@ placeholder
 		SetBalance(userIn.Balance).
 		SetConcurrency(userIn.Concurrency).
 		SetStatus(userIn.Status).
-		Save(ctx)
+		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
+		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
+		SetNillableBalanceNotifyThreshold(userIn.BalanceNotifyThreshold).
+		SetBalanceNotifyExtraEmails(marshalExtraEmails(userIn.BalanceNotifyExtraEmails)).
+		SetTotalRecharged(userIn.TotalRecharged)
+	if userIn.BalanceNotifyThreshold == nil {
+		updateOp = updateOp.ClearBalanceNotifyThreshold()
+placeholder
+	updated, err := updateOp.Save(ctx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, service.ErrEmailExists)
 placeholder
@@ -382,7 +390,12 @@ placeholder
 
 func (r *userRepository) UpdateBalance(ctx context.Context, id int64, amount float64) error {
 	client := clientFromContext(ctx, r.client)
-	n, err := client.User.Update().Where(dbuser.IDEQ(id)).AddBalance(amount).Save(ctx)
+	update := client.User.Update().Where(dbuser.IDEQ(id)).AddBalance(amount)
+	// Track cumulative recharge amount for percentage-based notifications
+	if amount > 0 {
+		update = update.AddTotalRecharged(amount)
+placeholder
+	n, err := update.Save(ctx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 placeholder
@@ -547,6 +560,11 @@ placeholder
 	dst.ID = src.ID
 	dst.CreatedAt = src.CreatedAt
 	dst.UpdatedAt = src.UpdatedAt
+placeholder
+
+// marshalExtraEmails serializes notify email entries to JSON for storage.
+func marshalExtraEmails(entries []service.NotifyEmailEntry) string {
+	return service.MarshalNotifyEmails(entries)
 placeholder
 
 // UpdateTotpSecret 更新用户的 TOTP 加密密钥

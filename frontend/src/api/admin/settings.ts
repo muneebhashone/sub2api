@@ -4,7 +4,7 @@
  */
 
 import { apiClient placeholder from '../client'
-import type { CustomMenuItem, CustomEndpoint placeholder from '@/types'
+import type { CustomMenuItem, CustomEndpoint, NotifyEmailEntry placeholder from '@/types'
 
 export interface DefaultSubscriptionSetting {
   group_id: number
@@ -114,6 +114,7 @@ export interface SystemSettings {
   enable_fingerprint_unification: boolean
   enable_metadata_passthrough: boolean
   enable_cch_signing: boolean
+  web_search_emulation_enabled?: boolean
 
   // Payment configuration
   payment_enabled: boolean
@@ -134,6 +135,13 @@ export interface SystemSettings {
   payment_cancel_rate_limit_window: number
   payment_cancel_rate_limit_unit: string
   payment_cancel_rate_limit_window_mode: string
+
+  // Balance & quota notification
+  balance_low_notify_enabled: boolean
+  balance_low_notify_threshold: number
+  balance_low_notify_recharge_url: string
+  account_quota_notify_enabled: boolean
+  account_quota_notify_emails: NotifyEmailEntry[]
 placeholder
 
 export interface UpdateSettingsRequest {
@@ -233,6 +241,12 @@ export interface UpdateSettingsRequest {
   payment_cancel_rate_limit_window?: number
   payment_cancel_rate_limit_unit?: string
   payment_cancel_rate_limit_window_mode?: string
+  // Balance & quota notification
+  balance_low_notify_enabled?: boolean
+  balance_low_notify_threshold?: number
+  balance_low_notify_recharge_url?: string
+  account_quota_notify_enabled?: boolean
+  account_quota_notify_emails?: NotifyEmailEntry[]
 placeholder
 
 /**
@@ -482,6 +496,63 @@ export async function updateBetaPolicySettings(
   return data
 placeholder
 
+// --- Web Search Emulation Config ---
+
+export interface WebSearchProviderConfig {
+  type: 'brave' | 'tavily'
+  api_key: string
+  api_key_configured: boolean
+  quota_limit: number | null
+  subscribed_at: number | null
+  quota_used?: number
+  proxy_id: number | null
+  expires_at: number | null
+placeholder
+
+export interface WebSearchEmulationConfig {
+  enabled: boolean
+  providers: WebSearchProviderConfig[]
+placeholder
+
+export interface WebSearchTestResult {
+  provider: string
+  results: { url: string; title: string; snippet: string; page_age?: string placeholder[]
+  query: string
+placeholder
+
+export async function getWebSearchEmulationConfig(): Promise<WebSearchEmulationConfig> {
+  const { data placeholder = await apiClient.get<WebSearchEmulationConfig>(
+    '/admin/settings/web-search-emulation'
+  )
+  return data
+placeholder
+
+export async function updateWebSearchEmulationConfig(
+  config: WebSearchEmulationConfig
+): Promise<WebSearchEmulationConfig> {
+  const { data placeholder = await apiClient.put<WebSearchEmulationConfig>(
+    '/admin/settings/web-search-emulation',
+    config
+  )
+  return data
+placeholder
+
+export async function testWebSearchEmulation(
+  query: string
+): Promise<WebSearchTestResult> {
+  const { data placeholder = await apiClient.post<WebSearchTestResult>(
+    '/admin/settings/web-search-emulation/test',
+    { query placeholder
+  )
+  return data
+placeholder
+
+export async function resetWebSearchUsage(
+  payload: { provider_type: string placeholder
+): Promise<void> {
+  await apiClient.post('/admin/settings/web-search-emulation/reset-usage', payload)
+placeholder
+
 export const settingsAPI = {
   getSettings,
   updateSettings,
@@ -497,7 +568,11 @@ export const settingsAPI = {
   getRectifierSettings,
   updateRectifierSettings,
   getBetaPolicySettings,
-  updateBetaPolicySettings
+  updateBetaPolicySettings,
+  getWebSearchEmulationConfig,
+  updateWebSearchEmulationConfig,
+  testWebSearchEmulation,
+  resetWebSearchUsage
 placeholder
 
 export default settingsAPI

@@ -99,6 +99,11 @@ func RefundEnabled(v bool) predicate.PaymentProviderInstance {
 	return predicate.PaymentProviderInstance(sql.FieldEQ(FieldRefundEnabled, v))
 placeholder
 
+// AllowUserRefund applies equality check predicate on the "allow_user_refund" field. It's identical to AllowUserRefundEQ.
+func AllowUserRefund(v bool) predicate.PaymentProviderInstance {
+	return predicate.PaymentProviderInstance(sql.FieldEQ(FieldAllowUserRefund, v))
+placeholder
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.PaymentProviderInstance {
 	return predicate.PaymentProviderInstance(sql.FieldEQ(FieldCreatedAt, v))
@@ -557,6 +562,16 @@ placeholder
 // RefundEnabledNEQ applies the NEQ predicate on the "refund_enabled" field.
 func RefundEnabledNEQ(v bool) predicate.PaymentProviderInstance {
 	return predicate.PaymentProviderInstance(sql.FieldNEQ(FieldRefundEnabled, v))
+placeholder
+
+// AllowUserRefundEQ applies the EQ predicate on the "allow_user_refund" field.
+func AllowUserRefundEQ(v bool) predicate.PaymentProviderInstance {
+	return predicate.PaymentProviderInstance(sql.FieldEQ(FieldAllowUserRefund, v))
+placeholder
+
+// AllowUserRefundNEQ applies the NEQ predicate on the "allow_user_refund" field.
+func AllowUserRefundNEQ(v bool) predicate.PaymentProviderInstance {
+	return predicate.PaymentProviderInstance(sql.FieldNEQ(FieldAllowUserRefund, v))
 placeholder
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

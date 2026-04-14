@@ -98,9 +98,9 @@ placeholder{
 			errSubstr: "privateKey",
 	placeholder,
 		{
-			name:    "nil config map returns error for appId",
-			config:  map[string]string{placeholder,
-			wantErr: true,
+			name:      "nil config map returns error for appId",
+			config:    map[string]string{placeholder,
+			wantErr:   true,
 			errSubstr: "appId",
 	placeholder,
 placeholder
