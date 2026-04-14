@@ -38,6 +38,10 @@
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ order.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order.amount.toFixed(2) placeholderplaceholder</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
               <span class="font-medium text-gray-900 dark:text-white">&#165;{{ order.pay_amount.toFixed(2) placeholderplaceholder</span>
             </div>
             <div class="flex justify-between">
@@ -58,7 +62,7 @@
               <span class="font-medium text-gray-900 dark:text-white">{{ returnInfo.outTradeNo placeholderplaceholder</span>
             </div>
             <div v-if="returnInfo.money" class="flex justify-between">
-              <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</span>
+              <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
               <span class="font-medium text-gray-900 dark:text-white">&#165;{{ returnInfo.money placeholderplaceholder</span>
             </div>
             <div v-if="returnInfo.type" class="flex justify-between">

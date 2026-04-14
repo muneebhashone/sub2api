@@ -14,8 +14,8 @@
     </template>
     <template #cell-amount="{ value, row placeholder">
       <div class="text-sm">
-        <span class="font-medium text-gray-900 dark:text-white">${{ value.toFixed(2) placeholderplaceholder</span>
-        <span v-if="row.pay_amount !== value" class="ml-1 text-xs text-gray-500">(${{ row.pay_amount.toFixed(2) placeholderplaceholder)</span>
+        <span class="font-medium text-gray-900 dark:text-white">{{ row.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ value.toFixed(2) placeholderplaceholder</span>
+        <span v-if="row.pay_amount !== value" class="ml-1 text-xs text-gray-500">(¥{{ row.pay_amount.toFixed(2) placeholderplaceholder)</span>
       </div>
     </template>
     <template #cell-payment_type="{ value placeholder">

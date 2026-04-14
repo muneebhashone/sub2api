@@ -43,14 +43,18 @@ placeholder
 	if user.Status != payment.EntityStatusActive {
 		return nil, infraerrors.Forbidden("USER_INACTIVE", "user account is disabled")
 placeholder
-	amount := req.Amount
+	orderAmount := req.Amount
+	limitAmount := req.Amount
 	if plan != nil {
-		amount = plan.Price
+		orderAmount = plan.Price
+		limitAmount = plan.Price
+placeholder else if req.OrderType == payment.OrderTypeBalance {
+		orderAmount = calculateCreditedBalance(req.Amount, cfg.BalanceRechargeMultiplier)
 placeholder
 	feeRate := s.getFeeRate(req.PaymentType)
-	payAmountStr := payment.CalculatePayAmount(amount, feeRate)
+	payAmountStr := payment.CalculatePayAmount(limitAmount, feeRate)
 	payAmount, _ := strconv.ParseFloat(payAmountStr, 64)
-	order, err := s.createOrderInTx(ctx, req, user, plan, cfg, amount, feeRate, payAmount)
+	order, err := s.createOrderInTx(ctx, req, user, plan, cfg, orderAmount, limitAmount, feeRate, payAmount)
 	if err != nil {
 		return nil, err
 placeholder
@@ -99,7 +103,7 @@ placeholder
 	return plan, nil
 placeholder
 
-func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderRequest, user *User, plan *dbent.SubscriptionPlan, cfg *PaymentConfig, amount, feeRate, payAmount float64) (*dbent.PaymentOrder, error) {
+func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderRequest, user *User, plan *dbent.SubscriptionPlan, cfg *PaymentConfig, orderAmount, limitAmount, feeRate, payAmount float64) (*dbent.PaymentOrder, error) {
 	tx, err := s.entClient.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -108,7 +112,7 @@ placeholder
 	if err := s.checkPendingLimit(ctx, tx, req.UserID, cfg.MaxPendingOrders); err != nil {
 		return nil, err
 placeholder
-	if err := s.checkDailyLimit(ctx, tx, req.UserID, amount, cfg.DailyLimit); err != nil {
+	if err := s.checkDailyLimit(ctx, tx, req.UserID, limitAmount, cfg.DailyLimit); err != nil {
 		return nil, err
 placeholder
 	tm := cfg.OrderTimeoutMin
@@ -121,7 +125,7 @@ placeholder
 		SetUserEmail(user.Email).
 		SetUserName(user.Username).
 		SetNillableUserNotes(psNilIfEmpty(user.Notes)).
-		SetAmount(amount).
+		SetAmount(orderAmount).
 		SetPayAmount(payAmount).
 		SetFeeRate(feeRate).
 		SetRechargeCode("").
@@ -180,6 +184,10 @@ placeholder
 placeholder
 	var used float64
 	for _, o := range orders {
+		if o.OrderType == payment.OrderTypeBalance {
+			used += o.PayAmount
+			continue
+	placeholder
 		used += o.Amount
 placeholder
 	if used+amount > limit {
@@ -213,7 +221,13 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("update order with payment details: %w", err)
 placeholder
-	s.writeAuditLog(ctx, order.ID, "ORDER_CREATED", fmt.Sprintf("user:%d", req.UserID), map[string]any{"amount": req.Amount, "paymentType": req.PaymentType, "orderType": req.OrderTypeplaceholder)
+	s.writeAuditLog(ctx, order.ID, "ORDER_CREATED", fmt.Sprintf("user:%d", req.UserID), map[string]any{
+		"paymentAmount":  req.Amount,
+		"creditedAmount": order.Amount,
+		"payAmount":      order.PayAmount,
+		"paymentType":    req.PaymentType,
+		"orderType":      req.OrderType,
+placeholder)
 	return &CreateOrderResponse{OrderID: order.ID, Amount: order.Amount, PayAmount: payAmount, FeeRate: order.FeeRate, Status: OrderStatusPending, PaymentType: req.PaymentType, PayURL: pr.PayURL, QRCode: pr.QRCode, ClientSecret: pr.ClientSecret, ExpiresAt: order.ExpiresAt, PaymentMode: sel.PaymentModeplaceholder, nil
 placeholder
 
