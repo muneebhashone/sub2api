@@ -3,7 +3,9 @@
 package service
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -526,4 +528,244 @@ placeholder
 	// 100*0.001 + 50*0.002 + 200*0.003 + 300*0.0005
 	// = 0.1 + 0.1 + 0.6 + 0.15 = 0.95
 	require.InDelta(t, 0.95, *result, 1e-12)
+placeholder
+
+// ---------------------------------------------------------------------------
+// resolveAccountStatsCost — integration tests covering the 4-level priority chain
+// ---------------------------------------------------------------------------
+
+func TestResolveAccountStatsCost_NilChannelService(t *testing.T) {
+	result := resolveAccountStatsCost(
+		context.Background(),
+		nil, // channelService is nil
+		newTestBillingServiceWithPrices(map[string]*ModelPricing{placeholder),
+		1, 1, "claude-sonnet-4",
+		UsageTokens{InputTokens: 100placeholder, 1, 0.5,
+	)
+	require.Nil(t, result)
+placeholder
+
+func TestResolveAccountStatsCost_EmptyUpstreamModel(t *testing.T) {
+	cs := newTestChannelServiceForStats(t, &Channel{
+		ID:     1,
+		Status: StatusActive,
+placeholder, 1, "")
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs,
+		newTestBillingServiceWithPrices(map[string]*ModelPricing{placeholder),
+		1, 1, "", // empty upstream model
+		UsageTokens{InputTokens: 100placeholder, 1, 0.5,
+	)
+	require.Nil(t, result)
+placeholder
+
+func TestResolveAccountStatsCost_GetChannelForGroupReturnsNil(t *testing.T) {
+	// Group 99 is NOT in the cache, so GetChannelForGroup returns nil
+	cs := newTestChannelServiceForStats(t, &Channel{
+		ID:     1,
+		Status: StatusActive,
+placeholder, 1, "")
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs,
+		newTestBillingServiceWithPrices(map[string]*ModelPricing{placeholder),
+		1, 99, "claude-sonnet-4", // groupID 99 has no channel
+		UsageTokens{InputTokens: 100placeholder, 1, 0.5,
+	)
+	require.Nil(t, result)
+placeholder
+
+func TestResolveAccountStatsCost_HitsCustomRule(t *testing.T) {
+	channel := &Channel{
+		ID:     1,
+		Status: StatusActive,
+		AccountStatsPricingRules: []AccountStatsPricingRule{
+			{
+				GroupIDs: []int64{10placeholder,
+				Pricing: []ChannelModelPricing{
+					{
+						ID:          100,
+						Models:      []string{"claude-sonnet-4"placeholder,
+						InputPrice:  testPtrFloat64(0.01),
+						OutputPrice: testPtrFloat64(0.02),
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	tokens := UsageTokens{InputTokens: 100, OutputTokens: 50placeholder
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, nil, // billingService not needed when custom rule hits
+		1, 10, "claude-sonnet-4",
+		tokens, 1, 999.0, // totalCost ignored because custom rule hits
+	)
+	require.NotNil(t, result)
+	// 100*0.01 + 50*0.02 = 1.0 + 1.0 = 2.0
+	require.InDelta(t, 2.0, *result, 1e-12)
+placeholder
+
+func TestResolveAccountStatsCost_ApplyPricingToAccountStats_UsesTotalCost(t *testing.T) {
+	channel := &Channel{
+		ID:                         1,
+		Status:                     StatusActive,
+		ApplyPricingToAccountStats: true,
+		// No custom rules
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	tokens := UsageTokens{InputTokens: 100, OutputTokens: 50placeholder
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, nil,
+		1, 10, "claude-sonnet-4",
+		tokens, 1, 0.75, // totalCost = 0.75
+	)
+	require.NotNil(t, result)
+	require.InDelta(t, 0.75, *result, 1e-12)
+placeholder
+
+func TestResolveAccountStatsCost_ApplyPricingToAccountStats_ZeroTotalCost_ReturnsNil(t *testing.T) {
+	channel := &Channel{
+		ID:                         1,
+		Status:                     StatusActive,
+		ApplyPricingToAccountStats: true,
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, nil,
+		1, 10, "claude-sonnet-4",
+		UsageTokens{placeholder, 1, 0.0, // totalCost = 0
+	)
+	require.Nil(t, result)
+placeholder
+
+func TestResolveAccountStatsCost_FallsBackToLiteLLM(t *testing.T) {
+	channel := &Channel{
+		ID:                         1,
+		Status:                     StatusActive,
+		ApplyPricingToAccountStats: false, // not enabled
+		// No custom rules
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	bs := newTestBillingServiceWithPrices(map[string]*ModelPricing{
+		"claude-sonnet-4": {
+			InputPricePerToken:  0.001,
+			OutputPricePerToken: 0.002,
+	placeholder,
+placeholder)
+
+	tokens := UsageTokens{InputTokens: 100, OutputTokens: 50placeholder
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, bs,
+		1, 10, "claude-sonnet-4",
+		tokens, 1, 999.0, // totalCost ignored
+	)
+	require.NotNil(t, result)
+	// 100*0.001 + 50*0.002 = 0.1 + 0.1 = 0.2
+	require.InDelta(t, 0.2, *result, 1e-12)
+placeholder
+
+func TestResolveAccountStatsCost_AllMiss_ReturnsNil(t *testing.T) {
+	channel := &Channel{
+		ID:                         1,
+		Status:                     StatusActive,
+		ApplyPricingToAccountStats: false,
+		// No custom rules
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	// BillingService with no pricing for the model
+	bs := newTestBillingServiceWithPrices(map[string]*ModelPricing{placeholder)
+
+	tokens := UsageTokens{InputTokens: 100, OutputTokens: 50placeholder
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, bs,
+		1, 10, "totally-unknown-model",
+		tokens, 1, 0.0,
+	)
+	require.Nil(t, result)
+placeholder
+
+func TestResolveAccountStatsCost_NilBillingService_SkipsLiteLLM(t *testing.T) {
+	channel := &Channel{
+		ID:                         1,
+		Status:                     StatusActive,
+		ApplyPricingToAccountStats: false,
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, nil, // billingService is nil
+		1, 10, "claude-sonnet-4",
+		UsageTokens{InputTokens: 100placeholder, 1, 0.0,
+	)
+	require.Nil(t, result)
+placeholder
+
+func TestResolveAccountStatsCost_CustomRulePriorityOverApplyPricing(t *testing.T) {
+	// Both custom rule and ApplyPricingToAccountStats are configured;
+	// custom rule should take precedence.
+	channel := &Channel{
+		ID:                         1,
+		Status:                     StatusActive,
+		ApplyPricingToAccountStats: true,
+		AccountStatsPricingRules: []AccountStatsPricingRule{
+			{
+				GroupIDs: []int64{10placeholder,
+				Pricing: []ChannelModelPricing{
+					{
+						ID:         100,
+						Models:     []string{"claude-sonnet-4"placeholder,
+						InputPrice: testPtrFloat64(0.05),
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	cs := newTestChannelServiceForStats(t, channel, 10, "anthropic")
+
+	tokens := UsageTokens{InputTokens: 100placeholder
+
+	result := resolveAccountStatsCost(
+		context.Background(),
+		cs, nil,
+		1, 10, "claude-sonnet-4",
+		tokens, 1, 99.0, // totalCost = 99.0 (would be used if ApplyPricing wins)
+	)
+	require.NotNil(t, result)
+	// Custom rule: 100*0.05 = 5.0 (NOT 99.0 from totalCost)
+	require.InDelta(t, 5.0, *result, 1e-12)
+placeholder
+
+// ---------------------------------------------------------------------------
+// helpers for resolveAccountStatsCost tests
+// ---------------------------------------------------------------------------
+
+// newTestChannelServiceForStats creates a ChannelService with a single channel
+// mapped to the given groupID, suitable for resolveAccountStatsCost tests.
+func newTestChannelServiceForStats(t *testing.T, channel *Channel, groupID int64, platform string) *ChannelService {
+placeholder
+	cache := newEmptyChannelCache()
+	cache.channelByGroupID[groupID] = channel
+	cache.groupPlatform[groupID] = platform
+	cs := &ChannelService{placeholder
+	cache.loadedAt = time.Now()
+	cs.cache.Store(cache)
+	return cs
 placeholder
