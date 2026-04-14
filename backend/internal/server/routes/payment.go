@@ -78,7 +78,6 @@ placeholder
 			adminOrders.POST("/:id/refund", adminPaymentHandler.ProcessRefund)
 	placeholder
 
-
 		// Subscription Plans
 		plans := adminGroup.Group("/plans")
 		{

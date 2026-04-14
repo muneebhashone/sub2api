@@ -29,7 +29,7 @@ func TestBraveProvider_Search_Success(t *testing.T) {
 			{URL: "https://tour.go.dev", Title: "Tour", Description: "A Tour of Go", Age: "3 days"placeholder,
 	placeholder
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 placeholder))
 	defer srv.Close()
 
@@ -53,7 +53,7 @@ func TestBraveProvider_Search_DefaultMaxResults(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedCount = r.URL.Query().Get("count")
 		resp := braveResponse{placeholder
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 placeholder))
 	defer srv.Close()
 
@@ -70,7 +70,7 @@ placeholder
 func TestBraveProvider_Search_HTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(429)
-		w.Write([]byte("rate limited"))
+		_, _ = w.Write([]byte("rate limited"))
 placeholder))
 	defer srv.Close()
 
@@ -86,7 +86,7 @@ placeholder
 
 func TestBraveProvider_Search_InvalidJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte("not json"))
+		_, _ = w.Write([]byte("not json"))
 placeholder))
 	defer srv.Close()
 
@@ -103,7 +103,7 @@ placeholder
 func TestBraveProvider_Search_EmptyResults(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := braveResponse{placeholder
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 placeholder))
 	defer srv.Close()
 

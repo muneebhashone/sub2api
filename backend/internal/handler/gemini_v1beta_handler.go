@@ -682,6 +682,16 @@ placeholder
 	return false
 placeholder
 
+func shouldFallbackGeminiModel(modelName string, res *service.UpstreamHTTPResult) bool {
+	if shouldFallbackGeminiModels(res) {
+		return true
+placeholder
+	if res == nil || res.StatusCode != http.StatusNotFound {
+		return false
+placeholder
+	return gemini.HasFallbackModel(modelName)
+placeholder
+
 // extractGeminiCLISessionHash 从 Gemini CLI 请求中提取会话标识。
 // 组合 x-gemini-api-privileged-user-id header 和请求体中的 tmp 目录哈希。
 //
