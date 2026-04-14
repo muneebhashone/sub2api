@@ -76,6 +76,12 @@ export function useTableSelection<T>({ rows, getId placeholder: UseTableSelectio
     replaceSelectedSet(next)
   placeholder
 
+  const batchUpdate = (updater: (draft: Set<number>) => void) => {
+    const draft = new Set(selectedSet.value)
+    updater(draft)
+    replaceSelectedSet(draft)
+  placeholder
+
   const selectVisible = () => {
     toggleVisible(true)
   placeholder
@@ -93,6 +99,7 @@ export function useTableSelection<T>({ rows, getId placeholder: UseTableSelectio
     clear,
     removeMany,
     toggleVisible,
-    selectVisible
+    selectVisible,
+    batchUpdate
   placeholder
 placeholder
