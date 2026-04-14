@@ -231,10 +231,18 @@ placeholder
 	placeholder
 placeholder
 	if req.AllowUserRefund != nil {
-		// Only allow enabling when refund_enabled is true
+		// Only allow enabling when refund_enabled is (or will be) true
 		if *req.AllowUserRefund {
-			inst, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
-			if err == nil && inst.RefundEnabled {
+			refundEnabled := false
+			if req.RefundEnabled != nil {
+				refundEnabled = *req.RefundEnabled
+		placeholder else {
+				inst, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
+				if err == nil {
+					refundEnabled = inst.RefundEnabled
+			placeholder
+		placeholder
+			if refundEnabled {
 				u.SetAllowUserRefund(true)
 		placeholder
 	placeholder else {
