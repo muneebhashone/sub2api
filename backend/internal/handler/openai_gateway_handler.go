@@ -47,6 +47,13 @@ placeholder
 	return strings.TrimSpace(apiKey.Group.DefaultMappedModel)
 placeholder
 
+func resolveOpenAIMessagesDispatchMappedModel(apiKey *service.APIKey, requestedModel string) string {
+	if apiKey == nil || apiKey.Group == nil {
+		return ""
+placeholder
+	return strings.TrimSpace(apiKey.Group.ResolveMessagesDispatchModel(requestedModel))
+placeholder
+
 // NewOpenAIGatewayHandler creates a new OpenAIGatewayHandler
 func NewOpenAIGatewayHandler(
 	gatewayService *service.OpenAIGatewayService,
