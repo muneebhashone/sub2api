@@ -37,12 +37,16 @@
               <span class="font-medium text-gray-900 dark:text-white">{{ order.out_trade_no placeholderplaceholder</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ order.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order.amount.toFixed(2) placeholderplaceholder</span>
-            </div>
-            <div class="flex justify-between">
               <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
               <span class="font-medium text-gray-900 dark:text-white">&#165;{{ order.pay_amount.toFixed(2) placeholderplaceholder</span>
+            </div>
+            <div v-if="order.fee_rate > 0" class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.fee') placeholderplaceholder ({{ order.fee_rate placeholderplaceholder%)</span>
+              <span class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.orders.includedInPayAmount') placeholderplaceholder</span>
+            </div>
+            <div v-if="order.amount !== order.pay_amount" class="flex justify-between">
+              <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.creditedAmount') placeholderplaceholder</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ order.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order.amount.toFixed(2) placeholderplaceholder</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.paymentMethod') placeholderplaceholder</span>

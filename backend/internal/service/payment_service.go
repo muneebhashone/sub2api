@@ -288,7 +288,6 @@ func psComputeValidityDays(days int, unit string) int {
 placeholder
 placeholder
 
-func (s *PaymentService) getFeeRate(_ string) float64 { return 0 placeholder
 
 func psStartOfDayUTC(t time.Time) time.Time {
 	y, m, d := t.UTC().Date()

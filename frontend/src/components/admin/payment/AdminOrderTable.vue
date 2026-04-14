@@ -51,12 +51,15 @@
         <span class="text-sm text-gray-600 dark:text-gray-400">#{{ value placeholderplaceholder</span>
       </template>
 
-      <template #cell-amount="{ value, row placeholder">
+      <template #cell-pay_amount="{ value, row placeholder">
         <div class="text-sm">
-          <span class="font-medium text-gray-900 dark:text-white">{{ row.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ value.toFixed(2) placeholderplaceholder</span>
-          <span v-if="row.pay_amount !== value" class="ml-1 text-xs text-gray-500">
-            ({{ t('payment.orders.payAmount') placeholderplaceholder: ¥{{ row.pay_amount.toFixed(2) placeholderplaceholder)
+          <span class="font-medium text-gray-900 dark:text-white">¥{{ value.toFixed(2) placeholderplaceholder</span>
+          <span v-if="row.fee_rate > 0" class="ml-1 text-xs text-gray-400" :title="t('payment.orders.fee') + ': ' + row.fee_rate + '%'">
+            ({{ row.fee_rate placeholderplaceholder%)
           </span>
+          <div v-if="row.amount !== row.pay_amount" class="text-xs text-gray-500">
+            {{ t('payment.orders.creditedAmount') placeholderplaceholder: {{ row.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ row.amount.toFixed(2) placeholderplaceholder
+          </div>
         </div>
       </template>
 
@@ -183,7 +186,7 @@ placeholder
 const columns = computed<Column[]>(() => [
   { key: 'id', label: t('payment.orders.orderId') placeholder,
   { key: 'user_id', label: t('payment.orders.userId') placeholder,
-  { key: 'amount', label: t('payment.orders.amount') placeholder,
+  { key: 'pay_amount', label: t('payment.orders.payAmount') placeholder,
   { key: 'payment_type', label: t('payment.orders.paymentMethod') placeholder,
   { key: 'status', label: t('payment.orders.status') placeholder,
   { key: 'order_type', label: t('payment.orders.orderType') placeholder,
