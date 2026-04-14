@@ -73,7 +73,7 @@ placeholder
 			pc := websearch.ProviderConfig{
 				Type:       p.Type,
 				APIKey:     p.APIKey,
-				QuotaLimit: p.QuotaLimit,
+				QuotaLimit: derefInt64(p.QuotaLimit),
 				ExpiresAt:  p.ExpiresAt,
 		placeholder
 			if p.SubscribedAt != nil {
@@ -140,4 +140,11 @@ placeholder
 		// 注意：不设置 WriteTimeout，因为流式响应可能持续十几分钟
 		// 不设置 ReadTimeout，因为大请求体可能需要较长时间读取
 placeholder
+placeholder
+
+func derefInt64(p *int64) int64 {
+	if p == nil {
+		return 0
+placeholder
+	return *p
 placeholder

@@ -1962,7 +1962,28 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	response.Success(c, service.SanitizeWebSearchConfig(c.Request.Context(), updated))
+	response.Success(c, service.PopulateWebSearchUsage(c.Request.Context(), updated))
+placeholder
+
+// ResetWebSearchUsage 重置指定 provider 的配额用量
+// POST /api/v1/admin/settings/web-search-emulation/reset-usage
+func (h *SettingHandler) ResetWebSearchUsage(c *gin.Context) {
+	var req struct {
+		ProviderType string `json:"provider_type"`
+placeholder
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	if req.ProviderType == "" {
+		response.BadRequest(c, "provider_type is required")
+		return
+placeholder
+	if err := service.ResetWebSearchUsage(c.Request.Context(), req.ProviderType); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, nil)
 placeholder
 
 // TestWebSearchEmulation 测试 Web Search 搜索
