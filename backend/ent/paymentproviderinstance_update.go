@@ -161,6 +161,20 @@ placeholder
 	return _u
 placeholder
 
+// SetAllowUserRefund sets the "allow_user_refund" field.
+func (_u *PaymentProviderInstanceUpdate) SetAllowUserRefund(v bool) *PaymentProviderInstanceUpdate {
+	_u.mutation.SetAllowUserRefund(v)
+	return _u
+placeholder
+
+// SetNillableAllowUserRefund sets the "allow_user_refund" field if the given value is not nil.
+func (_u *PaymentProviderInstanceUpdate) SetNillableAllowUserRefund(v *bool) *PaymentProviderInstanceUpdate {
+	if v != nil {
+		_u.SetAllowUserRefund(*v)
+placeholder
+	return _u
+placeholder
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *PaymentProviderInstanceUpdate) SetUpdatedAt(v time.Time) *PaymentProviderInstanceUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -274,6 +288,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.RefundEnabled(); ok {
 		_spec.SetField(paymentproviderinstance.FieldRefundEnabled, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.AllowUserRefund(); ok {
+		_spec.SetField(paymentproviderinstance.FieldAllowUserRefund, field.TypeBool, value)
 placeholder
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentproviderinstance.FieldUpdatedAt, field.TypeTime, value)
@@ -431,6 +448,20 @@ placeholder
 	return _u
 placeholder
 
+// SetAllowUserRefund sets the "allow_user_refund" field.
+func (_u *PaymentProviderInstanceUpdateOne) SetAllowUserRefund(v bool) *PaymentProviderInstanceUpdateOne {
+	_u.mutation.SetAllowUserRefund(v)
+	return _u
+placeholder
+
+// SetNillableAllowUserRefund sets the "allow_user_refund" field if the given value is not nil.
+func (_u *PaymentProviderInstanceUpdateOne) SetNillableAllowUserRefund(v *bool) *PaymentProviderInstanceUpdateOne {
+	if v != nil {
+		_u.SetAllowUserRefund(*v)
+placeholder
+	return _u
+placeholder
+
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *PaymentProviderInstanceUpdateOne) SetUpdatedAt(v time.Time) *PaymentProviderInstanceUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -574,6 +605,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.RefundEnabled(); ok {
 		_spec.SetField(paymentproviderinstance.FieldRefundEnabled, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.AllowUserRefund(); ok {
+		_spec.SetField(paymentproviderinstance.FieldAllowUserRefund, field.TypeBool, value)
 placeholder
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentproviderinstance.FieldUpdatedAt, field.TypeTime, value)
