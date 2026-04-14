@@ -114,7 +114,6 @@ type CreateProviderInstanceRequest struct {
 	SortOrder       int               `json:"sort_order"`
 	Limits          string            `json:"limits"`
 	RefundEnabled   bool              `json:"refund_enabled"`
-	AllowUserRefund bool              `json:"allow_user_refund"`
 placeholder
 
 type UpdateProviderInstanceRequest struct {
@@ -126,7 +125,6 @@ type UpdateProviderInstanceRequest struct {
 	SortOrder       *int              `json:"sort_order"`
 	Limits          *string           `json:"limits"`
 	RefundEnabled   *bool             `json:"refund_enabled"`
-	AllowUserRefund *bool             `json:"allow_user_refund"`
 placeholder
 type CreatePlanRequest struct {
 	GroupID       int64    `json:"group_id"`
