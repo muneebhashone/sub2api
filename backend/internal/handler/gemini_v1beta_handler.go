@@ -121,7 +121,7 @@ placeholder
 		googleError(c, http.StatusBadGateway, err.Error())
 		return
 placeholder
-	if shouldFallbackGeminiModels(res) {
+	if shouldFallbackGeminiModel(modelName, res) {
 		c.JSON(http.StatusOK, gemini.FallbackModel(modelName))
 		return
 placeholder

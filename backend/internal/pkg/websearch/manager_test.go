@@ -50,7 +50,7 @@ func TestManager_SearchWithBestProvider_UsesFirstAvailable(t *testing.T) {
 	srvBrave := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := braveResponse{placeholder
 		resp.Web.Results = []braveResult{{URL: "https://brave.com", Title: "Brave", Description: "from brave"placeholderplaceholder
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 placeholder))
 	defer srvBrave.Close()
 
@@ -77,7 +77,7 @@ func TestManager_SearchWithBestProvider_NilRedis(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := braveResponse{placeholder
 		resp.Web.Results = []braveResult{{URL: "https://test.com", Title: "Test", Description: "result"placeholderplaceholder
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 placeholder))
 	defer srv.Close()
 
