@@ -117,6 +117,7 @@ function getPlanNameClass(groupId: number): string {
   return group ? platformTextClass(group.platform) : 'text-gray-900 dark:text-white'
 placeholder
 
+
 // ==================== Plans ====================
 
 const plansLoading = ref(false)
@@ -133,6 +134,7 @@ const planColumns = computed((): Column[] => [
   { key: 'price', label: t('payment.admin.price') placeholder,
   { key: 'validity_days', label: t('payment.admin.validityDays') placeholder,
   { key: 'for_sale', label: t('payment.admin.forSale') placeholder,
+  { key: 'sort_order', label: t('payment.admin.sortOrder') placeholder,
   { key: 'actions', label: t('common.actions') placeholder,
 ])
 
@@ -156,6 +158,7 @@ function openPlanEdit(plan: SubscriptionPlan | null) {
   editingPlan.value = plan
   showPlanDialog.value = true
 placeholder
+
 
 /** Quick toggle for_sale from the list */
 async function toggleForSale(plan: SubscriptionPlan) {

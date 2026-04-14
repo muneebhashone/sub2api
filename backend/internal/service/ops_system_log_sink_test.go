@@ -183,6 +183,15 @@ placeholder
 	if strings.TrimSpace(item.Message) == "" {
 		t.Fatalf("message should not be empty")
 placeholder
+	// writtenCount is incremented after BatchInsertSystemLogsFn returns,
+	// so poll briefly to avoid a race between the done signal and the atomic add.
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if sink.Health().WrittenCount > 0 {
+			break
+	placeholder
+		time.Sleep(time.Millisecond)
+placeholder
 	health := sink.Health()
 	if health.WrittenCount == 0 {
 		t.Fatalf("written_count should be >0")

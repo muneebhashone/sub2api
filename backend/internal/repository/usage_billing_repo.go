@@ -113,9 +113,11 @@ func (r *usageBillingRepository) applyUsageBillingEffects(ctx context.Context, t
 placeholder
 
 	if cmd.BalanceCost > 0 {
-		if err := deductUsageBillingBalance(ctx, tx, cmd.UserID, cmd.BalanceCost); err != nil {
+		newBalance, err := deductUsageBillingBalance(ctx, tx, cmd.UserID, cmd.BalanceCost)
+		if err != nil {
 			return err
 	placeholder
+		result.NewBalance = &newBalance
 placeholder
 
 	if cmd.APIKeyQuotaCost > 0 {
@@ -133,9 +135,11 @@ placeholder
 placeholder
 
 	if cmd.AccountQuotaCost > 0 && (strings.EqualFold(cmd.AccountType, service.AccountTypeAPIKey) || strings.EqualFold(cmd.AccountType, service.AccountTypeBedrock)) {
-		if err := incrementUsageBillingAccountQuota(ctx, tx, cmd.AccountID, cmd.AccountQuotaCost); err != nil {
+		quotaState, err := incrementUsageBillingAccountQuota(ctx, tx, cmd.AccountID, cmd.AccountQuotaCost)
+		if err != nil {
 			return err
 	placeholder
+		result.QuotaState = quotaState
 placeholder
 
 	return nil
@@ -169,24 +173,22 @@ placeholder
 	return service.ErrSubscriptionNotFound
 placeholder
 
-func deductUsageBillingBalance(ctx context.Context, tx *sql.Tx, userID int64, amount float64) error {
-	res, err := tx.ExecContext(ctx, `
+func deductUsageBillingBalance(ctx context.Context, tx *sql.Tx, userID int64, amount float64) (float64, error) {
+	var newBalance float64
+	err := tx.QueryRowContext(ctx, `
 		UPDATE users
 		SET balance = balance - $1,
 			updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL
-	`, amount, userID)
+		RETURNING balance
+	`, amount, userID).Scan(&newBalance)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, service.ErrUserNotFound
+placeholder
 	if err != nil {
-		return err
+		return 0, err
 placeholder
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-placeholder
-	if affected > 0 {
-		return nil
-placeholder
-	return service.ErrUserNotFound
+	return newBalance, nil
 placeholder
 
 func incrementUsageBillingAPIKeyQuota(ctx context.Context, tx *sql.Tx, apiKeyID int64, amount float64) (bool, error) {
@@ -240,7 +242,7 @@ placeholder
 	return nil
 placeholder
 
-func incrementUsageBillingAccountQuota(ctx context.Context, tx *sql.Tx, accountID int64, amount float64) error {
+func incrementUsageBillingAccountQuota(ctx context.Context, tx *sql.Tx, accountID int64, amount float64) (*service.AccountQuotaState, error) {
 	rows, err := tx.QueryContext(ctx,
 		`UPDATE accounts SET extra = (
 			COALESCE(extra, '{placeholder'::jsonb)
@@ -279,32 +281,40 @@ func incrementUsageBillingAccountQuota(ctx context.Context, tx *sql.Tx, accountI
 		WHERE id = $2 AND deleted_at IS NULL
 		RETURNING
 			COALESCE((extra->>'quota_used')::numeric, 0),
-			COALESCE((extra->>'quota_limit')::numeric, 0)`,
+			COALESCE((extra->>'quota_limit')::numeric, 0),
+			COALESCE((extra->>'quota_daily_used')::numeric, 0),
+			COALESCE((extra->>'quota_daily_limit')::numeric, 0),
+			COALESCE((extra->>'quota_weekly_used')::numeric, 0),
+			COALESCE((extra->>'quota_weekly_limit')::numeric, 0)`,
 		amount, accountID)
 	if err != nil {
-		return err
+		return nil, err
 placeholder
 	defer func() { _ = rows.Close() placeholder()
 
-	var newUsed, limit float64
+	var state service.AccountQuotaState
 	if rows.Next() {
-		if err := rows.Scan(&newUsed, &limit); err != nil {
-			return err
+		if err := rows.Scan(
+			&state.TotalUsed, &state.TotalLimit,
+			&state.DailyUsed, &state.DailyLimit,
+			&state.WeeklyUsed, &state.WeeklyLimit,
+		); err != nil {
+			return nil, err
 	placeholder
 placeholder else {
 		if err := rows.Err(); err != nil {
-			return err
+			return nil, err
 	placeholder
-		return service.ErrAccountNotFound
+		return nil, service.ErrAccountNotFound
 placeholder
 	if err := rows.Err(); err != nil {
-		return err
+		return nil, err
 placeholder
-	if limit > 0 && newUsed >= limit && (newUsed-amount) < limit {
+	if state.TotalLimit > 0 && state.TotalUsed >= state.TotalLimit && (state.TotalUsed-amount) < state.TotalLimit {
 		if err := enqueueSchedulerOutbox(ctx, tx, service.SchedulerOutboxEventAccountChanged, &accountID, nil, nil); err != nil {
 			logger.LegacyPrintf("repository.usage_billing", "[SchedulerOutbox] enqueue quota exceeded failed: account=%d err=%v", accountID, err)
-			return err
+			return nil, err
 	placeholder
 placeholder
-	return nil
+	return &state, nil
 placeholder
