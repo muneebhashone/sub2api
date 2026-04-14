@@ -439,14 +439,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch placeholder from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, onUnmounted, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, AccountUsageInfo, GeminiCredentials, WindowStats placeholder from '@/types'
 import { buildOpenAIUsageRefreshKey placeholder from '@/utils/accountUsageRefresh'
+import { enqueueUsageRequest placeholder from '@/utils/usageLoadQueue'
 import { formatCompactNumber placeholder from '@/utils/format'
 import UsageProgressBar from './UsageProgressBar.vue'
 import AccountQuotaInfo from './AccountQuotaInfo.vue'
+
+// Module-level cache shared across all AccountUsageCell instances
+const _usageCache = new Map<number, { data: AccountUsageInfo; ts: number placeholder>()
+const USAGE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 const props = withDefaults(
   defineProps<{
@@ -464,6 +469,9 @@ const props = withDefaults(
 
 const { t placeholder = useI18n()
 const desktopViewportQuery = '(min-width: 768px)'
+
+const unmounted = ref(false)
+onBeforeUnmount(() => { unmounted.value = true placeholder)
 
 const loading = ref(false)
 const activeQueryLoading = ref(false)
@@ -941,19 +949,36 @@ const isAnthropicOAuthOrSetupToken = computed(() => {
   return props.account.platform === 'anthropic' && (props.account.type === 'oauth' || props.account.type === 'setup-token')
 placeholder)
 
-const loadUsage = async (source?: 'passive' | 'active') => {
+const loadUsage = async (options?: { source?: 'passive' | 'active'; bypassCache?: boolean placeholder) => {
   if (!shouldFetchUsage.value) return
+
+  // Check cache
+  if (!options?.bypassCache) {
+    const cached = _usageCache.get(props.account.id)
+    if (cached && Date.now() - cached.ts < USAGE_CACHE_TTL) {
+      usageInfo.value = cached.data
+      loading.value = false
+      return
+    placeholder
+  placeholder
 
   loading.value = true
   error.value = null
 
   try {
-    usageInfo.value = await adminAPI.accounts.getUsage(props.account.id, source)
+    const fetchFn = () => adminAPI.accounts.getUsage(props.account.id, options?.source)
+    const result = await enqueueUsageRequest(props.account, fetchFn)
+    if (!unmounted.value) {
+      usageInfo.value = result
+      _usageCache.set(props.account.id, { data: result, ts: Date.now() placeholder)
+    placeholder
   placeholder catch (e: any) {
-    error.value = t('common.error')
-    console.error('Failed to load usage:', e)
+    if (!unmounted.value) {
+      error.value = t('common.error')
+      console.error('Failed to load usage:', e)
+    placeholder
   placeholder finally {
-    loading.value = false
+    if (!unmounted.value) loading.value = false
   placeholder
 placeholder
 
@@ -962,7 +987,7 @@ const flushPendingAutoLoad = () => {
   const source = pendingAutoLoadSource.value
   pendingAutoLoad.value = false
   pendingAutoLoadSource.value = undefined
-  loadUsage(source).catch((e) => {
+  loadUsage({ source placeholder).catch((e) => {
     console.error('Failed to load deferred usage:', e)
   placeholder)
 placeholder
@@ -974,7 +999,7 @@ const requestAutoLoad = (source?: 'passive' | 'active') => {
     pendingAutoLoadSource.value = source
     return
   placeholder
-  loadUsage(source).catch((e) => {
+  loadUsage({ source placeholder).catch((e) => {
     console.error('Failed to auto load usage:', e)
   placeholder)
 placeholder
@@ -1138,7 +1163,10 @@ watch(
     if (!shouldFetchUsage.value) return
 
     const source = isAnthropicOAuthOrSetupToken.value ? 'passive' : undefined
-    requestAutoLoad(source)
+    _usageCache.delete(props.account.id)
+    loadUsage({ source, bypassCache: true placeholder).catch((e) => {
+      console.error('Failed to refresh usage after manual refresh:', e)
+    placeholder)
   placeholder
 )
 
