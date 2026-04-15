@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"testing"
+	"testing/iotest"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,5 +35,46 @@ placeholder)
 		require.Nil(t, body)
 	placeholder
 		require.True(t, errors.Is(err, ErrUpstreamResponseBodyTooLarge))
+placeholder)
+placeholder
+
+func TestReadUpstreamResponseBody(t *testing.T) {
+	t.Run("within limit", func(t *testing.T) {
+		body, err := ReadUpstreamResponseBody(bytes.NewReader([]byte("ok")), nil, nil, nil)
+	placeholder
+		require.Equal(t, []byte("ok"), body)
+placeholder)
+
+	t.Run("exceeds limit calls onTooLarge", func(t *testing.T) {
+		cfg := &config.Config{placeholder
+		cfg.Gateway.UpstreamResponseReadMaxBytes = 3
+
+		called := false
+		onTooLarge := func(_ *gin.Context) { called = true placeholder
+
+		body, err := ReadUpstreamResponseBody(bytes.NewReader([]byte("toolong")), cfg, nil, onTooLarge)
+		require.Nil(t, body)
+		require.True(t, errors.Is(err, ErrUpstreamResponseBodyTooLarge))
+		require.True(t, called)
+placeholder)
+
+	t.Run("nil onTooLarge does not panic", func(t *testing.T) {
+		cfg := &config.Config{placeholder
+		cfg.Gateway.UpstreamResponseReadMaxBytes = 3
+
+		body, err := ReadUpstreamResponseBody(bytes.NewReader([]byte("toolong")), cfg, nil, nil)
+		require.Nil(t, body)
+		require.True(t, errors.Is(err, ErrUpstreamResponseBodyTooLarge))
+placeholder)
+
+	t.Run("io error does not call onTooLarge", func(t *testing.T) {
+		called := false
+		onTooLarge := func(_ *gin.Context) { called = true placeholder
+
+		body, err := ReadUpstreamResponseBody(iotest.ErrReader(errors.New("disk failure")), nil, nil, onTooLarge)
+		require.Nil(t, body)
+	placeholder
+		require.False(t, errors.Is(err, ErrUpstreamResponseBodyTooLarge))
+		require.False(t, called)
 placeholder)
 placeholder
