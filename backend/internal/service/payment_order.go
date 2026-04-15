@@ -43,18 +43,22 @@ placeholder
 	if user.Status != payment.EntityStatusActive {
 		return nil, infraerrors.Forbidden("USER_INACTIVE", "user account is disabled")
 placeholder
-	amount := req.Amount
+	orderAmount := req.Amount
+	limitAmount := req.Amount
 	if plan != nil {
-		amount = plan.Price
+		orderAmount = plan.Price
+		limitAmount = plan.Price
+placeholder else if req.OrderType == payment.OrderTypeBalance {
+		orderAmount = calculateCreditedBalance(req.Amount, cfg.BalanceRechargeMultiplier)
 placeholder
-	feeRate := s.getFeeRate(req.PaymentType)
-	payAmountStr := payment.CalculatePayAmount(amount, feeRate)
+	feeRate := cfg.RechargeFeeRate
+	payAmountStr := payment.CalculatePayAmount(limitAmount, feeRate)
 	payAmount, _ := strconv.ParseFloat(payAmountStr, 64)
-	order, err := s.createOrderInTx(ctx, req, user, plan, cfg, amount, feeRate, payAmount)
+	order, err := s.createOrderInTx(ctx, req, user, plan, cfg, orderAmount, limitAmount, feeRate, payAmount)
 	if err != nil {
 		return nil, err
 placeholder
-	resp, err := s.invokeProvider(ctx, order, req, cfg, payAmountStr, payAmount, plan)
+	resp, err := s.invokeProvider(ctx, order, req, cfg, limitAmount, payAmountStr, payAmount, plan)
 	if err != nil {
 		_, _ = s.entClient.PaymentOrder.UpdateOneID(order.ID).
 			SetStatus(OrderStatusFailed).
@@ -99,7 +103,7 @@ placeholder
 	return plan, nil
 placeholder
 
-func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderRequest, user *User, plan *dbent.SubscriptionPlan, cfg *PaymentConfig, amount, feeRate, payAmount float64) (*dbent.PaymentOrder, error) {
+func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderRequest, user *User, plan *dbent.SubscriptionPlan, cfg *PaymentConfig, orderAmount, limitAmount, feeRate, payAmount float64) (*dbent.PaymentOrder, error) {
 	tx, err := s.entClient.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -108,7 +112,7 @@ placeholder
 	if err := s.checkPendingLimit(ctx, tx, req.UserID, cfg.MaxPendingOrders); err != nil {
 		return nil, err
 placeholder
-	if err := s.checkDailyLimit(ctx, tx, req.UserID, amount, cfg.DailyLimit); err != nil {
+	if err := s.checkDailyLimit(ctx, tx, req.UserID, limitAmount, cfg.DailyLimit); err != nil {
 		return nil, err
 placeholder
 	tm := cfg.OrderTimeoutMin
@@ -121,7 +125,7 @@ placeholder
 		SetUserEmail(user.Email).
 		SetUserName(user.Username).
 		SetNillableUserNotes(psNilIfEmpty(user.Notes)).
-		SetAmount(amount).
+		SetAmount(orderAmount).
 		SetPayAmount(payAmount).
 		SetFeeRate(feeRate).
 		SetRechargeCode("").
@@ -180,6 +184,10 @@ placeholder
 placeholder
 	var used float64
 	for _, o := range orders {
+		if o.OrderType == payment.OrderTypeBalance {
+			used += o.PayAmount
+			continue
+	placeholder
 		used += o.Amount
 placeholder
 	if used+amount > limit {
@@ -188,7 +196,7 @@ placeholder
 	return nil
 placeholder
 
-func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.PaymentOrder, req CreateOrderRequest, cfg *PaymentConfig, payAmountStr string, payAmount float64, plan *dbent.SubscriptionPlan) (*CreateOrderResponse, error) {
+func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.PaymentOrder, req CreateOrderRequest, cfg *PaymentConfig, limitAmount float64, payAmountStr string, payAmount float64, plan *dbent.SubscriptionPlan) (*CreateOrderResponse, error) {
 	// Select an instance across all providers that support the requested payment type.
 	// This enables cross-provider load balancing (e.g. EasyPay + Alipay direct for "alipay").
 	sel, err := s.loadBalancer.SelectInstance(ctx, "", req.PaymentType, payment.Strategy(cfg.LoadBalanceStrategy), payAmount)
@@ -202,7 +210,7 @@ placeholder
 	if err != nil {
 		return nil, infraerrors.ServiceUnavailable("PAYMENT_GATEWAY_ERROR", "payment method is temporarily unavailable")
 placeholder
-	subject := s.buildPaymentSubject(plan, payAmountStr, cfg)
+	subject := s.buildPaymentSubject(plan, limitAmount, cfg)
 	outTradeNo := order.OutTradeNo
 	pr, err := prov.CreatePayment(ctx, payment.CreatePaymentRequest{OrderID: outTradeNo, Amount: payAmountStr, PaymentType: req.PaymentType, Subject: subject, ClientIP: req.ClientIP, IsMobile: req.IsMobile, InstanceSubMethods: sel.SupportedTypesplaceholder)
 	if err != nil {
@@ -213,23 +221,30 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("update order with payment details: %w", err)
 placeholder
-	s.writeAuditLog(ctx, order.ID, "ORDER_CREATED", fmt.Sprintf("user:%d", req.UserID), map[string]any{"amount": req.Amount, "paymentType": req.PaymentType, "orderType": req.OrderTypeplaceholder)
+	s.writeAuditLog(ctx, order.ID, "ORDER_CREATED", fmt.Sprintf("user:%d", req.UserID), map[string]any{
+		"paymentAmount":  req.Amount,
+		"creditedAmount": order.Amount,
+		"payAmount":      order.PayAmount,
+		"paymentType":    req.PaymentType,
+		"orderType":      req.OrderType,
+placeholder)
 	return &CreateOrderResponse{OrderID: order.ID, Amount: order.Amount, PayAmount: payAmount, FeeRate: order.FeeRate, Status: OrderStatusPending, PaymentType: req.PaymentType, PayURL: pr.PayURL, QRCode: pr.QRCode, ClientSecret: pr.ClientSecret, ExpiresAt: order.ExpiresAt, PaymentMode: sel.PaymentModeplaceholder, nil
 placeholder
 
-func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, payAmountStr string, cfg *PaymentConfig) string {
+func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limitAmount float64, cfg *PaymentConfig) string {
 	if plan != nil {
 		if plan.ProductName != "" {
 			return plan.ProductName
 	placeholder
 		return "Sub2API Subscription " + plan.Name
 placeholder
+	amountStr := strconv.FormatFloat(limitAmount, 'f', 2, 64)
 	pf := strings.TrimSpace(cfg.ProductNamePrefix)
 	sf := strings.TrimSpace(cfg.ProductNameSuffix)
 	if pf != "" || sf != "" {
-		return strings.TrimSpace(pf + " " + payAmountStr + " " + sf)
+		return strings.TrimSpace(pf + " " + amountStr + " " + sf)
 placeholder
-	return "Sub2API " + payAmountStr + " CNY"
+	return "Sub2API " + amountStr + " CNY"
 placeholder
 
 // --- Order Queries ---

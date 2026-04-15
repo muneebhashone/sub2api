@@ -18,22 +18,26 @@
           </span>
         </div>
         <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</p>
-          <p class="text-sm font-medium text-gray-900 dark:text-white">${{ order.amount.toFixed(2) placeholderplaceholder</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.orders.baseAmount') placeholderplaceholder</p>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">¥{{ baseAmount.toFixed(2) placeholderplaceholder</p>
+        </div>
+        <div v-if="order.fee_rate > 0">
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.orders.fee') placeholderplaceholder ({{ order.fee_rate placeholderplaceholder%)</p>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">¥{{ feeAmount.toFixed(2) placeholderplaceholder</p>
         </div>
         <div>
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</p>
-          <p class="text-sm font-medium text-gray-900 dark:text-white">${{ order.pay_amount.toFixed(2) placeholderplaceholder</p>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">¥{{ order.pay_amount.toFixed(2) placeholderplaceholder</p>
+        </div>
+        <div v-if="order.amount !== order.pay_amount">
+          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.orders.creditedAmount') placeholderplaceholder</p>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ order.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order.amount.toFixed(2) placeholderplaceholder</p>
         </div>
         <div>
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.orders.paymentMethod') placeholderplaceholder</p>
           <p class="text-sm text-gray-700 dark:text-gray-300">
             {{ t('payment.methods.' + order.payment_type, order.payment_type) placeholderplaceholder
           </p>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.feeRate') placeholderplaceholder</p>
-          <p class="text-sm text-gray-700 dark:text-gray-300">{{ (order.fee_rate * 100).toFixed(1) placeholderplaceholder%</p>
         </div>
         <div>
           <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.orderType') placeholderplaceholder</p>
@@ -73,7 +77,7 @@
         <div class="grid grid-cols-2 gap-2 text-sm">
           <div>
             <span class="text-red-600 dark:text-red-400">{{ t('payment.admin.refundAmount') placeholderplaceholder:</span>
-            <span class="ml-1 font-medium text-red-700 dark:text-red-300">${{ order.refund_amount.toFixed(2) placeholderplaceholder</span>
+            <span class="ml-1 font-medium text-red-700 dark:text-red-300">{{ order.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order.refund_amount.toFixed(2) placeholderplaceholder</span>
           </div>
           <div v-if="order.refund_reason" class="col-span-2">
             <span class="text-red-600 dark:text-red-400">{{ t('payment.admin.refundReason') placeholderplaceholder:</span>
@@ -110,6 +114,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import type { PaymentOrder placeholder from '@/types/payment'
@@ -117,10 +122,23 @@ import { statusBadgeClass, canRefund as canRefundStatus, formatOrderDateTime pla
 
 const { t placeholder = useI18n()
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   order: PaymentOrder | null
 placeholder>()
+
+/** 充值金额 (base amount before fee) = pay_amount - fee = pay_amount / (1 + fee_rate/100) */
+const baseAmount = computed(() => {
+  if (!props.order) return 0
+  if (props.order.fee_rate <= 0) return props.order.pay_amount
+  return props.order.pay_amount / (1 + props.order.fee_rate / 100)
+placeholder)
+
+/** 手续费 = pay_amount - baseAmount */
+const feeAmount = computed(() => {
+  if (!props.order || props.order.fee_rate <= 0) return 0
+  return props.order.pay_amount - baseAmount.value
+placeholder)
 
 const emit = defineEmits<{
   (e: 'close'): void
