@@ -31,11 +31,9 @@
           ${{ (stats?.total_actual_cost || 0).toFixed(4) placeholderplaceholder
         </p>
         <p class="text-xs text-gray-400">
-          <span class="text-orange-500">${{ (stats?.total_account_cost || 0).toFixed(4) placeholderplaceholder</span>
-          <span> {{ t('usage.accountCost') placeholderplaceholder</span>
+          <span class="text-orange-500">{{ t('usage.accountCost') placeholderplaceholder ${{ (stats?.total_account_cost || 0).toFixed(4) placeholderplaceholder</span>
           <span> · </span>
-          <span>${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
-          <span> {{ t('usage.standardCost') placeholderplaceholder</span>
+          <span>{{ t('usage.standardCost') placeholderplaceholder ${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
         </p>
       </div>
     </div>
