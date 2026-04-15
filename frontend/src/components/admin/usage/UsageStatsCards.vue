@@ -28,17 +28,12 @@
       <div class="min-w-0 flex-1">
         <p class="text-xs font-medium text-gray-500">{{ t('usage.totalCost') placeholderplaceholder</p>
         <p class="text-xl font-bold text-green-600">
-          ${{ ((stats?.total_account_cost ?? stats?.total_actual_cost) || 0).toFixed(4) placeholderplaceholder
+          ${{ (stats?.total_actual_cost || 0).toFixed(4) placeholderplaceholder
         </p>
-        <p class="text-xs text-gray-400" v-if="stats?.total_account_cost != null">
-          {{ t('usage.userBilled') placeholderplaceholder:
-          <span class="text-gray-300">${{ (stats?.total_actual_cost || 0).toFixed(4) placeholderplaceholder</span>
-          · {{ t('usage.standardCost') placeholderplaceholder:
-          <span class="text-gray-300">${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
-        </p>
-        <p class="text-xs text-gray-400" v-else>
-          {{ t('usage.standardCost') placeholderplaceholder:
-          <span class="line-through">${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
+        <p class="text-xs text-gray-400">
+          <span class="text-orange-500">{{ t('usage.accountCost') placeholderplaceholder ${{ (stats?.total_account_cost || 0).toFixed(4) placeholderplaceholder</span>
+          <span> · </span>
+          <span>{{ t('usage.standardCost') placeholderplaceholder ${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
         </p>
       </div>
     </div>
