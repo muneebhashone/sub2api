@@ -20,6 +20,14 @@ var (
 
 const outboxEventTimeout = 2 * time.Minute
 
+// batchSeenKey tracks which (groupID, platform) bucket sets have already been
+// rebuilt within a single pollOutbox call, to avoid redundant work when multiple
+// account_changed events share the same groups.
+type batchSeenKey struct {
+	groupID  int64
+	platform string
+placeholder
+
 type SchedulerSnapshotService struct {
 	cache         SchedulerCache
 	outboxRepo    SchedulerOutboxRepository
@@ -244,9 +252,10 @@ placeholder
 placeholder
 
 	watermarkForCheck := watermark
+	seen := make(map[batchSeenKey]struct{placeholder)
 	for _, event := range events {
 		eventCtx, cancel := context.WithTimeout(context.Background(), outboxEventTimeout)
-		err := s.handleOutboxEvent(eventCtx, event)
+		err := s.handleOutboxEvent(eventCtx, event, seen)
 		cancel()
 		if err != nil {
 			logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] outbox handle failed: id=%d type=%s err=%v", event.ID, event.EventType, err)
@@ -255,8 +264,20 @@ placeholder
 placeholder
 
 	lastID := events[len(events)-1].ID
-	if err := s.cache.SetOutboxWatermark(ctx, lastID); err != nil {
-		logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] outbox watermark write failed: %v", err)
+	wmCtx, wmCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer wmCancel()
+	var wmErr error
+	for i := range 3 {
+		wmErr = s.cache.SetOutboxWatermark(wmCtx, lastID)
+		if wmErr == nil {
+			break
+	placeholder
+		if i < 2 {
+			time.Sleep(200 * time.Millisecond)
+	placeholder
+placeholder
+	if wmErr != nil {
+		logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] outbox watermark write failed: %v", wmErr)
 placeholder else {
 		watermarkForCheck = lastID
 placeholder
@@ -264,18 +285,18 @@ placeholder
 	s.checkOutboxLag(ctx, events[0], watermarkForCheck)
 placeholder
 
-func (s *SchedulerSnapshotService) handleOutboxEvent(ctx context.Context, event SchedulerOutboxEvent) error {
+func (s *SchedulerSnapshotService) handleOutboxEvent(ctx context.Context, event SchedulerOutboxEvent, seen map[batchSeenKey]struct{placeholder) error {
 	switch event.EventType {
 	case SchedulerOutboxEventAccountLastUsed:
 		return s.handleLastUsedEvent(ctx, event.Payload)
 	case SchedulerOutboxEventAccountBulkChanged:
-		return s.handleBulkAccountEvent(ctx, event.Payload)
+		return s.handleBulkAccountEvent(ctx, event.Payload, seen)
 	case SchedulerOutboxEventAccountGroupsChanged:
-		return s.handleAccountEvent(ctx, event.AccountID, event.Payload)
+		return s.handleAccountEvent(ctx, event.AccountID, event.Payload, seen)
 	case SchedulerOutboxEventAccountChanged:
-		return s.handleAccountEvent(ctx, event.AccountID, event.Payload)
+		return s.handleAccountEvent(ctx, event.AccountID, event.Payload, seen)
 	case SchedulerOutboxEventGroupChanged:
-		return s.handleGroupEvent(ctx, event.GroupID)
+		return s.handleGroupEvent(ctx, event.GroupID, seen)
 	case SchedulerOutboxEventFullRebuild:
 		return s.triggerFullRebuild("outbox")
 	default:
@@ -309,7 +330,7 @@ placeholder
 	return s.cache.UpdateLastUsed(ctx, updates)
 placeholder
 
-func (s *SchedulerSnapshotService) handleBulkAccountEvent(ctx context.Context, payload map[string]any) error {
+func (s *SchedulerSnapshotService) handleBulkAccountEvent(ctx context.Context, payload map[string]any, seen map[batchSeenKey]struct{placeholder) error {
 	if payload == nil {
 		return nil
 placeholder
@@ -323,15 +344,15 @@ placeholder
 placeholder
 
 	ids := make([]int64, 0, len(rawIDs))
-	seen := make(map[int64]struct{placeholder, len(rawIDs))
+	seenIDs := make(map[int64]struct{placeholder, len(rawIDs))
 	for _, id := range rawIDs {
 		if id <= 0 {
 			continue
 	placeholder
-		if _, exists := seen[id]; exists {
+		if _, exists := seenIDs[id]; exists {
 			continue
 	placeholder
-		seen[id] = struct{placeholder{placeholder
+		seenIDs[id] = struct{placeholder{placeholder
 		ids = append(ids, id)
 placeholder
 	if len(ids) == 0 {
@@ -384,10 +405,10 @@ placeholder
 	for gid := range rebuildGroupSet {
 		rebuildGroupIDs = append(rebuildGroupIDs, gid)
 placeholder
-	return s.rebuildByGroupIDs(ctx, rebuildGroupIDs, "account_bulk_change")
+	return s.rebuildByGroupIDs(ctx, rebuildGroupIDs, "account_bulk_change", seen)
 placeholder
 
-func (s *SchedulerSnapshotService) handleAccountEvent(ctx context.Context, accountID *int64, payload map[string]any) error {
+func (s *SchedulerSnapshotService) handleAccountEvent(ctx context.Context, accountID *int64, payload map[string]any, seen map[batchSeenKey]struct{placeholder) error {
 	if accountID == nil || *accountID <= 0 {
 		return nil
 placeholder
@@ -408,7 +429,7 @@ placeholder
 					return err
 			placeholder
 		placeholder
-			return s.rebuildByGroupIDs(ctx, groupIDs, "account_miss")
+			return s.rebuildByGroupIDs(ctx, groupIDs, "account_miss", seen)
 	placeholder
 		return err
 placeholder
@@ -420,18 +441,18 @@ placeholder
 	if len(groupIDs) == 0 {
 		groupIDs = account.GroupIDs
 placeholder
-	return s.rebuildByAccount(ctx, account, groupIDs, "account_change")
+	return s.rebuildByAccount(ctx, account, groupIDs, "account_change", seen)
 placeholder
 
-func (s *SchedulerSnapshotService) handleGroupEvent(ctx context.Context, groupID *int64) error {
+func (s *SchedulerSnapshotService) handleGroupEvent(ctx context.Context, groupID *int64, seen map[batchSeenKey]struct{placeholder) error {
 	if groupID == nil || *groupID <= 0 {
 		return nil
 placeholder
 	groupIDs := []int64{*groupIDplaceholder
-	return s.rebuildByGroupIDs(ctx, groupIDs, "group_change")
+	return s.rebuildByGroupIDs(ctx, groupIDs, "group_change", seen)
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildByAccount(ctx context.Context, account *Account, groupIDs []int64, reason string) error {
+func (s *SchedulerSnapshotService) rebuildByAccount(ctx context.Context, account *Account, groupIDs []int64, reason string, seen map[batchSeenKey]struct{placeholder) error {
 	if account == nil {
 		return nil
 placeholder
@@ -441,21 +462,21 @@ placeholder
 placeholder
 
 	var firstErr error
-	if err := s.rebuildBucketsForPlatform(ctx, account.Platform, groupIDs, reason); err != nil && firstErr == nil {
+	if err := s.rebuildBucketsForPlatform(ctx, account.Platform, groupIDs, reason, seen); err != nil && firstErr == nil {
 		firstErr = err
 placeholder
 	if account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled() {
-		if err := s.rebuildBucketsForPlatform(ctx, PlatformAnthropic, groupIDs, reason); err != nil && firstErr == nil {
+		if err := s.rebuildBucketsForPlatform(ctx, PlatformAnthropic, groupIDs, reason, seen); err != nil && firstErr == nil {
 			firstErr = err
 	placeholder
-		if err := s.rebuildBucketsForPlatform(ctx, PlatformGemini, groupIDs, reason); err != nil && firstErr == nil {
+		if err := s.rebuildBucketsForPlatform(ctx, PlatformGemini, groupIDs, reason, seen); err != nil && firstErr == nil {
 			firstErr = err
 	placeholder
 placeholder
 	return firstErr
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildByGroupIDs(ctx context.Context, groupIDs []int64, reason string) error {
+func (s *SchedulerSnapshotService) rebuildByGroupIDs(ctx context.Context, groupIDs []int64, reason string, seen map[batchSeenKey]struct{placeholder) error {
 	groupIDs = s.normalizeGroupIDs(groupIDs)
 	if len(groupIDs) == 0 {
 		return nil
@@ -463,19 +484,30 @@ placeholder
 	platforms := []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravityplaceholder
 	var firstErr error
 	for _, platform := range platforms {
-		if err := s.rebuildBucketsForPlatform(ctx, platform, groupIDs, reason); err != nil && firstErr == nil {
+		if err := s.rebuildBucketsForPlatform(ctx, platform, groupIDs, reason, seen); err != nil && firstErr == nil {
 			firstErr = err
 	placeholder
 placeholder
 	return firstErr
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildBucketsForPlatform(ctx context.Context, platform string, groupIDs []int64, reason string) error {
+func (s *SchedulerSnapshotService) rebuildBucketsForPlatform(ctx context.Context, platform string, groupIDs []int64, reason string, seen map[batchSeenKey]struct{placeholder) error {
 	if platform == "" {
 		return nil
 placeholder
 	var firstErr error
 	for _, gid := range groupIDs {
+		// Within a single poll batch, skip (groupID, platform) pairs that were
+		// already rebuilt. The first rebuild loads fresh DB data for all accounts
+		// in the group, so subsequent rebuilds for the same group+platform within
+		// the same batch are redundant.
+		if seen != nil {
+			key := batchSeenKey{gid, platformplaceholder
+			if _, exists := seen[key]; exists {
+				continue
+		placeholder
+			seen[key] = struct{placeholder{placeholder
+	placeholder
 		if err := s.rebuildBucket(ctx, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeSingleplaceholder, reason); err != nil && firstErr == nil {
 			firstErr = err
 	placeholder
