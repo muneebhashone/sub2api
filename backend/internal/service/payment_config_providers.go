@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -290,19 +291,29 @@ placeholder
 	return existing, nil
 placeholder
 
-func (s *PaymentConfigService) decryptConfig(encrypted string) (map[string]string, error) {
-	if encrypted == "" {
+// decryptConfig parses a stored provider config.
+// New records are plaintext JSON; legacy records are AES-256-GCM ciphertext
+// ("iv:authTag:ciphertext"). Values that cannot be parsed as either — including
+// legacy ciphertext with no/invalid TOTP_ENCRYPTION_KEY — are treated as empty,
+// letting the admin re-enter the config via the UI to complete the migration.
+func (s *PaymentConfigService) decryptConfig(stored string) (map[string]string, error) {
+	if stored == "" {
 		return nil, nil
 placeholder
-	decrypted, err := payment.Decrypt(encrypted, s.encryptionKey)
-	if err != nil {
-		return nil, fmt.Errorf("decrypt config: %w", err)
+	var cfg map[string]string
+	if err := json.Unmarshal([]byte(stored), &cfg); err == nil {
+		return cfg, nil
 placeholder
-	var raw map[string]string
-	if err := json.Unmarshal([]byte(decrypted), &raw); err != nil {
-		return nil, fmt.Errorf("unmarshal decrypted config: %w", err)
+	if len(s.encryptionKey) == payment.AES256KeySize {
+		if plaintext, err := payment.Decrypt(stored, s.encryptionKey); err == nil {
+			if err := json.Unmarshal([]byte(plaintext), &cfg); err == nil {
+				return cfg, nil
+		placeholder
+	placeholder
 placeholder
-	return raw, nil
+	slog.Warn("payment provider config unreadable, treating as empty for re-entry",
+		"stored_len", len(stored))
+	return nil, nil
 placeholder
 
 func (s *PaymentConfigService) DeleteProviderInstance(ctx context.Context, id int64) error {
@@ -317,14 +328,13 @@ placeholder
 	return s.entClient.PaymentProviderInstance.DeleteOneID(id).Exec(ctx)
 placeholder
 
+// encryptConfig serialises a provider config for storage.
+// New records are written as plaintext JSON; the historical AES-GCM wrapping
+// has been dropped but decryptConfig still accepts old ciphertext during migration.
 func (s *PaymentConfigService) encryptConfig(cfg map[string]string) (string, error) {
 	data, err := json.Marshal(cfg)
 	if err != nil {
 		return "", fmt.Errorf("marshal config: %w", err)
 placeholder
-	enc, err := payment.Encrypt(string(data), s.encryptionKey)
-	if err != nil {
-		return "", fmt.Errorf("encrypt config: %w", err)
-placeholder
-	return enc, nil
+	return string(data), nil
 placeholder
