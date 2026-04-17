@@ -84,6 +84,12 @@ placeholder,
 		CreatedAt:   "2026-02-06T00:00:00Z",
 placeholder,
 	{
+		ID:          "claude-opus-4-7",
+		Type:        "model",
+		DisplayName: "Claude Opus 4.7",
+		CreatedAt:   "2026-04-17T00:00:00Z",
+placeholder,
+	{
 		ID:          "claude-sonnet-4-6",
 		Type:        "model",
 		DisplayName: "Claude Sonnet 4.6",
