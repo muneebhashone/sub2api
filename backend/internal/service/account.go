@@ -121,6 +121,9 @@ placeholder
 	if a.TempUnschedulableUntil != nil && now.Before(*a.TempUnschedulableUntil) {
 		return false
 placeholder
+	if a.IsAPIKeyOrBedrock() && a.IsQuotaExceeded() {
+		return false
+placeholder
 	return true
 placeholder
 
