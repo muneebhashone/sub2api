@@ -198,6 +198,18 @@ const routes: RouteRecordRaw[] = [
     placeholder
   placeholder,
   {
+    path: '/available-channels',
+    name: 'UserAvailableChannels',
+    component: () => import('@/views/user/AvailableChannelsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Available Channels',
+      titleKey: 'availableChannels.title',
+      descriptionKey: 'availableChannels.description'
+    placeholder
+  placeholder,
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/user/ProfileView.vue'),
@@ -356,6 +368,18 @@ const routes: RouteRecordRaw[] = [
       title: 'Group Management',
       titleKey: 'admin.groups.title',
       descriptionKey: 'admin.groups.description'
+    placeholder
+  placeholder,
+  {
+    path: '/admin/available-channels',
+    name: 'AdminAvailableChannels',
+    component: () => import('@/views/admin/AvailableChannelsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Available Channels',
+      titleKey: 'admin.availableChannels.title',
+      descriptionKey: 'admin.availableChannels.description'
     placeholder
   placeholder,
   {

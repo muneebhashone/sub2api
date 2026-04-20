@@ -189,11 +189,11 @@ placeholder
 // ---------------------------------------------------------------------------
 
 func newTestChannelService(repo *mockChannelRepository) *ChannelService {
-	return NewChannelService(repo, nil)
+	return NewChannelService(repo, nil, nil)
 placeholder
 
 func newTestChannelServiceWithAuth(repo *mockChannelRepository, auth *mockChannelAuthCacheInvalidator) *ChannelService {
-	return NewChannelService(repo, auth)
+	return NewChannelService(repo, nil, auth)
 placeholder
 
 // makeStandardRepo returns a repo that serves one active channel with anthropic pricing
