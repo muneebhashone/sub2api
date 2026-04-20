@@ -16,6 +16,15 @@
       placeholder="Password"
       :disabled="isSubmitting"
     />
+    <div v-if="turnstileEnabled && turnstileSiteKey" class="space-y-2">
+      <TurnstileWidget
+        ref="turnstileRef"
+        :site-key="turnstileSiteKey"
+        @verify="onTurnstileVerify"
+        @expire="onTurnstileExpire"
+        @error="onTurnstileError"
+      />
+    </div>
     <div class="flex gap-3">
       <input
         v-model="verifyCode"
@@ -31,7 +40,7 @@
         :data-testid="`${testIdPrefixplaceholder-create-account-send-code`"
         type="button"
         class="btn btn-secondary shrink-0"
-        :disabled="isSubmitting || isSendingCode || countdown > 0 || !email.trim()"
+        :disabled="isSubmitting || isSendingCode || countdown > 0 || !email.trim() || (turnstileEnabled && !turnstileToken)"
         @click="handleSendCode"
       >
         {{
@@ -80,9 +89,10 @@
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, ref, watch placeholder from 'vue'
+import { onMounted, onUnmounted, ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import { sendVerifyCode placeholder from '@/api/auth'
+import TurnstileWidget from '@/components/TurnstileWidget.vue'
+import { getPublicSettings, sendVerifyCode placeholder from '@/api/auth'
 
 export type PendingOAuthCreateAccountPayload = {
   email: string
@@ -111,6 +121,10 @@ const isSendingCode = ref(false)
 const sendCodeError = ref('')
 const sendCodeSuccess = ref(false)
 const countdown = ref(0)
+const turnstileEnabled = ref(false)
+const turnstileSiteKey = ref('')
+const turnstileToken = ref('')
+const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
@@ -153,9 +167,34 @@ function getRequestErrorMessage(error: unknown, fallback: string): string {
   return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
 placeholder
 
+function resetTurnstile() {
+  turnstileToken.value = ''
+  turnstileRef.value?.reset()
+placeholder
+
+function onTurnstileVerify(token: string) {
+  turnstileToken.value = token
+  sendCodeError.value = ''
+placeholder
+
+function onTurnstileExpire() {
+  turnstileToken.value = ''
+  sendCodeError.value = t('auth.turnstileExpired')
+placeholder
+
+function onTurnstileError() {
+  turnstileToken.value = ''
+  sendCodeError.value = t('auth.turnstileFailed')
+placeholder
+
 async function handleSendCode() {
   const trimmedEmail = email.value.trim()
   if (!trimmedEmail) {
+    return
+  placeholder
+
+  if (turnstileEnabled.value && !turnstileToken.value) {
+    sendCodeError.value = t('auth.completeVerification')
     return
   placeholder
 
@@ -165,10 +204,14 @@ async function handleSendCode() {
 
   try {
     const response = await sendVerifyCode({
-      email: trimmedEmail
+      email: trimmedEmail,
+      turnstile_token: turnstileEnabled.value ? turnstileToken.value : undefined
     placeholder)
     sendCodeSuccess.value = true
     startCountdown(response.countdown)
+    if (turnstileEnabled.value) {
+      resetTurnstile()
+    placeholder
   placeholder catch (error: unknown) {
     sendCodeError.value = getRequestErrorMessage(error, t('auth.sendCodeFailed'))
   placeholder finally {
@@ -192,6 +235,17 @@ placeholder
 function emitSwitchToBind() {
   emit('switchToBind', email.value.trim())
 placeholder
+
+onMounted(async () => {
+  try {
+    const settings = await getPublicSettings()
+    turnstileEnabled.value = settings.turnstile_enabled === true
+    turnstileSiteKey.value = settings.turnstile_site_key || ''
+  placeholder catch {
+    turnstileEnabled.value = false
+    turnstileSiteKey.value = ''
+  placeholder
+placeholder)
 
 onUnmounted(() => {
   clearCountdown()

@@ -4,6 +4,7 @@ import { flushPromises, mount placeholder from '@vue/test-utils'
 import PendingOAuthCreateAccountForm from '../PendingOAuthCreateAccountForm.vue'
 
 const sendVerifyCode = vi.fn()
+const getPublicSettings = vi.fn()
 
 vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
@@ -19,13 +20,19 @@ vi.mock('@/api/auth', async () => {
   const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')
   return {
     ...actual,
-    sendVerifyCode: (...args: any[]) => sendVerifyCode(...args)
+    sendVerifyCode: (...args: any[]) => sendVerifyCode(...args),
+    getPublicSettings: (...args: any[]) => getPublicSettings(...args)
   placeholder
 placeholder)
 
 describe('PendingOAuthCreateAccountForm', () => {
   beforeEach(() => {
     sendVerifyCode.mockReset()
+    getPublicSettings.mockReset()
+    getPublicSettings.mockResolvedValue({
+      turnstile_enabled: false,
+      turnstile_site_key: ''
+    placeholder)
   placeholder)
 
   it('emits trimmed email, password, and verify code on submit', async () => {
@@ -75,6 +82,47 @@ describe('PendingOAuthCreateAccountForm', () => {
 
     expect(sendVerifyCode).toHaveBeenCalledWith({
       email: 'user@example.com'
+    placeholder)
+  placeholder)
+
+  it('requires a turnstile token before sending a verify code when turnstile is enabled', async () => {
+    getPublicSettings.mockResolvedValue({
+      turnstile_enabled: true,
+      turnstile_site_key: 'site-key'
+    placeholder)
+    sendVerifyCode.mockResolvedValue({
+      message: 'sent',
+      countdown: 60
+    placeholder)
+
+    const wrapper = mount(PendingOAuthCreateAccountForm, {
+      props: {
+        providerName: 'LinuxDo',
+        testIdPrefix: 'linuxdo',
+        initialEmail: '',
+        isSubmitting: false
+      placeholder,
+      global: {
+        stubs: {
+          TurnstileWidget: {
+            template: '<button data-testid="turnstile-verify" @click="$emit(\'verify\', \'turnstile-token\')">verify</button>'
+          placeholder
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+    await wrapper.get('[data-testid="linuxdo-create-account-email"]').setValue('  user@example.com  ')
+
+    expect(wrapper.get('[data-testid="linuxdo-create-account-send-code"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-testid="turnstile-verify"]').trigger('click')
+    await wrapper.get('[data-testid="linuxdo-create-account-send-code"]').trigger('click')
+    await flushPromises()
+
+    expect(sendVerifyCode).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      turnstile_token: 'turnstile-token'
     placeholder)
   placeholder)
 placeholder)
