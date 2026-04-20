@@ -1,93 +1,23 @@
 <template>
   <AppLayout>
-    <TablePageLayout>
-      <template #filters>
-        <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-          <div class="flex flex-1 flex-wrap items-center gap-3">
-            <div class="relative w-full sm:w-64">
-              <Icon
-                name="search"
-                size="md"
-                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-              />
-              <input
-                v-model="searchQuery"
-                type="text"
-                :placeholder="t('channelStatus.searchPlaceholder')"
-                class="input pl-10"
-              />
-            </div>
+    <MonitorHero
+      :overall-status="overallStatus"
+      :updated-at="updatedAt"
+      :interval-seconds="DEFAULT_INTERVAL_SECONDS"
+      :window="currentWindow"
+      :loading="loading"
+      @update:window="handleWindowChange"
+      @refresh="manualReload"
+    />
 
-            <Select
-              v-model="providerFilter"
-              :options="providerFilterOptions"
-              :placeholder="t('channelStatus.allProviders')"
-              class="w-44"
-            />
-          </div>
-
-          <div class="flex w-full flex-shrink-0 flex-wrap items-center justify-end gap-3 lg:w-auto">
-            <button
-              @click="reload"
-              :disabled="loading"
-              class="btn btn-secondary"
-              :title="t('common.refresh')"
-            >
-              <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
-            </button>
-          </div>
-        </div>
-      </template>
-
-      <template #table>
-        <DataTable :columns="columns" :data="filteredItems" :loading="loading">
-          <template #cell-name="{ row placeholder">
-            <button
-              @click="openDetail(row)"
-              class="font-medium text-primary-600 transition-colors hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-            >
-              {{ row.name placeholderplaceholder
-            </button>
-          </template>
-
-          <template #cell-provider="{ row placeholder">
-            <span
-              class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
-              :class="providerBadgeClass(row.provider)"
-            >
-              {{ providerLabel(row.provider) placeholderplaceholder
-            </span>
-          </template>
-
-          <template #cell-group_name="{ value placeholder">
-            <span class="text-sm text-gray-700 dark:text-gray-300">{{ value || '-' placeholderplaceholder</span>
-          </template>
-
-          <template #cell-primary_model="{ row placeholder">
-            <MonitorPrimaryModelCell :row="row" />
-          </template>
-
-          <template #cell-availability_7d="{ row placeholder">
-            <span class="text-sm text-gray-900 dark:text-gray-100">
-              {{ formatAvailability(row) placeholderplaceholder
-            </span>
-          </template>
-
-          <template #cell-latency="{ row placeholder">
-            <span class="text-sm text-gray-900 dark:text-gray-100">
-              {{ formatLatency(row.primary_latency_ms) placeholderplaceholder
-            </span>
-          </template>
-
-          <template #empty>
-            <EmptyState
-              :title="t('channelStatus.empty.title')"
-              :description="t('channelStatus.empty.description')"
-            />
-          </template>
-        </DataTable>
-      </template>
-    </TablePageLayout>
+    <MonitorCardGrid
+      :items="items"
+      :window="currentWindow"
+      :countdown-seconds="countdown"
+      :loading="loading"
+      :detail-cache="detailCache"
+      @card-click="openDetail"
+    />
 
     <MonitorDetailDialog
       :show="showDetail"
@@ -99,79 +29,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted placeholder from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { extractApiErrorMessage placeholder from '@/utils/apiError'
 import {
   list as listChannelMonitorViews,
-  type Provider,
+  status as fetchChannelMonitorDetail,
   type UserMonitorView,
+  type UserMonitorDetail,
 placeholder from '@/api/channelMonitor'
-import type { Column placeholder from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import TablePageLayout from '@/components/layout/TablePageLayout.vue'
-import DataTable from '@/components/common/DataTable.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
-import Select from '@/components/common/Select.vue'
-import Icon from '@/components/icons/Icon.vue'
+import MonitorHero, {
+  type MonitorWindow,
+  type OverallStatus,
+placeholder from '@/components/user/monitor/MonitorHero.vue'
+import MonitorCardGrid from '@/components/user/monitor/MonitorCardGrid.vue'
 import MonitorDetailDialog from '@/components/user/MonitorDetailDialog.vue'
-import MonitorPrimaryModelCell from '@/components/user/MonitorPrimaryModelCell.vue'
-import { useChannelMonitorFormat placeholder from '@/composables/useChannelMonitorFormat'
-import {
-  PROVIDER_OPENAI,
-  PROVIDER_ANTHROPIC,
-  PROVIDER_GEMINI,
-placeholder from '@/constants/channelMonitor'
+import { DEFAULT_INTERVAL_SECONDS, STATUS_OPERATIONAL placeholder from '@/constants/channelMonitor'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
-const {
-  providerLabel,
-  providerBadgeClass,
-  formatLatency,
-  formatAvailability,
-placeholder = useChannelMonitorFormat()
 
 // ── State ──
 const items = ref<UserMonitorView[]>([])
 const loading = ref(false)
-const searchQuery = ref('')
-const providerFilter = ref<Provider | ''>('')
+const updatedAt = ref<string | null>(null)
+const currentWindow = ref<MonitorWindow>('7d')
+const detailCache = reactive<Record<number, UserMonitorDetail>>({placeholder)
+const countdown = ref(DEFAULT_INTERVAL_SECONDS)
 
 const showDetail = ref(false)
 const detailTarget = ref<UserMonitorView | null>(null)
 
-// ── Options ──
-const providerFilterOptions = computed(() => [
-  { value: '', label: t('channelStatus.allProviders') placeholder,
-  { value: PROVIDER_OPENAI, label: providerLabel(PROVIDER_OPENAI) placeholder,
-  { value: PROVIDER_ANTHROPIC, label: providerLabel(PROVIDER_ANTHROPIC) placeholder,
-  { value: PROVIDER_GEMINI, label: providerLabel(PROVIDER_GEMINI) placeholder,
-])
+let countdownTimer: number | undefined
+let abortController: AbortController | null = null
 
-// ── Columns ──
-const columns = computed<Column[]>(() => [
-  { key: 'name', label: t('channelStatus.columns.name'), sortable: false placeholder,
-  { key: 'provider', label: t('channelStatus.columns.provider'), sortable: false placeholder,
-  { key: 'group_name', label: t('channelStatus.columns.groupName'), sortable: false placeholder,
-  { key: 'primary_model', label: t('channelStatus.columns.primaryModel'), sortable: false placeholder,
-  { key: 'availability_7d', label: t('channelStatus.columns.availability7d'), sortable: false placeholder,
-  { key: 'latency', label: t('channelStatus.columns.latency'), sortable: false placeholder,
-])
-
-// ── Filtered data ──
-const filteredItems = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  return items.value.filter(it => {
-    if (providerFilter.value && it.provider !== providerFilter.value) return false
-    if (!q) return true
-    return (
-      it.name.toLowerCase().includes(q) ||
-      (it.group_name || '').toLowerCase().includes(q) ||
-      it.primary_model.toLowerCase().includes(q)
-    )
-  placeholder)
+// ── Computed ──
+const overallStatus = computed<OverallStatus>(() => {
+  if (items.value.length === 0) return 'operational'
+  let hasFailure = false
+  let hasDegraded = false
+  for (const it of items.value) {
+    if (it.primary_status === 'failed' || it.primary_status === 'error') hasFailure = true
+    else if (it.primary_status !== STATUS_OPERATIONAL) hasDegraded = true
+  placeholder
+  if (hasFailure) return 'unavailable'
+  if (hasDegraded) return 'degraded'
+  return 'operational'
 placeholder)
 
 const detailTitle = computed(() => {
@@ -179,16 +84,56 @@ const detailTitle = computed(() => {
 placeholder)
 
 // ── Loaders ──
-async function reload() {
-  loading.value = true
+async function reload(silent = false) {
+  if (abortController) abortController.abort()
+  const ctrl = new AbortController()
+  abortController = ctrl
+  if (!silent) loading.value = true
   try {
-    const res = await listChannelMonitorViews()
+    const res = await listChannelMonitorViews({ signal: ctrl.signal placeholder)
+    if (ctrl.signal.aborted || abortController !== ctrl) return
     items.value = res.items || []
+    updatedAt.value = new Date().toISOString()
   placeholder catch (err: unknown) {
+    const e = err as { name?: string; code?: string placeholder
+    if (e?.name === 'AbortError' || e?.code === 'ERR_CANCELED') return
     appStore.showError(extractApiErrorMessage(err, t('channelStatus.loadError')))
   placeholder finally {
-    loading.value = false
+    if (abortController === ctrl) {
+      if (!silent) loading.value = false
+      countdown.value = DEFAULT_INTERVAL_SECONDS
+      abortController = null
+    placeholder
   placeholder
+placeholder
+
+async function manualReload() {
+  await reload(false)
+  // After base reload, refresh any cached detail records so non-7d availability
+  // values stay in sync without forcing the user to switch tabs again.
+  if (currentWindow.value !== '7d') {
+    await Promise.all(items.value.map(it => loadDetail(it.id, true)))
+  placeholder
+placeholder
+
+async function loadDetail(id: number, force = false) {
+  if (!force && detailCache[id]) return
+  try {
+    detailCache[id] = await fetchChannelMonitorDetail(id)
+  placeholder catch (err: unknown) {
+    appStore.showError(extractApiErrorMessage(err, t('channelStatus.detailLoadError')))
+  placeholder
+placeholder
+
+async function ensureDetailsForWindow() {
+  if (currentWindow.value === '7d') return
+  await Promise.all(items.value.map(it => loadDetail(it.id)))
+placeholder
+
+// ── Handlers ──
+async function handleWindowChange(value: MonitorWindow) {
+  currentWindow.value = value
+  await ensureDetailsForWindow()
 placeholder
 
 function openDetail(row: UserMonitorView) {
@@ -201,8 +146,28 @@ function closeDetail() {
   detailTarget.value = null
 placeholder
 
+// ── Polling ──
+function tick() {
+  if (countdown.value <= 1) {
+    void reload(true)
+    return
+  placeholder
+  countdown.value -= 1
+placeholder
+
+watch(items, () => {
+  // Lazily load detail entries when window requires it and the list refreshes.
+  void ensureDetailsForWindow()
+placeholder)
+
 // ── Lifecycle ──
 onMounted(() => {
-  reload()
+  void reload(false)
+  countdownTimer = setInterval(tick, 1000) as unknown as number
+placeholder)
+
+onBeforeUnmount(() => {
+  if (countdownTimer !== undefined) clearInterval(countdownTimer)
+  if (abortController) abortController.abort()
 placeholder)
 </script>
