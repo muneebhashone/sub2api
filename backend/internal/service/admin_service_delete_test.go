@@ -13,15 +13,18 @@ import (
 )
 
 type userRepoStub struct {
-	user       *User
-	getErr     error
-	createErr  error
-	deleteErr  error
-	exists     bool
-	existsErr  error
-	nextID     int64
-	created    []*User
-	deletedIDs []int64
+	user          *User
+	getErr        error
+	createErr     error
+	deleteErr     error
+	exists        bool
+	existsErr     error
+	nextID        int64
+	created       []*User
+	updated       []*User
+	deletedIDs    []int64
+	usersByEmail  map[string]*User
+	getByEmailErr error
 placeholder
 
 func (s *userRepoStub) Create(ctx context.Context, user *User) error {
@@ -32,6 +35,11 @@ placeholder
 		user.ID = s.nextID
 placeholder
 	s.created = append(s.created, user)
+	if s.usersByEmail == nil {
+		s.usersByEmail = make(map[string]*User)
+placeholder
+	s.usersByEmail[user.Email] = user
+	s.user = user
 	return nil
 placeholder
 
@@ -46,7 +54,18 @@ placeholder
 placeholder
 
 func (s *userRepoStub) GetByEmail(ctx context.Context, email string) (*User, error) {
-	panic("unexpected GetByEmail call")
+	if s.getByEmailErr != nil {
+		return nil, s.getByEmailErr
+placeholder
+	if s.usersByEmail != nil {
+		if user, ok := s.usersByEmail[email]; ok {
+			return user, nil
+	placeholder
+placeholder
+	if s.user != nil && s.user.Email == email {
+		return s.user, nil
+placeholder
+	return nil, ErrUserNotFound
 placeholder
 
 func (s *userRepoStub) GetFirstAdmin(ctx context.Context) (*User, error) {
@@ -54,7 +73,13 @@ func (s *userRepoStub) GetFirstAdmin(ctx context.Context) (*User, error) {
 placeholder
 
 func (s *userRepoStub) Update(ctx context.Context, user *User) error {
-	panic("unexpected Update call")
+	s.updated = append(s.updated, user)
+	if s.usersByEmail == nil {
+		s.usersByEmail = make(map[string]*User)
+placeholder
+	s.usersByEmail[user.Email] = user
+	s.user = user
+	return nil
 placeholder
 
 func (s *userRepoStub) Delete(ctx context.Context, id int64) error {
@@ -111,6 +136,10 @@ placeholder
 
 func (s *userRepoStub) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
 	panic("unexpected AddGroupToAllowedGroups call")
+placeholder
+
+func (s *userRepoStub) ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
+	panic("unexpected ListUserAuthIdentities call")
 placeholder
 
 func (s *userRepoStub) UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error {
