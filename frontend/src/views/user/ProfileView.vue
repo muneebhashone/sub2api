@@ -67,7 +67,6 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import { authAPI placeholder from '@/api'
 import { Icon placeholder from '@/components/icons'
 import StatCard from '@/components/common/StatCard.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -76,10 +75,12 @@ import ProfileEditForm from '@/components/user/profile/ProfileEditForm.vue'
 import ProfileInfoCard from '@/components/user/profile/ProfileInfoCard.vue'
 import ProfilePasswordForm from '@/components/user/profile/ProfilePasswordForm.vue'
 import ProfileTotpCard from '@/components/user/profile/ProfileTotpCard.vue'
+import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
 import { formatDate placeholder from '@/utils/format'
 
 const { t placeholder = useI18n()
+const appStore = useAppStore()
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 
@@ -121,8 +122,11 @@ onMounted(async () => {
     console.error('Failed to refresh profile:', error)
   placeholder)
 
-  const settingsLoad = authAPI.getPublicSettings()
+  const settingsLoad = appStore.fetchPublicSettings()
     .then((settings) => {
+      if (!settings) {
+        return
+      placeholder
       contactInfo.value = settings.contact_info || ''
       balanceLowNotifyEnabled.value = settings.balance_low_notify_enabled ?? false
       systemDefaultThreshold.value = settings.balance_low_notify_threshold ?? 0

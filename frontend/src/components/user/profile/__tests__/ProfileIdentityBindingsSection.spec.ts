@@ -1,6 +1,8 @@
 import { mount placeholder from '@vue/test-utils'
+import { createPinia, setActivePinia placeholder from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi placeholder from 'vitest'
 import ProfileIdentityBindingsSection from '@/components/user/profile/ProfileIdentityBindingsSection.vue'
+import { useAppStore placeholder from '@/stores'
 import type { User placeholder from '@/types'
 
 const routeState = vi.hoisted(() => ({
@@ -10,6 +12,8 @@ placeholder))
 const locationState = vi.hoisted(() => ({
   current: { href: 'http://localhost/profile' placeholder as { href: string placeholder,
 placeholder))
+
+let pinia: ReturnType<typeof createPinia>
 
 vi.mock('vue-router', () => ({
   useRoute: () => routeState,
@@ -57,6 +61,8 @@ placeholder
 
 describe('ProfileIdentityBindingsSection', () => {
   beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
     routeState.fullPath = '/profile'
     locationState.current = { href: 'http://localhost/profile' placeholder
     Object.defineProperty(window, 'location', {
@@ -67,6 +73,9 @@ describe('ProfileIdentityBindingsSection', () => {
       configurable: true,
       value: 'Mozilla/5.0',
     placeholder)
+    const appStore = useAppStore()
+    appStore.cachedPublicSettings = null
+    appStore.publicSettingsLoaded = false
   placeholder)
 
   afterEach(() => {
@@ -75,6 +84,9 @@ describe('ProfileIdentityBindingsSection', () => {
 
   it('renders provider binding states and provider-specific bind actions', () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
       props: {
         user: createUser({
           auth_bindings: {
@@ -102,11 +114,16 @@ describe('ProfileIdentityBindingsSection', () => {
 
   it('starts the WeChat bind flow for the current profile page', async () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
       props: {
         user: createUser(),
         linuxdoEnabled: false,
         oidcEnabled: false,
         wechatEnabled: true,
+        wechatOpenEnabled: true,
+        wechatMpEnabled: false,
       placeholder,
     placeholder)
 
@@ -116,5 +133,23 @@ describe('ProfileIdentityBindingsSection', () => {
     expect(locationState.current.href).toContain('mode=open')
     expect(locationState.current.href).toContain('intent=bind_current_user')
     expect(locationState.current.href).toContain('redirect=%2Fprofile')
+  placeholder)
+
+  it('hides the WeChat bind action outside the WeChat browser when only mp mode is configured', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser(),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: true,
+        wechatOpenEnabled: false,
+        wechatMpEnabled: true,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(false)
   placeholder)
 placeholder)
