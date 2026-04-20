@@ -198,7 +198,7 @@ placeholder)
 
 	assert.Equal(t,
 		payment.TypeEasyPay,
-		expectedNotificationProviderKey(registry, payment.TypeAlipay, payment.TypeEasyPay),
+		expectedNotificationProviderKey(registry, payment.TypeAlipay, "", payment.TypeEasyPay),
 	)
 placeholder
 
@@ -213,7 +213,7 @@ placeholder)
 
 	assert.Equal(t,
 		payment.TypeEasyPay,
-		expectedNotificationProviderKey(registry, payment.TypeAlipay, ""),
+		expectedNotificationProviderKey(registry, payment.TypeAlipay, "", ""),
 	)
 placeholder
 
@@ -222,6 +222,21 @@ func TestExpectedNotificationProviderKeyFallsBackToPaymentType(t *testing.T) {
 
 	assert.Equal(t,
 		payment.TypeWxpay,
-		expectedNotificationProviderKey(nil, payment.TypeWxpay, ""),
+		expectedNotificationProviderKey(nil, payment.TypeWxpay, "", ""),
+	)
+placeholder
+
+func TestExpectedNotificationProviderKeyPrefersOrderSnapshotProviderKey(t *testing.T) {
+	t.Parallel()
+
+	registry := payment.NewRegistry()
+	registry.Register(paymentFulfillmentTestProvider{
+		key:            payment.TypeAlipay,
+		supportedTypes: []payment.PaymentType{payment.TypeAlipayplaceholder,
+placeholder)
+
+	assert.Equal(t,
+		payment.TypeEasyPay,
+		expectedNotificationProviderKey(registry, payment.TypeAlipay, payment.TypeEasyPay, ""),
 	)
 placeholder

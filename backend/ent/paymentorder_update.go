@@ -385,6 +385,26 @@ func (_u *PaymentOrderUpdate) ClearProviderInstanceID() *PaymentOrderUpdate {
 	return _u
 placeholder
 
+// SetProviderKey sets the "provider_key" field.
+func (_u *PaymentOrderUpdate) SetProviderKey(v string) *PaymentOrderUpdate {
+	_u.mutation.SetProviderKey(v)
+	return _u
+placeholder
+
+// SetNillableProviderKey sets the "provider_key" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProviderKey(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetProviderKey(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (_u *PaymentOrderUpdate) ClearProviderKey() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderKey()
+	return _u
+placeholder
+
 // SetStatus sets the "status" field.
 func (_u *PaymentOrderUpdate) SetStatus(v string) *PaymentOrderUpdate {
 	_u.mutation.SetStatus(v)
@@ -776,6 +796,11 @@ placeholder
 			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.ProviderKey(); ok {
+		if err := paymentorder.ProviderKeyValidator(v); err != nil {
+			return &ValidationError{Name: "provider_key", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_key": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)placeholder
@@ -909,6 +934,12 @@ placeholder
 placeholder
 	if _u.mutation.ProviderInstanceIDCleared() {
 		_spec.ClearField(paymentorder.FieldProviderInstanceID, field.TypeString)
+placeholder
+	if value, ok := _u.mutation.ProviderKey(); ok {
+		_spec.SetField(paymentorder.FieldProviderKey, field.TypeString, value)
+placeholder
+	if _u.mutation.ProviderKeyCleared() {
+		_spec.ClearField(paymentorder.FieldProviderKey, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeString, value)
@@ -1399,6 +1430,26 @@ func (_u *PaymentOrderUpdateOne) ClearProviderInstanceID() *PaymentOrderUpdateOn
 	return _u
 placeholder
 
+// SetProviderKey sets the "provider_key" field.
+func (_u *PaymentOrderUpdateOne) SetProviderKey(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetProviderKey(v)
+	return _u
+placeholder
+
+// SetNillableProviderKey sets the "provider_key" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProviderKey(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetProviderKey(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (_u *PaymentOrderUpdateOne) ClearProviderKey() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderKey()
+	return _u
+placeholder
+
 // SetStatus sets the "status" field.
 func (_u *PaymentOrderUpdateOne) SetStatus(v string) *PaymentOrderUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -1803,6 +1854,11 @@ placeholder
 			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.ProviderKey(); ok {
+		if err := paymentorder.ProviderKeyValidator(v); err != nil {
+			return &ValidationError{Name: "provider_key", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_key": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)placeholder
@@ -1953,6 +2009,12 @@ placeholder
 placeholder
 	if _u.mutation.ProviderInstanceIDCleared() {
 		_spec.ClearField(paymentorder.FieldProviderInstanceID, field.TypeString)
+placeholder
+	if value, ok := _u.mutation.ProviderKey(); ok {
+		_spec.SetField(paymentorder.FieldProviderKey, field.TypeString, value)
+placeholder
+	if _u.mutation.ProviderKeyCleared() {
+		_spec.ClearField(paymentorder.FieldProviderKey, field.TypeString)
 placeholder
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeString, value)

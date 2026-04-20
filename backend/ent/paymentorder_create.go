@@ -225,6 +225,20 @@ placeholder
 	return _c
 placeholder
 
+// SetProviderKey sets the "provider_key" field.
+func (_c *PaymentOrderCreate) SetProviderKey(v string) *PaymentOrderCreate {
+	_c.mutation.SetProviderKey(v)
+	return _c
+placeholder
+
+// SetNillableProviderKey sets the "provider_key" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableProviderKey(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetProviderKey(*v)
+placeholder
+	return _c
+placeholder
+
 // SetStatus sets the "status" field.
 func (_c *PaymentOrderCreate) SetStatus(v string) *PaymentOrderCreate {
 	_c.mutation.SetStatus(v)
@@ -602,6 +616,11 @@ placeholder
 			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _c.mutation.ProviderKey(); ok {
+		if err := paymentorder.ProviderKeyValidator(v); err != nil {
+			return &ValidationError{Name: "provider_key", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_key": %w`, err)placeholder
+	placeholder
+placeholder
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "PaymentOrder.status"`)placeholder
 placeholder
@@ -747,6 +766,10 @@ placeholder
 	if value, ok := _c.mutation.ProviderInstanceID(); ok {
 		_spec.SetField(paymentorder.FieldProviderInstanceID, field.TypeString, value)
 		_node.ProviderInstanceID = &value
+placeholder
+	if value, ok := _c.mutation.ProviderKey(); ok {
+		_spec.SetField(paymentorder.FieldProviderKey, field.TypeString, value)
+		_node.ProviderKey = &value
 placeholder
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeString, value)
@@ -1198,6 +1221,24 @@ placeholder
 // ClearProviderInstanceID clears the value of the "provider_instance_id" field.
 func (u *PaymentOrderUpsert) ClearProviderInstanceID() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldProviderInstanceID)
+	return u
+placeholder
+
+// SetProviderKey sets the "provider_key" field.
+func (u *PaymentOrderUpsert) SetProviderKey(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldProviderKey, v)
+	return u
+placeholder
+
+// UpdateProviderKey sets the "provider_key" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateProviderKey() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldProviderKey)
+	return u
+placeholder
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (u *PaymentOrderUpsert) ClearProviderKey() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldProviderKey)
 	return u
 placeholder
 
@@ -1877,6 +1918,27 @@ placeholder
 func (u *PaymentOrderUpsertOne) ClearProviderInstanceID() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearProviderInstanceID()
+placeholder)
+placeholder
+
+// SetProviderKey sets the "provider_key" field.
+func (u *PaymentOrderUpsertOne) SetProviderKey(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetProviderKey(v)
+placeholder)
+placeholder
+
+// UpdateProviderKey sets the "provider_key" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateProviderKey() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateProviderKey()
+placeholder)
+placeholder
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (u *PaymentOrderUpsertOne) ClearProviderKey() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearProviderKey()
 placeholder)
 placeholder
 
@@ -2767,6 +2829,27 @@ placeholder
 func (u *PaymentOrderUpsertBulk) ClearProviderInstanceID() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearProviderInstanceID()
+placeholder)
+placeholder
+
+// SetProviderKey sets the "provider_key" field.
+func (u *PaymentOrderUpsertBulk) SetProviderKey(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetProviderKey(v)
+placeholder)
+placeholder
+
+// UpdateProviderKey sets the "provider_key" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateProviderKey() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateProviderKey()
+placeholder)
+placeholder
+
+// ClearProviderKey clears the value of the "provider_key" field.
+func (u *PaymentOrderUpsertBulk) ClearProviderKey() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearProviderKey()
 placeholder)
 placeholder
 
