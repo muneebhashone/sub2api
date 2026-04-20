@@ -127,30 +127,34 @@ placeholder
 		redirectTo = oidcOAuthDefaultRedirectTo
 placeholder
 
+	browserSessionKey, err := generateOAuthPendingBrowserSession()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BROWSER_SESSION_GEN_FAILED", "failed to generate oauth browser session").WithCause(err))
+		return
+placeholder
+
 	secureCookie := isRequestHTTPS(c)
 	oidcSetCookie(c, oidcOAuthStateCookieName, encodeCookieValue(state), oidcOAuthCookieMaxAgeSec, secureCookie)
 	oidcSetCookie(c, oidcOAuthRedirectCookie, encodeCookieValue(redirectTo), oidcOAuthCookieMaxAgeSec, secureCookie)
+	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
+	clearOAuthPendingSessionCookie(c, secureCookie)
 
 	codeChallenge := ""
-	if cfg.UsePKCE {
-		verifier, genErr := oauth.GenerateCodeVerifier()
-		if genErr != nil {
-			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(genErr))
-			return
-	placeholder
-		codeChallenge = oauth.GenerateCodeChallenge(verifier)
-		oidcSetCookie(c, oidcOAuthVerifierCookie, encodeCookieValue(verifier), oidcOAuthCookieMaxAgeSec, secureCookie)
+	verifier, genErr := oauth.GenerateCodeVerifier()
+	if genErr != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(genErr))
+		return
 placeholder
+	codeChallenge = oauth.GenerateCodeChallenge(verifier)
+	oidcSetCookie(c, oidcOAuthVerifierCookie, encodeCookieValue(verifier), oidcOAuthCookieMaxAgeSec, secureCookie)
 
 	nonce := ""
-	if cfg.ValidateIDToken {
-		nonce, err = oauth.GenerateState()
-		if err != nil {
-			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_NONCE_GEN_FAILED", "failed to generate oauth nonce").WithCause(err))
-			return
-	placeholder
-		oidcSetCookie(c, oidcOAuthNonceCookie, encodeCookieValue(nonce), oidcOAuthCookieMaxAgeSec, secureCookie)
+	nonce, err = oauth.GenerateState()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_NONCE_GEN_FAILED", "failed to generate oauth nonce").WithCause(err))
+		return
 placeholder
+	oidcSetCookie(c, oidcOAuthNonceCookie, encodeCookieValue(nonce), oidcOAuthCookieMaxAgeSec, secureCookie)
 
 	redirectURI := strings.TrimSpace(cfg.RedirectURL)
 	if redirectURI == "" {
@@ -212,23 +216,24 @@ placeholder
 	if redirectTo == "" {
 		redirectTo = oidcOAuthDefaultRedirectTo
 placeholder
+	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
+	if strings.TrimSpace(browserSessionKey) == "" {
+		redirectOAuthError(c, frontendCallback, "missing_browser_session", "missing oauth browser session", "")
+		return
+placeholder
 
 	codeVerifier := ""
-	if cfg.UsePKCE {
-		codeVerifier, _ = readCookieDecoded(c, oidcOAuthVerifierCookie)
-		if codeVerifier == "" {
-			redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
-			return
-	placeholder
+	codeVerifier, _ = readCookieDecoded(c, oidcOAuthVerifierCookie)
+	if codeVerifier == "" {
+		redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
+		return
 placeholder
 
 	expectedNonce := ""
-	if cfg.ValidateIDToken {
-		expectedNonce, _ = readCookieDecoded(c, oidcOAuthNonceCookie)
-		if expectedNonce == "" {
-			redirectOAuthError(c, frontendCallback, "missing_nonce", "missing oauth nonce", "")
-			return
-	placeholder
+	expectedNonce, _ = readCookieDecoded(c, oidcOAuthNonceCookie)
+	if expectedNonce == "" {
+		redirectOAuthError(c, frontendCallback, "missing_nonce", "missing oauth nonce", "")
+		return
 placeholder
 
 	redirectURI := strings.TrimSpace(cfg.RedirectURL)
@@ -258,7 +263,7 @@ placeholder
 		return
 placeholder
 
-	if cfg.ValidateIDToken && strings.TrimSpace(tokenResp.IDToken) == "" {
+	if strings.TrimSpace(tokenResp.IDToken) == "" {
 		redirectOAuthError(c, frontendCallback, "missing_id_token", "missing id_token", "")
 		return
 placeholder
@@ -304,9 +309,13 @@ placeholder
 			return
 	placeholder
 placeholder
+	if userInfoClaims.Subject != "" && idClaims.Subject != "" && strings.TrimSpace(userInfoClaims.Subject) != strings.TrimSpace(idClaims.Subject) {
+		redirectOAuthError(c, frontendCallback, "subject_mismatch", "userinfo subject does not match id_token", "")
+		return
+placeholder
 
 	identityKey := oidcIdentityKey(issuer, subject)
-	email := oidcSelectLoginEmail(userInfoClaims.Email, idClaims.Email, identityKey)
+	email := oidcSyntheticEmailFromIdentityKey(identityKey)
 	username := firstNonEmpty(
 		userInfoClaims.Username,
 		idClaims.PreferredUsername,
@@ -318,34 +327,73 @@ placeholder
 	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
 	if err != nil {
 		if errors.Is(err, service.ErrOAuthInvitationRequired) {
-			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
-			if tokenErr != nil {
-				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")
+			if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+				Intent: "login",
+				Identity: service.PendingAuthIdentityKey{
+					ProviderType:    "oidc",
+					ProviderKey:     issuer,
+					ProviderSubject: subject,
+			placeholder,
+				ResolvedEmail:     email,
+				RedirectTo:        redirectTo,
+				BrowserSessionKey: browserSessionKey,
+				UpstreamIdentityClaims: map[string]any{
+					"email":             email,
+					"username":          username,
+					"subject":           subject,
+					"issuer":            issuer,
+					"email_verified":    emailVerified != nil && *emailVerified,
+					"provider_fallback": strings.TrimSpace(cfg.ProviderName),
+			placeholder,
+				CompletionResponse: map[string]any{
+					"error":    "invitation_required",
+					"redirect": redirectTo,
+			placeholder,
+		placeholder); err != nil {
+				redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 				return
 		placeholder
-			fragment := url.Values{placeholder
-			fragment.Set("error", "invitation_required")
-			fragment.Set("pending_oauth_token", pendingToken)
-			fragment.Set("redirect", redirectTo)
-			redirectWithFragment(c, frontendCallback, fragment)
+			redirectToFrontendCallback(c, frontendCallback)
 			return
 	placeholder
 		redirectOAuthError(c, frontendCallback, "login_failed", infraerrors.Reason(err), infraerrors.Message(err))
 		return
 placeholder
 
-	fragment := url.Values{placeholder
-	fragment.Set("access_token", tokenPair.AccessToken)
-	fragment.Set("refresh_token", tokenPair.RefreshToken)
-	fragment.Set("expires_in", fmt.Sprintf("%d", tokenPair.ExpiresIn))
-	fragment.Set("token_type", "Bearer")
-	fragment.Set("redirect", redirectTo)
-	redirectWithFragment(c, frontendCallback, fragment)
+	if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+		Intent: "login",
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "oidc",
+			ProviderKey:     issuer,
+			ProviderSubject: subject,
+	placeholder,
+		ResolvedEmail:     email,
+		RedirectTo:        redirectTo,
+		BrowserSessionKey: browserSessionKey,
+		UpstreamIdentityClaims: map[string]any{
+			"email":             email,
+			"username":          username,
+			"subject":           subject,
+			"issuer":            issuer,
+			"email_verified":    emailVerified != nil && *emailVerified,
+			"provider_fallback": strings.TrimSpace(cfg.ProviderName),
+	placeholder,
+		CompletionResponse: map[string]any{
+			"access_token":  tokenPair.AccessToken,
+			"refresh_token": tokenPair.RefreshToken,
+			"expires_in":    tokenPair.ExpiresIn,
+			"token_type":    "Bearer",
+			"redirect":      redirectTo,
+	placeholder,
+placeholder); err != nil {
+		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+		return
+placeholder
+	redirectToFrontendCallback(c, frontendCallback)
 placeholder
 
 type completeOIDCOAuthRequest struct {
-	PendingOAuthToken string `json:"pending_oauth_token" binding:"required"`
-	InvitationCode    string `json:"invitation_code"     binding:"required"`
+	InvitationCode string `json:"invitation_code" binding:"required"`
 placeholder
 
 // CompleteOIDCOAuthRegistration completes a pending OAuth registration by validating
@@ -358,9 +406,38 @@ func (h *AuthHandler) CompleteOIDCOAuthRegistration(c *gin.Context) {
 		return
 placeholder
 
-	email, username, err := h.authService.VerifyPendingOAuthToken(req.PendingOAuthToken)
+	secureCookie := isRequestHTTPS(c)
+	sessionToken, err := readOAuthPendingSessionCookie(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "INVALID_TOKEN", "message": "invalid or expired registration token"placeholder)
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, service.ErrPendingAuthSessionNotFound)
+		return
+placeholder
+	browserSessionKey, err := readOAuthPendingBrowserCookie(c)
+	if err != nil {
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, service.ErrPendingAuthBrowserMismatch)
+		return
+placeholder
+	pendingSvc, err := h.pendingIdentityService()
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	session, err := pendingSvc.GetBrowserSession(c.Request.Context(), sessionToken, browserSessionKey)
+	if err != nil {
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	email := strings.TrimSpace(session.ResolvedEmail)
+	username := pendingSessionStringValue(session.UpstreamIdentityClaims, "username")
+	if email == "" || username == "" {
+		response.ErrorFrom(c, infraerrors.BadRequest("PENDING_AUTH_SESSION_INVALID", "pending auth registration context is invalid"))
 		return
 placeholder
 
@@ -369,6 +446,14 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), sessionToken, browserSessionKey); err != nil {
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	clearOAuthPendingSessionCookie(c, secureCookie)
+	clearOAuthPendingBrowserCookie(c, secureCookie)
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":  tokenPair.AccessToken,
@@ -405,9 +490,7 @@ func oidcExchangeCode(
 	form.Set("client_id", cfg.ClientID)
 	form.Set("code", code)
 	form.Set("redirect_uri", redirectURI)
-	if cfg.UsePKCE {
-		form.Set("code_verifier", codeVerifier)
-placeholder
+	form.Set("code_verifier", codeVerifier)
 
 	r := client.R().
 		SetContext(ctx).
@@ -592,13 +675,9 @@ placeholder
 		q.Set("scope", cfg.Scopes)
 placeholder
 	q.Set("state", state)
-	if strings.TrimSpace(nonce) != "" {
-		q.Set("nonce", nonce)
-placeholder
-	if cfg.UsePKCE {
-		q.Set("code_challenge", codeChallenge)
-		q.Set("code_challenge_method", "S256")
-placeholder
+	q.Set("nonce", nonce)
+	q.Set("code_challenge", codeChallenge)
+	q.Set("code_challenge_method", "S256")
 
 	u.RawQuery = q.Encode()
 	return u.String(), nil
@@ -829,14 +908,6 @@ func oidcSyntheticEmailFromIdentityKey(identityKey string) string {
 placeholder
 	sum := sha256.Sum256([]byte(identityKey))
 	return "oidc-" + hex.EncodeToString(sum[:16]) + service.OIDCConnectSyntheticEmailDomain
-placeholder
-
-func oidcSelectLoginEmail(userInfoEmail, idTokenEmail, identityKey string) string {
-	email := strings.TrimSpace(firstNonEmpty(userInfoEmail, idTokenEmail))
-	if email != "" {
-		return email
-placeholder
-	return oidcSyntheticEmailFromIdentityKey(identityKey)
 placeholder
 
 func oidcFallbackUsername(subject string) string {
