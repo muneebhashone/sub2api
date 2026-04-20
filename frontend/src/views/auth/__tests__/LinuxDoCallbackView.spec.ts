@@ -9,6 +9,7 @@ const showError = vi.fn()
 const setToken = vi.fn()
 const exchangePendingOAuthCompletion = vi.fn()
 const completeLinuxDoOAuthRegistration = vi.fn()
+const login2FA = vi.fn()
 const apiClientPost = vi.fn()
 
 vi.mock('vue-router', () => ({
@@ -51,7 +52,8 @@ vi.mock('@/api/auth', async () => {
   return {
     ...actual,
     exchangePendingOAuthCompletion: (...args: any[]) => exchangePendingOAuthCompletion(...args),
-    completeLinuxDoOAuthRegistration: (...args: any[]) => completeLinuxDoOAuthRegistration(...args)
+    completeLinuxDoOAuthRegistration: (...args: any[]) => completeLinuxDoOAuthRegistration(...args),
+    login2FA: (...args: any[]) => login2FA(...args)
   placeholder
 placeholder)
 
@@ -63,6 +65,7 @@ describe('LinuxDoCallbackView', () => {
     setToken.mockReset()
     exchangePendingOAuthCompletion.mockReset()
     completeLinuxDoOAuthRegistration.mockReset()
+    login2FA.mockReset()
     apiClientPost.mockReset()
   placeholder)
 
@@ -343,5 +346,58 @@ describe('LinuxDoCallbackView', () => {
     placeholder)
     expect(setToken).toHaveBeenCalledWith('bind-access-token')
     expect(replace).toHaveBeenCalledWith('/profile/security')
+  placeholder)
+
+  it('handles bind-login 2FA challenge before redirecting', async () => {
+    exchangePendingOAuthCompletion.mockResolvedValue({
+      error: 'bind_login_required',
+      redirect: '/profile',
+      email: 'existing@example.com',
+      adoption_required: true,
+      suggested_display_name: 'LinuxDo Nick',
+      suggested_avatar_url: 'https://cdn.example/linuxdo.png'
+    placeholder)
+    apiClientPost.mockResolvedValue({
+      data: {
+        requires_2fa: true,
+        temp_token: 'temp-123',
+        user_email_masked: 'o***g@example.com'
+      placeholder
+    placeholder)
+    login2FA.mockResolvedValue({
+      access_token: '2fa-access-token'
+    placeholder)
+    setToken.mockResolvedValue({placeholder)
+
+    const wrapper = mount(LinuxDoCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+
+    await wrapper.get('[data-testid="linuxdo-bind-login-password"]').setValue('secret-password')
+    await wrapper.get('[data-testid="linuxdo-bind-login-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('o***g@example.com')
+    expect(login2FA).not.toHaveBeenCalled()
+
+    await wrapper.get('[data-testid="linuxdo-bind-login-totp"]').setValue('123456')
+    await wrapper.get('[data-testid="linuxdo-bind-login-totp-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(login2FA).toHaveBeenCalledWith({
+      temp_token: 'temp-123',
+      totp_code: '123456'
+    placeholder)
+    expect(setToken).toHaveBeenCalledWith('2fa-access-token')
+    expect(replace).toHaveBeenCalledWith('/profile')
   placeholder)
 placeholder)
