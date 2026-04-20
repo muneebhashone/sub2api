@@ -68,6 +68,7 @@ placeholder
 	return &AdminUser{
 		User:       *base,
 		Notes:      u.Notes,
+		LastUsedAt: u.LastUsedAt,
 		GroupRates: u.GroupRates,
 placeholder
 placeholder

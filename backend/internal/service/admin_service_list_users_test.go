@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,8 @@ type userRepoStubForListUsers struct {
 	users                 []User
 	err                   error
 	listWithFiltersParams pagination.PaginationParams
+	lastUsedByUserID      map[int64]*time.Time
+	lastUsedErr           error
 placeholder
 
 func (s *userRepoStubForListUsers) ListWithFilters(_ context.Context, params pagination.PaginationParams, _ UserListFilters) ([]User, *pagination.PaginationResult, error) {
@@ -30,6 +33,26 @@ placeholder
 		Page:     params.Page,
 		PageSize: params.PageSize,
 placeholder, nil
+placeholder
+
+func (s *userRepoStubForListUsers) GetLatestUsedAtByUserIDs(_ context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	if s.lastUsedErr != nil {
+		return nil, s.lastUsedErr
+placeholder
+	result := make(map[int64]*time.Time, len(userIDs))
+	for _, userID := range userIDs {
+		if ts, ok := s.lastUsedByUserID[userID]; ok {
+			result[userID] = ts
+	placeholder
+placeholder
+	return result, nil
+placeholder
+
+func (s *userRepoStubForListUsers) GetLatestUsedAtByUserID(_ context.Context, userID int64) (*time.Time, error) {
+	if s.lastUsedErr != nil {
+		return nil, s.lastUsedErr
+placeholder
+	return s.lastUsedByUserID[userID], nil
 placeholder
 
 type userGroupRateRepoStubForListUsers struct {
@@ -129,4 +152,22 @@ placeholder
 		SortBy:    "email",
 		SortOrder: "ASC",
 placeholder, userRepo.listWithFiltersParams)
+placeholder
+
+func TestAdminService_ListUsers_PopulatesLastUsedAt(t *testing.T) {
+	lastUsed := time.Now().UTC().Add(-30 * time.Minute).Truncate(time.Second)
+	userRepo := &userRepoStubForListUsers{
+		users: []User{{ID: 101, Email: "u@example.com"placeholderplaceholder,
+		lastUsedByUserID: map[int64]*time.Time{
+			101: &lastUsed,
+	placeholder,
+placeholder
+	svc := &adminServiceImpl{userRepo: userRepoplaceholder
+
+	users, total, err := svc.ListUsers(context.Background(), 1, 20, UserListFilters{placeholder, "", "")
+placeholder
+	require.Equal(t, int64(1), total)
+	require.Len(t, users, 1)
+	require.NotNil(t, users[0].LastUsedAt)
+	require.WithinDuration(t, lastUsed, *users[0].LastUsedAt, time.Second)
 placeholder
