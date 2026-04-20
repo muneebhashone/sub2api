@@ -150,6 +150,39 @@ placeholder
 placeholder
 placeholder
 
+func TestWeChatPaymentResumeTokenRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	svc := NewPaymentResumeService([]byte("placeholder"))
+	token, err := svc.CreateWeChatPaymentResumeToken(WeChatPaymentResumeClaims{
+		OpenID:      "openid-123",
+		PaymentType: payment.TypeWxpay,
+		Amount:      "12.50",
+		OrderType:   payment.OrderTypeSubscription,
+		PlanID:      7,
+		RedirectTo:  "/purchase?from=wechat",
+		Scope:       "snsapi_base",
+		IssuedAt:    1234567890,
+placeholder)
+	if err != nil {
+		t.Fatalf("CreateWeChatPaymentResumeToken returned error: %v", err)
+placeholder
+
+	claims, err := svc.ParseWeChatPaymentResumeToken(token)
+	if err != nil {
+		t.Fatalf("ParseWeChatPaymentResumeToken returned error: %v", err)
+placeholder
+	if claims.OpenID != "openid-123" || claims.PaymentType != payment.TypeWxpay {
+		t.Fatalf("claims mismatch: %+v", claims)
+placeholder
+	if claims.Amount != "12.50" || claims.OrderType != payment.OrderTypeSubscription || claims.PlanID != 7 {
+		t.Fatalf("claims payment context mismatch: %+v", claims)
+placeholder
+	if claims.RedirectTo != "/purchase?from=wechat" || claims.Scope != "snsapi_base" {
+		t.Fatalf("claims redirect/scope mismatch: %+v", claims)
+placeholder
+placeholder
+
 func TestNormalizeVisibleMethodSource(t *testing.T) {
 	t.Parallel()
 

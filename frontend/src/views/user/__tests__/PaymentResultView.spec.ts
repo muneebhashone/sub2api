@@ -157,6 +157,25 @@ describe('PaymentResultView', () => {
     expect(wrapper.text()).toContain('payment.result.success')
   placeholder)
 
+  it('does not use public out_trade_no verification for bare order numbers without legacy return markers', async () => {
+    routeState.query = {
+      out_trade_no: 'legacy-bare',
+    placeholder
+
+    mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(verifyOrderPublic).not.toHaveBeenCalled()
+    expect(verifyOrder).not.toHaveBeenCalled()
+  placeholder)
+
   it('resolves order by resume token when local recovery snapshot is missing', async () => {
     routeState.query = {
       resume_token: 'resume-77',

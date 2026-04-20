@@ -33,3 +33,7 @@ placeholder
 
 	return order, nil
 placeholder
+
+func (s *PaymentService) ParseWeChatPaymentResumeToken(token string) (*WeChatPaymentResumeClaims, error) {
+	return s.paymentResume().ParseWeChatPaymentResumeToken(strings.TrimSpace(token))
+placeholder
