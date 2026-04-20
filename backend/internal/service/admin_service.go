@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +18,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/util/httputil"
+
+	entsql "entgo.io/ent/dialect/sql"
 )
 
 // AdminService interface defines admin management operations
@@ -33,6 +37,8 @@ type AdminService interface {
 	// codeType is optional - pass empty string to return all types.
 	// Also returns totalRecharged (sum of all positive balance top-ups).
 	GetUserBalanceHistory(ctx context.Context, userID int64, page, pageSize int, codeType string) ([]RedeemCode, int64, float64, error)
+	ListAuthIdentityMigrationReports(ctx context.Context, reportType string, page, pageSize int) ([]AuthIdentityMigrationReport, int64, error)
+	GetAuthIdentityMigrationReportSummary(ctx context.Context) (*AuthIdentityMigrationReportSummary, error)
 
 	// Group management
 	ListGroups(ctx context.Context, page, pageSize int, platform, status, search string, isExclusive *bool, sortBy, sortOrder string) ([]Group, int64, error)
@@ -125,6 +131,19 @@ type UpdateUserInput struct {
 	// GroupRates 用户专属分组倍率配置
 	// map[groupID]*rate，nil 表示删除该分组的专属倍率
 	GroupRates map[int64]*float64
+placeholder
+
+type AuthIdentityMigrationReport struct {
+	ID         int64          `json:"id"`
+	ReportType string         `json:"report_type"`
+	ReportKey  string         `json:"report_key"`
+	Details    map[string]any `json:"details"`
+	CreatedAt  time.Time      `json:"created_at"`
+placeholder
+
+type AuthIdentityMigrationReportSummary struct {
+	Total  int64            `json:"total"`
+	ByType map[string]int64 `json:"by_type"`
 placeholder
 
 type CreateGroupInput struct {
@@ -786,6 +805,122 @@ placeholder
 		return nil, 0, 0, err
 placeholder
 	return codes, result.Total, totalRecharged, nil
+placeholder
+
+func (s *adminServiceImpl) ListAuthIdentityMigrationReports(ctx context.Context, reportType string, page, pageSize int) ([]AuthIdentityMigrationReport, int64, error) {
+	db, err := s.adminSQLDB()
+	if err != nil {
+		return nil, 0, err
+placeholder
+
+	reportType = strings.TrimSpace(reportType)
+	if page <= 0 {
+		page = 1
+placeholder
+	if pageSize <= 0 {
+		pageSize = 20
+placeholder
+	offset := (page - 1) * pageSize
+
+	var total int64
+	if err := db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM auth_identity_migration_reports
+WHERE ($1 = '' OR report_type = $1)`,
+		reportType,
+	).Scan(&total); err != nil {
+		return nil, 0, err
+placeholder
+
+	rows, err := db.QueryContext(ctx, `
+SELECT id, report_type, report_key, details, created_at
+FROM auth_identity_migration_reports
+WHERE ($1 = '' OR report_type = $1)
+ORDER BY created_at DESC, id DESC
+LIMIT $2 OFFSET $3`,
+		reportType,
+		pageSize,
+		offset,
+	)
+	if err != nil {
+		return nil, 0, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	reports := make([]AuthIdentityMigrationReport, 0)
+	for rows.Next() {
+		report, scanErr := scanAuthIdentityMigrationReport(rows)
+		if scanErr != nil {
+			return nil, 0, scanErr
+	placeholder
+		reports = append(reports, report)
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+placeholder
+	return reports, total, nil
+placeholder
+
+func (s *adminServiceImpl) GetAuthIdentityMigrationReportSummary(ctx context.Context) (*AuthIdentityMigrationReportSummary, error) {
+	db, err := s.adminSQLDB()
+	if err != nil {
+		return nil, err
+placeholder
+
+	rows, err := db.QueryContext(ctx, `
+SELECT report_type, COUNT(*)
+FROM auth_identity_migration_reports
+GROUP BY report_type
+ORDER BY report_type ASC`)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	summary := &AuthIdentityMigrationReportSummary{
+		ByType: make(map[string]int64),
+placeholder
+	for rows.Next() {
+		var reportType string
+		var count int64
+		if err := rows.Scan(&reportType, &count); err != nil {
+			return nil, err
+	placeholder
+		summary.ByType[reportType] = count
+		summary.Total += count
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
+	return summary, nil
+placeholder
+
+func (s *adminServiceImpl) adminSQLDB() (*sql.DB, error) {
+	if s == nil || s.entClient == nil {
+		return nil, infraerrors.ServiceUnavailable("ADMIN_SQL_NOT_READY", "admin sql access is not ready")
+placeholder
+	driver, ok := s.entClient.Driver().(*entsql.Driver)
+	if !ok || driver.DB() == nil {
+		return nil, infraerrors.ServiceUnavailable("ADMIN_SQL_NOT_READY", "admin sql access is not ready")
+placeholder
+	return driver.DB(), nil
+placeholder
+
+func scanAuthIdentityMigrationReport(scanner interface{ Scan(dest ...any) error placeholder) (AuthIdentityMigrationReport, error) {
+	var (
+		report  AuthIdentityMigrationReport
+		details []byte
+	)
+	if err := scanner.Scan(&report.ID, &report.ReportType, &report.ReportKey, &details, &report.CreatedAt); err != nil {
+		return AuthIdentityMigrationReport{placeholder, err
+placeholder
+	report.Details = map[string]any{placeholder
+	if len(details) > 0 {
+		if err := json.Unmarshal(details, &report.Details); err != nil {
+			return AuthIdentityMigrationReport{placeholder, err
+	placeholder
+placeholder
+	return report, nil
 placeholder
 
 // Group management implementations

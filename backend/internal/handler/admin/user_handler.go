@@ -172,6 +172,31 @@ placeholder
 	response.Success(c, dto.UserFromServiceAdmin(user))
 placeholder
 
+// GetAuthIdentityMigrationReportSummary returns aggregate migration report counts.
+// GET /api/v1/admin/users/auth-identity-migration-reports/summary
+func (h *UserHandler) GetAuthIdentityMigrationReportSummary(c *gin.Context) {
+	summary, err := h.adminService.GetAuthIdentityMigrationReportSummary(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, summary)
+placeholder
+
+// ListAuthIdentityMigrationReports returns paginated auth identity migration reports.
+// GET /api/v1/admin/users/auth-identity-migration-reports
+func (h *UserHandler) ListAuthIdentityMigrationReports(c *gin.Context) {
+	page, pageSize := response.ParsePagination(c)
+	reportType := strings.TrimSpace(c.Query("report_type"))
+
+	reports, total, err := h.adminService.ListAuthIdentityMigrationReports(c.Request.Context(), reportType, page, pageSize)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Paginated(c, reports, total, page, pageSize)
+placeholder
+
 // Create handles creating a new user
 // POST /api/v1/admin/users
 func (h *UserHandler) Create(c *gin.Context) {
