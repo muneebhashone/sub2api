@@ -33,6 +33,9 @@ const (
 	VisibleMethodSourceEasyPayWechat  = "easypay_wxpay"
 
 	wechatPaymentResumeTokenType = "wechat_payment_resume"
+
+	paymentResumeNotConfiguredCode    = "PAYMENT_RESUME_NOT_CONFIGURED"
+	paymentResumeNotConfiguredMessage = "payment resume tokens require a configured signing key"
 )
 
 type ResumeTokenClaims struct {
@@ -68,6 +71,17 @@ placeholder
 
 func NewPaymentResumeService(signingKey []byte) *PaymentResumeService {
 	return &PaymentResumeService{signingKey: signingKeyplaceholder
+placeholder
+
+func (s *PaymentResumeService) isSigningConfigured() bool {
+	return s != nil && len(s.signingKey) > 0
+placeholder
+
+func (s *PaymentResumeService) ensureSigningKey() error {
+	if s.isSigningConfigured() {
+		return nil
+placeholder
+	return infraerrors.ServiceUnavailable(paymentResumeNotConfiguredCode, paymentResumeNotConfiguredMessage)
 placeholder
 
 func NormalizeVisibleMethod(method string) string {
@@ -240,6 +254,9 @@ placeholder
 placeholder
 
 func (s *PaymentResumeService) CreateToken(claims ResumeTokenClaims) (string, error) {
+	if err := s.ensureSigningKey(); err != nil {
+		return "", err
+placeholder
 	if claims.OrderID <= 0 {
 		return "", fmt.Errorf("resume token requires order id")
 placeholder
@@ -250,6 +267,9 @@ placeholder
 placeholder
 
 func (s *PaymentResumeService) ParseToken(token string) (*ResumeTokenClaims, error) {
+	if err := s.ensureSigningKey(); err != nil {
+		return nil, err
+placeholder
 	var claims ResumeTokenClaims
 	if err := s.parseSignedToken(token, &claims); err != nil {
 		return nil, infraerrors.BadRequest("INVALID_RESUME_TOKEN", "resume token payload is invalid")
@@ -261,6 +281,9 @@ placeholder
 placeholder
 
 func (s *PaymentResumeService) CreateWeChatPaymentResumeToken(claims WeChatPaymentResumeClaims) (string, error) {
+	if err := s.ensureSigningKey(); err != nil {
+		return "", err
+placeholder
 	claims.OpenID = strings.TrimSpace(claims.OpenID)
 	if claims.OpenID == "" {
 		return "", fmt.Errorf("wechat payment resume token requires openid")
@@ -282,6 +305,9 @@ placeholder
 placeholder
 
 func (s *PaymentResumeService) ParseWeChatPaymentResumeToken(token string) (*WeChatPaymentResumeClaims, error) {
+	if err := s.ensureSigningKey(); err != nil {
+		return nil, err
+placeholder
 	var claims WeChatPaymentResumeClaims
 	if err := s.parseSignedToken(token, &claims); err != nil {
 		return nil, infraerrors.BadRequest("INVALID_WECHAT_PAYMENT_RESUME_TOKEN", "wechat payment resume token payload is invalid")
@@ -330,11 +356,7 @@ placeholder
 placeholder
 
 func (s *PaymentResumeService) sign(payload string) string {
-	key := s.signingKey
-	if len(key) == 0 {
-		key = []byte(paymentResumeFallbackSigningKey)
-placeholder
-	mac := hmac.New(sha256.New, key)
+	mac := hmac.New(sha256.New, s.signingKey)
 	_, _ = mac.Write([]byte(payload))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 placeholder

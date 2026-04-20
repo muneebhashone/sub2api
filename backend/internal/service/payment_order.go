@@ -216,7 +216,11 @@ placeholder
 placeholder
 
 func (s *PaymentService) selectCreateOrderInstance(ctx context.Context, req CreateOrderRequest, cfg *PaymentConfig, payAmount float64) (*payment.InstanceSelection, error) {
-	sel, err := s.loadBalancer.SelectInstance(ctx, "", req.PaymentType, payment.Strategy(cfg.LoadBalanceStrategy), payAmount)
+	selectCtx, err := s.prepareCreateOrderSelectionContext(ctx, req)
+	if err != nil {
+		return nil, err
+placeholder
+	sel, err := s.loadBalancer.SelectInstance(selectCtx, "", req.PaymentType, payment.Strategy(cfg.LoadBalanceStrategy), payAmount)
 	if err != nil {
 		return nil, infraerrors.ServiceUnavailable("PAYMENT_GATEWAY_ERROR", fmt.Sprintf("payment method (%s) is not configured", req.PaymentType))
 placeholder
@@ -224,6 +228,44 @@ placeholder
 		return nil, infraerrors.TooManyRequests("NO_AVAILABLE_INSTANCE", "no available payment instance")
 placeholder
 	return sel, nil
+placeholder
+
+func (s *PaymentService) prepareCreateOrderSelectionContext(ctx context.Context, req CreateOrderRequest) (context.Context, error) {
+	if !requestNeedsWeChatJSAPICompatibility(req) {
+		return ctx, nil
+placeholder
+	if !s.usesOfficialWxpayVisibleMethod(ctx) {
+		return ctx, nil
+placeholder
+	expectedAppID, _, err := s.getWeChatPaymentOAuthCredential(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+	return payment.WithWxpayJSAPIAppID(ctx, expectedAppID), nil
+placeholder
+
+func requestNeedsWeChatJSAPICompatibility(req CreateOrderRequest) bool {
+	if payment.GetBasePaymentType(req.PaymentType) != payment.TypeWxpay {
+		return false
+placeholder
+	return req.IsWeChatBrowser || strings.TrimSpace(req.OpenID) != ""
+placeholder
+
+func (s *PaymentService) usesOfficialWxpayVisibleMethod(ctx context.Context) bool {
+	if s == nil || s.configService == nil || s.configService.settingRepo == nil {
+		return false
+placeholder
+	vals, err := s.configService.settingRepo.GetMultiple(ctx, []string{
+		SettingPaymentVisibleMethodWxpayEnabled,
+		SettingPaymentVisibleMethodWxpaySource,
+placeholder)
+	if err != nil {
+		return false
+placeholder
+	if vals[SettingPaymentVisibleMethodWxpayEnabled] != "true" {
+		return false
+placeholder
+	return NormalizeVisibleMethodSource(payment.TypeWxpay, vals[SettingPaymentVisibleMethodWxpaySource]) == VisibleMethodSourceOfficialWechat
 placeholder
 
 func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.PaymentOrder, req CreateOrderRequest, cfg *PaymentConfig, limitAmount float64, payAmountStr string, payAmount float64, plan *dbent.SubscriptionPlan, sel *payment.InstanceSelection) (*CreateOrderResponse, error) {
@@ -239,16 +281,18 @@ placeholder
 placeholder
 	resumeToken := ""
 	if resume := s.paymentResume(); resume != nil {
-		resumeToken, err = resume.CreateToken(ResumeTokenClaims{
-			OrderID:            order.ID,
-			UserID:             order.UserID,
-			ProviderInstanceID: sel.InstanceID,
-			ProviderKey:        sel.ProviderKey,
-			PaymentType:        req.PaymentType,
-			CanonicalReturnURL: canonicalReturnURL,
-	placeholder)
-		if err != nil {
-			return nil, fmt.Errorf("create payment resume token: %w", err)
+		if resume.isSigningConfigured() {
+			resumeToken, err = resume.CreateToken(ResumeTokenClaims{
+				OrderID:            order.ID,
+				UserID:             order.UserID,
+				ProviderInstanceID: sel.InstanceID,
+				ProviderKey:        sel.ProviderKey,
+				PaymentType:        req.PaymentType,
+				CanonicalReturnURL: canonicalReturnURL,
+		placeholder)
+			if err != nil {
+				return nil, fmt.Errorf("create payment resume token: %w", err)
+		placeholder
 	placeholder
 placeholder
 	providerReturnURL, err := buildPaymentReturnURL(canonicalReturnURL, order.ID, resumeToken)

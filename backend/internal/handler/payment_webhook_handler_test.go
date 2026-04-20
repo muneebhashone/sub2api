@@ -3,11 +3,14 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -130,4 +133,71 @@ placeholder
 			assert.Equal(t, tt.want, extractOutTradeNo(tt.rawBody, tt.providerKey))
 	placeholder)
 placeholder
+placeholder
+
+func TestVerifyNotificationWithProvidersReturnsMatchedProvider(t *testing.T) {
+	firstErr := errors.New("wrong provider")
+	providers := []payment.Provider{
+		webhookHandlerProviderStub{
+			key:       payment.TypeWxpay,
+			verifyErr: firstErr,
+	placeholder,
+		webhookHandlerProviderStub{
+			key: payment.TypeWxpay,
+			notification: &payment.PaymentNotification{
+				OrderID: "sub2_42",
+				TradeNo: "trade-42",
+				Status:  payment.NotificationStatusSuccess,
+		placeholder,
+	placeholder,
+placeholder
+
+	providerKey, notification, err := verifyNotificationWithProviders(context.Background(), providers, "{placeholder", map[string]string{"wechatpay-signature": "sig"placeholder)
+placeholder
+	require.Equal(t, payment.TypeWxpay, providerKey)
+	require.NotNil(t, notification)
+	require.Equal(t, "sub2_42", notification.OrderID)
+placeholder
+
+func TestVerifyNotificationWithProvidersFailsWhenAllProvidersReject(t *testing.T) {
+	providers := []payment.Provider{
+		webhookHandlerProviderStub{
+			key:       payment.TypeWxpay,
+			verifyErr: errors.New("verify failed a"),
+	placeholder,
+		webhookHandlerProviderStub{
+			key:       payment.TypeWxpay,
+			verifyErr: errors.New("verify failed b"),
+	placeholder,
+placeholder
+
+	_, _, err := verifyNotificationWithProviders(context.Background(), providers, "{placeholder", nil)
+placeholder
+placeholder
+
+type webhookHandlerProviderStub struct {
+	key          string
+	notification *payment.PaymentNotification
+	verifyErr    error
+placeholder
+
+func (p webhookHandlerProviderStub) Name() string { return p.key placeholder
+func (p webhookHandlerProviderStub) ProviderKey() string { return p.key placeholder
+func (p webhookHandlerProviderStub) SupportedTypes() []payment.PaymentType {
+	return []payment.PaymentType{payment.PaymentType(p.key)placeholder
+placeholder
+func (p webhookHandlerProviderStub) CreatePayment(context.Context, payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
+	panic("unexpected call")
+placeholder
+func (p webhookHandlerProviderStub) QueryOrder(context.Context, string) (*payment.QueryOrderResponse, error) {
+	panic("unexpected call")
+placeholder
+func (p webhookHandlerProviderStub) VerifyNotification(context.Context, string, map[string]string) (*payment.PaymentNotification, error) {
+	if p.verifyErr != nil {
+		return nil, p.verifyErr
+placeholder
+	return p.notification, nil
+placeholder
+func (p webhookHandlerProviderStub) Refund(context.Context, payment.RefundRequest) (*payment.RefundResponse, error) {
+	panic("unexpected call")
 placeholder
