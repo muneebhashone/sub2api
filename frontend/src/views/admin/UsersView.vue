@@ -455,6 +455,18 @@
             <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatDateTime(value) placeholderplaceholder</span>
           </template>
 
+          <template #cell-last_login_at="{ value placeholder">
+            <span class="text-sm text-gray-500 dark:text-dark-400">
+              {{ value ? formatDateTime(value) : '-' placeholderplaceholder
+            </span>
+          </template>
+
+          <template #cell-last_active_at="{ value placeholder">
+            <span class="text-sm text-gray-500 dark:text-dark-400">
+              {{ value ? formatDateTime(value) : '-' placeholderplaceholder
+            </span>
+          </template>
+
           <template #cell-actions="{ row placeholder">
             <div class="flex items-center gap-1">
               <!-- Edit Button -->
@@ -700,6 +712,8 @@ const allColumns = computed<Column[]>(() => [
   { key: 'usage', label: t('admin.users.columns.usage'), sortable: false placeholder,
   { key: 'concurrency', label: t('admin.users.columns.concurrency'), sortable: true placeholder,
   { key: 'status', label: t('admin.users.columns.status'), sortable: true placeholder,
+  { key: 'last_login_at', label: t('admin.users.columns.lastLogin'), sortable: true placeholder,
+  { key: 'last_active_at', label: t('admin.users.columns.lastActive'), sortable: true placeholder,
   { key: 'created_at', label: t('admin.users.columns.created'), sortable: true placeholder,
   { key: 'actions', label: t('admin.users.columns.actions'), sortable: false placeholder
 ])
@@ -714,7 +728,7 @@ const toggleableColumns = computed(() =>
 const hiddenColumns = reactive<Set<string>>(new Set())
 
 // Default hidden columns (columns hidden by default on first load)
-const DEFAULT_HIDDEN_COLUMNS = ['notes', 'groups', 'subscriptions', 'usage', 'concurrency']
+const DEFAULT_HIDDEN_COLUMNS = ['notes', 'groups', 'subscriptions', 'usage', 'concurrency', 'last_login_at', 'last_active_at']
 
 // localStorage key for column settings
 const HIDDEN_COLUMNS_KEY = 'user-hidden-columns'
@@ -787,7 +801,7 @@ const searchQuery = ref('')
 const USER_SORT_STORAGE_KEY = 'admin-users-table-sort'
 const loadInitialSortState = (): { sort_by: string; sort_order: 'asc' | 'desc' placeholder => {
   const fallback = { sort_by: 'created_at', sort_order: 'desc' as 'asc' | 'desc' placeholder
-  const sortable = new Set(['email', 'id', 'username', 'role', 'balance', 'concurrency', 'status', 'created_at'])
+  const sortable = new Set(['email', 'id', 'username', 'role', 'balance', 'concurrency', 'status', 'last_login_at', 'last_active_at', 'created_at'])
   try {
     const raw = localStorage.getItem(USER_SORT_STORAGE_KEY)
     if (!raw) return fallback
