@@ -611,7 +611,9 @@ const userNavItems = computed((): NavItem[] => {
     { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
-    { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon placeholder,
+    ...(appStore.cachedPublicSettings?.channel_monitor_enabled
+      ? [{ path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon placeholder]
+      : []),
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
     ...(appStore.cachedPublicSettings?.payment_enabled
       ? [
@@ -650,7 +652,9 @@ const personalNavItems = computed((): NavItem[] => {
   const items: NavItem[] = [
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
-    { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon placeholder,
+    ...(appStore.cachedPublicSettings?.channel_monitor_enabled
+      ? [{ path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon placeholder]
+      : []),
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
     ...(appStore.cachedPublicSettings?.payment_enabled
       ? [
@@ -715,7 +719,9 @@ const adminNavItems = computed((): NavItem[] => {
       expandOnly: true,
       children: [
         { path: '/admin/channels/pricing', label: t('nav.channelPricing'), icon: PriceTagIcon placeholder,
-        { path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon placeholder,
+        ...(appStore.cachedPublicSettings?.channel_monitor_enabled
+          ? [{ path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon placeholder]
+          : []),
       ],
     placeholder,
     { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,

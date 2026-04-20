@@ -160,14 +160,34 @@ watch(items, () => {
   void ensureDetailsForWindow()
 placeholder)
 
+function startTimer() {
+  if (countdownTimer !== undefined) return
+  countdownTimer = setInterval(tick, 1000) as unknown as number
+placeholder
+
+function stopTimer() {
+  if (countdownTimer !== undefined) {
+    clearInterval(countdownTimer)
+    countdownTimer = undefined
+  placeholder
+placeholder
+
+watch(
+  () => appStore.cachedPublicSettings?.channel_monitor_enabled,
+  (enabled) => {
+    if (enabled === false) stopTimer()
+    else startTimer()
+  placeholder,
+)
+
 // ── Lifecycle ──
 onMounted(() => {
   void reload(false)
-  countdownTimer = setInterval(tick, 1000) as unknown as number
+  if (appStore.cachedPublicSettings?.channel_monitor_enabled !== false) startTimer()
 placeholder)
 
 onBeforeUnmount(() => {
-  if (countdownTimer !== undefined) clearInterval(countdownTimer)
+  stopTimer()
   if (abortController) abortController.abort()
 placeholder)
 </script>
