@@ -209,14 +209,6 @@ placeholder
 	return nil
 placeholder
 
-func (r *userRepository) EnsureEmailAuthIdentity(ctx context.Context, userID int64, email string) error {
-	return ensureEmailAuthIdentityWithClient(ctx, r.client, userID, email, "service_dual_write")
-placeholder
-
-func (r *userRepository) ReplaceEmailAuthIdentity(ctx context.Context, userID int64, oldEmail, newEmail string) error {
-	return replaceEmailAuthIdentityWithClient(ctx, r.client, userID, oldEmail, newEmail, "service_dual_write")
-placeholder
-
 func ensureEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client, userID int64, email string, source string) error {
 	client = clientFromContext(ctx, client)
 	if client == nil || userID <= 0 {
