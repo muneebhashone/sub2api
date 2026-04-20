@@ -31,12 +31,25 @@ type mockUserRepo struct {
 	deleteAvatarFn   func(ctx context.Context, userID int64) error
 	deleteAvatarIDs  []int64
 	getAvatarFn      func(ctx context.Context, userID int64) (*UserAvatar, error)
+	txCalls          int
+placeholder
+
+type mockUserRepoTxKey struct{placeholder
+
+type mockUserRepoTxState struct {
+	getByIDUser      *User
+	upsertAvatarArgs []UpsertUserAvatarInput
+	deleteAvatarIDs  []int64
 placeholder
 
 func (m *mockUserRepo) Create(context.Context, *User) error { return nil placeholder
-func (m *mockUserRepo) GetByID(context.Context, int64) (*User, error) {
+func (m *mockUserRepo) GetByID(ctx context.Context, _ int64) (*User, error) {
 	if m.getByIDErr != nil {
 		return nil, m.getByIDErr
+placeholder
+	if txState, _ := ctx.Value(mockUserRepoTxKey{placeholder).(*mockUserRepoTxState); txState != nil && txState.getByIDUser != nil {
+		cloned := *txState.getByIDUser
+		return &cloned, nil
 placeholder
 	if m.getByIDUser != nil {
 		cloned := *m.getByIDUser
@@ -61,6 +74,27 @@ placeholder
 	return nil, nil
 placeholder
 func (m *mockUserRepo) UpsertUserAvatar(ctx context.Context, userID int64, input UpsertUserAvatarInput) (*UserAvatar, error) {
+	if txState, _ := ctx.Value(mockUserRepoTxKey{placeholder).(*mockUserRepoTxState); txState != nil {
+		txState.upsertAvatarArgs = append(txState.upsertAvatarArgs, input)
+		if txState.getByIDUser != nil {
+			txState.getByIDUser.AvatarURL = input.URL
+			txState.getByIDUser.AvatarSource = input.StorageProvider
+			txState.getByIDUser.AvatarMIME = input.ContentType
+			txState.getByIDUser.AvatarByteSize = input.ByteSize
+			txState.getByIDUser.AvatarSHA256 = input.SHA256
+	placeholder
+		if m.upsertAvatarFn != nil {
+			return m.upsertAvatarFn(ctx, userID, input)
+	placeholder
+		return &UserAvatar{
+			StorageProvider: input.StorageProvider,
+			StorageKey:      input.StorageKey,
+			URL:             input.URL,
+			ContentType:     input.ContentType,
+			ByteSize:        input.ByteSize,
+			SHA256:          input.SHA256,
+	placeholder, nil
+placeholder
 	m.upsertAvatarArgs = append(m.upsertAvatarArgs, input)
 	if m.upsertAvatarFn != nil {
 		return m.upsertAvatarFn(ctx, userID, input)
@@ -75,6 +109,20 @@ placeholder
 placeholder, nil
 placeholder
 func (m *mockUserRepo) DeleteUserAvatar(ctx context.Context, userID int64) error {
+	if txState, _ := ctx.Value(mockUserRepoTxKey{placeholder).(*mockUserRepoTxState); txState != nil {
+		txState.deleteAvatarIDs = append(txState.deleteAvatarIDs, userID)
+		if txState.getByIDUser != nil {
+			txState.getByIDUser.AvatarURL = ""
+			txState.getByIDUser.AvatarSource = ""
+			txState.getByIDUser.AvatarMIME = ""
+			txState.getByIDUser.AvatarByteSize = 0
+			txState.getByIDUser.AvatarSHA256 = ""
+	placeholder
+		if m.deleteAvatarFn != nil {
+			return m.deleteAvatarFn(ctx, userID)
+	placeholder
+		return nil
+placeholder
 	m.deleteAvatarIDs = append(m.deleteAvatarIDs, userID)
 	if m.deleteAvatarFn != nil {
 		return m.deleteAvatarFn(ctx, userID)
@@ -113,6 +161,26 @@ func (m *mockUserRepo) UpdateTotpSecret(context.Context, int64, *string) error {
 func (m *mockUserRepo) EnableTotp(context.Context, int64) error                { return nil placeholder
 func (m *mockUserRepo) DisableTotp(context.Context, int64) error               { return nil placeholder
 func (m *mockUserRepo) RemoveGroupFromUserAllowedGroups(context.Context, int64, int64) error {
+	return nil
+placeholder
+
+func (m *mockUserRepo) WithUserProfileIdentityTx(ctx context.Context, fn func(txCtx context.Context) error) error {
+	m.txCalls++
+	txState := &mockUserRepoTxState{
+		upsertAvatarArgs: append([]UpsertUserAvatarInput(nil), m.upsertAvatarArgs...),
+		deleteAvatarIDs:  append([]int64(nil), m.deleteAvatarIDs...),
+placeholder
+	if m.getByIDUser != nil {
+		userCopy := *m.getByIDUser
+		txState.getByIDUser = &userCopy
+placeholder
+	err := fn(context.WithValue(ctx, mockUserRepoTxKey{placeholder, txState))
+	if err != nil {
+		return err
+placeholder
+	m.getByIDUser = txState.getByIDUser
+	m.upsertAvatarArgs = txState.upsertAvatarArgs
+	m.deleteAvatarIDs = txState.deleteAvatarIDs
 	return nil
 placeholder
 
@@ -358,6 +426,33 @@ placeholder
 	require.Empty(t, repo.upsertAvatarArgs)
 	require.Empty(t, updated.AvatarURL)
 	require.Empty(t, updated.AvatarSource)
+placeholder
+
+func TestUpdateProfile_RollsBackAvatarMutationWhenUserUpdateFails(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:           11,
+			Email:        "rollback@example.com",
+			AvatarURL:    "https://cdn.example.com/original.png",
+			AvatarSource: "remote_url",
+	placeholder,
+		updateFn: func(context.Context, *User) error {
+			return errors.New("write user failed")
+	placeholder,
+placeholder
+	svc := NewUserService(repo, nil, nil, nil)
+
+	remoteURL := "https://cdn.example.com/new.png"
+	_, err := svc.UpdateProfile(context.Background(), 11, UpdateProfileRequest{
+		AvatarURL: &remoteURL,
+placeholder)
+
+	require.EqualError(t, err, "update user: write user failed")
+	require.Equal(t, 1, repo.txCalls)
+	require.Empty(t, repo.upsertAvatarArgs)
+	require.Empty(t, repo.deleteAvatarIDs)
+	require.Equal(t, "https://cdn.example.com/original.png", repo.getByIDUser.AvatarURL)
+	require.Equal(t, "remote_url", repo.getByIDUser.AvatarSource)
 placeholder
 
 func TestGetProfile_HydratesAvatarFromRepository(t *testing.T) {

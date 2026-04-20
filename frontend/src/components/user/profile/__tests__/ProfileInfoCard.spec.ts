@@ -62,6 +62,8 @@ vi.mock('vue-i18n', async (importOriginal) => {
         if (key === 'profile.authBindings.providers.linuxdo') return 'LinuxDo'
         if (key === 'profile.authBindings.providers.wechat') return 'WeChat'
         if (key === 'profile.authBindings.providers.oidc') return params?.providerName || 'OIDC'
+        if (key === 'profile.authBindings.source.avatar') return `Avatar synced from ${params?.providerName || 'provider'placeholder`
+        if (key === 'profile.authBindings.source.username') return `Username synced from ${params?.providerName || 'provider'placeholder`
         if (key === 'common.save') return 'Save'
         if (key === 'common.delete') return 'Delete'
         return key
@@ -168,5 +170,30 @@ describe('ProfileInfoCard', () => {
     expect(updateProfileMock).toHaveBeenCalledWith({ avatar_url: '' placeholder)
     expect(authStoreState.user?.avatar_url).toBeNull()
     expect(showSuccessMock).toHaveBeenCalledWith('Avatar removed')
+  placeholder)
+
+  it('renders third-party source hints from profile_sources', () => {
+    authStoreState.user = createUser({
+      avatar_url: 'https://cdn.example.com/linuxdo.png',
+      profile_sources: {
+        avatar: { provider: 'linuxdo', source: 'linuxdo' placeholder,
+        username: { provider: 'linuxdo', source: 'linuxdo' placeholder
+      placeholder
+    placeholder)
+
+    const wrapper = mount(ProfileInfoCard, {
+      props: {
+        user: authStoreState.user
+      placeholder,
+      global: {
+        stubs: {
+          Icon: true,
+          ProfileIdentityBindingsSection: true
+        placeholder
+      placeholder
+    placeholder)
+
+    expect(wrapper.text()).toContain('Avatar synced from LinuxDo')
+    expect(wrapper.text()).toContain('Username synced from LinuxDo')
   placeholder)
 placeholder)
