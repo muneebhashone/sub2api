@@ -141,6 +141,70 @@ placeholder
 	require.Nil(t, got)
 placeholder
 
+func TestGetOrderProviderInstanceLeavesLegacyProviderKeyUnresolvedWhenHistoricalInstancesConflict(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	_, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeStripe).
+		SetName("stripe-disabled-legacy").
+		SetConfig("{placeholder").
+		SetSupportedTypes("stripe").
+		SetEnabled(false).
+		Save(ctx)
+placeholder
+	_, err = client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeStripe).
+		SetName("stripe-enabled-current").
+		SetConfig("{placeholder").
+		SetSupportedTypes("stripe").
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	providerKey := payment.TypeStripe
+	order := &dbent.PaymentOrder{
+		PaymentType: payment.TypeStripe,
+		ProviderKey: &providerKey,
+placeholder
+
+	svc := &PaymentService{
+		entClient:    client,
+		loadBalancer: newWebhookProviderTestLoadBalancer(client),
+placeholder
+
+	got, err := svc.getOrderProviderInstance(ctx, order)
+placeholder
+	require.Nil(t, got)
+placeholder
+
+func TestGetOrderProviderInstanceLeavesProviderKeyMatchUnresolvedWhenTypeNotSupported(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	_, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeWxpay).
+		SetName("wxpay-only").
+		SetConfig("{placeholder").
+		SetSupportedTypes("wxpay").
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	providerKey := payment.TypeWxpay
+	order := &dbent.PaymentOrder{
+		PaymentType: payment.TypeAlipayDirect,
+		ProviderKey: &providerKey,
+placeholder
+
+	svc := &PaymentService{
+		entClient:    client,
+		loadBalancer: newWebhookProviderTestLoadBalancer(client),
+placeholder
+
+	got, err := svc.getOrderProviderInstance(ctx, order)
+placeholder
+	require.Nil(t, got)
+placeholder
+
 func TestGetWebhookProviderRejectsAmbiguousRegistryFallback(t *testing.T) {
 	ctx := context.Background()
 	client := newPaymentConfigServiceTestClient(t)
