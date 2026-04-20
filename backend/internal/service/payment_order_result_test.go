@@ -1,0 +1,177 @@
+package service
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/internal/payment"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+)
+
+func TestBuildCreateOrderResponseDefaultsToOrderCreated(t *testing.T) {
+	t.Parallel()
+
+	expiresAt := time.Date(2026, 4, 16, 12, 0, 0, 0, time.UTC)
+	resp := buildCreateOrderResponse(
+		&dbent.PaymentOrder{
+			ID:         42,
+			Amount:     12.34,
+			FeeRate:    0.03,
+			ExpiresAt:  expiresAt,
+			OutTradeNo: "sub2_42",
+	placeholder,
+		CreateOrderRequest{PaymentType: payment.TypeWxpayplaceholder,
+		12.71,
+		&payment.InstanceSelection{PaymentMode: "qrcode"placeholder,
+		&payment.CreatePaymentResponse{
+			TradeNo: "sub2_42",
+			QRCode:  "weixin://wxpay/bizpayurl?pr=test",
+	placeholder,
+		payment.CreatePaymentResultOrderCreated,
+	)
+
+	if resp.ResultType != payment.CreatePaymentResultOrderCreated {
+		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultOrderCreated)
+placeholder
+	if resp.OutTradeNo != "sub2_42" {
+		t.Fatalf("out_trade_no = %q, want %q", resp.OutTradeNo, "sub2_42")
+placeholder
+	if resp.QRCode != "weixin://wxpay/bizpayurl?pr=test" {
+		t.Fatalf("qr_code = %q, want %q", resp.QRCode, "weixin://wxpay/bizpayurl?pr=test")
+placeholder
+	if resp.JSAPI != nil || resp.JSAPIPayload != nil {
+		t.Fatal("order_created response should not include jsapi payload")
+placeholder
+	if !resp.ExpiresAt.Equal(expiresAt) {
+		t.Fatalf("expires_at = %v, want %v", resp.ExpiresAt, expiresAt)
+placeholder
+placeholder
+
+func TestBuildCreateOrderResponseCopiesJSAPIPayload(t *testing.T) {
+	t.Parallel()
+
+	jsapiPayload := &payment.WechatJSAPIPayload{
+		AppID:     "wx123",
+		TimeStamp: "1712345678",
+		NonceStr:  "nonce-123",
+		Package:   "prepay_id=wx123",
+		SignType:  "RSA",
+		PaySign:   "signed-payload",
+placeholder
+	resp := buildCreateOrderResponse(
+		&dbent.PaymentOrder{
+			ID:         88,
+			Amount:     66.88,
+			FeeRate:    0.01,
+			ExpiresAt:  time.Date(2026, 4, 16, 13, 0, 0, 0, time.UTC),
+			OutTradeNo: "sub2_88",
+	placeholder,
+		CreateOrderRequest{PaymentType: payment.TypeWxpayplaceholder,
+		67.55,
+		&payment.InstanceSelection{PaymentMode: "popup"placeholder,
+		&payment.CreatePaymentResponse{
+			TradeNo:    "sub2_88",
+			ResultType: payment.CreatePaymentResultJSAPIReady,
+			JSAPI:      jsapiPayload,
+	placeholder,
+		payment.CreatePaymentResultJSAPIReady,
+	)
+
+	if resp.ResultType != payment.CreatePaymentResultJSAPIReady {
+		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultJSAPIReady)
+placeholder
+	if resp.JSAPI == nil || resp.JSAPIPayload == nil {
+		t.Fatal("expected jsapi payload aliases to be populated")
+placeholder
+	if resp.JSAPI != jsapiPayload || resp.JSAPIPayload != jsapiPayload {
+		t.Fatal("expected jsapi aliases to preserve the original pointer")
+placeholder
+placeholder
+
+func TestMaybeBuildWeChatOAuthRequiredResponse(t *testing.T) {
+	t.Setenv("WECHAT_OAUTH_MP_APP_ID", "wx123456")
+	t.Setenv("WECHAT_OAUTH_MP_APP_SECRET", "wechat-secret")
+
+	svc := &PaymentService{placeholder
+
+	resp, err := svc.maybeBuildWeChatOAuthRequiredResponse(context.Background(), CreateOrderRequest{
+		Amount:          12.5,
+		PaymentType:     payment.TypeWxpay,
+		IsWeChatBrowser: true,
+		SrcURL:          "https://merchant.example/payment?from=wechat",
+		OrderType:       payment.OrderTypeBalance,
+placeholder, 12.5, 12.88, 0.03)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+	if resp == nil {
+		t.Fatal("expected oauth_required response, got nil")
+placeholder
+	if resp.ResultType != payment.CreatePaymentResultOAuthRequired {
+		t.Fatalf("result type = %q, want %q", resp.ResultType, payment.CreatePaymentResultOAuthRequired)
+placeholder
+	if resp.OAuth == nil {
+		t.Fatal("expected oauth payload, got nil")
+placeholder
+	if resp.OAuth.AppID != "wx123456" {
+		t.Fatalf("appid = %q, want %q", resp.OAuth.AppID, "wx123456")
+placeholder
+	if resp.OAuth.Scope != "snsapi_base" {
+		t.Fatalf("scope = %q, want %q", resp.OAuth.Scope, "snsapi_base")
+placeholder
+	if resp.OAuth.RedirectURL != "/auth/wechat/payment/callback" {
+		t.Fatalf("redirect_url = %q, want %q", resp.OAuth.RedirectURL, "/auth/wechat/payment/callback")
+placeholder
+	if resp.OAuth.AuthorizeURL != "/api/v1/auth/oauth/wechat/payment/start?amount=12.5&order_type=balance&payment_type=wxpay&redirect=%2Fpurchase%3Ffrom%3Dwechat&scope=snsapi_base" {
+		t.Fatalf("authorize_url = %q", resp.OAuth.AuthorizeURL)
+placeholder
+placeholder
+
+func TestMaybeBuildWeChatOAuthRequiredResponseRequiresMPConfigInWeChat(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentService{placeholder
+
+	resp, err := svc.maybeBuildWeChatOAuthRequiredResponse(context.Background(), CreateOrderRequest{
+		Amount:          12.5,
+		PaymentType:     payment.TypeWxpay,
+		IsWeChatBrowser: true,
+		SrcURL:          "https://merchant.example/payment?from=wechat",
+		OrderType:       payment.OrderTypeBalance,
+placeholder, 12.5, 12.88, 0.03)
+	if resp != nil {
+		t.Fatalf("expected nil response, got %+v", resp)
+placeholder
+	if err == nil {
+		t.Fatal("expected error, got nil")
+placeholder
+
+	appErr := infraerrors.FromError(err)
+	if appErr.Reason != "WECHAT_PAYMENT_MP_NOT_CONFIGURED" {
+		t.Fatalf("reason = %q, want %q", appErr.Reason, "WECHAT_PAYMENT_MP_NOT_CONFIGURED")
+placeholder
+placeholder
+
+func TestMaybeBuildWeChatOAuthRequiredResponseForSelectionSkipsEasyPayProvider(t *testing.T) {
+	t.Setenv("WECHAT_OAUTH_MP_APP_ID", "wx123456")
+	t.Setenv("WECHAT_OAUTH_MP_APP_SECRET", "wechat-secret")
+
+	svc := &PaymentService{placeholder
+
+	resp, err := svc.maybeBuildWeChatOAuthRequiredResponseForSelection(context.Background(), CreateOrderRequest{
+		Amount:          12.5,
+		PaymentType:     payment.TypeWxpay,
+		IsWeChatBrowser: true,
+		OrderType:       payment.OrderTypeBalance,
+placeholder, 12.5, 12.88, 0.03, &payment.InstanceSelection{
+		ProviderKey: payment.TypeEasyPay,
+placeholder)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+	if resp != nil {
+		t.Fatalf("expected nil response, got %+v", resp)
+placeholder
+placeholder
