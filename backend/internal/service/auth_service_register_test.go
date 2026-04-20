@@ -373,7 +373,8 @@ placeholder
 func TestAuthService_Register_Success(t *testing.T) {
 	repo := &userRepoStub{nextID: 5placeholder
 	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled: "true",
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "false",
 placeholder, nil)
 
 	token, user, err := service.Register(context.Background(), "user@test.com", "password")
@@ -520,8 +521,9 @@ func TestAuthService_Register_AssignsDefaultSubscriptions(t *testing.T) {
 	repo := &userRepoStub{nextID: 42placeholder
 	assigner := &defaultSubscriptionAssignerStub{placeholder
 	service := newAuthService(repo, map[string]string{
-		SettingKeyRegistrationEnabled:  "true",
-		SettingKeyDefaultSubscriptions: `[{"group_id":11,"validity_days":30placeholder,{"group_id":12,"validity_days":7placeholder]`,
+		SettingKeyRegistrationEnabled:                 "true",
+		SettingKeyDefaultSubscriptions:                `[{"group_id":11,"validity_days":30placeholder,{"group_id":12,"validity_days":7placeholder]`,
+		SettingKeyAuthSourceDefaultEmailGrantOnSignup: "false",
 placeholder, nil)
 	service.defaultSubAssigner = assigner
 
