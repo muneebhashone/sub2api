@@ -4,12 +4,16 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/stretchr/testify/require"
 )
+
+const webhookProviderTestEncryptionKey = "placeholder"
 
 type webhookProviderTestDouble struct {
 	key   string
@@ -30,6 +34,111 @@ func (p webhookProviderTestDouble) VerifyNotification(context.Context, string, m
 placeholder
 func (p webhookProviderTestDouble) Refund(context.Context, payment.RefundRequest) (*payment.RefundResponse, error) {
 	panic("unexpected call")
+placeholder
+
+func encryptWebhookProviderConfig(t *testing.T, config map[string]string) string {
+placeholder
+
+	data, err := json.Marshal(config)
+placeholder
+
+	encrypted, err := payment.Encrypt(string(data), []byte(webhookProviderTestEncryptionKey))
+placeholder
+	return encrypted
+placeholder
+
+func newWebhookProviderTestLoadBalancer(client *dbent.Client) payment.LoadBalancer {
+	return payment.NewDefaultLoadBalancer(client, []byte(webhookProviderTestEncryptionKey))
+placeholder
+
+func TestGetOrderProviderInstanceResolvesUniqueLegacyProviderKey(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	inst, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeStripe).
+		SetName("stripe-a").
+		SetConfig(encryptWebhookProviderConfig(t, map[string]string{"secretKey": "sk_test_legacy_provider_key"placeholder)).
+		SetSupportedTypes("stripe").
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	providerKey := payment.TypeStripe
+	order := &dbent.PaymentOrder{
+		PaymentType: payment.TypeStripe,
+		ProviderKey: &providerKey,
+placeholder
+
+	svc := &PaymentService{
+		entClient:    client,
+		loadBalancer: newWebhookProviderTestLoadBalancer(client),
+placeholder
+
+	got, err := svc.getOrderProviderInstance(ctx, order)
+placeholder
+	require.NotNil(t, got)
+	require.Equal(t, inst.ID, got.ID)
+placeholder
+
+func TestGetOrderProviderInstanceResolvesUniqueLegacyPaymentType(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	inst, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeWxpay).
+		SetName("wxpay-a").
+		SetConfig("{placeholder").
+		SetSupportedTypes("wxpay").
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	order := &dbent.PaymentOrder{
+		PaymentType: payment.TypeWxpayDirect,
+placeholder
+
+	svc := &PaymentService{
+		entClient:    client,
+		loadBalancer: newWebhookProviderTestLoadBalancer(client),
+placeholder
+
+	got, err := svc.getOrderProviderInstance(ctx, order)
+placeholder
+	require.NotNil(t, got)
+	require.Equal(t, inst.ID, got.ID)
+placeholder
+
+func TestGetOrderProviderInstanceLeavesAmbiguousLegacyOrderUnresolved(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	_, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeEasyPay).
+		SetName("easypay-a").
+		SetConfig("{placeholder").
+		SetSupportedTypes("wxpay").
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+	_, err = client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeWxpay).
+		SetName("wxpay-a").
+		SetConfig("{placeholder").
+		SetSupportedTypes("wxpay").
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	order := &dbent.PaymentOrder{
+		PaymentType: payment.TypeWxpay,
+placeholder
+
+	svc := &PaymentService{
+		entClient:    client,
+		loadBalancer: newWebhookProviderTestLoadBalancer(client),
+placeholder
+
+	got, err := svc.getOrderProviderInstance(ctx, order)
+placeholder
+	require.Nil(t, got)
 placeholder
 
 func TestGetWebhookProviderRejectsAmbiguousRegistryFallback(t *testing.T) {
