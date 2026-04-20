@@ -310,12 +310,14 @@ func buildWxpayResultURL(returnURL string, req payment.CreatePaymentRequest) (st
 		return "", fmt.Errorf("return URL must be an absolute http(s) URL")
 placeholder
 
-	values := url.Values{placeholder
+	values := u.Query()
 	values.Set("out_trade_no", strings.TrimSpace(req.OrderID))
 	if paymentType := strings.TrimSpace(req.PaymentType); paymentType != "" {
 		values.Set("payment_type", paymentType)
 placeholder
-	u.Path = wxpayResultPath
+	if strings.TrimSpace(u.Path) == "" {
+		u.Path = wxpayResultPath
+placeholder
 	u.RawPath = ""
 	u.RawQuery = values.Encode()
 	u.Fragment = ""

@@ -142,10 +142,11 @@ onMounted(async () => {
   const resumeToken = typeof route.query.resume_token === 'string'
     ? route.query.resume_token
     : ''
-  let orderId = Number(route.query.order_id) || 0
+  const routeOrderId = Number(route.query.order_id) || 0
   const outTradeNo = String(route.query.out_trade_no || '')
+  let orderId = 0
 
-  if (!orderId && resumeToken && typeof window !== 'undefined') {
+  if (resumeToken && typeof window !== 'undefined') {
     const restored = readPaymentRecoverySnapshot(
       window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY),
       { resumeToken placeholder,
@@ -155,17 +156,31 @@ onMounted(async () => {
     placeholder
   placeholder
 
-  if (!order.value && !orderId && resumeToken) {
+  if (!order.value && resumeToken && orderId) {
     try {
-      const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
-      order.value = result.data
-      orderId = result.data.id
+      order.value = await paymentStore.pollOrderStatus(orderId)
     placeholder catch (_err: unknown) {
-      // Resume token recovery failed, continue to legacy fallback paths.
+      // Fall through to signed resume-token recovery below.
     placeholder
   placeholder
 
-  if (!order.value && orderId) {
+  if (!order.value && resumeToken) {
+    try {
+      const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
+      order.value = result.data
+      if (!orderId) {
+        orderId = result.data.id
+      placeholder
+    placeholder catch (_err: unknown) {
+      // Resume token recovery failed; do not trust legacy public out_trade_no fallback.
+    placeholder
+  placeholder
+
+  if (!resumeToken) {
+    orderId = routeOrderId
+  placeholder
+
+  if (!order.value && !resumeToken && orderId) {
     try {
       order.value = await paymentStore.pollOrderStatus(orderId)
     placeholder catch (_err: unknown) {
@@ -173,7 +188,8 @@ onMounted(async () => {
     placeholder
   placeholder
 
-  if (!order.value && outTradeNo) {
+  const hasLegacyFallbackContext = Boolean(route.query.trade_status || route.query.money || route.query.type)
+  if (!order.value && !resumeToken && !orderId && outTradeNo && hasLegacyFallbackContext) {
     returnInfo.value = {
       outTradeNo,
       money: String(route.query.money || ''),
@@ -189,14 +205,6 @@ onMounted(async () => {
         const result = await paymentAPI.verifyOrder(outTradeNo)
         order.value = result.data
       placeholder catch (_e: unknown) { /* fall through */ placeholder
-    placeholder
-  placeholder
-
-  if (!order.value && orderId) {
-    try {
-      order.value = await paymentStore.pollOrderStatus(orderId)
-    placeholder catch (_err: unknown) {
-      // Order lookup failed, will show returnInfo fallback.
     placeholder
   placeholder
   loading.value = false
