@@ -231,6 +231,11 @@ placeholder
 	if cl, ok := limits[lookupKey]; ok {
 		return cl
 placeholder
+	if aliasKey := legacyVisibleMethodAlias(lookupKey); aliasKey != "" {
+		if cl, ok := limits[aliasKey]; ok {
+			return cl
+	placeholder
+placeholder
 	return ChannelLimits{placeholder
 placeholder
 
@@ -321,12 +326,36 @@ func InstanceSupportsType(supportedTypes string, target PaymentType) bool {
 	if supportedTypes == "" {
 		return true
 placeholder
+	normalizedTarget := normalizeVisibleMethodSupportType(target)
 	for _, t := range strings.Split(supportedTypes, ",") {
-		if strings.TrimSpace(t) == target {
+		supported := strings.TrimSpace(t)
+		if supported == target || normalizeVisibleMethodSupportType(supported) == normalizedTarget {
 			return true
 	placeholder
 placeholder
 	return false
+placeholder
+
+func normalizeVisibleMethodSupportType(paymentType PaymentType) PaymentType {
+	switch strings.TrimSpace(paymentType) {
+	case TypeAlipay, TypeAlipayDirect:
+		return TypeAlipay
+	case TypeWxpay, TypeWxpayDirect:
+		return TypeWxpay
+	default:
+		return strings.TrimSpace(paymentType)
+placeholder
+placeholder
+
+func legacyVisibleMethodAlias(paymentType PaymentType) PaymentType {
+	switch normalizeVisibleMethodSupportType(paymentType) {
+	case TypeAlipay:
+		return TypeAlipayDirect
+	case TypeWxpay:
+		return TypeWxpayDirect
+	default:
+		return ""
+placeholder
 placeholder
 
 // GetInstanceConfig decrypts and returns the configuration for a provider instance by ID.
