@@ -56,7 +56,7 @@
 import { computed, ref, onMounted, onUnmounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useRoute placeholder from 'vue-router'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { isMobileDevice placeholder from '@/utils/device'
 
 interface StripeWithWechatPay {
@@ -143,7 +143,7 @@ async function initStripe(clientSecret: string, publishableKey: string) {
       placeholder
     placeholder
   placeholder catch (err: unknown) {
-    error.value = extractApiErrorMessage(err, t('payment.stripeLoadFailed'))
+    error.value = extractI18nErrorMessage(err, t, 'payment.errors', t('payment.stripeLoadFailed'))
   placeholder
 placeholder
 

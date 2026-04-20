@@ -78,7 +78,7 @@ import { ref, computed, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminPaymentAPI placeholder from '@/api/admin/payment'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import adminAPI from '@/api/admin'
 import type { SubscriptionPlan placeholder from '@/types/payment'
 import type { AdminGroup placeholder from '@/types'
@@ -150,7 +150,7 @@ async function loadPlans() {
         : (p.features || []),
     placeholder))
   placeholder
-  catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) placeholder
   finally { plansLoading.value = false placeholder
 placeholder
 
@@ -166,7 +166,7 @@ async function toggleForSale(plan: SubscriptionPlan) {
     await adminPaymentAPI.updatePlan(plan.id, { for_sale: !plan.for_sale placeholder)
     plan.for_sale = !plan.for_sale
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t('common.error')))
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
   placeholder
 placeholder
 
@@ -174,7 +174,7 @@ function confirmDeletePlan(plan: SubscriptionPlan) { deletingPlanId.value = plan
 async function handleDeletePlan() {
   if (!deletingPlanId.value) return
   try { await adminPaymentAPI.deletePlan(deletingPlanId.value); appStore.showSuccess(t('common.deleted')); showDeletePlanDialog.value = false; loadPlans() placeholder
-  catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) placeholder
 placeholder
 
 // ==================== Lifecycle ====================

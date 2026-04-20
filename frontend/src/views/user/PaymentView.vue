@@ -271,7 +271,7 @@ import { usePaymentStore placeholder from '@/stores/payment'
 import { useSubscriptionStore placeholder from '@/stores/subscriptions'
 import { useAppStore placeholder from '@/stores'
 import { paymentAPI placeholder from '@/api/payment'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { isMobileDevice placeholder from '@/utils/device'
 import type { SubscriptionPlan, CheckoutInfoResponse, OrderType placeholder from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -610,7 +610,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
     placeholder else if (apiErr.reason === 'CANCEL_RATE_LIMITED') {
       errorMessage.value = t('payment.errors.cancelRateLimited')
     placeholder else {
-      errorMessage.value = extractApiErrorMessage(err, t('payment.result.failed'))
+      errorMessage.value = extractI18nErrorMessage(err, t, 'payment.errors', t('payment.result.failed'))
     placeholder
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -648,7 +648,7 @@ onMounted(async () => {
         placeholder
       placeholder
     placeholder
-  placeholder catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  placeholder catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) placeholder
   finally { loading.value = false placeholder
   // Fetch active subscriptions (uses cache, non-blocking)
   subscriptionStore.fetchActiveSubscriptions().catch(() => {placeholder)

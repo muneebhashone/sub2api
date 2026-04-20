@@ -72,7 +72,7 @@ import { ref, watch, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminPaymentAPI placeholder from '@/api/admin/payment'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import type { DashboardStats placeholder from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -110,7 +110,7 @@ async function loadDashboard() {
     const res = await adminPaymentAPI.getDashboard(days.value)
     stats.value = res.data
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t('common.error')))
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
   placeholder finally {
     loading.value = false
   placeholder

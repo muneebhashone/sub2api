@@ -78,7 +78,7 @@ import Icon from '@/components/icons/Icon.vue'
 import { usePaymentStore placeholder from '@/stores/payment'
 import { useAppStore placeholder from '@/stores'
 import { paymentAPI placeholder from '@/api/payment'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { getPaymentPopupFeatures placeholder from '@/components/payment/providerConfig'
 import type { PaymentOrder placeholder from '@/types/payment'
 import QRCode from 'qrcode'
@@ -222,7 +222,7 @@ async function handleCancel() {
     cleanup()
     emit('close')
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t('common.error')))
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
   placeholder finally {
     cancelling.value = false
   placeholder
