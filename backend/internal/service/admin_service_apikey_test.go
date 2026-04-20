@@ -44,6 +44,15 @@ func (s *userRepoStubForGroupUpdate) GetFirstAdmin(context.Context) (*User, erro
 placeholder
 func (s *userRepoStubForGroupUpdate) Update(context.Context, *User) error { panic("unexpected") placeholder
 func (s *userRepoStubForGroupUpdate) Delete(context.Context, int64) error { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) GetUserAvatar(context.Context, int64) (*UserAvatar, error) {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) UpsertUserAvatar(context.Context, int64, UpsertUserAvatarInput) (*UserAvatar, error) {
+	panic("unexpected")
+placeholder
+func (s *userRepoStubForGroupUpdate) DeleteUserAvatar(context.Context, int64) error {
+	panic("unexpected")
+placeholder
 func (s *userRepoStubForGroupUpdate) List(context.Context, pagination.PaginationParams) ([]User, *pagination.PaginationResult, error) {
 	panic("unexpected")
 placeholder

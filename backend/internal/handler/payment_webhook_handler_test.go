@@ -97,3 +97,37 @@ placeholder)
 		assert.Equal(t, 200, webhookLogTruncateLen)
 placeholder)
 placeholder
+
+func TestExtractOutTradeNo(t *testing.T) {
+	tests := []struct {
+		name        string
+		providerKey string
+		rawBody     string
+		want        string
+placeholder{
+		{
+			name:        "easypay query payload",
+			providerKey: "easypay",
+			rawBody:     "out_trade_no=sub2_123&trade_status=TRADE_SUCCESS",
+			want:        "sub2_123",
+	placeholder,
+		{
+			name:        "alipay query payload",
+			providerKey: "alipay",
+			rawBody:     "notify_time=2026-04-20+12%3A00%3A00&out_trade_no=sub2_456",
+			want:        "sub2_456",
+	placeholder,
+		{
+			name:        "unknown provider",
+			providerKey: "wxpay",
+			rawBody:     "{placeholder",
+			want:        "",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, extractOutTradeNo(tt.rawBody, tt.providerKey))
+	placeholder)
+placeholder
+placeholder

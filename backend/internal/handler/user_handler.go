@@ -34,8 +34,14 @@ placeholder
 // UpdateProfileRequest represents the update profile request payload
 type UpdateProfileRequest struct {
 	Username               *string  `json:"username"`
+	AvatarURL              *string  `json:"avatar_url"`
 	BalanceNotifyEnabled   *bool    `json:"balance_notify_enabled"`
 	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
+placeholder
+
+type userProfileResponse struct {
+	dto.User
+	AvatarURL string `json:"avatar_url,omitempty"`
 placeholder
 
 // GetProfile handles getting user profile
@@ -47,13 +53,13 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 placeholder
 
-	userData, err := h.userService.GetByID(c.Request.Context(), subject.UserID)
+	userData, err := h.userService.GetProfile(c.Request.Context(), subject.UserID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(userData))
+	response.Success(c, userProfileResponseFromService(userData))
 placeholder
 
 // ChangePassword handles changing user password
@@ -101,6 +107,7 @@ placeholder
 
 	svcReq := service.UpdateProfileRequest{
 		Username:               req.Username,
+		AvatarURL:              req.AvatarURL,
 		BalanceNotifyEnabled:   req.BalanceNotifyEnabled,
 		BalanceNotifyThreshold: req.BalanceNotifyThreshold,
 placeholder
@@ -110,7 +117,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(updatedUser))
+	response.Success(c, userProfileResponseFromService(updatedUser))
 placeholder
 
 // SendNotifyEmailCodeRequest represents the request to send notify email verification code
@@ -176,7 +183,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(updatedUser))
+	response.Success(c, userProfileResponseFromService(updatedUser))
 placeholder
 
 // RemoveNotifyEmailRequest represents the request to remove a notify email
@@ -212,7 +219,7 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(updatedUser))
+	response.Success(c, userProfileResponseFromService(updatedUser))
 placeholder
 
 // ToggleNotifyEmailRequest represents the request to toggle a notify email's disabled state
@@ -248,5 +255,16 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, dto.UserFromService(updatedUser))
+	response.Success(c, userProfileResponseFromService(updatedUser))
+placeholder
+
+func userProfileResponseFromService(user *service.User) userProfileResponse {
+	base := dto.UserFromService(user)
+	if base == nil {
+		return userProfileResponse{placeholder
+placeholder
+	return userProfileResponse{
+		User:      *base,
+		AvatarURL: user.AvatarURL,
+placeholder
 placeholder

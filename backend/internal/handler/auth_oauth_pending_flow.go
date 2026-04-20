@@ -1,10 +1,17 @@
 package handler
 
 import (
+	"context"
+	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/authidentity"
+	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
+	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -26,11 +33,17 @@ const (
 type oauthPendingSessionPayload struct {
 	Intent                 string
 	Identity               service.PendingAuthIdentityKey
+	TargetUserID           *int64
 	ResolvedEmail          string
 	RedirectTo             string
 	BrowserSessionKey      string
 	UpstreamIdentityClaims map[string]any
 	CompletionResponse     map[string]any
+placeholder
+
+type oauthAdoptionDecisionRequest struct {
+	AdoptDisplayName *bool `json:"adopt_display_name,omitempty"`
+	AdoptAvatar      *bool `json:"adopt_avatar,omitempty"`
 placeholder
 
 func (h *AuthHandler) pendingIdentityService() (*service.AuthPendingIdentityService, error) {
@@ -125,6 +138,7 @@ placeholder
 	session, err := svc.CreatePendingSession(c.Request.Context(), service.CreatePendingAuthSessionInput{
 		Intent:                 strings.TrimSpace(payload.Intent),
 		Identity:               payload.Identity,
+		TargetUserID:           payload.TargetUserID,
 		ResolvedEmail:          strings.TrimSpace(payload.ResolvedEmail),
 		RedirectTo:             strings.TrimSpace(payload.RedirectTo),
 		BrowserSessionKey:      strings.TrimSpace(payload.BrowserSessionKey),
@@ -175,6 +189,291 @@ func pendingSessionWantsInvitation(payload map[string]any) bool {
 	return strings.EqualFold(strings.TrimSpace(pendingSessionStringValue(payload, "error")), "invitation_required")
 placeholder
 
+func (r oauthAdoptionDecisionRequest) hasDecision() bool {
+	return r.AdoptDisplayName != nil || r.AdoptAvatar != nil
+placeholder
+
+func (r oauthAdoptionDecisionRequest) toServiceInput(sessionID int64) service.PendingIdentityAdoptionDecisionInput {
+	input := service.PendingIdentityAdoptionDecisionInput{
+		PendingAuthSessionID: sessionID,
+placeholder
+	if r.AdoptDisplayName != nil {
+		input.AdoptDisplayName = *r.AdoptDisplayName
+placeholder
+	if r.AdoptAvatar != nil {
+		input.AdoptAvatar = *r.AdoptAvatar
+placeholder
+	return input
+placeholder
+
+func bindOptionalOAuthAdoptionDecision(c *gin.Context) (oauthAdoptionDecisionRequest, error) {
+	var req oauthAdoptionDecisionRequest
+	if c == nil || c.Request == nil || c.Request.Body == nil {
+		return req, nil
+placeholder
+	if err := c.ShouldBindJSON(&req); err != nil {
+		if errors.Is(err, io.EOF) {
+			return req, nil
+	placeholder
+		return req, err
+placeholder
+	return req, nil
+placeholder
+
+func persistPendingOAuthAdoptionDecision(
+	c *gin.Context,
+	svc *service.AuthPendingIdentityService,
+	sessionID int64,
+	req oauthAdoptionDecisionRequest,
+) error {
+	if !req.hasDecision() {
+		return nil
+placeholder
+	if svc == nil {
+		return infraerrors.ServiceUnavailable("PENDING_AUTH_NOT_READY", "pending auth service is not ready")
+placeholder
+	if _, err := svc.UpsertAdoptionDecision(c.Request.Context(), req.toServiceInput(sessionID)); err != nil {
+		return infraerrors.InternalServer("PENDING_AUTH_ADOPTION_SAVE_FAILED", "failed to save oauth profile adoption decision").WithCause(err)
+placeholder
+	return nil
+placeholder
+
+func cloneOAuthMetadata(values map[string]any) map[string]any {
+	if len(values) == 0 {
+		return map[string]any{placeholder
+placeholder
+	cloned := make(map[string]any, len(values))
+	for key, value := range values {
+		cloned[key] = value
+placeholder
+	return cloned
+placeholder
+
+func normalizeAdoptedOAuthDisplayName(value string) string {
+	value = strings.TrimSpace(value)
+	if len([]rune(value)) > 100 {
+		value = string([]rune(value)[:100])
+placeholder
+	return value
+placeholder
+
+func (h *AuthHandler) entClient() *dbent.Client {
+	if h == nil || h.authService == nil {
+		return nil
+placeholder
+	return h.authService.EntClient()
+placeholder
+
+func (h *AuthHandler) upsertPendingOAuthAdoptionDecision(
+	c *gin.Context,
+	sessionID int64,
+	req oauthAdoptionDecisionRequest,
+) (*dbent.IdentityAdoptionDecision, error) {
+	client := h.entClient()
+	if client == nil {
+		return nil, infraerrors.ServiceUnavailable("PENDING_AUTH_NOT_READY", "pending auth service is not ready")
+placeholder
+
+	existing, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(sessionID)).
+		Only(c.Request.Context())
+	if err != nil && !dbent.IsNotFound(err) {
+		return nil, infraerrors.InternalServer("PENDING_AUTH_ADOPTION_LOAD_FAILED", "failed to load oauth profile adoption decision").WithCause(err)
+placeholder
+	if existing != nil && !req.hasDecision() {
+		return existing, nil
+placeholder
+	if existing == nil && !req.hasDecision() {
+		return nil, nil
+placeholder
+
+	input := service.PendingIdentityAdoptionDecisionInput{
+		PendingAuthSessionID: sessionID,
+placeholder
+	if existing != nil {
+		input.AdoptDisplayName = existing.AdoptDisplayName
+		input.AdoptAvatar = existing.AdoptAvatar
+		input.IdentityID = existing.IdentityID
+placeholder
+	if req.AdoptDisplayName != nil {
+		input.AdoptDisplayName = *req.AdoptDisplayName
+placeholder
+	if req.AdoptAvatar != nil {
+		input.AdoptAvatar = *req.AdoptAvatar
+placeholder
+
+	svc, err := h.pendingIdentityService()
+	if err != nil {
+		return nil, err
+placeholder
+	decision, err := svc.UpsertAdoptionDecision(c.Request.Context(), input)
+	if err != nil {
+		return nil, infraerrors.InternalServer("PENDING_AUTH_ADOPTION_SAVE_FAILED", "failed to save oauth profile adoption decision").WithCause(err)
+placeholder
+	return decision, nil
+placeholder
+
+func resolvePendingOAuthTargetUserID(ctx context.Context, client *dbent.Client, session *dbent.PendingAuthSession) (int64, error) {
+	if session == nil {
+		return 0, infraerrors.BadRequest("PENDING_AUTH_SESSION_INVALID", "pending auth session is invalid")
+placeholder
+	if session.TargetUserID != nil && *session.TargetUserID > 0 {
+		return *session.TargetUserID, nil
+placeholder
+	email := strings.TrimSpace(session.ResolvedEmail)
+	if email == "" {
+		return 0, infraerrors.BadRequest("PENDING_AUTH_TARGET_USER_MISSING", "pending auth target user is missing")
+placeholder
+
+	userEntity, err := client.User.Query().
+		Where(dbuser.EmailEQ(email)).
+		Only(ctx)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return 0, infraerrors.InternalServer("PENDING_AUTH_TARGET_USER_NOT_FOUND", "pending auth target user was not found")
+	placeholder
+		return 0, err
+placeholder
+	return userEntity.ID, nil
+placeholder
+
+func oauthIdentityIssuer(session *dbent.PendingAuthSession) *string {
+	if session == nil {
+		return nil
+placeholder
+	switch strings.TrimSpace(session.ProviderType) {
+	case "oidc":
+		issuer := strings.TrimSpace(session.ProviderKey)
+		if issuer == "" {
+			issuer = pendingSessionStringValue(session.UpstreamIdentityClaims, "issuer")
+	placeholder
+		if issuer == "" {
+			return nil
+	placeholder
+		return &issuer
+	default:
+		issuer := pendingSessionStringValue(session.UpstreamIdentityClaims, "issuer")
+		if issuer == "" {
+			return nil
+	placeholder
+		return &issuer
+placeholder
+placeholder
+
+func ensurePendingOAuthIdentityForUser(ctx context.Context, tx *dbent.Tx, session *dbent.PendingAuthSession, userID int64) (*dbent.AuthIdentity, error) {
+	client := tx.Client()
+	identity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ(strings.TrimSpace(session.ProviderType)),
+			authidentity.ProviderKeyEQ(strings.TrimSpace(session.ProviderKey)),
+			authidentity.ProviderSubjectEQ(strings.TrimSpace(session.ProviderSubject)),
+		).
+		Only(ctx)
+	if err != nil && !dbent.IsNotFound(err) {
+		return nil, err
+placeholder
+	if identity != nil {
+		if identity.UserID != userID {
+			return nil, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+	placeholder
+		return identity, nil
+placeholder
+
+	create := client.AuthIdentity.Create().
+		SetUserID(userID).
+		SetProviderType(strings.TrimSpace(session.ProviderType)).
+		SetProviderKey(strings.TrimSpace(session.ProviderKey)).
+		SetProviderSubject(strings.TrimSpace(session.ProviderSubject)).
+		SetMetadata(cloneOAuthMetadata(session.UpstreamIdentityClaims))
+	if issuer := oauthIdentityIssuer(session); issuer != nil {
+		create = create.SetIssuer(strings.TrimSpace(*issuer))
+placeholder
+	return create.Save(ctx)
+placeholder
+
+func applyPendingOAuthAdoption(
+	ctx context.Context,
+	client *dbent.Client,
+	session *dbent.PendingAuthSession,
+	decision *dbent.IdentityAdoptionDecision,
+	overrideUserID *int64,
+) error {
+	if client == nil || session == nil || decision == nil {
+		return nil
+placeholder
+	if !decision.AdoptDisplayName && !decision.AdoptAvatar {
+		return nil
+placeholder
+
+	targetUserID := int64(0)
+	if overrideUserID != nil && *overrideUserID > 0 {
+		targetUserID = *overrideUserID
+placeholder else {
+		resolvedUserID, err := resolvePendingOAuthTargetUserID(ctx, client, session)
+		if err != nil {
+			return err
+	placeholder
+		targetUserID = resolvedUserID
+placeholder
+
+	adoptedDisplayName := ""
+	if decision.AdoptDisplayName {
+		adoptedDisplayName = normalizeAdoptedOAuthDisplayName(pendingSessionStringValue(session.UpstreamIdentityClaims, "suggested_display_name"))
+placeholder
+	adoptedAvatarURL := ""
+	if decision.AdoptAvatar {
+		adoptedAvatarURL = pendingSessionStringValue(session.UpstreamIdentityClaims, "suggested_avatar_url")
+placeholder
+
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return err
+placeholder
+	defer func() { _ = tx.Rollback() placeholder()
+
+	if decision.AdoptDisplayName && adoptedDisplayName != "" {
+		if err := tx.Client().User.UpdateOneID(targetUserID).
+			SetUsername(adoptedDisplayName).
+			Exec(ctx); err != nil {
+			return err
+	placeholder
+placeholder
+
+	identity, err := ensurePendingOAuthIdentityForUser(ctx, tx, session, targetUserID)
+	if err != nil {
+		return err
+placeholder
+
+	metadata := cloneOAuthMetadata(identity.Metadata)
+	for key, value := range session.UpstreamIdentityClaims {
+		metadata[key] = value
+placeholder
+	if decision.AdoptDisplayName && adoptedDisplayName != "" {
+		metadata["display_name"] = adoptedDisplayName
+placeholder
+	if decision.AdoptAvatar && adoptedAvatarURL != "" {
+		metadata["avatar_url"] = adoptedAvatarURL
+placeholder
+
+	updateIdentity := tx.Client().AuthIdentity.UpdateOneID(identity.ID).SetMetadata(metadata)
+	if issuer := oauthIdentityIssuer(session); issuer != nil {
+		updateIdentity = updateIdentity.SetIssuer(strings.TrimSpace(*issuer))
+placeholder
+	if _, err := updateIdentity.Save(ctx); err != nil {
+		return err
+placeholder
+
+	if decision.IdentityID == nil || *decision.IdentityID != identity.ID {
+		if _, err := tx.Client().IdentityAdoptionDecision.UpdateOneID(decision.ID).
+			SetIdentityID(identity.ID).
+			Save(ctx); err != nil {
+			return err
+	placeholder
+placeholder
+
+	return tx.Commit()
+placeholder
+
 func applySuggestedProfileToCompletionResponse(payload map[string]any, upstream map[string]any) {
 	if len(payload) == 0 || len(upstream) == 0 {
 		return
@@ -205,6 +504,11 @@ func (h *AuthHandler) ExchangePendingOAuthCompletion(c *gin.Context) {
 	clearCookies := func() {
 		clearOAuthPendingSessionCookie(c, secureCookie)
 		clearOAuthPendingBrowserCookie(c, secureCookie)
+placeholder
+	adoptionDecision, err := bindOptionalOAuthAdoptionDecision(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
 placeholder
 
 	sessionToken, err := readOAuthPendingSessionCookie(c)
@@ -248,7 +552,28 @@ placeholder
 	applySuggestedProfileToCompletionResponse(payload, session.UpstreamIdentityClaims)
 
 	if pendingSessionWantsInvitation(payload) {
+		if adoptionDecision.hasDecision() {
+			decision, err := h.upsertPendingOAuthAdoptionDecision(c, session.ID, adoptionDecision)
+			if err != nil {
+				response.ErrorFrom(c, err)
+				return
+		placeholder
+			_ = decision
+	placeholder
 		response.Success(c, payload)
+		return
+placeholder
+	if !adoptionDecision.hasDecision() {
+		response.Success(c, payload)
+		return
+placeholder
+	decision, err := h.upsertPendingOAuthAdoptionDecision(c, session.ID, adoptionDecision)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	if err := applyPendingOAuthAdoption(c.Request.Context(), h.entClient(), session, decision, session.TargetUserID); err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_ADOPTION_APPLY_FAILED", "failed to apply oauth profile adoption").WithCause(err))
 		return
 placeholder
 
