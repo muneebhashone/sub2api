@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -43,8 +44,24 @@ placeholder
 
 type userProfileResponse struct {
 	dto.User
-	AvatarURL  string                         `json:"avatar_url,omitempty"`
-	Identities service.UserIdentitySummarySet `json:"identities"`
+	AvatarURL         string                                 `json:"avatar_url,omitempty"`
+	AvatarSource      *userProfileSourceContext              `json:"avatar_source,omitempty"`
+	UsernameSource    *userProfileSourceContext              `json:"username_source,omitempty"`
+	DisplayNameSource *userProfileSourceContext              `json:"display_name_source,omitempty"`
+	NicknameSource    *userProfileSourceContext              `json:"nickname_source,omitempty"`
+	ProfileSources    map[string]*userProfileSourceContext   `json:"profile_sources,omitempty"`
+	Identities        service.UserIdentitySummarySet         `json:"identities"`
+	AuthBindings      map[string]service.UserIdentitySummary `json:"auth_bindings"`
+	IdentityBindings  map[string]service.UserIdentitySummary `json:"identity_bindings"`
+	EmailBound        bool                                   `json:"email_bound"`
+	LinuxDoBound      bool                                   `json:"linuxdo_bound"`
+	OIDCBound         bool                                   `json:"oidc_bound"`
+	WeChatBound       bool                                   `json:"wechat_bound"`
+placeholder
+
+type userProfileSourceContext struct {
+	Provider string `json:"provider,omitempty"`
+	Source   string `json:"source,omitempty"`
 placeholder
 
 // GetProfile handles getting user profile
@@ -335,9 +352,94 @@ func userProfileResponseFromService(user *service.User, identities service.UserI
 	if base == nil {
 		return userProfileResponse{placeholder
 placeholder
+	bindings := userProfileBindingMap(identities)
+	profileSources, avatarSource, usernameSource := inferUserProfileSources(user, identities)
 	return userProfileResponse{
-		User:       *base,
-		AvatarURL:  user.AvatarURL,
-		Identities: identities,
+		User:              *base,
+		AvatarURL:         user.AvatarURL,
+		AvatarSource:      avatarSource,
+		UsernameSource:    usernameSource,
+		DisplayNameSource: usernameSource,
+		NicknameSource:    usernameSource,
+		ProfileSources:    profileSources,
+		Identities:        identities,
+		AuthBindings:      bindings,
+		IdentityBindings:  bindings,
+		EmailBound:        identities.Email.Bound,
+		LinuxDoBound:      identities.LinuxDo.Bound,
+		OIDCBound:         identities.OIDC.Bound,
+		WeChatBound:       identities.WeChat.Bound,
+placeholder
+placeholder
+
+func userProfileBindingMap(identities service.UserIdentitySummarySet) map[string]service.UserIdentitySummary {
+	return map[string]service.UserIdentitySummary{
+		"email":   identities.Email,
+		"linuxdo": identities.LinuxDo,
+		"oidc":    identities.OIDC,
+		"wechat":  identities.WeChat,
+placeholder
+placeholder
+
+func inferUserProfileSources(user *service.User, identities service.UserIdentitySummarySet) (
+	map[string]*userProfileSourceContext,
+	*userProfileSourceContext,
+	*userProfileSourceContext,
+) {
+	if user == nil {
+		return nil, nil, nil
+placeholder
+
+	thirdParty := thirdPartyIdentityProviders(identities)
+	var avatarSource *userProfileSourceContext
+	if strings.TrimSpace(user.AvatarURL) != "" && len(thirdParty) == 1 {
+		avatarSource = buildUserProfileSourceContext(thirdParty[0].Provider)
+placeholder
+
+	usernameValue := strings.TrimSpace(user.Username)
+	var usernameSource *userProfileSourceContext
+	for _, summary := range thirdParty {
+		if usernameValue != "" && usernameValue == strings.TrimSpace(summary.DisplayName) {
+			usernameSource = buildUserProfileSourceContext(summary.Provider)
+			break
+	placeholder
+placeholder
+	if usernameSource == nil && usernameValue != "" && len(thirdParty) == 1 {
+		usernameSource = buildUserProfileSourceContext(thirdParty[0].Provider)
+placeholder
+
+	profileSources := map[string]*userProfileSourceContext{placeholder
+	if avatarSource != nil {
+		profileSources["avatar"] = avatarSource
+placeholder
+	if usernameSource != nil {
+		profileSources["username"] = usernameSource
+		profileSources["display_name"] = usernameSource
+		profileSources["nickname"] = usernameSource
+placeholder
+	if len(profileSources) == 0 {
+		return nil, avatarSource, usernameSource
+placeholder
+	return profileSources, avatarSource, usernameSource
+placeholder
+
+func thirdPartyIdentityProviders(identities service.UserIdentitySummarySet) []service.UserIdentitySummary {
+	out := make([]service.UserIdentitySummary, 0, 3)
+	for _, summary := range []service.UserIdentitySummary{identities.LinuxDo, identities.OIDC, identities.WeChatplaceholder {
+		if summary.Bound {
+			out = append(out, summary)
+	placeholder
+placeholder
+	return out
+placeholder
+
+func buildUserProfileSourceContext(provider string) *userProfileSourceContext {
+	provider = strings.TrimSpace(provider)
+	if provider == "" {
+		return nil
+placeholder
+	return &userProfileSourceContext{
+		Provider: provider,
+		Source:   provider,
 placeholder
 placeholder

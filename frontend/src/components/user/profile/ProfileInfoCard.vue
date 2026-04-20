@@ -61,6 +61,71 @@
         </div>
       </div>
 
+      <div
+        class="mt-4 rounded-2xl border border-gray-100 bg-white/90 p-4 dark:border-dark-700 dark:bg-dark-900/30"
+      >
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+              {{ t('profile.avatar.title') placeholderplaceholder
+            </h3>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('profile.avatar.description') placeholderplaceholder
+            </p>
+          </div>
+          <button
+            data-testid="profile-avatar-delete"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="avatarSaving"
+            @click="handleAvatarDelete"
+          >
+            {{ t('common.delete') placeholderplaceholder
+          </button>
+        </div>
+
+        <div class="mt-3 space-y-3">
+          <label
+            for="profile-avatar-input"
+            class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
+          >
+            {{ t('profile.avatar.inputLabel') placeholderplaceholder
+          </label>
+          <textarea
+            id="profile-avatar-input"
+            data-testid="profile-avatar-input"
+            v-model="avatarDraft"
+            rows="3"
+            class="input min-h-[88px]"
+            :placeholder="t('profile.avatar.inputPlaceholder')"
+          />
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="btn btn-secondary btn-sm cursor-pointer">
+              <input
+                data-testid="profile-avatar-file-input"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                @change="handleAvatarFileChange"
+              >
+              {{ t('profile.avatar.uploadAction') placeholderplaceholder
+            </label>
+            <button
+              data-testid="profile-avatar-save"
+              type="button"
+              class="btn btn-primary btn-sm"
+              :disabled="avatarSaving"
+              @click="handleAvatarSave"
+            >
+              {{ t('common.save') placeholderplaceholder
+            </button>
+            <span class="text-xs text-gray-400 dark:text-gray-500">
+              {{ t('profile.avatar.uploadHint') placeholderplaceholder
+            </span>
+          </div>
+        </div>
+      </div>
+
       <ProfileIdentityBindingsSection
         class="mt-4"
         :user="user"
@@ -74,11 +139,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed placeholder from 'vue'
+import { computed, ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
+import { userAPI placeholder from '@/api'
 import Icon from '@/components/icons/Icon.vue'
 import ProfileIdentityBindingsSection from '@/components/user/profile/ProfileIdentityBindingsSection.vue'
+import { useAppStore placeholder from '@/stores/app'
+import { useAuthStore placeholder from '@/stores/auth'
 import type { User, UserAuthProvider, UserProfileSourceContext placeholder from '@/types'
+import { extractApiErrorMessage placeholder from '@/utils/apiError'
 
 const props = withDefaults(
   defineProps<{
@@ -97,6 +166,12 @@ const props = withDefaults(
 )
 
 const { t placeholder = useI18n()
+const authStore = useAuthStore()
+const appStore = useAppStore()
+
+const maxAvatarBytes = 100 * 1024
+const avatarDraft = ref(props.user?.avatar_url?.trim() || '')
+const avatarSaving = ref(false)
 
 const providerLabels = computed<Record<UserAuthProvider, string>>(() => ({
   email: t('profile.authBindings.providers.email'),
@@ -108,6 +183,13 @@ placeholder))
 const avatarUrl = computed(() => props.user?.avatar_url?.trim() || '')
 const displayName = computed(() => props.user?.username?.trim() || props.user?.email?.trim() || 'User')
 const avatarInitial = computed(() => displayName.value.charAt(0).toUpperCase() || 'U')
+
+watch(
+  () => props.user?.avatar_url,
+  (value) => {
+    avatarDraft.value = value?.trim() || ''
+  placeholder
+)
 
 function normalizeProvider(value: string): UserAuthProvider | null {
   const normalized = value.trim().toLowerCase()
@@ -205,4 +287,122 @@ const sourceHints = computed(() => {
 
   return hints
 placeholder)
+
+function estimateDataURLByteSize(value: string): number {
+  const [, encoded = ''] = value.split(',', 2)
+  const sanitized = encoded.replace(/\s+/g, '')
+  const padding = sanitized.endsWith('==') ? 2 : sanitized.endsWith('=') ? 1 : 0
+  return Math.max(0, Math.floor((sanitized.length * 3) / 4) - padding)
+placeholder
+
+function validateAvatarInput(value: string): string | null {
+  const normalized = value.trim()
+  if (!normalized) {
+    return null
+  placeholder
+
+  if (normalized.startsWith('data:')) {
+    if (!/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(normalized)) {
+      appStore.showError(t('profile.avatar.invalidValue'))
+      return null
+    placeholder
+    if (estimateDataURLByteSize(normalized) > maxAvatarBytes) {
+      appStore.showError(t('profile.avatar.fileTooLarge'))
+      return null
+    placeholder
+    return normalized
+  placeholder
+
+  try {
+    const parsed = new URL(normalized)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return normalized
+    placeholder
+  placeholder catch {
+    // Invalid URL is handled below.
+  placeholder
+
+  appStore.showError(t('profile.avatar.invalidValue'))
+  return null
+placeholder
+
+function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+    reader.onerror = () => reject(reader.error ?? new Error('avatar_read_failed'))
+    reader.readAsDataURL(file)
+  placeholder)
+placeholder
+
+async function handleAvatarFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+  if (input) {
+    input.value = ''
+  placeholder
+  if (!file) {
+    return
+  placeholder
+  if (!file.type.startsWith('image/')) {
+    appStore.showError(t('profile.avatar.invalidType'))
+    return
+  placeholder
+  if (file.size > maxAvatarBytes) {
+    appStore.showError(t('profile.avatar.fileTooLarge'))
+    return
+  placeholder
+
+  try {
+    const dataURL = await readFileAsDataURL(file)
+    const normalized = validateAvatarInput(dataURL)
+    if (!normalized) {
+      return
+    placeholder
+    avatarDraft.value = normalized
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
+  placeholder
+placeholder
+
+async function handleAvatarSave() {
+  const normalized = validateAvatarInput(avatarDraft.value)
+  if (!normalized) {
+    return
+  placeholder
+
+  avatarSaving.value = true
+  try {
+    const updated = await userAPI.updateProfile({ avatar_url: normalized placeholder)
+    authStore.user = updated
+    avatarDraft.value = updated.avatar_url?.trim() || ''
+    appStore.showSuccess(t('profile.avatar.saveSuccess'))
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
+  placeholder finally {
+    avatarSaving.value = false
+  placeholder
+placeholder
+
+async function handleAvatarDelete() {
+  if (avatarSaving.value) {
+    return
+  placeholder
+  if (!avatarDraft.value.trim() && !props.user?.avatar_url?.trim()) {
+    appStore.showError(t('profile.avatar.emptyDeleteHint'))
+    return
+  placeholder
+
+  avatarSaving.value = true
+  try {
+    const updated = await userAPI.updateProfile({ avatar_url: '' placeholder)
+    authStore.user = updated
+    avatarDraft.value = ''
+    appStore.showSuccess(t('profile.avatar.deleteSuccess'))
+  placeholder catch (error: unknown) {
+    appStore.showError(extractApiErrorMessage(error, t('common.error')))
+  placeholder finally {
+    avatarSaving.value = false
+  placeholder
+placeholder
 </script>

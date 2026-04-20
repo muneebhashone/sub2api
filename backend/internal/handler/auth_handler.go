@@ -296,6 +296,7 @@ placeholder
 			c.Request.Context(),
 			h.entClient(),
 			h.authService,
+			h.userService,
 			pendingSession,
 			decision,
 			&user.ID,
