@@ -18,6 +18,7 @@ export { paymentAPI placeholder from './payment'
 export { userGroupsAPI placeholder from './groups'
 export { totpAPI placeholder from './totp'
 export { default as announcementsAPI placeholder from './announcements'
+export { channelMonitorUserAPI placeholder from './channelMonitor'
 
 // Admin APIs
 export { adminAPI placeholder from './admin'

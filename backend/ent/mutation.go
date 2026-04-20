@@ -19,6 +19,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/apikey"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
+	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
+	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
@@ -62,6 +64,8 @@ const (
 	TypeAnnouncementRead         = "AnnouncementRead"
 	TypeAuthIdentity             = "AuthIdentity"
 	TypeAuthIdentityChannel      = "AuthIdentityChannel"
+	TypeChannelMonitor           = "ChannelMonitor"
+	TypeChannelMonitorHistory    = "ChannelMonitorHistory"
 	TypeErrorPassthroughRule     = "ErrorPassthroughRule"
 	TypeGroup                    = "Group"
 	TypeIdempotencyRecord        = "IdempotencyRecord"
@@ -8732,6 +8736,2034 @@ func (m *AuthIdentityChannelMutation) ResetEdge(name string) error {
 		return nil
 placeholder
 	return fmt.Errorf("unknown AuthIdentityChannel edge %s", name)
+placeholder
+
+// ChannelMonitorMutation represents an operation that mutates the ChannelMonitor nodes in the graph.
+type ChannelMonitorMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *int64
+	created_at          *time.Time
+	updated_at          *time.Time
+	name                *string
+	provider            *channelmonitor.Provider
+	endpoint            *string
+	api_key_encrypted   *string
+	primary_model       *string
+	extra_models        *[]string
+	appendextra_models  []string
+	group_name          *string
+	enabled             *bool
+	interval_seconds    *int
+	addinterval_seconds *int
+	last_checked_at     *time.Time
+	created_by          *int64
+	addcreated_by       *int64
+	clearedFields       map[string]struct{placeholder
+	history             map[int64]struct{placeholder
+	removedhistory      map[int64]struct{placeholder
+	clearedhistory      bool
+	done                bool
+	oldValue            func(context.Context) (*ChannelMonitor, error)
+	predicates          []predicate.ChannelMonitor
+placeholder
+
+var _ ent.Mutation = (*ChannelMonitorMutation)(nil)
+
+// channelmonitorOption allows management of the mutation configuration using functional options.
+type channelmonitorOption func(*ChannelMonitorMutation)
+
+// newChannelMonitorMutation creates new mutation for the ChannelMonitor entity.
+func newChannelMonitorMutation(c config, op Op, opts ...channelmonitorOption) *ChannelMonitorMutation {
+	m := &ChannelMonitorMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeChannelMonitor,
+		clearedFields: make(map[string]struct{placeholder),
+placeholder
+	for _, opt := range opts {
+		opt(m)
+placeholder
+	return m
+placeholder
+
+// withChannelMonitorID sets the ID field of the mutation.
+func withChannelMonitorID(id int64) channelmonitorOption {
+	return func(m *ChannelMonitorMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ChannelMonitor
+		)
+		m.oldValue = func(ctx context.Context) (*ChannelMonitor, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+			placeholder else {
+					value, err = m.Client().ChannelMonitor.Get(ctx, id)
+			placeholder
+		placeholder)
+			return value, err
+	placeholder
+		m.id = &id
+placeholder
+placeholder
+
+// withChannelMonitor sets the old ChannelMonitor of the mutation.
+func withChannelMonitor(node *ChannelMonitor) channelmonitorOption {
+	return func(m *ChannelMonitorMutation) {
+		m.oldValue = func(context.Context) (*ChannelMonitor, error) {
+			return node, nil
+	placeholder
+		m.id = &node.ID
+placeholder
+placeholder
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ChannelMonitorMutation) Client() *Client {
+	client := &Client{config: m.configplaceholder
+	client.init()
+	return client
+placeholder
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ChannelMonitorMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+placeholder
+	tx := &Tx{config: m.configplaceholder
+	tx.init()
+	return tx, nil
+placeholder
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ChannelMonitorMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+placeholder
+	return *m.id, true
+placeholder
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ChannelMonitorMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{idplaceholder, nil
+	placeholder
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ChannelMonitor.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+placeholder
+placeholder
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ChannelMonitorMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+placeholder
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ChannelMonitorMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCreatedAt returns the old "created_at" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+placeholder
+	return oldValue.CreatedAt, nil
+placeholder
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ChannelMonitorMutation) ResetCreatedAt() {
+	m.created_at = nil
+placeholder
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ChannelMonitorMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+placeholder
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ChannelMonitorMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+placeholder
+	return oldValue.UpdatedAt, nil
+placeholder
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ChannelMonitorMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+placeholder
+
+// SetName sets the "name" field.
+func (m *ChannelMonitorMutation) SetName(s string) {
+	m.name = &s
+placeholder
+
+// Name returns the value of the "name" field in the mutation.
+func (m *ChannelMonitorMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldName returns the old "name" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+placeholder
+	return oldValue.Name, nil
+placeholder
+
+// ResetName resets all changes to the "name" field.
+func (m *ChannelMonitorMutation) ResetName() {
+	m.name = nil
+placeholder
+
+// SetProvider sets the "provider" field.
+func (m *ChannelMonitorMutation) SetProvider(c channelmonitor.Provider) {
+	m.provider = &c
+placeholder
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *ChannelMonitorMutation) Provider() (r channelmonitor.Provider, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldProvider returns the old "provider" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldProvider(ctx context.Context) (v channelmonitor.Provider, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+placeholder
+	return oldValue.Provider, nil
+placeholder
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *ChannelMonitorMutation) ResetProvider() {
+	m.provider = nil
+placeholder
+
+// SetEndpoint sets the "endpoint" field.
+func (m *ChannelMonitorMutation) SetEndpoint(s string) {
+	m.endpoint = &s
+placeholder
+
+// Endpoint returns the value of the "endpoint" field in the mutation.
+func (m *ChannelMonitorMutation) Endpoint() (r string, exists bool) {
+	v := m.endpoint
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldEndpoint returns the old "endpoint" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldEndpoint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndpoint is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndpoint requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndpoint: %w", err)
+placeholder
+	return oldValue.Endpoint, nil
+placeholder
+
+// ResetEndpoint resets all changes to the "endpoint" field.
+func (m *ChannelMonitorMutation) ResetEndpoint() {
+	m.endpoint = nil
+placeholder
+
+// SetAPIKeyEncrypted sets the "api_key_encrypted" field.
+func (m *ChannelMonitorMutation) SetAPIKeyEncrypted(s string) {
+	m.api_key_encrypted = &s
+placeholder
+
+// APIKeyEncrypted returns the value of the "api_key_encrypted" field in the mutation.
+func (m *ChannelMonitorMutation) APIKeyEncrypted() (r string, exists bool) {
+	v := m.api_key_encrypted
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldAPIKeyEncrypted returns the old "api_key_encrypted" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldAPIKeyEncrypted(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAPIKeyEncrypted is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAPIKeyEncrypted requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAPIKeyEncrypted: %w", err)
+placeholder
+	return oldValue.APIKeyEncrypted, nil
+placeholder
+
+// ResetAPIKeyEncrypted resets all changes to the "api_key_encrypted" field.
+func (m *ChannelMonitorMutation) ResetAPIKeyEncrypted() {
+	m.api_key_encrypted = nil
+placeholder
+
+// SetPrimaryModel sets the "primary_model" field.
+func (m *ChannelMonitorMutation) SetPrimaryModel(s string) {
+	m.primary_model = &s
+placeholder
+
+// PrimaryModel returns the value of the "primary_model" field in the mutation.
+func (m *ChannelMonitorMutation) PrimaryModel() (r string, exists bool) {
+	v := m.primary_model
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPrimaryModel returns the old "primary_model" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldPrimaryModel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrimaryModel is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrimaryModel requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrimaryModel: %w", err)
+placeholder
+	return oldValue.PrimaryModel, nil
+placeholder
+
+// ResetPrimaryModel resets all changes to the "primary_model" field.
+func (m *ChannelMonitorMutation) ResetPrimaryModel() {
+	m.primary_model = nil
+placeholder
+
+// SetExtraModels sets the "extra_models" field.
+func (m *ChannelMonitorMutation) SetExtraModels(s []string) {
+	m.extra_models = &s
+	m.appendextra_models = nil
+placeholder
+
+// ExtraModels returns the value of the "extra_models" field in the mutation.
+func (m *ChannelMonitorMutation) ExtraModels() (r []string, exists bool) {
+	v := m.extra_models
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldExtraModels returns the old "extra_models" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldExtraModels(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExtraModels is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExtraModels requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExtraModels: %w", err)
+placeholder
+	return oldValue.ExtraModels, nil
+placeholder
+
+// AppendExtraModels adds s to the "extra_models" field.
+func (m *ChannelMonitorMutation) AppendExtraModels(s []string) {
+	m.appendextra_models = append(m.appendextra_models, s...)
+placeholder
+
+// AppendedExtraModels returns the list of values that were appended to the "extra_models" field in this mutation.
+func (m *ChannelMonitorMutation) AppendedExtraModels() ([]string, bool) {
+	if len(m.appendextra_models) == 0 {
+		return nil, false
+placeholder
+	return m.appendextra_models, true
+placeholder
+
+// ResetExtraModels resets all changes to the "extra_models" field.
+func (m *ChannelMonitorMutation) ResetExtraModels() {
+	m.extra_models = nil
+	m.appendextra_models = nil
+placeholder
+
+// SetGroupName sets the "group_name" field.
+func (m *ChannelMonitorMutation) SetGroupName(s string) {
+	m.group_name = &s
+placeholder
+
+// GroupName returns the value of the "group_name" field in the mutation.
+func (m *ChannelMonitorMutation) GroupName() (r string, exists bool) {
+	v := m.group_name
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldGroupName returns the old "group_name" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldGroupName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGroupName is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGroupName requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGroupName: %w", err)
+placeholder
+	return oldValue.GroupName, nil
+placeholder
+
+// ClearGroupName clears the value of the "group_name" field.
+func (m *ChannelMonitorMutation) ClearGroupName() {
+	m.group_name = nil
+	m.clearedFields[channelmonitor.FieldGroupName] = struct{placeholder{placeholder
+placeholder
+
+// GroupNameCleared returns if the "group_name" field was cleared in this mutation.
+func (m *ChannelMonitorMutation) GroupNameCleared() bool {
+	_, ok := m.clearedFields[channelmonitor.FieldGroupName]
+	return ok
+placeholder
+
+// ResetGroupName resets all changes to the "group_name" field.
+func (m *ChannelMonitorMutation) ResetGroupName() {
+	m.group_name = nil
+	delete(m.clearedFields, channelmonitor.FieldGroupName)
+placeholder
+
+// SetEnabled sets the "enabled" field.
+func (m *ChannelMonitorMutation) SetEnabled(b bool) {
+	m.enabled = &b
+placeholder
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *ChannelMonitorMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldEnabled returns the old "enabled" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+placeholder
+	return oldValue.Enabled, nil
+placeholder
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *ChannelMonitorMutation) ResetEnabled() {
+	m.enabled = nil
+placeholder
+
+// SetIntervalSeconds sets the "interval_seconds" field.
+func (m *ChannelMonitorMutation) SetIntervalSeconds(i int) {
+	m.interval_seconds = &i
+	m.addinterval_seconds = nil
+placeholder
+
+// IntervalSeconds returns the value of the "interval_seconds" field in the mutation.
+func (m *ChannelMonitorMutation) IntervalSeconds() (r int, exists bool) {
+	v := m.interval_seconds
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldIntervalSeconds returns the old "interval_seconds" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldIntervalSeconds(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIntervalSeconds is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIntervalSeconds requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIntervalSeconds: %w", err)
+placeholder
+	return oldValue.IntervalSeconds, nil
+placeholder
+
+// AddIntervalSeconds adds i to the "interval_seconds" field.
+func (m *ChannelMonitorMutation) AddIntervalSeconds(i int) {
+	if m.addinterval_seconds != nil {
+		*m.addinterval_seconds += i
+placeholder else {
+		m.addinterval_seconds = &i
+placeholder
+placeholder
+
+// AddedIntervalSeconds returns the value that was added to the "interval_seconds" field in this mutation.
+func (m *ChannelMonitorMutation) AddedIntervalSeconds() (r int, exists bool) {
+	v := m.addinterval_seconds
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetIntervalSeconds resets all changes to the "interval_seconds" field.
+func (m *ChannelMonitorMutation) ResetIntervalSeconds() {
+	m.interval_seconds = nil
+	m.addinterval_seconds = nil
+placeholder
+
+// SetLastCheckedAt sets the "last_checked_at" field.
+func (m *ChannelMonitorMutation) SetLastCheckedAt(t time.Time) {
+	m.last_checked_at = &t
+placeholder
+
+// LastCheckedAt returns the value of the "last_checked_at" field in the mutation.
+func (m *ChannelMonitorMutation) LastCheckedAt() (r time.Time, exists bool) {
+	v := m.last_checked_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldLastCheckedAt returns the old "last_checked_at" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldLastCheckedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastCheckedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastCheckedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastCheckedAt: %w", err)
+placeholder
+	return oldValue.LastCheckedAt, nil
+placeholder
+
+// ClearLastCheckedAt clears the value of the "last_checked_at" field.
+func (m *ChannelMonitorMutation) ClearLastCheckedAt() {
+	m.last_checked_at = nil
+	m.clearedFields[channelmonitor.FieldLastCheckedAt] = struct{placeholder{placeholder
+placeholder
+
+// LastCheckedAtCleared returns if the "last_checked_at" field was cleared in this mutation.
+func (m *ChannelMonitorMutation) LastCheckedAtCleared() bool {
+	_, ok := m.clearedFields[channelmonitor.FieldLastCheckedAt]
+	return ok
+placeholder
+
+// ResetLastCheckedAt resets all changes to the "last_checked_at" field.
+func (m *ChannelMonitorMutation) ResetLastCheckedAt() {
+	m.last_checked_at = nil
+	delete(m.clearedFields, channelmonitor.FieldLastCheckedAt)
+placeholder
+
+// SetCreatedBy sets the "created_by" field.
+func (m *ChannelMonitorMutation) SetCreatedBy(i int64) {
+	m.created_by = &i
+	m.addcreated_by = nil
+placeholder
+
+// CreatedBy returns the value of the "created_by" field in the mutation.
+func (m *ChannelMonitorMutation) CreatedBy() (r int64, exists bool) {
+	v := m.created_by
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCreatedBy returns the old "created_by" field's value of the ChannelMonitor entity.
+// If the ChannelMonitor object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorMutation) OldCreatedBy(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedBy is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedBy requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedBy: %w", err)
+placeholder
+	return oldValue.CreatedBy, nil
+placeholder
+
+// AddCreatedBy adds i to the "created_by" field.
+func (m *ChannelMonitorMutation) AddCreatedBy(i int64) {
+	if m.addcreated_by != nil {
+		*m.addcreated_by += i
+placeholder else {
+		m.addcreated_by = &i
+placeholder
+placeholder
+
+// AddedCreatedBy returns the value that was added to the "created_by" field in this mutation.
+func (m *ChannelMonitorMutation) AddedCreatedBy() (r int64, exists bool) {
+	v := m.addcreated_by
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetCreatedBy resets all changes to the "created_by" field.
+func (m *ChannelMonitorMutation) ResetCreatedBy() {
+	m.created_by = nil
+	m.addcreated_by = nil
+placeholder
+
+// AddHistoryIDs adds the "history" edge to the ChannelMonitorHistory entity by ids.
+func (m *ChannelMonitorMutation) AddHistoryIDs(ids ...int64) {
+	if m.history == nil {
+		m.history = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.history[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearHistory clears the "history" edge to the ChannelMonitorHistory entity.
+func (m *ChannelMonitorMutation) ClearHistory() {
+	m.clearedhistory = true
+placeholder
+
+// HistoryCleared reports if the "history" edge to the ChannelMonitorHistory entity was cleared.
+func (m *ChannelMonitorMutation) HistoryCleared() bool {
+	return m.clearedhistory
+placeholder
+
+// RemoveHistoryIDs removes the "history" edge to the ChannelMonitorHistory entity by IDs.
+func (m *ChannelMonitorMutation) RemoveHistoryIDs(ids ...int64) {
+	if m.removedhistory == nil {
+		m.removedhistory = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.history, ids[i])
+		m.removedhistory[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedHistory returns the removed IDs of the "history" edge to the ChannelMonitorHistory entity.
+func (m *ChannelMonitorMutation) RemovedHistoryIDs() (ids []int64) {
+	for id := range m.removedhistory {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// HistoryIDs returns the "history" edge IDs in the mutation.
+func (m *ChannelMonitorMutation) HistoryIDs() (ids []int64) {
+	for id := range m.history {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetHistory resets all changes to the "history" edge.
+func (m *ChannelMonitorMutation) ResetHistory() {
+	m.history = nil
+	m.clearedhistory = false
+	m.removedhistory = nil
+placeholder
+
+// Where appends a list predicates to the ChannelMonitorMutation builder.
+func (m *ChannelMonitorMutation) Where(ps ...predicate.ChannelMonitor) {
+	m.predicates = append(m.predicates, ps...)
+placeholder
+
+// WhereP appends storage-level predicates to the ChannelMonitorMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ChannelMonitorMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ChannelMonitor, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+placeholder
+	m.Where(p...)
+placeholder
+
+// Op returns the operation name.
+func (m *ChannelMonitorMutation) Op() Op {
+	return m.op
+placeholder
+
+// SetOp allows setting the mutation operation.
+func (m *ChannelMonitorMutation) SetOp(op Op) {
+	m.op = op
+placeholder
+
+// Type returns the node type of this mutation (ChannelMonitor).
+func (m *ChannelMonitorMutation) Type() string {
+	return m.typ
+placeholder
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ChannelMonitorMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.created_at != nil {
+		fields = append(fields, channelmonitor.FieldCreatedAt)
+placeholder
+	if m.updated_at != nil {
+		fields = append(fields, channelmonitor.FieldUpdatedAt)
+placeholder
+	if m.name != nil {
+		fields = append(fields, channelmonitor.FieldName)
+placeholder
+	if m.provider != nil {
+		fields = append(fields, channelmonitor.FieldProvider)
+placeholder
+	if m.endpoint != nil {
+		fields = append(fields, channelmonitor.FieldEndpoint)
+placeholder
+	if m.api_key_encrypted != nil {
+		fields = append(fields, channelmonitor.FieldAPIKeyEncrypted)
+placeholder
+	if m.primary_model != nil {
+		fields = append(fields, channelmonitor.FieldPrimaryModel)
+placeholder
+	if m.extra_models != nil {
+		fields = append(fields, channelmonitor.FieldExtraModels)
+placeholder
+	if m.group_name != nil {
+		fields = append(fields, channelmonitor.FieldGroupName)
+placeholder
+	if m.enabled != nil {
+		fields = append(fields, channelmonitor.FieldEnabled)
+placeholder
+	if m.interval_seconds != nil {
+		fields = append(fields, channelmonitor.FieldIntervalSeconds)
+placeholder
+	if m.last_checked_at != nil {
+		fields = append(fields, channelmonitor.FieldLastCheckedAt)
+placeholder
+	if m.created_by != nil {
+		fields = append(fields, channelmonitor.FieldCreatedBy)
+placeholder
+	return fields
+placeholder
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ChannelMonitorMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case channelmonitor.FieldCreatedAt:
+		return m.CreatedAt()
+	case channelmonitor.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case channelmonitor.FieldName:
+		return m.Name()
+	case channelmonitor.FieldProvider:
+		return m.Provider()
+	case channelmonitor.FieldEndpoint:
+		return m.Endpoint()
+	case channelmonitor.FieldAPIKeyEncrypted:
+		return m.APIKeyEncrypted()
+	case channelmonitor.FieldPrimaryModel:
+		return m.PrimaryModel()
+	case channelmonitor.FieldExtraModels:
+		return m.ExtraModels()
+	case channelmonitor.FieldGroupName:
+		return m.GroupName()
+	case channelmonitor.FieldEnabled:
+		return m.Enabled()
+	case channelmonitor.FieldIntervalSeconds:
+		return m.IntervalSeconds()
+	case channelmonitor.FieldLastCheckedAt:
+		return m.LastCheckedAt()
+	case channelmonitor.FieldCreatedBy:
+		return m.CreatedBy()
+placeholder
+	return nil, false
+placeholder
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ChannelMonitorMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case channelmonitor.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case channelmonitor.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case channelmonitor.FieldName:
+		return m.OldName(ctx)
+	case channelmonitor.FieldProvider:
+		return m.OldProvider(ctx)
+	case channelmonitor.FieldEndpoint:
+		return m.OldEndpoint(ctx)
+	case channelmonitor.FieldAPIKeyEncrypted:
+		return m.OldAPIKeyEncrypted(ctx)
+	case channelmonitor.FieldPrimaryModel:
+		return m.OldPrimaryModel(ctx)
+	case channelmonitor.FieldExtraModels:
+		return m.OldExtraModels(ctx)
+	case channelmonitor.FieldGroupName:
+		return m.OldGroupName(ctx)
+	case channelmonitor.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case channelmonitor.FieldIntervalSeconds:
+		return m.OldIntervalSeconds(ctx)
+	case channelmonitor.FieldLastCheckedAt:
+		return m.OldLastCheckedAt(ctx)
+	case channelmonitor.FieldCreatedBy:
+		return m.OldCreatedBy(ctx)
+placeholder
+	return nil, fmt.Errorf("unknown ChannelMonitor field %s", name)
+placeholder
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelMonitorMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case channelmonitor.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCreatedAt(v)
+		return nil
+	case channelmonitor.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetUpdatedAt(v)
+		return nil
+	case channelmonitor.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetName(v)
+		return nil
+	case channelmonitor.FieldProvider:
+		v, ok := value.(channelmonitor.Provider)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetProvider(v)
+		return nil
+	case channelmonitor.FieldEndpoint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetEndpoint(v)
+		return nil
+	case channelmonitor.FieldAPIKeyEncrypted:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetAPIKeyEncrypted(v)
+		return nil
+	case channelmonitor.FieldPrimaryModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPrimaryModel(v)
+		return nil
+	case channelmonitor.FieldExtraModels:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetExtraModels(v)
+		return nil
+	case channelmonitor.FieldGroupName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetGroupName(v)
+		return nil
+	case channelmonitor.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetEnabled(v)
+		return nil
+	case channelmonitor.FieldIntervalSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetIntervalSeconds(v)
+		return nil
+	case channelmonitor.FieldLastCheckedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetLastCheckedAt(v)
+		return nil
+	case channelmonitor.FieldCreatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCreatedBy(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitor field %s", name)
+placeholder
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ChannelMonitorMutation) AddedFields() []string {
+	var fields []string
+	if m.addinterval_seconds != nil {
+		fields = append(fields, channelmonitor.FieldIntervalSeconds)
+placeholder
+	if m.addcreated_by != nil {
+		fields = append(fields, channelmonitor.FieldCreatedBy)
+placeholder
+	return fields
+placeholder
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ChannelMonitorMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case channelmonitor.FieldIntervalSeconds:
+		return m.AddedIntervalSeconds()
+	case channelmonitor.FieldCreatedBy:
+		return m.AddedCreatedBy()
+placeholder
+	return nil, false
+placeholder
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelMonitorMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case channelmonitor.FieldIntervalSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddIntervalSeconds(v)
+		return nil
+	case channelmonitor.FieldCreatedBy:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddCreatedBy(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitor numeric field %s", name)
+placeholder
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ChannelMonitorMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(channelmonitor.FieldGroupName) {
+		fields = append(fields, channelmonitor.FieldGroupName)
+placeholder
+	if m.FieldCleared(channelmonitor.FieldLastCheckedAt) {
+		fields = append(fields, channelmonitor.FieldLastCheckedAt)
+placeholder
+	return fields
+placeholder
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ChannelMonitorMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+placeholder
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ChannelMonitorMutation) ClearField(name string) error {
+	switch name {
+	case channelmonitor.FieldGroupName:
+		m.ClearGroupName()
+		return nil
+	case channelmonitor.FieldLastCheckedAt:
+		m.ClearLastCheckedAt()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitor nullable field %s", name)
+placeholder
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ChannelMonitorMutation) ResetField(name string) error {
+	switch name {
+	case channelmonitor.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case channelmonitor.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case channelmonitor.FieldName:
+		m.ResetName()
+		return nil
+	case channelmonitor.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case channelmonitor.FieldEndpoint:
+		m.ResetEndpoint()
+		return nil
+	case channelmonitor.FieldAPIKeyEncrypted:
+		m.ResetAPIKeyEncrypted()
+		return nil
+	case channelmonitor.FieldPrimaryModel:
+		m.ResetPrimaryModel()
+		return nil
+	case channelmonitor.FieldExtraModels:
+		m.ResetExtraModels()
+		return nil
+	case channelmonitor.FieldGroupName:
+		m.ResetGroupName()
+		return nil
+	case channelmonitor.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case channelmonitor.FieldIntervalSeconds:
+		m.ResetIntervalSeconds()
+		return nil
+	case channelmonitor.FieldLastCheckedAt:
+		m.ResetLastCheckedAt()
+		return nil
+	case channelmonitor.FieldCreatedBy:
+		m.ResetCreatedBy()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitor field %s", name)
+placeholder
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ChannelMonitorMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.history != nil {
+		edges = append(edges, channelmonitor.EdgeHistory)
+placeholder
+	return edges
+placeholder
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ChannelMonitorMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case channelmonitor.EdgeHistory:
+		ids := make([]ent.Value, 0, len(m.history))
+		for id := range m.history {
+			ids = append(ids, id)
+	placeholder
+		return ids
+placeholder
+	return nil
+placeholder
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ChannelMonitorMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedhistory != nil {
+		edges = append(edges, channelmonitor.EdgeHistory)
+placeholder
+	return edges
+placeholder
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ChannelMonitorMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case channelmonitor.EdgeHistory:
+		ids := make([]ent.Value, 0, len(m.removedhistory))
+		for id := range m.removedhistory {
+			ids = append(ids, id)
+	placeholder
+		return ids
+placeholder
+	return nil
+placeholder
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ChannelMonitorMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedhistory {
+		edges = append(edges, channelmonitor.EdgeHistory)
+placeholder
+	return edges
+placeholder
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ChannelMonitorMutation) EdgeCleared(name string) bool {
+	switch name {
+	case channelmonitor.EdgeHistory:
+		return m.clearedhistory
+placeholder
+	return false
+placeholder
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ChannelMonitorMutation) ClearEdge(name string) error {
+	switch name {
+placeholder
+	return fmt.Errorf("unknown ChannelMonitor unique edge %s", name)
+placeholder
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ChannelMonitorMutation) ResetEdge(name string) error {
+	switch name {
+	case channelmonitor.EdgeHistory:
+		m.ResetHistory()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitor edge %s", name)
+placeholder
+
+// ChannelMonitorHistoryMutation represents an operation that mutates the ChannelMonitorHistory nodes in the graph.
+type ChannelMonitorHistoryMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *int64
+	model              *string
+	status             *channelmonitorhistory.Status
+	latency_ms         *int
+	addlatency_ms      *int
+	ping_latency_ms    *int
+	addping_latency_ms *int
+	message            *string
+	checked_at         *time.Time
+	clearedFields      map[string]struct{placeholder
+	monitor            *int64
+	clearedmonitor     bool
+	done               bool
+	oldValue           func(context.Context) (*ChannelMonitorHistory, error)
+	predicates         []predicate.ChannelMonitorHistory
+placeholder
+
+var _ ent.Mutation = (*ChannelMonitorHistoryMutation)(nil)
+
+// channelmonitorhistoryOption allows management of the mutation configuration using functional options.
+type channelmonitorhistoryOption func(*ChannelMonitorHistoryMutation)
+
+// newChannelMonitorHistoryMutation creates new mutation for the ChannelMonitorHistory entity.
+func newChannelMonitorHistoryMutation(c config, op Op, opts ...channelmonitorhistoryOption) *ChannelMonitorHistoryMutation {
+	m := &ChannelMonitorHistoryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeChannelMonitorHistory,
+		clearedFields: make(map[string]struct{placeholder),
+placeholder
+	for _, opt := range opts {
+		opt(m)
+placeholder
+	return m
+placeholder
+
+// withChannelMonitorHistoryID sets the ID field of the mutation.
+func withChannelMonitorHistoryID(id int64) channelmonitorhistoryOption {
+	return func(m *ChannelMonitorHistoryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ChannelMonitorHistory
+		)
+		m.oldValue = func(ctx context.Context) (*ChannelMonitorHistory, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+			placeholder else {
+					value, err = m.Client().ChannelMonitorHistory.Get(ctx, id)
+			placeholder
+		placeholder)
+			return value, err
+	placeholder
+		m.id = &id
+placeholder
+placeholder
+
+// withChannelMonitorHistory sets the old ChannelMonitorHistory of the mutation.
+func withChannelMonitorHistory(node *ChannelMonitorHistory) channelmonitorhistoryOption {
+	return func(m *ChannelMonitorHistoryMutation) {
+		m.oldValue = func(context.Context) (*ChannelMonitorHistory, error) {
+			return node, nil
+	placeholder
+		m.id = &node.ID
+placeholder
+placeholder
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ChannelMonitorHistoryMutation) Client() *Client {
+	client := &Client{config: m.configplaceholder
+	client.init()
+	return client
+placeholder
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ChannelMonitorHistoryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+placeholder
+	tx := &Tx{config: m.configplaceholder
+	tx.init()
+	return tx, nil
+placeholder
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ChannelMonitorHistoryMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+placeholder
+	return *m.id, true
+placeholder
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ChannelMonitorHistoryMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{idplaceholder, nil
+	placeholder
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ChannelMonitorHistory.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+placeholder
+placeholder
+
+// SetMonitorID sets the "monitor_id" field.
+func (m *ChannelMonitorHistoryMutation) SetMonitorID(i int64) {
+	m.monitor = &i
+placeholder
+
+// MonitorID returns the value of the "monitor_id" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) MonitorID() (r int64, exists bool) {
+	v := m.monitor
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldMonitorID returns the old "monitor_id" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldMonitorID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMonitorID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMonitorID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMonitorID: %w", err)
+placeholder
+	return oldValue.MonitorID, nil
+placeholder
+
+// ResetMonitorID resets all changes to the "monitor_id" field.
+func (m *ChannelMonitorHistoryMutation) ResetMonitorID() {
+	m.monitor = nil
+placeholder
+
+// SetModel sets the "model" field.
+func (m *ChannelMonitorHistoryMutation) SetModel(s string) {
+	m.model = &s
+placeholder
+
+// Model returns the value of the "model" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) Model() (r string, exists bool) {
+	v := m.model
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldModel returns the old "model" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldModel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModel is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModel requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModel: %w", err)
+placeholder
+	return oldValue.Model, nil
+placeholder
+
+// ResetModel resets all changes to the "model" field.
+func (m *ChannelMonitorHistoryMutation) ResetModel() {
+	m.model = nil
+placeholder
+
+// SetStatus sets the "status" field.
+func (m *ChannelMonitorHistoryMutation) SetStatus(c channelmonitorhistory.Status) {
+	m.status = &c
+placeholder
+
+// Status returns the value of the "status" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) Status() (r channelmonitorhistory.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldStatus returns the old "status" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldStatus(ctx context.Context) (v channelmonitorhistory.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+placeholder
+	return oldValue.Status, nil
+placeholder
+
+// ResetStatus resets all changes to the "status" field.
+func (m *ChannelMonitorHistoryMutation) ResetStatus() {
+	m.status = nil
+placeholder
+
+// SetLatencyMs sets the "latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) SetLatencyMs(i int) {
+	m.latency_ms = &i
+	m.addlatency_ms = nil
+placeholder
+
+// LatencyMs returns the value of the "latency_ms" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) LatencyMs() (r int, exists bool) {
+	v := m.latency_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldLatencyMs returns the old "latency_ms" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldLatencyMs(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLatencyMs is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLatencyMs requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLatencyMs: %w", err)
+placeholder
+	return oldValue.LatencyMs, nil
+placeholder
+
+// AddLatencyMs adds i to the "latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) AddLatencyMs(i int) {
+	if m.addlatency_ms != nil {
+		*m.addlatency_ms += i
+placeholder else {
+		m.addlatency_ms = &i
+placeholder
+placeholder
+
+// AddedLatencyMs returns the value that was added to the "latency_ms" field in this mutation.
+func (m *ChannelMonitorHistoryMutation) AddedLatencyMs() (r int, exists bool) {
+	v := m.addlatency_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearLatencyMs clears the value of the "latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) ClearLatencyMs() {
+	m.latency_ms = nil
+	m.addlatency_ms = nil
+	m.clearedFields[channelmonitorhistory.FieldLatencyMs] = struct{placeholder{placeholder
+placeholder
+
+// LatencyMsCleared returns if the "latency_ms" field was cleared in this mutation.
+func (m *ChannelMonitorHistoryMutation) LatencyMsCleared() bool {
+	_, ok := m.clearedFields[channelmonitorhistory.FieldLatencyMs]
+	return ok
+placeholder
+
+// ResetLatencyMs resets all changes to the "latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) ResetLatencyMs() {
+	m.latency_ms = nil
+	m.addlatency_ms = nil
+	delete(m.clearedFields, channelmonitorhistory.FieldLatencyMs)
+placeholder
+
+// SetPingLatencyMs sets the "ping_latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) SetPingLatencyMs(i int) {
+	m.ping_latency_ms = &i
+	m.addping_latency_ms = nil
+placeholder
+
+// PingLatencyMs returns the value of the "ping_latency_ms" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) PingLatencyMs() (r int, exists bool) {
+	v := m.ping_latency_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldPingLatencyMs returns the old "ping_latency_ms" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldPingLatencyMs(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPingLatencyMs is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPingLatencyMs requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPingLatencyMs: %w", err)
+placeholder
+	return oldValue.PingLatencyMs, nil
+placeholder
+
+// AddPingLatencyMs adds i to the "ping_latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) AddPingLatencyMs(i int) {
+	if m.addping_latency_ms != nil {
+		*m.addping_latency_ms += i
+placeholder else {
+		m.addping_latency_ms = &i
+placeholder
+placeholder
+
+// AddedPingLatencyMs returns the value that was added to the "ping_latency_ms" field in this mutation.
+func (m *ChannelMonitorHistoryMutation) AddedPingLatencyMs() (r int, exists bool) {
+	v := m.addping_latency_ms
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearPingLatencyMs clears the value of the "ping_latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) ClearPingLatencyMs() {
+	m.ping_latency_ms = nil
+	m.addping_latency_ms = nil
+	m.clearedFields[channelmonitorhistory.FieldPingLatencyMs] = struct{placeholder{placeholder
+placeholder
+
+// PingLatencyMsCleared returns if the "ping_latency_ms" field was cleared in this mutation.
+func (m *ChannelMonitorHistoryMutation) PingLatencyMsCleared() bool {
+	_, ok := m.clearedFields[channelmonitorhistory.FieldPingLatencyMs]
+	return ok
+placeholder
+
+// ResetPingLatencyMs resets all changes to the "ping_latency_ms" field.
+func (m *ChannelMonitorHistoryMutation) ResetPingLatencyMs() {
+	m.ping_latency_ms = nil
+	m.addping_latency_ms = nil
+	delete(m.clearedFields, channelmonitorhistory.FieldPingLatencyMs)
+placeholder
+
+// SetMessage sets the "message" field.
+func (m *ChannelMonitorHistoryMutation) SetMessage(s string) {
+	m.message = &s
+placeholder
+
+// Message returns the value of the "message" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) Message() (r string, exists bool) {
+	v := m.message
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldMessage returns the old "message" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldMessage(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMessage is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMessage requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMessage: %w", err)
+placeholder
+	return oldValue.Message, nil
+placeholder
+
+// ClearMessage clears the value of the "message" field.
+func (m *ChannelMonitorHistoryMutation) ClearMessage() {
+	m.message = nil
+	m.clearedFields[channelmonitorhistory.FieldMessage] = struct{placeholder{placeholder
+placeholder
+
+// MessageCleared returns if the "message" field was cleared in this mutation.
+func (m *ChannelMonitorHistoryMutation) MessageCleared() bool {
+	_, ok := m.clearedFields[channelmonitorhistory.FieldMessage]
+	return ok
+placeholder
+
+// ResetMessage resets all changes to the "message" field.
+func (m *ChannelMonitorHistoryMutation) ResetMessage() {
+	m.message = nil
+	delete(m.clearedFields, channelmonitorhistory.FieldMessage)
+placeholder
+
+// SetCheckedAt sets the "checked_at" field.
+func (m *ChannelMonitorHistoryMutation) SetCheckedAt(t time.Time) {
+	m.checked_at = &t
+placeholder
+
+// CheckedAt returns the value of the "checked_at" field in the mutation.
+func (m *ChannelMonitorHistoryMutation) CheckedAt() (r time.Time, exists bool) {
+	v := m.checked_at
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldCheckedAt returns the old "checked_at" field's value of the ChannelMonitorHistory entity.
+// If the ChannelMonitorHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelMonitorHistoryMutation) OldCheckedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCheckedAt is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCheckedAt requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCheckedAt: %w", err)
+placeholder
+	return oldValue.CheckedAt, nil
+placeholder
+
+// ResetCheckedAt resets all changes to the "checked_at" field.
+func (m *ChannelMonitorHistoryMutation) ResetCheckedAt() {
+	m.checked_at = nil
+placeholder
+
+// ClearMonitor clears the "monitor" edge to the ChannelMonitor entity.
+func (m *ChannelMonitorHistoryMutation) ClearMonitor() {
+	m.clearedmonitor = true
+	m.clearedFields[channelmonitorhistory.FieldMonitorID] = struct{placeholder{placeholder
+placeholder
+
+// MonitorCleared reports if the "monitor" edge to the ChannelMonitor entity was cleared.
+func (m *ChannelMonitorHistoryMutation) MonitorCleared() bool {
+	return m.clearedmonitor
+placeholder
+
+// MonitorIDs returns the "monitor" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MonitorID instead. It exists only for internal usage by the builders.
+func (m *ChannelMonitorHistoryMutation) MonitorIDs() (ids []int64) {
+	if id := m.monitor; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetMonitor resets all changes to the "monitor" edge.
+func (m *ChannelMonitorHistoryMutation) ResetMonitor() {
+	m.monitor = nil
+	m.clearedmonitor = false
+placeholder
+
+// Where appends a list predicates to the ChannelMonitorHistoryMutation builder.
+func (m *ChannelMonitorHistoryMutation) Where(ps ...predicate.ChannelMonitorHistory) {
+	m.predicates = append(m.predicates, ps...)
+placeholder
+
+// WhereP appends storage-level predicates to the ChannelMonitorHistoryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ChannelMonitorHistoryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ChannelMonitorHistory, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+placeholder
+	m.Where(p...)
+placeholder
+
+// Op returns the operation name.
+func (m *ChannelMonitorHistoryMutation) Op() Op {
+	return m.op
+placeholder
+
+// SetOp allows setting the mutation operation.
+func (m *ChannelMonitorHistoryMutation) SetOp(op Op) {
+	m.op = op
+placeholder
+
+// Type returns the node type of this mutation (ChannelMonitorHistory).
+func (m *ChannelMonitorHistoryMutation) Type() string {
+	return m.typ
+placeholder
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ChannelMonitorHistoryMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.monitor != nil {
+		fields = append(fields, channelmonitorhistory.FieldMonitorID)
+placeholder
+	if m.model != nil {
+		fields = append(fields, channelmonitorhistory.FieldModel)
+placeholder
+	if m.status != nil {
+		fields = append(fields, channelmonitorhistory.FieldStatus)
+placeholder
+	if m.latency_ms != nil {
+		fields = append(fields, channelmonitorhistory.FieldLatencyMs)
+placeholder
+	if m.ping_latency_ms != nil {
+		fields = append(fields, channelmonitorhistory.FieldPingLatencyMs)
+placeholder
+	if m.message != nil {
+		fields = append(fields, channelmonitorhistory.FieldMessage)
+placeholder
+	if m.checked_at != nil {
+		fields = append(fields, channelmonitorhistory.FieldCheckedAt)
+placeholder
+	return fields
+placeholder
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ChannelMonitorHistoryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case channelmonitorhistory.FieldMonitorID:
+		return m.MonitorID()
+	case channelmonitorhistory.FieldModel:
+		return m.Model()
+	case channelmonitorhistory.FieldStatus:
+		return m.Status()
+	case channelmonitorhistory.FieldLatencyMs:
+		return m.LatencyMs()
+	case channelmonitorhistory.FieldPingLatencyMs:
+		return m.PingLatencyMs()
+	case channelmonitorhistory.FieldMessage:
+		return m.Message()
+	case channelmonitorhistory.FieldCheckedAt:
+		return m.CheckedAt()
+placeholder
+	return nil, false
+placeholder
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ChannelMonitorHistoryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case channelmonitorhistory.FieldMonitorID:
+		return m.OldMonitorID(ctx)
+	case channelmonitorhistory.FieldModel:
+		return m.OldModel(ctx)
+	case channelmonitorhistory.FieldStatus:
+		return m.OldStatus(ctx)
+	case channelmonitorhistory.FieldLatencyMs:
+		return m.OldLatencyMs(ctx)
+	case channelmonitorhistory.FieldPingLatencyMs:
+		return m.OldPingLatencyMs(ctx)
+	case channelmonitorhistory.FieldMessage:
+		return m.OldMessage(ctx)
+	case channelmonitorhistory.FieldCheckedAt:
+		return m.OldCheckedAt(ctx)
+placeholder
+	return nil, fmt.Errorf("unknown ChannelMonitorHistory field %s", name)
+placeholder
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelMonitorHistoryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case channelmonitorhistory.FieldMonitorID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetMonitorID(v)
+		return nil
+	case channelmonitorhistory.FieldModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetModel(v)
+		return nil
+	case channelmonitorhistory.FieldStatus:
+		v, ok := value.(channelmonitorhistory.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetStatus(v)
+		return nil
+	case channelmonitorhistory.FieldLatencyMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetLatencyMs(v)
+		return nil
+	case channelmonitorhistory.FieldPingLatencyMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetPingLatencyMs(v)
+		return nil
+	case channelmonitorhistory.FieldMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetMessage(v)
+		return nil
+	case channelmonitorhistory.FieldCheckedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetCheckedAt(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitorHistory field %s", name)
+placeholder
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ChannelMonitorHistoryMutation) AddedFields() []string {
+	var fields []string
+	if m.addlatency_ms != nil {
+		fields = append(fields, channelmonitorhistory.FieldLatencyMs)
+placeholder
+	if m.addping_latency_ms != nil {
+		fields = append(fields, channelmonitorhistory.FieldPingLatencyMs)
+placeholder
+	return fields
+placeholder
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ChannelMonitorHistoryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case channelmonitorhistory.FieldLatencyMs:
+		return m.AddedLatencyMs()
+	case channelmonitorhistory.FieldPingLatencyMs:
+		return m.AddedPingLatencyMs()
+placeholder
+	return nil, false
+placeholder
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelMonitorHistoryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case channelmonitorhistory.FieldLatencyMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddLatencyMs(v)
+		return nil
+	case channelmonitorhistory.FieldPingLatencyMs:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddPingLatencyMs(v)
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitorHistory numeric field %s", name)
+placeholder
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ChannelMonitorHistoryMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(channelmonitorhistory.FieldLatencyMs) {
+		fields = append(fields, channelmonitorhistory.FieldLatencyMs)
+placeholder
+	if m.FieldCleared(channelmonitorhistory.FieldPingLatencyMs) {
+		fields = append(fields, channelmonitorhistory.FieldPingLatencyMs)
+placeholder
+	if m.FieldCleared(channelmonitorhistory.FieldMessage) {
+		fields = append(fields, channelmonitorhistory.FieldMessage)
+placeholder
+	return fields
+placeholder
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ChannelMonitorHistoryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+placeholder
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ChannelMonitorHistoryMutation) ClearField(name string) error {
+	switch name {
+	case channelmonitorhistory.FieldLatencyMs:
+		m.ClearLatencyMs()
+		return nil
+	case channelmonitorhistory.FieldPingLatencyMs:
+		m.ClearPingLatencyMs()
+		return nil
+	case channelmonitorhistory.FieldMessage:
+		m.ClearMessage()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitorHistory nullable field %s", name)
+placeholder
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ChannelMonitorHistoryMutation) ResetField(name string) error {
+	switch name {
+	case channelmonitorhistory.FieldMonitorID:
+		m.ResetMonitorID()
+		return nil
+	case channelmonitorhistory.FieldModel:
+		m.ResetModel()
+		return nil
+	case channelmonitorhistory.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case channelmonitorhistory.FieldLatencyMs:
+		m.ResetLatencyMs()
+		return nil
+	case channelmonitorhistory.FieldPingLatencyMs:
+		m.ResetPingLatencyMs()
+		return nil
+	case channelmonitorhistory.FieldMessage:
+		m.ResetMessage()
+		return nil
+	case channelmonitorhistory.FieldCheckedAt:
+		m.ResetCheckedAt()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitorHistory field %s", name)
+placeholder
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ChannelMonitorHistoryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.monitor != nil {
+		edges = append(edges, channelmonitorhistory.EdgeMonitor)
+placeholder
+	return edges
+placeholder
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ChannelMonitorHistoryMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case channelmonitorhistory.EdgeMonitor:
+		if id := m.monitor; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+placeholder
+	return nil
+placeholder
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ChannelMonitorHistoryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+placeholder
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ChannelMonitorHistoryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+placeholder
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ChannelMonitorHistoryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedmonitor {
+		edges = append(edges, channelmonitorhistory.EdgeMonitor)
+placeholder
+	return edges
+placeholder
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ChannelMonitorHistoryMutation) EdgeCleared(name string) bool {
+	switch name {
+	case channelmonitorhistory.EdgeMonitor:
+		return m.clearedmonitor
+placeholder
+	return false
+placeholder
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ChannelMonitorHistoryMutation) ClearEdge(name string) error {
+	switch name {
+	case channelmonitorhistory.EdgeMonitor:
+		m.ClearMonitor()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitorHistory unique edge %s", name)
+placeholder
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ChannelMonitorHistoryMutation) ResetEdge(name string) error {
+	switch name {
+	case channelmonitorhistory.EdgeMonitor:
+		m.ResetMonitor()
+		return nil
+placeholder
+	return fmt.Errorf("unknown ChannelMonitorHistory edge %s", name)
 placeholder
 
 // ErrorPassthroughRuleMutation represents an operation that mutates the ErrorPassthroughRule nodes in the graph.
