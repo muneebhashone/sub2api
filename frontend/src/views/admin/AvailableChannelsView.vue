@@ -78,7 +78,7 @@ import AvailableChannelsTable from '@/components/channels/AvailableChannelsTable
 import channelsAPI, { type AvailableChannel placeholder from '@/api/admin/channels'
 import { useAppStore placeholder from '@/stores/app'
 import { extractApiErrorMessage placeholder from '@/utils/apiError'
-import { CHANNEL_STATUS_ACTIVE placeholder from '@/constants/channel'
+import { CHANNEL_STATUS_ACTIVE, type ChannelStatus placeholder from '@/constants/channel'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -95,7 +95,7 @@ const columns = computed(() => [
   { key: 'supported_models', label: t('admin.availableChannels.columns.supportedModels') placeholder
 ])
 
-function statusLabel(status: string): string {
+function statusLabel(status: ChannelStatus): string {
   return status === CHANNEL_STATUS_ACTIVE
     ? t('admin.availableChannels.statusActive')
     : t('admin.availableChannels.statusDisabled')

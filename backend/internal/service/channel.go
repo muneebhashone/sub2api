@@ -509,7 +509,7 @@ placeholder
 	placeholder
 placeholder
 
-	sort.Slice(result, func(i, j int) bool {
+	sort.SliceStable(result, func(i, j int) bool {
 		if result[i].Platform != result[j].Platform {
 			return result[i].Platform < result[j].Platform
 	placeholder
