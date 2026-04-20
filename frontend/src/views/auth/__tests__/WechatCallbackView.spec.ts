@@ -201,6 +201,61 @@ describe('WechatCallbackView', () => {
     expect(locationState.current.href).not.toContain('mode=mp')
   placeholder)
 
+  it('falls back to the query mode when capability settings cannot be confirmed', async () => {
+    routeState.query = {
+      wechat_bind_existing: '1',
+      mode: 'mp',
+      redirect: '/profile',
+    placeholder
+    fetchPublicSettingsMock.mockResolvedValue(null)
+    getAuthTokenMock.mockReturnValue('current-auth-token')
+
+    mount(WechatCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(prepareOAuthBindAccessTokenCookieMock).toHaveBeenCalledTimes(1)
+    expect(locationState.current.href).toContain('mode=mp')
+  placeholder)
+
+  it('ignores legacy aggregate wechat settings and reuses the query mode during bind recovery', async () => {
+    routeState.query = {
+      wechat_bind_existing: '1',
+      mode: 'open',
+      redirect: '/profile',
+    placeholder
+    appStoreState.cachedPublicSettings = {
+      wechat_oauth_enabled: true,
+    placeholder
+    appStoreState.publicSettingsLoaded = true
+    getAuthTokenMock.mockReturnValue('current-auth-token')
+
+    mount(WechatCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(prepareOAuthBindAccessTokenCookieMock).toHaveBeenCalledTimes(1)
+    expect(locationState.current.href).toContain('mode=open')
+  placeholder)
+
   it('does not send adoption decisions during the initial exchange', async () => {
     exchangePendingOAuthCompletionMock.mockResolvedValue({
       access_token: 'access-token',
