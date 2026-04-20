@@ -26,6 +26,10 @@ var (
 		"AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT",
 		"auth identity channel already belongs to another user",
 	)
+	ErrAuthIdentityChannelProviderMismatch = infraerrors.BadRequest(
+		"AUTH_IDENTITY_CHANNEL_PROVIDER_MISMATCH",
+		"auth identity channel provider must match canonical identity",
+	)
 )
 
 type ProviderGrantReason string
@@ -133,6 +137,10 @@ placeholder
 placeholder
 
 func (r *userRepository) CreateAuthIdentity(ctx context.Context, input CreateAuthIdentityInput) (*CreateAuthIdentityResult, error) {
+	if err := validateAuthIdentityChannelProviderMatch(input.Canonical, input.Channel); err != nil {
+		return nil, err
+placeholder
+
 	client := clientFromContext(ctx, r.client)
 
 	create := client.AuthIdentity.Create().
@@ -240,6 +248,10 @@ placeholder
 placeholder
 
 func (r *userRepository) BindAuthIdentityToUser(ctx context.Context, input BindAuthIdentityInput) (*CreateAuthIdentityResult, error) {
+	if err := validateAuthIdentityChannelProviderMatch(input.Canonical, input.Channel); err != nil {
+		return nil, err
+placeholder
+
 	var result *CreateAuthIdentityResult
 	err := r.WithUserProfileIdentityTx(ctx, func(txCtx context.Context) error {
 		client := clientFromContext(txCtx, r.client)
@@ -529,6 +541,23 @@ placeholder
 		out[k] = v
 placeholder
 	return out
+placeholder
+
+func validateAuthIdentityChannelProviderMatch(canonical AuthIdentityKey, channel *AuthIdentityChannelKey) error {
+	if channel == nil {
+		return nil
+placeholder
+
+	canonicalProviderType := strings.TrimSpace(canonical.ProviderType)
+	canonicalProviderKey := strings.TrimSpace(canonical.ProviderKey)
+	channelProviderType := strings.TrimSpace(channel.ProviderType)
+	channelProviderKey := strings.TrimSpace(channel.ProviderKey)
+
+	if canonicalProviderType != channelProviderType || canonicalProviderKey != channelProviderKey {
+		return ErrAuthIdentityChannelProviderMismatch
+placeholder
+
+	return nil
 placeholder
 
 func txAwareSQLExecutor(ctx context.Context, fallback sqlExecutor, client *dbent.Client) sqlQueryExecutor {
