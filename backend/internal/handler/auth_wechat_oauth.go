@@ -214,6 +214,11 @@ placeholder
 		"suggested_display_name": strings.TrimSpace(userInfo.Nickname),
 		"suggested_avatar_url":   strings.TrimSpace(userInfo.HeadImgURL),
 placeholder
+	identityRef := service.PendingAuthIdentityKey{
+		ProviderType:    "wechat",
+		ProviderKey:     wechatOAuthProviderKey,
+		ProviderSubject: providerSubject,
+placeholder
 
 	normalizedIntent := normalizeWeChatOAuthIntent(intent)
 	if normalizedIntent == wechatOAuthIntentBind {
@@ -226,6 +231,34 @@ placeholder
 			default:
 				redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 		placeholder
+			return
+	placeholder
+		redirectToFrontendCallback(c, frontendCallback)
+		return
+placeholder
+
+	existingIdentityUser, err := h.findOAuthIdentityUser(c.Request.Context(), identityRef)
+	if err != nil {
+		redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
+		return
+placeholder
+	if existingIdentityUser != nil {
+		tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), existingIdentityUser.Email, username, "")
+		if err != nil {
+			redirectOAuthError(c, frontendCallback, "login_failed", infraerrors.Reason(err), infraerrors.Message(err))
+			return
+	placeholder
+		if err := h.createWeChatPendingSession(c, normalizedIntent, providerSubject, existingIdentityUser.Email, redirectTo, browserSessionKey, upstreamClaims, tokenPair, nil, &user.ID); err != nil {
+			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+			return
+	placeholder
+		redirectToFrontendCallback(c, frontendCallback)
+		return
+placeholder
+
+	if h.isForceEmailOnThirdPartySignup(c.Request.Context()) {
+		if err := h.createOAuthEmailRequiredPendingSession(c, identityRef, redirectTo, browserSessionKey, upstreamClaims); err != nil {
+			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 			return
 	placeholder
 		redirectToFrontendCallback(c, frontendCallback)
