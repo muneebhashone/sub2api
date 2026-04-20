@@ -177,6 +177,15 @@ function isPendingStatus(status: string | null | undefined): boolean {
   return PENDING_STATUSES.has(normalizeOrderStatus(status))
 placeholder
 
+async function resolveOrderFromResumeToken(resumeToken: string): Promise<PaymentOrder | null> {
+  try {
+    const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
+    return result.data
+  placeholder catch (_err: unknown) {
+    return null
+  placeholder
+placeholder
+
 function clearStatusRefreshTimer(): void {
   if (statusRefreshTimer !== null) {
     clearTimeout(statusRefreshTimer)
@@ -230,15 +239,13 @@ onMounted(async () => {
     placeholder
   placeholder
 
-  if (!order.value && resumeToken) {
-    try {
-      const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
-      order.value = result.data
+  if (resumeToken) {
+    const resolvedOrder = await resolveOrderFromResumeToken(resumeToken)
+    if (resolvedOrder) {
+      order.value = resolvedOrder
       if (!orderId) {
-        orderId = result.data.id
+        orderId = resolvedOrder.id
       placeholder
-    placeholder catch (_err: unknown) {
-      // Resume token recovery failed; do not trust legacy public out_trade_no fallback.
     placeholder
   placeholder
 
@@ -278,12 +285,7 @@ onMounted(async () => {
 
   const refreshOrder = async (): Promise<PaymentOrder | null> => {
     if (resumeToken) {
-      try {
-        const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
-        return result.data
-      placeholder catch (_err: unknown) {
-        return null
-      placeholder
+      return await resolveOrderFromResumeToken(resumeToken)
     placeholder
 
     if (orderId) {
