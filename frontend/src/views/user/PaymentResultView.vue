@@ -94,6 +94,7 @@ import { ref, computed, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useRoute, useRouter placeholder from 'vue-router'
 import OrderStatusBadge from '@/components/payment/OrderStatusBadge.vue'
+import { PAYMENT_RECOVERY_STORAGE_KEY, readPaymentRecoverySnapshot placeholder from '@/components/payment/paymentFlow'
 import { usePaymentStore placeholder from '@/stores/payment'
 import { paymentAPI placeholder from '@/api/payment'
 import type { PaymentOrder placeholder from '@/types/payment'
@@ -129,46 +130,46 @@ const feeAmount = computed(() => {
 placeholder)
 
 const isSuccess = computed(() => {
-  // Always prioritize actual order status from backend
-  if (order.value) {
-    return SUCCESS_STATUSES.has(order.value.status)
-  placeholder
-  // Fallback only when order not loaded
-  if (route.query.status === 'success') return true
-  if (route.query.trade_status === 'TRADE_SUCCESS') return true
-  return false
+  return !!order.value && SUCCESS_STATUSES.has(order.value.status)
 placeholder)
 
-/** Extract numeric order ID from out_trade_no like "sub2_46" → 46 */
-function parseOutTradeNo(outTradeNo: string): number {
-  const match = outTradeNo.match(/_(\d+)$/)
-  return match ? Number(match[1]) : 0
-placeholder
-
 onMounted(async () => {
-  // Try order_id first (internal navigation from QRCode/Stripe pages)
+  const resumeToken = typeof route.query.resume_token === 'string'
+    ? route.query.resume_token
+    : ''
   let orderId = Number(route.query.order_id) || 0
   const outTradeNo = String(route.query.out_trade_no || '')
 
-  // Fallback: EasyPay return URL with out_trade_no
-  if (!orderId && outTradeNo) {
-    orderId = parseOutTradeNo(outTradeNo)
-    // Store return info for display when order lookup fails
+  if (!orderId && resumeToken && typeof window !== 'undefined') {
+    const restored = readPaymentRecoverySnapshot(
+      window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY),
+      { resumeToken placeholder,
+    )
+    if (restored?.orderId) {
+      orderId = restored.orderId
+    placeholder
+  placeholder
+
+  if (orderId) {
+    try {
+      order.value = await paymentStore.pollOrderStatus(orderId)
+    placeholder catch (_err: unknown) {
+      // Order lookup failed, will try legacy fallback below when possible.
+    placeholder
+  placeholder
+
+  if (!order.value && outTradeNo) {
     returnInfo.value = {
       outTradeNo,
       money: String(route.query.money || ''),
       type: String(route.query.type || ''),
       tradeStatus: String(route.query.trade_status || ''),
     placeholder
-  placeholder
 
-  // Verify payment via public endpoint (works without login)
-  if (outTradeNo) {
     try {
       const result = await paymentAPI.verifyOrderPublic(outTradeNo)
       order.value = result.data
     placeholder catch (_err: unknown) {
-      // Public verify failed, try authenticated endpoint if logged in
       try {
         const result = await paymentAPI.verifyOrder(outTradeNo)
         order.value = result.data
@@ -176,12 +177,11 @@ onMounted(async () => {
     placeholder
   placeholder
 
-  // Normal order lookup by ID (if verify didn't load the order)
   if (!order.value && orderId) {
     try {
       order.value = await paymentStore.pollOrderStatus(orderId)
     placeholder catch (_err: unknown) {
-      // Order lookup failed, will show returnInfo fallback
+      // Order lookup failed, will show returnInfo fallback.
     placeholder
   placeholder
   loading.value = false
