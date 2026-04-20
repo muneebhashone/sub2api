@@ -3,11 +3,36 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/stretchr/testify/assert"
 )
+
+type paymentFulfillmentTestProvider struct {
+	key            string
+	supportedTypes []payment.PaymentType
+placeholder
+
+func (p paymentFulfillmentTestProvider) Name() string        { return p.key placeholder
+func (p paymentFulfillmentTestProvider) ProviderKey() string { return p.key placeholder
+func (p paymentFulfillmentTestProvider) SupportedTypes() []payment.PaymentType {
+	return p.supportedTypes
+placeholder
+func (p paymentFulfillmentTestProvider) CreatePayment(ctx context.Context, req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
+	panic("unexpected call")
+placeholder
+func (p paymentFulfillmentTestProvider) QueryOrder(ctx context.Context, tradeNo string) (*payment.QueryOrderResponse, error) {
+	panic("unexpected call")
+placeholder
+func (p paymentFulfillmentTestProvider) VerifyNotification(ctx context.Context, rawBody string, headers map[string]string) (*payment.PaymentNotification, error) {
+	panic("unexpected call")
+placeholder
+func (p paymentFulfillmentTestProvider) Refund(ctx context.Context, req payment.RefundRequest) (*payment.RefundResponse, error) {
+	panic("unexpected call")
+placeholder
 
 // ---------------------------------------------------------------------------
 // resolveRedeemAction — pure idempotency decision logic
@@ -160,4 +185,43 @@ func TestResolveRedeemAction_IsUsedCanUseConsistency(t *testing.T) {
 	assert.False(t, unusedCode.IsUsed())
 	assert.True(t, unusedCode.CanUse())
 	assert.Equal(t, redeemActionRedeem, resolveRedeemAction(unusedCode, nil))
+placeholder
+
+func TestExpectedNotificationProviderKeyPrefersOrderInstanceProvider(t *testing.T) {
+	t.Parallel()
+
+	registry := payment.NewRegistry()
+	registry.Register(paymentFulfillmentTestProvider{
+		key:            payment.TypeAlipay,
+		supportedTypes: []payment.PaymentType{payment.TypeAlipayplaceholder,
+placeholder)
+
+	assert.Equal(t,
+		payment.TypeEasyPay,
+		expectedNotificationProviderKey(registry, payment.TypeAlipay, payment.TypeEasyPay),
+	)
+placeholder
+
+func TestExpectedNotificationProviderKeyUsesRegistryMappingForLegacyOrders(t *testing.T) {
+	t.Parallel()
+
+	registry := payment.NewRegistry()
+	registry.Register(paymentFulfillmentTestProvider{
+		key:            payment.TypeEasyPay,
+		supportedTypes: []payment.PaymentType{payment.TypeAlipayplaceholder,
+placeholder)
+
+	assert.Equal(t,
+		payment.TypeEasyPay,
+		expectedNotificationProviderKey(registry, payment.TypeAlipay, ""),
+	)
+placeholder
+
+func TestExpectedNotificationProviderKeyFallsBackToPaymentType(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t,
+		payment.TypeWxpay,
+		expectedNotificationProviderKey(nil, payment.TypeWxpay, ""),
+	)
 placeholder
