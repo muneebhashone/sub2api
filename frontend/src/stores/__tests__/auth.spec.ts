@@ -211,6 +211,78 @@ describe('useAuthStore', () => {
 
       expect(store.isAuthenticated).toBe(true)
     placeholder)
+
+    it('恢复持久化 pending auth session', () => {
+      localStorage.setItem(
+        'pending_auth_session',
+        JSON.stringify({
+          token: 'pending-token',
+          token_field: 'pending_auth_token',
+          provider: 'wechat',
+          redirect: '/profile',
+        placeholder)
+      )
+
+      const store = useAuthStore()
+      store.checkAuth()
+
+      expect(store.hasPendingAuthSession).toBe(true)
+      expect(store.pendingAuthSession).toEqual({
+        token: 'pending-token',
+        token_field: 'pending_auth_token',
+        provider: 'wechat',
+        redirect: '/profile',
+      placeholder)
+    placeholder)
+  placeholder)
+
+  describe('pending auth session', () => {
+    it('persists and clears pending auth session state', () => {
+      const store = useAuthStore()
+
+      store.setPendingAuthSession({
+        token: 'pending-token',
+        token_field: 'pending_auth_token',
+        provider: 'wechat',
+        redirect: '/profile',
+      placeholder)
+
+      expect(store.hasPendingAuthSession).toBe(true)
+      expect(JSON.parse(localStorage.getItem('pending_auth_session') || 'null')).toEqual({
+        token: 'pending-token',
+        token_field: 'pending_auth_token',
+        provider: 'wechat',
+        redirect: '/profile',
+      placeholder)
+
+      store.clearPendingAuthSession()
+
+      expect(store.hasPendingAuthSession).toBe(false)
+      expect(localStorage.getItem('pending_auth_session')).toBeNull()
+    placeholder)
+
+    it('preserves pending auth session when registration fails', async () => {
+      const store = useAuthStore()
+      store.setPendingAuthSession({
+        token: 'pending-token',
+        token_field: 'pending_auth_token',
+        provider: 'oidc',
+        redirect: '/register',
+      placeholder)
+      mockRegister.mockRejectedValue(new Error('Register failed'))
+
+      await expect(
+        store.register({ email: 'user@example.com', password: 'secret-123' placeholder)
+      ).rejects.toThrow('Register failed')
+
+      expect(store.hasPendingAuthSession).toBe(true)
+      expect(store.pendingAuthSession).toEqual({
+        token: 'pending-token',
+        token_field: 'pending_auth_token',
+        provider: 'oidc',
+        redirect: '/register',
+      placeholder)
+    placeholder)
   placeholder)
 
   // --- isAdmin ---
