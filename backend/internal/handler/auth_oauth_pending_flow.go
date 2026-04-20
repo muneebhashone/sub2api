@@ -10,6 +10,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
+	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
 	"github.com/Wei-Shaw/sub2api/ent/identityadoptiondecision"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -309,6 +310,14 @@ placeholder
 	return cloned
 placeholder
 
+func mergeOAuthMetadata(base map[string]any, overlay map[string]any) map[string]any {
+	merged := cloneOAuthMetadata(base)
+	for key, value := range overlay {
+		merged[key] = value
+placeholder
+	return merged
+placeholder
+
 func normalizeAdoptedOAuthDisplayName(value string) string {
 	value = strings.TrimSpace(value)
 	if len([]rune(value)) > 100 {
@@ -558,6 +567,10 @@ placeholder
 placeholder
 
 func ensurePendingOAuthIdentityForUser(ctx context.Context, tx *dbent.Tx, session *dbent.PendingAuthSession, userID int64) (*dbent.AuthIdentity, error) {
+	if session != nil && strings.EqualFold(strings.TrimSpace(session.ProviderType), "wechat") {
+		return ensurePendingWeChatOAuthIdentityForUser(ctx, tx, session, userID)
+placeholder
+
 	client := tx.Client()
 	identity, err := client.AuthIdentity.Query().
 		Where(
@@ -588,14 +601,149 @@ placeholder
 	return create.Save(ctx)
 placeholder
 
+func ensurePendingWeChatOAuthIdentityForUser(ctx context.Context, tx *dbent.Tx, session *dbent.PendingAuthSession, userID int64) (*dbent.AuthIdentity, error) {
+	client := tx.Client()
+	providerType := strings.TrimSpace(session.ProviderType)
+	providerKey := strings.TrimSpace(session.ProviderKey)
+	providerSubject := strings.TrimSpace(session.ProviderSubject)
+	channel := strings.TrimSpace(pendingSessionStringValue(session.UpstreamIdentityClaims, "channel"))
+	channelAppID := strings.TrimSpace(pendingSessionStringValue(session.UpstreamIdentityClaims, "channel_app_id"))
+	channelSubject := strings.TrimSpace(pendingSessionStringValue(session.UpstreamIdentityClaims, "channel_subject"))
+	metadata := cloneOAuthMetadata(session.UpstreamIdentityClaims)
+
+	identity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ(providerType),
+			authidentity.ProviderKeyEQ(providerKey),
+			authidentity.ProviderSubjectEQ(providerSubject),
+		).
+		Only(ctx)
+	if err != nil && !dbent.IsNotFound(err) {
+		return nil, err
+placeholder
+	if identity != nil && identity.UserID != userID {
+		return nil, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+placeholder
+
+	var legacyOpenIDIdentity *dbent.AuthIdentity
+	if channelSubject != "" && channelSubject != providerSubject {
+		legacyOpenIDIdentity, err = client.AuthIdentity.Query().
+			Where(
+				authidentity.ProviderTypeEQ(providerType),
+				authidentity.ProviderKeyEQ(providerKey),
+				authidentity.ProviderSubjectEQ(channelSubject),
+			).
+			Only(ctx)
+		if err != nil && !dbent.IsNotFound(err) {
+			return nil, err
+	placeholder
+		if legacyOpenIDIdentity != nil && legacyOpenIDIdentity.UserID != userID {
+			return nil, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+	placeholder
+placeholder
+
+	switch {
+	case identity != nil:
+		update := client.AuthIdentity.UpdateOneID(identity.ID).
+			SetMetadata(mergeOAuthMetadata(identity.Metadata, metadata))
+		if issuer := oauthIdentityIssuer(session); issuer != nil {
+			update = update.SetIssuer(strings.TrimSpace(*issuer))
+	placeholder
+		identity, err = update.Save(ctx)
+		if err != nil {
+			return nil, err
+	placeholder
+	case legacyOpenIDIdentity != nil:
+		update := client.AuthIdentity.UpdateOneID(legacyOpenIDIdentity.ID).
+			SetProviderSubject(providerSubject).
+			SetMetadata(mergeOAuthMetadata(legacyOpenIDIdentity.Metadata, metadata))
+		if issuer := oauthIdentityIssuer(session); issuer != nil {
+			update = update.SetIssuer(strings.TrimSpace(*issuer))
+	placeholder
+		identity, err = update.Save(ctx)
+		if err != nil {
+			return nil, err
+	placeholder
+	default:
+		create := client.AuthIdentity.Create().
+			SetUserID(userID).
+			SetProviderType(providerType).
+			SetProviderKey(providerKey).
+			SetProviderSubject(providerSubject).
+			SetMetadata(metadata)
+		if issuer := oauthIdentityIssuer(session); issuer != nil {
+			create = create.SetIssuer(strings.TrimSpace(*issuer))
+	placeholder
+		identity, err = create.Save(ctx)
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
+
+	if channel == "" || channelAppID == "" || channelSubject == "" {
+		return identity, nil
+placeholder
+
+	channelRecord, err := client.AuthIdentityChannel.Query().
+		Where(
+			authidentitychannel.ProviderTypeEQ(providerType),
+			authidentitychannel.ProviderKeyEQ(providerKey),
+			authidentitychannel.ChannelEQ(channel),
+			authidentitychannel.ChannelAppIDEQ(channelAppID),
+			authidentitychannel.ChannelSubjectEQ(channelSubject),
+		).
+		WithIdentity().
+		Only(ctx)
+	if err != nil && !dbent.IsNotFound(err) {
+		return nil, err
+placeholder
+	if channelRecord != nil && channelRecord.Edges.Identity != nil && channelRecord.Edges.Identity.UserID != userID {
+		return nil, infraerrors.Conflict("AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT", "auth identity channel already belongs to another user")
+placeholder
+
+	channelMetadata := mergeOAuthMetadata(channelRecordMetadata(channelRecord), metadata)
+	if channelRecord == nil {
+		if _, err := client.AuthIdentityChannel.Create().
+			SetIdentityID(identity.ID).
+			SetProviderType(providerType).
+			SetProviderKey(providerKey).
+			SetChannel(channel).
+			SetChannelAppID(channelAppID).
+			SetChannelSubject(channelSubject).
+			SetMetadata(channelMetadata).
+			Save(ctx); err != nil {
+			return nil, err
+	placeholder
+		return identity, nil
+placeholder
+
+	_, err = client.AuthIdentityChannel.UpdateOneID(channelRecord.ID).
+		SetIdentityID(identity.ID).
+		SetMetadata(channelMetadata).
+		Save(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+	return identity, nil
+placeholder
+
+func channelRecordMetadata(channel *dbent.AuthIdentityChannel) map[string]any {
+	if channel == nil {
+		return map[string]any{placeholder
+placeholder
+	return cloneOAuthMetadata(channel.Metadata)
+placeholder
+
 func shouldBindPendingOAuthIdentity(session *dbent.PendingAuthSession, decision *dbent.IdentityAdoptionDecision) bool {
 	if session == nil || decision == nil {
 		return false
 placeholder
-	if strings.EqualFold(strings.TrimSpace(session.Intent), "bind_current_user") {
+	switch strings.ToLower(strings.TrimSpace(session.Intent)) {
+	case "bind_current_user", "login", "adopt_existing_user_by_email":
 		return true
+	default:
+		return decision.AdoptDisplayName || decision.AdoptAvatar
 placeholder
-	return decision.AdoptDisplayName || decision.AdoptAvatar
 placeholder
 
 func applyPendingOAuthBinding(
