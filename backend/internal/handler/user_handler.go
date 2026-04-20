@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -41,7 +43,8 @@ placeholder
 
 type userProfileResponse struct {
 	dto.User
-	AvatarURL string `json:"avatar_url,omitempty"`
+	AvatarURL  string                         `json:"avatar_url,omitempty"`
+	Identities service.UserIdentitySummarySet `json:"identities"`
 placeholder
 
 // GetProfile handles getting user profile
@@ -59,7 +62,13 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, userProfileResponseFromService(userData))
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, userData)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, profileResp)
 placeholder
 
 // ChangePassword handles changing user password
@@ -117,7 +126,44 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, userProfileResponseFromService(updatedUser))
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, profileResp)
+placeholder
+
+type StartIdentityBindingRequest struct {
+	Provider   string `json:"provider" binding:"required"`
+	RedirectTo string `json:"redirect_to"`
+placeholder
+
+// StartIdentityBinding returns the backend authorize URL for starting a third-party identity bind flow.
+// POST /api/v1/user/auth-identities/bind/start
+func (h *UserHandler) StartIdentityBinding(c *gin.Context) {
+	if _, ok := middleware2.GetAuthSubjectFromContext(c); !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+
+	var req StartIdentityBindingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	result, err := h.userService.PrepareIdentityBindingStart(c.Request.Context(), service.StartUserIdentityBindingRequest{
+		Provider:   req.Provider,
+		RedirectTo: req.RedirectTo,
+placeholder)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, result)
 placeholder
 
 // SendNotifyEmailCodeRequest represents the request to send notify email verification code
@@ -183,7 +229,13 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, userProfileResponseFromService(updatedUser))
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, profileResp)
 placeholder
 
 // RemoveNotifyEmailRequest represents the request to remove a notify email
@@ -219,7 +271,13 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, userProfileResponseFromService(updatedUser))
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, profileResp)
 placeholder
 
 // ToggleNotifyEmailRequest represents the request to toggle a notify email's disabled state
@@ -255,16 +313,31 @@ placeholder
 		return
 placeholder
 
-	response.Success(c, userProfileResponseFromService(updatedUser))
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
 placeholder
 
-func userProfileResponseFromService(user *service.User) userProfileResponse {
+	response.Success(c, profileResp)
+placeholder
+
+func (h *UserHandler) buildUserProfileResponse(ctx context.Context, userID int64, user *service.User) (userProfileResponse, error) {
+	identities, err := h.userService.GetProfileIdentitySummaries(ctx, userID, user)
+	if err != nil {
+		return userProfileResponse{placeholder, err
+placeholder
+	return userProfileResponseFromService(user, identities), nil
+placeholder
+
+func userProfileResponseFromService(user *service.User, identities service.UserIdentitySummarySet) userProfileResponse {
 	base := dto.UserFromService(user)
 	if base == nil {
 		return userProfileResponse{placeholder
 placeholder
 	return userProfileResponse{
-		User:      *base,
-		AvatarURL: user.AvatarURL,
+		User:       *base,
+		AvatarURL:  user.AvatarURL,
+		Identities: identities,
 placeholder
 placeholder

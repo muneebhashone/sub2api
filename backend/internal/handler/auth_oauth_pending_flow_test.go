@@ -167,6 +167,348 @@ placeholder
 	require.NotNil(t, consumed.ConsumedAt)
 placeholder
 
+func TestExchangePendingOAuthCompletionBindCurrentUserPreviewThenFinalizeBindsIdentityWithoutAdoption(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	ctx := context.Background()
+
+	userEntity, err := client.User.Create().
+		SetEmail("bind-target@example.com").
+		SetUsername("legacy-name").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("bind-pending-session-token").
+		SetIntent("bind_current_user").
+		SetProviderType("linuxdo").
+		SetProviderKey("linuxdo").
+		SetProviderSubject("bind-123").
+		SetTargetUserID(userEntity.ID).
+		SetResolvedEmail(userEntity.Email).
+		SetBrowserSessionKey("bind-browser-session-key").
+		SetUpstreamIdentityClaims(map[string]any{
+			"username":               "linuxdo_user",
+			"suggested_display_name": "Bound Example",
+			"suggested_avatar_url":   "https://cdn.example/bound.png",
+	placeholder).
+		SetLocalFlowState(map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"access_token": "access-token",
+				"redirect":     "/settings/profile",
+		placeholder,
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	previewRecorder := httptest.NewRecorder()
+	previewCtx, _ := gin.CreateTestContext(previewRecorder)
+	previewReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/exchange", nil)
+	previewReq.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	previewReq.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("bind-browser-session-key")placeholder)
+	previewCtx.Request = previewReq
+
+	handler.ExchangePendingOAuthCompletion(previewCtx)
+
+	require.Equal(t, http.StatusOK, previewRecorder.Code)
+	previewData := decodeJSONResponseData(t, previewRecorder)
+	require.Equal(t, "Bound Example", previewData["suggested_display_name"])
+	require.Equal(t, "https://cdn.example/bound.png", previewData["suggested_avatar_url"])
+	require.Equal(t, true, previewData["adoption_required"])
+
+	identityCount, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("linuxdo"),
+			authidentity.ProviderKeyEQ("linuxdo"),
+			authidentity.ProviderSubjectEQ("bind-123"),
+		).
+		Count(ctx)
+placeholder
+	require.Zero(t, identityCount)
+
+	previewSession, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.IDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.Nil(t, previewSession.ConsumedAt)
+
+	body := bytes.NewBufferString(`{"adopt_display_name":false,"adopt_avatar":falseplaceholder`)
+	finalizeRecorder := httptest.NewRecorder()
+	finalizeCtx, _ := gin.CreateTestContext(finalizeRecorder)
+	finalizeReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/exchange", body)
+	finalizeReq.Header.Set("Content-Type", "application/json")
+	finalizeReq.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	finalizeReq.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("bind-browser-session-key")placeholder)
+	finalizeCtx.Request = finalizeReq
+
+	handler.ExchangePendingOAuthCompletion(finalizeCtx)
+
+	require.Equal(t, http.StatusOK, finalizeRecorder.Code)
+
+	storedUser, err := client.User.Get(ctx, userEntity.ID)
+placeholder
+	require.Equal(t, "legacy-name", storedUser.Username)
+
+	identity, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("linuxdo"),
+			authidentity.ProviderKeyEQ("linuxdo"),
+			authidentity.ProviderSubjectEQ("bind-123"),
+		).
+		Only(ctx)
+placeholder
+	require.Equal(t, userEntity.ID, identity.UserID)
+	require.Equal(t, "Bound Example", identity.Metadata["suggested_display_name"])
+	require.Equal(t, "https://cdn.example/bound.png", identity.Metadata["suggested_avatar_url"])
+	_, hasDisplayName := identity.Metadata["display_name"]
+	require.False(t, hasDisplayName)
+	_, hasAvatarURL := identity.Metadata["avatar_url"]
+	require.False(t, hasAvatarURL)
+
+	decision, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.NotNil(t, decision.IdentityID)
+	require.Equal(t, identity.ID, *decision.IdentityID)
+	require.False(t, decision.AdoptDisplayName)
+	require.False(t, decision.AdoptAvatar)
+
+	consumed, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.IDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.NotNil(t, consumed.ConsumedAt)
+placeholder
+
+func TestExchangePendingOAuthCompletionBindCurrentUserOwnershipConflict(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	ctx := context.Background()
+
+	targetUser, err := client.User.Create().
+		SetEmail("bind-conflict-target@example.com").
+		SetUsername("target-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+
+	ownerUser, err := client.User.Create().
+		SetEmail("bind-conflict-owner@example.com").
+		SetUsername("owner-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+
+	existingIdentity, err := client.AuthIdentity.Create().
+		SetUserID(ownerUser.ID).
+		SetProviderType("linuxdo").
+		SetProviderKey("linuxdo").
+		SetProviderSubject("conflict-123").
+		SetMetadata(map[string]any{"username": "owner-user"placeholder).
+		Save(ctx)
+placeholder
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("bind-conflict-session-token").
+		SetIntent("bind_current_user").
+		SetProviderType("linuxdo").
+		SetProviderKey("linuxdo").
+		SetProviderSubject("conflict-123").
+		SetTargetUserID(targetUser.ID).
+		SetResolvedEmail(targetUser.Email).
+		SetBrowserSessionKey("bind-conflict-browser-session-key").
+		SetUpstreamIdentityClaims(map[string]any{
+			"suggested_display_name": "Conflict Example",
+			"suggested_avatar_url":   "https://cdn.example/conflict.png",
+	placeholder).
+		SetLocalFlowState(map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"access_token": "access-token",
+		placeholder,
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	body := bytes.NewBufferString(`{"adopt_display_name":false,"adopt_avatar":falseplaceholder`)
+	recorder := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/exchange", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("bind-conflict-browser-session-key")placeholder)
+	ginCtx.Request = req
+
+	handler.ExchangePendingOAuthCompletion(ginCtx)
+
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	payload := decodeJSONBody(t, recorder)
+	require.Equal(t, "PENDING_AUTH_ADOPTION_APPLY_FAILED", payload["reason"])
+
+	identity, err := client.AuthIdentity.Get(ctx, existingIdentity.ID)
+placeholder
+	require.Equal(t, ownerUser.ID, identity.UserID)
+
+	decision, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.Nil(t, decision.IdentityID)
+	require.False(t, decision.AdoptDisplayName)
+	require.False(t, decision.AdoptAvatar)
+
+	storedSession, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.IDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.Nil(t, storedSession.ConsumedAt)
+placeholder
+
+func TestExchangePendingOAuthCompletionLoginFalseFalseDoesNotBindIdentity(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	ctx := context.Background()
+
+	userEntity, err := client.User.Create().
+		SetEmail("login-false@example.com").
+		SetUsername("legacy-name").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("login-false-session-token").
+		SetIntent("login").
+		SetProviderType("linuxdo").
+		SetProviderKey("linuxdo").
+		SetProviderSubject("login-false-123").
+		SetTargetUserID(userEntity.ID).
+		SetResolvedEmail(userEntity.Email).
+		SetBrowserSessionKey("login-false-browser-session-key").
+		SetUpstreamIdentityClaims(map[string]any{
+			"suggested_display_name": "Login Example",
+			"suggested_avatar_url":   "https://cdn.example/login.png",
+	placeholder).
+		SetLocalFlowState(map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"access_token": "access-token",
+		placeholder,
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	body := bytes.NewBufferString(`{"adopt_display_name":false,"adopt_avatar":falseplaceholder`)
+	recorder := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/exchange", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("login-false-browser-session-key")placeholder)
+	ginCtx.Request = req
+
+	handler.ExchangePendingOAuthCompletion(ginCtx)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	identityCount, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("linuxdo"),
+			authidentity.ProviderKeyEQ("linuxdo"),
+			authidentity.ProviderSubjectEQ("login-false-123"),
+		).
+		Count(ctx)
+placeholder
+	require.Zero(t, identityCount)
+
+	decision, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.Nil(t, decision.IdentityID)
+	require.False(t, decision.AdoptDisplayName)
+	require.False(t, decision.AdoptAvatar)
+
+	storedSession, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.IDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.NotNil(t, storedSession.ConsumedAt)
+placeholder
+
+func TestExchangePendingOAuthCompletionInvitationRequiredFalseFalsePersistsDecisionWithoutBinding(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, true)
+	ctx := context.Background()
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("invitation-required-session-token").
+		SetIntent("login").
+		SetProviderType("linuxdo").
+		SetProviderKey("linuxdo").
+		SetProviderSubject("invitation-123").
+		SetBrowserSessionKey("invitation-required-browser-session-key").
+		SetUpstreamIdentityClaims(map[string]any{
+			"suggested_display_name": "Invite Example",
+			"suggested_avatar_url":   "https://cdn.example/invite.png",
+	placeholder).
+		SetLocalFlowState(map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"error": "invitation_required",
+		placeholder,
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	body := bytes.NewBufferString(`{"adopt_display_name":false,"adopt_avatar":falseplaceholder`)
+	recorder := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/pending/exchange", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("invitation-required-browser-session-key")placeholder)
+	ginCtx.Request = req
+
+	handler.ExchangePendingOAuthCompletion(ginCtx)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	data := decodeJSONResponseData(t, recorder)
+	require.Equal(t, "invitation_required", data["error"])
+	require.Equal(t, true, data["adoption_required"])
+
+	identityCount, err := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ("linuxdo"),
+			authidentity.ProviderKeyEQ("linuxdo"),
+			authidentity.ProviderSubjectEQ("invitation-123"),
+		).
+		Count(ctx)
+placeholder
+	require.Zero(t, identityCount)
+
+	decision, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.Nil(t, decision.IdentityID)
+	require.False(t, decision.AdoptDisplayName)
+	require.False(t, decision.AdoptAvatar)
+
+	storedSession, err := client.PendingAuthSession.Query().
+		Where(pendingauthsession.IDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.Nil(t, storedSession.ConsumedAt)
+placeholder
+
 func newOAuthPendingFlowTestHandler(t *testing.T, invitationEnabled bool) (*AuthHandler, *dbent.Client) {
 placeholder
 
@@ -198,9 +540,10 @@ placeholder
 			service.SettingKeyInvitationCodeEnabled: boolSettingValue(invitationEnabled),
 	placeholder,
 placeholder, cfg)
+	userRepo := &oauthPendingFlowUserRepo{client: clientplaceholder
 	authSvc := service.NewAuthService(
 		client,
-		&oauthPendingFlowUserRepo{client: clientplaceholder,
+		userRepo,
 		nil,
 		&oauthPendingFlowRefreshTokenCacheStub{placeholder,
 		cfg,
@@ -211,9 +554,11 @@ placeholder, cfg)
 		nil,
 		nil,
 	)
+	userSvc := service.NewUserService(userRepo, nil, nil, nil)
 
 	return &AuthHandler{
 		authService: authSvc,
+		userService: userSvc,
 		settingSvc:  settingSvc,
 placeholder, client
 placeholder
@@ -414,7 +759,7 @@ func (r *oauthPendingFlowUserRepo) Delete(ctx context.Context, id int64) error {
 placeholder
 
 func (r *oauthPendingFlowUserRepo) GetUserAvatar(context.Context, int64) (*service.UserAvatar, error) {
-	return nil, service.ErrUserNotFound
+	return nil, nil
 placeholder
 
 func (r *oauthPendingFlowUserRepo) UpsertUserAvatar(context.Context, int64, service.UpsertUserAvatarInput) (*service.UserAvatar, error) {
@@ -460,6 +805,33 @@ placeholder
 
 func (r *oauthPendingFlowUserRepo) RemoveGroupFromUserAllowedGroups(context.Context, int64, int64) error {
 	panic("unexpected RemoveGroupFromUserAllowedGroups call")
+placeholder
+
+func (r *oauthPendingFlowUserRepo) ListUserAuthIdentities(ctx context.Context, userID int64) ([]service.UserAuthIdentityRecord, error) {
+	identities, err := r.client.AuthIdentity.Query().
+		Where(authidentity.UserIDEQ(userID)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+
+	records := make([]service.UserAuthIdentityRecord, 0, len(identities))
+	for _, identity := range identities {
+		if identity == nil {
+			continue
+	placeholder
+		records = append(records, service.UserAuthIdentityRecord{
+			ProviderType:    identity.ProviderType,
+			ProviderKey:     identity.ProviderKey,
+			ProviderSubject: identity.ProviderSubject,
+			VerifiedAt:      identity.VerifiedAt,
+			Issuer:          identity.Issuer,
+			Metadata:        identity.Metadata,
+			CreatedAt:       identity.CreatedAt,
+			UpdatedAt:       identity.UpdatedAt,
+	placeholder)
+placeholder
+	return records, nil
 placeholder
 
 func (r *oauthPendingFlowUserRepo) UpdateTotpSecret(context.Context, int64, *string) error {

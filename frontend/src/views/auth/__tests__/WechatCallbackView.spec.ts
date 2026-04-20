@@ -3,14 +3,16 @@ import { beforeEach, describe, expect, it, vi placeholder from 'vitest'
 import WechatCallbackView from '@/views/auth/WechatCallbackView.vue'
 
 const {
-  postMock,
+  exchangePendingOAuthCompletionMock,
+  completeWeChatOAuthRegistrationMock,
   replaceMock,
   setTokenMock,
   showSuccessMock,
   showErrorMock,
   routeState,
 placeholder = vi.hoisted(() => ({
-  postMock: vi.fn(),
+  exchangePendingOAuthCompletionMock: vi.fn(),
+  completeWeChatOAuthRegistrationMock: vi.fn(),
   replaceMock: vi.fn(),
   setTokenMock: vi.fn(),
   showSuccessMock: vi.fn(),
@@ -86,15 +88,19 @@ vi.mock('@/stores', () => ({
   placeholder),
 placeholder))
 
-vi.mock('@/api/client', () => ({
-  apiClient: {
-    post: postMock,
-  placeholder,
-placeholder))
+vi.mock('@/api/auth', async () => {
+  const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')
+  return {
+    ...actual,
+    exchangePendingOAuthCompletion: (...args: any[]) => exchangePendingOAuthCompletionMock(...args),
+    completeWeChatOAuthRegistration: (...args: any[]) => completeWeChatOAuthRegistrationMock(...args),
+  placeholder
+placeholder)
 
 describe('WechatCallbackView', () => {
   beforeEach(() => {
-    postMock.mockReset()
+    exchangePendingOAuthCompletionMock.mockReset()
+    completeWeChatOAuthRegistrationMock.mockReset()
     replaceMock.mockReset()
     setTokenMock.mockReset()
     showSuccessMock.mockReset()
@@ -104,14 +110,12 @@ describe('WechatCallbackView', () => {
   placeholder)
 
   it('does not send adoption decisions during the initial exchange', async () => {
-    postMock.mockResolvedValueOnce({
-      data: {
-        access_token: 'access-token',
-        refresh_token: 'refresh-token',
-        expires_in: 3600,
-        redirect: '/dashboard',
-        adoption_required: true,
-      placeholder,
+    exchangePendingOAuthCompletionMock.mockResolvedValue({
+      access_token: 'access-token',
+      refresh_token: 'refresh-token',
+      expires_in: 3600,
+      redirect: '/dashboard',
+      adoption_required: true,
     placeholder)
     setTokenMock.mockResolvedValue({placeholder)
 
@@ -128,28 +132,24 @@ describe('WechatCallbackView', () => {
 
     await flushPromises()
 
-    expect(postMock).toHaveBeenCalledWith('/auth/oauth/pending/exchange', {placeholder)
-    expect(postMock).toHaveBeenCalledTimes(1)
+    expect(exchangePendingOAuthCompletionMock).toHaveBeenCalledWith()
+    expect(exchangePendingOAuthCompletionMock).toHaveBeenCalledTimes(1)
   placeholder)
 
   it('waits for explicit adoption confirmation before finishing a non-invitation login', async () => {
-    postMock
+    exchangePendingOAuthCompletionMock
       .mockResolvedValueOnce({
-        data: {
-          redirect: '/dashboard',
-          adoption_required: true,
-          suggested_display_name: 'WeChat Nick',
-          suggested_avatar_url: 'https://cdn.example/wechat.png',
-        placeholder,
+        redirect: '/dashboard',
+        adoption_required: true,
+        suggested_display_name: 'WeChat Nick',
+        suggested_avatar_url: 'https://cdn.example/wechat.png',
       placeholder)
       .mockResolvedValueOnce({
-        data: {
-          access_token: 'wechat-access-token',
-          refresh_token: 'wechat-refresh-token',
-          expires_in: 3600,
-          token_type: 'Bearer',
-          redirect: '/dashboard',
-        placeholder,
+        access_token: 'wechat-access-token',
+        refresh_token: 'wechat-refresh-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+        redirect: '/dashboard',
       placeholder)
     setTokenMock.mockResolvedValue({placeholder)
 
@@ -179,35 +179,67 @@ describe('WechatCallbackView', () => {
     await buttons[0].trigger('click')
     await flushPromises()
 
-    expect(postMock).toHaveBeenNthCalledWith(1, '/auth/oauth/pending/exchange', {placeholder)
-    expect(postMock).toHaveBeenNthCalledWith(2, '/auth/oauth/pending/exchange', {
-      adopt_display_name: true,
-      adopt_avatar: false,
+    expect(exchangePendingOAuthCompletionMock).toHaveBeenNthCalledWith(1)
+    expect(exchangePendingOAuthCompletionMock).toHaveBeenNthCalledWith(2, {
+      adoptDisplayName: true,
+      adoptAvatar: false,
     placeholder)
     expect(setTokenMock).toHaveBeenCalledWith('wechat-access-token')
     expect(replaceMock).toHaveBeenCalledWith('/dashboard')
     expect(localStorage.getItem('refresh_token')).toBe('wechat-refresh-token')
   placeholder)
 
+  it('supports bind completion after adoption confirmation', async () => {
+    exchangePendingOAuthCompletionMock
+      .mockResolvedValueOnce({
+        redirect: '/dashboard',
+        adoption_required: true,
+        suggested_display_name: 'WeChat Nick',
+        suggested_avatar_url: 'https://cdn.example/wechat.png',
+      placeholder)
+      .mockResolvedValueOnce({
+        redirect: '/profile/connections',
+      placeholder)
+
+    const wrapper = mount(WechatCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    await wrapper.findAll('button')[0].trigger('click')
+    await flushPromises()
+
+    expect(exchangePendingOAuthCompletionMock).toHaveBeenNthCalledWith(2, {
+      adoptDisplayName: true,
+      adoptAvatar: true,
+    placeholder)
+    expect(setTokenMock).not.toHaveBeenCalled()
+    expect(showSuccessMock).toHaveBeenCalledWith('profile.authBindings.bindSuccess')
+    expect(replaceMock).toHaveBeenCalledWith('/profile/connections')
+  placeholder)
+
   it('renders adoption choices for invitation flow and submits the selected values', async () => {
-    postMock
-      .mockResolvedValueOnce({
-        data: {
-          error: 'invitation_required',
-          redirect: '/subscriptions',
-          adoption_required: true,
-          suggested_display_name: 'WeChat Nick',
-          suggested_avatar_url: 'https://cdn.example/wechat.png',
-        placeholder,
-      placeholder)
-      .mockResolvedValueOnce({
-        data: {
-          access_token: 'wechat-invite-token',
-          refresh_token: 'wechat-invite-refresh',
-          expires_in: 600,
-          token_type: 'Bearer',
-        placeholder,
-      placeholder)
+    exchangePendingOAuthCompletionMock.mockResolvedValue({
+      error: 'invitation_required',
+      redirect: '/subscriptions',
+      adoption_required: true,
+      suggested_display_name: 'WeChat Nick',
+      suggested_avatar_url: 'https://cdn.example/wechat.png',
+    placeholder)
+    completeWeChatOAuthRegistrationMock.mockResolvedValue({
+      access_token: 'wechat-invite-token',
+      refresh_token: 'wechat-invite-refresh',
+      expires_in: 600,
+      token_type: 'Bearer',
+    placeholder)
 
     const wrapper = mount(WechatCallbackView, {
       global: {
@@ -230,10 +262,9 @@ describe('WechatCallbackView', () => {
     await wrapper.get('button').trigger('click')
     await flushPromises()
 
-    expect(postMock).toHaveBeenNthCalledWith(2, '/auth/oauth/wechat/complete-registration', {
-      invitation_code: 'INVITE-CODE',
-      adopt_display_name: false,
-      adopt_avatar: true,
+    expect(completeWeChatOAuthRegistrationMock).toHaveBeenCalledWith('INVITE-CODE', {
+      adoptDisplayName: false,
+      adoptAvatar: true,
     placeholder)
     expect(setTokenMock).toHaveBeenCalledWith('wechat-invite-token')
     expect(replaceMock).toHaveBeenCalledWith('/subscriptions')

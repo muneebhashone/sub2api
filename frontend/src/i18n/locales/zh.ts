@@ -944,6 +944,26 @@ export default {
       maxEmailsReached: '已达到通知邮箱数量上限',
       unverified: '未验证',
       verified: '已验证',
+    placeholder,
+    authBindings: {
+      title: '登录方式绑定',
+      description: '查看当前绑定状态，并将更多第三方登录方式关联到这个账号。',
+      bindAction: '绑定 {providerNameplaceholder',
+      bindSuccess: '账号绑定成功',
+      status: {
+        bound: '已绑定',
+        notBound: '未绑定',
+      placeholder,
+      providers: {
+        email: '邮箱',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerNameplaceholder',
+        wechat: '微信',
+      placeholder,
+      source: {
+        avatar: '头像当前来自 {providerNameplaceholder',
+        username: '昵称当前来自 {providerNameplaceholder',
+      placeholder,
     placeholder
   placeholder,
 

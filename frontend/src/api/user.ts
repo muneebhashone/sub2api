@@ -4,7 +4,8 @@
  */
 
 import { apiClient placeholder from './client'
-import type { User, ChangePasswordRequest, NotifyEmailEntry placeholder from '@/types'
+import { prepareOAuthBindAccessTokenCookie placeholder from './auth'
+import type { User, ChangePasswordRequest, NotifyEmailEntry, UserAuthProvider placeholder from '@/types'
 
 /**
  * Get current user profile
@@ -83,6 +84,49 @@ export async function toggleNotifyEmail(email: string, disabled: boolean): Promi
   return data
 placeholder
 
+export type BindableOAuthProvider = Exclude<UserAuthProvider, 'email'>
+
+interface BuildOAuthBindingStartURLOptions {
+  redirectTo?: string
+placeholder
+
+export function resolveWeChatOAuthMode(): 'open' | 'mp' {
+  if (typeof navigator === 'undefined') {
+    return 'open'
+  placeholder
+  return /MicroMessenger/i.test(navigator.userAgent) ? 'mp' : 'open'
+placeholder
+
+export function buildOAuthBindingStartURL(
+  provider: BindableOAuthProvider,
+  options: BuildOAuthBindingStartURLOptions = {placeholder
+): string {
+  const redirectTo = options.redirectTo?.trim() || '/profile'
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
+  const normalized = apiBase.replace(/\/$/, '')
+  const params = new URLSearchParams({
+    redirect: redirectTo,
+    intent: 'bind_current_user'
+  placeholder)
+
+  if (provider === 'wechat') {
+    params.set('mode', resolveWeChatOAuthMode())
+  placeholder
+
+  return `${normalizedplaceholder/auth/oauth/${providerplaceholder/start?${params.toString()placeholder`
+placeholder
+
+export function startOAuthBinding(
+  provider: BindableOAuthProvider,
+  options: BuildOAuthBindingStartURLOptions = {placeholder
+): void {
+  if (typeof window === 'undefined') {
+    return
+  placeholder
+  prepareOAuthBindAccessTokenCookie()
+  window.location.href = buildOAuthBindingStartURL(provider, options)
+placeholder
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -90,7 +134,9 @@ export const userAPI = {
   sendNotifyEmailCode,
   verifyNotifyEmail,
   removeNotifyEmail,
-  toggleNotifyEmail
+  toggleNotifyEmail,
+  buildOAuthBindingStartURL,
+  startOAuthBinding
 placeholder
 
 export default userAPI

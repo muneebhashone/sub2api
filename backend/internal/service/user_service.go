@@ -7,13 +7,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
-	"net/url"
-	"strings"
-	"time"
-
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"log/slog"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
 )
 
 var (
@@ -24,6 +24,8 @@ var (
 	ErrAvatarInvalid           = infraerrors.BadRequest("AVATAR_INVALID", "avatar must be a valid image data URL or http(s) URL")
 	ErrAvatarTooLarge          = infraerrors.BadRequest("AVATAR_TOO_LARGE", "avatar image must be 100KB or smaller")
 	ErrAvatarNotImage          = infraerrors.BadRequest("AVATAR_NOT_IMAGE", "avatar content must be an image")
+	ErrIdentityProviderInvalid = infraerrors.BadRequest("IDENTITY_PROVIDER_INVALID", "identity provider is invalid")
+	ErrIdentityRedirectInvalid = infraerrors.BadRequest("IDENTITY_REDIRECT_INVALID", "identity redirect path is invalid")
 )
 
 const (
@@ -33,6 +35,8 @@ const (
 	// User-level rate limiting for notify email verification codes
 	notifyCodeUserRateLimit  = 5
 	notifyCodeUserRateWindow = 10 * time.Minute
+
+	defaultUserIdentityRedirect = "/settings/profile"
 )
 
 // UserListFilters contains all filter options for listing users
@@ -71,11 +75,56 @@ type UserRepository interface {
 	AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error
 	// RemoveGroupFromUserAllowedGroups 移除单个用户的指定分组权限
 	RemoveGroupFromUserAllowedGroups(ctx context.Context, userID int64, groupID int64) error
+	ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error)
 
 	// TOTP 双因素认证
 	UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error
 	EnableTotp(ctx context.Context, userID int64) error
 	DisableTotp(ctx context.Context, userID int64) error
+placeholder
+
+type UserAuthIdentityRecord struct {
+	ProviderType    string
+	ProviderKey     string
+	ProviderSubject string
+	VerifiedAt      *time.Time
+	Issuer          *string
+	Metadata        map[string]any
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+placeholder
+
+type UserIdentitySummary struct {
+	Provider      string     `json:"provider"`
+	Bound         bool       `json:"bound"`
+	BoundCount    int        `json:"bound_count"`
+	DisplayName   string     `json:"display_name,omitempty"`
+	SubjectHint   string     `json:"subject_hint,omitempty"`
+	ProviderKey   string     `json:"provider_key,omitempty"`
+	VerifiedAt    *time.Time `json:"verified_at,omitempty"`
+	BindStartPath string     `json:"bind_start_path,omitempty"`
+	CanBind       bool       `json:"can_bind"`
+	CanUnbind     bool       `json:"can_unbind"`
+	Note          string     `json:"note,omitempty"`
+placeholder
+
+type UserIdentitySummarySet struct {
+	Email   UserIdentitySummary `json:"email"`
+	LinuxDo UserIdentitySummary `json:"linuxdo"`
+	OIDC    UserIdentitySummary `json:"oidc"`
+	WeChat  UserIdentitySummary `json:"wechat"`
+placeholder
+
+type StartUserIdentityBindingRequest struct {
+	Provider   string
+	RedirectTo string
+placeholder
+
+type StartUserIdentityBindingResult struct {
+	Provider           string `json:"provider"`
+	AuthorizeURL       string `json:"authorize_url"`
+	Method             string `json:"method"`
+	UseBrowserRedirect bool   `json:"use_browser_redirect"`
 placeholder
 
 // UpdateProfileRequest 更新用户资料请求
@@ -104,6 +153,10 @@ type UpsertUserAvatarInput struct {
 	ContentType     string
 	ByteSize        int
 	SHA256          string
+placeholder
+
+type userAuthIdentityReader interface {
+	ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error)
 placeholder
 
 // ChangePasswordRequest 修改密码请求
@@ -149,6 +202,47 @@ placeholder
 		return nil, fmt.Errorf("get user avatar: %w", err)
 placeholder
 	return user, nil
+placeholder
+
+func (s *UserService) GetProfileIdentitySummaries(ctx context.Context, userID int64, user *User) (UserIdentitySummarySet, error) {
+	if user == nil {
+		var err error
+		user, err = s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return UserIdentitySummarySet{placeholder, fmt.Errorf("get user: %w", err)
+	placeholder
+placeholder
+
+	records, err := s.listUserAuthIdentities(ctx, userID)
+	if err != nil {
+		return UserIdentitySummarySet{placeholder, err
+placeholder
+
+	return UserIdentitySummarySet{
+		Email:   s.buildEmailIdentitySummary(user),
+		LinuxDo: s.buildProviderIdentitySummary("linuxdo", records),
+		OIDC:    s.buildProviderIdentitySummary("oidc", records),
+		WeChat:  s.buildProviderIdentitySummary("wechat", records),
+placeholder, nil
+placeholder
+
+func (s *UserService) PrepareIdentityBindingStart(_ context.Context, req StartUserIdentityBindingRequest) (*StartUserIdentityBindingResult, error) {
+	provider := normalizeUserIdentityProvider(req.Provider)
+	if provider == "" {
+		return nil, ErrIdentityProviderInvalid
+placeholder
+
+	authorizeURL, err := buildUserIdentityBindAuthorizeURL(provider, req.RedirectTo)
+	if err != nil {
+		return nil, err
+placeholder
+
+	return &StartUserIdentityBindingResult{
+		Provider:           provider,
+		AuthorizeURL:       authorizeURL,
+		Method:             "GET",
+		UseBrowserRedirect: true,
+placeholder, nil
 placeholder
 
 // UpdateProfile 更新用户资料
@@ -301,6 +395,234 @@ placeholder
 		ByteSize:        len(decoded),
 		SHA256:          hex.EncodeToString(sum[:]),
 placeholder, nil
+placeholder
+
+func (s *UserService) buildEmailIdentitySummary(user *User) UserIdentitySummary {
+	summary := UserIdentitySummary{
+		Provider:  "email",
+		CanBind:   false,
+		CanUnbind: false,
+		Note:      "Primary account email is managed from the profile form.",
+placeholder
+	if user == nil {
+		return summary
+placeholder
+
+	email := strings.TrimSpace(user.Email)
+	if email == "" || isReservedEmail(email) {
+		return summary
+placeholder
+
+	summary.Bound = true
+	summary.BoundCount = 1
+	summary.DisplayName = email
+	summary.SubjectHint = maskEmailIdentity(email)
+	summary.ProviderKey = "email"
+	return summary
+placeholder
+
+func (s *UserService) buildProviderIdentitySummary(provider string, records []UserAuthIdentityRecord) UserIdentitySummary {
+	summary := UserIdentitySummary{
+		Provider:  provider,
+		CanUnbind: false,
+placeholder
+	filtered := filterUserAuthIdentities(records, provider)
+	if len(filtered) == 0 {
+		summary.CanBind = true
+		bindStartPath, err := buildUserIdentityBindAuthorizeURL(provider, "")
+		if err == nil {
+			summary.BindStartPath = bindStartPath
+	placeholder
+		return summary
+placeholder
+
+	primary := selectPrimaryUserAuthIdentity(filtered)
+	summary.Bound = true
+	summary.BoundCount = len(filtered)
+	summary.DisplayName = userAuthIdentityDisplayName(primary)
+	summary.SubjectHint = maskOpaqueIdentity(primary.ProviderSubject)
+	summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
+	summary.VerifiedAt = primary.VerifiedAt
+	summary.Note = "Unbind is not available yet."
+	return summary
+placeholder
+
+func (s *UserService) listUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
+	if userID <= 0 || s == nil || s.userRepo == nil {
+		return nil, nil
+placeholder
+	return s.userRepo.ListUserAuthIdentities(ctx, userID)
+placeholder
+
+func buildUserIdentityBindAuthorizeURL(provider, redirectTo string) (string, error) {
+	provider = normalizeUserIdentityProvider(provider)
+	if provider == "" || provider == "email" {
+		return "", ErrIdentityProviderInvalid
+placeholder
+
+	redirectTo, err := normalizeUserIdentityRedirect(redirectTo)
+	if err != nil {
+		return "", err
+placeholder
+
+	path := ""
+	switch provider {
+	case "linuxdo":
+		path = "/api/v1/auth/oauth/linuxdo/start"
+	case "oidc":
+		path = "/api/v1/auth/oauth/oidc/start"
+	case "wechat":
+		path = "/api/v1/auth/oauth/wechat/start"
+	default:
+		return "", ErrIdentityProviderInvalid
+placeholder
+
+	query := url.Values{placeholder
+	query.Set("redirect", redirectTo)
+	query.Set("intent", "bind_current_user")
+	return path + "?" + query.Encode(), nil
+placeholder
+
+func normalizeUserIdentityProvider(provider string) string {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "linuxdo":
+		return "linuxdo"
+	case "oidc":
+		return "oidc"
+	case "wechat":
+		return "wechat"
+	case "email":
+		return "email"
+	default:
+		return ""
+placeholder
+placeholder
+
+func normalizeUserIdentityRedirect(raw string) (string, error) {
+	redirect := strings.TrimSpace(raw)
+	if redirect == "" {
+		return defaultUserIdentityRedirect, nil
+placeholder
+	if len(redirect) > 2048 || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
+		return "", ErrIdentityRedirectInvalid
+placeholder
+	return redirect, nil
+placeholder
+
+func filterUserAuthIdentities(records []UserAuthIdentityRecord, provider string) []UserAuthIdentityRecord {
+	if len(records) == 0 {
+		return nil
+placeholder
+	filtered := make([]UserAuthIdentityRecord, 0, len(records))
+	for _, record := range records {
+		if strings.EqualFold(strings.TrimSpace(record.ProviderType), provider) {
+			filtered = append(filtered, record)
+	placeholder
+placeholder
+	return filtered
+placeholder
+
+func selectPrimaryUserAuthIdentity(records []UserAuthIdentityRecord) UserAuthIdentityRecord {
+	if len(records) == 0 {
+		return UserAuthIdentityRecord{placeholder
+placeholder
+	sort.SliceStable(records, func(i, j int) bool {
+		left := userAuthIdentitySortTime(records[i])
+		right := userAuthIdentitySortTime(records[j])
+		if !left.Equal(right) {
+			return left.After(right)
+	placeholder
+		return records[i].ProviderKey < records[j].ProviderKey
+placeholder)
+	return records[0]
+placeholder
+
+func userAuthIdentitySortTime(record UserAuthIdentityRecord) time.Time {
+	if record.VerifiedAt != nil && !record.VerifiedAt.IsZero() {
+		return record.VerifiedAt.UTC()
+placeholder
+	if !record.UpdatedAt.IsZero() {
+		return record.UpdatedAt.UTC()
+placeholder
+	if !record.CreatedAt.IsZero() {
+		return record.CreatedAt.UTC()
+placeholder
+	return time.Time{placeholder
+placeholder
+
+func userAuthIdentityDisplayName(record UserAuthIdentityRecord) string {
+	if displayName := firstStringIdentityValue(record.Metadata,
+		"display_name",
+		"suggested_display_name",
+		"username",
+		"name",
+		"nickname",
+		"email",
+	); displayName != "" {
+		return displayName
+placeholder
+	if subject := strings.TrimSpace(record.ProviderSubject); subject != "" {
+		return subject
+placeholder
+	return strings.TrimSpace(record.ProviderType)
+placeholder
+
+func firstStringIdentityValue(values map[string]any, keys ...string) string {
+	for _, key := range keys {
+		raw, ok := values[key]
+		if !ok {
+			continue
+	placeholder
+		switch value := raw.(type) {
+		case string:
+			if trimmed := strings.TrimSpace(value); trimmed != "" {
+				return trimmed
+		placeholder
+		case fmt.Stringer:
+			if trimmed := strings.TrimSpace(value.String()); trimmed != "" {
+				return trimmed
+		placeholder
+	placeholder
+placeholder
+	return ""
+placeholder
+
+func maskEmailIdentity(email string) string {
+	local, domain, ok := strings.Cut(strings.TrimSpace(email), "@")
+	if !ok || local == "" || domain == "" {
+		return maskOpaqueIdentity(email)
+placeholder
+	runes := []rune(local)
+	if len(runes) == 1 {
+		return string(runes[0]) + "***@" + domain
+placeholder
+	return string(runes[0]) + "***" + string(runes[len(runes)-1]) + "@" + domain
+placeholder
+
+func maskOpaqueIdentity(value string) string {
+	value = strings.TrimSpace(value)
+	runes := []rune(value)
+	switch {
+	case len(runes) == 0:
+		return ""
+	case len(runes) <= 4:
+		return string(runes[0]) + "***"
+	case len(runes) <= 8:
+		return string(runes[:2]) + "***" + string(runes[len(runes)-1:])
+	default:
+		return string(runes[:3]) + "***" + string(runes[len(runes)-3:])
+placeholder
+placeholder
+
+func cloneAnyMap(values map[string]any) map[string]any {
+	if len(values) == 0 {
+		return map[string]any{placeholder
+placeholder
+	cloned := make(map[string]any, len(values))
+	for key, value := range values {
+		cloned[key] = value
+placeholder
+	return cloned
 placeholder
 
 // ChangePassword 修改密码

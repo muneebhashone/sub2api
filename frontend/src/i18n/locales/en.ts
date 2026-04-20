@@ -940,6 +940,26 @@ export default {
       maxEmailsReached: 'Maximum number of notification emails reached',
       unverified: 'Unverified',
       verified: 'Verified',
+    placeholder,
+    authBindings: {
+      title: 'Connected Sign-In Methods',
+      description: 'View current bindings and connect another provider to this account.',
+      bindAction: 'Bind {providerNameplaceholder',
+      bindSuccess: 'Account linked successfully',
+      status: {
+        bound: 'Bound',
+        notBound: 'Not bound',
+      placeholder,
+      providers: {
+        email: 'Email',
+        linuxdo: 'LinuxDo',
+        oidc: '{providerNameplaceholder',
+        wechat: 'WeChat',
+      placeholder,
+      source: {
+        avatar: 'Avatar is currently synced from {providerNameplaceholder',
+        username: 'Nickname is currently synced from {providerNameplaceholder',
+      placeholder,
     placeholder
   placeholder,
 

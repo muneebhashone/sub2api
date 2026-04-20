@@ -186,17 +186,22 @@ export interface RefreshTokenResponse {
   token_type: string
 placeholder
 
-export interface PendingOAuthExchangeResponse {
-  access_token?: string
+export interface OAuthTokenResponse {
+  access_token: string
   refresh_token?: string
   expires_in?: number
   token_type?: string
+placeholder
+
+export interface PendingOAuthExchangeResponse extends Partial<OAuthTokenResponse> {
   redirect?: string
   error?: string
   adoption_required?: boolean
   suggested_display_name?: string
   suggested_avatar_url?: string
 placeholder
+
+export type OAuthCompletionKind = 'login' | 'bind'
 
 export interface OAuthAdoptionDecision {
   adoptDisplayName?: boolean
@@ -216,6 +221,56 @@ function serializeOAuthAdoptionDecision(
   placeholder
 
   return payload
+placeholder
+
+export function isOAuthLoginCompletion(
+  completion: Partial<OAuthTokenResponse>
+): completion is OAuthTokenResponse {
+  return typeof completion.access_token === 'string' && completion.access_token.trim().length > 0
+placeholder
+
+export function getOAuthCompletionKind(
+  completion: Partial<OAuthTokenResponse>
+): OAuthCompletionKind {
+  return isOAuthLoginCompletion(completion) ? 'login' : 'bind'
+placeholder
+
+export function persistOAuthTokenContext(tokens: Partial<OAuthTokenResponse>): void {
+  if (tokens.refresh_token) {
+    setRefreshToken(tokens.refresh_token)
+  placeholder
+  if (tokens.expires_in) {
+    setTokenExpiresAt(tokens.expires_in)
+  placeholder
+placeholder
+
+export function prepareOAuthBindAccessTokenCookie(): void {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return
+  placeholder
+
+  const token = getAuthToken()
+  if (!token) {
+    return
+  placeholder
+
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  const path = resolveOAuthBindCookiePath()
+  document.cookie =
+    `oauth_bind_access_token=${encodeURIComponent(token)placeholder; Path=${pathplaceholder/auth/oauth; Max-Age=600; SameSite=Lax${secureplaceholder`
+placeholder
+
+function resolveOAuthBindCookiePath(): string {
+  const apiBase = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1').replace(/\/$/, '')
+
+  try {
+    return new URL(apiBase, window.location.origin).pathname.replace(/\/$/, '') || '/api/v1'
+  placeholder catch {
+    if (apiBase.startsWith('/')) {
+      return apiBase
+    placeholder
+    return '/api/v1'
+  placeholder
 placeholder
 
 /**
@@ -375,13 +430,8 @@ placeholder
 export async function completeLinuxDoOAuthRegistration(
   invitationCode: string,
   decision?: OAuthAdoptionDecision
-): Promise<{ access_token: string; refresh_token: string; expires_in: number; token_type: string placeholder> {
-  const { data placeholder = await apiClient.post<{
-    access_token: string
-    refresh_token: string
-    expires_in: number
-    token_type: string
-  placeholder>('/auth/oauth/linuxdo/complete-registration', {
+): Promise<OAuthTokenResponse> {
+  const { data placeholder = await apiClient.post<OAuthTokenResponse>('/auth/oauth/linuxdo/complete-registration', {
     invitation_code: invitationCode,
     ...serializeOAuthAdoptionDecision(decision)
   placeholder)
@@ -396,13 +446,19 @@ placeholder
 export async function completeOIDCOAuthRegistration(
   invitationCode: string,
   decision?: OAuthAdoptionDecision
-): Promise<{ access_token: string; refresh_token: string; expires_in: number; token_type: string placeholder> {
-  const { data placeholder = await apiClient.post<{
-    access_token: string
-    refresh_token: string
-    expires_in: number
-    token_type: string
-  placeholder>('/auth/oauth/oidc/complete-registration', {
+): Promise<OAuthTokenResponse> {
+  const { data placeholder = await apiClient.post<OAuthTokenResponse>('/auth/oauth/oidc/complete-registration', {
+    invitation_code: invitationCode,
+    ...serializeOAuthAdoptionDecision(decision)
+  placeholder)
+  return data
+placeholder
+
+export async function completeWeChatOAuthRegistration(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<OAuthTokenResponse> {
+  const { data placeholder = await apiClient.post<OAuthTokenResponse>('/auth/oauth/wechat/complete-registration', {
     invitation_code: invitationCode,
     ...serializeOAuthAdoptionDecision(decision)
   placeholder)
@@ -444,7 +500,8 @@ export const authAPI = {
   revokeAllSessions,
   exchangePendingOAuthCompletion,
   completeLinuxDoOAuthRegistration,
-  completeOIDCOAuthRegistration
+  completeOIDCOAuthRegistration,
+  completeWeChatOAuthRegistration
 placeholder
 
 export default authAPI
