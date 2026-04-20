@@ -388,6 +388,15 @@ function resolveWeChatOAuthMode(): 'open' | 'mp' {
   return /MicroMessenger/i.test(navigator.userAgent) ? 'mp' : 'open'
 placeholder
 
+function normalizeWeChatOAuthMode(value: unknown): 'open' | 'mp' | null {
+  return value === 'open' || value === 'mp' ? value : null
+placeholder
+
+function resolveRequestedWeChatOAuthMode(): 'open' | 'mp' {
+  const queryMode = normalizeWeChatOAuthMode(route.query.mode)
+  return queryMode || resolveWeChatOAuthMode()
+placeholder
+
 function resolveRedirectTarget(): string {
   return sanitizeRedirectPath(
     (route.query.redirect as string | undefined) || redirectTo.value || '/dashboard'
@@ -398,7 +407,7 @@ function resolveWeChatStartURL(intent: 'bind_current_user' | 'adopt_existing_use
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
   const params = new URLSearchParams({
-    mode: resolveWeChatOAuthMode(),
+    mode: resolveRequestedWeChatOAuthMode(),
     redirect: resolveRedirectTarget(),
     intent,
   placeholder)
@@ -415,6 +424,7 @@ function buildExistingAccountResumePath(): string {
   const params = new URLSearchParams({
     wechat_bind_existing: '1',
     redirect: resolveRedirectTarget(),
+    mode: resolveRequestedWeChatOAuthMode(),
   placeholder)
 
   const email = existingAccountEmail.value.trim()
@@ -727,9 +737,21 @@ onMounted(async () => {
     existingAccountEmail.value = route.query.email
   placeholder
 
-  if (route.query.wechat_bind_existing === '1' && getAuthToken()) {
-    prepareOAuthBindAccessTokenCookie()
-    window.location.href = resolveWeChatStartURL('bind_current_user')
+  if (route.query.wechat_bind_existing === '1') {
+    if (getAuthToken()) {
+      prepareOAuthBindAccessTokenCookie()
+      window.location.href = resolveWeChatStartURL('bind_current_user')
+      return
+    placeholder
+
+    const params = new URLSearchParams({
+      redirect: buildExistingAccountResumePath(),
+    placeholder)
+    const email = existingAccountEmail.value.trim()
+    if (email) {
+      params.set('email', email)
+    placeholder
+    await router.replace(`/login?${params.toString()placeholder`)
     return
   placeholder
 
