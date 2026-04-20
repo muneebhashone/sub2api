@@ -5,20 +5,33 @@ import WechatCallbackView from '@/views/auth/WechatCallbackView.vue'
 const {
   exchangePendingOAuthCompletionMock,
   completeWeChatOAuthRegistrationMock,
+  prepareOAuthBindAccessTokenCookieMock,
+  getAuthTokenMock,
   replaceMock,
   setTokenMock,
   showSuccessMock,
   showErrorMock,
   routeState,
+  locationState,
 placeholder = vi.hoisted(() => ({
   exchangePendingOAuthCompletionMock: vi.fn(),
   completeWeChatOAuthRegistrationMock: vi.fn(),
+  prepareOAuthBindAccessTokenCookieMock: vi.fn(),
+  getAuthTokenMock: vi.fn(),
   replaceMock: vi.fn(),
   setTokenMock: vi.fn(),
   showSuccessMock: vi.fn(),
   showErrorMock: vi.fn(),
   routeState: {
     query: {placeholder as Record<string, unknown>,
+  placeholder,
+  locationState: {
+    current: {
+      href: 'http://localhost/auth/wechat/callback',
+      hash: '',
+      search: '',
+      pathname: '/auth/wechat/callback'
+    placeholder as { href: string; hash: string; search: string; pathname: string placeholder,
   placeholder,
 placeholder))
 
@@ -94,6 +107,8 @@ vi.mock('@/api/auth', async () => {
     ...actual,
     exchangePendingOAuthCompletion: (...args: any[]) => exchangePendingOAuthCompletionMock(...args),
     completeWeChatOAuthRegistration: (...args: any[]) => completeWeChatOAuthRegistrationMock(...args),
+    prepareOAuthBindAccessTokenCookie: (...args: any[]) => prepareOAuthBindAccessTokenCookieMock(...args),
+    getAuthToken: (...args: any[]) => getAuthTokenMock(...args),
   placeholder
 placeholder)
 
@@ -105,8 +120,24 @@ describe('WechatCallbackView', () => {
     setTokenMock.mockReset()
     showSuccessMock.mockReset()
     showErrorMock.mockReset()
+    prepareOAuthBindAccessTokenCookieMock.mockReset()
+    getAuthTokenMock.mockReset()
     routeState.query = {placeholder
     localStorage.clear()
+    locationState.current = {
+      href: 'http://localhost/auth/wechat/callback',
+      hash: '',
+      search: '',
+      pathname: '/auth/wechat/callback'
+    placeholder
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: locationState.current,
+    placeholder)
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0',
+    placeholder)
   placeholder)
 
   it('does not send adoption decisions during the initial exchange', async () => {
@@ -268,5 +299,62 @@ describe('WechatCallbackView', () => {
     placeholder)
     expect(setTokenMock).toHaveBeenCalledWith('wechat-invite-token')
     expect(replaceMock).toHaveBeenCalledWith('/subscriptions')
+  placeholder)
+
+  it('offers existing-account email collection during invitation flow', async () => {
+    exchangePendingOAuthCompletionMock.mockResolvedValue({
+      error: 'invitation_required',
+      redirect: '/usage',
+    placeholder)
+    getAuthTokenMock.mockReturnValue(null)
+
+    const wrapper = mount(WechatCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    const emailInput = wrapper.get('[data-testid="existing-account-email"]')
+    await emailInput.setValue('user@example.com')
+    await wrapper.get('[data-testid="existing-account-submit"]').trigger('click')
+
+    expect(replaceMock).toHaveBeenCalledTimes(1)
+    expect(replaceMock.mock.calls[0]?.[0]).toContain('/login?')
+    expect(replaceMock.mock.calls[0]?.[0]).toContain('wechat_bind_existing%3D1')
+    expect(replaceMock.mock.calls[0]?.[0]).toContain('email=user%40example.com')
+  placeholder)
+
+  it('restarts the current-user bind flow after returning from login', async () => {
+    routeState.query = {
+      wechat_bind_existing: '1',
+      redirect: '/profile'
+    placeholder
+    getAuthTokenMock.mockReturnValue('existing-auth-token')
+
+    mount(WechatCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(exchangePendingOAuthCompletionMock).not.toHaveBeenCalled()
+    expect(prepareOAuthBindAccessTokenCookieMock).toHaveBeenCalledTimes(1)
+    expect(locationState.current.href).toContain('/api/v1/auth/oauth/wechat/start?')
+    expect(locationState.current.href).toContain('intent=bind_current_user')
+    expect(locationState.current.href).toContain('redirect=%2Fprofile')
   placeholder)
 placeholder)

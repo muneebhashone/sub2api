@@ -97,6 +97,40 @@
                   : t('auth.oidc.completeRegistration')
               placeholderplaceholder
             </button>
+
+            <div
+              class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-dark-600 dark:bg-dark-800/60"
+            >
+              <div class="space-y-3">
+                <div class="space-y-1">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    {{ t('auth.alreadyHaveAccount') placeholderplaceholder
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-dark-400">
+                    Sign in to an existing account, then bind this WeChat identity to it.
+                  </p>
+                </div>
+
+                <input
+                  v-model="existingAccountEmail"
+                  data-testid="existing-account-email"
+                  type="email"
+                  class="input w-full"
+                  :placeholder="t('auth.emailPlaceholder')"
+                  :disabled="isSubmitting"
+                />
+
+                <button
+                  data-testid="existing-account-submit"
+                  type="button"
+                  class="btn btn-secondary w-full"
+                  :disabled="isSubmitting"
+                  @click="handleExistingAccountBinding"
+                >
+                  {{ t('auth.signIn') placeholderplaceholder
+                </button>
+              </div>
+            </div>
           </template>
 
           <template v-else-if="needsAdoptionConfirmation">
@@ -144,8 +178,10 @@ import { useAuthStore, useAppStore placeholder from '@/stores'
 import {
   completeWeChatOAuthRegistration,
   exchangePendingOAuthCompletion,
+  getAuthToken,
   getOAuthCompletionKind,
   isOAuthLoginCompletion,
+  prepareOAuthBindAccessTokenCookie,
   persistOAuthTokenContext,
   type OAuthAdoptionDecision,
   type PendingOAuthExchangeResponse
@@ -168,6 +204,7 @@ const redirectTo = ref('/dashboard')
 const adoptionRequired = ref(false)
 const suggestedDisplayName = ref('')
 const suggestedAvatarUrl = ref('')
+const existingAccountEmail = ref('')
 const adoptDisplayName = ref(true)
 const adoptAvatar = ref(true)
 const needsAdoptionConfirmation = ref(false)
@@ -190,11 +227,72 @@ function sanitizeRedirectPath(path: string | null | undefined): string {
   return path
 placeholder
 
+function resolveWeChatOAuthMode(): 'open' | 'mp' {
+  if (typeof navigator === 'undefined') {
+    return 'open'
+  placeholder
+  return /MicroMessenger/i.test(navigator.userAgent) ? 'mp' : 'open'
+placeholder
+
+function resolveRedirectTarget(): string {
+  return sanitizeRedirectPath(
+    (route.query.redirect as string | undefined) || redirectTo.value || '/dashboard'
+  )
+placeholder
+
+function resolveWeChatStartURL(intent: 'bind_current_user' | 'adopt_existing_user_by_email'): string {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
+  const normalized = apiBase.replace(/\/$/, '')
+  const params = new URLSearchParams({
+    mode: resolveWeChatOAuthMode(),
+    redirect: resolveRedirectTarget(),
+    intent,
+  placeholder)
+
+  const email = existingAccountEmail.value.trim()
+  if (email) {
+    params.set('email', email)
+  placeholder
+
+  return `${normalizedplaceholder/auth/oauth/wechat/start?${params.toString()placeholder`
+placeholder
+
+function buildExistingAccountResumePath(): string {
+  const params = new URLSearchParams({
+    wechat_bind_existing: '1',
+    redirect: resolveRedirectTarget(),
+  placeholder)
+
+  const email = existingAccountEmail.value.trim()
+  if (email) {
+    params.set('email', email)
+  placeholder
+
+  return `/auth/wechat/callback?${params.toString()placeholder`
+placeholder
+
 function currentAdoptionDecision(): OAuthAdoptionDecision {
   return {
     adoptDisplayName: adoptDisplayName.value,
     adoptAvatar: adoptAvatar.value
   placeholder
+placeholder
+
+async function handleExistingAccountBinding() {
+  if (getAuthToken()) {
+    prepareOAuthBindAccessTokenCookie()
+    window.location.href = resolveWeChatStartURL('bind_current_user')
+    return
+  placeholder
+
+  const params = new URLSearchParams({
+    redirect: buildExistingAccountResumePath(),
+  placeholder)
+  const email = existingAccountEmail.value.trim()
+  if (email) {
+    params.set('email', email)
+  placeholder
+  await router.replace(`/login?${params.toString()placeholder`)
 placeholder
 
 function applyAdoptionSuggestionState(completion: PendingOAuthExchangeResponse) {
@@ -275,6 +373,16 @@ async function handleContinueLogin() {
 placeholder
 
 onMounted(async () => {
+  if (typeof route.query.email === 'string') {
+    existingAccountEmail.value = route.query.email
+  placeholder
+
+  if (route.query.wechat_bind_existing === '1' && getAuthToken()) {
+    prepareOAuthBindAccessTokenCookie()
+    window.location.href = resolveWeChatStartURL('bind_current_user')
+    return
+  placeholder
+
   const params = parseFragmentParams()
   const error = params.get('error')
   const errorDesc = params.get('error_description') || params.get('error_message') || ''

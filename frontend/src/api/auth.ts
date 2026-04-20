@@ -193,13 +193,17 @@ export interface OAuthTokenResponse {
   token_type?: string
 placeholder
 
-export interface PendingOAuthExchangeResponse extends Partial<OAuthTokenResponse> {
+export interface PendingOAuthBindLoginResponse extends Partial<OAuthTokenResponse> {
   redirect?: string
   error?: string
   adoption_required?: boolean
   suggested_display_name?: string
   suggested_avatar_url?: string
 placeholder
+
+export type PendingOAuthExchangeResponse = PendingOAuthBindLoginResponse
+
+export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {placeholder
 
 export type OAuthCompletionKind = 'login' | 'bind'
 
@@ -233,6 +237,27 @@ export function getOAuthCompletionKind(
   completion: Partial<OAuthTokenResponse>
 ): OAuthCompletionKind {
   return isOAuthLoginCompletion(completion) ? 'login' : 'bind'
+placeholder
+
+export function getPendingOAuthBindLoginKind(
+  completion: PendingOAuthBindLoginResponse
+): OAuthCompletionKind {
+  return getOAuthCompletionKind(completion)
+placeholder
+
+export function isPendingOAuthCreateAccountRequired(
+  completion: Pick<PendingOAuthBindLoginResponse, 'error'>
+): boolean {
+  return completion.error === 'invitation_required'
+placeholder
+
+export function hasPendingOAuthSuggestedProfile(
+  completion: Pick<
+    PendingOAuthBindLoginResponse,
+    'suggested_display_name' | 'suggested_avatar_url'
+  >
+): boolean {
+  return Boolean(completion.suggested_display_name || completion.suggested_avatar_url)
 placeholder
 
 export function persistOAuthTokenContext(tokens: Partial<OAuthTokenResponse>): void {
@@ -431,11 +456,7 @@ export async function completeLinuxDoOAuthRegistration(
   invitationCode: string,
   decision?: OAuthAdoptionDecision
 ): Promise<OAuthTokenResponse> {
-  const { data placeholder = await apiClient.post<OAuthTokenResponse>('/auth/oauth/linuxdo/complete-registration', {
-    invitation_code: invitationCode,
-    ...serializeOAuthAdoptionDecision(decision)
-  placeholder)
-  return data
+  return createPendingLinuxDoOAuthAccount(invitationCode, decision)
 placeholder
 
 /**
@@ -447,32 +468,66 @@ export async function completeOIDCOAuthRegistration(
   invitationCode: string,
   decision?: OAuthAdoptionDecision
 ): Promise<OAuthTokenResponse> {
-  const { data placeholder = await apiClient.post<OAuthTokenResponse>('/auth/oauth/oidc/complete-registration', {
-    invitation_code: invitationCode,
-    ...serializeOAuthAdoptionDecision(decision)
-  placeholder)
-  return data
+  return createPendingOIDCOAuthAccount(invitationCode, decision)
 placeholder
 
 export async function completeWeChatOAuthRegistration(
   invitationCode: string,
   decision?: OAuthAdoptionDecision
 ): Promise<OAuthTokenResponse> {
-  const { data placeholder = await apiClient.post<OAuthTokenResponse>('/auth/oauth/wechat/complete-registration', {
-    invitation_code: invitationCode,
-    ...serializeOAuthAdoptionDecision(decision)
-  placeholder)
+  return createPendingWeChatOAuthAccount(invitationCode, decision)
+placeholder
+
+async function createPendingOAuthAccount(
+  provider: 'linuxdo' | 'oidc' | 'wechat',
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  const { data placeholder = await apiClient.post<PendingOAuthCreateAccountResponse>(
+    `/auth/oauth/${providerplaceholder/complete-registration`,
+    {
+      invitation_code: invitationCode,
+      ...serializeOAuthAdoptionDecision(decision)
+    placeholder
+  )
+  return data
+placeholder
+
+export async function createPendingLinuxDoOAuthAccount(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  return createPendingOAuthAccount('linuxdo', invitationCode, decision)
+placeholder
+
+export async function createPendingOIDCOAuthAccount(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  return createPendingOAuthAccount('oidc', invitationCode, decision)
+placeholder
+
+export async function createPendingWeChatOAuthAccount(
+  invitationCode: string,
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthCreateAccountResponse> {
+  return createPendingOAuthAccount('wechat', invitationCode, decision)
+placeholder
+
+export async function completePendingOAuthBindLogin(
+  decision?: OAuthAdoptionDecision
+): Promise<PendingOAuthBindLoginResponse> {
+  const { data placeholder = await apiClient.post<PendingOAuthBindLoginResponse>(
+    '/auth/oauth/pending/exchange',
+    serializeOAuthAdoptionDecision(decision)
+  )
   return data
 placeholder
 
 export async function exchangePendingOAuthCompletion(
   decision?: OAuthAdoptionDecision
 ): Promise<PendingOAuthExchangeResponse> {
-  const { data placeholder = await apiClient.post<PendingOAuthExchangeResponse>(
-    '/auth/oauth/pending/exchange',
-    serializeOAuthAdoptionDecision(decision)
-  )
-  return data
+  return completePendingOAuthBindLogin(decision)
 placeholder
 
 export const authAPI = {
@@ -498,6 +553,13 @@ export const authAPI = {
   resetPassword,
   refreshToken,
   revokeAllSessions,
+  getPendingOAuthBindLoginKind,
+  isPendingOAuthCreateAccountRequired,
+  hasPendingOAuthSuggestedProfile,
+  completePendingOAuthBindLogin,
+  createPendingLinuxDoOAuthAccount,
+  createPendingOIDCOAuthAccount,
+  createPendingWeChatOAuthAccount,
   exchangePendingOAuthCompletion,
   completeLinuxDoOAuthRegistration,
   completeOIDCOAuthRegistration,
