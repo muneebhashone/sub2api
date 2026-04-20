@@ -86,6 +86,10 @@ placeholder
 	return &User{ID: id, Balance: s.balanceplaceholder, nil
 placeholder
 
+func (s *balanceLoadUserRepoStub) ListUserAuthIdentities(context.Context, int64) ([]UserAuthIdentityRecord, error) {
+	return nil, nil
+placeholder
+
 func TestBillingCacheServiceGetUserBalance_Singleflight(t *testing.T) {
 	cache := &billingCacheMissStub{placeholder
 	userRepo := &balanceLoadUserRepoStub{
