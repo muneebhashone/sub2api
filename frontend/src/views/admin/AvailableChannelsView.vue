@@ -59,11 +59,7 @@
 
           <template #cell-billing_model_source="{ row placeholder">
             <span class="text-xs text-gray-700 dark:text-gray-300">
-              {{
-                t(
-                  `admin.availableChannels.billingSource.${row.billing_model_source || BILLING_MODEL_SOURCE_CHANNEL_MAPPEDplaceholder`
-                )
-              placeholderplaceholder
+              {{ t(`admin.availableChannels.billingSource.${row.billing_model_sourceplaceholder`) placeholderplaceholder
             </span>
           </template>
         </AvailableChannelsTable>
@@ -82,10 +78,7 @@ import AvailableChannelsTable from '@/components/channels/AvailableChannelsTable
 import channelsAPI, { type AvailableChannel placeholder from '@/api/admin/channels'
 import { useAppStore placeholder from '@/stores/app'
 import { extractApiErrorMessage placeholder from '@/utils/apiError'
-import {
-  CHANNEL_STATUS_ACTIVE,
-  BILLING_MODEL_SOURCE_CHANNEL_MAPPED
-placeholder from '@/constants/channel'
+import { CHANNEL_STATUS_ACTIVE placeholder from '@/constants/channel'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()

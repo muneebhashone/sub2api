@@ -65,12 +65,17 @@ placeholder
 	placeholder
 		sort.Slice(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name placeholder)
 
+		billingSource := ch.BillingModelSource
+		if billingSource == "" {
+			billingSource = BillingModelSourceChannelMapped
+	placeholder
+
 		out = append(out, AvailableChannel{
 			ID:                 ch.ID,
 			Name:               ch.Name,
 			Description:        ch.Description,
 			Status:             ch.Status,
-			BillingModelSource: ch.BillingModelSource,
+			BillingModelSource: billingSource,
 			RestrictModels:     ch.RestrictModels,
 			Groups:             groups,
 			SupportedModels:    ch.SupportedModels(),
