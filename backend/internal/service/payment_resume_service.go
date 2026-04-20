@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -197,6 +198,30 @@ placeholder
 	if parsed.Path == "" {
 		parsed.Path = "/"
 placeholder
+	return parsed.String(), nil
+placeholder
+
+func buildPaymentReturnURL(base string, orderID int64, resumeToken string) (string, error) {
+	canonical, err := CanonicalizeReturnURL(base)
+	if err != nil || canonical == "" {
+		return canonical, err
+placeholder
+
+	parsed, err := url.Parse(canonical)
+	if err != nil {
+		return "", infraerrors.BadRequest("INVALID_RETURN_URL", "return_url must be a valid URL")
+placeholder
+
+	query := parsed.Query()
+	if orderID > 0 {
+		query.Set("order_id", strconv.FormatInt(orderID, 10))
+placeholder
+	if strings.TrimSpace(resumeToken) != "" {
+		query.Set("resume_token", strings.TrimSpace(resumeToken))
+placeholder
+	query.Set("status", "success")
+	parsed.RawQuery = query.Encode()
+
 	return parsed.String(), nil
 placeholder
 
