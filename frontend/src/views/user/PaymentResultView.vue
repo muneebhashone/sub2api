@@ -54,7 +54,7 @@
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.paymentMethod') placeholderplaceholder</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ t('payment.methods.' + order.payment_type, order.payment_type) placeholderplaceholder</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ t(paymentMethodI18nKey(order.payment_type), normalizedOrderPaymentType(order.payment_type)) placeholderplaceholder</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.status') placeholderplaceholder</span>
@@ -75,7 +75,7 @@
             </div>
             <div v-if="returnInfo.type" class="flex justify-between">
               <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.paymentMethod') placeholderplaceholder</span>
-              <span class="font-medium text-gray-900 dark:text-white">{{ t('payment.methods.' + returnInfo.type, returnInfo.type) placeholderplaceholder</span>
+              <span class="font-medium text-gray-900 dark:text-white">{{ t(paymentMethodI18nKey(returnInfo.type), normalizedOrderPaymentType(returnInfo.type)) placeholderplaceholder</span>
             </div>
           </div>
         </div>
@@ -98,6 +98,7 @@ import { PAYMENT_RECOVERY_STORAGE_KEY, readPaymentRecoverySnapshot placeholder f
 import { usePaymentStore placeholder from '@/stores/payment'
 import { paymentAPI placeholder from '@/api/payment'
 import type { PaymentOrder placeholder from '@/types/payment'
+import { normalizePaymentMethodForDisplay, paymentMethodI18nKey placeholder from './paymentUx'
 
 const { t placeholder = useI18n()
 const route = useRoute()
@@ -132,6 +133,10 @@ placeholder)
 const isSuccess = computed(() => {
   return !!order.value && SUCCESS_STATUSES.has(order.value.status)
 placeholder)
+
+function normalizedOrderPaymentType(paymentType: string): string {
+  return normalizePaymentMethodForDisplay(paymentType) || paymentType
+placeholder
 
 onMounted(async () => {
   const resumeToken = typeof route.query.resume_token === 'string'

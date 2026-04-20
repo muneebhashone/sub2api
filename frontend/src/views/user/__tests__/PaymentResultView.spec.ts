@@ -155,4 +155,29 @@ describe('PaymentResultView', () => {
     expect(wrapper.text()).toContain('payment.result.success')
     expect(verifyOrderPublic).not.toHaveBeenCalled()
   placeholder)
+
+  it('normalizes aliased payment methods before rendering the label', async () => {
+    routeState.query = {
+      resume_token: 'resume-88',
+    placeholder
+    resolveOrderPublicByResumeToken.mockResolvedValueOnce({
+      data: {
+        ...orderFactory('PAID'),
+        payment_type: 'alipay_direct',
+      placeholder,
+    placeholder)
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('payment.methods.alipay')
+    expect(wrapper.text()).not.toContain('payment.methods.alipay_direct')
+  placeholder)
 placeholder)
