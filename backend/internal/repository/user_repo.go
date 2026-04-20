@@ -19,6 +19,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/lib/pq"
 
 	entsql "entgo.io/ent/dialect/sql"
 )
@@ -296,6 +297,51 @@ placeholder
 		return ""
 placeholder
 	return normalized
+placeholder
+
+func (r *userRepository) GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error) {
+	result := make(map[int64]*time.Time, len(userIDs))
+	if len(userIDs) == 0 {
+		return result, nil
+placeholder
+	if r.sql == nil {
+		return nil, fmt.Errorf("sql executor is not configured")
+placeholder
+
+	rows, err := r.sql.QueryContext(ctx, `
+		SELECT user_id, MAX(created_at) AS last_used_at
+		FROM usage_logs
+		WHERE user_id = ANY($1)
+		GROUP BY user_id
+	`, pq.Array(userIDs))
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	for rows.Next() {
+		var (
+			userID     int64
+			lastUsedAt time.Time
+		)
+		if err := rows.Scan(&userID, &lastUsedAt); err != nil {
+			return nil, err
+	placeholder
+		ts := lastUsedAt.UTC()
+		result[userID] = &ts
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, err
+placeholder
+	return result, nil
+placeholder
+
+func (r *userRepository) GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error) {
+	latestByUserID, err := r.GetLatestUsedAtByUserIDs(ctx, []int64{userIDplaceholder)
+	if err != nil {
+		return nil, err
+placeholder
+	return latestByUserID[userID], nil
 placeholder
 
 func (r *userRepository) Delete(ctx context.Context, id int64) error {
