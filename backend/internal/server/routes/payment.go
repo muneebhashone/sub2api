@@ -49,6 +49,7 @@ placeholder
 	public := v1.Group("/payment/public")
 	{
 		public.POST("/orders/verify", paymentHandler.VerifyOrderPublic)
+		public.POST("/orders/resolve", paymentHandler.ResolveOrderPublicByResumeToken)
 placeholder
 
 	// --- Webhook endpoints (no auth) ---

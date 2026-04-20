@@ -150,7 +150,17 @@ onMounted(async () => {
     placeholder
   placeholder
 
-  if (orderId) {
+  if (!order.value && !orderId && resumeToken) {
+    try {
+      const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
+      order.value = result.data
+      orderId = result.data.id
+    placeholder catch (_err: unknown) {
+      // Resume token recovery failed, continue to legacy fallback paths.
+    placeholder
+  placeholder
+
+  if (!order.value && orderId) {
     try {
       order.value = await paymentStore.pollOrderStatus(orderId)
     placeholder catch (_err: unknown) {
