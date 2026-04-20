@@ -18,9 +18,10 @@
         <div
           v-if="
             needsInvitation ||
-            needsEmailCollection ||
-            needsExistingAccountBinding ||
-            needsAdoptionConfirmation
+            needsAdoptionConfirmation ||
+            needsCreateAccount ||
+            needsBindLogin ||
+            needsTotpChallenge
           "
           class="space-y-4"
         >
@@ -108,39 +109,6 @@
             </button>
           </template>
 
-          <template v-else-if="needsEmailCollection">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              Continue with email to finish setting up your {{ providerName placeholderplaceholder sign-in.
-            </p>
-            <div>
-              <input
-                v-model="pendingEmail"
-                type="email"
-                class="input w-full"
-                placeholder="you@example.com"
-                :disabled="isSubmitting"
-                @keyup.enter="handleContinueWithEmail"
-              />
-            </div>
-            <button
-              class="btn btn-primary w-full"
-              :disabled="isSubmitting || !pendingEmail.trim()"
-              @click="handleContinueWithEmail"
-            >
-              Continue with email
-            </button>
-          </template>
-
-          <template v-else-if="needsExistingAccountBinding">
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              Sign in to bind {{ providerName placeholderplaceholder to the existing account for
-              <span class="font-medium text-gray-900 dark:text-white">{{ pendingEmail placeholderplaceholder</span>.
-            </p>
-            <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueToLogin">
-              Sign in to bind
-            </button>
-          </template>
-
           <template v-else-if="needsAdoptionConfirmation">
             <p class="text-sm text-gray-700 dark:text-gray-300">
               Review the {{ providerName placeholderplaceholder profile details before continuing.
@@ -148,6 +116,124 @@
             <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueLogin">
               {{ isSubmitting ? t('common.processing') : 'Continue' placeholderplaceholder
             </button>
+          </template>
+
+          <template v-else-if="needsCreateAccount">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Enter an email address to create your account and continue.
+            </p>
+            <div class="space-y-3">
+              <input
+                v-model="pendingAccountEmail"
+                data-testid="oidc-create-account-email"
+                type="email"
+                class="input w-full"
+                placeholder="you@example.com"
+                :disabled="isSubmitting"
+                @keyup.enter="handleCreateAccount"
+              />
+              <button
+                data-testid="oidc-create-account-submit"
+                class="btn btn-primary w-full"
+                :disabled="isSubmitting || !pendingAccountEmail.trim()"
+                @click="handleCreateAccount"
+              >
+                {{ isSubmitting ? t('common.processing') : 'Create account' placeholderplaceholder
+              </button>
+              <button
+                class="btn btn-secondary w-full"
+                :disabled="isSubmitting"
+                @click="switchToBindLoginMode"
+              >
+                I already have an account
+              </button>
+            </div>
+            <transition name="fade">
+              <p v-if="accountActionError" class="text-sm text-red-600 dark:text-red-400">
+                {{ accountActionError placeholderplaceholder
+              </p>
+            </transition>
+          </template>
+
+          <template v-else-if="needsBindLogin">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Log in to an existing account to bind this {{ providerName placeholderplaceholder sign-in.
+            </p>
+            <div class="space-y-3">
+              <input
+                v-model="bindLoginEmail"
+                data-testid="oidc-bind-login-email"
+                type="email"
+                class="input w-full"
+                placeholder="you@example.com"
+                :disabled="isSubmitting"
+                @keyup.enter="handleBindLogin"
+              />
+              <input
+                v-model="bindLoginPassword"
+                data-testid="oidc-bind-login-password"
+                type="password"
+                class="input w-full"
+                placeholder="Password"
+                :disabled="isSubmitting"
+                @keyup.enter="handleBindLogin"
+              />
+              <button
+                data-testid="oidc-bind-login-submit"
+                class="btn btn-primary w-full"
+                :disabled="isSubmitting || !bindLoginEmail.trim() || !bindLoginPassword"
+                @click="handleBindLogin"
+              >
+                {{ isSubmitting ? t('common.processing') : 'Log in and bind' placeholderplaceholder
+              </button>
+              <button
+                v-if="canReturnToCreateAccount"
+                class="btn btn-secondary w-full"
+                :disabled="isSubmitting"
+                @click="switchToCreateAccountMode"
+              >
+                Use a different email
+              </button>
+            </div>
+            <transition name="fade">
+              <p v-if="accountActionError" class="text-sm text-red-600 dark:text-red-400">
+                {{ accountActionError placeholderplaceholder
+              </p>
+            </transition>
+          </template>
+
+          <template v-else-if="needsTotpChallenge">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Enter the 6-digit verification code for
+              <span class="font-medium">{{ totpUserEmailMasked || 'your account' placeholderplaceholder</span>
+              to finish binding this {{ providerName placeholderplaceholder sign-in.
+            </p>
+            <div class="space-y-3">
+              <input
+                v-model="totpCode"
+                data-testid="oidc-bind-login-totp"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                class="input w-full"
+                placeholder="123456"
+                :disabled="isSubmitting"
+                @keyup.enter="handleSubmitTotpChallenge"
+              />
+              <button
+                data-testid="oidc-bind-login-totp-submit"
+                class="btn btn-primary w-full"
+                :disabled="isSubmitting || totpCode.trim().length !== 6"
+                @click="handleSubmitTotpChallenge"
+              >
+                {{ isSubmitting ? t('common.processing') : 'Verify and continue' placeholderplaceholder
+              </button>
+            </div>
+            <transition name="fade">
+              <p v-if="totpError" class="text-sm text-red-600 dark:text-red-400">
+                {{ totpError placeholderplaceholder
+              </p>
+            </transition>
           </template>
         </div>
       </transition>
@@ -177,11 +263,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref placeholder from 'vue'
+import { computed, onMounted, ref placeholder from 'vue'
 import { useRoute, useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { AuthLayout placeholder from '@/components/layout'
 import Icon from '@/components/icons/Icon.vue'
+import { apiClient placeholder from '@/api/client'
 import { useAuthStore, useAppStore placeholder from '@/stores'
 import {
   completeOIDCOAuthRegistration,
@@ -189,6 +276,7 @@ import {
   getOAuthCompletionKind,
   getPublicSettings,
   isOAuthLoginCompletion,
+  login2FA,
   persistOAuthTokenContext,
   type OAuthAdoptionDecision,
   type PendingOAuthExchangeResponse
@@ -203,7 +291,6 @@ const appStore = useAppStore()
 
 const isProcessing = ref(true)
 const errorMessage = ref('')
-
 const needsInvitation = ref(false)
 const invitationCode = ref('')
 const isSubmitting = ref(false)
@@ -215,11 +302,22 @@ const suggestedDisplayName = ref('')
 const suggestedAvatarUrl = ref('')
 const adoptDisplayName = ref(true)
 const adoptAvatar = ref(true)
-const pendingEmail = ref('')
-const needsEmailCollection = ref(false)
-const needsExistingAccountBinding = ref(false)
 const needsAdoptionConfirmation = ref(false)
+const pendingAccountAction = ref<'none' | 'create_account' | 'bind_login'>('none')
+const pendingAccountEmail = ref('')
+const bindLoginEmail = ref('')
+const bindLoginPassword = ref('')
+const accountActionError = ref('')
+const canReturnToCreateAccount = ref(false)
 const bindSuccessMessage = t('profile.authBindings.bindSuccess')
+const needsTotpChallenge = ref(false)
+const totpTempToken = ref('')
+const totpCode = ref('')
+const totpError = ref('')
+const totpUserEmailMasked = ref('')
+
+const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
+const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
 
 type PendingOidcCompletion = PendingOAuthExchangeResponse & {
   step?: string
@@ -229,6 +327,9 @@ type PendingOidcCompletion = PendingOAuthExchangeResponse & {
   email?: string
   provider_fallback?: string
   intent?: string
+  requires_2fa?: boolean
+  temp_token?: string
+  user_email_masked?: string
 placeholder
 
 function parseFragmentParams(): URLSearchParams {
@@ -258,39 +359,22 @@ async function loadProviderName() {
   placeholder
 placeholder
 
-function normalizedPendingState(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() || ''
-placeholder
-
-function resolvePendingEmail(completion: PendingOidcCompletion): string {
-  return (
-    completion.pending_email ||
-    completion.existing_account_email ||
-    completion.resolved_email ||
-    completion.email ||
-    ''
-  ).trim()
-placeholder
-
-function requiresEmailCollection(completion: PendingOidcCompletion): boolean {
-  const state = normalizedPendingState(completion.step || completion.error)
-  return state === 'email_required'
-placeholder
-
-function requiresExistingAccountBinding(completion: PendingOidcCompletion): boolean {
-  const state = normalizedPendingState(completion.step || completion.error || completion.intent)
-  return (
-    state === 'existing_account_binding_required' ||
-    state === 'existing_account_required' ||
-    state === 'adopt_existing_user_by_email'
-  )
-placeholder
-
 function currentAdoptionDecision(): OAuthAdoptionDecision {
   return {
     adoptDisplayName: adoptDisplayName.value,
     adoptAvatar: adoptAvatar.value
   placeholder
+placeholder
+
+function serializeAdoptionDecision(decision: OAuthAdoptionDecision): Record<string, boolean> {
+  const payload: Record<string, boolean> = {placeholder
+  if (typeof decision.adoptDisplayName === 'boolean') {
+    payload.adopt_display_name = decision.adoptDisplayName
+  placeholder
+  if (typeof decision.adoptAvatar === 'boolean') {
+    payload.adopt_avatar = decision.adoptAvatar
+  placeholder
+  return payload
 placeholder
 
 function applyAdoptionSuggestionState(completion: {
@@ -317,6 +401,100 @@ placeholder): boolean {
   return Boolean(completion.suggested_display_name || completion.suggested_avatar_url)
 placeholder
 
+function normalizedPendingState(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() || ''
+placeholder
+
+function extractPendingAccountEmail(completion: PendingOidcCompletion): string {
+  return (
+    completion.pending_email ||
+    completion.existing_account_email ||
+    completion.resolved_email ||
+    completion.email ||
+    ''
+  ).trim()
+placeholder
+
+function resolvePendingAccountAction(completion: PendingOidcCompletion): 'none' | 'create_account' | 'bind_login' {
+  const raw = normalizedPendingState(completion.step || completion.error || completion.intent)
+  if (raw === 'email_required' || raw === 'create_account_required' || raw === 'create_account') {
+    return 'create_account'
+  placeholder
+  if (
+    raw === 'bind_login_required' ||
+    raw === 'bind_login' ||
+    raw === 'existing_account_binding_required' ||
+    raw === 'existing_account_required' ||
+    raw === 'adopt_existing_user_by_email'
+  ) {
+    return 'bind_login'
+  placeholder
+  return 'none'
+placeholder
+
+function applyPendingAccountAction(completion: PendingOidcCompletion) {
+  const action = resolvePendingAccountAction(completion)
+  pendingAccountAction.value = action
+  accountActionError.value = ''
+  needsTotpChallenge.value = false
+  totpTempToken.value = ''
+  totpCode.value = ''
+  totpError.value = ''
+  totpUserEmailMasked.value = ''
+
+  const email = extractPendingAccountEmail(completion)
+  if (action === 'create_account') {
+    pendingAccountEmail.value = email
+    canReturnToCreateAccount.value = true
+    return
+  placeholder
+
+  if (action === 'bind_login') {
+    bindLoginEmail.value = email
+    bindLoginPassword.value = ''
+    canReturnToCreateAccount.value = false
+    return
+  placeholder
+
+  canReturnToCreateAccount.value = false
+placeholder
+
+function applyTotpChallenge(completion: PendingOidcCompletion): boolean {
+  if (completion.requires_2fa !== true || !completion.temp_token) {
+    return false
+  placeholder
+
+  pendingAccountAction.value = 'none'
+  needsInvitation.value = false
+  needsAdoptionConfirmation.value = false
+  needsTotpChallenge.value = true
+  totpTempToken.value = completion.temp_token
+  totpCode.value = ''
+  totpError.value = ''
+  totpUserEmailMasked.value = completion.user_email_masked || ''
+  isProcessing.value = false
+  return true
+placeholder
+
+function switchToBindLoginMode() {
+  pendingAccountAction.value = 'bind_login'
+  bindLoginEmail.value = bindLoginEmail.value.trim() || pendingAccountEmail.value.trim()
+  bindLoginPassword.value = ''
+  accountActionError.value = ''
+  canReturnToCreateAccount.value = true
+placeholder
+
+function switchToCreateAccountMode() {
+  pendingAccountAction.value = 'create_account'
+  pendingAccountEmail.value = pendingAccountEmail.value.trim() || bindLoginEmail.value.trim()
+  accountActionError.value = ''
+placeholder
+
+function getRequestErrorMessage(error: unknown, fallback: string): string {
+  const err = error as { message?: string; response?: { data?: { detail?: string; message?: string placeholder placeholder placeholder
+  return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
+placeholder
+
 async function finalizeCompletion(completion: PendingOAuthExchangeResponse, redirect: string) {
   if (getOAuthCompletionKind(completion) === 'bind') {
     const bindRedirect = sanitizeRedirectPath(completion.redirect || '/profile')
@@ -333,6 +511,33 @@ async function finalizeCompletion(completion: PendingOAuthExchangeResponse, redi
   await authStore.setToken(completion.access_token)
   appStore.showSuccess(t('auth.loginSuccess'))
   await router.replace(redirect)
+placeholder
+
+async function finalizePendingAccountResponse(completion: PendingOidcCompletion) {
+  applyAdoptionSuggestionState(completion)
+
+  if (completion.error === 'invitation_required') {
+    pendingAccountAction.value = 'none'
+    needsInvitation.value = true
+    needsAdoptionConfirmation.value = false
+    isProcessing.value = false
+    return
+  placeholder
+
+  if (applyTotpChallenge(completion)) {
+    return
+  placeholder
+
+  applyPendingAccountAction(completion)
+  if (pendingAccountAction.value !== 'none') {
+    needsInvitation.value = false
+    needsAdoptionConfirmation.value = false
+    isProcessing.value = false
+    return
+  placeholder
+
+  const redirect = sanitizeRedirectPath(completion.redirect || redirectTo.value)
+  await finalizeCompletion(completion, redirect)
 placeholder
 
 async function handleSubmitInvitation() {
@@ -364,12 +569,7 @@ async function handleContinueLogin() {
     const completion = await exchangePendingOAuthCompletion(currentAdoptionDecision())
     await finalizeCompletion(completion, redirectTo.value)
   placeholder catch (e: unknown) {
-    const err = e as { message?: string; response?: { data?: { detail?: string; message?: string placeholder placeholder placeholder
-    errorMessage.value =
-      err.response?.data?.detail ||
-      err.response?.data?.message ||
-      err.message ||
-      t('auth.loginFailed')
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
     appStore.showError(errorMessage.value)
     needsAdoptionConfirmation.value = false
   placeholder finally {
@@ -377,33 +577,65 @@ async function handleContinueLogin() {
   placeholder
 placeholder
 
-async function handleContinueWithEmail() {
-  const email = pendingEmail.value.trim()
-  if (!email) {
-    return
-  placeholder
+async function handleCreateAccount() {
+  accountActionError.value = ''
+  const email = pendingAccountEmail.value.trim()
+  if (!email) return
 
-  await router.replace({
-    path: '/register',
-    query: {
+  isSubmitting.value = true
+  try {
+    const { data placeholder = await apiClient.post<PendingOidcCompletion>('/auth/oauth/pending/create-account', {
       email,
-      redirect: redirectTo.value,
-      provider: providerName.value
-    placeholder
-  placeholder)
+      ...serializeAdoptionDecision(currentAdoptionDecision())
+    placeholder)
+    await finalizePendingAccountResponse(data)
+  placeholder catch (e: unknown) {
+    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  placeholder finally {
+    isSubmitting.value = false
+  placeholder
 placeholder
 
-async function handleContinueToLogin() {
-  const email = pendingEmail.value.trim()
+async function handleBindLogin() {
+  accountActionError.value = ''
+  const email = bindLoginEmail.value.trim()
+  const password = bindLoginPassword.value
+  if (!email || !password) return
 
-  await router.replace({
-    path: '/login',
-    query: {
+  isSubmitting.value = true
+  try {
+    const { data placeholder = await apiClient.post<PendingOidcCompletion>('/auth/oauth/pending/bind-login', {
       email,
-      redirect: redirectTo.value,
-      provider: providerName.value
-    placeholder
-  placeholder)
+      password,
+      ...serializeAdoptionDecision(currentAdoptionDecision())
+    placeholder)
+    await finalizePendingAccountResponse(data)
+  placeholder catch (e: unknown) {
+    accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  placeholder finally {
+    isSubmitting.value = false
+  placeholder
+placeholder
+
+async function handleSubmitTotpChallenge() {
+  totpError.value = ''
+  const code = totpCode.value.trim()
+  if (!totpTempToken.value || code.length !== 6) return
+
+  isSubmitting.value = true
+  try {
+    const completion = await login2FA({
+      temp_token: totpTempToken.value,
+      totp_code: code
+    placeholder)
+    await authStore.setToken(completion.access_token)
+    appStore.showSuccess(t('auth.loginSuccess'))
+    await router.replace(redirectTo.value)
+  placeholder catch (e: unknown) {
+    totpError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  placeholder finally {
+    isSubmitting.value = false
+  placeholder
 placeholder
 
 onMounted(async () => {
@@ -427,7 +659,6 @@ onMounted(async () => {
     )
     applyAdoptionSuggestionState(completion)
     redirectTo.value = redirect
-    pendingEmail.value = resolvePendingEmail(completion)
 
     if (completion.error === 'invitation_required') {
       needsInvitation.value = true
@@ -435,14 +666,12 @@ onMounted(async () => {
       return
     placeholder
 
-    if (requiresEmailCollection(completion)) {
-      needsEmailCollection.value = true
-      isProcessing.value = false
+    if (applyTotpChallenge(completion)) {
       return
     placeholder
 
-    if (requiresExistingAccountBinding(completion)) {
-      needsExistingAccountBinding.value = true
+    applyPendingAccountAction(completion)
+    if (pendingAccountAction.value !== 'none') {
       isProcessing.value = false
       return
     placeholder
@@ -455,12 +684,7 @@ onMounted(async () => {
 
     await finalizeCompletion(completion, redirect)
   placeholder catch (e: unknown) {
-    const err = e as { message?: string; response?: { data?: { detail?: string; message?: string placeholder placeholder placeholder
-    errorMessage.value =
-      err.response?.data?.detail ||
-      err.response?.data?.message ||
-      err.message ||
-      t('auth.loginFailed')
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
     appStore.showError(errorMessage.value)
     isProcessing.value = false
   placeholder
