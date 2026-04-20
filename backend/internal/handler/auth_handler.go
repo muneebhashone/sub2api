@@ -348,8 +348,14 @@ placeholder
 		return
 placeholder
 
+	identities, err := h.userService.GetProfileIdentitySummaries(c.Request.Context(), subject.UserID, user)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
 	type UserResponse struct {
-		*dto.User
+		userProfileResponse
 		RunMode string `json:"run_mode"`
 placeholder
 
@@ -358,7 +364,10 @@ placeholder
 		runMode = h.cfg.RunMode
 placeholder
 
-	response.Success(c, UserResponse{User: dto.UserFromService(user), RunMode: runModeplaceholder)
+	response.Success(c, UserResponse{
+		userProfileResponse: userProfileResponseFromService(user, identities),
+		RunMode:             runMode,
+placeholder)
 placeholder
 
 // ValidatePromoCodeRequest 验证优惠码请求

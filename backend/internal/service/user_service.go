@@ -403,6 +403,11 @@ placeholder
 placeholder, nil
 placeholder
 
+func ValidateUserAvatar(raw string) error {
+	_, err := normalizeUserAvatarInput(raw)
+	return err
+placeholder
+
 func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
 	body := strings.TrimPrefix(raw, "data:")
 	meta, encoded, ok := strings.Cut(body, ",")
