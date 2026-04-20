@@ -87,20 +87,25 @@ placeholder
 		redirectTo = linuxDoOAuthDefaultRedirectTo
 placeholder
 
+	browserSessionKey, err := generateOAuthPendingBrowserSession()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BROWSER_SESSION_GEN_FAILED", "failed to generate oauth browser session").WithCause(err))
+		return
+placeholder
+
 	secureCookie := isRequestHTTPS(c)
 	setCookie(c, linuxDoOAuthStateCookieName, encodeCookieValue(state), linuxDoOAuthCookieMaxAgeSec, secureCookie)
 	setCookie(c, linuxDoOAuthRedirectCookie, encodeCookieValue(redirectTo), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	setOAuthPendingBrowserCookie(c, browserSessionKey, secureCookie)
+	clearOAuthPendingSessionCookie(c, secureCookie)
 
-	codeChallenge := ""
-	if cfg.UsePKCE {
-		verifier, err := oauth.GenerateCodeVerifier()
-		if err != nil {
-			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(err))
-			return
-	placeholder
-		codeChallenge = oauth.GenerateCodeChallenge(verifier)
-		setCookie(c, linuxDoOAuthVerifierCookie, encodeCookieValue(verifier), linuxDoOAuthCookieMaxAgeSec, secureCookie)
+	verifier, err := oauth.GenerateCodeVerifier()
+	if err != nil {
+		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(err))
+		return
 placeholder
+	codeChallenge := oauth.GenerateCodeChallenge(verifier)
+	setCookie(c, linuxDoOAuthVerifierCookie, encodeCookieValue(verifier), linuxDoOAuthCookieMaxAgeSec, secureCookie)
 
 	redirectURI := strings.TrimSpace(cfg.RedirectURL)
 	if redirectURI == "" {
@@ -161,14 +166,16 @@ placeholder
 	if redirectTo == "" {
 		redirectTo = linuxDoOAuthDefaultRedirectTo
 placeholder
+	browserSessionKey, _ := readOAuthPendingBrowserCookie(c)
+	if strings.TrimSpace(browserSessionKey) == "" {
+		redirectOAuthError(c, frontendCallback, "missing_browser_session", "missing oauth browser session", "")
+		return
+placeholder
 
-	codeVerifier := ""
-	if cfg.UsePKCE {
-		codeVerifier, _ = readCookieDecoded(c, linuxDoOAuthVerifierCookie)
-		if codeVerifier == "" {
-			redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
-			return
-	placeholder
+	codeVerifier, _ := readCookieDecoded(c, linuxDoOAuthVerifierCookie)
+	if codeVerifier == "" {
+		redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
+		return
 placeholder
 
 	redirectURI := strings.TrimSpace(cfg.RedirectURL)
@@ -198,7 +205,7 @@ placeholder
 		return
 placeholder
 
-	email, username, subject, err := linuxDoFetchUserInfo(c.Request.Context(), cfg, tokenResp)
+	email, username, subject, displayName, avatarURL, err := linuxDoFetchUserInfo(c.Request.Context(), cfg, tokenResp)
 	if err != nil {
 		log.Printf("[LinuxDo OAuth] userinfo fetch failed: %v", err)
 		redirectOAuthError(c, frontendCallback, "userinfo_failed", "failed to fetch user info", "")
@@ -215,16 +222,32 @@ placeholder
 	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
 	if err != nil {
 		if errors.Is(err, service.ErrOAuthInvitationRequired) {
-			pendingToken, tokenErr := h.authService.CreatePendingOAuthToken(email, username)
-			if tokenErr != nil {
-				redirectOAuthError(c, frontendCallback, "login_failed", "service_error", "")
+			if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+				Intent: "login",
+				Identity: service.PendingAuthIdentityKey{
+					ProviderType:    "linuxdo",
+					ProviderKey:     "linuxdo",
+					ProviderSubject: subject,
+			placeholder,
+				ResolvedEmail:     email,
+				RedirectTo:        redirectTo,
+				BrowserSessionKey: browserSessionKey,
+				UpstreamIdentityClaims: map[string]any{
+					"email":                  email,
+					"username":               username,
+					"subject":                subject,
+					"suggested_display_name": displayName,
+					"suggested_avatar_url":   avatarURL,
+			placeholder,
+				CompletionResponse: map[string]any{
+					"error":    "invitation_required",
+					"redirect": redirectTo,
+			placeholder,
+		placeholder); err != nil {
+				redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 				return
 		placeholder
-			fragment := url.Values{placeholder
-			fragment.Set("error", "invitation_required")
-			fragment.Set("pending_oauth_token", pendingToken)
-			fragment.Set("redirect", redirectTo)
-			redirectWithFragment(c, frontendCallback, fragment)
+			redirectToFrontendCallback(c, frontendCallback)
 			return
 	placeholder
 		// 避免把内部细节泄露给客户端；给前端保留结构化原因与提示信息即可。
@@ -232,18 +255,39 @@ placeholder
 		return
 placeholder
 
-	fragment := url.Values{placeholder
-	fragment.Set("access_token", tokenPair.AccessToken)
-	fragment.Set("refresh_token", tokenPair.RefreshToken)
-	fragment.Set("expires_in", fmt.Sprintf("%d", tokenPair.ExpiresIn))
-	fragment.Set("token_type", "Bearer")
-	fragment.Set("redirect", redirectTo)
-	redirectWithFragment(c, frontendCallback, fragment)
+	if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+		Intent: "login",
+		Identity: service.PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: subject,
+	placeholder,
+		ResolvedEmail:     email,
+		RedirectTo:        redirectTo,
+		BrowserSessionKey: browserSessionKey,
+		UpstreamIdentityClaims: map[string]any{
+			"email":                  email,
+			"username":               username,
+			"subject":                subject,
+			"suggested_display_name": displayName,
+			"suggested_avatar_url":   avatarURL,
+	placeholder,
+		CompletionResponse: map[string]any{
+			"access_token":  tokenPair.AccessToken,
+			"refresh_token": tokenPair.RefreshToken,
+			"expires_in":    tokenPair.ExpiresIn,
+			"token_type":    "Bearer",
+			"redirect":      redirectTo,
+	placeholder,
+placeholder); err != nil {
+		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
+		return
+placeholder
+	redirectToFrontendCallback(c, frontendCallback)
 placeholder
 
 type completeLinuxDoOAuthRequest struct {
-	PendingOAuthToken string `json:"pending_oauth_token" binding:"required"`
-	InvitationCode    string `json:"invitation_code"     binding:"required"`
+	InvitationCode string `json:"invitation_code" binding:"required"`
 placeholder
 
 // CompleteLinuxDoOAuthRegistration completes a pending OAuth registration by validating
@@ -256,9 +300,38 @@ func (h *AuthHandler) CompleteLinuxDoOAuthRegistration(c *gin.Context) {
 		return
 placeholder
 
-	email, username, err := h.authService.VerifyPendingOAuthToken(req.PendingOAuthToken)
+	secureCookie := isRequestHTTPS(c)
+	sessionToken, err := readOAuthPendingSessionCookie(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "INVALID_TOKEN", "message": "invalid or expired registration token"placeholder)
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, service.ErrPendingAuthSessionNotFound)
+		return
+placeholder
+	browserSessionKey, err := readOAuthPendingBrowserCookie(c)
+	if err != nil {
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, service.ErrPendingAuthBrowserMismatch)
+		return
+placeholder
+	pendingSvc, err := h.pendingIdentityService()
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	session, err := pendingSvc.GetBrowserSession(c.Request.Context(), sessionToken, browserSessionKey)
+	if err != nil {
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	email := strings.TrimSpace(session.ResolvedEmail)
+	username := pendingSessionStringValue(session.UpstreamIdentityClaims, "username")
+	if email == "" || username == "" {
+		response.ErrorFrom(c, infraerrors.BadRequest("PENDING_AUTH_SESSION_INVALID", "pending auth registration context is invalid"))
 		return
 placeholder
 
@@ -267,6 +340,14 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), sessionToken, browserSessionKey); err != nil {
+		clearOAuthPendingSessionCookie(c, secureCookie)
+		clearOAuthPendingBrowserCookie(c, secureCookie)
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	clearOAuthPendingSessionCookie(c, secureCookie)
+	clearOAuthPendingBrowserCookie(c, secureCookie)
 
 	c.JSON(http.StatusOK, gin.H{
 		"access_token":  tokenPair.AccessToken,
@@ -303,9 +384,7 @@ func linuxDoExchangeCode(
 	form.Set("client_id", cfg.ClientID)
 	form.Set("code", code)
 	form.Set("redirect_uri", redirectURI)
-	if cfg.UsePKCE {
-		form.Set("code_verifier", codeVerifier)
-placeholder
+	form.Set("code_verifier", codeVerifier)
 
 	r := client.R().
 		SetContext(ctx).
@@ -353,11 +432,11 @@ func linuxDoFetchUserInfo(
 	ctx context.Context,
 	cfg config.LinuxDoConnectConfig,
 	token *linuxDoTokenResponse,
-) (email string, username string, subject string, err error) {
+) (email string, username string, subject string, displayName string, avatarURL string, err error) {
 	client := req.C().SetTimeout(30 * time.Second)
 	authorization, err := buildBearerAuthorization(token.TokenType, token.AccessToken)
 	if err != nil {
-		return "", "", "", fmt.Errorf("invalid token for userinfo request: %w", err)
+		return "", "", "", "", "", fmt.Errorf("invalid token for userinfo request: %w", err)
 placeholder
 
 	resp, err := client.R().
@@ -366,16 +445,16 @@ placeholder
 		SetHeader("Authorization", authorization).
 		Get(cfg.UserInfoURL)
 	if err != nil {
-		return "", "", "", fmt.Errorf("request userinfo: %w", err)
+		return "", "", "", "", "", fmt.Errorf("request userinfo: %w", err)
 placeholder
 	if !resp.IsSuccessState() {
-		return "", "", "", fmt.Errorf("userinfo status=%d", resp.StatusCode)
+		return "", "", "", "", "", fmt.Errorf("userinfo status=%d", resp.StatusCode)
 placeholder
 
 	return linuxDoParseUserInfo(resp.String(), cfg)
 placeholder
 
-func linuxDoParseUserInfo(body string, cfg config.LinuxDoConnectConfig) (email string, username string, subject string, err error) {
+func linuxDoParseUserInfo(body string, cfg config.LinuxDoConnectConfig) (email string, username string, subject string, displayName string, avatarURL string, err error) {
 	email = firstNonEmpty(
 		getGJSON(body, cfg.UserInfoEmailPath),
 		getGJSON(body, "email"),
@@ -400,12 +479,29 @@ func linuxDoParseUserInfo(body string, cfg config.LinuxDoConnectConfig) (email s
 		getGJSON(body, "user.id"),
 	)
 
+	displayName = firstNonEmpty(
+		getGJSON(body, "name"),
+		getGJSON(body, "nickname"),
+		getGJSON(body, "display_name"),
+		getGJSON(body, "user.name"),
+		getGJSON(body, "user.username"),
+		username,
+	)
+	avatarURL = firstNonEmpty(
+		getGJSON(body, "avatar_url"),
+		getGJSON(body, "avatar"),
+		getGJSON(body, "picture"),
+		getGJSON(body, "profile_image_url"),
+		getGJSON(body, "user.avatar"),
+		getGJSON(body, "user.avatar_url"),
+	)
+
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
-		return "", "", "", errors.New("userinfo missing id field")
+		return "", "", "", "", "", errors.New("userinfo missing id field")
 placeholder
 	if !isSafeLinuxDoSubject(subject) {
-		return "", "", "", errors.New("userinfo returned invalid id field")
+		return "", "", "", "", "", errors.New("userinfo returned invalid id field")
 placeholder
 
 	email = strings.TrimSpace(email)
@@ -418,8 +514,13 @@ placeholder
 	if username == "" {
 		username = "linuxdo_" + subject
 placeholder
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		displayName = username
+placeholder
+	avatarURL = strings.TrimSpace(avatarURL)
 
-	return email, username, subject, nil
+	return email, username, subject, displayName, avatarURL, nil
 placeholder
 
 func buildLinuxDoAuthorizeURL(cfg config.LinuxDoConnectConfig, state string, codeChallenge string, redirectURI string) (string, error) {
@@ -436,10 +537,8 @@ placeholder
 		q.Set("scope", cfg.Scopes)
 placeholder
 	q.Set("state", state)
-	if cfg.UsePKCE {
-		q.Set("code_challenge", codeChallenge)
-		q.Set("code_challenge_method", "S256")
-placeholder
+	q.Set("code_challenge", codeChallenge)
+	q.Set("code_challenge_method", "S256")
 
 	u.RawQuery = q.Encode()
 	return u.String(), nil

@@ -41,11 +41,13 @@ func TestLinuxDoParseUserInfoParsesIDAndUsername(t *testing.T) {
 		UserInfoURL: "https://connect.linux.do/api/user",
 placeholder
 
-	email, username, subject, err := linuxDoParseUserInfo(`{"id":123,"username":"alice"placeholder`, cfg)
+	email, username, subject, displayName, avatarURL, err := linuxDoParseUserInfo(`{"id":123,"username":"alice","name":"Alice","avatar_url":"https://cdn.example/avatar.png"placeholder`, cfg)
 placeholder
 	require.Equal(t, "123", subject)
 	require.Equal(t, "alice", username)
 	require.Equal(t, "linuxdo-123@linuxdo-connect.invalid", email)
+	require.Equal(t, "Alice", displayName)
+	require.Equal(t, "https://cdn.example/avatar.png", avatarURL)
 placeholder
 
 func TestLinuxDoParseUserInfoDefaultsUsername(t *testing.T) {
@@ -53,11 +55,13 @@ func TestLinuxDoParseUserInfoDefaultsUsername(t *testing.T) {
 		UserInfoURL: "https://connect.linux.do/api/user",
 placeholder
 
-	email, username, subject, err := linuxDoParseUserInfo(`{"id":"123"placeholder`, cfg)
+	email, username, subject, displayName, avatarURL, err := linuxDoParseUserInfo(`{"id":"123"placeholder`, cfg)
 placeholder
 	require.Equal(t, "123", subject)
 	require.Equal(t, "linuxdo_123", username)
 	require.Equal(t, "linuxdo-123@linuxdo-connect.invalid", email)
+	require.Equal(t, "linuxdo_123", displayName)
+	require.Equal(t, "", avatarURL)
 placeholder
 
 func TestLinuxDoParseUserInfoRejectsUnsafeSubject(t *testing.T) {
@@ -65,11 +69,11 @@ func TestLinuxDoParseUserInfoRejectsUnsafeSubject(t *testing.T) {
 		UserInfoURL: "https://connect.linux.do/api/user",
 placeholder
 
-	_, _, _, err := linuxDoParseUserInfo(`{"id":"123@456"placeholder`, cfg)
+	_, _, _, _, _, err := linuxDoParseUserInfo(`{"id":"123@456"placeholder`, cfg)
 placeholder
 
 	tooLong := strings.Repeat("a", linuxDoOAuthMaxSubjectLen+1)
-	_, _, _, err = linuxDoParseUserInfo(`{"id":"`+tooLong+`"placeholder`, cfg)
+	_, _, _, _, _, err = linuxDoParseUserInfo(`{"id":"`+tooLong+`"placeholder`, cfg)
 placeholder
 placeholder
 
