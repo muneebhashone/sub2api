@@ -431,6 +431,58 @@ placeholder
 	require.NotNil(t, consumed.ConsumedAt)
 placeholder
 
+func TestCompleteOIDCOAuthRegistrationRejectsAdoptExistingUserSession(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	ctx := context.Background()
+
+	existingUser, err := client.User.Create().
+		SetEmail("owner@example.com").
+		SetUsername("owner-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("oidc-complete-invalid-session").
+		SetIntent("adopt_existing_user_by_email").
+		SetProviderType("oidc").
+		SetProviderKey("https://issuer.example.com").
+		SetProviderSubject("oidc-invalid-subject-1").
+		SetTargetUserID(existingUser.ID).
+		SetResolvedEmail(existingUser.Email).
+		SetBrowserSessionKey("oidc-invalid-browser").
+		SetUpstreamIdentityClaims(map[string]any{
+			"username": "oidc_user",
+	placeholder).
+		SetLocalFlowState(map[string]any{
+			oauthCompletionResponseKey: map[string]any{
+				"step": "bind_login_required",
+		placeholder,
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	body := bytes.NewBufferString(`{"invitation_code":"invite-1"placeholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/oidc/complete-registration", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("oidc-invalid-browser")placeholder)
+	c.Request = req
+
+	handler.CompleteOIDCOAuthRegistration(c)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+
+	storedSession, err := client.PendingAuthSession.Get(ctx, session.ID)
+placeholder
+	require.Nil(t, storedSession.ConsumedAt)
+placeholder
+
 type oidcProviderFixture struct {
 	Subject           string
 	PreferredUsername string

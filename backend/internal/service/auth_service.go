@@ -430,8 +430,6 @@ placeholder
 	if !user.IsActive() {
 		return "", nil, ErrUserNotActive
 placeholder
-	s.backfillEmailIdentityOnSuccessfulLogin(ctx, user)
-	s.touchUserLogin(ctx, user.ID)
 
 	// 生成JWT token
 	token, err := s.GenerateToken(user)
@@ -507,7 +505,7 @@ placeholder
 			placeholder
 		placeholder else {
 				user = newUser
-				s.postAuthUserBootstrap(ctx, user, signupSource, true)
+				s.postAuthUserBootstrap(ctx, user, signupSource, false)
 				s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 		placeholder
 	placeholder else {
@@ -527,8 +525,6 @@ placeholder
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to update username after oauth login: %v", err)
 	placeholder
 placeholder
-	s.touchUserLogin(ctx, user.ID)
-
 	token, err := s.GenerateToken(user)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate token: %w", err)
@@ -634,7 +630,7 @@ placeholder
 						return nil, nil, ErrServiceUnavailable
 				placeholder
 					user = newUser
-					s.postAuthUserBootstrap(ctx, user, signupSource, true)
+					s.postAuthUserBootstrap(ctx, user, signupSource, false)
 					s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 			placeholder
 		placeholder else {
@@ -651,7 +647,7 @@ placeholder
 				placeholder
 			placeholder else {
 					user = newUser
-					s.postAuthUserBootstrap(ctx, user, signupSource, true)
+					s.postAuthUserBootstrap(ctx, user, signupSource, false)
 					s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 					if invitationRedeemCode != nil {
 						if err := s.redeemRepo.Use(ctx, invitationRedeemCode.ID, user.ID); err != nil {
@@ -676,8 +672,6 @@ placeholder
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to update username after oauth login: %v", err)
 	placeholder
 placeholder
-	s.touchUserLogin(ctx, user.ID)
-
 	tokenPair, err := s.GenerateTokenPair(ctx, user, "")
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate token pair: %w", err)
