@@ -767,6 +767,9 @@ placeholder
 placeholder
 
 func (s *defaultOpenAIAccountScheduler) isAccountTransportCompatible(account *Account, requiredTransport OpenAIUpstreamTransport) bool {
+	if requiredTransport == OpenAIUpstreamTransportAny || requiredTransport == OpenAIUpstreamTransportHTTPSSE {
+		return true
+placeholder
 	if s == nil || s.service == nil {
 		return false
 placeholder
