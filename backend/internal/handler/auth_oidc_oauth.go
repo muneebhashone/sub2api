@@ -420,27 +420,6 @@ placeholder
 		redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 		return
 placeholder
-	if compatEmailUser != nil {
-		if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
-			Intent:                 "adopt_existing_user_by_email",
-			Identity:               identityRef,
-			TargetUserID:           &compatEmailUser.ID,
-			ResolvedEmail:          compatEmailUser.Email,
-			RedirectTo:             redirectTo,
-			BrowserSessionKey:      browserSessionKey,
-			UpstreamIdentityClaims: upstreamClaims,
-			CompletionResponse: map[string]any{
-				"redirect": redirectTo,
-				"step":     "bind_login_required",
-				"email":    compatEmailUser.Email,
-		placeholder,
-	placeholder); err != nil {
-			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
-			return
-	placeholder
-		redirectToFrontendCallback(c, frontendCallback)
-		return
-placeholder
 
 	if cfg.RequireEmailVerified {
 		if emailVerified == nil || !*emailVerified {
@@ -450,7 +429,18 @@ placeholder
 placeholder
 
 	if h.isForceEmailOnThirdPartySignup(c.Request.Context()) {
-		if err := h.createOAuthEmailRequiredPendingSession(c, identityRef, redirectTo, browserSessionKey, upstreamClaims); err != nil {
+		if err := h.createOIDCOAuthChoicePendingSession(
+			c,
+			identityRef,
+			email,
+			email,
+			redirectTo,
+			browserSessionKey,
+			upstreamClaims,
+			compatEmail,
+			compatEmailUser,
+			true,
+		); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 			return
 	placeholder
@@ -458,48 +448,18 @@ placeholder
 		return
 placeholder
 
-	// 传入空邀请码；如果需要邀请码，服务层返回 ErrOAuthInvitationRequired
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
-	if err != nil {
-		if errors.Is(err, service.ErrOAuthInvitationRequired) {
-			if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
-				Intent:                 "login",
-				Identity:               identityRef,
-				ResolvedEmail:          email,
-				RedirectTo:             redirectTo,
-				BrowserSessionKey:      browserSessionKey,
-				UpstreamIdentityClaims: upstreamClaims,
-				CompletionResponse: map[string]any{
-					"error":    "invitation_required",
-					"redirect": redirectTo,
-			placeholder,
-		placeholder); err != nil {
-				redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
-				return
-		placeholder
-			redirectToFrontendCallback(c, frontendCallback)
-			return
-	placeholder
-		redirectOAuthError(c, frontendCallback, "login_failed", infraerrors.Reason(err), infraerrors.Message(err))
-		return
-placeholder
-
-	if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
-		Intent:                 "login",
-		Identity:               identityRef,
-		TargetUserID:           &user.ID,
-		ResolvedEmail:          email,
-		RedirectTo:             redirectTo,
-		BrowserSessionKey:      browserSessionKey,
-		UpstreamIdentityClaims: upstreamClaims,
-		CompletionResponse: map[string]any{
-			"access_token":  tokenPair.AccessToken,
-			"refresh_token": tokenPair.RefreshToken,
-			"expires_in":    tokenPair.ExpiresIn,
-			"token_type":    "Bearer",
-			"redirect":      redirectTo,
-	placeholder,
-placeholder); err != nil {
+	if err := h.createOIDCOAuthChoicePendingSession(
+		c,
+		identityRef,
+		email,
+		email,
+		redirectTo,
+		browserSessionKey,
+		upstreamClaims,
+		compatEmail,
+		compatEmailUser,
+		h.isForceEmailOnThirdPartySignup(c.Request.Context()),
+	); err != nil {
 		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 		return
 placeholder
@@ -528,6 +488,65 @@ placeholder
 		return nil, infraerrors.InternalServer("COMPAT_EMAIL_LOOKUP_FAILED", "failed to look up compat email user").WithCause(err)
 placeholder
 	return userEntity, nil
+placeholder
+
+func (h *AuthHandler) createOIDCOAuthChoicePendingSession(
+	c *gin.Context,
+	identity service.PendingAuthIdentityKey,
+	suggestedEmail string,
+	resolvedEmail string,
+	redirectTo string,
+	browserSessionKey string,
+	upstreamClaims map[string]any,
+	compatEmail string,
+	compatEmailUser *dbent.User,
+	forceEmailOnSignup bool,
+) error {
+	suggestionEmail := strings.TrimSpace(suggestedEmail)
+	canonicalEmail := strings.TrimSpace(resolvedEmail)
+	if suggestionEmail == "" {
+		suggestionEmail = canonicalEmail
+placeholder
+
+	completionResponse := map[string]any{
+		"step":                      oauthPendingChoiceStep,
+		"adoption_required":         true,
+		"redirect":                  strings.TrimSpace(redirectTo),
+		"email":                     suggestionEmail,
+		"resolved_email":            canonicalEmail,
+		"existing_account_email":    "",
+		"existing_account_bindable": false,
+		"create_account_allowed":    true,
+		"force_email_on_signup":     forceEmailOnSignup,
+		"choice_reason":             "third_party_signup",
+placeholder
+	if strings.TrimSpace(compatEmail) != "" {
+		completionResponse["compat_email"] = strings.TrimSpace(compatEmail)
+placeholder
+	if compatEmailUser != nil {
+		completionResponse["email"] = strings.TrimSpace(compatEmailUser.Email)
+		completionResponse["existing_account_email"] = strings.TrimSpace(compatEmailUser.Email)
+		completionResponse["existing_account_bindable"] = true
+		completionResponse["choice_reason"] = "compat_email_match"
+placeholder
+	if forceEmailOnSignup && compatEmailUser == nil {
+		completionResponse["choice_reason"] = "force_email_on_signup"
+placeholder
+
+	resolvedChoiceEmail := suggestionEmail
+	if compatEmailUser != nil {
+		resolvedChoiceEmail = strings.TrimSpace(compatEmailUser.Email)
+placeholder
+
+	return h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+		Intent:                 oauthIntentLogin,
+		Identity:               identity,
+		ResolvedEmail:          resolvedChoiceEmail,
+		RedirectTo:             redirectTo,
+		BrowserSessionKey:      browserSessionKey,
+		UpstreamIdentityClaims: upstreamClaims,
+		CompletionResponse:     completionResponse,
+placeholder)
 placeholder
 
 type completeOIDCOAuthRequest struct {

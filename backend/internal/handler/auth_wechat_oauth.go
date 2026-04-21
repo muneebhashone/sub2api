@@ -62,6 +62,8 @@ type wechatOAuthConfig struct {
 	scope            string
 	redirectURI      string
 	frontendCallback string
+	openEnabled      bool
+	mpEnabled        bool
 placeholder
 
 type wechatOAuthTokenResponse struct {
@@ -209,11 +211,18 @@ placeholder
 
 	unionid := strings.TrimSpace(firstNonEmpty(userInfo.UnionID, tokenResp.UnionID))
 	openid := strings.TrimSpace(firstNonEmpty(userInfo.OpenID, tokenResp.OpenID))
-	if unionid == "" {
+	providerSubject := unionid
+	if providerSubject == "" {
+		if cfg.requiresUnionID() {
+			redirectOAuthError(c, frontendCallback, "provider_error", "wechat_missing_unionid", "")
+			return
+	placeholder
+		providerSubject = openid
+placeholder
+	if providerSubject == "" {
 		redirectOAuthError(c, frontendCallback, "provider_error", "wechat_missing_unionid", "")
 		return
 placeholder
-	providerSubject := unionid
 
 	username := firstNonEmpty(userInfo.Nickname, wechatFallbackUsername(providerSubject))
 	email := wechatSyntheticEmail(providerSubject)
@@ -284,7 +293,18 @@ placeholder
 placeholder
 
 	if h.isForceEmailOnThirdPartySignup(c.Request.Context()) {
-		if err := h.createOAuthEmailRequiredPendingSession(c, identityRef, redirectTo, browserSessionKey, upstreamClaims); err != nil {
+		if err := h.createWeChatChoicePendingSession(
+			c,
+			identityRef,
+			email,
+			email,
+			redirectTo,
+			browserSessionKey,
+			upstreamClaims,
+			"",
+			nil,
+			true,
+		); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 			return
 	placeholder
@@ -292,17 +312,18 @@ placeholder
 		return
 placeholder
 
-	tokenPair, _, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, "")
-	if err != nil {
-		if err := h.createWeChatPendingSession(c, normalizedIntent, providerSubject, email, redirectTo, browserSessionKey, upstreamClaims, tokenPair, err, nil); err != nil {
-			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
-			return
-	placeholder
-		redirectToFrontendCallback(c, frontendCallback)
-		return
-placeholder
-
-	if err := h.createWeChatPendingSession(c, normalizedIntent, providerSubject, email, redirectTo, browserSessionKey, upstreamClaims, tokenPair, nil, nil); err != nil {
+	if err := h.createWeChatChoicePendingSession(
+		c,
+		identityRef,
+		email,
+		email,
+		redirectTo,
+		browserSessionKey,
+		upstreamClaims,
+		"",
+		nil,
+		false,
+	); err != nil {
 		redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 		return
 placeholder
@@ -600,6 +621,65 @@ placeholder
 placeholder)
 placeholder
 
+func (h *AuthHandler) createWeChatChoicePendingSession(
+	c *gin.Context,
+	identity service.PendingAuthIdentityKey,
+	suggestedEmail string,
+	resolvedEmail string,
+	redirectTo string,
+	browserSessionKey string,
+	upstreamClaims map[string]any,
+	compatEmail string,
+	compatEmailUser *dbent.User,
+	forceEmailOnSignup bool,
+) error {
+	suggestionEmail := strings.TrimSpace(suggestedEmail)
+	canonicalEmail := strings.TrimSpace(resolvedEmail)
+	if suggestionEmail == "" {
+		suggestionEmail = canonicalEmail
+placeholder
+
+	completionResponse := map[string]any{
+		"step":                      oauthPendingChoiceStep,
+		"adoption_required":         true,
+		"redirect":                  strings.TrimSpace(redirectTo),
+		"email":                     suggestionEmail,
+		"resolved_email":            canonicalEmail,
+		"existing_account_email":    "",
+		"existing_account_bindable": false,
+		"create_account_allowed":    true,
+		"force_email_on_signup":     forceEmailOnSignup,
+		"choice_reason":             "third_party_signup",
+placeholder
+	if strings.TrimSpace(compatEmail) != "" {
+		completionResponse["compat_email"] = strings.TrimSpace(compatEmail)
+placeholder
+	if compatEmailUser != nil {
+		completionResponse["email"] = strings.TrimSpace(compatEmailUser.Email)
+		completionResponse["existing_account_email"] = strings.TrimSpace(compatEmailUser.Email)
+		completionResponse["existing_account_bindable"] = true
+		completionResponse["choice_reason"] = "compat_email_match"
+placeholder
+	if forceEmailOnSignup {
+		completionResponse["choice_reason"] = "force_email_on_signup"
+placeholder
+
+	resolvedChoiceEmail := suggestionEmail
+	if compatEmailUser != nil {
+		resolvedChoiceEmail = strings.TrimSpace(compatEmailUser.Email)
+placeholder
+
+	return h.createOAuthPendingSession(c, oauthPendingSessionPayload{
+		Intent:                 oauthIntentLogin,
+		Identity:               identity,
+		ResolvedEmail:          resolvedChoiceEmail,
+		RedirectTo:             redirectTo,
+		BrowserSessionKey:      browserSessionKey,
+		UpstreamIdentityClaims: upstreamClaims,
+		CompletionResponse:     completionResponse,
+placeholder)
+placeholder
+
 func (h *AuthHandler) createWeChatBindPendingSession(
 	c *gin.Context,
 	cfg wechatOAuthConfig,
@@ -874,7 +954,7 @@ placeholder
 	if err != nil {
 		return wechatOAuthConfig{placeholder, err
 placeholder
-	if effective.Mode != mode {
+	if !effective.SupportsMode(mode) {
 		return wechatOAuthConfig{placeholder, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
 placeholder
 
@@ -884,7 +964,9 @@ placeholder
 		appSecret:        strings.TrimSpace(effective.AppSecret),
 		redirectURI:      firstNonEmpty(strings.TrimSpace(effective.RedirectURL), resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback")),
 		frontendCallback: firstNonEmpty(strings.TrimSpace(effective.FrontendRedirectURL), wechatOAuthDefaultFrontendCB),
-		scope:            firstNonEmpty(strings.TrimSpace(effective.Scopes), service.DefaultWeChatConnectScopesForMode(mode)),
+		scope:            effective.ScopeForMode(mode),
+		openEnabled:      effective.OpenEnabled,
+		mpEnabled:        effective.MPEnabled,
 placeholder
 
 	switch mode {
@@ -898,6 +980,10 @@ placeholder
 placeholder
 
 	return cfg, nil
+placeholder
+
+func (cfg wechatOAuthConfig) requiresUnionID() bool {
+	return cfg.openEnabled && cfg.mpEnabled
 placeholder
 
 func (h *AuthHandler) wechatOAuthFrontendCallback(ctx context.Context) string {
