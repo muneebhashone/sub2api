@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -15,59 +14,57 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
-	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
 )
 
-// ChannelMonitorQuery is the builder for querying ChannelMonitor entities.
-type ChannelMonitorQuery struct {
+// ChannelMonitorDailyRollupQuery is the builder for querying ChannelMonitorDailyRollup entities.
+type ChannelMonitorDailyRollupQuery struct {
 	config
-	ctx              *QueryContext
-	order            []channelmonitor.OrderOption
-	inters           []Interceptor
-	predicates       []predicate.ChannelMonitor
-	withHistory      *ChannelMonitorHistoryQuery
-	withDailyRollups *ChannelMonitorDailyRollupQuery
-	modifiers        []func(*sql.Selector)
+	ctx         *QueryContext
+	order       []channelmonitordailyrollup.OrderOption
+	inters      []Interceptor
+	predicates  []predicate.ChannelMonitorDailyRollup
+	withMonitor *ChannelMonitorQuery
+	modifiers   []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 placeholder
 
-// Where adds a new predicate for the ChannelMonitorQuery builder.
-func (_q *ChannelMonitorQuery) Where(ps ...predicate.ChannelMonitor) *ChannelMonitorQuery {
+// Where adds a new predicate for the ChannelMonitorDailyRollupQuery builder.
+func (_q *ChannelMonitorDailyRollupQuery) Where(ps ...predicate.ChannelMonitorDailyRollup) *ChannelMonitorDailyRollupQuery {
 	_q.predicates = append(_q.predicates, ps...)
 	return _q
 placeholder
 
 // Limit the number of records to be returned by this query.
-func (_q *ChannelMonitorQuery) Limit(limit int) *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) Limit(limit int) *ChannelMonitorDailyRollupQuery {
 	_q.ctx.Limit = &limit
 	return _q
 placeholder
 
 // Offset to start from.
-func (_q *ChannelMonitorQuery) Offset(offset int) *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) Offset(offset int) *ChannelMonitorDailyRollupQuery {
 	_q.ctx.Offset = &offset
 	return _q
 placeholder
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (_q *ChannelMonitorQuery) Unique(unique bool) *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) Unique(unique bool) *ChannelMonitorDailyRollupQuery {
 	_q.ctx.Unique = &unique
 	return _q
 placeholder
 
 // Order specifies how the records should be ordered.
-func (_q *ChannelMonitorQuery) Order(o ...channelmonitor.OrderOption) *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) Order(o ...channelmonitordailyrollup.OrderOption) *ChannelMonitorDailyRollupQuery {
 	_q.order = append(_q.order, o...)
 	return _q
 placeholder
 
-// QueryHistory chains the current query on the "history" edge.
-func (_q *ChannelMonitorQuery) QueryHistory() *ChannelMonitorHistoryQuery {
-	query := (&ChannelMonitorHistoryClient{config: _q.configplaceholder).Query()
+// QueryMonitor chains the current query on the "monitor" edge.
+func (_q *ChannelMonitorDailyRollupQuery) QueryMonitor() *ChannelMonitorQuery {
+	query := (&ChannelMonitorClient{config: _q.configplaceholder).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -77,9 +74,9 @@ func (_q *ChannelMonitorQuery) QueryHistory() *ChannelMonitorHistoryQuery {
 			return nil, err
 	placeholder
 		step := sqlgraph.NewStep(
-			sqlgraph.From(channelmonitor.Table, channelmonitor.FieldID, selector),
-			sqlgraph.To(channelmonitorhistory.Table, channelmonitorhistory.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, channelmonitor.HistoryTable, channelmonitor.HistoryColumn),
+			sqlgraph.From(channelmonitordailyrollup.Table, channelmonitordailyrollup.FieldID, selector),
+			sqlgraph.To(channelmonitor.Table, channelmonitor.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, channelmonitordailyrollup.MonitorTable, channelmonitordailyrollup.MonitorColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -87,43 +84,21 @@ placeholder
 	return query
 placeholder
 
-// QueryDailyRollups chains the current query on the "daily_rollups" edge.
-func (_q *ChannelMonitorQuery) QueryDailyRollups() *ChannelMonitorDailyRollupQuery {
-	query := (&ChannelMonitorDailyRollupClient{config: _q.configplaceholder).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-	placeholder
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-	placeholder
-		step := sqlgraph.NewStep(
-			sqlgraph.From(channelmonitor.Table, channelmonitor.FieldID, selector),
-			sqlgraph.To(channelmonitordailyrollup.Table, channelmonitordailyrollup.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, channelmonitor.DailyRollupsTable, channelmonitor.DailyRollupsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-placeholder
-	return query
-placeholder
-
-// First returns the first ChannelMonitor entity from the query.
-// Returns a *NotFoundError when no ChannelMonitor was found.
-func (_q *ChannelMonitorQuery) First(ctx context.Context) (*ChannelMonitor, error) {
+// First returns the first ChannelMonitorDailyRollup entity from the query.
+// Returns a *NotFoundError when no ChannelMonitorDailyRollup was found.
+func (_q *ChannelMonitorDailyRollupQuery) First(ctx context.Context) (*ChannelMonitorDailyRollup, error) {
 	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 placeholder
 	if len(nodes) == 0 {
-		return nil, &NotFoundError{channelmonitor.Labelplaceholder
+		return nil, &NotFoundError{channelmonitordailyrollup.Labelplaceholder
 placeholder
 	return nodes[0], nil
 placeholder
 
 // FirstX is like First, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) FirstX(ctx context.Context) *ChannelMonitor {
+func (_q *ChannelMonitorDailyRollupQuery) FirstX(ctx context.Context) *ChannelMonitorDailyRollup {
 	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -131,22 +106,22 @@ placeholder
 	return node
 placeholder
 
-// FirstID returns the first ChannelMonitor ID from the query.
-// Returns a *NotFoundError when no ChannelMonitor ID was found.
-func (_q *ChannelMonitorQuery) FirstID(ctx context.Context) (id int64, err error) {
+// FirstID returns the first ChannelMonitorDailyRollup ID from the query.
+// Returns a *NotFoundError when no ChannelMonitorDailyRollup ID was found.
+func (_q *ChannelMonitorDailyRollupQuery) FirstID(ctx context.Context) (id int64, err error) {
 	var ids []int64
 	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 placeholder
 	if len(ids) == 0 {
-		err = &NotFoundError{channelmonitor.Labelplaceholder
+		err = &NotFoundError{channelmonitordailyrollup.Labelplaceholder
 		return
 placeholder
 	return ids[0], nil
 placeholder
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) FirstIDX(ctx context.Context) int64 {
+func (_q *ChannelMonitorDailyRollupQuery) FirstIDX(ctx context.Context) int64 {
 	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -154,10 +129,10 @@ placeholder
 	return id
 placeholder
 
-// Only returns a single ChannelMonitor entity found by the query, ensuring it only returns one.
-// Returns a *NotSingularError when more than one ChannelMonitor entity is found.
-// Returns a *NotFoundError when no ChannelMonitor entities are found.
-func (_q *ChannelMonitorQuery) Only(ctx context.Context) (*ChannelMonitor, error) {
+// Only returns a single ChannelMonitorDailyRollup entity found by the query, ensuring it only returns one.
+// Returns a *NotSingularError when more than one ChannelMonitorDailyRollup entity is found.
+// Returns a *NotFoundError when no ChannelMonitorDailyRollup entities are found.
+func (_q *ChannelMonitorDailyRollupQuery) Only(ctx context.Context) (*ChannelMonitorDailyRollup, error) {
 	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
@@ -166,14 +141,14 @@ placeholder
 	case 1:
 		return nodes[0], nil
 	case 0:
-		return nil, &NotFoundError{channelmonitor.Labelplaceholder
+		return nil, &NotFoundError{channelmonitordailyrollup.Labelplaceholder
 	default:
-		return nil, &NotSingularError{channelmonitor.Labelplaceholder
+		return nil, &NotSingularError{channelmonitordailyrollup.Labelplaceholder
 placeholder
 placeholder
 
 // OnlyX is like Only, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) OnlyX(ctx context.Context) *ChannelMonitor {
+func (_q *ChannelMonitorDailyRollupQuery) OnlyX(ctx context.Context) *ChannelMonitorDailyRollup {
 	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
@@ -181,10 +156,10 @@ placeholder
 	return node
 placeholder
 
-// OnlyID is like Only, but returns the only ChannelMonitor ID in the query.
-// Returns a *NotSingularError when more than one ChannelMonitor ID is found.
+// OnlyID is like Only, but returns the only ChannelMonitorDailyRollup ID in the query.
+// Returns a *NotSingularError when more than one ChannelMonitorDailyRollup ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (_q *ChannelMonitorQuery) OnlyID(ctx context.Context) (id int64, err error) {
+func (_q *ChannelMonitorDailyRollupQuery) OnlyID(ctx context.Context) (id int64, err error) {
 	var ids []int64
 	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
@@ -193,15 +168,15 @@ placeholder
 	case 1:
 		id = ids[0]
 	case 0:
-		err = &NotFoundError{channelmonitor.Labelplaceholder
+		err = &NotFoundError{channelmonitordailyrollup.Labelplaceholder
 	default:
-		err = &NotSingularError{channelmonitor.Labelplaceholder
+		err = &NotSingularError{channelmonitordailyrollup.Labelplaceholder
 placeholder
 	return
 placeholder
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) OnlyIDX(ctx context.Context) int64 {
+func (_q *ChannelMonitorDailyRollupQuery) OnlyIDX(ctx context.Context) int64 {
 	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -209,18 +184,18 @@ placeholder
 	return id
 placeholder
 
-// All executes the query and returns a list of ChannelMonitors.
-func (_q *ChannelMonitorQuery) All(ctx context.Context) ([]*ChannelMonitor, error) {
+// All executes the query and returns a list of ChannelMonitorDailyRollups.
+func (_q *ChannelMonitorDailyRollupQuery) All(ctx context.Context) ([]*ChannelMonitorDailyRollup, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 placeholder
-	qr := querierAll[[]*ChannelMonitor, *ChannelMonitorQuery]()
-	return withInterceptors[[]*ChannelMonitor](ctx, _q, qr, _q.inters)
+	qr := querierAll[[]*ChannelMonitorDailyRollup, *ChannelMonitorDailyRollupQuery]()
+	return withInterceptors[[]*ChannelMonitorDailyRollup](ctx, _q, qr, _q.inters)
 placeholder
 
 // AllX is like All, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) AllX(ctx context.Context) []*ChannelMonitor {
+func (_q *ChannelMonitorDailyRollupQuery) AllX(ctx context.Context) []*ChannelMonitorDailyRollup {
 	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
@@ -228,20 +203,20 @@ placeholder
 	return nodes
 placeholder
 
-// IDs executes the query and returns a list of ChannelMonitor IDs.
-func (_q *ChannelMonitorQuery) IDs(ctx context.Context) (ids []int64, err error) {
+// IDs executes the query and returns a list of ChannelMonitorDailyRollup IDs.
+func (_q *ChannelMonitorDailyRollupQuery) IDs(ctx context.Context) (ids []int64, err error) {
 	if _q.ctx.Unique == nil && _q.path != nil {
 		_q.Unique(true)
 placeholder
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
-	if err = _q.Select(channelmonitor.FieldID).Scan(ctx, &ids); err != nil {
+	if err = _q.Select(channelmonitordailyrollup.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 placeholder
 	return ids, nil
 placeholder
 
 // IDsX is like IDs, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) IDsX(ctx context.Context) []int64 {
+func (_q *ChannelMonitorDailyRollupQuery) IDsX(ctx context.Context) []int64 {
 	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -250,16 +225,16 @@ placeholder
 placeholder
 
 // Count returns the count of the given query.
-func (_q *ChannelMonitorQuery) Count(ctx context.Context) (int, error) {
+func (_q *ChannelMonitorDailyRollupQuery) Count(ctx context.Context) (int, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
 	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 placeholder
-	return withInterceptors[int](ctx, _q, querierCount[*ChannelMonitorQuery](), _q.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ChannelMonitorDailyRollupQuery](), _q.inters)
 placeholder
 
 // CountX is like Count, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) CountX(ctx context.Context) int {
+func (_q *ChannelMonitorDailyRollupQuery) CountX(ctx context.Context) int {
 	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
@@ -268,7 +243,7 @@ placeholder
 placeholder
 
 // Exist returns true if the query has elements in the graph.
-func (_q *ChannelMonitorQuery) Exist(ctx context.Context) (bool, error) {
+func (_q *ChannelMonitorDailyRollupQuery) Exist(ctx context.Context) (bool, error) {
 	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
 	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
@@ -281,7 +256,7 @@ placeholder
 placeholder
 
 // ExistX is like Exist, but panics if an error occurs.
-func (_q *ChannelMonitorQuery) ExistX(ctx context.Context) bool {
+func (_q *ChannelMonitorDailyRollupQuery) ExistX(ctx context.Context) bool {
 	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
@@ -289,45 +264,33 @@ placeholder
 	return exist
 placeholder
 
-// Clone returns a duplicate of the ChannelMonitorQuery builder, including all associated steps. It can be
+// Clone returns a duplicate of the ChannelMonitorDailyRollupQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (_q *ChannelMonitorQuery) Clone() *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) Clone() *ChannelMonitorDailyRollupQuery {
 	if _q == nil {
 		return nil
 placeholder
-	return &ChannelMonitorQuery{
-		config:           _q.config,
-		ctx:              _q.ctx.Clone(),
-		order:            append([]channelmonitor.OrderOption{placeholder, _q.order...),
-		inters:           append([]Interceptor{placeholder, _q.inters...),
-		predicates:       append([]predicate.ChannelMonitor{placeholder, _q.predicates...),
-		withHistory:      _q.withHistory.Clone(),
-		withDailyRollups: _q.withDailyRollups.Clone(),
+	return &ChannelMonitorDailyRollupQuery{
+		config:      _q.config,
+		ctx:         _q.ctx.Clone(),
+		order:       append([]channelmonitordailyrollup.OrderOption{placeholder, _q.order...),
+		inters:      append([]Interceptor{placeholder, _q.inters...),
+		predicates:  append([]predicate.ChannelMonitorDailyRollup{placeholder, _q.predicates...),
+		withMonitor: _q.withMonitor.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 placeholder
 placeholder
 
-// WithHistory tells the query-builder to eager-load the nodes that are connected to
-// the "history" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ChannelMonitorQuery) WithHistory(opts ...func(*ChannelMonitorHistoryQuery)) *ChannelMonitorQuery {
-	query := (&ChannelMonitorHistoryClient{config: _q.configplaceholder).Query()
+// WithMonitor tells the query-builder to eager-load the nodes that are connected to
+// the "monitor" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ChannelMonitorDailyRollupQuery) WithMonitor(opts ...func(*ChannelMonitorQuery)) *ChannelMonitorDailyRollupQuery {
+	query := (&ChannelMonitorClient{config: _q.configplaceholder).Query()
 	for _, opt := range opts {
 		opt(query)
 placeholder
-	_q.withHistory = query
-	return _q
-placeholder
-
-// WithDailyRollups tells the query-builder to eager-load the nodes that are connected to
-// the "daily_rollups" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ChannelMonitorQuery) WithDailyRollups(opts ...func(*ChannelMonitorDailyRollupQuery)) *ChannelMonitorQuery {
-	query := (&ChannelMonitorDailyRollupClient{config: _q.configplaceholder).Query()
-	for _, opt := range opts {
-		opt(query)
-placeholder
-	_q.withDailyRollups = query
+	_q.withMonitor = query
 	return _q
 placeholder
 
@@ -337,19 +300,19 @@ placeholder
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		DeletedAt time.Time `json:"deleted_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //placeholder
 //
-//	client.ChannelMonitor.Query().
-//		GroupBy(channelmonitor.FieldCreatedAt).
+//	client.ChannelMonitorDailyRollup.Query().
+//		GroupBy(channelmonitordailyrollup.FieldDeletedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (_q *ChannelMonitorQuery) GroupBy(field string, fields ...string) *ChannelMonitorGroupBy {
+func (_q *ChannelMonitorDailyRollupQuery) GroupBy(field string, fields ...string) *ChannelMonitorDailyRollupGroupBy {
 	_q.ctx.Fields = append([]string{fieldplaceholder, fields...)
-	grbuild := &ChannelMonitorGroupBy{build: _qplaceholder
+	grbuild := &ChannelMonitorDailyRollupGroupBy{build: _qplaceholder
 	grbuild.flds = &_q.ctx.Fields
-	grbuild.label = channelmonitor.Label
+	grbuild.label = channelmonitordailyrollup.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
 placeholder
@@ -360,26 +323,26 @@ placeholder
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		DeletedAt time.Time `json:"deleted_at,omitempty"`
 //placeholder
 //
-//	client.ChannelMonitor.Query().
-//		Select(channelmonitor.FieldCreatedAt).
+//	client.ChannelMonitorDailyRollup.Query().
+//		Select(channelmonitordailyrollup.FieldDeletedAt).
 //		Scan(ctx, &v)
-func (_q *ChannelMonitorQuery) Select(fields ...string) *ChannelMonitorSelect {
+func (_q *ChannelMonitorDailyRollupQuery) Select(fields ...string) *ChannelMonitorDailyRollupSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
-	sbuild := &ChannelMonitorSelect{ChannelMonitorQuery: _qplaceholder
-	sbuild.label = channelmonitor.Label
+	sbuild := &ChannelMonitorDailyRollupSelect{ChannelMonitorDailyRollupQuery: _qplaceholder
+	sbuild.label = channelmonitordailyrollup.Label
 	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 placeholder
 
-// Aggregate returns a ChannelMonitorSelect configured with the given aggregations.
-func (_q *ChannelMonitorQuery) Aggregate(fns ...AggregateFunc) *ChannelMonitorSelect {
+// Aggregate returns a ChannelMonitorDailyRollupSelect configured with the given aggregations.
+func (_q *ChannelMonitorDailyRollupQuery) Aggregate(fns ...AggregateFunc) *ChannelMonitorDailyRollupSelect {
 	return _q.Select().Aggregate(fns...)
 placeholder
 
-func (_q *ChannelMonitorQuery) prepareQuery(ctx context.Context) error {
+func (_q *ChannelMonitorDailyRollupQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
@@ -391,7 +354,7 @@ func (_q *ChannelMonitorQuery) prepareQuery(ctx context.Context) error {
 	placeholder
 placeholder
 	for _, f := range _q.ctx.Fields {
-		if !channelmonitor.ValidColumn(f) {
+		if !channelmonitordailyrollup.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)placeholder
 	placeholder
 placeholder
@@ -405,20 +368,19 @@ placeholder
 	return nil
 placeholder
 
-func (_q *ChannelMonitorQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ChannelMonitor, error) {
+func (_q *ChannelMonitorDailyRollupQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ChannelMonitorDailyRollup, error) {
 	var (
-		nodes       = []*ChannelMonitor{placeholder
+		nodes       = []*ChannelMonitorDailyRollup{placeholder
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
-			_q.withHistory != nil,
-			_q.withDailyRollups != nil,
+		loadedTypes = [1]bool{
+			_q.withMonitor != nil,
 	placeholder
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
-		return (*ChannelMonitor).scanValues(nil, columns)
+		return (*ChannelMonitorDailyRollup).scanValues(nil, columns)
 placeholder
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ChannelMonitor{config: _q.configplaceholder
+		node := &ChannelMonitorDailyRollup{config: _q.configplaceholder
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -435,87 +397,46 @@ placeholder
 	if len(nodes) == 0 {
 		return nodes, nil
 placeholder
-	if query := _q.withHistory; query != nil {
-		if err := _q.loadHistory(ctx, query, nodes,
-			func(n *ChannelMonitor) { n.Edges.History = []*ChannelMonitorHistory{placeholder placeholder,
-			func(n *ChannelMonitor, e *ChannelMonitorHistory) { n.Edges.History = append(n.Edges.History, e) placeholder); err != nil {
-			return nil, err
-	placeholder
-placeholder
-	if query := _q.withDailyRollups; query != nil {
-		if err := _q.loadDailyRollups(ctx, query, nodes,
-			func(n *ChannelMonitor) { n.Edges.DailyRollups = []*ChannelMonitorDailyRollup{placeholder placeholder,
-			func(n *ChannelMonitor, e *ChannelMonitorDailyRollup) {
-				n.Edges.DailyRollups = append(n.Edges.DailyRollups, e)
-		placeholder); err != nil {
+	if query := _q.withMonitor; query != nil {
+		if err := _q.loadMonitor(ctx, query, nodes, nil,
+			func(n *ChannelMonitorDailyRollup, e *ChannelMonitor) { n.Edges.Monitor = e placeholder); err != nil {
 			return nil, err
 	placeholder
 placeholder
 	return nodes, nil
 placeholder
 
-func (_q *ChannelMonitorQuery) loadHistory(ctx context.Context, query *ChannelMonitorHistoryQuery, nodes []*ChannelMonitor, init func(*ChannelMonitor), assign func(*ChannelMonitor, *ChannelMonitorHistory)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int64]*ChannelMonitor)
+func (_q *ChannelMonitorDailyRollupQuery) loadMonitor(ctx context.Context, query *ChannelMonitorQuery, nodes []*ChannelMonitorDailyRollup, init func(*ChannelMonitorDailyRollup), assign func(*ChannelMonitorDailyRollup, *ChannelMonitor)) error {
+	ids := make([]int64, 0, len(nodes))
+	nodeids := make(map[int64][]*ChannelMonitorDailyRollup)
 	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		fk := nodes[i].MonitorID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
 	placeholder
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 placeholder
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(channelmonitorhistory.FieldMonitorID)
+	if len(ids) == 0 {
+		return nil
 placeholder
-	query.Where(predicate.ChannelMonitorHistory(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(channelmonitor.HistoryColumn), fks...))
-placeholder))
+	query.Where(channelmonitor.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 placeholder
 	for _, n := range neighbors {
-		fk := n.MonitorID
-		node, ok := nodeids[fk]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "monitor_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "monitor_id" returned %v`, n.ID)
 	placeholder
-		assign(node, n)
-placeholder
-	return nil
-placeholder
-func (_q *ChannelMonitorQuery) loadDailyRollups(ctx context.Context, query *ChannelMonitorDailyRollupQuery, nodes []*ChannelMonitor, init func(*ChannelMonitor), assign func(*ChannelMonitor, *ChannelMonitorDailyRollup)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int64]*ChannelMonitor)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
+		for i := range nodes {
+			assign(nodes[i], n)
 	placeholder
-placeholder
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(channelmonitordailyrollup.FieldMonitorID)
-placeholder
-	query.Where(predicate.ChannelMonitorDailyRollup(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(channelmonitor.DailyRollupsColumn), fks...))
-placeholder))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-placeholder
-	for _, n := range neighbors {
-		fk := n.MonitorID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "monitor_id" returned %v for node %v`, fk, n.ID)
-	placeholder
-		assign(node, n)
 placeholder
 	return nil
 placeholder
 
-func (_q *ChannelMonitorQuery) sqlCount(ctx context.Context) (int, error) {
+func (_q *ChannelMonitorDailyRollupQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
 	if len(_q.modifiers) > 0 {
 		_spec.Modifiers = _q.modifiers
@@ -527,8 +448,8 @@ placeholder
 	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 placeholder
 
-func (_q *ChannelMonitorQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(channelmonitor.Table, channelmonitor.Columns, sqlgraph.NewFieldSpec(channelmonitor.FieldID, field.TypeInt64))
+func (_q *ChannelMonitorDailyRollupQuery) querySpec() *sqlgraph.QuerySpec {
+	_spec := sqlgraph.NewQuerySpec(channelmonitordailyrollup.Table, channelmonitordailyrollup.Columns, sqlgraph.NewFieldSpec(channelmonitordailyrollup.FieldID, field.TypeInt64))
 	_spec.From = _q.sql
 	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
@@ -537,11 +458,14 @@ placeholder else if _q.path != nil {
 placeholder
 	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
-		_spec.Node.Columns = append(_spec.Node.Columns, channelmonitor.FieldID)
+		_spec.Node.Columns = append(_spec.Node.Columns, channelmonitordailyrollup.FieldID)
 		for i := range fields {
-			if fields[i] != channelmonitor.FieldID {
+			if fields[i] != channelmonitordailyrollup.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 		placeholder
+	placeholder
+		if _q.withMonitor != nil {
+			_spec.Node.AddColumnOnce(channelmonitordailyrollup.FieldMonitorID)
 	placeholder
 placeholder
 	if ps := _q.predicates; len(ps) > 0 {
@@ -567,12 +491,12 @@ placeholder
 	return _spec
 placeholder
 
-func (_q *ChannelMonitorQuery) sqlQuery(ctx context.Context) *sql.Selector {
+func (_q *ChannelMonitorDailyRollupQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(_q.driver.Dialect())
-	t1 := builder.Table(channelmonitor.Table)
+	t1 := builder.Table(channelmonitordailyrollup.Table)
 	columns := _q.ctx.Fields
 	if len(columns) == 0 {
-		columns = channelmonitor.Columns
+		columns = channelmonitordailyrollup.Columns
 placeholder
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
 	if _q.sql != nil {
@@ -605,7 +529,7 @@ placeholder
 // ForUpdate locks the selected rows against concurrent updates, and prevent them from being
 // updated, deleted or "selected ... for update" by other sessions, until the transaction is
 // either committed or rolled-back.
-func (_q *ChannelMonitorQuery) ForUpdate(opts ...sql.LockOption) *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) ForUpdate(opts ...sql.LockOption) *ChannelMonitorDailyRollupQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 placeholder
@@ -618,7 +542,7 @@ placeholder
 // ForShare behaves similarly to ForUpdate, except that it acquires a shared mode lock
 // on any rows that are read. Other sessions can read the rows, but cannot modify them
 // until your transaction commits.
-func (_q *ChannelMonitorQuery) ForShare(opts ...sql.LockOption) *ChannelMonitorQuery {
+func (_q *ChannelMonitorDailyRollupQuery) ForShare(opts ...sql.LockOption) *ChannelMonitorDailyRollupQuery {
 	if _q.driver.Dialect() == dialect.Postgres {
 		_q.Unique(false)
 placeholder
@@ -628,28 +552,28 @@ placeholder)
 	return _q
 placeholder
 
-// ChannelMonitorGroupBy is the group-by builder for ChannelMonitor entities.
-type ChannelMonitorGroupBy struct {
+// ChannelMonitorDailyRollupGroupBy is the group-by builder for ChannelMonitorDailyRollup entities.
+type ChannelMonitorDailyRollupGroupBy struct {
 	selector
-	build *ChannelMonitorQuery
+	build *ChannelMonitorDailyRollupQuery
 placeholder
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (_g *ChannelMonitorGroupBy) Aggregate(fns ...AggregateFunc) *ChannelMonitorGroupBy {
+func (_g *ChannelMonitorDailyRollupGroupBy) Aggregate(fns ...AggregateFunc) *ChannelMonitorDailyRollupGroupBy {
 	_g.fns = append(_g.fns, fns...)
 	return _g
 placeholder
 
 // Scan applies the selector query and scans the result into the given value.
-func (_g *ChannelMonitorGroupBy) Scan(ctx context.Context, v any) error {
+func (_g *ChannelMonitorDailyRollupGroupBy) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
 	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 placeholder
-	return scanWithInterceptors[*ChannelMonitorQuery, *ChannelMonitorGroupBy](ctx, _g.build, _g, _g.build.inters, v)
+	return scanWithInterceptors[*ChannelMonitorDailyRollupQuery, *ChannelMonitorDailyRollupGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 placeholder
 
-func (_g *ChannelMonitorGroupBy) sqlScan(ctx context.Context, root *ChannelMonitorQuery, v any) error {
+func (_g *ChannelMonitorDailyRollupGroupBy) sqlScan(ctx context.Context, root *ChannelMonitorDailyRollupQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
 	aggregation := make([]string, 0, len(_g.fns))
 	for _, fn := range _g.fns {
@@ -676,28 +600,28 @@ placeholder
 	return sql.ScanSlice(rows, v)
 placeholder
 
-// ChannelMonitorSelect is the builder for selecting fields of ChannelMonitor entities.
-type ChannelMonitorSelect struct {
-	*ChannelMonitorQuery
+// ChannelMonitorDailyRollupSelect is the builder for selecting fields of ChannelMonitorDailyRollup entities.
+type ChannelMonitorDailyRollupSelect struct {
+	*ChannelMonitorDailyRollupQuery
 	selector
 placeholder
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (_s *ChannelMonitorSelect) Aggregate(fns ...AggregateFunc) *ChannelMonitorSelect {
+func (_s *ChannelMonitorDailyRollupSelect) Aggregate(fns ...AggregateFunc) *ChannelMonitorDailyRollupSelect {
 	_s.fns = append(_s.fns, fns...)
 	return _s
 placeholder
 
 // Scan applies the selector query and scans the result into the given value.
-func (_s *ChannelMonitorSelect) Scan(ctx context.Context, v any) error {
+func (_s *ChannelMonitorDailyRollupSelect) Scan(ctx context.Context, v any) error {
 	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
 	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 placeholder
-	return scanWithInterceptors[*ChannelMonitorQuery, *ChannelMonitorSelect](ctx, _s.ChannelMonitorQuery, _s, _s.inters, v)
+	return scanWithInterceptors[*ChannelMonitorDailyRollupQuery, *ChannelMonitorDailyRollupSelect](ctx, _s.ChannelMonitorDailyRollupQuery, _s, _s.inters, v)
 placeholder
 
-func (_s *ChannelMonitorSelect) sqlScan(ctx context.Context, root *ChannelMonitorQuery, v any) error {
+func (_s *ChannelMonitorDailyRollupSelect) sqlScan(ctx context.Context, root *ChannelMonitorDailyRollupQuery, v any) error {
 	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(_s.fns))
 	for _, fn := range _s.fns {
