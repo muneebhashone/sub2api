@@ -179,6 +179,8 @@ import { useAuthStore, useAppStore placeholder from '@/stores'
 import {
   persistOAuthTokenContext,
   getPublicSettings,
+  isOAuthLoginCompletion,
+  type PendingOAuthSendVerifyCodeResponse,
   sendPendingOAuthVerifyCode,
   sendVerifyCode,
 placeholder from '@/api/auth'
@@ -216,10 +218,13 @@ type PendingAuthSessionSummary = {
   redirect?: string
 placeholder
 type PendingOAuthCreateAccountResponse = {
+  auth_result?: string
   access_token: string
   refresh_token?: string
   expires_in?: number
   token_type?: string
+  provider?: string
+  redirect?: string
 placeholder
 
 const email = ref<string>('')
@@ -353,6 +358,46 @@ function onTurnstileError(): void {
   errors.value.turnstile = t('auth.turnstileFailed')
 placeholder
 
+function isPendingOAuthFlow(): boolean {
+  return Boolean(pendingProvider.value.trim())
+placeholder
+
+function shouldBypassRegistrationEmailPolicy(): boolean {
+  return isPendingOAuthFlow() || Boolean(pendingAuthToken.value.trim())
+placeholder
+
+function resolvePendingOAuthCallbackRoute(provider: string): string {
+  switch (provider.trim().toLowerCase()) {
+    case 'linuxdo':
+      return '/auth/linuxdo/callback'
+    case 'oidc':
+      return '/auth/oidc/callback'
+    case 'wechat':
+      return '/auth/wechat/callback'
+    default:
+      return '/auth/callback'
+  placeholder
+placeholder
+
+function isPendingOAuthSessionResponse(data: PendingOAuthCreateAccountResponse): boolean {
+  return data.auth_result === 'pending_session'
+placeholder
+
+function getPendingOAuthSendCodeSessionResponse(
+  data: PendingOAuthSendVerifyCodeResponse,
+): PendingOAuthSendVerifyCodeResponse | null {
+  return data.auth_result === 'pending_session' ? data : null
+placeholder
+
+function persistPendingOAuthSession(provider: string, redirect?: string): void {
+  authStore.setPendingAuthSession({
+    token: pendingAuthToken.value,
+    token_field: pendingAuthTokenField.value,
+    provider: provider.trim() || pendingProvider.value.trim(),
+    redirect: redirect || pendingRedirect.value || undefined,
+  placeholder)
+placeholder
+
 // ==================== Send Code ====================
 
 async function sendCode(): Promise<void> {
@@ -360,7 +405,7 @@ async function sendCode(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    if (!pendingAuthToken.value && !isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
+    if (!shouldBypassRegistrationEmailPolicy() && !isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
       errorMessage.value = buildEmailSuffixNotAllowedMessage()
       appStore.showError(errorMessage.value)
       return
@@ -372,9 +417,24 @@ async function sendCode(): Promise<void> {
       // 优先使用重发时新获取的 token（因为初始 token 可能已被使用）
       turnstile_token: resendTurnstileToken.value || initialTurnstileToken.value || undefined
     placeholder as Parameters<typeof sendVerifyCode>[0]
-    const response = pendingAuthToken.value
+    const response = isPendingOAuthFlow()
       ? await sendPendingOAuthVerifyCode(requestPayload)
       : await sendVerifyCode(requestPayload)
+
+    const pendingSendCodeSession = isPendingOAuthFlow()
+      ? getPendingOAuthSendCodeSessionResponse(response as PendingOAuthSendVerifyCodeResponse)
+      : null
+    if (pendingSendCodeSession) {
+      sessionStorage.removeItem('register_data')
+      persistPendingOAuthSession(
+        pendingSendCodeSession.provider || pendingProvider.value,
+        pendingSendCodeSession.redirect,
+      )
+      await router.push(
+        resolvePendingOAuthCallbackRoute(pendingSendCodeSession.provider || pendingProvider.value),
+      )
+      return
+    placeholder
 
     codeSent.value = true
     startCountdown(response.countdown)
@@ -438,13 +498,13 @@ async function handleVerify(): Promise<void> {
   isLoading.value = true
 
   try {
-    if (!isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
+    if (!shouldBypassRegistrationEmailPolicy() && !isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
       errorMessage.value = buildEmailSuffixNotAllowedMessage()
       appStore.showError(errorMessage.value)
       return
     placeholder
 
-    if (pendingProvider.value) {
+    if (isPendingOAuthFlow()) {
       const { data placeholder = await apiClient.post<PendingOAuthCreateAccountResponse>(
         '/auth/oauth/pending/create-account',
         {
@@ -456,6 +516,16 @@ async function handleVerify(): Promise<void> {
           adopt_avatar: pendingAdoptionDecision.value?.adoptAvatar
         placeholder
       )
+      if (isPendingOAuthSessionResponse(data)) {
+        sessionStorage.removeItem('register_data')
+        persistPendingOAuthSession(data.provider || pendingProvider.value, data.redirect)
+        await router.push(resolvePendingOAuthCallbackRoute(data.provider || pendingProvider.value))
+        return
+      placeholder
+      if (!isOAuthLoginCompletion(data)) {
+        throw new Error(t('auth.verifyFailed'))
+      placeholder
+
       persistOAuthTokenContext(data)
       await authStore.setToken(data.access_token)
       authStore.clearPendingAuthSession?.()

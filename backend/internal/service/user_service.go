@@ -240,7 +240,7 @@ placeholder
 placeholder
 
 	return UserIdentitySummarySet{
-		Email:   s.buildEmailIdentitySummary(user),
+		Email:   s.buildEmailIdentitySummary(user, records),
 		LinuxDo: s.buildProviderIdentitySummary("linuxdo", records),
 		OIDC:    s.buildProviderIdentitySummary("oidc", records),
 		WeChat:  s.buildProviderIdentitySummary("wechat", records),
@@ -497,7 +497,7 @@ placeholder
 	return nil, "", ErrAvatarTooLarge
 placeholder
 
-func (s *UserService) buildEmailIdentitySummary(user *User) UserIdentitySummary {
+func (s *UserService) buildEmailIdentitySummary(user *User, records []UserAuthIdentityRecord) UserIdentitySummary {
 	summary := UserIdentitySummary{
 		Provider:  "email",
 		CanBind:   false,
@@ -508,11 +508,34 @@ placeholder
 		return summary
 placeholder
 
+	filtered := filterUserAuthIdentities(records, "email")
+	if len(filtered) > 0 {
+		primary := selectPrimaryUserAuthIdentity(filtered)
+		email := strings.TrimSpace(firstStringIdentityValue(primary.Metadata, "email"))
+		if email == "" {
+			email = strings.TrimSpace(primary.ProviderSubject)
+	placeholder
+		if email == "" || isReservedEmail(email) {
+			email = strings.TrimSpace(user.Email)
+	placeholder
+		if email == "" || isReservedEmail(email) {
+			email = strings.TrimSpace(primary.ProviderKey)
+	placeholder
+
+		summary.Bound = true
+		summary.BoundCount = len(filtered)
+		summary.DisplayName = email
+		summary.SubjectHint = maskEmailIdentity(email)
+		summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
+		summary.VerifiedAt = primary.VerifiedAt
+		return summary
+placeholder
+
+	// Compatibility fallback for legacy normal-email users that predate auth_identities backfill.
 	email := strings.TrimSpace(user.Email)
 	if email == "" || isReservedEmail(email) {
 		return summary
 placeholder
-
 	summary.Bound = true
 	summary.BoundCount = 1
 	summary.DisplayName = email

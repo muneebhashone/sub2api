@@ -301,4 +301,27 @@ describe('ProfileIdentityBindingsSection', () => {
     expect(wrapper.get('[data-testid="profile-binding-email-status"]').text()).toBe('Bound')
     expect(authStore.user?.email).toBe('bound@example.com')
   placeholder)
+
+  it('keeps the email binding form visible when the user still lacks an email identity', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser({
+          email: 'legacy@example.com',
+          email_bound: false,
+          auth_bindings: {
+            email: { bound: false placeholder,
+          placeholder,
+        placeholder),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: false,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.get('[data-testid="profile-binding-email-status"]').text()).toBe('Not bound')
+    expect(wrapper.get('[data-testid="profile-binding-email-input"]').exists()).toBe(true)
+  placeholder)
 placeholder)

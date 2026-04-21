@@ -208,6 +208,12 @@ export type PendingOAuthExchangeResponse = PendingOAuthBindLoginResponse
 
 export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {placeholder
 
+export interface PendingOAuthSendVerifyCodeResponse extends SendVerifyCodeResponse {
+  auth_result?: string
+  provider?: string
+  redirect?: string
+placeholder
+
 export type OAuthCompletionKind = 'login' | 'bind'
 
 export interface OAuthAdoptionDecision {
@@ -451,8 +457,8 @@ placeholder
 
 export async function sendPendingOAuthVerifyCode(
   request: SendVerifyCodeRequest
-): Promise<SendVerifyCodeResponse> {
-  const { data placeholder = await apiClient.post<SendVerifyCodeResponse>(
+): Promise<PendingOAuthSendVerifyCodeResponse> {
+  const { data placeholder = await apiClient.post<PendingOAuthSendVerifyCodeResponse>(
     '/auth/oauth/pending/send-verify-code',
     request
   )
