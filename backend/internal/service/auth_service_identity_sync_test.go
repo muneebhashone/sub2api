@@ -259,7 +259,7 @@ placeholder
 	require.Equal(t, user.ID, identity.UserID)
 placeholder
 
-func TestAuthServiceLogin_AppliesEmailFirstBindDefaultsOnlyWhenEmailIdentityIsNew(t *testing.T) {
+func TestAuthServiceLogin_DoesNotApplyEmailFirstBindDefaultsWhenBackfillingLegacyEmailIdentity(t *testing.T) {
 	assigner := &authIdentityDefaultSubAssignerStub{placeholder
 	svc, _, client := newAuthServiceWithEnt(t, map[string]string{
 		service.SettingKeyRegistrationEnabled:                    "true",
@@ -291,11 +291,9 @@ placeholder
 
 	storedUser, err := client.User.Get(ctx, user.ID)
 placeholder
-	require.Equal(t, 10.0, storedUser.Balance)
-	require.Equal(t, 6, storedUser.Concurrency)
-	require.Len(t, assigner.calls, 1)
-	require.Equal(t, int64(11), assigner.calls[0].GroupID)
-	require.Equal(t, 30, assigner.calls[0].ValidityDays)
+	require.Equal(t, 1.5, storedUser.Balance)
+	require.Equal(t, 2, storedUser.Concurrency)
+	require.Empty(t, assigner.calls)
 
 	identityCount, err := client.AuthIdentity.Query().
 		Where(
@@ -306,7 +304,7 @@ placeholder
 		Count(ctx)
 placeholder
 	require.Equal(t, 1, identityCount)
-	require.Equal(t, 1, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
+	require.Equal(t, 0, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
 
 	token, gotUser, err = svc.Login(ctx, user.Email, "password")
 placeholder
@@ -315,13 +313,13 @@ placeholder
 
 	storedUser, err = client.User.Get(ctx, user.ID)
 placeholder
-	require.Equal(t, 10.0, storedUser.Balance)
-	require.Equal(t, 6, storedUser.Concurrency)
-	require.Len(t, assigner.calls, 1)
-	require.Equal(t, 1, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
+	require.Equal(t, 1.5, storedUser.Balance)
+	require.Equal(t, 2, storedUser.Concurrency)
+	require.Empty(t, assigner.calls)
+	require.Equal(t, 0, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
 placeholder
 
-func TestAuthServiceLogin_MergesEmailFirstBindSourceOverridesWithGlobalDefaults(t *testing.T) {
+func TestAuthServiceLogin_DoesNotApplyMergedEmailFirstBindDefaultsWhenBackfillingLegacyEmailIdentity(t *testing.T) {
 	assigner := &authIdentityDefaultSubAssignerStub{placeholder
 	svc, _, client := newAuthServiceWithEnt(t, map[string]string{
 		service.SettingKeyRegistrationEnabled:                    "true",
@@ -354,12 +352,10 @@ placeholder
 
 	storedUser, err := client.User.Get(ctx, user.ID)
 placeholder
-	require.Equal(t, 10.0, storedUser.Balance)
-	require.Equal(t, 4, storedUser.Concurrency)
-	require.Len(t, assigner.calls, 1)
-	require.Equal(t, int64(21), assigner.calls[0].GroupID)
-	require.Equal(t, 14, assigner.calls[0].ValidityDays)
-	require.Equal(t, 1, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
+	require.Equal(t, 1.5, storedUser.Balance)
+	require.Equal(t, 2, storedUser.Concurrency)
+	require.Empty(t, assigner.calls)
+	require.Equal(t, 0, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
 placeholder
 
 func TestAuthServiceLogin_DoesNotApplyEmailFirstBindDefaultsWhenIdentityAlreadyExists(t *testing.T) {
@@ -409,7 +405,7 @@ placeholder
 	require.Equal(t, 0, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
 placeholder
 
-func TestAuthServiceLogin_RetriesEmailFirstBindDefaultsAfterPreviousFailure(t *testing.T) {
+func TestAuthServiceLogin_DoesNotRetryEmailFirstBindDefaultsForBackfilledEmailIdentity(t *testing.T) {
 	assigner := &flakyAuthIdentityDefaultSubAssignerStub{failuresRemaining: 1placeholder
 	svc, _, client := newAuthServiceWithEnt(t, map[string]string{
 		service.SettingKeyRegistrationEnabled:                    "true",
@@ -443,7 +439,7 @@ placeholder
 placeholder
 	require.Equal(t, 1.5, storedUser.Balance)
 	require.Equal(t, 2, storedUser.Concurrency)
-	require.Len(t, assigner.calls, 1)
+	require.Empty(t, assigner.calls)
 	require.Equal(t, 0, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
 
 	token, gotUser, err = svc.Login(ctx, user.Email, "password")
@@ -454,10 +450,10 @@ placeholder
 
 	storedUser, err = client.User.Get(ctx, user.ID)
 placeholder
-	require.Equal(t, 10.0, storedUser.Balance)
-	require.Equal(t, 6, storedUser.Concurrency)
-	require.Len(t, assigner.calls, 2)
-	require.Equal(t, 1, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
+	require.Equal(t, 1.5, storedUser.Balance)
+	require.Equal(t, 2, storedUser.Concurrency)
+	require.Empty(t, assigner.calls)
+	require.Equal(t, 0, countProviderGrantRecords(t, client, user.ID, "email", "first_bind"))
 placeholder
 
 func countProviderGrantRecords(
