@@ -452,6 +452,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		SettingKeyAccountQuotaNotifyEnabled,
 		SettingKeyChannelMonitorEnabled,
 		SettingKeyChannelMonitorDefaultIntervalSeconds,
+		SettingKeyAvailableChannelsEnabled,
 placeholder
 
 	settings, err := s.settingRepo.GetMultiple(ctx, keys)
@@ -537,6 +538,8 @@ placeholder
 
 		ChannelMonitorEnabled:                !isFalseSettingValue(settings[SettingKeyChannelMonitorEnabled]),
 		ChannelMonitorDefaultIntervalSeconds: parseChannelMonitorInterval(settings[SettingKeyChannelMonitorDefaultIntervalSeconds]),
+
+		AvailableChannelsEnabled: settings[SettingKeyAvailableChannelsEnabled] == "true",
 placeholder, nil
 placeholder
 
@@ -592,6 +595,25 @@ placeholder
 	return ChannelMonitorRuntime{
 		Enabled:                !isFalseSettingValue(vals[SettingKeyChannelMonitorEnabled]),
 		DefaultIntervalSeconds: parseChannelMonitorInterval(vals[SettingKeyChannelMonitorDefaultIntervalSeconds]),
+placeholder
+placeholder
+
+// AvailableChannelsRuntime is the lightweight view of the available-channels feature
+// switch consumed by the user-facing handler.
+type AvailableChannelsRuntime struct {
+	Enabled bool
+placeholder
+
+// GetAvailableChannelsRuntime reads the available-channels feature switch directly
+// from the settings store. Fail-closed: on error returns Enabled=false, matching
+// the opt-in default (unknown ↔ disabled).
+func (s *SettingService) GetAvailableChannelsRuntime(ctx context.Context) AvailableChannelsRuntime {
+	vals, err := s.settingRepo.GetMultiple(ctx, []string{SettingKeyAvailableChannelsEnabledplaceholder)
+	if err != nil {
+		return AvailableChannelsRuntime{Enabled: falseplaceholder
+placeholder
+	return AvailableChannelsRuntime{
+		Enabled: vals[SettingKeyAvailableChannelsEnabled] == "true",
 placeholder
 placeholder
 
@@ -1151,6 +1173,9 @@ placeholder
 		updates[SettingKeyChannelMonitorDefaultIntervalSeconds] = strconv.Itoa(v)
 placeholder
 
+	// Available channels feature switch
+	updates[SettingKeyAvailableChannelsEnabled] = strconv.FormatBool(settings.AvailableChannelsEnabled)
+
 	// Claude Code version check
 	updates[SettingKeyMinClaudeCodeVersion] = settings.MinClaudeCodeVersion
 	updates[SettingKeyMaxClaudeCodeVersion] = settings.MaxClaudeCodeVersion
@@ -1700,6 +1725,9 @@ placeholder
 		SettingKeyChannelMonitorEnabled:                "true",
 		SettingKeyChannelMonitorDefaultIntervalSeconds: "60",
 
+		// Available channels feature (default disabled; opt-in)
+		SettingKeyAvailableChannelsEnabled: "false",
+
 		// Claude Code version check (default: empty = disabled)
 		SettingKeyMinClaudeCodeVersion: "",
 		SettingKeyMaxClaudeCodeVersion: "",
@@ -2007,6 +2035,9 @@ placeholder
 	result.ChannelMonitorDefaultIntervalSeconds = parseChannelMonitorInterval(
 		settings[SettingKeyChannelMonitorDefaultIntervalSeconds],
 	)
+
+	// Available channels feature (default: disabled; strict true)
+	result.AvailableChannelsEnabled = settings[SettingKeyAvailableChannelsEnabled] == "true"
 
 	// Claude Code version check
 	result.MinClaudeCodeVersion = settings[SettingKeyMinClaudeCodeVersion]
