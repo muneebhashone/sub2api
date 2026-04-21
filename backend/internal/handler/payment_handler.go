@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
@@ -327,7 +328,7 @@ placeholder)
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	response.Paginated(c, orders, int64(total), page, pageSize)
+	response.Paginated(c, sanitizePaymentOrdersForResponse(orders), int64(total), page, pageSize)
 placeholder
 
 // GetOrder returns a single order for the authenticated user.
@@ -349,7 +350,7 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	response.Success(c, order)
+	response.Success(c, sanitizePaymentOrderForResponse(order))
 placeholder
 
 // CancelOrder cancels a pending order for the authenticated user.
@@ -445,7 +446,7 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	response.Success(c, order)
+	response.Success(c, sanitizePaymentOrderForResponse(order))
 placeholder
 
 // PublicOrderResult is the limited order info returned by the public verify endpoint.
@@ -521,6 +522,26 @@ func isMobile(c *gin.Context) bool {
 	placeholder
 placeholder
 	return false
+placeholder
+
+func sanitizePaymentOrdersForResponse(orders []*dbent.PaymentOrder) []*dbent.PaymentOrder {
+	if len(orders) == 0 {
+		return orders
+placeholder
+	out := make([]*dbent.PaymentOrder, 0, len(orders))
+	for _, order := range orders {
+		out = append(out, sanitizePaymentOrderForResponse(order))
+placeholder
+	return out
+placeholder
+
+func sanitizePaymentOrderForResponse(order *dbent.PaymentOrder) *dbent.PaymentOrder {
+	if order == nil {
+		return nil
+placeholder
+	cloned := *order
+	cloned.ProviderSnapshot = nil
+	return &cloned
 placeholder
 
 func isWeChatBrowser(c *gin.Context) bool {

@@ -655,6 +655,7 @@ placeholder
 		{Name: "subscription_days", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "provider_instance_id", Type: field.TypeString, Nullable: true, Size: 64placeholder,
 		{Name: "provider_key", Type: field.TypeString, Nullable: true, Size: 30placeholder,
+		{Name: "provider_snapshot", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "status", Type: field.TypeString, Size: 30, Default: "PENDING"placeholder,
 		{Name: "refund_amount", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
 		{Name: "refund_reason", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
@@ -683,7 +684,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_users_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[38]placeholder,
+				Columns:    []*schema.Column{PaymentOrdersColumns[39]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
@@ -697,32 +698,32 @@ placeholder
 			{
 				Name:    "paymentorder_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[38]placeholder,
+				Columns: []*schema.Column{PaymentOrdersColumns[39]placeholder,
 		placeholder,
 			{
 				Name:    "paymentorder_status",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[20]placeholder,
+				Columns: []*schema.Column{PaymentOrdersColumns[21]placeholder,
 		placeholder,
 			{
 				Name:    "paymentorder_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[28]placeholder,
+				Columns: []*schema.Column{PaymentOrdersColumns[29]placeholder,
 		placeholder,
 			{
 				Name:    "paymentorder_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[36]placeholder,
+				Columns: []*schema.Column{PaymentOrdersColumns[37]placeholder,
 		placeholder,
 			{
 				Name:    "paymentorder_paid_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[29]placeholder,
+				Columns: []*schema.Column{PaymentOrdersColumns[30]placeholder,
 		placeholder,
 			{
 				Name:    "paymentorder_payment_type_paid_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[9], PaymentOrdersColumns[29]placeholder,
+				Columns: []*schema.Column{PaymentOrdersColumns[9], PaymentOrdersColumns[30]placeholder,
 		placeholder,
 			{
 				Name:    "paymentorder_order_type",

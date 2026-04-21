@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -58,6 +59,8 @@ type PaymentOrder struct {
 	ProviderInstanceID *string `json:"provider_instance_id,omitempty"`
 	// ProviderKey holds the value of the "provider_key" field.
 	ProviderKey *string `json:"provider_key,omitempty"`
+	// ProviderSnapshot holds the value of the "provider_snapshot" field.
+	ProviderSnapshot map[string]interface{placeholder `json:"provider_snapshot,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
 	// RefundAmount holds the value of the "refund_amount" field.
@@ -125,6 +128,8 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case paymentorder.FieldProviderSnapshot:
+			values[i] = new([]byte)
 		case paymentorder.FieldForceRefund:
 			values[i] = new(sql.NullBool)
 		case paymentorder.FieldAmount, paymentorder.FieldPayAmount, paymentorder.FieldFeeRate, paymentorder.FieldRefundAmount:
@@ -284,6 +289,14 @@ placeholder
 		placeholder else if value.Valid {
 				_m.ProviderKey = new(string)
 				*_m.ProviderKey = value.String
+		placeholder
+		case paymentorder.FieldProviderSnapshot:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_snapshot", values[i])
+		placeholder else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.ProviderSnapshot); err != nil {
+					return fmt.Errorf("unmarshal field provider_snapshot: %w", err)
+			placeholder
 		placeholder
 		case paymentorder.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -521,6 +534,9 @@ placeholder
 		builder.WriteString("provider_key=")
 		builder.WriteString(*v)
 placeholder
+	builder.WriteString(", ")
+	builder.WriteString("provider_snapshot=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ProviderSnapshot))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(_m.Status)
