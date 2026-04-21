@@ -644,15 +644,17 @@ placeholder
 placeholder
 
 func userNormalizedEmailPredicate(email string) predicate.User {
-	normalized := strings.TrimSpace(email)
+	normalized := strings.ToLower(strings.TrimSpace(email))
 	if normalized == "" {
 		return dbuser.EmailEQ(email)
 placeholder
 	return predicate.User(func(s *entsql.Selector) {
-		s.Where(entsql.ExprP(
-			fmt.Sprintf("LOWER(TRIM(%s)) = LOWER(TRIM(?))", s.C(dbuser.FieldEmail)),
-			normalized,
-		))
+		s.Where(entsql.P(func(b *entsql.Builder) {
+			b.WriteString("LOWER(TRIM(").
+				Ident(s.C(dbuser.FieldEmail)).
+				WriteString(")) = ").
+				Arg(normalized)
+	placeholder))
 placeholder)
 placeholder
 
@@ -718,7 +720,16 @@ placeholder
 placeholder
 	if identity != nil {
 		if identity.UserID != userID {
-			return nil, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+			activeOwner, err := findActiveUserByID(ctx, client, identity.UserID)
+			if err != nil {
+				return nil, err
+		placeholder
+			if activeOwner != nil {
+				return nil, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+		placeholder
+			return client.AuthIdentity.UpdateOneID(identity.ID).
+				SetUserID(userID).
+				Save(ctx)
 	placeholder
 		return identity, nil
 placeholder
@@ -756,7 +767,7 @@ func ensurePendingWeChatOAuthIdentityForUser(ctx context.Context, tx *dbent.Tx, 
 	if err != nil {
 		return nil, err
 placeholder
-	identity, hasCanonicalKey, err := chooseWeChatIdentityForUser(identityRecords, userID, providerKey)
+	identity, hasCanonicalKey, err := chooseWeChatIdentityForUser(ctx, client, identityRecords, userID, providerKey)
 	if err != nil {
 		return nil, err
 placeholder
@@ -773,7 +784,7 @@ placeholder
 		if err != nil {
 			return nil, err
 	placeholder
-		legacyOpenIDIdentity, _, err = chooseWeChatIdentityForUser(legacyOpenIDRecords, userID, providerKey)
+		legacyOpenIDIdentity, _, err = chooseWeChatIdentityForUser(ctx, client, legacyOpenIDRecords, userID, providerKey)
 		if err != nil {
 			return nil, err
 	placeholder
@@ -783,6 +794,9 @@ placeholder
 	case identity != nil:
 		update := client.AuthIdentity.UpdateOneID(identity.ID).
 			SetMetadata(mergeOAuthMetadata(identity.Metadata, metadata))
+		if identity.UserID != userID {
+			update = update.SetUserID(userID)
+	placeholder
 		if !strings.EqualFold(strings.TrimSpace(identity.ProviderKey), providerKey) && !hasCanonicalKey {
 			update = update.SetProviderKey(providerKey)
 	placeholder
@@ -838,7 +852,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	channelRecord, hasCanonicalChannelKey, err := chooseWeChatChannelForUser(channelRecords, userID, providerKey)
+	channelRecord, hasCanonicalChannelKey, err := chooseWeChatChannelForUser(ctx, client, channelRecords, userID, providerKey)
 	if err != nil {
 		return nil, err
 placeholder
@@ -872,7 +886,7 @@ placeholder
 	return identity, nil
 placeholder
 
-func chooseWeChatIdentityForUser(records []*dbent.AuthIdentity, userID int64, preferredProviderKey string) (*dbent.AuthIdentity, bool, error) {
+func chooseWeChatIdentityForUser(ctx context.Context, client *dbent.Client, records []*dbent.AuthIdentity, userID int64, preferredProviderKey string) (*dbent.AuthIdentity, bool, error) {
 	var preferred *dbent.AuthIdentity
 	var fallback *dbent.AuthIdentity
 	hasCanonicalKey := false
@@ -881,7 +895,13 @@ func chooseWeChatIdentityForUser(records []*dbent.AuthIdentity, userID int64, pr
 			continue
 	placeholder
 		if record.UserID != userID {
-			return nil, false, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+			activeOwner, err := findActiveUserByID(ctx, client, record.UserID)
+			if err != nil {
+				return nil, false, err
+		placeholder
+			if activeOwner != nil {
+				return nil, false, infraerrors.Conflict("AUTH_IDENTITY_OWNERSHIP_CONFLICT", "auth identity already belongs to another user")
+		placeholder
 	placeholder
 		if strings.EqualFold(strings.TrimSpace(record.ProviderKey), preferredProviderKey) {
 			hasCanonicalKey = true
@@ -900,7 +920,7 @@ placeholder
 	return fallback, hasCanonicalKey, nil
 placeholder
 
-func chooseWeChatChannelForUser(records []*dbent.AuthIdentityChannel, userID int64, preferredProviderKey string) (*dbent.AuthIdentityChannel, bool, error) {
+func chooseWeChatChannelForUser(ctx context.Context, client *dbent.Client, records []*dbent.AuthIdentityChannel, userID int64, preferredProviderKey string) (*dbent.AuthIdentityChannel, bool, error) {
 	var preferred *dbent.AuthIdentityChannel
 	var fallback *dbent.AuthIdentityChannel
 	hasCanonicalKey := false
@@ -909,7 +929,13 @@ func chooseWeChatChannelForUser(records []*dbent.AuthIdentityChannel, userID int
 			continue
 	placeholder
 		if record.Edges.Identity != nil && record.Edges.Identity.UserID != userID {
-			return nil, false, infraerrors.Conflict("AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT", "auth identity channel already belongs to another user")
+			activeOwner, err := findActiveUserByID(ctx, client, record.Edges.Identity.UserID)
+			if err != nil {
+				return nil, false, err
+		placeholder
+			if activeOwner != nil {
+				return nil, false, infraerrors.Conflict("AUTH_IDENTITY_CHANNEL_OWNERSHIP_CONFLICT", "auth identity channel already belongs to another user")
+		placeholder
 	placeholder
 		if strings.EqualFold(strings.TrimSpace(record.ProviderKey), preferredProviderKey) {
 			hasCanonicalKey = true
@@ -926,6 +952,20 @@ placeholder
 		return preferred, hasCanonicalKey, nil
 placeholder
 	return fallback, hasCanonicalKey, nil
+placeholder
+
+func findActiveUserByID(ctx context.Context, client *dbent.Client, userID int64) (*dbent.User, error) {
+	if client == nil || userID <= 0 {
+		return nil, nil
+placeholder
+	userEntity, err := client.User.Get(ctx, userID)
+	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil, nil
+	placeholder
+		return nil, infraerrors.InternalServer("AUTH_IDENTITY_USER_LOOKUP_FAILED", "failed to load auth identity user").WithCause(err)
+placeholder
+	return userEntity, nil
 placeholder
 
 func channelRecordMetadata(channel *dbent.AuthIdentityChannel) map[string]any {
@@ -1343,7 +1383,7 @@ placeholder
 		return
 placeholder
 	if err := applyPendingOAuthBinding(c.Request.Context(), h.entClient(), h.authService, h.userService, session, decision, &user.ID, true, true); err != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err))
+		respondPendingOAuthBindingApplyError(c, err)
 		return
 placeholder
 
@@ -1361,6 +1401,14 @@ placeholder
 
 	clearCookies()
 	writeOAuthTokenPairResponse(c, tokenPair)
+placeholder
+
+func respondPendingOAuthBindingApplyError(c *gin.Context, err error) {
+	if code := infraerrors.Code(err); code >= http.StatusBadRequest && code < http.StatusInternalServerError {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err))
 placeholder
 
 func (h *AuthHandler) createPendingOAuthAccount(c *gin.Context, provider string) {
@@ -1480,7 +1528,7 @@ placeholder
 		if rollbackCreatedUser(err) {
 			return
 	placeholder
-		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err))
+		respondPendingOAuthBindingApplyError(c, err)
 		return
 placeholder
 
@@ -1514,7 +1562,7 @@ placeholder
 			if rollbackCreatedUser(err) {
 				return
 		placeholder
-			response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_BIND_APPLY_FAILED", "failed to bind pending oauth identity").WithCause(err))
+			respondPendingOAuthBindingApplyError(c, err)
 			return
 	placeholder
 placeholder
