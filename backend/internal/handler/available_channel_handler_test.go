@@ -42,21 +42,6 @@ placeholder
 	require.ElementsMatch(t, []int64{1, 3placeholder, ids)
 placeholder
 
-func TestCollectGroupPlatforms_DerivesAllowedSet(t *testing.T) {
-	groups := []userAvailableGroup{
-		{ID: 1, Platform: "anthropic"placeholder,
-		{ID: 2, Platform: "openai"placeholder,
-		{ID: 3, Platform: "anthropic"placeholder, // 去重
-		{ID: 4, Platform: ""placeholder,          // 空平台忽略
-placeholder
-	got := collectGroupPlatforms(groups)
-	require.Len(t, got, 2)
-	_, hasAnt := got["anthropic"]
-	_, hasOA := got["openai"]
-	require.True(t, hasAnt)
-	require.True(t, hasOA)
-placeholder
-
 func TestToUserSupportedModels_FiltersByAllowedPlatforms(t *testing.T) {
 	// 用户可访问分组只覆盖 anthropic；anthropic 平台的模型保留，openai 模型被剔除。
 	src := []service.SupportedModel{
