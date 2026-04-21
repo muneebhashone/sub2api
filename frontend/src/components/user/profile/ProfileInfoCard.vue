@@ -29,7 +29,11 @@
             <span
               :class="['badge', user?.status === 'active' ? 'badge-success' : 'badge-danger']"
             >
-              {{ user?.status placeholderplaceholder
+              {{
+                user?.status === 'active'
+                  ? t('common.active')
+                  : t('common.disabled')
+              placeholderplaceholder
             </span>
           </div>
         </div>
@@ -80,7 +84,7 @@ placeholder>()
 const { t placeholder = useI18n()
 
 const avatarUrl = computed(() => props.user?.avatar_url?.trim() || '')
-const displayName = computed(() => props.user?.username?.trim() || props.user?.email?.trim() || 'User')
+const displayName = computed(() => props.user?.username?.trim() || props.user?.email?.trim() || t('profile.user'))
 const avatarInitial = computed(() => displayName.value.charAt(0).toUpperCase() || 'U')
 
 const providerLabels = computed<Record<UserAuthProvider, string>>(() => ({

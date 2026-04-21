@@ -7,7 +7,10 @@ const mocks = vi.hoisted(() => ({
   showSuccess: vi.fn(),
   showError: vi.fn(),
   getVerificationMethod: vi.fn(),
-  sendVerifyCode: vi.fn()
+  sendVerifyCode: vi.fn(),
+  initiateSetup: vi.fn(),
+  enable: vi.fn(),
+  disable: vi.fn()
 placeholder))
 
 vi.mock('vue-i18n', () => ({
@@ -27,9 +30,9 @@ vi.mock('@/api', () => ({
   totpAPI: {
     getVerificationMethod: mocks.getVerificationMethod,
     sendVerifyCode: mocks.sendVerifyCode,
-    initiateSetup: vi.fn(),
-    enable: vi.fn(),
-    disable: vi.fn()
+    initiateSetup: mocks.initiateSetup,
+    enable: mocks.enable,
+    disable: mocks.disable
   placeholder
 placeholder))
 
@@ -49,9 +52,19 @@ describe('TOTP 弹窗定时器清理', () => {
     mocks.showError.mockReset()
     mocks.getVerificationMethod.mockReset()
     mocks.sendVerifyCode.mockReset()
+    mocks.initiateSetup.mockReset()
+    mocks.enable.mockReset()
+    mocks.disable.mockReset()
 
     mocks.getVerificationMethod.mockResolvedValue({ method: 'email' placeholder)
     mocks.sendVerifyCode.mockResolvedValue({ success: true placeholder)
+    mocks.initiateSetup.mockResolvedValue({
+      qr_code_url: 'otpauth://totp/Sub2API:test?secret=ABC123',
+      secret: 'ABC123',
+      setup_token: 'setup-token'
+    placeholder)
+    mocks.enable.mockResolvedValue({ success: true placeholder)
+    mocks.disable.mockResolvedValue({ success: true placeholder)
 
     setIntervalSpy = vi.spyOn(window, 'setInterval').mockImplementation(((handler: TimerHandler) => {
       void handler
@@ -104,5 +117,41 @@ describe('TOTP 弹窗定时器清理', () => {
     wrapper.unmount()
 
     expect(clearIntervalSpy).toHaveBeenCalledWith(timerId)
+  placeholder)
+
+  it('TotpSetupModal 失败时改用 toast 并不渲染内联错误', async () => {
+    mocks.getVerificationMethod.mockResolvedValue({ method: 'password' placeholder)
+    mocks.initiateSetup.mockRejectedValue({
+      response: { data: { message: 'setup failed' placeholder placeholder
+    placeholder)
+
+    const wrapper = mount(TotpSetupModal)
+    await flushPromises()
+
+    await wrapper.get('input[type="password"]').setValue('correct horse battery staple')
+    await wrapper.get('button[type="button"].btn-primary').trigger('click')
+    await flushPromises()
+
+    expect(mocks.showError).toHaveBeenCalledWith('setup failed')
+    expect(wrapper.text()).not.toContain('setup failed')
+    expect(wrapper.find('.bg-red-50').exists()).toBe(false)
+  placeholder)
+
+  it('TotpDisableDialog 失败时改用 toast 并不渲染内联错误', async () => {
+    mocks.getVerificationMethod.mockResolvedValue({ method: 'password' placeholder)
+    mocks.disable.mockRejectedValue({
+      response: { data: { message: 'disable failed' placeholder placeholder
+    placeholder)
+
+    const wrapper = mount(TotpDisableDialog)
+    await flushPromises()
+
+    await wrapper.get('input[type="password"]').setValue('correct horse battery staple')
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(mocks.showError).toHaveBeenCalledWith('disable failed')
+    expect(wrapper.text()).not.toContain('disable failed')
+    expect(wrapper.find('.bg-red-50').exists()).toBe(false)
   placeholder)
 placeholder)
