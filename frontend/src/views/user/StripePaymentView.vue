@@ -99,7 +99,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { useRoute, useRouter placeholder from 'vue-router'
 import { usePaymentStore placeholder from '@/stores/payment'
 import { paymentAPI placeholder from '@/api/payment'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { isMobileDevice placeholder from '@/utils/device'
 import type { PaymentOrder placeholder from '@/types/payment'
 import type { Stripe, StripeElements placeholder from '@stripe/stripe-js'
@@ -167,7 +167,7 @@ onMounted(async () => {
       mountPaymentElement(stripe, clientSecret)
     placeholder
   placeholder catch (err: unknown) {
-    initError.value = extractApiErrorMessage(err, t('payment.stripeLoadFailed'))
+    initError.value = extractI18nErrorMessage(err, t, 'payment.errors', t('payment.stripeLoadFailed'))
   placeholder finally {
     loading.value = false
   placeholder
@@ -248,7 +248,7 @@ async function handleGenericPay() {
       scheduleClose()
     placeholder
   placeholder catch (err: unknown) {
-    stripeError.value = extractApiErrorMessage(err, t('payment.result.failed'))
+    stripeError.value = extractI18nErrorMessage(err, t, 'payment.errors', t('payment.result.failed'))
   placeholder finally {
     stripeSubmitting.value = false
   placeholder

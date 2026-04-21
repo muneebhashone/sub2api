@@ -67,7 +67,7 @@
 import { ref, onMounted, nextTick placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useRouter placeholder from 'vue-router'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { paymentAPI placeholder from '@/api/payment'
 import { useAppStore placeholder from '@/stores'
 import { getPaymentPopupFeatures placeholder from '@/components/payment/providerConfig'
@@ -132,7 +132,7 @@ onMounted(async () => {
       selectedType.value = event.value.type
     placeholder)
   placeholder catch (err: unknown) {
-    initError.value = extractApiErrorMessage(err, t('payment.stripeLoadFailed'))
+    initError.value = extractI18nErrorMessage(err, t, 'payment.errors', t('payment.stripeLoadFailed'))
   placeholder finally {
     loading.value = false
   placeholder
@@ -186,7 +186,7 @@ async function handlePay() {
       emit('success')
     placeholder
   placeholder catch (err: unknown) {
-    error.value = extractApiErrorMessage(err, t('payment.result.failed'))
+    error.value = extractI18nErrorMessage(err, t, 'payment.errors', t('payment.result.failed'))
   placeholder finally {
     submitting.value = false
   placeholder
@@ -199,7 +199,7 @@ async function handleCancel() {
     await paymentAPI.cancelOrder(props.orderId)
     emit('back')
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t('common.error')))
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
   placeholder finally {
     cancelling.value = false
   placeholder
