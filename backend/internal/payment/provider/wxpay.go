@@ -32,6 +32,13 @@ const (
 	wxpayResultPath = "/payment/result"
 )
 
+const (
+	wxpayMetadataAppID      = "appid"
+	wxpayMetadataMerchantID = "mchid"
+	wxpayMetadataCurrency   = "currency"
+	wxpayMetadataTradeState = "trade_state"
+)
+
 // WeChat Pay create-payment modes.
 const (
 	wxpayModeNative = "native"
@@ -355,6 +362,32 @@ func mapWxState(s string) string {
 placeholder
 placeholder
 
+func buildWxpayTransactionMetadata(tx *payments.Transaction) map[string]string {
+	if tx == nil {
+		return nil
+placeholder
+
+	metadata := map[string]string{placeholder
+	if appID := wxSV(tx.Appid); appID != "" {
+		metadata[wxpayMetadataAppID] = appID
+placeholder
+	if merchantID := wxSV(tx.Mchid); merchantID != "" {
+		metadata[wxpayMetadataMerchantID] = merchantID
+placeholder
+	if tradeState := wxSV(tx.TradeState); tradeState != "" {
+		metadata[wxpayMetadataTradeState] = tradeState
+placeholder
+	if tx.Amount != nil {
+		if currency := wxSV(tx.Amount.Currency); currency != "" {
+			metadata[wxpayMetadataCurrency] = currency
+	placeholder
+placeholder
+	if len(metadata) == 0 {
+		return nil
+placeholder
+	return metadata
+placeholder
+
 func (w *Wxpay) QueryOrder(ctx context.Context, tradeNo string) (*payment.QueryOrderResponse, error) {
 	c, err := w.ensureClient()
 	if err != nil {
@@ -379,7 +412,13 @@ placeholder
 	if tx.SuccessTime != nil {
 		pa = *tx.SuccessTime
 placeholder
-	return &payment.QueryOrderResponse{TradeNo: id, Status: mapWxState(wxSV(tx.TradeState)), Amount: amt, PaidAt: paplaceholder, nil
+	return &payment.QueryOrderResponse{
+		TradeNo:  id,
+		Status:   mapWxState(wxSV(tx.TradeState)),
+		Amount:   amt,
+		PaidAt:   pa,
+		Metadata: buildWxpayTransactionMetadata(tx),
+placeholder, nil
 placeholder
 
 func (w *Wxpay) VerifyNotification(ctx context.Context, rawBody string, headers map[string]string) (*payment.PaymentNotification, error) {
@@ -411,7 +450,7 @@ placeholder
 placeholder
 	return &payment.PaymentNotification{
 		TradeNo: wxSV(tx.TransactionId), OrderID: wxSV(tx.OutTradeNo),
-		Amount: amt, Status: st, RawData: rawBody,
+		Amount: amt, Status: st, RawData: rawBody, Metadata: buildWxpayTransactionMetadata(&tx),
 placeholder, nil
 placeholder
 
