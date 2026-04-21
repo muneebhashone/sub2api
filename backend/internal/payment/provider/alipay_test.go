@@ -3,7 +3,6 @@
 package provider
 
 import (
-	"context"
 	"errors"
 	"net/url"
 	"strings"
@@ -136,34 +135,24 @@ placeholder
 placeholder
 placeholder
 
-func TestCreateTradeUsesPreCreateForDesktop(t *testing.T) {
-	origPreCreate := alipayTradePreCreate
+func TestCreateTradeUsesPagePayForDesktop(t *testing.T) {
 	origPagePay := alipayTradePagePay
 	origWapPay := alipayTradeWapPay
 	t.Cleanup(func() {
-		alipayTradePreCreate = origPreCreate
 		alipayTradePagePay = origPagePay
 		alipayTradeWapPay = origWapPay
 placeholder)
 
-	preCreateCalls := 0
 	pagePayCalls := 0
 	wapPayCalls := 0
-	alipayTradePreCreate = func(ctx context.Context, client *alipay.Client, param alipay.TradePreCreate) (*alipay.TradePreCreateRsp, error) {
-		preCreateCalls++
+	alipayTradePagePay = func(client *alipay.Client, param alipay.TradePagePay) (*url.URL, error) {
+		pagePayCalls++
 		if param.OutTradeNo != "sub2_100" {
 			t.Fatalf("out_trade_no = %q, want %q", param.OutTradeNo, "sub2_100")
 	placeholder
 		if param.NotifyURL != "https://merchant.example.com/api/v1/payment/webhook/alipay" {
 			t.Fatalf("notify_url = %q", param.NotifyURL)
 	placeholder
-		return &alipay.TradePreCreateRsp{
-			OutTradeNo: "sub2_100",
-			QRCode:     "https://qr.alipay.example.com/precreate-token",
-	placeholder, nil
-placeholder
-	alipayTradePagePay = func(client *alipay.Client, param alipay.TradePagePay) (*url.URL, error) {
-		pagePayCalls++
 		return url.Parse("https://openapi.alipay.com/gateway.do?page-pay")
 placeholder
 	alipayTradeWapPay = func(client *alipay.Client, param alipay.TradeWapPay) (*url.URL, error) {
@@ -172,44 +161,30 @@ placeholder
 placeholder
 
 	provider := &Alipay{placeholder
-	resp, err := provider.createTrade(context.Background(), &alipay.Client{placeholder, payment.CreatePaymentRequest{
+	resp, err := provider.createPagePayTrade(&alipay.Client{placeholder, payment.CreatePaymentRequest{
 		OrderID: "sub2_100",
 		Amount:  "88.00",
 		Subject: "Balance recharge",
-placeholder, "https://merchant.example.com/api/v1/payment/webhook/alipay", "https://merchant.example.com/payment/result", false)
+placeholder, "https://merchant.example.com/api/v1/payment/webhook/alipay", "https://merchant.example.com/payment/result")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 placeholder
-	if preCreateCalls != 1 {
-		t.Fatalf("precreate calls = %d, want 1", preCreateCalls)
-placeholder
-	if pagePayCalls != 0 {
-		t.Fatalf("page pay calls = %d, want 0", pagePayCalls)
+	if pagePayCalls != 1 {
+		t.Fatalf("page pay calls = %d, want 1", pagePayCalls)
 placeholder
 	if wapPayCalls != 0 {
 		t.Fatalf("wap pay calls = %d, want 0", wapPayCalls)
 placeholder
-	if resp.QRCode != "https://qr.alipay.example.com/precreate-token" {
-		t.Fatalf("qr_code = %q", resp.QRCode)
-placeholder
-	if resp.PayURL != "" {
-		t.Fatalf("pay_url = %q, want empty", resp.PayURL)
+	if resp.PayURL == "" {
+		t.Fatal("expected pay_url for desktop page pay")
 placeholder
 placeholder
 
 func TestCreateTradeUsesWapPayForMobile(t *testing.T) {
-	origPreCreate := alipayTradePreCreate
 	origWapPay := alipayTradeWapPay
 	t.Cleanup(func() {
-		alipayTradePreCreate = origPreCreate
 		alipayTradeWapPay = origWapPay
 placeholder)
-
-	preCreateCalls := 0
-	alipayTradePreCreate = func(ctx context.Context, client *alipay.Client, param alipay.TradePreCreate) (*alipay.TradePreCreateRsp, error) {
-		preCreateCalls++
-		return &alipay.TradePreCreateRsp{placeholder, nil
-placeholder
 
 	wapPayCalls := 0
 	alipayTradeWapPay = func(client *alipay.Client, param alipay.TradeWapPay) (*url.URL, error) {
@@ -221,26 +196,20 @@ placeholder
 placeholder
 
 	provider := &Alipay{placeholder
-	resp, err := provider.createTrade(context.Background(), &alipay.Client{placeholder, payment.CreatePaymentRequest{
+	resp, err := provider.createWapTrade(&alipay.Client{placeholder, payment.CreatePaymentRequest{
 		OrderID:  "sub2_101",
 		Amount:   "18.00",
 		Subject:  "Balance recharge",
 		IsMobile: true,
-placeholder, "https://merchant.example.com/api/v1/payment/webhook/alipay", "https://merchant.example.com/payment/result", true)
+placeholder, "https://merchant.example.com/api/v1/payment/webhook/alipay", "https://merchant.example.com/payment/result")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-placeholder
-	if preCreateCalls != 0 {
-		t.Fatalf("precreate calls = %d, want 0", preCreateCalls)
 placeholder
 	if wapPayCalls != 1 {
 		t.Fatalf("wap pay calls = %d, want 1", wapPayCalls)
 placeholder
 	if resp.PayURL == "" {
 		t.Fatal("expected pay_url for mobile wap pay")
-placeholder
-	if resp.QRCode != "" {
-		t.Fatalf("qr_code = %q, want empty", resp.QRCode)
 placeholder
 placeholder
 

@@ -679,13 +679,6 @@ placeholder
 	return tokenPair, user, nil
 placeholder
 
-func (s *AuthService) assignDefaultSubscriptions(ctx context.Context, userID int64) {
-	if s.settingService == nil {
-		return
-placeholder
-	s.assignSubscriptions(ctx, userID, s.settingService.GetDefaultSubscriptions(ctx), "auto assigned by default user subscriptions setting")
-placeholder
-
 func (s *AuthService) assignSubscriptions(ctx context.Context, userID int64, items []DefaultSubscriptionSetting, notes string) {
 	if s.settingService == nil || s.defaultSubAssigner == nil || userID <= 0 {
 		return
@@ -863,7 +856,7 @@ placeholder
 	if err != nil {
 		return false, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	return rows.Next(), rows.Err()
 placeholder
 
@@ -917,7 +910,7 @@ placeholder
 			DoNothing().
 			Exec(ctx); err != nil {
 			if isSQLNoRowsError(err) {
-				err = nil
+				return nil, false
 		placeholder
 	placeholder
 		if err != nil {

@@ -210,9 +210,15 @@ func TestCreateProviderInstanceRejectsConflictingVisibleMethodEnablement(t *test
 placeholder
 
 	_, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
-		ProviderKey:    "easypay",
-		Name:           "EasyPay Alipay",
-		Config:         map[string]string{"pid": "1001"placeholder,
+		ProviderKey: "easypay",
+		Name:        "EasyPay Alipay",
+		Config: map[string]string{
+			"pid":       "1001",
+			"pkey":      "pkey-1001",
+			"apiBase":   "https://pay.example.com",
+			"notifyUrl": "https://merchant.example.com/notify",
+			"returnUrl": "https://merchant.example.com/return",
+	placeholder,
 		SupportedTypes: []string{"alipay"placeholder,
 		Enabled:        true,
 placeholder)
@@ -240,9 +246,15 @@ func TestUpdateProviderInstanceRejectsEnablingConflictingVisibleMethodProvider(t
 placeholder
 
 	existing, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
-		ProviderKey:    "easypay",
-		Name:           "EasyPay WeChat",
-		Config:         map[string]string{"pid": "2001"placeholder,
+		ProviderKey: "easypay",
+		Name:        "EasyPay WeChat",
+		Config: map[string]string{
+			"pid":       "2001",
+			"pkey":      "pkey-2001",
+			"apiBase":   "https://pay.example.com",
+			"notifyUrl": "https://merchant.example.com/notify",
+			"returnUrl": "https://merchant.example.com/return",
+	placeholder,
 		SupportedTypes: []string{"wxpay"placeholder,
 		Enabled:        true,
 placeholder)
@@ -276,9 +288,15 @@ func TestUpdateProviderInstancePersistsEnabledAndSupportedTypes(t *testing.T) {
 placeholder
 
 	instance, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
-		ProviderKey:    "easypay",
-		Name:           "EasyPay",
-		Config:         map[string]string{"pid": "3001"placeholder,
+		ProviderKey: "easypay",
+		Name:        "EasyPay",
+		Config: map[string]string{
+			"pid":       "3001",
+			"pkey":      "pkey-3001",
+			"apiBase":   "https://pay.example.com",
+			"notifyUrl": "https://merchant.example.com/notify",
+			"returnUrl": "https://merchant.example.com/return",
+	placeholder,
 		SupportedTypes: []string{"alipay"placeholder,
 		Enabled:        false,
 placeholder)

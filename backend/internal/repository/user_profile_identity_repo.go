@@ -573,27 +573,6 @@ placeholder
 	return err
 placeholder
 
-func (r *userRepository) attachUserAvatar(ctx context.Context, user *service.User) error {
-	if user == nil {
-		return nil
-placeholder
-
-	avatar, err := r.GetUserAvatar(ctx, user.ID)
-	if err != nil {
-		return err
-placeholder
-	if avatar == nil {
-		return nil
-placeholder
-
-	user.AvatarURL = avatar.URL
-	user.AvatarSource = avatar.StorageProvider
-	user.AvatarMIME = avatar.ContentType
-	user.AvatarByteSize = avatar.ByteSize
-	user.AvatarSHA256 = avatar.SHA256
-	return nil
-placeholder
-
 func copyMetadata(in map[string]any) map[string]any {
 	if len(in) == 0 {
 		return map[string]any{placeholder

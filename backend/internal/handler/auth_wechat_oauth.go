@@ -1129,7 +1129,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("request wechat access token: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -1177,7 +1177,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("request wechat userinfo: %w", err)
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

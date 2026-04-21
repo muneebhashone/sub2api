@@ -183,10 +183,6 @@ type UpsertUserAvatarInput struct {
 	SHA256          string
 placeholder
 
-type userAuthIdentityReader interface {
-	ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error)
-placeholder
-
 type userProfileIdentityTxRunner interface {
 	WithUserProfileIdentityTx(ctx context.Context, fn func(txCtx context.Context) error) error
 placeholder
@@ -810,17 +806,6 @@ func maskOpaqueIdentity(value string) string {
 	default:
 		return string(runes[:3]) + "***" + string(runes[len(runes)-3:])
 placeholder
-placeholder
-
-func cloneAnyMap(values map[string]any) map[string]any {
-	if len(values) == 0 {
-		return map[string]any{placeholder
-placeholder
-	cloned := make(map[string]any, len(values))
-	for key, value := range values {
-		cloned[key] = value
-placeholder
-	return cloned
 placeholder
 
 // ChangePassword 修改密码

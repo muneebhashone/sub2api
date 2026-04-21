@@ -184,7 +184,7 @@ func TestLinuxDoOAuthBindStartAcceptsAccessTokenCookie(t *testing.T) {
 		TokenAuthMethod:     "client_secret_post",
 		UsePKCE:             true,
 placeholder)
-	defer client.Close()
+	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	user, err := client.User.Create().
 		SetEmail("bind-cookie@example.com").
@@ -226,7 +226,7 @@ placeholder
 	require.Equal(t, -1, accessTokenCookie.MaxAge)
 placeholder
 
-func TestLinuxDoOAuthCallbackCreatesLoginPendingSessionForExistingUser(t *testing.T) {
+func TestLinuxDoOAuthCallbackCreatesLoginPendingSessionForExistingIdentityUser(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
@@ -254,7 +254,7 @@ placeholder))
 		TokenAuthMethod:     "client_secret_post",
 		UsePKCE:             true,
 placeholder)
-	defer client.Close()
+	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	ctx := context.Background()
 	existingUser, err := client.User.Create().
@@ -263,6 +263,14 @@ placeholder)
 		SetPasswordHash("hash").
 		SetRole(service.RoleUser).
 		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+	_, err = client.AuthIdentity.Create().
+		SetUserID(existingUser.ID).
+		SetProviderType("linuxdo").
+		SetProviderKey("linuxdo").
+		SetProviderSubject("321").
+		SetMetadata(map[string]any{"username": "legacy-user"placeholder).
 		Save(ctx)
 placeholder
 
@@ -294,7 +302,8 @@ placeholder
 	require.Equal(t, linuxDoSyntheticEmail("321"), session.ResolvedEmail)
 	require.Equal(t, "LinuxDo Display", session.UpstreamIdentityClaims["suggested_display_name"])
 
-	completion := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	completion, ok := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, "/dashboard", completion["redirect"])
 	require.NotEmpty(t, completion["access_token"])
 	require.Nil(t, completion["error"])
@@ -328,7 +337,7 @@ placeholder))
 		TokenAuthMethod:     "client_secret_post",
 		UsePKCE:             true,
 placeholder)
-	defer client.Close()
+	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	ctx := context.Background()
 	existingUser, err := client.User.Create().
@@ -362,21 +371,24 @@ placeholder
 		Where(pendingauthsession.SessionTokenEQ(decodeCookieValueForTest(t, sessionCookie.Value))).
 		Only(ctx)
 placeholder
-	require.Equal(t, "adopt_existing_user_by_email", session.Intent)
-	require.NotNil(t, session.TargetUserID)
-	require.Equal(t, existingUser.ID, *session.TargetUserID)
+	require.Equal(t, oauthIntentLogin, session.Intent)
+	require.Nil(t, session.TargetUserID)
 	require.Equal(t, existingUser.Email, session.ResolvedEmail)
 	require.Equal(t, "legacy@example.com", session.UpstreamIdentityClaims["compat_email"])
 
-	completion := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	completion, ok := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, "/dashboard", completion["redirect"])
-	require.Equal(t, "bind_login_required", completion["step"])
+	require.Equal(t, oauthPendingChoiceStep, completion["step"])
 	require.Equal(t, existingUser.Email, completion["email"])
+	require.Equal(t, existingUser.Email, completion["existing_account_email"])
+	require.Equal(t, true, completion["existing_account_bindable"])
+	require.Equal(t, "compat_email_match", completion["choice_reason"])
 	_, hasAccessToken := completion["access_token"]
 	require.False(t, hasAccessToken)
 placeholder
 
-func TestLinuxDoOAuthCallbackCreatesInvitationPendingSessionWhenSignupRequiresInvite(t *testing.T) {
+func TestLinuxDoOAuthCallbackCreatesChoicePendingSessionWhenSignupRequiresInvite(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
@@ -404,7 +416,7 @@ placeholder))
 		TokenAuthMethod:     "client_secret_post",
 		UsePKCE:             true,
 placeholder)
-	defer client.Close()
+	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
@@ -432,9 +444,11 @@ placeholder
 	require.Equal(t, oauthIntentLogin, session.Intent)
 	require.Nil(t, session.TargetUserID)
 
-	completion := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
-	require.Equal(t, "invitation_required", completion["error"])
+	completion, ok := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, oauthPendingChoiceStep, completion["step"])
 	require.Equal(t, "/dashboard", completion["redirect"])
+	require.Equal(t, "third_party_signup", completion["choice_reason"])
 placeholder
 
 func TestLinuxDoOAuthCallbackCreatesBindPendingSessionForCurrentUser(t *testing.T) {
@@ -465,7 +479,7 @@ placeholder))
 		TokenAuthMethod:     "client_secret_post",
 		UsePKCE:             true,
 placeholder)
-	defer client.Close()
+	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	ctx := context.Background()
 	currentUser, err := client.User.Create().
@@ -505,7 +519,8 @@ placeholder
 	require.Equal(t, currentUser.ID, *session.TargetUserID)
 	require.Equal(t, linuxDoSyntheticEmail("999"), session.ResolvedEmail)
 
-	completion := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	completion, ok := session.LocalFlowState[oauthCompletionResponseKey].(map[string]any)
+	require.True(t, ok)
 	require.Equal(t, "/settings/connections", completion["redirect"])
 	require.Empty(t, completion["access_token"])
 	require.Equal(t, "Bind Display", session.UpstreamIdentityClaims["suggested_display_name"])
