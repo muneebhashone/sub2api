@@ -73,6 +73,12 @@ placeholder,
 			"222b4a09c797c22e5922b6b172327c824f5463aaa8760e4f621bc5c22e2be0f3": {placeholder,
 	placeholder,
 placeholder,
+	"109_auth_identity_compat_backfill.sql": {
+		fileChecksum: "551e498aa5616d2d91096e9d72cf9fb36e418ee22eacc557f8811cadbc9e20ee",
+		acceptedDBChecksum: map[string]struct{placeholder{
+			"2b380305e73ff0c13aa8c811e45897f2b36ca4a438f7b3e8f98e19ecb6bae0b3": {placeholder,
+	placeholder,
+placeholder,
 placeholder
 
 // ApplyMigrations 将嵌入的 SQL 迁移文件应用到指定的数据库。
