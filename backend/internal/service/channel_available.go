@@ -66,7 +66,7 @@ placeholder
 	placeholder
 		sort.SliceStable(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name placeholder)
 
-		normalizeBillingModelSource(ch)
+		ch.normalizeBillingModelSource()
 
 		out = append(out, AvailableChannel{
 			ID:                 ch.ID,
