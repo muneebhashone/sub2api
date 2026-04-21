@@ -300,12 +300,12 @@ placeholder
 // Example:
 //
 //	var v []struct {
-//		DeletedAt time.Time `json:"deleted_at,omitempty"`
+//		MonitorID int64 `json:"monitor_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //placeholder
 //
 //	client.ChannelMonitorHistory.Query().
-//		GroupBy(channelmonitorhistory.FieldDeletedAt).
+//		GroupBy(channelmonitorhistory.FieldMonitorID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *ChannelMonitorHistoryQuery) GroupBy(field string, fields ...string) *ChannelMonitorHistoryGroupBy {
@@ -323,11 +323,11 @@ placeholder
 // Example:
 //
 //	var v []struct {
-//		DeletedAt time.Time `json:"deleted_at,omitempty"`
+//		MonitorID int64 `json:"monitor_id,omitempty"`
 //placeholder
 //
 //	client.ChannelMonitorHistory.Query().
-//		Select(channelmonitorhistory.FieldDeletedAt).
+//		Select(channelmonitorhistory.FieldMonitorID).
 //		Scan(ctx, &v)
 func (_q *ChannelMonitorHistoryQuery) Select(fields ...string) *ChannelMonitorHistorySelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

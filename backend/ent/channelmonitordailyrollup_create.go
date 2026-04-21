@@ -23,20 +23,6 @@ type ChannelMonitorDailyRollupCreate struct {
 	conflict []sql.ConflictOption
 placeholder
 
-// SetDeletedAt sets the "deleted_at" field.
-func (_c *ChannelMonitorDailyRollupCreate) SetDeletedAt(v time.Time) *ChannelMonitorDailyRollupCreate {
-	_c.mutation.SetDeletedAt(v)
-	return _c
-placeholder
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_c *ChannelMonitorDailyRollupCreate) SetNillableDeletedAt(v *time.Time) *ChannelMonitorDailyRollupCreate {
-	if v != nil {
-		_c.SetDeletedAt(*v)
-placeholder
-	return _c
-placeholder
-
 // SetMonitorID sets the "monitor_id" field.
 func (_c *ChannelMonitorDailyRollupCreate) SetMonitorID(v int64) *ChannelMonitorDailyRollupCreate {
 	_c.mutation.SetMonitorID(v)
@@ -221,9 +207,7 @@ placeholder
 
 // Save creates the ChannelMonitorDailyRollup in the database.
 func (_c *ChannelMonitorDailyRollupCreate) Save(ctx context.Context) (*ChannelMonitorDailyRollup, error) {
-	if err := _c.defaults(); err != nil {
-		return nil, err
-placeholder
+	_c.defaults()
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 placeholder
 
@@ -250,7 +234,7 @@ placeholder
 placeholder
 
 // defaults sets the default values of the builder before save.
-func (_c *ChannelMonitorDailyRollupCreate) defaults() error {
+func (_c *ChannelMonitorDailyRollupCreate) defaults() {
 	if _, ok := _c.mutation.TotalChecks(); !ok {
 		v := channelmonitordailyrollup.DefaultTotalChecks
 		_c.mutation.SetTotalChecks(v)
@@ -292,13 +276,9 @@ placeholder
 		_c.mutation.SetCountPingLatency(v)
 placeholder
 	if _, ok := _c.mutation.ComputedAt(); !ok {
-		if channelmonitordailyrollup.DefaultComputedAt == nil {
-			return fmt.Errorf("ent: uninitialized channelmonitordailyrollup.DefaultComputedAt (forgotten import ent/runtime?)")
-	placeholder
 		v := channelmonitordailyrollup.DefaultComputedAt()
 		_c.mutation.SetComputedAt(v)
 placeholder
-	return nil
 placeholder
 
 // check runs all checks and user-defined validators on the builder.
@@ -380,10 +360,6 @@ func (_c *ChannelMonitorDailyRollupCreate) createSpec() (*ChannelMonitorDailyRol
 		_spec = sqlgraph.NewCreateSpec(channelmonitordailyrollup.Table, sqlgraph.NewFieldSpec(channelmonitordailyrollup.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
-	if value, ok := _c.mutation.DeletedAt(); ok {
-		_spec.SetField(channelmonitordailyrollup.FieldDeletedAt, field.TypeTime, value)
-		_node.DeletedAt = &value
-placeholder
 	if value, ok := _c.mutation.Model(); ok {
 		_spec.SetField(channelmonitordailyrollup.FieldModel, field.TypeString, value)
 		_node.Model = value
@@ -460,7 +436,7 @@ placeholder
 // of the `INSERT` statement. For example:
 //
 //	client.ChannelMonitorDailyRollup.Create().
-//		SetDeletedAt(v).
+//		SetMonitorID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -469,7 +445,7 @@ placeholder
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ChannelMonitorDailyRollupUpsert) {
-//			SetDeletedAt(v+v).
+//			SetMonitorID(v+v).
 //	placeholder).
 //		Exec(ctx)
 func (_c *ChannelMonitorDailyRollupCreate) OnConflict(opts ...sql.ConflictOption) *ChannelMonitorDailyRollupUpsertOne {
@@ -504,24 +480,6 @@ placeholder
 		*sql.UpdateSet
 placeholder
 )
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *ChannelMonitorDailyRollupUpsert) SetDeletedAt(v time.Time) *ChannelMonitorDailyRollupUpsert {
-	u.Set(channelmonitordailyrollup.FieldDeletedAt, v)
-	return u
-placeholder
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *ChannelMonitorDailyRollupUpsert) UpdateDeletedAt() *ChannelMonitorDailyRollupUpsert {
-	u.SetExcluded(channelmonitordailyrollup.FieldDeletedAt)
-	return u
-placeholder
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *ChannelMonitorDailyRollupUpsert) ClearDeletedAt() *ChannelMonitorDailyRollupUpsert {
-	u.SetNull(channelmonitordailyrollup.FieldDeletedAt)
-	return u
-placeholder
 
 // SetMonitorID sets the "monitor_id" field.
 func (u *ChannelMonitorDailyRollupUpsert) SetMonitorID(v int64) *ChannelMonitorDailyRollupUpsert {
@@ -789,27 +747,6 @@ func (u *ChannelMonitorDailyRollupUpsertOne) Update(set func(*ChannelMonitorDail
 		set(&ChannelMonitorDailyRollupUpsert{UpdateSet: updateplaceholder)
 placeholder))
 	return u
-placeholder
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *ChannelMonitorDailyRollupUpsertOne) SetDeletedAt(v time.Time) *ChannelMonitorDailyRollupUpsertOne {
-	return u.Update(func(s *ChannelMonitorDailyRollupUpsert) {
-		s.SetDeletedAt(v)
-placeholder)
-placeholder
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *ChannelMonitorDailyRollupUpsertOne) UpdateDeletedAt() *ChannelMonitorDailyRollupUpsertOne {
-	return u.Update(func(s *ChannelMonitorDailyRollupUpsert) {
-		s.UpdateDeletedAt()
-placeholder)
-placeholder
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *ChannelMonitorDailyRollupUpsertOne) ClearDeletedAt() *ChannelMonitorDailyRollupUpsertOne {
-	return u.Update(func(s *ChannelMonitorDailyRollupUpsert) {
-		s.ClearDeletedAt()
-placeholder)
 placeholder
 
 // SetMonitorID sets the "monitor_id" field.
@@ -1213,7 +1150,7 @@ placeholder
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.ChannelMonitorDailyRollupUpsert) {
-//			SetDeletedAt(v+v).
+//			SetMonitorID(v+v).
 //	placeholder).
 //		Exec(ctx)
 func (_c *ChannelMonitorDailyRollupCreateBulk) OnConflict(opts ...sql.ConflictOption) *ChannelMonitorDailyRollupUpsertBulk {
@@ -1280,27 +1217,6 @@ func (u *ChannelMonitorDailyRollupUpsertBulk) Update(set func(*ChannelMonitorDai
 		set(&ChannelMonitorDailyRollupUpsert{UpdateSet: updateplaceholder)
 placeholder))
 	return u
-placeholder
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *ChannelMonitorDailyRollupUpsertBulk) SetDeletedAt(v time.Time) *ChannelMonitorDailyRollupUpsertBulk {
-	return u.Update(func(s *ChannelMonitorDailyRollupUpsert) {
-		s.SetDeletedAt(v)
-placeholder)
-placeholder
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *ChannelMonitorDailyRollupUpsertBulk) UpdateDeletedAt() *ChannelMonitorDailyRollupUpsertBulk {
-	return u.Update(func(s *ChannelMonitorDailyRollupUpsert) {
-		s.UpdateDeletedAt()
-placeholder)
-placeholder
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *ChannelMonitorDailyRollupUpsertBulk) ClearDeletedAt() *ChannelMonitorDailyRollupUpsertBulk {
-	return u.Update(func(s *ChannelMonitorDailyRollupUpsert) {
-		s.ClearDeletedAt()
-placeholder)
 placeholder
 
 // SetMonitorID sets the "monitor_id" field.

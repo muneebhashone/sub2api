@@ -199,6 +199,28 @@ interface NavItem {
    * does NOT navigate to its `path`. The `path` is purely a stable key.
    */
   expandOnly?: boolean
+  /**
+   * 可选的功能开关 getter。返回 false 时菜单项被隐藏；返回 undefined/true 时显示。
+   * 宽容策略（undefined → 显示）避免 public settings 未加载完成时菜单闪烁消失。
+   * Getter 里访问的 reactive 来源（store / composable）会被 computed 自动追踪，
+   * 开关切换时菜单自动更新。
+   */
+  featureFlag?: () => boolean | undefined
+placeholder
+
+// applyFeatureFlags 递归过滤掉 featureFlag() === false 的节点（含子节点）。
+// 使用 `!== false` 宽容语义：undefined（设置未加载）或 true 都视为显示。
+function applyFeatureFlags(items: NavItem[]): NavItem[] {
+  const out: NavItem[] = []
+  for (const item of items) {
+    if (item.featureFlag && item.featureFlag() === false) continue
+    if (item.children) {
+      out.push({ ...item, children: applyFeatureFlags(item.children) placeholder)
+    placeholder else {
+      out.push(item)
+    placeholder
+  placeholder
+  return out
 placeholder
 
 const { t placeholder = useI18n()
@@ -605,36 +627,27 @@ const ChevronDownIcon = {
     )
 placeholder
 
-// User navigation items (for regular users)
-const userNavItems = computed((): NavItem[] => {
-  const items: NavItem[] = [
-    { path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
+// 各个开关集中声明：所有菜单项引用这里的 getter，未来加新开关只需在此加一个常量。
+// getter 返回 false = 隐藏；undefined/true = 显示（宽容策略，避免 public settings 未加载闪烁）。
+const flagChannelMonitor = () => appStore.cachedPublicSettings?.channel_monitor_enabled
+const flagPayment = () => appStore.cachedPublicSettings?.payment_enabled
+const flagOpsMonitoring = () => adminSettingsStore.opsMonitoringEnabled
+const flagAdminPayment = () => adminSettingsStore.paymentEnabled
+
+// buildSelfNavItems 构造用户自己的导航项（用户端主菜单和管理员的"我的账户"子菜单共享这组声明）。
+// withDashboard=true 时包含仪表盘（用户端），false 时不含（管理员的个人区已经有独立仪表盘入口）。
+function buildSelfNavItems(withDashboard: boolean): NavItem[] {
+  const items: NavItem[] = []
+  if (withDashboard) {
+    items.push({ path: '/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder)
+  placeholder
+  items.push(
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
-    ...(appStore.cachedPublicSettings?.channel_monitor_enabled
-      ? [{ path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon placeholder]
-      : []),
+    { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon, featureFlag: flagChannelMonitor placeholder,
     { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
-    ...(appStore.cachedPublicSettings?.payment_enabled
-      ? [
-          {
-            path: '/purchase',
-            label: t('nav.buySubscription'),
-            icon: RechargeSubscriptionIcon,
-            hideInSimpleMode: true
-          placeholder,
-        ]
-      : []),
-    ...(appStore.cachedPublicSettings?.payment_enabled
-      ? [
-          {
-            path: '/orders',
-            label: t('nav.myOrders'),
-            icon: OrderListIcon,
-            hideInSimpleMode: true
-          placeholder,
-        ]
-      : []),
+    { path: '/purchase', label: t('nav.buySubscription'), icon: RechargeSubscriptionIcon, hideInSimpleMode: true, featureFlag: flagPayment placeholder,
+    { path: '/orders', label: t('nav.myOrders'), icon: OrderListIcon, hideInSimpleMode: true, featureFlag: flagPayment placeholder,
     { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
     { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder,
     ...customMenuItemsForUser.value.map((item): NavItem => ({
@@ -643,50 +656,21 @@ const userNavItems = computed((): NavItem[] => {
       icon: null,
       iconSvg: item.icon_svg,
     placeholder)),
-  ]
-  return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
-placeholder)
+  )
+  return items
+placeholder
+
+// finalizeNav 合并三重过滤：featureFlag 过滤 + simple 模式过滤。
+function finalizeNav(items: NavItem[]): NavItem[] {
+  const visible = applyFeatureFlags(items)
+  return authStore.isSimpleMode ? visible.filter(item => !item.hideInSimpleMode) : visible
+placeholder
+
+// User navigation items (for regular users)
+const userNavItems = computed((): NavItem[] => finalizeNav(buildSelfNavItems(true)))
 
 // Personal navigation items (for admin's "My Account" section, without Dashboard)
-const personalNavItems = computed((): NavItem[] => {
-  const items: NavItem[] = [
-    { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
-    { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
-    ...(appStore.cachedPublicSettings?.channel_monitor_enabled
-      ? [{ path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon placeholder]
-      : []),
-    { path: '/subscriptions', label: t('nav.mySubscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
-    ...(appStore.cachedPublicSettings?.payment_enabled
-      ? [
-          {
-            path: '/purchase',
-            label: t('nav.buySubscription'),
-            icon: RechargeSubscriptionIcon,
-            hideInSimpleMode: true
-          placeholder,
-        ]
-      : []),
-    ...(appStore.cachedPublicSettings?.payment_enabled
-      ? [
-          {
-            path: '/orders',
-            label: t('nav.myOrders'),
-            icon: OrderListIcon,
-            hideInSimpleMode: true
-          placeholder,
-        ]
-      : []),
-    { path: '/redeem', label: t('nav.redeem'), icon: GiftIcon, hideInSimpleMode: true placeholder,
-    { path: '/profile', label: t('nav.profile'), icon: UserIcon placeholder,
-    ...customMenuItemsForUser.value.map((item): NavItem => ({
-      path: `/custom/${item.idplaceholder`,
-      label: item.label,
-      icon: null,
-      iconSvg: item.icon_svg,
-    placeholder)),
-  ]
-  return authStore.isSimpleMode ? items.filter(item => !item.hideInSimpleMode) : items
-placeholder)
+const personalNavItems = computed((): NavItem[] => finalizeNav(buildSelfNavItems(false)))
 
 // Custom menu items filtered by visibility
 const customMenuItemsForUser = computed(() => {
@@ -706,9 +690,7 @@ placeholder)
 const adminNavItems = computed((): NavItem[] => {
   const baseItems: NavItem[] = [
     { path: '/admin/dashboard', label: t('nav.dashboard'), icon: DashboardIcon placeholder,
-    ...(adminSettingsStore.opsMonitoringEnabled
-      ? [{ path: '/admin/ops', label: t('nav.ops'), icon: ChartIcon placeholder]
-      : []),
+    { path: '/admin/ops', label: t('nav.ops'), icon: ChartIcon, featureFlag: flagOpsMonitoring placeholder,
     { path: '/admin/users', label: t('nav.users'), icon: UsersIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon, hideInSimpleMode: true placeholder,
     {
@@ -719,9 +701,7 @@ const adminNavItems = computed((): NavItem[] => {
       expandOnly: true,
       children: [
         { path: '/admin/channels/pricing', label: t('nav.channelPricing'), icon: PriceTagIcon placeholder,
-        ...(appStore.cachedPublicSettings?.channel_monitor_enabled
-          ? [{ path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon placeholder]
-          : []),
+        { path: '/admin/channels/monitor', label: t('nav.channelMonitor'), icon: SignalIcon, featureFlag: flagChannelMonitor placeholder,
       ],
     placeholder,
     { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
@@ -730,43 +710,40 @@ const adminNavItems = computed((): NavItem[] => {
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon placeholder,
     { path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true placeholder,
-    ...(adminSettingsStore.paymentEnabled
-      ? [
-          {
-            path: '/admin/orders',
-            label: t('nav.orderManagement'),
-            icon: OrderIcon,
-            hideInSimpleMode: true,
-            expandOnly: true,
-            children: [
-              { path: '/admin/orders/dashboard', label: t('nav.paymentDashboard'), icon: ChartIcon placeholder,
-              { path: '/admin/orders', label: t('nav.orderManagement'), icon: OrderIcon placeholder,
-              { path: '/admin/orders/plans', label: t('nav.paymentPlans'), icon: CreditCardIcon placeholder,
-            ],
-          placeholder,
-        ]
-      : []),
+    {
+      path: '/admin/orders',
+      label: t('nav.orderManagement'),
+      icon: OrderIcon,
+      hideInSimpleMode: true,
+      expandOnly: true,
+      featureFlag: flagAdminPayment,
+      children: [
+        { path: '/admin/orders/dashboard', label: t('nav.paymentDashboard'), icon: ChartIcon placeholder,
+        { path: '/admin/orders', label: t('nav.orderManagement'), icon: OrderIcon placeholder,
+        { path: '/admin/orders/plans', label: t('nav.paymentPlans'), icon: CreditCardIcon placeholder,
+      ],
+    placeholder,
     { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon placeholder
   ]
 
+  const visible = applyFeatureFlags(baseItems)
+
   // 简单模式下，在系统设置前插入 API密钥
   if (authStore.isSimpleMode) {
-    const filtered = baseItems.filter(item => !item.hideInSimpleMode)
+    const filtered = visible.filter(item => !item.hideInSimpleMode)
     filtered.push({ path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder)
     filtered.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder)
-    // Add admin custom menu items after settings
     for (const cm of customMenuItemsForAdmin.value) {
       filtered.push({ path: `/custom/${cm.idplaceholder`, label: cm.label, icon: null, iconSvg: cm.icon_svg placeholder)
     placeholder
     return filtered
   placeholder
 
-  baseItems.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder)
-  // Add admin custom menu items after settings
+  visible.push({ path: '/admin/settings', label: t('nav.settings'), icon: CogIcon placeholder)
   for (const cm of customMenuItemsForAdmin.value) {
-    baseItems.push({ path: `/custom/${cm.idplaceholder`, label: cm.label, icon: null, iconSvg: cm.icon_svg placeholder)
+    visible.push({ path: `/custom/${cm.idplaceholder`, label: cm.label, icon: null, iconSvg: cm.icon_svg placeholder)
   placeholder
-  return baseItems
+  return visible
 placeholder)
 
 function toggleSidebar() {
