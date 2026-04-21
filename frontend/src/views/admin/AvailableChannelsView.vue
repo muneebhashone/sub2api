@@ -46,20 +46,16 @@
 
           <template #cell-status="{ row placeholder">
             <span
-              :class="
-                row.status === CHANNEL_STATUS_ACTIVE
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-gray-400'
-              "
+              :class="statusStyles[row.status as ChannelStatus].cls"
               class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
             >
-              {{ statusLabel(row.status) placeholderplaceholder
+              {{ statusStyles[row.status as ChannelStatus].label placeholderplaceholder
             </span>
           </template>
 
           <template #cell-billing_model_source="{ row placeholder">
             <span class="text-xs text-gray-700 dark:text-gray-300">
-              {{ t(`admin.availableChannels.billingSource.${row.billing_model_sourceplaceholder`) placeholderplaceholder
+              {{ billingSourceLabels[row.billing_model_source as BillingModelSource] placeholderplaceholder
             </span>
           </template>
         </AvailableChannelsTable>
@@ -78,7 +74,15 @@ import AvailableChannelsTable from '@/components/channels/AvailableChannelsTable
 import channelsAPI, { type AvailableChannel placeholder from '@/api/admin/channels'
 import { useAppStore placeholder from '@/stores/app'
 import { extractApiErrorMessage placeholder from '@/utils/apiError'
-import { CHANNEL_STATUS_ACTIVE, type ChannelStatus placeholder from '@/constants/channel'
+import {
+  CHANNEL_STATUS_ACTIVE,
+  CHANNEL_STATUS_DISABLED,
+  BILLING_MODEL_SOURCE_REQUESTED,
+  BILLING_MODEL_SOURCE_UPSTREAM,
+  BILLING_MODEL_SOURCE_CHANNEL_MAPPED,
+  type ChannelStatus,
+  type BillingModelSource
+placeholder from '@/constants/channel'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -95,11 +99,30 @@ const columns = computed(() => [
   { key: 'supported_models', label: t('admin.availableChannels.columns.supportedModels') placeholder
 ])
 
-function statusLabel(status: ChannelStatus): string {
-  return status === CHANNEL_STATUS_ACTIVE
-    ? t('admin.availableChannels.statusActive')
-    : t('admin.availableChannels.statusDisabled')
-placeholder
+/**
+ * 显示样式：i18n label + Tailwind class，按 ChannelStatus 完整穷举。
+ * 用 Record<ChannelStatus, ...> 强制未来新增状态时 TS 编译失败，避免遗漏分支。
+ */
+const statusStyles = computed<Record<ChannelStatus, { label: string; cls: string placeholder>>(() => ({
+  [CHANNEL_STATUS_ACTIVE]: {
+    label: t('admin.availableChannels.statusActive'),
+    cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+  placeholder,
+  [CHANNEL_STATUS_DISABLED]: {
+    label: t('admin.availableChannels.statusDisabled'),
+    cls: 'bg-gray-100 text-gray-600 dark:bg-dark-700 dark:text-gray-400'
+  placeholder
+placeholder))
+
+/**
+ * BillingModelSource 显式映射：避免将后端 snake_case 字面量直接拼成 i18n key，
+ * 同时在 BillingModelSource 扩展时 TS 编译失败以暴露遗漏。
+ */
+const billingSourceLabels = computed<Record<BillingModelSource, string>>(() => ({
+  [BILLING_MODEL_SOURCE_REQUESTED]: t('admin.availableChannels.billingSource.requested'),
+  [BILLING_MODEL_SOURCE_UPSTREAM]: t('admin.availableChannels.billingSource.upstream'),
+  [BILLING_MODEL_SOURCE_CHANNEL_MAPPED]: t('admin.availableChannels.billingSource.channel_mapped')
+placeholder))
 
 const filteredChannels = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()

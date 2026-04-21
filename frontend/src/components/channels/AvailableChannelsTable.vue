@@ -61,7 +61,7 @@ import { computed, useSlots placeholder from 'vue'
 import DataTable from '@/components/common/DataTable.vue'
 import Icon from '@/components/icons/Icon.vue'
 import SupportedModelChip from './SupportedModelChip.vue'
-import type { UserSupportedModelPricing placeholder from '@/api/channels'
+import type { UserSupportedModel placeholder from '@/api/channels'
 
 interface GroupRef {
   id: number
@@ -73,11 +73,8 @@ interface Row {
   name: string
   description?: string
   groups: GroupRef[]
-  supported_models: Array<{
-    name: string
-    platform: string
-    pricing: UserSupportedModelPricing | null
-  placeholder>
+  // 复用 user 侧最小 DTO；admin 侧 SupportedModel 结构上是其超集，可直接传入。
+  supported_models: UserSupportedModel[]
   [key: string]: unknown
 placeholder
 
