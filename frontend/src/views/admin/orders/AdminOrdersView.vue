@@ -116,7 +116,7 @@ import { ref, reactive, computed, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminPaymentAPI placeholder from '@/api/admin/payment'
-import { extractApiErrorMessage placeholder from '@/utils/apiError'
+import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { formatOrderDateTime placeholder from '@/components/payment/orderUtils'
 import type { PaymentOrder placeholder from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -167,7 +167,7 @@ async function loadOrders() {
     orders.value = res.data.items || []
     orderPagination.total = res.data.total || 0
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t('common.error')))
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
   placeholder finally { ordersLoading.value = false placeholder
 placeholder
 
@@ -214,12 +214,12 @@ placeholder
 
 async function handleCancelOrder(order: PaymentOrder) {
   try { await adminPaymentAPI.cancelOrder(order.id); appStore.showSuccess(t('payment.admin.orderCancelled')); loadOrders() placeholder
-  catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) placeholder
 placeholder
 
 async function handleRetryOrder(order: PaymentOrder) {
   try { await adminPaymentAPI.retryRecharge(order.id); appStore.showSuccess(t('payment.admin.retrySuccess')); loadOrders() placeholder
-  catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) placeholder
 placeholder
 
 function openRefundDialog(order: PaymentOrder) { selectedOrder.value = order; showRefundDialog.value = true placeholder
@@ -230,7 +230,7 @@ async function handleRefund(data: { amount: number; reason: string; deduct_balan
   try {
     await adminPaymentAPI.refundOrder(selectedOrder.value.id, { amount: data.amount, reason: data.reason, deduct_balance: data.deduct_balance, force: data.force placeholder)
     appStore.showSuccess(t('payment.admin.refundSuccess')); showRefundDialog.value = false; loadOrders()
-  placeholder catch (err: unknown) { appStore.showError(extractApiErrorMessage(err, t('common.error'))) placeholder
+  placeholder catch (err: unknown) { appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error'))) placeholder
   finally { refundSubmitting.value = false placeholder
 placeholder
 

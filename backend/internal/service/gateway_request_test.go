@@ -1150,6 +1150,11 @@ placeholder{
 			wantEffort: "max",
 	placeholder,
 		{
+			name:       "output_config.effort xhigh",
+			body:       `{"model":"claude-opus-4-7","output_config":{"effort":"xhigh"placeholder,"messages":[]placeholder`,
+			wantEffort: "xhigh",
+	placeholder,
+		{
 			name:       "output_config without effort",
 			body:       `{"model":"claude-opus-4-6","output_config":{placeholder,"messages":[]placeholder`,
 			wantEffort: "",
@@ -1186,9 +1191,10 @@ placeholder{
 		{"LOW", strPtr("low")placeholder,
 		{"Max", strPtr("max")placeholder,
 		{" medium ", strPtr("medium")placeholder,
+		{"xhigh", strPtr("xhigh")placeholder,
+		{"XHIGH", strPtr("xhigh")placeholder,
 		{"", nilplaceholder,
 		{"unknown", nilplaceholder,
-		{"xhigh", nilplaceholder,
 placeholder
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

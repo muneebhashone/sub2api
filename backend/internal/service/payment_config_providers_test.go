@@ -99,41 +99,52 @@ placeholder
 placeholder
 placeholder
 
-func TestIsSensitiveConfigField(t *testing.T) {
+func TestIsSensitiveProviderConfigField(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		field   string
-		wantSen bool
+		providerKey string
+		field       string
+		wantSen     bool
 placeholder{
-		// Sensitive fields (contain key/secret/private/password/pkey patterns)
-		{"secretKey", trueplaceholder,
-		{"apiSecret", trueplaceholder,
-		{"pkey", trueplaceholder,
-		{"privateKey", trueplaceholder,
-		{"apiPassword", trueplaceholder,
-		{"appKey", trueplaceholder,
-		{"SECRET_TOKEN", trueplaceholder,
-		{"PrivateData", trueplaceholder,
-		{"PASSWORD", trueplaceholder,
-		{"mySecretValue", trueplaceholder,
+		// Stripe: publishableKey is public, only secretKey/webhookSecret are secrets
+		{"stripe", "secretKey", trueplaceholder,
+		{"stripe", "webhookSecret", trueplaceholder,
+		{"stripe", "SecretKey", trueplaceholder, // case-insensitive
+		{"stripe", "publishableKey", falseplaceholder,
+		{"stripe", "appId", falseplaceholder,
 
-		// Non-sensitive fields
-		{"appId", falseplaceholder,
-		{"mchId", falseplaceholder,
-		{"apiBase", falseplaceholder,
-		{"endpoint", falseplaceholder,
-		{"merchantNo", falseplaceholder,
-		{"paymentMode", falseplaceholder,
-		{"notifyUrl", falseplaceholder,
+		// Alipay
+		{"alipay", "privateKey", trueplaceholder,
+		{"alipay", "publicKey", trueplaceholder,
+		{"alipay", "alipayPublicKey", trueplaceholder,
+		{"alipay", "appId", falseplaceholder,
+		{"alipay", "notifyUrl", falseplaceholder,
+
+		// Wxpay
+		{"wxpay", "privateKey", trueplaceholder,
+		{"wxpay", "apiV3Key", trueplaceholder,
+		{"wxpay", "publicKey", trueplaceholder,
+		{"wxpay", "publicKeyId", falseplaceholder,
+		{"wxpay", "certSerial", falseplaceholder,
+		{"wxpay", "mchId", falseplaceholder,
+
+		// EasyPay
+		{"easypay", "pkey", trueplaceholder,
+		{"easypay", "pid", falseplaceholder,
+		{"easypay", "apiBase", falseplaceholder,
+
+		// Unknown provider: never sensitive
+		{"unknown", "secretKey", falseplaceholder,
 placeholder
 
 	for _, tc := range tests {
-		t.Run(tc.field, func(t *testing.T) {
+		tc := tc
+		t.Run(tc.providerKey+"/"+tc.field, func(t *testing.T) {
 			t.Parallel()
 
-			got := isSensitiveConfigField(tc.field)
-			assert.Equal(t, tc.wantSen, got, "isSensitiveConfigField(%q)", tc.field)
+			got := isSensitiveProviderConfigField(tc.providerKey, tc.field)
+			assert.Equal(t, tc.wantSen, got, "isSensitiveProviderConfigField(%q, %q)", tc.providerKey, tc.field)
 	placeholder)
 placeholder
 placeholder

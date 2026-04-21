@@ -474,6 +474,103 @@ placeholder
 placeholder
 placeholder
 
+func TestDecryptConfig_PlaintextAndLegacyCompat(t *testing.T) {
+	t.Parallel()
+
+	key := make([]byte, AES256KeySize)
+	for i := range key {
+		key[i] = byte(i + 1)
+placeholder
+	wrongKey := make([]byte, AES256KeySize)
+	for i := range wrongKey {
+		wrongKey[i] = byte(0xFF - i)
+placeholder
+
+	plaintextJSON := `{"appId":"app-123","secret":"sec-xyz"placeholder`
+
+	legacyEncrypted, err := Encrypt(plaintextJSON, key)
+	if err != nil {
+		t.Fatalf("seed Encrypt: %v", err)
+placeholder
+
+	tests := []struct {
+		name   string
+		stored string
+		key    []byte
+		want   map[string]string
+placeholder{
+		{
+			name:   "empty stored returns nil map",
+			stored: "",
+			key:    key,
+			want:   nil,
+	placeholder,
+		{
+			name:   "plaintext JSON parses directly",
+			stored: plaintextJSON,
+			key:    nil,
+			want:   map[string]string{"appId": "app-123", "secret": "sec-xyz"placeholder,
+	placeholder,
+		{
+			name:   "plaintext JSON works even with key present",
+			stored: plaintextJSON,
+			key:    key,
+			want:   map[string]string{"appId": "app-123", "secret": "sec-xyz"placeholder,
+	placeholder,
+		{
+			name:   "legacy ciphertext with correct key decrypts",
+			stored: legacyEncrypted,
+			key:    key,
+			want:   map[string]string{"appId": "app-123", "secret": "sec-xyz"placeholder,
+	placeholder,
+		{
+			name:   "legacy ciphertext with no key treated as empty",
+			stored: legacyEncrypted,
+			key:    nil,
+			want:   nil,
+	placeholder,
+		{
+			name:   "legacy ciphertext with wrong key treated as empty",
+			stored: legacyEncrypted,
+			key:    wrongKey,
+			want:   nil,
+	placeholder,
+		{
+			name:   "garbage data treated as empty",
+			stored: "not-json-and-not-ciphertext",
+			key:    key,
+			want:   nil,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			lb := NewDefaultLoadBalancer(nil, tt.key)
+			got, err := lb.decryptConfig(tt.stored)
+			if err != nil {
+				t.Fatalf("decryptConfig unexpected error: %v", err)
+		placeholder
+			if !stringMapEqual(got, tt.want) {
+				t.Fatalf("decryptConfig = %v, want %v", got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+// stringMapEqual compares two map[string]string values; nil and empty are equal.
+func stringMapEqual(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+placeholder
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || bv != v {
+			return false
+	placeholder
+placeholder
+	return true
+placeholder
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

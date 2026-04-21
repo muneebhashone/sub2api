@@ -4710,7 +4710,7 @@ import ProxySelector from "@/components/common/ProxySelector.vue";
 import ImageUpload from "@/components/common/ImageUpload.vue";
 import BackupSettings from "@/views/admin/BackupView.vue";
 import { useClipboard placeholder from "@/composables/useClipboard";
-import { extractApiErrorMessage placeholder from "@/utils/apiError";
+import { extractApiErrorMessage, extractI18nErrorMessage placeholder from "@/utils/apiError";
 import { useAppStore placeholder from "@/stores";
 import { useAdminSettingsStore placeholder from "@/stores/adminSettings";
 import { normalizeVisibleMethod placeholder from "@/components/payment/paymentFlow";
@@ -6431,11 +6431,6 @@ const cancelRateLimitModeOptions = computed(() => [
   placeholder,
 ]);
 
-const paymentErrorMap = computed(() => ({
-  PENDING_ORDERS: t("payment.errors.PENDING_ORDERS"),
-  PAYMENT_PROVIDER_CONFLICT: t("payment.errors.PAYMENT_PROVIDER_CONFLICT"),
-placeholder));
-
 type ProviderEnablementCandidate = Pick<
   ProviderInstance,
   "id" | "provider_key" | "supported_types" | "enabled" | "name"
@@ -6531,7 +6526,7 @@ async function loadProviders() {
     const res = await adminAPI.payment.getProviders();
     providers.value = res.data || [];
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t("common.error")));
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
   placeholder finally {
     providersLoading.value = false;
   placeholder
@@ -6580,9 +6575,7 @@ async function handleSaveProvider(payload: Partial<ProviderInstance>) {
     // Auto-save settings so provider changes take effect immediately
     await saveSettings();
   placeholder catch (err: unknown) {
-    appStore.showError(
-      extractApiErrorMessage(err, t("common.error"), paymentErrorMap.value),
-    );
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
   placeholder finally {
     providerSaving.value = false;
   placeholder
@@ -6620,9 +6613,7 @@ async function handleToggleField(
     await adminAPI.payment.updateProvider(provider.id, payload);
     await loadProviders();
   placeholder catch (err: unknown) {
-    appStore.showError(
-      extractApiErrorMessage(err, t("common.error"), paymentErrorMap.value),
-    );
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
   placeholder
 placeholder
 
@@ -6647,9 +6638,7 @@ async function handleToggleType(provider: ProviderInstance, type: string) {
     placeholder as any);
     await loadProviders();
   placeholder catch (err: unknown) {
-    appStore.showError(
-      extractApiErrorMessage(err, t("common.error"), paymentErrorMap.value),
-    );
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
   placeholder
 placeholder
 
@@ -6671,7 +6660,7 @@ async function handleReorderProviders(
     );
     await loadProviders();
   placeholder catch (err: unknown) {
-    appStore.showError(extractApiErrorMessage(err, t("common.error")));
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
     loadProviders();
   placeholder
 placeholder
@@ -6684,9 +6673,7 @@ async function handleDeleteProvider() {
     showDeleteProviderDialog.value = false;
     loadProviders();
   placeholder catch (err: unknown) {
-    appStore.showError(
-      extractApiErrorMessage(err, t("common.error"), paymentErrorMap.value),
-    );
+    appStore.showError(extractI18nErrorMessage(err, t, "payment.errors", t("common.error")));
   placeholder
 placeholder
 
