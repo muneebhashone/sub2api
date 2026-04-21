@@ -1214,6 +1214,67 @@ placeholder
 placeholder
 placeholder
 
+func pendingOAuthIdentityExistsForUser(
+	ctx context.Context,
+	client *dbent.Client,
+	session *dbent.PendingAuthSession,
+	userID int64,
+) (bool, error) {
+	if client == nil || session == nil || userID <= 0 {
+		return false, nil
+placeholder
+
+	providerType := strings.TrimSpace(session.ProviderType)
+	providerKey := strings.TrimSpace(session.ProviderKey)
+	providerSubject := strings.TrimSpace(session.ProviderSubject)
+	if providerType == "" || providerSubject == "" {
+		return false, nil
+placeholder
+
+	query := client.AuthIdentity.Query().
+		Where(
+			authidentity.ProviderTypeEQ(providerType),
+			authidentity.ProviderSubjectEQ(providerSubject),
+			authidentity.UserIDEQ(userID),
+		)
+	if strings.EqualFold(providerType, "wechat") {
+		query = query.Where(authidentity.ProviderKeyIn(wechatCompatibleProviderKeys(providerKey)...))
+placeholder else if providerKey != "" {
+		query = query.Where(authidentity.ProviderKeyEQ(providerKey))
+placeholder
+
+	count, err := query.Count(ctx)
+	if err != nil {
+		return false, infraerrors.InternalServer("AUTH_IDENTITY_LOOKUP_FAILED", "failed to inspect auth identity ownership").WithCause(err)
+placeholder
+	return count > 0, nil
+placeholder
+
+func (h *AuthHandler) shouldSkipPendingOAuthAdoptionPrompt(
+	ctx context.Context,
+	session *dbent.PendingAuthSession,
+	payload map[string]any,
+) (bool, error) {
+	if session == nil || len(payload) == 0 {
+		return false, nil
+placeholder
+	if !strings.EqualFold(strings.TrimSpace(session.Intent), oauthIntentLogin) {
+		return false, nil
+placeholder
+	if !pendingOAuthCompletionIncludesTokenPayload(payload) {
+		return false, nil
+placeholder
+	if session.TargetUserID == nil || *session.TargetUserID <= 0 {
+		return false, nil
+placeholder
+	if pendingSessionStringValue(session.UpstreamIdentityClaims, "suggested_display_name") == "" &&
+		pendingSessionStringValue(session.UpstreamIdentityClaims, "suggested_avatar_url") == "" {
+		return false, nil
+placeholder
+
+	return pendingOAuthIdentityExistsForUser(ctx, h.entClient(), session, *session.TargetUserID)
+placeholder
+
 func readPendingOAuthBrowserSession(c *gin.Context, h *AuthHandler) (*service.AuthPendingIdentityService, *dbent.PendingAuthSession, func(), error) {
 	secureCookie := isRequestHTTPS(c)
 	clearCookies := func() {
@@ -1634,6 +1695,15 @@ placeholder
 	placeholder
 placeholder
 	applySuggestedProfileToCompletionResponse(payload, session.UpstreamIdentityClaims)
+	skipAdoptionPrompt, err := h.shouldSkipPendingOAuthAdoptionPrompt(c.Request.Context(), session, payload)
+	if err != nil {
+		clearCookies()
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	if skipAdoptionPrompt {
+		delete(payload, "adoption_required")
+placeholder
 	if pendingOAuthCompletionIncludesTokenPayload(payload) {
 		if session.TargetUserID == nil || *session.TargetUserID <= 0 {
 			clearCookies()
