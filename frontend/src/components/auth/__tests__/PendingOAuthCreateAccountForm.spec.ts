@@ -6,6 +6,7 @@ import PendingOAuthCreateAccountForm from '../PendingOAuthCreateAccountForm.vue'
 const sendVerifyCode = vi.fn()
 const sendPendingOAuthVerifyCode = vi.fn()
 const getPublicSettings = vi.fn()
+const showError = vi.fn()
 
 vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
@@ -27,11 +28,18 @@ vi.mock('@/api/auth', async () => {
   placeholder
 placeholder)
 
+vi.mock('@/stores', () => ({
+  useAppStore: () => ({
+    showError
+  placeholder)
+placeholder))
+
 describe('PendingOAuthCreateAccountForm', () => {
   beforeEach(() => {
     sendVerifyCode.mockReset()
     sendPendingOAuthVerifyCode.mockReset()
     getPublicSettings.mockReset()
+    showError.mockReset()
     getPublicSettings.mockResolvedValue({
       turnstile_enabled: false,
       turnstile_site_key: ''
@@ -62,6 +70,19 @@ describe('PendingOAuthCreateAccountForm', () => {
         placeholder
       ]
     ])
+  placeholder)
+
+  it('renders action labels through i18n keys', () => {
+    const wrapper = mount(PendingOAuthCreateAccountForm, {
+      props: {
+        testIdPrefix: 'linuxdo',
+        initialEmail: '',
+        isSubmitting: false
+      placeholder
+    placeholder)
+
+    expect(wrapper.text()).toContain('auth.createAccount')
+    expect(wrapper.text()).toContain('auth.alreadyHaveAccount')
   placeholder)
 
   it('shows and emits invitation code when invitation-only signup is enabled', async () => {
@@ -120,6 +141,25 @@ describe('PendingOAuthCreateAccountForm', () => {
     expect(sendPendingOAuthVerifyCode).toHaveBeenCalledWith({
       email: 'user@example.com'
     placeholder)
+  placeholder)
+
+  it('shows send-code failures via toast without rendering inline error text', async () => {
+    sendPendingOAuthVerifyCode.mockRejectedValue(new Error('send failed'))
+
+    const wrapper = mount(PendingOAuthCreateAccountForm, {
+      props: {
+        testIdPrefix: 'linuxdo',
+        initialEmail: '',
+        isSubmitting: false
+      placeholder
+    placeholder)
+
+    await wrapper.get('[data-testid="linuxdo-create-account-email"]').setValue('user@example.com')
+    await wrapper.get('[data-testid="linuxdo-create-account-send-code"]').trigger('click')
+    await flushPromises()
+
+    expect(showError).toHaveBeenCalledWith('send failed')
+    expect(wrapper.text()).not.toContain('send failed')
   placeholder)
 
   it('requires a turnstile token before sending a verify code when turnstile is enabled', async () => {

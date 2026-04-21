@@ -48,10 +48,7 @@
             :class="{ 'input-error': errors.code placeholder"
             placeholder="000000"
           />
-          <p v-if="errors.code" class="input-error-text text-center">
-            {{ errors.code placeholderplaceholder
-          </p>
-          <p v-else class="input-hint text-center">{{ t('auth.verificationCodeHint') placeholderplaceholder</p>
+          <p class="input-hint text-center">{{ t('auth.verificationCodeHint') placeholderplaceholder</p>
         </div>
 
         <!-- Code Status -->
@@ -78,27 +75,7 @@
             @expire="onTurnstileExpire"
             @error="onTurnstileError"
           />
-          <p v-if="errors.turnstile" class="input-error-text mt-2 text-center">
-            {{ errors.turnstile placeholderplaceholder
-          </p>
         </div>
-
-        <!-- Error Message -->
-        <transition name="fade">
-          <div
-            v-if="errorMessage"
-            class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800/50 dark:bg-red-900/20"
-          >
-            <div class="flex items-start gap-3">
-              <div class="flex-shrink-0">
-                <Icon name="exclamationCircle" size="md" class="text-red-500" />
-              </div>
-              <p class="text-sm text-red-700 dark:text-red-400">
-                {{ errorMessage placeholderplaceholder
-              </p>
-            </div>
-          </div>
-        </transition>
 
         <!-- Submit Button -->
         <button type="submit" :disabled="isLoading || !verifyCode" class="btn btn-primary w-full">
@@ -169,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted placeholder from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch placeholder from 'vue'
 import { useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { AuthLayout placeholder from '@/components/layout'
@@ -256,6 +233,16 @@ const showResendTurnstile = ref<boolean>(false)
 const errors = ref({
   code: '',
   turnstile: ''
+placeholder)
+
+const validationToastMessage = computed(
+  () => errors.value.code || errors.value.turnstile || ''
+)
+
+watch(validationToastMessage, (value, previousValue) => {
+  if (value && value !== previousValue) {
+    appStore.showError(value)
+  placeholder
 placeholder)
 
 // ==================== Lifecycle ====================

@@ -31,7 +31,12 @@ vi.mock('vue-i18n', async () => {
   return {
     ...actual,
     useI18n: () => ({
-      t: (key: string) => key
+      t: (key: string, params?: Record<string, string>) => {
+        if (key === 'auth.oauthFlow.totpHint') {
+          return `verify ${params?.account ?? ''placeholder`.trim()
+        placeholder
+        return key
+      placeholder
     placeholder)
   placeholder
 placeholder)
@@ -496,6 +501,34 @@ describe('LinuxDoCallbackView', () => {
     expect((wrapper.get('[data-testid="linuxdo-bind-login-email"]').element as HTMLInputElement).value).toBe(
       'existing@example.com'
     )
+  placeholder)
+
+  it('shows create-account failures through toast without inline error text', async () => {
+    exchangePendingOAuthCompletion.mockResolvedValue({
+      error: 'email_required',
+      redirect: '/welcome'
+    placeholder)
+    apiClientPost.mockRejectedValue(new Error('create failed'))
+
+    const wrapper = mount(LinuxDoCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+    await wrapper.get('[data-testid="linuxdo-create-account-email"]').setValue('new@example.com')
+    await wrapper.get('[data-testid="linuxdo-create-account-password"]').setValue('secret-123')
+    await wrapper.get('[data-testid="linuxdo-create-account-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(showError).toHaveBeenCalledWith('create failed')
+    expect(wrapper.text()).not.toContain('create failed')
   placeholder)
 
   it('sends a verify code for pending oauth account creation', async () => {

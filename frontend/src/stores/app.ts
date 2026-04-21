@@ -6,6 +6,7 @@
 import { defineStore placeholder from 'pinia'
 import { ref, computed placeholder from 'vue'
 import type { Toast, ToastType, PublicSettings placeholder from '@/types'
+import { i18n placeholder from '@/i18n'
 import {
   checkUpdates as checkUpdatesAPI,
   type VersionInfo,
@@ -209,7 +210,10 @@ export const useAppStore = defineStore('app', () => {
     try {
       return await operation()
     placeholder catch (error) {
-      const message = errorMessage || (error as { message?: string placeholder).message || 'An error occurred'
+      const message =
+        errorMessage ||
+        (error as { message?: string placeholder).message ||
+        i18n.global.t('common.unknownError')
       showError(message)
       return null
     placeholder finally {

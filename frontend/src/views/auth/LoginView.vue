@@ -61,9 +61,6 @@
               :placeholder="t('auth.emailPlaceholder')"
             />
           </div>
-          <p v-if="errors.email" class="input-error-text">
-            {{ errors.email placeholderplaceholder
-          </p>
         </div>
 
         <!-- Password Input -->
@@ -96,10 +93,7 @@
             </button>
           </div>
           <div class="mt-1 flex items-center justify-between">
-            <p v-if="errors.password" class="input-error-text">
-              {{ errors.password placeholderplaceholder
-            </p>
-            <span v-else></span>
+            <span></span>
             <router-link
               v-if="passwordResetEnabled && !backendModeEnabled"
               to="/forgot-password"
@@ -119,27 +113,7 @@
             @expire="onTurnstileExpire"
             @error="onTurnstileError"
           />
-          <p v-if="errors.turnstile" class="input-error-text mt-2 text-center">
-            {{ errors.turnstile placeholderplaceholder
-          </p>
         </div>
-
-        <!-- Error Message -->
-        <transition name="fade">
-          <div
-            v-if="errorMessage"
-            class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800/50 dark:bg-red-900/20"
-          >
-            <div class="flex items-start gap-3">
-              <div class="flex-shrink-0">
-                <Icon name="exclamationCircle" size="md" class="text-red-500" />
-              </div>
-              <p class="text-sm text-red-700 dark:text-red-400">
-                {{ errorMessage placeholderplaceholder
-              </p>
-            </div>
-          </div>
-        </transition>
 
         <!-- Submit Button -->
         <button
@@ -199,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted placeholder from 'vue'
+import { computed, ref, reactive, onMounted, watch placeholder from 'vue'
 import { useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { AuthLayout placeholder from '@/components/layout'
@@ -256,6 +230,16 @@ const errors = reactive({
   email: '',
   password: '',
   turnstile: ''
+placeholder)
+
+const validationToastMessage = computed(
+  () => errors.email || errors.password || errors.turnstile || ''
+)
+
+watch(validationToastMessage, (value, previousValue) => {
+  if (value && value !== previousValue) {
+    appStore.showError(value)
+  placeholder
 placeholder)
 
 // ==================== Lifecycle ====================

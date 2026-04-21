@@ -33,11 +33,10 @@
             <div class="space-y-3">
               <div class="space-y-1">
                 <p class="text-sm font-medium text-gray-900 dark:text-white">
-                  Use {{ providerName placeholderplaceholder profile details
+                  {{ t('auth.oauthFlow.profileDetailsTitle', { providerName placeholder) placeholderplaceholder
                 </p>
                 <p class="text-xs text-gray-500 dark:text-dark-400">
-                  Choose whether to apply the nickname or avatar from {{ providerName placeholderplaceholder to this
-                  account.
+                  {{ t('auth.oauthFlow.profileDetailsDescription', { providerName placeholder) placeholderplaceholder
                 </p>
               </div>
 
@@ -48,7 +47,7 @@
                 <input v-model="adoptDisplayName" type="checkbox" class="mt-1 h-4 w-4" />
                 <span class="space-y-1">
                   <span class="block font-medium text-gray-900 dark:text-white">
-                    Use display name
+                    {{ t('auth.oauthFlow.useDisplayName') placeholderplaceholder
                   </span>
                   <span class="block text-gray-500 dark:text-dark-400">
                     {{ suggestedDisplayName placeholderplaceholder
@@ -63,12 +62,12 @@
                 <input v-model="adoptAvatar" type="checkbox" class="mt-1 h-4 w-4" />
                 <img
                   :src="suggestedAvatarUrl"
-                  :alt="`${providerNameplaceholder avatar`"
+                  :alt="t('auth.oauthFlow.avatarAlt', { providerName placeholder)"
                   class="h-10 w-10 rounded-full border border-gray-200 object-cover dark:border-dark-600"
                 />
                 <span class="space-y-1">
                   <span class="block font-medium text-gray-900 dark:text-white">
-                    Use avatar
+                    {{ t('auth.oauthFlow.useAvatar') placeholderplaceholder
                   </span>
                   <span class="block break-all text-gray-500 dark:text-dark-400">
                     {{ suggestedAvatarUrl placeholderplaceholder
@@ -92,11 +91,6 @@
                 @keyup.enter="handleSubmitInvitation"
               />
             </div>
-            <transition name="fade">
-              <p v-if="invitationError" class="text-sm text-red-600 dark:text-red-400">
-                {{ invitationError placeholderplaceholder
-              </p>
-            </transition>
             <button
               class="btn btn-primary w-full"
               :disabled="isSubmitting || !invitationCode.trim()"
@@ -112,10 +106,10 @@
 
           <template v-else-if="needsAdoptionConfirmation">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              Review the {{ providerName placeholderplaceholder profile details before continuing.
+              {{ t('auth.oauthFlow.reviewProfileBeforeContinue', { providerName placeholder) placeholderplaceholder
             </p>
             <button class="btn btn-primary w-full" :disabled="isSubmitting" @click="handleContinueLogin">
-              {{ isSubmitting ? t('common.processing') : 'Continue' placeholderplaceholder
+              {{ isSubmitting ? t('common.processing') : t('auth.continue') placeholderplaceholder
             </button>
           </template>
 
@@ -124,13 +118,13 @@
               <div class="space-y-4">
                 <div class="space-y-1">
                   <p class="text-sm font-medium text-gray-900 dark:text-white">
-                    Choose how to continue
+                    {{ t('auth.oauthFlow.chooseHowToContinue') placeholderplaceholder
                   </p>
                   <p class="text-xs text-gray-500 dark:text-dark-400">
                     {{
                       pendingAccountEmail
-                        ? `Suggested email: ${pendingAccountEmailplaceholder`
-                        : `Choose whether to bind an existing ${providerNameplaceholder account or create a new one.`
+                        ? t('auth.oauthFlow.suggestedEmail', { email: pendingAccountEmail placeholder)
+                        : t('auth.oauthFlow.chooseAccountActionHint')
                     placeholderplaceholder
                   </p>
                 </div>
@@ -141,14 +135,14 @@
                     :disabled="isSubmitting"
                     @click="switchToBindLoginMode()"
                   >
-                    Bind existing account
+                    {{ t('auth.oauthFlow.bindExistingAccount') placeholderplaceholder
                   </button>
                   <button
                     class="btn btn-primary w-full"
                     :disabled="isSubmitting"
                     @click="switchToCreateAccountMode"
                   >
-                    Create new account
+                    {{ t('auth.oauthFlow.createNewAccount') placeholderplaceholder
                   </button>
                 </div>
               </div>
@@ -157,7 +151,7 @@
 
           <template v-else-if="needsCreateAccount">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              Enter an email address to create your account and continue.
+              {{ t('auth.oauthFlow.createAccountHint') placeholderplaceholder
             </p>
             <PendingOAuthCreateAccountForm
               test-id-prefix="oidc"
@@ -171,7 +165,7 @@
 
           <template v-else-if="needsBindLogin">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              Log in to an existing account to bind this {{ providerName placeholderplaceholder sign-in.
+              {{ t('auth.oauthFlow.bindLoginHint', { providerName placeholder) placeholderplaceholder
             </p>
             <div class="space-y-3">
               <input
@@ -179,7 +173,7 @@
                 data-testid="oidc-bind-login-email"
                 type="email"
                 class="input w-full"
-                placeholder="you@example.com"
+                :placeholder="t('auth.emailPlaceholder')"
                 :disabled="isSubmitting"
                 @keyup.enter="handleBindLogin"
               />
@@ -188,7 +182,7 @@
                 data-testid="oidc-bind-login-password"
                 type="password"
                 class="input w-full"
-                placeholder="Password"
+                :placeholder="t('auth.passwordPlaceholder')"
                 :disabled="isSubmitting"
                 @keyup.enter="handleBindLogin"
               />
@@ -198,7 +192,7 @@
                 :disabled="isSubmitting || !bindLoginEmail.trim() || !bindLoginPassword"
                 @click="handleBindLogin"
               >
-                {{ isSubmitting ? t('common.processing') : 'Log in and bind' placeholderplaceholder
+                {{ isSubmitting ? t('common.processing') : t('auth.oauthFlow.logInAndBind') placeholderplaceholder
               </button>
               <button
                 v-if="canReturnToCreateAccount"
@@ -206,21 +200,19 @@
                 :disabled="isSubmitting"
                 @click="switchToCreateAccountMode"
               >
-                Use a different email
+                {{ t('auth.oauthFlow.useDifferentEmail') placeholderplaceholder
               </button>
             </div>
-            <transition name="fade">
-              <p v-if="accountActionError" class="text-sm text-red-600 dark:text-red-400">
-                {{ accountActionError placeholderplaceholder
-              </p>
-            </transition>
           </template>
 
           <template v-else-if="needsTotpChallenge">
             <p class="text-sm text-gray-700 dark:text-gray-300">
-              Enter the 6-digit verification code for
-              <span class="font-medium">{{ totpUserEmailMasked || 'your account' placeholderplaceholder</span>
-              to finish binding this {{ providerName placeholderplaceholder sign-in.
+              {{
+                t('auth.oauthFlow.totpHint', {
+                  providerName,
+                  account: totpUserEmailMasked || t('auth.oauthFlow.yourAccount')
+                placeholder)
+              placeholderplaceholder
             </p>
             <div class="space-y-3">
               <input
@@ -240,36 +232,10 @@
                 :disabled="isSubmitting || totpCode.trim().length !== 6"
                 @click="handleSubmitTotpChallenge"
               >
-                {{ isSubmitting ? t('common.processing') : 'Verify and continue' placeholderplaceholder
+                {{ isSubmitting ? t('common.processing') : t('auth.oauthFlow.verifyAndContinue') placeholderplaceholder
               </button>
             </div>
-            <transition name="fade">
-              <p v-if="totpError" class="text-sm text-red-600 dark:text-red-400">
-                {{ totpError placeholderplaceholder
-              </p>
-            </transition>
           </template>
-        </div>
-      </transition>
-
-      <transition name="fade">
-        <div
-          v-if="errorMessage"
-          class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800/50 dark:bg-red-900/20"
-        >
-          <div class="flex items-start gap-3">
-            <div class="flex-shrink-0">
-              <Icon name="exclamationCircle" size="md" class="text-red-500" />
-            </div>
-            <div class="space-y-2">
-              <p class="text-sm text-red-700 dark:text-red-400">
-                {{ errorMessage placeholderplaceholder
-              </p>
-              <router-link to="/login" class="btn btn-primary">
-                {{ t('auth.oidc.backToLogin') placeholderplaceholder
-              </router-link>
-            </div>
-          </div>
         </div>
       </transition>
     </div>
@@ -277,14 +243,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref placeholder from 'vue'
+import { computed, onMounted, ref, watch placeholder from 'vue'
 import { useRoute, useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { AuthLayout placeholder from '@/components/layout'
 import PendingOAuthCreateAccountForm, {
   type PendingOAuthCreateAccountPayload
 placeholder from '@/components/auth/PendingOAuthCreateAccountForm.vue'
-import Icon from '@/components/icons/Icon.vue'
 import { apiClient placeholder from '@/api/client'
 import { useAuthStore, useAppStore placeholder from '@/stores'
 import {
@@ -338,6 +303,30 @@ const totpUserEmailMasked = ref('')
 const needsCreateAccount = computed(() => pendingAccountAction.value === 'create_account')
 const needsChooser = computed(() => pendingAccountAction.value === 'choose_account_action')
 const needsBindLogin = computed(() => pendingAccountAction.value === 'bind_login')
+
+watch(invitationError, value => {
+  if (value) {
+    appStore.showError(value)
+  placeholder
+placeholder)
+
+watch(accountActionError, value => {
+  if (value) {
+    appStore.showError(value)
+  placeholder
+placeholder)
+
+watch(totpError, value => {
+  if (value) {
+    appStore.showError(value)
+  placeholder
+placeholder)
+
+watch(errorMessage, value => {
+  if (value) {
+    appStore.showError(value)
+  placeholder
+placeholder)
 
 type PendingOidcCompletion = PendingOAuthExchangeResponse & {
   step?: string
@@ -573,6 +562,30 @@ function getRequestErrorMessage(error: unknown, fallback: string): string {
   return err.response?.data?.detail || err.response?.data?.message || err.message || fallback
 placeholder
 
+function isCreateAccountRecoveryError(error: unknown): boolean {
+  const data = (error as {
+    response?: {
+      data?: {
+        reason?: string
+        error?: string
+        code?: string
+        step?: string
+        intent?: string
+      placeholder
+    placeholder
+  placeholder).response?.data
+  const states = [data?.reason, data?.error, data?.code, data?.step, data?.intent]
+    .map(value => value?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value))
+
+  return states.includes('email_exists') ||
+    states.includes('bind_login_required') ||
+    states.includes('bind_login') ||
+    states.includes('adopt_existing_user_by_email') ||
+    states.includes('existing_account_required') ||
+    states.includes('existing_account_binding_required')
+placeholder
+
 async function finalizeCompletion(completion: PendingOAuthExchangeResponse, redirect: string) {
   if (getOAuthCompletionKind(completion) === 'bind') {
     const bindRedirect = sanitizeRedirectPath(completion.redirect || '/profile')
@@ -660,7 +673,6 @@ async function handleContinueLogin() {
     await finalizePendingAccountResponse(completion)
   placeholder catch (e: unknown) {
     errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
-    appStore.showError(errorMessage.value)
     needsAdoptionConfirmation.value = false
   placeholder finally {
     isSubmitting.value = false
@@ -682,6 +694,10 @@ async function handleCreateAccount(payload: PendingOAuthCreateAccountPayload) {
     placeholder)
     await finalizePendingAccountResponse(data)
   placeholder catch (e: unknown) {
+    if (isCreateAccountRecoveryError(e)) {
+      switchToBindLoginMode(payload.email.trim())
+      return
+    placeholder
     accountActionError.value = getRequestErrorMessage(e, t('auth.loginFailed'))
   placeholder finally {
     isSubmitting.value = false
@@ -761,7 +777,6 @@ onMounted(async () => {
 
     if (error) {
       errorMessage.value = errorDesc || error
-      appStore.showError(errorMessage.value)
       isProcessing.value = false
       return
     placeholder
@@ -803,7 +818,6 @@ onMounted(async () => {
   placeholder catch (e: unknown) {
     clearPendingAuthSession()
     errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
-    appStore.showError(errorMessage.value)
     isProcessing.value = false
   placeholder
 placeholder)
