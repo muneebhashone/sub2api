@@ -277,7 +277,9 @@ placeholder
 		).
 		DoNothing().
 		Exec(ctx); err != nil {
-		return err
+		if !isSQLNoRowsError(err) {
+			return err
+	placeholder
 placeholder
 
 	identity, err := client.AuthIdentity.Query().

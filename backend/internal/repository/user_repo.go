@@ -56,8 +56,12 @@ placeholder
 		defer func() { _ = tx.Rollback() placeholder()
 		txClient = tx.Client()
 placeholder else {
-		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
-		txClient = r.client
+		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
+		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+			txClient = existingTx.Client()
+	placeholder else {
+			txClient = r.client
+	placeholder
 placeholder
 
 	created, err := txClient.User.Create().
@@ -154,8 +158,12 @@ placeholder
 		defer func() { _ = tx.Rollback() placeholder()
 		txClient = tx.Client()
 placeholder else {
-		// 已处于外部事务中（ErrTxStarted），复用当前 client 并由调用方负责提交/回滚。
-		txClient = r.client
+		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
+		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+			txClient = existingTx.Client()
+	placeholder else {
+			txClient = r.client
+	placeholder
 placeholder
 	existing, err := clientFromContext(ctx, txClient).User.Get(ctx, userIn.ID)
 	if err != nil {
@@ -236,7 +244,9 @@ placeholder
 		).
 		DoNothing().
 		Exec(ctx); err != nil {
-		return err
+		if !isSQLNoRowsError(err) {
+			return err
+	placeholder
 placeholder
 
 	identity, err := client.AuthIdentity.Query().
@@ -304,7 +314,11 @@ placeholder
 		defer func() { _ = tx.Rollback() placeholder()
 		txClient = tx.Client()
 placeholder else {
-		txClient = r.client
+		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+			txClient = existingTx.Client()
+	placeholder else {
+			txClient = r.client
+	placeholder
 placeholder
 
 	identityIDs, err := txClient.AuthIdentity.Query().
@@ -707,12 +721,16 @@ placeholder
 
 func (r *userRepository) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
 	client := clientFromContext(ctx, r.client)
-	return client.UserAllowedGroup.Create().
+	err := client.UserAllowedGroup.Create().
 		SetUserID(userID).
 		SetGroupID(groupID).
 		OnConflictColumns(userallowedgroup.FieldUserID, userallowedgroup.FieldGroupID).
 		DoNothing().
 		Exec(ctx)
+	if isSQLNoRowsError(err) {
+		return nil
+placeholder
+	return err
 placeholder
 
 func (r *userRepository) RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error) {
@@ -812,6 +830,9 @@ placeholder
 			OnConflictColumns(userallowedgroup.FieldUserID, userallowedgroup.FieldGroupID).
 			DoNothing().
 			Exec(ctx); err != nil {
+			if isSQLNoRowsError(err) {
+				return nil
+		placeholder
 			return err
 	placeholder
 placeholder
