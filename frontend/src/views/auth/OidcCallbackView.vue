@@ -259,6 +259,7 @@ import {
   login2FA,
   persistOAuthTokenContext,
   type OAuthAdoptionDecision,
+  type OAuthTokenResponse,
   type PendingOAuthExchangeResponse
 placeholder from '@/api/auth'
 
@@ -287,6 +288,7 @@ const pendingAccountAction = ref<'none' | 'create_account' | 'bind_login'>('none
 const pendingAccountEmail = ref('')
 const bindLoginEmail = ref('')
 const bindLoginPassword = ref('')
+const legacyPendingOAuthToken = ref('')
 const accountActionError = ref('')
 const canReturnToCreateAccount = ref(false)
 const bindSuccessMessage = t('profile.authBindings.bindSuccess')
@@ -329,6 +331,30 @@ function parseFragmentParams(): URLSearchParams {
   const raw = typeof window !== 'undefined' ? window.location.hash : ''
   const hash = raw.startsWith('#') ? raw.slice(1) : raw
   return new URLSearchParams(hash)
+placeholder
+
+function readLegacyFragmentLogin(params: URLSearchParams): OAuthTokenResponse | null {
+  const accessToken = params.get('access_token')?.trim() || ''
+  if (!accessToken) {
+    return null
+  placeholder
+
+  const completion: OAuthTokenResponse = {
+    access_token: accessToken
+  placeholder
+  const refreshToken = params.get('refresh_token')?.trim() || ''
+  if (refreshToken) {
+    completion.refresh_token = refreshToken
+  placeholder
+  const expiresIn = Number.parseInt(params.get('expires_in')?.trim() || '', 10)
+  if (Number.isFinite(expiresIn) && expiresIn > 0) {
+    completion.expires_in = expiresIn
+  placeholder
+  const tokenType = params.get('token_type')?.trim() || ''
+  if (tokenType) {
+    completion.token_type = tokenType
+  placeholder
+  return completion
 placeholder
 
 function sanitizeRedirectPath(path: string | null | undefined): string {
@@ -565,10 +591,18 @@ async function handleSubmitInvitation() {
 
   isSubmitting.value = true
   try {
-    const tokenData = await completeOIDCOAuthRegistration(
-      invitationCode.value.trim(),
-      currentAdoptionDecision()
-    )
+    const tokenData = legacyPendingOAuthToken.value
+      ? (
+          await apiClient.post<OAuthTokenResponse>('/auth/oauth/oidc/complete-registration', {
+            pending_oauth_token: legacyPendingOAuthToken.value,
+            invitation_code: invitationCode.value.trim(),
+            ...serializeAdoptionDecision(currentAdoptionDecision())
+          placeholder)
+        ).data
+      : await completeOIDCOAuthRegistration(
+          invitationCode.value.trim(),
+          currentAdoptionDecision()
+        )
     persistOAuthTokenContext(tokenData)
     await authStore.setToken(tokenData.access_token)
     appStore.showSuccess(t('auth.loginSuccess'))
@@ -667,51 +701,72 @@ onMounted(async () => {
   void loadProviderName()
 
   const params = parseFragmentParams()
+  const legacyLogin = readLegacyFragmentLogin(params)
+  const legacyPendingToken = params.get('pending_oauth_token')?.trim() || ''
   const error = params.get('error')
   const errorDesc = params.get('error_description') || params.get('error_message') || ''
-
-  if (error) {
-    errorMessage.value = errorDesc || error
-    appStore.showError(errorMessage.value)
-    isProcessing.value = false
-    return
-  placeholder
+  const redirect = sanitizeRedirectPath(
+    params.get('redirect') || (route.query.redirect as string | undefined) || '/dashboard'
+  )
 
   try {
+    if (legacyLogin) {
+      persistOAuthTokenContext(legacyLogin)
+      await authStore.setToken(legacyLogin.access_token)
+      appStore.showSuccess(t('auth.loginSuccess'))
+      await router.replace(redirect)
+      return
+    placeholder
+
+    if (error === 'invitation_required' && legacyPendingToken) {
+      legacyPendingOAuthToken.value = legacyPendingToken
+      redirectTo.value = redirect
+      needsInvitation.value = true
+      isProcessing.value = false
+      return
+    placeholder
+
+    if (error) {
+      errorMessage.value = errorDesc || error
+      appStore.showError(errorMessage.value)
+      isProcessing.value = false
+      return
+    placeholder
+
     const completion = await exchangePendingOAuthCompletion() as PendingOidcCompletion
-    const redirect = sanitizeRedirectPath(
+    const completionRedirect = sanitizeRedirectPath(
       completion.redirect || (route.query.redirect as string | undefined) || '/dashboard'
     )
     applyAdoptionSuggestionState(completion)
-    redirectTo.value = redirect
+    redirectTo.value = completionRedirect
 
     if (completion.error === 'invitation_required') {
       needsInvitation.value = true
       isProcessing.value = false
-      persistPendingAuthSession(redirect)
+      persistPendingAuthSession(completionRedirect)
       return
     placeholder
 
     if (applyTotpChallenge(completion)) {
-      persistPendingAuthSession(redirect)
+      persistPendingAuthSession(completionRedirect)
       return
     placeholder
 
     applyPendingAccountAction(completion)
     if (pendingAccountAction.value !== 'none') {
       isProcessing.value = false
-      persistPendingAuthSession(redirect)
+      persistPendingAuthSession(completionRedirect)
       return
     placeholder
 
     if (adoptionRequired.value && hasSuggestedProfile(completion)) {
       needsAdoptionConfirmation.value = true
       isProcessing.value = false
-      persistPendingAuthSession(redirect)
+      persistPendingAuthSession(completionRedirect)
       return
     placeholder
 
-    await finalizeCompletion(completion, redirect)
+    await finalizeCompletion(completion, completionRedirect)
   placeholder catch (e: unknown) {
     clearPendingAuthSession()
     errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
