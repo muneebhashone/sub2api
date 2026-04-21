@@ -449,6 +449,16 @@ export async function sendVerifyCode(
   return data
 placeholder
 
+export async function sendPendingOAuthVerifyCode(
+  request: SendVerifyCodeRequest
+): Promise<SendVerifyCodeResponse> {
+  const { data placeholder = await apiClient.post<SendVerifyCodeResponse>(
+    '/auth/oauth/pending/send-verify-code',
+    request
+  )
+  return data
+placeholder
+
 /**
  * Validate promo code response
  */
@@ -638,6 +648,7 @@ export const authAPI = {
   clearAuthToken,
   getPublicSettings,
   sendVerifyCode,
+  sendPendingOAuthVerifyCode,
   validatePromoCode,
   validateInvitationCode,
   forgotPassword,

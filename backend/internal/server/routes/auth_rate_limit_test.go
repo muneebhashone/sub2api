@@ -52,6 +52,7 @@ placeholder)
 		"/api/v1/auth/login",
 		"/api/v1/auth/login/2fa",
 		"/api/v1/auth/send-verify-code",
+		"/api/v1/auth/oauth/pending/send-verify-code",
 placeholder
 
 	for _, path := range paths {

@@ -15,14 +15,21 @@ import (
 // UserHandler handles user-related requests
 type UserHandler struct {
 	userService  *service.UserService
+	authService  *service.AuthService
 	emailService *service.EmailService
 	emailCache   service.EmailCache
 placeholder
 
 // NewUserHandler creates a new UserHandler
-func NewUserHandler(userService *service.UserService, emailService *service.EmailService, emailCache service.EmailCache) *UserHandler {
+func NewUserHandler(
+	userService *service.UserService,
+	authService *service.AuthService,
+	emailService *service.EmailService,
+	emailCache service.EmailCache,
+) *UserHandler {
 	return &UserHandler{
 		userService:  userService,
+		authService:  authService,
 		emailService: emailService,
 		emailCache:   emailCache,
 placeholder
@@ -157,6 +164,16 @@ type StartIdentityBindingRequest struct {
 	RedirectTo string `json:"redirect_to"`
 placeholder
 
+type BindEmailIdentityRequest struct {
+	Email      string `json:"email" binding:"required,email"`
+	VerifyCode string `json:"verify_code" binding:"required"`
+	Password   string `json:"password" binding:"required,min=6"`
+placeholder
+
+type SendEmailBindingCodeRequest struct {
+	Email string `json:"email" binding:"required,email"`
+placeholder
+
 // StartIdentityBinding returns the backend authorize URL for starting a third-party identity bind flow.
 // POST /api/v1/user/auth-identities/bind/start
 func (h *UserHandler) StartIdentityBinding(c *gin.Context) {
@@ -181,6 +198,73 @@ placeholder)
 placeholder
 
 	response.Success(c, result)
+placeholder
+
+// BindEmailIdentity verifies and binds a local email identity for the current user.
+// POST /api/v1/user/account-bindings/email
+func (h *UserHandler) BindEmailIdentity(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+	if h.authService == nil {
+		response.InternalError(c, "Auth service not configured")
+		return
+placeholder
+
+	var req BindEmailIdentityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	updatedUser, err := h.authService.BindEmailIdentity(
+		c.Request.Context(),
+		subject.UserID,
+		req.Email,
+		req.VerifyCode,
+		req.Password,
+	)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, profileResp)
+placeholder
+
+// SendEmailBindingCode sends a verification code for the current user's email binding flow.
+// POST /api/v1/user/account-bindings/email/send-code
+func (h *UserHandler) SendEmailBindingCode(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+	if h.authService == nil {
+		response.InternalError(c, "Auth service not configured")
+		return
+placeholder
+
+	var req SendEmailBindingCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	if err := h.authService.SendEmailIdentityBindCode(c.Request.Context(), subject.UserID, req.Email); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{"message": "Verification code sent successfully"placeholder)
 placeholder
 
 // SendNotifyEmailCodeRequest represents the request to send notify email verification code
