@@ -36,6 +36,8 @@ type SystemSettings struct {
 	WeChatConnectAppID               string
 	WeChatConnectAppSecret           string
 	WeChatConnectAppSecretConfigured bool
+	WeChatConnectOpenEnabled         bool
+	WeChatConnectMPEnabled           bool
 	WeChatConnectMode                string
 	WeChatConnectScopes              string
 	WeChatConnectRedirectURL         string
@@ -191,10 +193,28 @@ type WeChatConnectOAuthConfig struct {
 	Enabled             bool
 	AppID               string
 	AppSecret           string
+	OpenEnabled         bool
+	MPEnabled           bool
 	Mode                string
 	Scopes              string
 	RedirectURL         string
 	FrontendRedirectURL string
+placeholder
+
+func (cfg WeChatConnectOAuthConfig) SupportsMode(mode string) bool {
+	switch normalizeWeChatConnectModeSetting(mode) {
+	case "mp":
+		return cfg.MPEnabled
+	default:
+		return cfg.OpenEnabled
+placeholder
+placeholder
+
+func (cfg WeChatConnectOAuthConfig) ScopeForMode(mode string) string {
+	if normalizeWeChatConnectModeSetting(mode) == "mp" {
+		return normalizeWeChatConnectScopeSetting(cfg.Scopes, "mp")
+placeholder
+	return defaultWeChatConnectScopeForMode("open")
 placeholder
 
 // StreamTimeoutSettings 流超时处理配置（仅控制超时后的处理方式，超时判定由网关配置控制）
