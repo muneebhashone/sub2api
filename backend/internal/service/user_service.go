@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -9,11 +10,19 @@ import (
 	"fmt"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"image"
+	"image/color"
+	stddraw "image/draw"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"log/slog"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
+
+	xdraw "golang.org/x/image/draw"
 )
 
 var (
@@ -31,12 +40,18 @@ var (
 const (
 	maxNotifyEmails      = 3 // Maximum number of notification emails per user
 	maxInlineAvatarBytes = 100 * 1024
+	targetAvatarBytes    = 20 * 1024
 
 	// User-level rate limiting for notify email verification codes
 	notifyCodeUserRateLimit  = 5
 	notifyCodeUserRateWindow = 10 * time.Minute
 
 	defaultUserIdentityRedirect = "/settings/profile"
+)
+
+var (
+	avatarScaleSteps   = []float64{1, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36placeholder
+	avatarQualitySteps = []int{88, 80, 72, 64, 56, 48, 40, 32placeholder
 )
 
 // UserListFilters contains all filter options for listing users
@@ -432,6 +447,14 @@ placeholder
 		return UpsertUserAvatarInput{placeholder, ErrAvatarTooLarge
 placeholder
 
+	if len(decoded) > targetAvatarBytes {
+		decoded, contentType, err = compressInlineAvatar(decoded)
+		if err != nil {
+			return UpsertUserAvatarInput{placeholder, err
+	placeholder
+		raw = "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(decoded)
+placeholder
+
 	sum := sha256.Sum256(decoded)
 	return UpsertUserAvatarInput{
 		StorageProvider: "inline",
@@ -440,6 +463,38 @@ placeholder
 		ByteSize:        len(decoded),
 		SHA256:          hex.EncodeToString(sum[:]),
 placeholder, nil
+placeholder
+
+func compressInlineAvatar(decoded []byte) ([]byte, string, error) {
+	src, _, err := image.Decode(bytes.NewReader(decoded))
+	if err != nil {
+		return nil, "", ErrAvatarInvalid
+placeholder
+
+	srcBounds := src.Bounds()
+	if srcBounds.Empty() {
+		return nil, "", ErrAvatarInvalid
+placeholder
+
+	for _, scale := range avatarScaleSteps {
+		width := max(1, int(float64(srcBounds.Dx())*scale))
+		height := max(1, int(float64(srcBounds.Dy())*scale))
+		dst := image.NewRGBA(image.Rect(0, 0, width, height))
+		stddraw.Draw(dst, dst.Bounds(), &image.Uniform{C: color.Whiteplaceholder, image.Point{placeholder, stddraw.Src)
+		xdraw.CatmullRom.Scale(dst, dst.Bounds(), src, srcBounds, stddraw.Over, nil)
+
+		for _, quality := range avatarQualitySteps {
+			var buf bytes.Buffer
+			if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: qualityplaceholder); err != nil {
+				return nil, "", ErrAvatarInvalid
+		placeholder
+			if buf.Len() <= targetAvatarBytes {
+				return buf.Bytes(), "image/jpeg", nil
+		placeholder
+	placeholder
+placeholder
+
+	return nil, "", ErrAvatarTooLarge
 placeholder
 
 func (s *UserService) buildEmailIdentitySummary(user *User) UserIdentitySummary {

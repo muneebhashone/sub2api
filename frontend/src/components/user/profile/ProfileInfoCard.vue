@@ -176,6 +176,9 @@ const authStore = useAuthStore()
 const appStore = useAppStore()
 
 const maxAvatarBytes = 100 * 1024
+const targetAvatarUploadBytes = 20 * 1024
+const avatarScaleSteps = [1, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36]
+const avatarQualitySteps = [0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36]
 const avatarDraft = ref(props.user?.avatar_url?.trim() || '')
 const avatarSaving = ref(false)
 
@@ -341,6 +344,72 @@ function readFileAsDataURL(file: File): Promise<string> {
   placeholder)
 placeholder
 
+function loadImage(dataURL: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(t('profile.avatar.readFailed')))
+    image.src = dataURL
+  placeholder)
+placeholder
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error(t('profile.avatar.compressFailed')))
+        return
+      placeholder
+      resolve(blob)
+    placeholder, type, quality)
+  placeholder)
+placeholder
+
+async function compressAvatarFile(file: File): Promise<File> {
+  const sourceDataURL = await readFileAsDataURL(file)
+  const image = await loadImage(sourceDataURL)
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error(t('profile.avatar.compressFailed'))
+  placeholder
+
+  for (const scale of avatarScaleSteps) {
+    const width = Math.max(1, Math.round(image.naturalWidth * scale))
+    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+    canvas.width = width
+    canvas.height = height
+    ctx.clearRect(0, 0, width, height)
+    ctx.drawImage(image, 0, 0, width, height)
+
+    for (const quality of avatarQualitySteps) {
+      const blob = await canvasToBlob(canvas, 'image/webp', quality)
+      if (blob.size <= targetAvatarUploadBytes) {
+        const fileName = file.name.replace(/\.[^.]+$/, '') || 'avatar'
+        return new File([blob], `${fileNameplaceholder.webp`, { type: 'image/webp' placeholder)
+      placeholder
+    placeholder
+  placeholder
+
+  throw new Error(t('profile.avatar.compressTooLarge'))
+placeholder
+
+async function prepareAvatarUpload(file: File): Promise<File> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error(t('profile.avatar.invalidType'))
+  placeholder
+  if (file.type === 'image/gif') {
+    if (file.size > targetAvatarUploadBytes) {
+      throw new Error(t('profile.avatar.gifTooLarge'))
+    placeholder
+    return file
+  placeholder
+  if (file.size <= targetAvatarUploadBytes) {
+    return file
+  placeholder
+  return compressAvatarFile(file)
+placeholder
+
 async function handleAvatarFileChange(event: Event) {
   const input = event.target as HTMLInputElement | null
   const file = input?.files?.[0]
@@ -360,7 +429,8 @@ async function handleAvatarFileChange(event: Event) {
   placeholder
 
   try {
-    const dataURL = await readFileAsDataURL(file)
+    const preparedFile = await prepareAvatarUpload(file)
+    const dataURL = await readFileAsDataURL(preparedFile)
     const normalized = validateAvatarInput(dataURL)
     if (!normalized) {
       return
