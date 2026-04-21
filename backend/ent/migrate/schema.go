@@ -437,12 +437,24 @@ placeholder
 		{Name: "interval_seconds", Type: field.TypeIntplaceholder,
 		{Name: "last_checked_at", Type: field.TypeTime, Nullable: trueplaceholder,
 		{Name: "created_by", Type: field.TypeInt64placeholder,
+		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
+		{Name: "body_override_mode", Type: field.TypeString, Size: 10, Default: "off"placeholder,
+		{Name: "body_override", Type: field.TypeJSON, Nullable: trueplaceholder,
+		{Name: "template_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 placeholder
 	// ChannelMonitorsTable holds the schema information for the "channel_monitors" table.
 	ChannelMonitorsTable = &schema.Table{
 		Name:       "channel_monitors",
 		Columns:    ChannelMonitorsColumns,
 		PrimaryKey: []*schema.Column{ChannelMonitorsColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "channel_monitors_channel_monitor_request_templates_request_template",
+				Columns:    []*schema.Column{ChannelMonitorsColumns[17]placeholder,
+				RefColumns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
+				OnDelete:   schema.SetNull,
+		placeholder,
+	placeholder,
 		Indexes: []*schema.Index{
 			{
 				Name:    "channelmonitor_enabled_last_checked_at",
@@ -458,6 +470,11 @@ placeholder
 				Name:    "channelmonitor_group_name",
 				Unique:  false,
 				Columns: []*schema.Column{ChannelMonitorsColumns[9]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitor_template_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[17]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -539,6 +556,31 @@ placeholder
 				Name:    "channelmonitorhistory_checked_at",
 				Unique:  false,
 				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[6]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// ChannelMonitorRequestTemplatesColumns holds the columns for the "channel_monitor_request_templates" table.
+	ChannelMonitorRequestTemplatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini"placeholderplaceholder,
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 500, Default: ""placeholder,
+		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
+		{Name: "body_override_mode", Type: field.TypeString, Size: 10, Default: "off"placeholder,
+		{Name: "body_override", Type: field.TypeJSON, Nullable: trueplaceholder,
+placeholder
+	// ChannelMonitorRequestTemplatesTable holds the schema information for the "channel_monitor_request_templates" table.
+	ChannelMonitorRequestTemplatesTable = &schema.Table{
+		Name:       "channel_monitor_request_templates",
+		Columns:    ChannelMonitorRequestTemplatesColumns,
+		PrimaryKey: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "channelmonitorrequesttemplate_provider_name",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[4], ChannelMonitorRequestTemplatesColumns[3]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -1644,6 +1686,7 @@ placeholder
 		ChannelMonitorsTable,
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
+		ChannelMonitorRequestTemplatesTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
@@ -1701,6 +1744,7 @@ placeholder
 	AuthIdentityChannelsTable.Annotation = &entsql.Annotation{
 		Table: "auth_identity_channels",
 placeholder
+	ChannelMonitorsTable.ForeignKeys[0].RefTable = ChannelMonitorRequestTemplatesTable
 	ChannelMonitorsTable.Annotation = &entsql.Annotation{
 		Table: "channel_monitors",
 placeholder
@@ -1711,6 +1755,9 @@ placeholder
 	ChannelMonitorHistoriesTable.ForeignKeys[0].RefTable = ChannelMonitorsTable
 	ChannelMonitorHistoriesTable.Annotation = &entsql.Annotation{
 		Table: "channel_monitor_histories",
+placeholder
+	ChannelMonitorRequestTemplatesTable.Annotation = &entsql.Annotation{
+		Table: "channel_monitor_request_templates",
 placeholder
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",

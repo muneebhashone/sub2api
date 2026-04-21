@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
+	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
 )
 
 // ChannelMonitorCreate is the builder for creating a ChannelMonitor entity.
@@ -142,6 +143,46 @@ func (_c *ChannelMonitorCreate) SetCreatedBy(v int64) *ChannelMonitorCreate {
 	return _c
 placeholder
 
+// SetTemplateID sets the "template_id" field.
+func (_c *ChannelMonitorCreate) SetTemplateID(v int64) *ChannelMonitorCreate {
+	_c.mutation.SetTemplateID(v)
+	return _c
+placeholder
+
+// SetNillableTemplateID sets the "template_id" field if the given value is not nil.
+func (_c *ChannelMonitorCreate) SetNillableTemplateID(v *int64) *ChannelMonitorCreate {
+	if v != nil {
+		_c.SetTemplateID(*v)
+placeholder
+	return _c
+placeholder
+
+// SetExtraHeaders sets the "extra_headers" field.
+func (_c *ChannelMonitorCreate) SetExtraHeaders(v map[string]string) *ChannelMonitorCreate {
+	_c.mutation.SetExtraHeaders(v)
+	return _c
+placeholder
+
+// SetBodyOverrideMode sets the "body_override_mode" field.
+func (_c *ChannelMonitorCreate) SetBodyOverrideMode(v string) *ChannelMonitorCreate {
+	_c.mutation.SetBodyOverrideMode(v)
+	return _c
+placeholder
+
+// SetNillableBodyOverrideMode sets the "body_override_mode" field if the given value is not nil.
+func (_c *ChannelMonitorCreate) SetNillableBodyOverrideMode(v *string) *ChannelMonitorCreate {
+	if v != nil {
+		_c.SetBodyOverrideMode(*v)
+placeholder
+	return _c
+placeholder
+
+// SetBodyOverride sets the "body_override" field.
+func (_c *ChannelMonitorCreate) SetBodyOverride(v map[string]interface{placeholder) *ChannelMonitorCreate {
+	_c.mutation.SetBodyOverride(v)
+	return _c
+placeholder
+
 // AddHistoryIDs adds the "history" edge to the ChannelMonitorHistory entity by IDs.
 func (_c *ChannelMonitorCreate) AddHistoryIDs(ids ...int64) *ChannelMonitorCreate {
 	_c.mutation.AddHistoryIDs(ids...)
@@ -170,6 +211,25 @@ func (_c *ChannelMonitorCreate) AddDailyRollups(v ...*ChannelMonitorDailyRollup)
 		ids[i] = v[i].ID
 placeholder
 	return _c.AddDailyRollupIDs(ids...)
+placeholder
+
+// SetRequestTemplateID sets the "request_template" edge to the ChannelMonitorRequestTemplate entity by ID.
+func (_c *ChannelMonitorCreate) SetRequestTemplateID(id int64) *ChannelMonitorCreate {
+	_c.mutation.SetRequestTemplateID(id)
+	return _c
+placeholder
+
+// SetNillableRequestTemplateID sets the "request_template" edge to the ChannelMonitorRequestTemplate entity by ID if the given value is not nil.
+func (_c *ChannelMonitorCreate) SetNillableRequestTemplateID(id *int64) *ChannelMonitorCreate {
+	if id != nil {
+		_c = _c.SetRequestTemplateID(*id)
+placeholder
+	return _c
+placeholder
+
+// SetRequestTemplate sets the "request_template" edge to the ChannelMonitorRequestTemplate entity.
+func (_c *ChannelMonitorCreate) SetRequestTemplate(v *ChannelMonitorRequestTemplate) *ChannelMonitorCreate {
+	return _c.SetRequestTemplateID(v.ID)
 placeholder
 
 // Mutation returns the ChannelMonitorMutation object of the builder.
@@ -226,6 +286,14 @@ placeholder
 	if _, ok := _c.mutation.Enabled(); !ok {
 		v := channelmonitor.DefaultEnabled
 		_c.mutation.SetEnabled(v)
+placeholder
+	if _, ok := _c.mutation.ExtraHeaders(); !ok {
+		v := channelmonitor.DefaultExtraHeaders
+		_c.mutation.SetExtraHeaders(v)
+placeholder
+	if _, ok := _c.mutation.BodyOverrideMode(); !ok {
+		v := channelmonitor.DefaultBodyOverrideMode
+		_c.mutation.SetBodyOverrideMode(v)
 placeholder
 placeholder
 
@@ -298,6 +366,17 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.CreatedBy(); !ok {
 		return &ValidationError{Name: "created_by", err: errors.New(`ent: missing required field "ChannelMonitor.created_by"`)placeholder
+placeholder
+	if _, ok := _c.mutation.ExtraHeaders(); !ok {
+		return &ValidationError{Name: "extra_headers", err: errors.New(`ent: missing required field "ChannelMonitor.extra_headers"`)placeholder
+placeholder
+	if _, ok := _c.mutation.BodyOverrideMode(); !ok {
+		return &ValidationError{Name: "body_override_mode", err: errors.New(`ent: missing required field "ChannelMonitor.body_override_mode"`)placeholder
+placeholder
+	if v, ok := _c.mutation.BodyOverrideMode(); ok {
+		if err := channelmonitor.BodyOverrideModeValidator(v); err != nil {
+			return &ValidationError{Name: "body_override_mode", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.body_override_mode": %w`, err)placeholder
+	placeholder
 placeholder
 	return nil
 placeholder
@@ -378,6 +457,18 @@ placeholder
 		_spec.SetField(channelmonitor.FieldCreatedBy, field.TypeInt64, value)
 		_node.CreatedBy = value
 placeholder
+	if value, ok := _c.mutation.ExtraHeaders(); ok {
+		_spec.SetField(channelmonitor.FieldExtraHeaders, field.TypeJSON, value)
+		_node.ExtraHeaders = value
+placeholder
+	if value, ok := _c.mutation.BodyOverrideMode(); ok {
+		_spec.SetField(channelmonitor.FieldBodyOverrideMode, field.TypeString, value)
+		_node.BodyOverrideMode = value
+placeholder
+	if value, ok := _c.mutation.BodyOverride(); ok {
+		_spec.SetField(channelmonitor.FieldBodyOverride, field.TypeJSON, value)
+		_node.BodyOverride = value
+placeholder
 	if nodes := _c.mutation.HistoryIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -408,6 +499,23 @@ placeholder
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 	placeholder
+		_spec.Edges = append(_spec.Edges, edge)
+placeholder
+	if nodes := _c.mutation.RequestTemplateIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: false,
+			Table:   channelmonitor.RequestTemplateTable,
+			Columns: []string{channelmonitor.RequestTemplateColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelmonitorrequesttemplate.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_node.TemplateID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 placeholder
 	return _node, _spec
@@ -627,6 +735,66 @@ placeholder
 // AddCreatedBy adds v to the "created_by" field.
 func (u *ChannelMonitorUpsert) AddCreatedBy(v int64) *ChannelMonitorUpsert {
 	u.Add(channelmonitor.FieldCreatedBy, v)
+	return u
+placeholder
+
+// SetTemplateID sets the "template_id" field.
+func (u *ChannelMonitorUpsert) SetTemplateID(v int64) *ChannelMonitorUpsert {
+	u.Set(channelmonitor.FieldTemplateID, v)
+	return u
+placeholder
+
+// UpdateTemplateID sets the "template_id" field to the value that was provided on create.
+func (u *ChannelMonitorUpsert) UpdateTemplateID() *ChannelMonitorUpsert {
+	u.SetExcluded(channelmonitor.FieldTemplateID)
+	return u
+placeholder
+
+// ClearTemplateID clears the value of the "template_id" field.
+func (u *ChannelMonitorUpsert) ClearTemplateID() *ChannelMonitorUpsert {
+	u.SetNull(channelmonitor.FieldTemplateID)
+	return u
+placeholder
+
+// SetExtraHeaders sets the "extra_headers" field.
+func (u *ChannelMonitorUpsert) SetExtraHeaders(v map[string]string) *ChannelMonitorUpsert {
+	u.Set(channelmonitor.FieldExtraHeaders, v)
+	return u
+placeholder
+
+// UpdateExtraHeaders sets the "extra_headers" field to the value that was provided on create.
+func (u *ChannelMonitorUpsert) UpdateExtraHeaders() *ChannelMonitorUpsert {
+	u.SetExcluded(channelmonitor.FieldExtraHeaders)
+	return u
+placeholder
+
+// SetBodyOverrideMode sets the "body_override_mode" field.
+func (u *ChannelMonitorUpsert) SetBodyOverrideMode(v string) *ChannelMonitorUpsert {
+	u.Set(channelmonitor.FieldBodyOverrideMode, v)
+	return u
+placeholder
+
+// UpdateBodyOverrideMode sets the "body_override_mode" field to the value that was provided on create.
+func (u *ChannelMonitorUpsert) UpdateBodyOverrideMode() *ChannelMonitorUpsert {
+	u.SetExcluded(channelmonitor.FieldBodyOverrideMode)
+	return u
+placeholder
+
+// SetBodyOverride sets the "body_override" field.
+func (u *ChannelMonitorUpsert) SetBodyOverride(v map[string]interface{placeholder) *ChannelMonitorUpsert {
+	u.Set(channelmonitor.FieldBodyOverride, v)
+	return u
+placeholder
+
+// UpdateBodyOverride sets the "body_override" field to the value that was provided on create.
+func (u *ChannelMonitorUpsert) UpdateBodyOverride() *ChannelMonitorUpsert {
+	u.SetExcluded(channelmonitor.FieldBodyOverride)
+	return u
+placeholder
+
+// ClearBodyOverride clears the value of the "body_override" field.
+func (u *ChannelMonitorUpsert) ClearBodyOverride() *ChannelMonitorUpsert {
+	u.SetNull(channelmonitor.FieldBodyOverride)
 	return u
 placeholder
 
@@ -868,6 +1036,76 @@ placeholder
 func (u *ChannelMonitorUpsertOne) UpdateCreatedBy() *ChannelMonitorUpsertOne {
 	return u.Update(func(s *ChannelMonitorUpsert) {
 		s.UpdateCreatedBy()
+placeholder)
+placeholder
+
+// SetTemplateID sets the "template_id" field.
+func (u *ChannelMonitorUpsertOne) SetTemplateID(v int64) *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetTemplateID(v)
+placeholder)
+placeholder
+
+// UpdateTemplateID sets the "template_id" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertOne) UpdateTemplateID() *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateTemplateID()
+placeholder)
+placeholder
+
+// ClearTemplateID clears the value of the "template_id" field.
+func (u *ChannelMonitorUpsertOne) ClearTemplateID() *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.ClearTemplateID()
+placeholder)
+placeholder
+
+// SetExtraHeaders sets the "extra_headers" field.
+func (u *ChannelMonitorUpsertOne) SetExtraHeaders(v map[string]string) *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetExtraHeaders(v)
+placeholder)
+placeholder
+
+// UpdateExtraHeaders sets the "extra_headers" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertOne) UpdateExtraHeaders() *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateExtraHeaders()
+placeholder)
+placeholder
+
+// SetBodyOverrideMode sets the "body_override_mode" field.
+func (u *ChannelMonitorUpsertOne) SetBodyOverrideMode(v string) *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetBodyOverrideMode(v)
+placeholder)
+placeholder
+
+// UpdateBodyOverrideMode sets the "body_override_mode" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertOne) UpdateBodyOverrideMode() *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateBodyOverrideMode()
+placeholder)
+placeholder
+
+// SetBodyOverride sets the "body_override" field.
+func (u *ChannelMonitorUpsertOne) SetBodyOverride(v map[string]interface{placeholder) *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetBodyOverride(v)
+placeholder)
+placeholder
+
+// UpdateBodyOverride sets the "body_override" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertOne) UpdateBodyOverride() *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateBodyOverride()
+placeholder)
+placeholder
+
+// ClearBodyOverride clears the value of the "body_override" field.
+func (u *ChannelMonitorUpsertOne) ClearBodyOverride() *ChannelMonitorUpsertOne {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.ClearBodyOverride()
 placeholder)
 placeholder
 
@@ -1275,6 +1513,76 @@ placeholder
 func (u *ChannelMonitorUpsertBulk) UpdateCreatedBy() *ChannelMonitorUpsertBulk {
 	return u.Update(func(s *ChannelMonitorUpsert) {
 		s.UpdateCreatedBy()
+placeholder)
+placeholder
+
+// SetTemplateID sets the "template_id" field.
+func (u *ChannelMonitorUpsertBulk) SetTemplateID(v int64) *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetTemplateID(v)
+placeholder)
+placeholder
+
+// UpdateTemplateID sets the "template_id" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertBulk) UpdateTemplateID() *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateTemplateID()
+placeholder)
+placeholder
+
+// ClearTemplateID clears the value of the "template_id" field.
+func (u *ChannelMonitorUpsertBulk) ClearTemplateID() *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.ClearTemplateID()
+placeholder)
+placeholder
+
+// SetExtraHeaders sets the "extra_headers" field.
+func (u *ChannelMonitorUpsertBulk) SetExtraHeaders(v map[string]string) *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetExtraHeaders(v)
+placeholder)
+placeholder
+
+// UpdateExtraHeaders sets the "extra_headers" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertBulk) UpdateExtraHeaders() *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateExtraHeaders()
+placeholder)
+placeholder
+
+// SetBodyOverrideMode sets the "body_override_mode" field.
+func (u *ChannelMonitorUpsertBulk) SetBodyOverrideMode(v string) *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetBodyOverrideMode(v)
+placeholder)
+placeholder
+
+// UpdateBodyOverrideMode sets the "body_override_mode" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertBulk) UpdateBodyOverrideMode() *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateBodyOverrideMode()
+placeholder)
+placeholder
+
+// SetBodyOverride sets the "body_override" field.
+func (u *ChannelMonitorUpsertBulk) SetBodyOverride(v map[string]interface{placeholder) *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.SetBodyOverride(v)
+placeholder)
+placeholder
+
+// UpdateBodyOverride sets the "body_override" field to the value that was provided on create.
+func (u *ChannelMonitorUpsertBulk) UpdateBodyOverride() *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.UpdateBodyOverride()
+placeholder)
+placeholder
+
+// ClearBodyOverride clears the value of the "body_override" field.
+func (u *ChannelMonitorUpsertBulk) ClearBodyOverride() *ChannelMonitorUpsertBulk {
+	return u.Update(func(s *ChannelMonitorUpsert) {
+		s.ClearBodyOverride()
 placeholder)
 placeholder
 
