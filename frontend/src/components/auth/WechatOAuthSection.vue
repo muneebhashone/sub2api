@@ -43,8 +43,12 @@ placeholder)
 
 const appStore = useAppStore()
 const route = useRoute()
-const { t placeholder = useI18n()
+const { t, locale placeholder = useI18n()
 const providerName = computed(() => t('auth.wechatProviderName'))
+
+function localizeWeChatHint(zh: string, en: string): string {
+  return locale.value.startsWith('zh') ? zh : en
+placeholder
 
 const resolvedStart = computed(() => resolveWeChatOAuthStart(appStore.cachedPublicSettings))
 const buttonDisabled = computed(() => props.disabled || resolvedStart.value.mode === null)
