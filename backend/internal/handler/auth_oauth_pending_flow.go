@@ -1350,10 +1350,24 @@ placeholder
 		return
 placeholder
 	if !adoptionDecision.hasDecision() {
-		response.Success(c, payload)
-		return
+		adoptionRequired, _ := payload["adoption_required"].(bool)
+		if adoptionRequired {
+			response.Success(c, payload)
+			return
+	placeholder
 placeholder
-	decision, err := h.upsertPendingOAuthAdoptionDecision(c, session.ID, adoptionDecision)
+
+	decisionReq := adoptionDecision
+	if !decisionReq.hasDecision() {
+		adoptDisplayName := false
+		adoptAvatar := false
+		decisionReq = oauthAdoptionDecisionRequest{
+			AdoptDisplayName: &adoptDisplayName,
+			AdoptAvatar:      &adoptAvatar,
+	placeholder
+placeholder
+
+	decision, err := h.ensurePendingOAuthAdoptionDecision(c, session.ID, decisionReq)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

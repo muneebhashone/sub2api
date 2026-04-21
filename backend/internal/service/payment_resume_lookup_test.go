@@ -200,3 +200,48 @@ placeholder
 	require.Equal(t, order.ID, got.ID)
 	require.Equal(t, 1, provider.queryCount)
 placeholder
+
+func TestVerifyOrderPublicDoesNotCheckUpstreamForPendingOrder(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	user, err := client.User.Create().
+		SetEmail("public-verify@example.com").
+		SetPasswordHash("hash").
+		SetUsername("public-verify-user").
+		Save(ctx)
+placeholder
+
+	order, err := client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(88).
+		SetPayAmount(88).
+		SetFeeRate(0).
+		SetRechargeCode("PUBLIC-VERIFY").
+		SetOutTradeNo("sub2_public_verify_pending").
+		SetPaymentType(payment.TypeAlipay).
+		SetPaymentTradeNo("trade-public-verify").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusPending).
+		SetExpiresAt(time.Now().Add(time.Hour)).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		Save(ctx)
+placeholder
+
+	registry := payment.NewRegistry()
+	provider := &paymentResumeLookupProvider{placeholder
+	registry.Register(provider)
+
+	svc := &PaymentService{
+		entClient:       client,
+		registry:        registry,
+		providersLoaded: true,
+placeholder
+
+	got, err := svc.VerifyOrderPublic(ctx, order.OutTradeNo)
+placeholder
+	require.Equal(t, order.ID, got.ID)
+	require.Equal(t, 0, provider.queryCount)
+placeholder
