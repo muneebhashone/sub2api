@@ -250,13 +250,12 @@ placeholder
 func (w *Wxpay) prepayH5(ctx context.Context, c *core.Client, req payment.CreatePaymentRequest, notifyURL string, totalFen int64) (*payment.CreatePaymentResponse, error) {
 	svc := h5.H5ApiService{Client: cplaceholder
 	cur := wxpayCurrency
-	tp := wxpayH5Type
 	resp, _, err := wxpayH5Prepay(ctx, svc, h5.PrepayRequest{
 		Appid: core.String(w.config["appId"]), Mchid: core.String(w.config["mchId"]),
 		Description: core.String(req.Subject), OutTradeNo: core.String(req.OrderID),
 		NotifyUrl: core.String(notifyURL),
 		Amount:    &h5.Amount{Total: core.Int64(totalFen), Currency: &curplaceholder,
-		SceneInfo: &h5.SceneInfo{PayerClientIp: core.String(req.ClientIP), H5Info: &h5.H5Info{Type: &tpplaceholderplaceholder,
+		SceneInfo: &h5.SceneInfo{PayerClientIp: core.String(req.ClientIP), H5Info: buildWxpayH5Info(w.config)placeholder,
 placeholder)
 	if err != nil {
 		return nil, fmt.Errorf("wxpay h5 prepay: %w", err)
@@ -270,6 +269,18 @@ placeholder
 		return nil, err
 placeholder
 	return &payment.CreatePaymentResponse{TradeNo: req.OrderID, PayURL: h5URLplaceholder, nil
+placeholder
+
+func buildWxpayH5Info(config map[string]string) *h5.H5Info {
+	tp := wxpayH5Type
+	info := &h5.H5Info{Type: &tpplaceholder
+	if appName := strings.TrimSpace(config["h5AppName"]); appName != "" {
+		info.AppName = core.String(appName)
+placeholder
+	if appURL := strings.TrimSpace(config["h5AppUrl"]); appURL != "" {
+		info.AppUrl = core.String(appURL)
+placeholder
+	return info
 placeholder
 
 func resolveWxpayCreateMode(req payment.CreatePaymentRequest) (string, error) {
