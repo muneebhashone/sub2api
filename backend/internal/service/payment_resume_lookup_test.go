@@ -146,6 +146,63 @@ placeholder
 	require.Contains(t, err.Error(), "resume token")
 placeholder
 
+func TestGetPublicOrderByResumeTokenUsesSnapshotAuthorityWhenColumnsDiffer(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	user, err := client.User.Create().
+		SetEmail("resume-snapshot-authority@example.com").
+		SetPasswordHash("hash").
+		SetUsername("resume-snapshot-authority-user").
+		Save(ctx)
+placeholder
+
+	order, err := client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(88).
+		SetPayAmount(88).
+		SetFeeRate(0).
+		SetRechargeCode("RESUME-SNAPSHOT-AUTHORITY").
+		SetOutTradeNo("sub2_resume_snapshot_authority").
+		SetPaymentType(payment.TypeAlipay).
+		SetPaymentTradeNo("trade-snapshot-authority").
+		SetOrderType(payment.OrderTypeBalance).
+		SetStatus(OrderStatusPending).
+		SetExpiresAt(time.Now().Add(time.Hour)).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		SetProviderInstanceID("legacy-column-instance").
+		SetProviderKey(payment.TypeAlipay).
+		SetProviderSnapshot(map[string]any{
+			"schema_version":       2,
+			"provider_instance_id": "snapshot-instance",
+			"provider_key":         payment.TypeEasyPay,
+	placeholder).
+		Save(ctx)
+placeholder
+
+	resumeSvc := NewPaymentResumeService([]byte("placeholder"))
+	token, err := resumeSvc.CreateToken(ResumeTokenClaims{
+		OrderID:            order.ID,
+		UserID:             user.ID,
+		ProviderInstanceID: "snapshot-instance",
+		ProviderKey:        payment.TypeEasyPay,
+		PaymentType:        payment.TypeAlipay,
+		CanonicalReturnURL: "https://app.example.com/payment/result",
+placeholder)
+placeholder
+
+	svc := &PaymentService{
+		entClient:     client,
+		resumeService: resumeSvc,
+placeholder
+
+	got, err := svc.GetPublicOrderByResumeToken(ctx, token)
+placeholder
+	require.Equal(t, order.ID, got.ID)
+placeholder
+
 func TestGetPublicOrderByResumeTokenChecksUpstreamForPendingOrder(t *testing.T) {
 	ctx := context.Background()
 	client := newPaymentConfigServiceTestClient(t)
