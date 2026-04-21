@@ -19,10 +19,13 @@ import (
 	"log/slog"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	xdraw "golang.org/x/image/draw"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -47,6 +50,8 @@ const (
 	notifyCodeUserRateWindow = 10 * time.Minute
 
 	defaultUserIdentityRedirect = "/settings/profile"
+	userLastActiveMinTouch      = 10 * time.Minute
+	userLastActiveFailBackoff   = 30 * time.Second
 )
 
 var (
@@ -82,6 +87,7 @@ type UserRepository interface {
 	ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters UserListFilters) ([]User, *pagination.PaginationResult, error)
 	GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error)
 	GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error)
+	UpdateUserLastActiveAt(ctx context.Context, userID int64, activeAt time.Time) error
 
 	UpdateBalance(ctx context.Context, id int64, amount float64) error
 	DeductBalance(ctx context.Context, id int64, amount float64) error
@@ -192,6 +198,8 @@ type UserService struct {
 	settingRepo          SettingRepository
 	authCacheInvalidator APIKeyAuthCacheInvalidator
 	billingCache         BillingCache
+	lastActiveTouchL1    sync.Map
+	lastActiveTouchSF    singleflight.Group
 placeholder
 
 // NewUserService 创建用户服务实例
@@ -786,6 +794,66 @@ placeholder
 		return nil, fmt.Errorf("get user avatar: %w", err)
 placeholder
 	return user, nil
+placeholder
+
+// TouchLastActive 通过防抖更新 users.last_active_at，减少鉴权热路径写放大。
+// 该操作为尽力而为，不应中断正常请求。
+func (s *UserService) TouchLastActive(ctx context.Context, userID int64) {
+	if s == nil || s.userRepo == nil || userID <= 0 {
+		return
+placeholder
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		slog.Debug("skip touch user last active after load failure", "user_id", userID, "error", err)
+		return
+placeholder
+	s.TouchLastActiveForUser(ctx, user)
+placeholder
+
+// TouchLastActiveForUser 使用已加载的用户信息更新 last_active_at，避免重复读取数据库。
+func (s *UserService) TouchLastActiveForUser(ctx context.Context, user *User) {
+	if s == nil || s.userRepo == nil || user == nil || user.ID <= 0 {
+		return
+placeholder
+
+	now := time.Now()
+	if userLastActiveFresh(user.LastActiveAt, now) {
+		return
+placeholder
+	if v, ok := s.lastActiveTouchL1.Load(user.ID); ok {
+		if nextAllowedAt, ok := v.(time.Time); ok && now.Before(nextAllowedAt) {
+			return
+	placeholder
+placeholder
+
+	_, err, _ := s.lastActiveTouchSF.Do(strconv.FormatInt(user.ID, 10), func() (any, error) {
+		latest := time.Now()
+		if v, ok := s.lastActiveTouchL1.Load(user.ID); ok {
+			if nextAllowedAt, ok := v.(time.Time); ok && latest.Before(nextAllowedAt) {
+				return nil, nil
+		placeholder
+	placeholder
+		if userLastActiveFresh(user.LastActiveAt, latest) {
+			return nil, nil
+	placeholder
+		if err := s.userRepo.UpdateUserLastActiveAt(ctx, user.ID, latest); err != nil {
+			s.lastActiveTouchL1.Store(user.ID, latest.Add(userLastActiveFailBackoff))
+			return nil, fmt.Errorf("touch user last active: %w", err)
+	placeholder
+		s.lastActiveTouchL1.Store(user.ID, latest.Add(userLastActiveMinTouch))
+		return nil, nil
+placeholder)
+	if err != nil {
+		slog.Warn("touch user last active failed", "user_id", user.ID, "error", err)
+placeholder
+placeholder
+
+func userLastActiveFresh(lastActiveAt *time.Time, now time.Time) bool {
+	if lastActiveAt == nil {
+		return false
+placeholder
+	return now.Before(lastActiveAt.Add(userLastActiveMinTouch))
 placeholder
 
 func (s *UserService) hydrateUserAvatar(ctx context.Context, user *User) error {
