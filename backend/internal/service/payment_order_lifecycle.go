@@ -292,8 +292,46 @@ placeholder
 	if inst != nil {
 		return s.createProviderFromInstance(ctx, inst)
 placeholder
+	if !paymentOrderAllowsRegistryFallback(o) {
+		return nil, fmt.Errorf("order %d provider instance is unresolved", o.ID)
+placeholder
+	providerKey := paymentOrderFallbackProviderKey(s.registry, o)
+	if providerKey == "" {
+		return nil, fmt.Errorf("order %d provider fallback key is missing", o.ID)
+placeholder
+	if !s.webhookRegistryFallbackAllowed(ctx, providerKey) {
+		return nil, fmt.Errorf("order %d provider fallback is ambiguous for %s", o.ID, providerKey)
+placeholder
 	s.EnsureProviders(ctx)
 	return s.registry.GetProvider(o.PaymentType)
+placeholder
+
+func paymentOrderAllowsRegistryFallback(order *dbent.PaymentOrder) bool {
+	if order == nil {
+		return false
+placeholder
+	if psOrderProviderSnapshot(order) != nil {
+		return false
+placeholder
+	if strings.TrimSpace(psStringValue(order.ProviderInstanceID)) != "" {
+		return false
+placeholder
+	if strings.TrimSpace(psStringValue(order.ProviderKey)) != "" {
+		return false
+placeholder
+	return true
+placeholder
+
+func paymentOrderFallbackProviderKey(registry *payment.Registry, order *dbent.PaymentOrder) string {
+	if order == nil {
+		return ""
+placeholder
+	if registry != nil {
+		if key := strings.TrimSpace(registry.GetProviderKey(payment.PaymentType(order.PaymentType))); key != "" {
+			return key
+	placeholder
+placeholder
+	return strings.TrimSpace(payment.GetBasePaymentType(strings.TrimSpace(order.PaymentType)))
 placeholder
 
 func (s *PaymentService) createProviderFromInstance(ctx context.Context, inst *dbent.PaymentProviderInstance) (payment.Provider, error) {

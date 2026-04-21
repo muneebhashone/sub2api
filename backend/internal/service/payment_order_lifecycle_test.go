@@ -323,6 +323,43 @@ placeholder
 	require.Equal(t, "upstream-trade-existing", got.PaymentTradeNo)
 placeholder
 
+func TestPaymentOrderAllowsRegistryFallbackOnlyForLegacyOrdersWithoutPinnedProviderState(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, paymentOrderAllowsRegistryFallback(&dbent.PaymentOrder{
+		PaymentType: payment.TypeAlipay,
+placeholder))
+
+	instanceID := "12"
+	require.False(t, paymentOrderAllowsRegistryFallback(&dbent.PaymentOrder{
+		PaymentType:        payment.TypeAlipay,
+		ProviderInstanceID: &instanceID,
+placeholder))
+
+	require.False(t, paymentOrderAllowsRegistryFallback(&dbent.PaymentOrder{
+		PaymentType: payment.TypeAlipay,
+		ProviderSnapshot: map[string]any{
+			"schema_version":       2,
+			"provider_instance_id": "12",
+	placeholder,
+placeholder))
+placeholder
+
+func TestPaymentOrderQueryReferenceUsesOutTradeNoForOfficialProviders(t *testing.T) {
+	t.Parallel()
+
+	order := &dbent.PaymentOrder{
+		PaymentType:    payment.TypeWxpay,
+		OutTradeNo:     "sub2_out_trade_no",
+		PaymentTradeNo: "wx-transaction-id",
+placeholder
+
+	require.Equal(t, "sub2_out_trade_no", paymentOrderQueryReference(order, &paymentOrderLifecycleQueryProvider{placeholder))
+	require.Equal(t, "sub2_out_trade_no", paymentOrderQueryReference(order, paymentFulfillmentTestProvider{
+		key: payment.TypeWxpay,
+placeholder))
+placeholder
+
 func newPaymentOrderLifecycleTestClient(t *testing.T) *dbent.Client {
 placeholder
 
