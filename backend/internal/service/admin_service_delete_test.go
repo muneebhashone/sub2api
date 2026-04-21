@@ -154,6 +154,10 @@ func (s *userRepoStub) ListUserAuthIdentities(ctx context.Context, userID int64)
 	panic("unexpected ListUserAuthIdentities call")
 placeholder
 
+func (s *userRepoStub) UnbindUserAuthProvider(context.Context, int64, string) error {
+	panic("unexpected UnbindUserAuthProvider call")
+placeholder
+
 func (s *userRepoStub) UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error {
 	panic("unexpected UpdateTotpSecret call")
 placeholder

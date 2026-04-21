@@ -22,6 +22,7 @@ import (
 type userHandlerRepoStub struct {
 	user       *service.User
 	identities []service.UserAuthIdentityRecord
+	unbound    []string
 placeholder
 
 func (s *userHandlerRepoStub) Create(context.Context, *service.User) error { return nil placeholder
@@ -115,6 +116,18 @@ func (s *userHandlerRepoStub) ListUserAuthIdentities(context.Context, int64) ([]
 	out := make([]service.UserAuthIdentityRecord, len(s.identities))
 	copy(out, s.identities)
 	return out, nil
+placeholder
+func (s *userHandlerRepoStub) UnbindUserAuthProvider(_ context.Context, _ int64, provider string) error {
+	s.unbound = append(s.unbound, provider)
+	filtered := s.identities[:0]
+	for _, identity := range s.identities {
+		if identity.ProviderType == provider {
+			continue
+	placeholder
+		filtered = append(filtered, identity)
+placeholder
+	s.identities = append([]service.UserAuthIdentityRecord(nil), filtered...)
+	return nil
 placeholder
 
 func TestUserHandlerUpdateProfileReturnsAvatarURL(t *testing.T) {
@@ -426,6 +439,60 @@ placeholder
 	require.Equal(t, 0, resp.Code)
 	require.Equal(t, "new@example.com", resp.Data.Email)
 	require.True(t, resp.Data.EmailBound)
+placeholder
+
+func TestUserHandlerUnbindIdentityReturnsUpdatedProfile(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &userHandlerRepoStub{
+		user: &service.User{
+			ID:       21,
+			Email:    "identity@example.com",
+			Username: "identity-user",
+			Role:     service.RoleUser,
+			Status:   service.StatusActive,
+	placeholder,
+		identities: []service.UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "identity@example.com",
+		placeholder,
+			{
+				ProviderType:    "linuxdo",
+				ProviderKey:     "linuxdo",
+				ProviderSubject: "linuxdo-subject-21",
+				Metadata: map[string]any{
+					"username": "linuxdo-handle",
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	handler := NewUserHandler(service.NewUserService(repo, nil, nil, nil), nil, nil, nil)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/v1/user/account-bindings/linuxdo", nil)
+	c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 21placeholder)
+	c.Params = gin.Params{{Key: "provider", Value: "linuxdo"placeholderplaceholder
+
+	handler.UnbindIdentity(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Equal(t, []string{"linuxdo"placeholder, repo.unbound)
+
+	var resp struct {
+		Code int            `json:"code"`
+		Data map[string]any `json:"data"`
+placeholder
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
+	require.Equal(t, 0, resp.Code)
+
+	authBindings, ok := resp.Data["auth_bindings"].(map[string]any)
+	require.True(t, ok)
+	linuxdoBinding, ok := authBindings["linuxdo"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, false, linuxdoBinding["bound"])
 placeholder
 
 func TestUserHandlerBindEmailIdentityRejectsWrongCurrentPasswordForBoundEmail(t *testing.T) {

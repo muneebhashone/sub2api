@@ -123,6 +123,8 @@ func (s *emailSyncRepoStub) ListUserAuthIdentities(context.Context, int64) ([]Us
 	return nil, nil
 placeholder
 
+func (s *emailSyncRepoStub) UnbindUserAuthProvider(context.Context, int64, string) error { return nil placeholder
+
 func (s *emailSyncRepoStub) UpdateTotpSecret(context.Context, int64, *string) error { return nil placeholder
 
 func (s *emailSyncRepoStub) EnableTotp(context.Context, int64) error { return nil placeholder
