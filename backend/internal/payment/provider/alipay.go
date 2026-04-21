@@ -91,6 +91,17 @@ func (a *Alipay) SupportedTypes() []payment.PaymentType {
 	return []payment.PaymentType{payment.TypeAlipayplaceholder
 placeholder
 
+func (a *Alipay) MerchantIdentityMetadata() map[string]string {
+	if a == nil {
+		return nil
+placeholder
+	appID := strings.TrimSpace(a.config["appId"])
+	if appID == "" {
+		return nil
+placeholder
+	return map[string]string{"app_id": appIDplaceholder
+placeholder
+
 // CreatePayment creates an Alipay payment page URL.
 func (a *Alipay) CreatePayment(ctx context.Context, req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
 	client, err := a.getClient()
@@ -181,10 +192,11 @@ placeholder
 placeholder
 
 	return &payment.QueryOrderResponse{
-		TradeNo: result.TradeNo,
-		Status:  status,
-		Amount:  amount,
-		PaidAt:  result.SendPayDate,
+		TradeNo:  result.TradeNo,
+		Status:   status,
+		Amount:   amount,
+		PaidAt:   result.SendPayDate,
+		Metadata: a.MerchantIdentityMetadata(),
 placeholder, nil
 placeholder
 
@@ -215,12 +227,21 @@ placeholder
 		return nil, fmt.Errorf("alipay parse notification amount %q: %w", notification.TotalAmount, err)
 placeholder
 
+	metadata := a.MerchantIdentityMetadata()
+	if appID := strings.TrimSpace(notification.AppId); appID != "" {
+		if metadata == nil {
+			metadata = map[string]string{placeholder
+	placeholder
+		metadata["app_id"] = appID
+placeholder
+
 	return &payment.PaymentNotification{
-		TradeNo: notification.TradeNo,
-		OrderID: notification.OutTradeNo,
-		Amount:  amount,
-		Status:  status,
-		RawData: rawBody,
+		TradeNo:  notification.TradeNo,
+		OrderID:  notification.OutTradeNo,
+		Amount:   amount,
+		Status:   status,
+		RawData:  rawBody,
+		Metadata: metadata,
 placeholder, nil
 placeholder
 
@@ -283,6 +304,7 @@ placeholder
 
 // Ensure interface compliance.
 var (
-	_ payment.Provider           = (*Alipay)(nil)
-	_ payment.CancelableProvider = (*Alipay)(nil)
+	_ payment.Provider                 = (*Alipay)(nil)
+	_ payment.CancelableProvider       = (*Alipay)(nil)
+	_ payment.MerchantIdentityProvider = (*Alipay)(nil)
 )

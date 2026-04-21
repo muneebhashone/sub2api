@@ -130,6 +130,40 @@ placeholder, CreateOrderRequest{OpenID: "openid-123"placeholder)
 	require.Equal(t, "CNY", snapshot["currency"])
 placeholder
 
+func TestBuildPaymentOrderProviderSnapshot_IncludesAlipayMerchantIdentity(t *testing.T) {
+	t.Parallel()
+
+	snapshot := buildPaymentOrderProviderSnapshot(&payment.InstanceSelection{
+		InstanceID:  "21",
+		ProviderKey: payment.TypeAlipay,
+		Config: map[string]string{
+			"appId":      "alipay-app-21",
+			"privateKey": "secret",
+	placeholder,
+		PaymentMode: "redirect",
+placeholder, CreateOrderRequest{placeholder)
+
+	require.Equal(t, "alipay-app-21", snapshot["merchant_app_id"])
+	require.NotContains(t, snapshot, "privateKey")
+placeholder
+
+func TestBuildPaymentOrderProviderSnapshot_IncludesEasyPayMerchantIdentity(t *testing.T) {
+	t.Parallel()
+
+	snapshot := buildPaymentOrderProviderSnapshot(&payment.InstanceSelection{
+		InstanceID:  "66",
+		ProviderKey: payment.TypeEasyPay,
+		Config: map[string]string{
+			"pid":  "easypay-merchant-66",
+			"pkey": "secret",
+	placeholder,
+		PaymentMode: "popup",
+placeholder, CreateOrderRequest{PaymentType: payment.TypeAlipayplaceholder)
+
+	require.Equal(t, "easypay-merchant-66", snapshot["merchant_id"])
+	require.NotContains(t, snapshot, "pkey")
+placeholder
+
 func valueOrEmpty(v *string) string {
 	if v == nil {
 		return ""

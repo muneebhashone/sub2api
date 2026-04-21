@@ -240,6 +240,16 @@ placeholder
 	placeholder
 		snapshot["currency"] = "CNY"
 placeholder
+	if providerKey == payment.TypeAlipay {
+		if merchantAppID := strings.TrimSpace(sel.Config["appId"]); merchantAppID != "" {
+			snapshot["merchant_app_id"] = merchantAppID
+	placeholder
+placeholder
+	if providerKey == payment.TypeEasyPay {
+		if merchantID := strings.TrimSpace(sel.Config["pid"]); merchantID != "" {
+			snapshot["merchant_id"] = merchantID
+	placeholder
+placeholder
 
 	if len(snapshot) == 1 {
 		return nil
