@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"testing"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -302,7 +304,7 @@ placeholder
 placeholder
 placeholder
 
-func TestGetPaymentConfigAppliesVisibleMethodRouting(t *testing.T) {
+func TestGetPaymentConfigKeepsStoredEnabledTypes(t *testing.T) {
 	ctx := context.Background()
 	client := newPaymentConfigServiceTestClient(t)
 
@@ -321,11 +323,7 @@ placeholder
 		entClient: client,
 		settingRepo: &paymentConfigSettingRepoStub{
 			values: map[string]string{
-				SettingEnabledPaymentTypes:               "alipay,wxpay,stripe",
-				SettingPaymentVisibleMethodAlipayEnabled: "true",
-				SettingPaymentVisibleMethodAlipaySource:  "easypay",
-				SettingPaymentVisibleMethodWxpayEnabled:  "true",
-				SettingPaymentVisibleMethodWxpaySource:   "wxpay",
+				SettingEnabledPaymentTypes: "alipay,wxpay,stripe",
 		placeholder,
 	placeholder,
 placeholder
@@ -335,7 +333,7 @@ placeholder
 		t.Fatalf("GetPaymentConfig returned error: %v", err)
 placeholder
 
-	want := []string{payment.TypeAlipay, payment.TypeStripeplaceholder
+	want := []string{payment.TypeAlipay, payment.TypeWxpay, payment.TypeStripeplaceholder
 	if len(cfg.EnabledTypes) != len(want) {
 		t.Fatalf("EnabledTypes len = %d, want %d (%v)", len(cfg.EnabledTypes), len(want), cfg.EnabledTypes)
 placeholder
@@ -349,7 +347,11 @@ placeholder
 func newPaymentConfigServiceTestClient(t *testing.T) *dbent.Client {
 placeholder
 
-	db, err := sql.Open("sqlite", "file:payment_config_service?mode=memory&cache=shared")
+	dbName := fmt.Sprintf(
+		"file:%s?mode=memory&cache=shared",
+		strings.NewReplacer("/", "_", " ", "_").Replace(t.Name()),
+	)
+	db, err := sql.Open("sqlite", dbName)
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 placeholder
