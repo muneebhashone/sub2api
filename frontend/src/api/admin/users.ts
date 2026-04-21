@@ -6,24 +6,6 @@
 import { apiClient placeholder from '../client'
 import type { AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey placeholder from '@/types'
 
-export interface AuthIdentityMigrationReport {
-  id: number
-  report_type: string
-  report_key: string
-  details: Record<string, unknown>
-  created_at: string
-  resolved_at?: string | null
-  resolved_by_user_id?: number | null
-  resolution_note?: string
-placeholder
-
-export interface AuthIdentityMigrationReportSummary {
-  total: number
-  open_total: number
-  resolved_total: number
-  by_type: Record<string, number>
-placeholder
-
 export interface AdminBindAuthIdentityChannelRequest {
   channel: string
   channel_app_id?: string
@@ -46,12 +28,6 @@ export interface AdminBoundAuthIdentity {
   provider_key: string
   provider_subject: string
   channel_id?: number | null
-placeholder
-
-export interface ListAuthIdentityMigrationReportsParams {
-  page?: number
-  pageSize?: number
-  reportType?: string
 placeholder
 
 /**
@@ -296,42 +272,6 @@ export async function replaceGroup(
   return data
 placeholder
 
-export async function getAuthIdentityMigrationReportSummary(): Promise<AuthIdentityMigrationReportSummary> {
-  const { data placeholder = await apiClient.get<AuthIdentityMigrationReportSummary>(
-    '/admin/users/auth-identity-migration-reports/summary'
-  )
-  return data
-placeholder
-
-export async function listAuthIdentityMigrationReports(
-  params: ListAuthIdentityMigrationReportsParams = {placeholder
-): Promise<PaginatedResponse<AuthIdentityMigrationReport>> {
-  const { data placeholder = await apiClient.get<PaginatedResponse<AuthIdentityMigrationReport>>(
-    '/admin/users/auth-identity-migration-reports',
-    {
-      params: {
-        page: params.page ?? 1,
-        page_size: params.pageSize ?? 20,
-        report_type: params.reportType ?? ''
-      placeholder
-    placeholder
-  )
-  return data
-placeholder
-
-export async function resolveAuthIdentityMigrationReport(
-  id: number,
-  resolutionNote: string
-): Promise<AuthIdentityMigrationReport> {
-  const { data placeholder = await apiClient.post<AuthIdentityMigrationReport>(
-    `/admin/users/auth-identity-migration-reports/${idplaceholder/resolve`,
-    {
-      resolution_note: resolutionNote
-    placeholder
-  )
-  return data
-placeholder
-
 export async function bindUserAuthIdentity(
   userId: number,
   input: AdminBindAuthIdentityRequest
@@ -356,10 +296,7 @@ export const usersAPI = {
   getUserUsageStats,
   getUserBalanceHistory,
   replaceGroup,
-  bindUserAuthIdentity,
-  getAuthIdentityMigrationReportSummary,
-  listAuthIdentityMigrationReports,
-  resolveAuthIdentityMigrationReport
+  bindUserAuthIdentity
 placeholder
 
 export default usersAPI

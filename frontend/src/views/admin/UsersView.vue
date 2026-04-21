@@ -712,8 +712,8 @@ const allColumns = computed<Column[]>(() => [
   { key: 'usage', label: t('admin.users.columns.usage'), sortable: false placeholder,
   { key: 'concurrency', label: t('admin.users.columns.concurrency'), sortable: true placeholder,
   { key: 'status', label: t('admin.users.columns.status'), sortable: true placeholder,
-  { key: 'last_used_at', label: t('admin.users.columns.lastUsed'), sortable: true placeholder,
   { key: 'last_active_at', label: t('admin.users.columns.lastActive'), sortable: true placeholder,
+  { key: 'last_used_at', label: t('admin.users.columns.lastUsed'), sortable: true placeholder,
   { key: 'created_at', label: t('admin.users.columns.created'), sortable: true placeholder,
   { key: 'actions', label: t('admin.users.columns.actions'), sortable: false placeholder
 ])

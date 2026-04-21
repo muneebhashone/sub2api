@@ -2293,6 +2293,10 @@ placeholder
 	return nil
 placeholder
 
+func (r *oauthPendingFlowUserRepo) UpdateUserLastActiveAt(ctx context.Context, userID int64, activeAt time.Time) error {
+	return r.client.User.UpdateOneID(userID).SetLastActiveAt(activeAt).Exec(ctx)
+placeholder
+
 func (r *oauthPendingFlowUserRepo) Delete(ctx context.Context, id int64) error {
 	if r.options.rejectDeleteWhileAuthIdentityExists {
 		count, err := r.client.AuthIdentity.Query().Where(authidentity.UserIDEQ(id)).Count(ctx)
