@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
+
+const paymentResultReturnPath = "/payment/result"
 
 const (
 	PaymentSourceHostedRedirect    = "hosted_redirect"
@@ -215,7 +218,7 @@ func visibleMethodSourceSettingKey(method string) string {
 placeholder
 placeholder
 
-func CanonicalizeReturnURL(raw string) (string, error) {
+func CanonicalizeReturnURL(raw string, srcHost string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return "", nil
@@ -231,19 +234,29 @@ placeholder
 	if parsed.Path == "" {
 		parsed.Path = "/"
 placeholder
+	if parsed.Path != paymentResultReturnPath {
+		return "", infraerrors.BadRequest("INVALID_RETURN_URL", "return_url must target the canonical internal payment result page")
+placeholder
+	if !sameOriginHost(parsed.Host, srcHost) {
+		return "", infraerrors.BadRequest("INVALID_RETURN_URL", "return_url must use the same host as the current site")
+placeholder
 	return parsed.String(), nil
 placeholder
 
 func buildPaymentReturnURL(base string, orderID int64, resumeToken string) (string, error) {
-	canonical, err := CanonicalizeReturnURL(base)
-	if err != nil || canonical == "" {
-		return canonical, err
+	canonical := strings.TrimSpace(base)
+	if canonical == "" {
+		return "", nil
 placeholder
 
 	parsed, err := url.Parse(canonical)
 	if err != nil {
 		return "", infraerrors.BadRequest("INVALID_RETURN_URL", "return_url must be a valid URL")
 placeholder
+	if !parsed.IsAbs() || parsed.Host == "" {
+		return "", infraerrors.BadRequest("INVALID_RETURN_URL", "return_url must be a valid absolute URL")
+placeholder
+	parsed.Fragment = ""
 
 	query := parsed.Query()
 	if orderID > 0 {
@@ -256,6 +269,31 @@ placeholder
 	parsed.RawQuery = query.Encode()
 
 	return parsed.String(), nil
+placeholder
+
+func sameOriginHost(returnURLHost string, requestHost string) bool {
+	returnHost := strings.TrimSpace(returnURLHost)
+	reqHost := strings.TrimSpace(requestHost)
+	if returnHost == "" || reqHost == "" {
+		return false
+placeholder
+	if strings.EqualFold(returnHost, reqHost) {
+		return true
+placeholder
+
+	returnName, returnPort := splitHostPortDefault(returnHost)
+	reqName, reqPort := splitHostPortDefault(reqHost)
+	if returnName == "" || reqName == "" {
+		return false
+placeholder
+	return strings.EqualFold(returnName, reqName) && returnPort == reqPort
+placeholder
+
+func splitHostPortDefault(raw string) (string, string) {
+	if host, port, err := net.SplitHostPort(raw); err == nil {
+		return host, port
+placeholder
+	return raw, ""
 placeholder
 
 func (s *PaymentResumeService) CreateToken(claims ResumeTokenClaims) (string, error) {

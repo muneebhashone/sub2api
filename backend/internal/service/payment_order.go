@@ -350,7 +350,7 @@ func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.Paymen
 placeholder
 	subject := s.buildPaymentSubject(plan, limitAmount, cfg)
 	outTradeNo := order.OutTradeNo
-	canonicalReturnURL, err := CanonicalizeReturnURL(req.ReturnURL)
+	canonicalReturnURL, err := CanonicalizeReturnURL(req.ReturnURL, req.SrcHost)
 	if err != nil {
 		return nil, err
 placeholder

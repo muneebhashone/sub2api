@@ -64,20 +64,36 @@ placeholder
 func TestCanonicalizeReturnURL(t *testing.T) {
 	t.Parallel()
 
-	got, err := CanonicalizeReturnURL("https://example.com/pay/result?b=2#a")
+	got, err := CanonicalizeReturnURL("https://example.com/payment/result?b=2#a", "example.com")
 	if err != nil {
 		t.Fatalf("CanonicalizeReturnURL returned error: %v", err)
 placeholder
-	if got != "https://example.com/pay/result?b=2" {
-		t.Fatalf("CanonicalizeReturnURL = %q, want %q", got, "https://example.com/pay/result?b=2")
+	if got != "https://example.com/payment/result?b=2" {
+		t.Fatalf("CanonicalizeReturnURL = %q, want %q", got, "https://example.com/payment/result?b=2")
 placeholder
 placeholder
 
 func TestCanonicalizeReturnURLRejectsRelativeURL(t *testing.T) {
 	t.Parallel()
 
-	if _, err := CanonicalizeReturnURL("/payment/result"); err == nil {
+	if _, err := CanonicalizeReturnURL("/payment/result", "example.com"); err == nil {
 		t.Fatal("CanonicalizeReturnURL should reject relative URLs")
+placeholder
+placeholder
+
+func TestCanonicalizeReturnURLRejectsExternalHost(t *testing.T) {
+	t.Parallel()
+
+	if _, err := CanonicalizeReturnURL("https://evil.example/payment/result", "app.example.com"); err == nil {
+		t.Fatal("CanonicalizeReturnURL should reject external hosts")
+placeholder
+placeholder
+
+func TestCanonicalizeReturnURLRejectsNonCanonicalPath(t *testing.T) {
+	t.Parallel()
+
+	if _, err := CanonicalizeReturnURL("https://app.example.com/orders/42", "app.example.com"); err == nil {
+		t.Fatal("CanonicalizeReturnURL should reject non-canonical result paths")
 placeholder
 placeholder
 
