@@ -1,15 +1,52 @@
 <template>
   <div class="space-y-4">
-    <!-- Headers textarea -->
+    <!-- Headers key-value rows -->
     <div>
       <label class="input-label">{{ t('admin.channelMonitor.advanced.headers') placeholderplaceholder</label>
-      <textarea
-        v-model="headersText"
-        rows="4"
-        :placeholder="t('admin.channelMonitor.advanced.headersPlaceholder')"
-        class="input font-mono text-xs"
-        @blur="commitHeaders"
-      />
+      <div class="space-y-1.5">
+        <div
+          v-for="(row, i) in headerRows"
+          :key="i"
+          class="flex items-center gap-2"
+        >
+          <input
+            v-model="row.name"
+            type="text"
+            spellcheck="false"
+            :placeholder="t('admin.channelMonitor.advanced.headerNamePlaceholder')"
+            class="input w-52 flex-none font-mono text-xs"
+            @blur="commitHeaders"
+          />
+          <input
+            v-model="row.value"
+            type="text"
+            spellcheck="false"
+            :placeholder="t('admin.channelMonitor.advanced.headerValuePlaceholder')"
+            class="input flex-1 font-mono text-xs"
+            @blur="commitHeaders"
+          />
+          <button
+            type="button"
+            class="flex-none rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+            :title="t('common.delete')"
+            @click="removeRow(i)"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-500 hover:border-primary-400 hover:text-primary-600 dark:border-dark-600 dark:text-gray-400 dark:hover:border-primary-500 dark:hover:text-primary-400"
+          @click="addRow"
+        >
+          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          {{ t('admin.channelMonitor.advanced.headerAddRow') placeholderplaceholder
+        </button>
+      </div>
       <p v-if="headersError" class="mt-1 text-xs text-red-500">{{ headersError placeholderplaceholder</p>
       <p v-else class="mt-1 text-xs text-gray-400">
         {{ t('admin.channelMonitor.advanced.headersHint') placeholderplaceholder
@@ -85,51 +122,79 @@ placeholder>()
 
 const { t placeholder = useI18n()
 
-// ---- Headers textarea (Key: Value per line) ----
-const headersText = ref(serializeHeaders(props.extraHeaders))
+// ---- Headers key-value rows ----
+interface HeaderRow {
+  name: string
+  value: string
+placeholder
+
+const headerRows = ref<HeaderRow[]>(toRows(props.extraHeaders))
 const headersError = ref('')
 
 watch(
   () => props.extraHeaders,
   (v) => {
-    // 外部重置时（如切换平台 / 应用模板）同步文本
-    headersText.value = serializeHeaders(v)
+    // 外部重置时（切换平台 / 应用模板）同步行。
+    // 同值不回写，避免每次 commit 都把行重排。
+    if (!isSameHeaderMap(toMap(headerRows.value), v)) {
+      headerRows.value = toRows(v)
+    placeholder
     headersError.value = ''
   placeholder,
 )
 
+function toRows(h: Record<string, string>): HeaderRow[] {
+  const entries = Object.entries(h || {placeholder)
+  if (entries.length === 0) return [{ name: '', value: '' placeholder]
+  return entries.map(([name, value]) => ({ name, value placeholder))
+placeholder
+
+function toMap(rows: HeaderRow[]): Record<string, string> {
+  const out: Record<string, string> = {placeholder
+  for (const row of rows) {
+    const name = row.name.trim()
+    if (name === '') continue
+    out[name] = row.value
+  placeholder
+  return out
+placeholder
+
+function isSameHeaderMap(a: Record<string, string>, b: Record<string, string>): boolean {
+  const ak = Object.keys(a)
+  const bk = Object.keys(b || {placeholder)
+  if (ak.length !== bk.length) return false
+  for (const k of ak) {
+    if (a[k] !== b[k]) return false
+  placeholder
+  return true
+placeholder
+
 function commitHeaders() {
-  const parsed = parseHeaders(headersText.value)
-  if (parsed.error) {
-    headersError.value = parsed.error
-    return
+  // 空白 name + 空白 value 的行允许保留作为"占位新行"，不报错；
+  // name 非空但 value 为空（或反之）都视为用户正在编辑，同样不报错。
+  // 只在 name 里含冒号这种明显不合法时兜一下。
+  for (const row of headerRows.value) {
+    const name = row.name.trim()
+    if (name === '') continue
+    if (name.includes(':') || /\s/.test(name)) {
+      headersError.value = t('admin.channelMonitor.advanced.headerNameInvalid', { name placeholder)
+      return
+    placeholder
   placeholder
   headersError.value = ''
-  emit('update:extraHeaders', parsed.headers)
+  emit('update:extraHeaders', toMap(headerRows.value))
 placeholder
 
-function serializeHeaders(h: Record<string, string>): string {
-  return Object.entries(h || {placeholder)
-    .map(([k, v]) => `${kplaceholder: ${vplaceholder`)
-    .join('\n')
+function addRow() {
+  headerRows.value.push({ name: '', value: '' placeholder)
 placeholder
 
-function parseHeaders(raw: string): { headers: Record<string, string>; error: string placeholder {
-  const result: Record<string, string> = {placeholder
-  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
-  for (const line of lines) {
-    const idx = line.indexOf(':')
-    if (idx <= 0) {
-      return { headers: {placeholder, error: t('admin.channelMonitor.advanced.headersParseError', { line placeholder) placeholder
-    placeholder
-    const key = line.slice(0, idx).trim()
-    const value = line.slice(idx + 1).trim()
-    if (!key) {
-      return { headers: {placeholder, error: t('admin.channelMonitor.advanced.headersParseError', { line placeholder) placeholder
-    placeholder
-    result[key] = value
+function removeRow(index: number) {
+  headerRows.value.splice(index, 1)
+  if (headerRows.value.length === 0) {
+    headerRows.value.push({ name: '', value: '' placeholder)
   placeholder
-  return { headers: result, error: '' placeholder
+  commitHeaders()
 placeholder
 
 // ---- Body mode + JSON ----
