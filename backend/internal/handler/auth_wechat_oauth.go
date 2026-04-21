@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -149,7 +148,7 @@ placeholder
 // WeChatOAuthCallback exchanges the code with WeChat, resolves openid/unionid,
 // and stores the result in the unified pending-auth flow.
 func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
-	frontendCallback := wechatOAuthFrontendCallback()
+	frontendCallback := h.wechatOAuthFrontendCallback(c.Request.Context())
 
 	if providerErr := strings.TrimSpace(c.Query("error")); providerErr != "" {
 		redirectOAuthError(c, frontendCallback, "provider_error", providerErr, c.Query("error_description"))
@@ -859,6 +858,10 @@ func (h *AuthHandler) getWeChatOAuthConfig(ctx context.Context, rawMode string, 
 		return wechatOAuthConfig{placeholder, err
 placeholder
 
+	if h == nil || h.settingSvc == nil {
+		return wechatOAuthConfig{placeholder, infraerrors.ServiceUnavailable("CONFIG_NOT_READY", "wechat oauth settings service not ready")
+placeholder
+
 	apiBaseURL := ""
 	if h != nil && h.settingSvc != nil {
 		settings, err := h.settingSvc.GetAllSettings(ctx)
@@ -867,27 +870,28 @@ placeholder
 	placeholder
 placeholder
 
+	effective, err := h.settingSvc.GetWeChatConnectOAuthConfig(ctx)
+	if err != nil {
+		return wechatOAuthConfig{placeholder, err
+placeholder
+	if effective.Mode != mode {
+		return wechatOAuthConfig{placeholder, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
+placeholder
+
 	cfg := wechatOAuthConfig{
 		mode:             mode,
-		redirectURI:      resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback"),
-		frontendCallback: wechatOAuthFrontendCallback(),
+		appID:            strings.TrimSpace(effective.AppID),
+		appSecret:        strings.TrimSpace(effective.AppSecret),
+		redirectURI:      firstNonEmpty(strings.TrimSpace(effective.RedirectURL), resolveWeChatOAuthAbsoluteURL(apiBaseURL, c, "/api/v1/auth/oauth/wechat/callback")),
+		frontendCallback: firstNonEmpty(strings.TrimSpace(effective.FrontendRedirectURL), wechatOAuthDefaultFrontendCB),
+		scope:            firstNonEmpty(strings.TrimSpace(effective.Scopes), service.DefaultWeChatConnectScopesForMode(mode)),
 placeholder
 
 	switch mode {
 	case "mp":
-		cfg.appID = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_ID"))
-		cfg.appSecret = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_MP_APP_SECRET"))
 		cfg.authorizeURL = "https://open.weixin.qq.com/connect/oauth2/authorize"
-		cfg.scope = "snsapi_userinfo"
 	default:
-		cfg.appID = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_ID"))
-		cfg.appSecret = strings.TrimSpace(os.Getenv("WECHAT_OAUTH_OPEN_APP_SECRET"))
 		cfg.authorizeURL = "https://open.weixin.qq.com/connect/qrconnect"
-		cfg.scope = "snsapi_login"
-placeholder
-
-	if cfg.appID == "" || cfg.appSecret == "" {
-		return wechatOAuthConfig{placeholder, infraerrors.NotFound("OAUTH_DISABLED", "wechat oauth is disabled")
 placeholder
 	if strings.TrimSpace(cfg.redirectURI) == "" {
 		return wechatOAuthConfig{placeholder, infraerrors.InternalServer("OAUTH_CONFIG_INVALID", "wechat oauth redirect url not configured")
@@ -896,8 +900,14 @@ placeholder
 	return cfg, nil
 placeholder
 
-func wechatOAuthFrontendCallback() string {
-	return firstNonEmpty(strings.TrimSpace(os.Getenv("WECHAT_OAUTH_FRONTEND_REDIRECT_URL")), wechatOAuthDefaultFrontendCB)
+func (h *AuthHandler) wechatOAuthFrontendCallback(ctx context.Context) string {
+	if h != nil && h.settingSvc != nil {
+		cfg, err := h.settingSvc.GetWeChatConnectOAuthConfig(ctx)
+		if err == nil && strings.TrimSpace(cfg.FrontendRedirectURL) != "" {
+			return strings.TrimSpace(cfg.FrontendRedirectURL)
+	placeholder
+placeholder
+	return wechatOAuthDefaultFrontendCB
 placeholder
 
 func resolveWeChatOAuthMode(rawMode string, c *gin.Context) (string, error) {

@@ -366,7 +366,8 @@ placeholder
 placeholder
 
 type paymentConfigSettingRepoStub struct {
-	values map[string]string
+	values  map[string]string
+	updates map[string]string
 placeholder
 
 func (s *paymentConfigSettingRepoStub) Get(context.Context, string) (*Setting, error) {
@@ -383,10 +384,52 @@ func (s *paymentConfigSettingRepoStub) GetMultiple(_ context.Context, keys []str
 placeholder
 	return out, nil
 placeholder
-func (s *paymentConfigSettingRepoStub) SetMultiple(context.Context, map[string]string) error {
+func (s *paymentConfigSettingRepoStub) SetMultiple(_ context.Context, values map[string]string) error {
+	s.updates = make(map[string]string, len(values))
+	for key, value := range values {
+		s.updates[key] = value
+		if s.values == nil {
+			s.values = map[string]string{placeholder
+	placeholder
+		s.values[key] = value
+placeholder
 	return nil
 placeholder
 func (s *paymentConfigSettingRepoStub) GetAll(context.Context) (map[string]string, error) {
 	return s.values, nil
 placeholder
 func (s *paymentConfigSettingRepoStub) Delete(context.Context, string) error { return nil placeholder
+
+func TestUpdatePaymentConfig_PersistsVisibleMethodRouting(t *testing.T) {
+	repo := &paymentConfigSettingRepoStub{values: map[string]string{placeholderplaceholder
+	svc := &PaymentConfigService{settingRepo: repoplaceholder
+
+	alipayEnabled := true
+	wxpayEnabled := false
+	err := svc.UpdatePaymentConfig(context.Background(), UpdatePaymentConfigRequest{
+		VisibleMethodAlipayEnabled: &alipayEnabled,
+		VisibleMethodAlipaySource:  paymentConfigStrPtr(VisibleMethodSourceEasyPayAlipay),
+		VisibleMethodWxpayEnabled:  &wxpayEnabled,
+		VisibleMethodWxpaySource:   paymentConfigStrPtr(VisibleMethodSourceOfficialWechat),
+placeholder)
+	if err != nil {
+		t.Fatalf("UpdatePaymentConfig returned error: %v", err)
+placeholder
+
+	if repo.values[SettingPaymentVisibleMethodAlipayEnabled] != "true" {
+		t.Fatalf("alipay enabled = %q, want true", repo.values[SettingPaymentVisibleMethodAlipayEnabled])
+placeholder
+	if repo.values[SettingPaymentVisibleMethodAlipaySource] != VisibleMethodSourceEasyPayAlipay {
+		t.Fatalf("alipay source = %q, want %q", repo.values[SettingPaymentVisibleMethodAlipaySource], VisibleMethodSourceEasyPayAlipay)
+placeholder
+	if repo.values[SettingPaymentVisibleMethodWxpayEnabled] != "false" {
+		t.Fatalf("wxpay enabled = %q, want false", repo.values[SettingPaymentVisibleMethodWxpayEnabled])
+placeholder
+	if repo.values[SettingPaymentVisibleMethodWxpaySource] != VisibleMethodSourceOfficialWechat {
+		t.Fatalf("wxpay source = %q, want %q", repo.values[SettingPaymentVisibleMethodWxpaySource], VisibleMethodSourceOfficialWechat)
+placeholder
+placeholder
+
+func paymentConfigStrPtr(value string) *string {
+	return &value
+placeholder

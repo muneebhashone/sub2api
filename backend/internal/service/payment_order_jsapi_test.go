@@ -60,10 +60,17 @@ placeholder
 placeholder
 
 	configService := &PaymentConfigService{
-		entClient:     client,
+		entClient: client,
 		settingRepo: &paymentConfigSettingRepoStub{values: map[string]string{
-			SettingPaymentVisibleMethodWxpayEnabled: "true",
-			SettingPaymentVisibleMethodWxpaySource:  VisibleMethodSourceOfficialWechat,
+			SettingPaymentVisibleMethodWxpayEnabled:    "true",
+			SettingPaymentVisibleMethodWxpaySource:     VisibleMethodSourceOfficialWechat,
+			SettingKeyWeChatConnectEnabled:             "true",
+			SettingKeyWeChatConnectAppID:               "wx-mp-app",
+			SettingKeyWeChatConnectAppSecret:           "wechat-secret",
+			SettingKeyWeChatConnectMode:                "mp",
+			SettingKeyWeChatConnectScopes:              "snsapi_base",
+			SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+			SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
 placeholder
 		encryptionKey: []byte(jsapiTestEncryptionKey),
 placeholder
@@ -76,9 +83,6 @@ placeholder
 		loadBalancer:  loadBalancer,
 		configService: configService,
 placeholder
-
-	t.Setenv("WECHAT_OAUTH_MP_APP_ID", "wx-mp-app")
-	t.Setenv("WECHAT_OAUTH_MP_APP_SECRET", "wechat-secret")
 
 	sel, err := svc.selectCreateOrderInstance(ctx, CreateOrderRequest{
 		PaymentType:     payment.TypeWxpay,
