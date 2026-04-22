@@ -184,7 +184,7 @@ placeholder
 			return map[int64]string{groupID: "anthropic"placeholder, nil
 	placeholder,
 placeholder
-	cs := NewChannelService(repo, nil, nil)
+	cs := NewChannelService(repo, nil, nil, nil)
 	bs := newTestBillingServiceForResolver()
 	return NewModelPricingResolver(cs, bs)
 placeholder
@@ -517,7 +517,7 @@ func TestResolve_WithChannelOverride_CacheError(t *testing.T) {
 			return nil, errors.New("database unavailable")
 	placeholder,
 placeholder
-	cs := NewChannelService(repo, nil, nil)
+	cs := NewChannelService(repo, nil, nil, nil)
 	bs := newTestBillingServiceForResolver()
 	r := NewModelPricingResolver(cs, bs)
 
