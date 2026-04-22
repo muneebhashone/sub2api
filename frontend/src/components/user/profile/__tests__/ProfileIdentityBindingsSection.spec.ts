@@ -335,6 +335,29 @@ describe('ProfileIdentityBindingsSection', () => {
     expect(wrapper.get('[data-testid="profile-binding-email-input"]').exists()).toBe(true)
   placeholder)
 
+  it('does not show a synthetic oauth-only email as the bound email summary', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser({
+          email: 'legacy-user@linuxdo-connect.invalid',
+          email_bound: false,
+          auth_bindings: {
+            email: { bound: false placeholder,
+          placeholder,
+        placeholder),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: false,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.text()).not.toContain('legacy-user@linuxdo-connect.invalid')
+    expect(wrapper.get('[data-testid="profile-binding-email-status"]').text()).toBe('Not bound')
+  placeholder)
+
   it('keeps the email form available for replacing a bound primary email', async () => {
     userApiMocks.sendEmailBindingCode.mockResolvedValue(undefined)
     userApiMocks.bindEmailIdentity.mockResolvedValue(

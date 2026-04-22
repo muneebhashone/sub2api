@@ -444,7 +444,14 @@ placeholder
 
 function providerSummary(provider: UserAuthProvider): string {
   if (provider === 'email') {
-    return currentUser.value?.email || ''
+    const email = currentUser.value?.email?.trim() || ''
+    if (!email) {
+      return ''
+    placeholder
+    if (currentUser.value?.email_bound === false && email.endsWith('.invalid')) {
+      return ''
+    placeholder
+    return email
   placeholder
   return ''
 placeholder

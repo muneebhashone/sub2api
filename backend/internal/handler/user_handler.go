@@ -258,6 +258,12 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if h.authService != nil {
+		if err := h.authService.RevokeAllUserSessions(c.Request.Context(), subject.UserID); err != nil {
+			response.ErrorFrom(c, err)
+			return
+	placeholder
+placeholder
 
 	profileResp, err := h.buildUserProfileResponse(c.Request.Context(), subject.UserID, updatedUser)
 	if err != nil {
@@ -504,8 +510,12 @@ placeholder
 
 	thirdParty := thirdPartyIdentityProviders(identities)
 	var avatarSource *userProfileSourceContext
-	if strings.TrimSpace(user.AvatarURL) != "" && len(thirdParty) == 1 {
-		avatarSource = buildUserProfileSourceContext(thirdParty[0].Provider)
+	avatarValue := strings.TrimSpace(user.AvatarURL)
+	for _, summary := range thirdParty {
+		if avatarValue != "" && avatarValue == strings.TrimSpace(summary.DisplayName) {
+			avatarSource = buildUserProfileSourceContext(summary.Provider)
+			break
+	placeholder
 placeholder
 
 	usernameValue := strings.TrimSpace(user.Username)
@@ -515,9 +525,6 @@ placeholder
 			usernameSource = buildUserProfileSourceContext(summary.Provider)
 			break
 	placeholder
-placeholder
-	if usernameSource == nil && usernameValue != "" && len(thirdParty) == 1 {
-		usernameSource = buildUserProfileSourceContext(thirdParty[0].Provider)
 placeholder
 
 	profileSources := map[string]*userProfileSourceContext{placeholder
