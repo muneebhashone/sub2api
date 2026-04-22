@@ -191,6 +191,80 @@ placeholder
 	require.Empty(t, redeemRepo.updateCalls)
 placeholder
 
+func TestRegisterOAuthEmailAccountSetsNormalizedSignupSourceOnCreatedUser(t *testing.T) {
+	userRepo := &userRepoStub{nextID: 42placeholder
+	emailCache := &emailCacheStub{
+		data: &VerificationCodeData{
+			Code:      "246810",
+			Attempts:  0,
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
+	placeholder,
+placeholder
+	authService := newOAuthEmailFlowAuthService(
+		userRepo,
+		&redeemCodeRepoStub{placeholder,
+		&refreshTokenCacheStub{placeholder,
+		map[string]string{
+			SettingKeyRegistrationEnabled: "true",
+			SettingKeyEmailVerifyEnabled:  "true",
+	placeholder,
+		emailCache,
+	)
+
+	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
+		context.Background(),
+		"fresh@example.com",
+		"secret-123",
+		"246810",
+		"",
+		" OIDC ",
+	)
+
+placeholder
+	require.NotNil(t, tokenPair)
+	require.NotNil(t, user)
+	require.Len(t, userRepo.created, 1)
+	require.Equal(t, "oidc", userRepo.created[0].SignupSource)
+placeholder
+
+func TestRegisterOAuthEmailAccountFallsBackUnknownSignupSourceToEmail(t *testing.T) {
+	userRepo := &userRepoStub{nextID: 43placeholder
+	emailCache := &emailCacheStub{
+		data: &VerificationCodeData{
+			Code:      "246810",
+			Attempts:  0,
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
+	placeholder,
+placeholder
+	authService := newOAuthEmailFlowAuthService(
+		userRepo,
+		&redeemCodeRepoStub{placeholder,
+		&refreshTokenCacheStub{placeholder,
+		map[string]string{
+			SettingKeyRegistrationEnabled: "true",
+			SettingKeyEmailVerifyEnabled:  "true",
+	placeholder,
+		emailCache,
+	)
+
+	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
+		context.Background(),
+		"fallback@example.com",
+		"secret-123",
+		"246810",
+		"",
+		"github",
+	)
+
+placeholder
+	require.NotNil(t, tokenPair)
+	require.NotNil(t, user)
+	require.Len(t, userRepo.created, 1)
+	require.Equal(t, "email", userRepo.created[0].SignupSource)
+placeholder
+
 func TestRollbackOAuthEmailAccountCreationRestoresInvitationUsage(t *testing.T) {
 	userRepo := &userRepoStub{placeholder
 	redeemRepo := &redeemCodeRepoStub{

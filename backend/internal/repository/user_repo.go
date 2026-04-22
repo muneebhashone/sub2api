@@ -43,9 +43,6 @@ func (r *userRepository) Create(ctx context.Context, userIn *service.User) error
 	if userIn == nil {
 		return nil
 placeholder
-	if err := r.ensureNormalizedEmailAvailable(ctx, 0, userIn.Email); err != nil {
-		return err
-placeholder
 
 	// 统一使用 ent 的事务：保证用户与允许分组的更新原子化，
 	// 并避免基于 *sql.Tx 手动构造 ent client 导致的 ExecQuerier 断言错误。
@@ -55,9 +52,11 @@ placeholder
 placeholder
 
 	var txClient *dbent.Client
+	txCtx := ctx
 	if err == nil {
 		defer func() { _ = tx.Rollback() placeholder()
 		txClient = tx.Client()
+		txCtx = dbent.NewTxContext(ctx, tx)
 placeholder else {
 		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
 		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
@@ -65,6 +64,21 @@ placeholder else {
 	placeholder else {
 			txClient = r.client
 	placeholder
+placeholder
+
+	releaseEmailLock, err := lockRepositoryScopedKeys(
+		txCtx,
+		txClient,
+		txAwareSQLExecutor(txCtx, r.sql, r.client),
+		normalizedEmailUniquenessLockKey(userIn.Email),
+	)
+	if err != nil {
+		return err
+placeholder
+	defer releaseEmailLock()
+
+	if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, 0, userIn.Email); err != nil {
+		return err
 placeholder
 
 	created, err := txClient.User.Create().
@@ -79,15 +93,15 @@ placeholder
 		SetSignupSource(userSignupSourceOrDefault(userIn.SignupSource)).
 		SetNillableLastLoginAt(userIn.LastLoginAt).
 		SetNillableLastActiveAt(userIn.LastActiveAt).
-		Save(ctx)
+		Save(txCtx)
 	if err != nil {
 		return translatePersistenceError(err, nil, service.ErrEmailExists)
 placeholder
 
-	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, created.ID, userIn.AllowedGroups); err != nil {
+	if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, created.ID, userIn.AllowedGroups); err != nil {
 		return err
 placeholder
-	if err := ensureEmailAuthIdentityWithClient(ctx, txClient, created.ID, created.Email, "user_repo_create"); err != nil {
+	if err := ensureEmailAuthIdentityWithClient(txCtx, txClient, created.ID, created.Email, "user_repo_create"); err != nil {
 		return err
 placeholder
 
@@ -149,9 +163,6 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User) error
 	if userIn == nil {
 		return nil
 placeholder
-	if err := r.ensureNormalizedEmailAvailable(ctx, userIn.ID, userIn.Email); err != nil {
-		return err
-placeholder
 
 	// 使用 ent 事务包裹用户更新与 allowed_groups 同步，避免跨层事务不一致。
 	tx, err := r.client.Tx(ctx)
@@ -160,9 +171,11 @@ placeholder
 placeholder
 
 	var txClient *dbent.Client
+	txCtx := ctx
 	if err == nil {
 		defer func() { _ = tx.Rollback() placeholder()
 		txClient = tx.Client()
+		txCtx = dbent.NewTxContext(ctx, tx)
 placeholder else {
 		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
 		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
@@ -171,7 +184,23 @@ placeholder else {
 			txClient = r.client
 	placeholder
 placeholder
-	existing, err := clientFromContext(ctx, txClient).User.Get(ctx, userIn.ID)
+
+	releaseEmailLock, err := lockRepositoryScopedKeys(
+		txCtx,
+		txClient,
+		txAwareSQLExecutor(txCtx, r.sql, r.client),
+		normalizedEmailUniquenessLockKey(userIn.Email),
+	)
+	if err != nil {
+		return err
+placeholder
+	defer releaseEmailLock()
+
+	if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, userIn.ID, userIn.Email); err != nil {
+		return err
+placeholder
+
+	existing, err := clientFromContext(txCtx, txClient).User.Get(txCtx, userIn.ID)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, nil)
 placeholder
@@ -203,15 +232,15 @@ placeholder
 	if userIn.BalanceNotifyThreshold == nil {
 		updateOp = updateOp.ClearBalanceNotifyThreshold()
 placeholder
-	updated, err := updateOp.Save(ctx)
+	updated, err := updateOp.Save(txCtx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, service.ErrEmailExists)
 placeholder
 
-	if err := r.syncUserAllowedGroupsWithClient(ctx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
+	if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
 		return err
 placeholder
-	if err := replaceEmailAuthIdentityWithClient(ctx, txClient, updated.ID, oldEmail, updated.Email, "user_repo_update"); err != nil {
+	if err := replaceEmailAuthIdentityWithClient(txCtx, txClient, updated.ID, oldEmail, updated.Email, "user_repo_update"); err != nil {
 		return err
 placeholder
 
@@ -711,7 +740,16 @@ func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool,
 placeholder
 
 func (r *userRepository) ensureNormalizedEmailAvailable(ctx context.Context, userID int64, email string) error {
-	matches, err := r.client.User.Query().
+	return ensureNormalizedEmailAvailableWithClient(ctx, clientFromContext(ctx, r.client), userID, email)
+placeholder
+
+func ensureNormalizedEmailAvailableWithClient(ctx context.Context, client *dbent.Client, userID int64, email string) error {
+	client = clientFromContext(ctx, client)
+	if client == nil {
+		return nil
+placeholder
+
+	matches, err := client.User.Query().
 		Where(userEmailLookupPredicate(email)).
 		All(ctx)
 	if err != nil {
@@ -726,7 +764,7 @@ placeholder
 placeholder
 
 func userEmailLookupPredicate(email string) predicate.User {
-	normalized := strings.ToLower(strings.TrimSpace(email))
+	normalized := normalizeEmailLookupValue(email)
 	if normalized == "" {
 		return dbuser.EmailEQ(email)
 placeholder
@@ -738,6 +776,18 @@ placeholder
 				Arg(normalized)
 	placeholder))
 placeholder)
+placeholder
+
+func normalizeEmailLookupValue(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+placeholder
+
+func normalizedEmailUniquenessLockKey(email string) string {
+	normalized := normalizeEmailLookupValue(email)
+	if normalized == "" {
+		return ""
+placeholder
+	return "users:normalized-email:" + normalized
 placeholder
 
 func (r *userRepository) AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error {
@@ -874,11 +924,14 @@ placeholder
 placeholder
 
 func userSignupSourceOrDefault(signupSource string) string {
-	signupSource = strings.TrimSpace(signupSource)
-	if signupSource == "" {
+	switch strings.TrimSpace(strings.ToLower(signupSource)) {
+	case "", "email":
+		return "email"
+	case "linuxdo", "wechat", "oidc":
+		return strings.TrimSpace(strings.ToLower(signupSource))
+	default:
 		return "email"
 placeholder
-	return signupSource
 placeholder
 
 // marshalExtraEmails serializes notify email entries to JSON for storage.

@@ -4,11 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"hash/fnv"
 	"reflect"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
+	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
@@ -118,6 +122,113 @@ placeholder
 type sqlQueryExecutor interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+placeholder
+
+var repositoryScopedKeyLocks = newScopedKeyLockRegistry()
+
+type scopedKeyLockRegistry struct {
+	mu    sync.Mutex
+	locks map[string]*scopedKeyLockEntry
+placeholder
+
+type scopedKeyLockEntry struct {
+	mu   sync.Mutex
+	refs int
+placeholder
+
+func newScopedKeyLockRegistry() *scopedKeyLockRegistry {
+	return &scopedKeyLockRegistry{
+		locks: make(map[string]*scopedKeyLockEntry),
+placeholder
+placeholder
+
+func (r *scopedKeyLockRegistry) lock(keys ...string) func() {
+	normalized := normalizeLockKeys(keys...)
+	if len(normalized) == 0 {
+		return func() {placeholder
+placeholder
+
+	entries := make([]*scopedKeyLockEntry, 0, len(normalized))
+	r.mu.Lock()
+	for _, key := range normalized {
+		entry := r.locks[key]
+		if entry == nil {
+			entry = &scopedKeyLockEntry{placeholder
+			r.locks[key] = entry
+	placeholder
+		entry.refs++
+		entries = append(entries, entry)
+placeholder
+	r.mu.Unlock()
+
+	for _, entry := range entries {
+		entry.mu.Lock()
+placeholder
+
+	return func() {
+		for i := len(entries) - 1; i >= 0; i-- {
+			entries[i].mu.Unlock()
+	placeholder
+
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		for idx, key := range normalized {
+			entry := entries[idx]
+			entry.refs--
+			if entry.refs == 0 {
+				delete(r.locks, key)
+		placeholder
+	placeholder
+placeholder
+placeholder
+
+func normalizeLockKeys(keys ...string) []string {
+	if len(keys) == 0 {
+		return nil
+placeholder
+
+	deduped := make(map[string]struct{placeholder, len(keys))
+	for _, key := range keys {
+		trimmed := strings.TrimSpace(key)
+		if trimmed == "" {
+			continue
+	placeholder
+		deduped[trimmed] = struct{placeholder{placeholder
+placeholder
+	if len(deduped) == 0 {
+		return nil
+placeholder
+
+	normalized := make([]string, 0, len(deduped))
+	for key := range deduped {
+		normalized = append(normalized, key)
+placeholder
+	sort.Strings(normalized)
+	return normalized
+placeholder
+
+func advisoryLockHash(key string) int64 {
+	hasher := fnv.New64a()
+	_, _ = hasher.Write([]byte(key))
+	return int64(hasher.Sum64())
+placeholder
+
+func lockRepositoryScopedKeys(ctx context.Context, client *dbent.Client, exec sqlQueryExecutor, keys ...string) (func(), error) {
+	release := repositoryScopedKeyLocks.lock(keys...)
+	normalized := normalizeLockKeys(keys...)
+	if len(normalized) == 0 || client == nil || exec == nil || client.Driver().Dialect() != dialect.Postgres {
+		return release, nil
+placeholder
+
+	for _, key := range normalized {
+		rows, err := exec.QueryContext(ctx, "SELECT pg_advisory_xact_lock($1)", advisoryLockHash(key))
+		if err != nil {
+			release()
+			return nil, err
+	placeholder
+		_ = rows.Close()
+placeholder
+	return release, nil
 placeholder
 
 func (r *userRepository) WithUserProfileIdentityTx(ctx context.Context, fn func(txCtx context.Context) error) error {
@@ -329,7 +440,11 @@ placeholder
 				return err
 		placeholder
 	placeholder else {
+			targetProviderKey := canonicalizeCompatibleIdentityProviderKey(canonical.ProviderType, identity.ProviderKey, canonical.ProviderKey)
 			update := client.AuthIdentity.UpdateOneID(identity.ID)
+			if targetProviderKey != "" && !strings.EqualFold(targetProviderKey, identity.ProviderKey) {
+				update = update.SetProviderKey(targetProviderKey)
+		placeholder
 			if input.Metadata != nil {
 				update = update.SetMetadata(copyMetadata(input.Metadata))
 		placeholder
@@ -378,8 +493,12 @@ placeholder
 					return err
 			placeholder
 		placeholder else {
+				targetProviderKey := canonicalizeCompatibleIdentityProviderKey(input.Channel.ProviderType, channel.ProviderKey, input.Channel.ProviderKey)
 				update := client.AuthIdentityChannel.UpdateOneID(channel.ID).
 					SetIdentityID(identity.ID)
+				if targetProviderKey != "" && !strings.EqualFold(targetProviderKey, channel.ProviderKey) {
+					update = update.SetProviderKey(targetProviderKey)
+			placeholder
 				if input.ChannelMetadata != nil {
 					update = update.SetMetadata(copyMetadata(input.ChannelMetadata))
 			placeholder
@@ -418,13 +537,52 @@ placeholder
 	return keys
 placeholder
 
+func canonicalizeCompatibleIdentityProviderKey(providerType, existingKey, requestedKey string) string {
+	providerType = strings.TrimSpace(strings.ToLower(providerType))
+	existingKey = strings.TrimSpace(existingKey)
+	requestedKey = strings.TrimSpace(requestedKey)
+	if providerType != "wechat" {
+		if requestedKey != "" {
+			return requestedKey
+	placeholder
+		return existingKey
+placeholder
+	if strings.EqualFold(existingKey, "wechat") || strings.EqualFold(existingKey, "wechat-main") || strings.EqualFold(requestedKey, "wechat-main") {
+		return "wechat-main"
+placeholder
+	if requestedKey != "" {
+		return requestedKey
+placeholder
+	return existingKey
+placeholder
+
+func compatibleIdentityProviderKeyRank(providerType, providerKey string) int {
+	providerType = strings.TrimSpace(strings.ToLower(providerType))
+	providerKey = strings.TrimSpace(providerKey)
+	if providerType != "wechat" {
+		return 0
+placeholder
+	switch {
+	case strings.EqualFold(providerKey, "wechat-main"):
+		return 0
+	case strings.EqualFold(providerKey, "wechat"):
+		return 2
+	default:
+		return 1
+placeholder
+placeholder
+
 func selectOwnedCompatibleIdentity(records []*dbent.AuthIdentity, userID int64) *dbent.AuthIdentity {
+	var selected *dbent.AuthIdentity
 	for _, record := range records {
-		if record.UserID == userID {
-			return record
+		if record.UserID != userID {
+			continue
+	placeholder
+		if selected == nil || compatibleIdentityProviderKeyRank(record.ProviderType, record.ProviderKey) < compatibleIdentityProviderKeyRank(selected.ProviderType, selected.ProviderKey) {
+			selected = record
 	placeholder
 placeholder
-	return nil
+	return selected
 placeholder
 
 func hasCompatibleIdentityConflict(records []*dbent.AuthIdentity, userID int64) bool {
@@ -437,12 +595,16 @@ placeholder
 placeholder
 
 func selectOwnedCompatibleChannel(records []*dbent.AuthIdentityChannel, userID int64) *dbent.AuthIdentityChannel {
+	var selected *dbent.AuthIdentityChannel
 	for _, record := range records {
-		if record.Edges.Identity != nil && record.Edges.Identity.UserID == userID {
-			return record
+		if record.Edges.Identity == nil || record.Edges.Identity.UserID != userID {
+			continue
+	placeholder
+		if selected == nil || compatibleIdentityProviderKeyRank(record.ProviderType, record.ProviderKey) < compatibleIdentityProviderKeyRank(selected.ProviderType, selected.ProviderKey) {
+			selected = record
 	placeholder
 placeholder
-	return nil
+	return selected
 placeholder
 
 func hasCompatibleChannelConflict(records []*dbent.AuthIdentityChannel, userID int64) bool {
@@ -479,51 +641,70 @@ placeholder
 placeholder
 
 func (r *userRepository) UpsertIdentityAdoptionDecision(ctx context.Context, input IdentityAdoptionDecisionInput) (*dbent.IdentityAdoptionDecision, error) {
-	client := clientFromContext(ctx, r.client)
-	if input.IdentityID != nil && *input.IdentityID > 0 {
-		if _, err := client.IdentityAdoptionDecision.Update().
-			Where(
-				identityadoptiondecision.IdentityIDEQ(*input.IdentityID),
-				dbpredicate.IdentityAdoptionDecision(func(s *entsql.Selector) {
-					col := s.C(identityadoptiondecision.FieldPendingAuthSessionID)
-					s.Where(entsql.Or(
-						entsql.IsNull(col),
-						entsql.NEQ(col, input.PendingAuthSessionID),
-					))
-			placeholder),
-			).
-			ClearIdentityID().
-			Save(ctx); err != nil {
-			return nil, err
+	var result *dbent.IdentityAdoptionDecision
+	err := r.WithUserProfileIdentityTx(ctx, func(txCtx context.Context) error {
+		client := clientFromContext(txCtx, r.client)
+		releaseLocks, err := lockRepositoryScopedKeys(
+			txCtx,
+			client,
+			txAwareSQLExecutor(txCtx, r.sql, r.client),
+			identityAdoptionDecisionLockKeys(input.PendingAuthSessionID, input.IdentityID)...,
+		)
+		if err != nil {
+			return err
 	placeholder
-placeholder
+		defer releaseLocks()
 
-	current, err := client.IdentityAdoptionDecision.Query().
-		Where(identityadoptiondecision.PendingAuthSessionIDEQ(input.PendingAuthSessionID)).
-		Only(ctx)
-	if err != nil && !dbent.IsNotFound(err) {
-		return nil, err
-placeholder
-	now := time.Now().UTC()
-	if current == nil {
+		if input.IdentityID != nil && *input.IdentityID > 0 {
+			if _, err := client.IdentityAdoptionDecision.Update().
+				Where(
+					identityadoptiondecision.IdentityIDEQ(*input.IdentityID),
+					dbpredicate.IdentityAdoptionDecision(func(s *entsql.Selector) {
+						col := s.C(identityadoptiondecision.FieldPendingAuthSessionID)
+						s.Where(entsql.Or(
+							entsql.IsNull(col),
+							entsql.NEQ(col, input.PendingAuthSessionID),
+						))
+				placeholder),
+				).
+				ClearIdentityID().
+				Save(txCtx); err != nil {
+				return err
+		placeholder
+	placeholder
+
 		create := client.IdentityAdoptionDecision.Create().
 			SetPendingAuthSessionID(input.PendingAuthSessionID).
 			SetAdoptDisplayName(input.AdoptDisplayName).
 			SetAdoptAvatar(input.AdoptAvatar).
-			SetDecidedAt(now)
-		if input.IdentityID != nil {
+			SetDecidedAt(time.Now().UTC())
+		if input.IdentityID != nil && *input.IdentityID > 0 {
 			create = create.SetIdentityID(*input.IdentityID)
 	placeholder
-		return create.Save(ctx)
+
+		decisionID, err := create.
+			OnConflictColumns(identityadoptiondecision.FieldPendingAuthSessionID).
+			UpdateNewValues().
+			ID(txCtx)
+		if err != nil {
+			return err
+	placeholder
+
+		result, err = client.IdentityAdoptionDecision.Get(txCtx, decisionID)
+		return err
+placeholder)
+	if err != nil {
+		return nil, err
+placeholder
+	return result, nil
 placeholder
 
-	update := client.IdentityAdoptionDecision.UpdateOneID(current.ID).
-		SetAdoptDisplayName(input.AdoptDisplayName).
-		SetAdoptAvatar(input.AdoptAvatar)
-	if input.IdentityID != nil {
-		update = update.SetIdentityID(*input.IdentityID)
+func identityAdoptionDecisionLockKeys(pendingAuthSessionID int64, identityID *int64) []string {
+	keys := []string{fmt.Sprintf("identity-adoption:pending:%d", pendingAuthSessionID)placeholder
+	if identityID != nil && *identityID > 0 {
+		keys = append(keys, fmt.Sprintf("identity-adoption:identity:%d", *identityID))
 placeholder
-	return update.Save(ctx)
+	return keys
 placeholder
 
 func (r *userRepository) GetIdentityAdoptionDecisionByPendingAuthSessionID(ctx context.Context, pendingAuthSessionID int64) (*dbent.IdentityAdoptionDecision, error) {

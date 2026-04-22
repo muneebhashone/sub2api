@@ -355,15 +355,20 @@ placeholder
 placeholder
 
 	userEntity, err := client.User.Query().
-		Where(dbuser.EmailEqualFold(email)).
-		Only(ctx)
+		Where(userNormalizedEmailPredicate(email)).
+		Order(dbent.Asc(dbuser.FieldID)).
+		All(ctx)
 	if err != nil {
-		if dbent.IsNotFound(err) {
-			return nil, nil
-	placeholder
 		return nil, infraerrors.InternalServer("COMPAT_EMAIL_LOOKUP_FAILED", "failed to look up compat email user").WithCause(err)
 placeholder
-	return userEntity, nil
+	switch len(userEntity) {
+	case 0:
+		return nil, nil
+	case 1:
+		return userEntity[0], nil
+	default:
+		return nil, infraerrors.Conflict("USER_EMAIL_CONFLICT", "normalized email matched multiple users")
+placeholder
 placeholder
 
 func (h *AuthHandler) createLinuxDoOAuthChoicePendingSession(
@@ -411,9 +416,15 @@ placeholder
 		completionResponse["choice_reason"] = "force_email_on_signup"
 placeholder
 
+	var targetUserID *int64
+	if compatEmailUser != nil && compatEmailUser.ID > 0 {
+		targetUserID = &compatEmailUser.ID
+placeholder
+
 	return h.createOAuthPendingSession(c, oauthPendingSessionPayload{
 		Intent:                 oauthIntentLogin,
 		Identity:               identity,
+		TargetUserID:           targetUserID,
 		ResolvedEmail:          resolvedChoiceEmail,
 		RedirectTo:             redirectTo,
 		BrowserSessionKey:      browserSessionKey,
@@ -490,9 +501,13 @@ placeholder
 		return
 placeholder
 
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
-	if err != nil {
-		response.ErrorFrom(c, err)
+	client := h.entClient()
+	if client == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("PENDING_AUTH_NOT_READY", "pending auth service is not ready"))
+		return
+placeholder
+	if err := ensurePendingOAuthRegistrationIdentityAvailable(c.Request.Context(), client, session); err != nil {
+		respondPendingOAuthBindingApplyError(c, err)
 		return
 placeholder
 	decision, err := h.ensurePendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
@@ -503,17 +518,16 @@ placeholder)
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	if err := applyPendingOAuthAdoption(c.Request.Context(), h.entClient(), h.authService, h.userService, session, decision, &user.ID); err != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_ADOPTION_APPLY_FAILED", "failed to apply oauth profile adoption").WithCause(err))
-		return
-placeholder
-	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
-	if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), sessionToken, browserSessionKey); err != nil {
-		clearOAuthPendingSessionCookie(c, secureCookie)
-		clearOAuthPendingBrowserCookie(c, secureCookie)
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
+	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if err := applyPendingOAuthAdoptionAndConsumeSession(c.Request.Context(), client, h.authService, h.userService, session, decision, user.ID); err != nil {
+		respondPendingOAuthBindingApplyError(c, err)
+		return
+placeholder
+	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
 	clearOAuthPendingSessionCookie(c, secureCookie)
 	clearOAuthPendingBrowserCookie(c, secureCookie)
 

@@ -438,7 +438,8 @@ placeholder
 		Only(ctx)
 placeholder
 	require.Equal(t, oauthIntentLogin, session.Intent)
-	require.Nil(t, session.TargetUserID)
+	require.NotNil(t, session.TargetUserID)
+	require.Equal(t, existingUser.ID, *session.TargetUserID)
 	require.Equal(t, existingUser.Email, session.ResolvedEmail)
 	require.Equal(t, "legacy@example.com", session.UpstreamIdentityClaims["compat_email"])
 
@@ -860,6 +861,69 @@ placeholder
 	require.Equal(t, identity.ID, *decision.IdentityID)
 	require.False(t, decision.AdoptDisplayName)
 	require.False(t, decision.AdoptAvatar)
+placeholder
+
+func TestCompleteOIDCOAuthRegistrationRejectsIdentityOwnershipConflictBeforeUserCreation(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	ctx := context.Background()
+
+	existingOwner, err := client.User.Create().
+		SetEmail("owner@example.com").
+		SetUsername("owner-user").
+		SetPasswordHash("hash").
+		SetRole(service.RoleUser).
+		SetStatus(service.StatusActive).
+		Save(ctx)
+placeholder
+
+	_, err = client.AuthIdentity.Create().
+		SetUserID(existingOwner.ID).
+		SetProviderType("oidc").
+		SetProviderKey("https://issuer.example.com").
+		SetProviderSubject("oidc-conflict-subject").
+		Save(ctx)
+placeholder
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("oidc-complete-conflict-session").
+		SetIntent("login").
+		SetProviderType("oidc").
+		SetProviderKey("https://issuer.example.com").
+		SetProviderSubject("oidc-conflict-subject").
+		SetResolvedEmail("f6f5f1f16f9248ccb11e0d633963b290@oidc-connect.invalid").
+		SetBrowserSessionKey("oidc-conflict-browser").
+		SetUpstreamIdentityClaims(map[string]any{
+			"username": "oidc_user",
+			"issuer":   "https://issuer.example.com",
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	body := bytes.NewBufferString(`{"invitation_code":"invite-1"placeholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/oidc/complete-registration", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("oidc-conflict-browser")placeholder)
+	c.Request = req
+
+	handler.CompleteOIDCOAuthRegistration(c)
+
+	require.Equal(t, http.StatusConflict, recorder.Code)
+	payload := decodeJSONBody(t, recorder)
+	require.Equal(t, "AUTH_IDENTITY_OWNERSHIP_CONFLICT", payload["reason"])
+
+	userCount, err := client.User.Query().
+		Where(dbuser.EmailEQ("f6f5f1f16f9248ccb11e0d633963b290@oidc-connect.invalid")).
+		Count(ctx)
+placeholder
+	require.Zero(t, userCount)
+
+	storedSession, err := client.PendingAuthSession.Get(ctx, session.ID)
+placeholder
+	require.Nil(t, storedSession.ConsumedAt)
 placeholder
 
 type oidcProviderFixture struct {
