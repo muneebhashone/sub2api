@@ -551,7 +551,7 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	decision, err := h.upsertPendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
+	decision, err := h.ensurePendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
 		AdoptDisplayName: req.AdoptDisplayName,
 		AdoptAvatar:      req.AdoptAvatar,
 placeholder)
@@ -827,7 +827,10 @@ placeholder
 			return nil, infraerrors.InternalServer("AUTH_IDENTITY_LOOKUP_FAILED", "failed to inspect auth identity ownership").WithCause(err)
 	placeholder
 		if user, err := singleWeChatIdentityUser(records); err != nil || user != nil {
-			return user, err
+			if err != nil || user == nil {
+				return user, err
+		placeholder
+			return findActiveUserByID(ctx, client, user.ID)
 	placeholder
 placeholder
 
@@ -851,7 +854,10 @@ placeholder
 			return nil, infraerrors.InternalServer("AUTH_IDENTITY_CHANNEL_LOOKUP_FAILED", "failed to inspect auth identity channel ownership").WithCause(err)
 	placeholder
 		if user, err := singleWeChatChannelUser(records); err != nil || user != nil {
-			return user, err
+			if err != nil || user == nil {
+				return user, err
+		placeholder
+			return findActiveUserByID(ctx, client, user.ID)
 	placeholder
 placeholder
 
@@ -870,7 +876,11 @@ placeholder
 	if err != nil {
 		return nil, infraerrors.InternalServer("AUTH_IDENTITY_LOOKUP_FAILED", "failed to inspect auth identity ownership").WithCause(err)
 placeholder
-	return singleWeChatIdentityUser(records)
+	user, err := singleWeChatIdentityUser(records)
+	if err != nil || user == nil {
+		return user, err
+placeholder
+	return findActiveUserByID(ctx, client, user.ID)
 placeholder
 
 func wechatCompatibleProviderKeys(providerKey string) []string {
