@@ -301,7 +301,9 @@ func findDuplicatePaymentOrderOutTradeNos(ctx context.Context, db *sql.DB) ([]st
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+placeholder()
 
 	duplicates := make([]string, 0, 5)
 	for rows.Next() {

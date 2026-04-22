@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi placeholder from "vitest";
-import { defineComponent, h, ref placeholder from "vue";
+import { defineComponent, h placeholder from "vue";
 import { flushPromises, mount placeholder from "@vue/test-utils";
 
 import SettingsView from "../SettingsView.vue";
