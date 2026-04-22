@@ -5,8 +5,10 @@ package service
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,6 +23,10 @@ type userGroupRateRepoStubForGroupRate struct {
 	syncedGroupID int64
 	syncedEntries []GroupRateMultiplierInput
 	syncGroupErr  error
+
+	rpmSyncedGroupID int64
+	rpmSyncedEntries []GroupRPMOverrideInput
+	rpmSyncErr       error
 placeholder
 
 func (s *userGroupRateRepoStubForGroupRate) GetByUserID(_ context.Context, _ int64) (map[int64]float64, error) {
@@ -29,6 +35,10 @@ placeholder
 
 func (s *userGroupRateRepoStubForGroupRate) GetByUserAndGroup(_ context.Context, _, _ int64) (*float64, error) {
 	panic("unexpected GetByUserAndGroup call")
+placeholder
+
+func (s *userGroupRateRepoStubForGroupRate) GetRPMOverrideByUserAndGroup(_ context.Context, _, _ int64) (*int, error) {
+	panic("unexpected GetRPMOverrideByUserAndGroup call")
 placeholder
 
 func (s *userGroupRateRepoStubForGroupRate) GetByGroupID(_ context.Context, groupID int64) ([]UserGroupRateEntry, error) {
@@ -48,6 +58,16 @@ func (s *userGroupRateRepoStubForGroupRate) SyncGroupRateMultipliers(_ context.C
 	return s.syncGroupErr
 placeholder
 
+func (s *userGroupRateRepoStubForGroupRate) SyncGroupRPMOverrides(_ context.Context, groupID int64, entries []GroupRPMOverrideInput) error {
+	s.rpmSyncedGroupID = groupID
+	s.rpmSyncedEntries = entries
+	return s.rpmSyncErr
+placeholder
+
+func (s *userGroupRateRepoStubForGroupRate) ClearGroupRPMOverrides(_ context.Context, _ int64) error {
+	panic("unexpected ClearGroupRPMOverrides call")
+placeholder
+
 func (s *userGroupRateRepoStubForGroupRate) DeleteByGroupID(_ context.Context, groupID int64) error {
 	s.deletedGroupIDs = append(s.deletedGroupIDs, groupID)
 	return s.deleteByGroupErr
@@ -62,8 +82,8 @@ func TestAdminService_GetGroupRateMultipliers(t *testing.T) {
 		repo := &userGroupRateRepoStubForGroupRate{
 			getByGroupIDData: map[int64][]UserGroupRateEntry{
 				10: {
-					{UserID: 1, UserName: "alice", UserEmail: "alice@test.com", RateMultiplier: placeholder,
-					{UserID: 2, UserName: "bob", UserEmail: "bob@test.com", RateMultiplier: 0.8placeholder,
+					{UserID: 1, UserName: "alice", UserEmail: "alice@test.com", RateMultiplier: ptrFloat(1.5)placeholder,
+					{UserID: 2, UserName: "bob", UserEmail: "bob@test.com", RateMultiplier: ptrFloat(0.8)placeholder,
 			placeholder,
 		placeholder,
 	placeholder
@@ -74,9 +94,11 @@ func TestAdminService_GetGroupRateMultipliers(t *testing.T) {
 		require.Len(t, entries, 2)
 		require.Equal(t, int64(1), entries[0].UserID)
 		require.Equal(t, "alice", entries[0].UserName)
-		require.Equal(t, 1.5, entries[0].RateMultiplier)
+		require.NotNil(t, entries[0].RateMultiplier)
+		require.Equal(t, 1.5, *entries[0].RateMultiplier)
 		require.Equal(t, int64(2), entries[1].UserID)
-		require.Equal(t, 0.8, entries[1].RateMultiplier)
+		require.NotNil(t, entries[1].RateMultiplier)
+		require.Equal(t, 0.8, *entries[1].RateMultiplier)
 placeholder)
 
 	t.Run("returns nil when repo is nil", func(t *testing.T) {
@@ -172,5 +194,32 @@ placeholder)
 	placeholder)
 	placeholder
 		require.Contains(t, err.Error(), "sync failed")
+placeholder)
+placeholder
+
+func TestAdminService_BatchSetGroupRPMOverrides(t *testing.T) {
+	t.Run("syncs entries to repo", func(t *testing.T) {
+		repo := &userGroupRateRepoStubForGroupRate{placeholder
+		svc := &adminServiceImpl{userGroupRateRepo: repoplaceholder
+		override := 20
+		entries := []GroupRPMOverrideInput{{UserID: 2, RPMOverride: &overrideplaceholderplaceholder
+
+		err := svc.BatchSetGroupRPMOverrides(context.Background(), 10, entries)
+	placeholder
+		require.Equal(t, int64(10), repo.rpmSyncedGroupID)
+		require.Equal(t, entries, repo.rpmSyncedEntries)
+placeholder)
+
+	t.Run("rejects negative override as bad request", func(t *testing.T) {
+		repo := &userGroupRateRepoStubForGroupRate{placeholder
+		svc := &adminServiceImpl{userGroupRateRepo: repoplaceholder
+		negative := -1
+
+		err := svc.BatchSetGroupRPMOverrides(context.Background(), 10, []GroupRPMOverrideInput{
+			{UserID: 2, RPMOverride: &negativeplaceholder,
+	placeholder)
+	placeholder
+		require.Equal(t, http.StatusBadRequest, infraerrors.Code(err))
+		require.Zero(t, repo.rpmSyncedGroupID)
 placeholder)
 placeholder
