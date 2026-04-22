@@ -85,6 +85,12 @@ function normalizeRedirectPath(path: string | null | undefined): string {
   return value
 placeholder
 
+function appendQueryParam(query: Record<string, string>, key: string, value: string) {
+  if (value) {
+    query[key] = value
+  placeholder
+placeholder
+
 function goBackToPayment() {
   void router.replace('/purchase')
 placeholder
@@ -102,12 +108,19 @@ onMounted(async () => {
   placeholder
 
   const resumeToken = readParam('wechat_resume_token')
+  const openid = readParam('openid')
+  const state = readParam('state')
+  const scope = readParam('scope')
+  const paymentType = readParam('payment_type')
+  const amount = readParam('amount')
+  const orderType = readParam('order_type')
+  const planId = readParam('plan_id')
   const redirectURL = new URL(
     normalizeRedirectPath(readParam('redirect')),
     window.location.origin,
   )
 
-  if (!resumeToken) {
+  if (!resumeToken && !openid) {
     errorMessage.value = t('auth.wechatPayment.callbackMissingResumeToken')
     return
   placeholder
@@ -115,7 +128,18 @@ onMounted(async () => {
   const query: Record<string, string> = {
     ...Object.fromEntries(redirectURL.searchParams.entries()),
     wechat_resume: '1',
-    wechat_resume_token: resumeToken,
+  placeholder
+
+  if (resumeToken) {
+    query.wechat_resume_token = resumeToken
+  placeholder else {
+    query.openid = openid
+    appendQueryParam(query, 'state', state)
+    appendQueryParam(query, 'scope', scope)
+    appendQueryParam(query, 'payment_type', paymentType)
+    appendQueryParam(query, 'amount', amount)
+    appendQueryParam(query, 'order_type', orderType)
+    appendQueryParam(query, 'plan_id', planId)
   placeholder
 
   await router.replace({
