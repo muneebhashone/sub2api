@@ -59,6 +59,17 @@ func (e *EasyPay) SupportedTypes() []payment.PaymentType {
 	return []payment.PaymentType{payment.TypeAlipay, payment.TypeWxpayplaceholder
 placeholder
 
+func (e *EasyPay) MerchantIdentityMetadata() map[string]string {
+	if e == nil {
+		return nil
+placeholder
+	pid := strings.TrimSpace(e.config["pid"])
+	if pid == "" {
+		return nil
+placeholder
+	return map[string]string{"pid": pidplaceholder
+placeholder
+
 func (e *EasyPay) CreatePayment(ctx context.Context, req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
 	// Payment mode determined by instance config, not payment type.
 	// "popup" → hosted page (submit.php); "qrcode"/default → API call (mapi.php).
@@ -178,7 +189,12 @@ placeholder
 		status = payment.ProviderStatusPaid
 placeholder
 	amount, _ := strconv.ParseFloat(resp.Money, 64)
-	return &payment.QueryOrderResponse{TradeNo: tradeNo, Status: status, Amount: amountplaceholder, nil
+	return &payment.QueryOrderResponse{
+		TradeNo:  tradeNo,
+		Status:   status,
+		Amount:   amount,
+		Metadata: e.MerchantIdentityMetadata(),
+placeholder, nil
 placeholder
 
 func (e *EasyPay) VerifyNotification(_ context.Context, rawBody string, _ map[string]string) (*payment.PaymentNotification, error) {
@@ -203,9 +219,17 @@ placeholder
 		status = payment.ProviderStatusSuccess
 placeholder
 	amount, _ := strconv.ParseFloat(params["money"], 64)
+
+	metadata := e.MerchantIdentityMetadata()
+	if pid := strings.TrimSpace(params["pid"]); pid != "" {
+		if metadata == nil {
+			metadata = map[string]string{placeholder
+	placeholder
+		metadata["pid"] = pid
+placeholder
 	return &payment.PaymentNotification{
 		TradeNo: params["trade_no"], OrderID: params["out_trade_no"],
-		Amount: amount, Status: status, RawData: rawBody,
+		Amount: amount, Status: status, RawData: rawBody, Metadata: metadata,
 placeholder, nil
 placeholder
 

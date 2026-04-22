@@ -20,6 +20,7 @@ func (s *PaymentConfigService) GetAvailableMethodLimits(ctx context.Context) (*M
 		return nil, fmt.Errorf("query provider instances: %w", err)
 placeholder
 	typeInstances := pcGroupByPaymentType(instances)
+	typeInstances = pcApplyEnabledVisibleMethodInstances(typeInstances, instances)
 	resp := &MethodLimitsResponse{
 		Methods: make(map[string]MethodLimits, len(typeInstances)),
 placeholder
@@ -29,6 +30,27 @@ placeholder
 placeholder
 	resp.GlobalMin, resp.GlobalMax = pcComputeGlobalRange(resp.Methods)
 	return resp, nil
+placeholder
+
+func pcApplyEnabledVisibleMethodInstances(typeInstances map[string][]*dbent.PaymentProviderInstance, instances []*dbent.PaymentProviderInstance) map[string][]*dbent.PaymentProviderInstance {
+	if len(typeInstances) == 0 {
+		return typeInstances
+placeholder
+
+	filtered := make(map[string][]*dbent.PaymentProviderInstance, len(typeInstances))
+	for paymentType, groupedInstances := range typeInstances {
+		filtered[paymentType] = groupedInstances
+placeholder
+
+	for _, method := range []string{payment.TypeAlipay, payment.TypeWxpayplaceholder {
+		matching := filterEnabledVisibleMethodInstances(instances, method)
+		if len(matching) != 1 {
+			delete(filtered, method)
+			continue
+	placeholder
+		filtered[method] = []*dbent.PaymentProviderInstance{matching[0]placeholder
+placeholder
+	return filtered
 placeholder
 
 // GetMethodLimits returns per-payment-type limits from enabled provider instances.

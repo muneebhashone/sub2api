@@ -25,21 +25,60 @@ placeholder
 	// Look up order by out_trade_no (the external order ID we sent to the provider)
 	order, err := s.entClient.PaymentOrder.Query().Where(paymentorder.OutTradeNo(n.OrderID)).Only(ctx)
 	if err != nil {
-		// Fallback: try legacy format (sub2_N where N is DB ID)
-		trimmed := strings.TrimPrefix(n.OrderID, orderIDPrefix)
-		if oid, parseErr := strconv.ParseInt(trimmed, 10, 64); parseErr == nil {
-			return s.confirmPayment(ctx, oid, n.TradeNo, n.Amount, pk)
+		// Fallback only for true legacy "sub2_N" DB-ID payloads when the
+		// current out_trade_no lookup genuinely did not find an order.
+		if oid, ok := parseLegacyPaymentOrderID(n.OrderID, err); ok {
+			return s.confirmPayment(ctx, oid, n.TradeNo, n.Amount, pk, n.Metadata)
 	placeholder
 		return fmt.Errorf("order not found for out_trade_no: %s", n.OrderID)
 placeholder
-	return s.confirmPayment(ctx, order.ID, n.TradeNo, n.Amount, pk)
+	return s.confirmPayment(ctx, order.ID, n.TradeNo, n.Amount, pk, n.Metadata)
 placeholder
 
-func (s *PaymentService) confirmPayment(ctx context.Context, oid int64, tradeNo string, paid float64, pk string) error {
+func parseLegacyPaymentOrderID(orderID string, lookupErr error) (int64, bool) {
+	if !dbent.IsNotFound(lookupErr) {
+		return 0, false
+placeholder
+	orderID = strings.TrimSpace(orderID)
+	if !strings.HasPrefix(orderID, orderIDPrefix) {
+		return 0, false
+placeholder
+	trimmed := strings.TrimPrefix(orderID, orderIDPrefix)
+	if trimmed == "" || trimmed == orderID {
+		return 0, false
+placeholder
+	oid, err := strconv.ParseInt(trimmed, 10, 64)
+	if err != nil || oid <= 0 {
+		return 0, false
+placeholder
+	return oid, true
+placeholder
+
+func (s *PaymentService) confirmPayment(ctx context.Context, oid int64, tradeNo string, paid float64, pk string, metadata map[string]string) error {
 	o, err := s.entClient.PaymentOrder.Get(ctx, oid)
 	if err != nil {
 		slog.Error("order not found", "orderID", oid)
 		return nil
+placeholder
+	instanceProviderKey := ""
+	if inst, instErr := s.getOrderProviderInstance(ctx, o); instErr == nil && inst != nil {
+		instanceProviderKey = inst.ProviderKey
+placeholder
+	expectedProviderKey := expectedNotificationProviderKeyForOrder(s.registry, o, instanceProviderKey)
+	if expectedProviderKey != "" && strings.TrimSpace(pk) != "" && !strings.EqualFold(expectedProviderKey, strings.TrimSpace(pk)) {
+		s.writeAuditLog(ctx, o.ID, "PAYMENT_PROVIDER_MISMATCH", pk, map[string]any{
+			"expectedProvider": expectedProviderKey,
+			"actualProvider":   pk,
+			"tradeNo":          tradeNo,
+	placeholder)
+		return fmt.Errorf("provider mismatch: expected %s, got %s", expectedProviderKey, pk)
+placeholder
+	if err := validateProviderNotificationMetadata(o, pk, metadata); err != nil {
+		s.writeAuditLog(ctx, o.ID, "PAYMENT_PROVIDER_METADATA_MISMATCH", pk, map[string]any{
+			"detail":  err.Error(),
+			"tradeNo": tradeNo,
+	placeholder)
+		return err
 placeholder
 	// Skip amount check when paid=0 (e.g. QueryOrder doesn't return amount).
 	// Also skip if paid is NaN/Inf (malformed provider data).
@@ -54,6 +93,25 @@ placeholder
 		paid = o.PayAmount
 placeholder
 	return s.toPaid(ctx, o, tradeNo, paid, pk)
+placeholder
+
+func validateProviderNotificationMetadata(order *dbent.PaymentOrder, providerKey string, metadata map[string]string) error {
+	return validateProviderSnapshotMetadata(order, providerKey, metadata)
+placeholder
+
+func expectedNotificationProviderKey(registry *payment.Registry, orderPaymentType string, orderProviderKey string, instanceProviderKey string) string {
+	if key := strings.TrimSpace(instanceProviderKey); key != "" {
+		return key
+placeholder
+	if key := strings.TrimSpace(orderProviderKey); key != "" {
+		return key
+placeholder
+	if registry != nil {
+		if key := strings.TrimSpace(registry.GetProviderKey(payment.PaymentType(orderPaymentType))); key != "" {
+			return key
+	placeholder
+placeholder
+	return strings.TrimSpace(orderPaymentType)
 placeholder
 
 func (s *PaymentService) toPaid(ctx context.Context, o *dbent.PaymentOrder, tradeNo string, paid float64, pk string) error {

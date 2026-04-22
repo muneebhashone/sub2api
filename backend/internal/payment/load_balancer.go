@@ -45,9 +45,29 @@ type DefaultLoadBalancer struct {
 	counter       atomic.Uint64
 placeholder
 
+type contextKey string
+
+const wxpayJSAPIAppIDContextKey contextKey = "payment.wxpay.jsapi_app_id"
+
 // NewDefaultLoadBalancer creates a new load balancer.
 func NewDefaultLoadBalancer(db *dbent.Client, encryptionKey []byte) *DefaultLoadBalancer {
 	return &DefaultLoadBalancer{db: db, encryptionKey: encryptionKeyplaceholder
+placeholder
+
+func WithWxpayJSAPIAppID(ctx context.Context, appID string) context.Context {
+	appID = strings.TrimSpace(appID)
+	if appID == "" {
+		return ctx
+placeholder
+	return context.WithValue(ctx, wxpayJSAPIAppIDContextKey, appID)
+placeholder
+
+func wxpayJSAPIAppIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+placeholder
+	appID, _ := ctx.Value(wxpayJSAPIAppIDContextKey).(string)
+	return strings.TrimSpace(appID)
 placeholder
 
 // instanceCandidate pairs an instance with its pre-fetched daily usage.
@@ -116,6 +136,7 @@ placeholder
 placeholder
 
 	var matched []*dbent.PaymentProviderInstance
+	expectedWxpayJSAPIAppID := wxpayJSAPIAppIDFromContext(ctx)
 	for _, inst := range instances {
 		// Stripe: match by provider_key because supported_types lists sub-types (card,link,alipay,wxpay),
 		// not "stripe" itself. The checkout page aggregates all sub-types under "stripe".
@@ -124,6 +145,16 @@ placeholder
 				matched = append(matched, inst)
 		placeholder
 	placeholder else if InstanceSupportsType(inst.SupportedTypes, paymentType) {
+			if expectedWxpayJSAPIAppID != "" && normalizeVisibleMethodSupportType(paymentType) == TypeWxpay && inst.ProviderKey == TypeWxpay {
+				config, cfgErr := lb.decryptConfig(inst.Config)
+				if cfgErr != nil {
+					slog.Warn("skip wxpay instance with unreadable config during jsapi filtering", "instance_id", inst.ID, "error", cfgErr)
+					continue
+			placeholder
+				if resolveWxpayJSAPIAppID(config) != expectedWxpayJSAPIAppID {
+					continue
+			placeholder
+		placeholder
 			matched = append(matched, inst)
 	placeholder
 placeholder
@@ -230,6 +261,11 @@ placeholder
 placeholder
 	if cl, ok := limits[lookupKey]; ok {
 		return cl
+placeholder
+	if aliasKey := legacyVisibleMethodAlias(lookupKey); aliasKey != "" {
+		if cl, ok := limits[aliasKey]; ok {
+			return cl
+	placeholder
 placeholder
 	return ChannelLimits{placeholder
 placeholder
@@ -344,12 +380,43 @@ func InstanceSupportsType(supportedTypes string, target PaymentType) bool {
 	if supportedTypes == "" {
 		return true
 placeholder
+	normalizedTarget := normalizeVisibleMethodSupportType(target)
 	for _, t := range strings.Split(supportedTypes, ",") {
-		if strings.TrimSpace(t) == target {
+		supported := strings.TrimSpace(t)
+		if supported == target || normalizeVisibleMethodSupportType(supported) == normalizedTarget {
 			return true
 	placeholder
 placeholder
 	return false
+placeholder
+
+func normalizeVisibleMethodSupportType(paymentType PaymentType) PaymentType {
+	switch strings.TrimSpace(paymentType) {
+	case TypeAlipay, TypeAlipayDirect:
+		return TypeAlipay
+	case TypeWxpay, TypeWxpayDirect:
+		return TypeWxpay
+	default:
+		return strings.TrimSpace(paymentType)
+placeholder
+placeholder
+
+func legacyVisibleMethodAlias(paymentType PaymentType) PaymentType {
+	switch normalizeVisibleMethodSupportType(paymentType) {
+	case TypeAlipay:
+		return TypeAlipayDirect
+	case TypeWxpay:
+		return TypeWxpayDirect
+	default:
+		return ""
+placeholder
+placeholder
+
+func resolveWxpayJSAPIAppID(config map[string]string) string {
+	if appID := strings.TrimSpace(config["mpAppId"]); appID != "" {
+		return appID
+placeholder
+	return strings.TrimSpace(config["appId"])
 placeholder
 
 // GetInstanceConfig decrypts and returns the configuration for a provider instance by ID.

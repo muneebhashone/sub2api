@@ -3,8 +3,10 @@
 package service
 
 import (
+	"context"
 	"testing"
 
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -195,4 +197,123 @@ placeholder
 			assert.Equal(t, tc.want, got)
 	placeholder)
 placeholder
+placeholder
+
+func TestCreateProviderInstanceRejectsConflictingVisibleMethodEnablement(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	svc := &PaymentConfigService{
+		entClient:     client,
+		encryptionKey: []byte("placeholder"),
+placeholder
+
+	_, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
+		ProviderKey: "easypay",
+		Name:        "EasyPay Alipay",
+		Config: map[string]string{
+			"pid":       "1001",
+			"pkey":      "pkey-1001",
+			"apiBase":   "https://pay.example.com",
+			"notifyUrl": "https://merchant.example.com/notify",
+			"returnUrl": "https://merchant.example.com/return",
+	placeholder,
+		SupportedTypes: []string{"alipay"placeholder,
+		Enabled:        true,
+placeholder)
+placeholder
+
+	_, err = svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
+		ProviderKey:    "alipay",
+		Name:           "Official Alipay",
+		Config:         map[string]string{"appId": "app-1"placeholder,
+		SupportedTypes: []string{"alipay"placeholder,
+		Enabled:        true,
+placeholder)
+placeholder
+	require.Equal(t, "PAYMENT_PROVIDER_CONFLICT", infraerrors.Reason(err))
+placeholder
+
+func TestUpdateProviderInstanceRejectsEnablingConflictingVisibleMethodProvider(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	svc := &PaymentConfigService{
+		entClient:     client,
+		encryptionKey: []byte("placeholder"),
+placeholder
+
+	existing, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
+		ProviderKey: "easypay",
+		Name:        "EasyPay WeChat",
+		Config: map[string]string{
+			"pid":       "2001",
+			"pkey":      "pkey-2001",
+			"apiBase":   "https://pay.example.com",
+			"notifyUrl": "https://merchant.example.com/notify",
+			"returnUrl": "https://merchant.example.com/return",
+	placeholder,
+		SupportedTypes: []string{"wxpay"placeholder,
+		Enabled:        true,
+placeholder)
+placeholder
+	require.NotNil(t, existing)
+
+	candidate, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
+		ProviderKey:    "wxpay",
+		Name:           "Official WeChat",
+		Config:         map[string]string{"appId": "wx-app"placeholder,
+		SupportedTypes: []string{"wxpay"placeholder,
+		Enabled:        false,
+placeholder)
+placeholder
+
+	_, err = svc.UpdateProviderInstance(ctx, candidate.ID, UpdateProviderInstanceRequest{
+		Enabled: boolPtrValue(true),
+placeholder)
+placeholder
+	require.Equal(t, "PAYMENT_PROVIDER_CONFLICT", infraerrors.Reason(err))
+placeholder
+
+func TestUpdateProviderInstancePersistsEnabledAndSupportedTypes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	svc := &PaymentConfigService{
+		entClient:     client,
+		encryptionKey: []byte("placeholder"),
+placeholder
+
+	instance, err := svc.CreateProviderInstance(ctx, CreateProviderInstanceRequest{
+		ProviderKey: "easypay",
+		Name:        "EasyPay",
+		Config: map[string]string{
+			"pid":       "3001",
+			"pkey":      "pkey-3001",
+			"apiBase":   "https://pay.example.com",
+			"notifyUrl": "https://merchant.example.com/notify",
+			"returnUrl": "https://merchant.example.com/return",
+	placeholder,
+		SupportedTypes: []string{"alipay"placeholder,
+		Enabled:        false,
+placeholder)
+placeholder
+
+	_, err = svc.UpdateProviderInstance(ctx, instance.ID, UpdateProviderInstanceRequest{
+		Enabled:        boolPtrValue(true),
+		SupportedTypes: []string{"alipay", "wxpay"placeholder,
+placeholder)
+placeholder
+
+	saved, err := client.PaymentProviderInstance.Get(ctx, instance.ID)
+placeholder
+	require.True(t, saved.Enabled)
+	require.Equal(t, "alipay,wxpay", saved.SupportedTypes)
+placeholder
+
+func boolPtrValue(v bool) *bool {
+	return &v
 placeholder

@@ -178,3 +178,18 @@ placeholder
 		t.Fatal("easyPayVerifySign should return false for an incorrect sign value")
 placeholder
 placeholder
+
+func TestEasyPayMerchantIdentityMetadata(t *testing.T) {
+	t.Parallel()
+
+	provider := &EasyPay{
+		config: map[string]string{
+			"pid": "1001",
+	placeholder,
+placeholder
+
+	metadata := provider.MerchantIdentityMetadata()
+	if metadata["pid"] != "1001" {
+		t.Fatalf("pid = %q, want %q", metadata["pid"], "1001")
+placeholder
+placeholder

@@ -21,6 +21,7 @@ placeholder
 		Concurrency:                u.Concurrency,
 		Status:                     u.Status,
 		AllowedGroups:              u.AllowedGroups,
+		LastActiveAt:               u.LastActiveAt,
 		CreatedAt:                  u.CreatedAt,
 		UpdatedAt:                  u.UpdatedAt,
 		BalanceNotifyEnabled:       u.BalanceNotifyEnabled,
@@ -66,6 +67,7 @@ placeholder
 	return &AdminUser{
 		User:       *base,
 		Notes:      u.Notes,
+		LastUsedAt: u.LastUsedAt,
 		GroupRates: u.GroupRates,
 placeholder
 placeholder

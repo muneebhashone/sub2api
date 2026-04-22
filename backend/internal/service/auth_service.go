@@ -13,6 +13,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
@@ -77,6 +78,12 @@ type DefaultSubscriptionAssigner interface {
 	AssignOrExtendSubscription(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error)
 placeholder
 
+type signupGrantPlan struct {
+	Balance       float64
+	Concurrency   int
+	Subscriptions []DefaultSubscriptionSetting
+placeholder
+
 // NewAuthService 创建认证服务实例
 func NewAuthService(
 	entClient *dbent.Client,
@@ -104,6 +111,13 @@ func NewAuthService(
 		promoService:       promoService,
 		defaultSubAssigner: defaultSubAssigner,
 placeholder
+placeholder
+
+func (s *AuthService) EntClient() *dbent.Client {
+	if s == nil {
+		return nil
+placeholder
+	return s.entClient
 placeholder
 
 // Register 用户注册，返回token和用户
@@ -179,21 +193,15 @@ placeholder
 		return "", nil, fmt.Errorf("hash password: %w", err)
 placeholder
 
-	// 获取默认配置
-	defaultBalance := s.cfg.Default.UserBalance
-	defaultConcurrency := s.cfg.Default.UserConcurrency
-	if s.settingService != nil {
-		defaultBalance = s.settingService.GetDefaultBalance(ctx)
-		defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
-placeholder
+	grantPlan := s.resolveSignupGrantPlan(ctx, "email")
 
 	// 创建用户
 	user := &User{
 		Email:        email,
 		PasswordHash: hashedPassword,
 		Role:         RoleUser,
-		Balance:      defaultBalance,
-		Concurrency:  defaultConcurrency,
+		Balance:      grantPlan.Balance,
+		Concurrency:  grantPlan.Concurrency,
 		Status:       StatusActive,
 placeholder
 
@@ -205,7 +213,8 @@ placeholder
 		logger.LegacyPrintf("service.auth", "[Auth] Database error creating user: %v", err)
 		return "", nil, ErrServiceUnavailable
 placeholder
-	s.assignDefaultSubscriptions(ctx, user.ID)
+	s.postAuthUserBootstrap(ctx, user, "email", true)
+	s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 
 	// 标记邀请码为已使用（如果使用了邀请码）
 	if invitationRedeemCode != nil {
@@ -469,21 +478,16 @@ placeholder
 				return "", nil, fmt.Errorf("hash password: %w", err)
 		placeholder
 
-			// 新用户默认值。
-			defaultBalance := s.cfg.Default.UserBalance
-			defaultConcurrency := s.cfg.Default.UserConcurrency
-			if s.settingService != nil {
-				defaultBalance = s.settingService.GetDefaultBalance(ctx)
-				defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
-		placeholder
+			signupSource := inferLegacySignupSource(email)
+			grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
 
 			newUser := &User{
 				Email:        email,
 				Username:     username,
 				PasswordHash: hashedPassword,
 				Role:         RoleUser,
-				Balance:      defaultBalance,
-				Concurrency:  defaultConcurrency,
+				Balance:      grantPlan.Balance,
+				Concurrency:  grantPlan.Concurrency,
 				Status:       StatusActive,
 		placeholder
 
@@ -501,7 +505,8 @@ placeholder
 			placeholder
 		placeholder else {
 				user = newUser
-				s.assignDefaultSubscriptions(ctx, user.ID)
+				s.postAuthUserBootstrap(ctx, user, signupSource, false)
+				s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 		placeholder
 	placeholder else {
 			logger.LegacyPrintf("service.auth", "[Auth] Database error during oauth login: %v", err)
@@ -520,7 +525,6 @@ placeholder
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to update username after oauth login: %v", err)
 	placeholder
 placeholder
-
 	token, err := s.GenerateToken(user)
 	if err != nil {
 		return "", nil, fmt.Errorf("generate token: %w", err)
@@ -584,20 +588,16 @@ placeholder
 				return nil, nil, fmt.Errorf("hash password: %w", err)
 		placeholder
 
-			defaultBalance := s.cfg.Default.UserBalance
-			defaultConcurrency := s.cfg.Default.UserConcurrency
-			if s.settingService != nil {
-				defaultBalance = s.settingService.GetDefaultBalance(ctx)
-				defaultConcurrency = s.settingService.GetDefaultConcurrency(ctx)
-		placeholder
+			signupSource := inferLegacySignupSource(email)
+			grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
 
 			newUser := &User{
 				Email:        email,
 				Username:     username,
 				PasswordHash: hashedPassword,
 				Role:         RoleUser,
-				Balance:      defaultBalance,
-				Concurrency:  defaultConcurrency,
+				Balance:      grantPlan.Balance,
+				Concurrency:  grantPlan.Concurrency,
 				Status:       StatusActive,
 		placeholder
 
@@ -630,7 +630,8 @@ placeholder
 						return nil, nil, ErrServiceUnavailable
 				placeholder
 					user = newUser
-					s.assignDefaultSubscriptions(ctx, user.ID)
+					s.postAuthUserBootstrap(ctx, user, signupSource, false)
+					s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 			placeholder
 		placeholder else {
 				if err := s.userRepo.Create(ctx, newUser); err != nil {
@@ -646,7 +647,8 @@ placeholder
 				placeholder
 			placeholder else {
 					user = newUser
-					s.assignDefaultSubscriptions(ctx, user.ID)
+					s.postAuthUserBootstrap(ctx, user, signupSource, false)
+					s.assignSubscriptions(ctx, user.ID, grantPlan.Subscriptions, "auto assigned by signup defaults")
 					if invitationRedeemCode != nil {
 						if err := s.redeemRepo.Use(ctx, invitationRedeemCode.ID, user.ID); err != nil {
 							return nil, nil, ErrInvitationCodeInvalid
@@ -670,7 +672,6 @@ placeholder
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to update username after oauth login: %v", err)
 	placeholder
 placeholder
-
 	tokenPair, err := s.GenerateTokenPair(ctx, user, "")
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate token pair: %w", err)
@@ -678,77 +679,270 @@ placeholder
 	return tokenPair, user, nil
 placeholder
 
-// pendingOAuthTokenTTL is the validity period for pending OAuth tokens.
-const pendingOAuthTokenTTL = 10 * time.Minute
-
-// pendingOAuthPurpose is the purpose claim value for pending OAuth registration tokens.
-const pendingOAuthPurpose = "pending_oauth_registration"
-
-type pendingOAuthClaims struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Purpose  string `json:"purpose"`
-	jwt.RegisteredClaims
-placeholder
-
-// CreatePendingOAuthToken generates a short-lived JWT that carries the OAuth identity
-// while waiting for the user to supply an invitation code.
-func (s *AuthService) CreatePendingOAuthToken(email, username string) (string, error) {
-	now := time.Now()
-	claims := &pendingOAuthClaims{
-		Email:    email,
-		Username: username,
-		Purpose:  pendingOAuthPurpose,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(pendingOAuthTokenTTL)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-	placeholder,
-placeholder
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(s.cfg.JWT.Secret))
-placeholder
-
-// VerifyPendingOAuthToken validates a pending OAuth token and returns the embedded identity.
-// Returns ErrInvalidToken when the token is invalid or expired.
-func (s *AuthService) VerifyPendingOAuthToken(tokenStr string) (email, username string, err error) {
-	if len(tokenStr) > maxTokenLength {
-		return "", "", ErrInvalidToken
-placeholder
-	parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Nameplaceholder))
-	token, parseErr := parser.ParseWithClaims(tokenStr, &pendingOAuthClaims{placeholder, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-	placeholder
-		return []byte(s.cfg.JWT.Secret), nil
-placeholder)
-	if parseErr != nil {
-		return "", "", ErrInvalidToken
-placeholder
-	claims, ok := token.Claims.(*pendingOAuthClaims)
-	if !ok || !token.Valid {
-		return "", "", ErrInvalidToken
-placeholder
-	if claims.Purpose != pendingOAuthPurpose {
-		return "", "", ErrInvalidToken
-placeholder
-	return claims.Email, claims.Username, nil
-placeholder
-
-func (s *AuthService) assignDefaultSubscriptions(ctx context.Context, userID int64) {
+func (s *AuthService) assignSubscriptions(ctx context.Context, userID int64, items []DefaultSubscriptionSetting, notes string) {
 	if s.settingService == nil || s.defaultSubAssigner == nil || userID <= 0 {
 		return
 placeholder
-	items := s.settingService.GetDefaultSubscriptions(ctx)
 	for _, item := range items {
 		if _, _, err := s.defaultSubAssigner.AssignOrExtendSubscription(ctx, &AssignSubscriptionInput{
 			UserID:       userID,
 			GroupID:      item.GroupID,
 			ValidityDays: item.ValidityDays,
-			Notes:        "auto assigned by default user subscriptions setting",
+			Notes:        notes,
 	placeholder); err != nil {
 			logger.LegacyPrintf("service.auth", "[Auth] Failed to assign default subscription: user_id=%d group_id=%d err=%v", userID, item.GroupID, err)
 	placeholder
+placeholder
+placeholder
+
+func (s *AuthService) resolveSignupGrantPlan(ctx context.Context, signupSource string) signupGrantPlan {
+	plan := signupGrantPlan{placeholder
+	if s != nil && s.cfg != nil {
+		plan.Balance = s.cfg.Default.UserBalance
+		plan.Concurrency = s.cfg.Default.UserConcurrency
+placeholder
+	if s == nil || s.settingService == nil {
+		return plan
+placeholder
+
+	plan.Balance = s.settingService.GetDefaultBalance(ctx)
+	plan.Concurrency = s.settingService.GetDefaultConcurrency(ctx)
+	plan.Subscriptions = s.settingService.GetDefaultSubscriptions(ctx)
+
+	resolved, enabled, err := s.settingService.ResolveAuthSourceGrantSettings(ctx, signupSource, false)
+	if err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to load auth source signup defaults for %s: %v", signupSource, err)
+		return plan
+placeholder
+	if !enabled {
+		return plan
+placeholder
+
+	plan.Balance = resolved.Balance
+	plan.Concurrency = resolved.Concurrency
+	plan.Subscriptions = resolved.Subscriptions
+	return plan
+placeholder
+
+func authSourceSignupSettings(defaults *AuthSourceDefaultSettings, signupSource string) (ProviderDefaultGrantSettings, bool) {
+	if defaults == nil {
+		return ProviderDefaultGrantSettings{placeholder, false
+placeholder
+
+	switch strings.ToLower(strings.TrimSpace(signupSource)) {
+	case "email":
+		return defaults.Email, true
+	case "linuxdo":
+		return defaults.LinuxDo, true
+	case "oidc":
+		return defaults.OIDC, true
+	case "wechat":
+		return defaults.WeChat, true
+	default:
+		return ProviderDefaultGrantSettings{placeholder, false
+placeholder
+placeholder
+
+func (s *AuthService) postAuthUserBootstrap(ctx context.Context, user *User, signupSource string, touchLogin bool) {
+	if user == nil || user.ID <= 0 {
+		return
+placeholder
+
+	if strings.TrimSpace(signupSource) == "" {
+		signupSource = "email"
+placeholder
+	s.updateUserSignupSource(ctx, user.ID, signupSource)
+
+	if touchLogin {
+		s.touchUserLogin(ctx, user.ID)
+placeholder
+placeholder
+
+func (s *AuthService) updateUserSignupSource(ctx context.Context, userID int64, signupSource string) {
+	if s == nil || s.entClient == nil || userID <= 0 {
+		return
+placeholder
+	if strings.TrimSpace(signupSource) == "" {
+		return
+placeholder
+	if err := s.entClient.User.UpdateOneID(userID).
+		SetSignupSource(signupSource).
+		Exec(ctx); err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to update signup source: user_id=%d source=%s err=%v", userID, signupSource, err)
+placeholder
+placeholder
+
+func (s *AuthService) touchUserLogin(ctx context.Context, userID int64) {
+	if s == nil || s.entClient == nil || userID <= 0 {
+		return
+placeholder
+	now := time.Now().UTC()
+	if err := s.entClient.User.UpdateOneID(userID).
+		SetLastLoginAt(now).
+		SetLastActiveAt(now).
+		Exec(ctx); err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to touch login timestamps: user_id=%d err=%v", userID, err)
+placeholder
+placeholder
+
+func (s *AuthService) backfillEmailIdentityOnSuccessfulLogin(ctx context.Context, user *User) {
+	if s == nil || user == nil || user.ID <= 0 {
+		return
+placeholder
+	identity, created := s.ensureEmailAuthIdentity(ctx, user, "auth_service_login_backfill")
+	if s.shouldApplyEmailFirstBindDefaults(ctx, user.ID, identity, created) {
+		if err := s.ApplyProviderDefaultSettingsOnFirstBind(ctx, user.ID, "email"); err != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] Failed to apply email first bind defaults: user_id=%d err=%v", user.ID, err)
+	placeholder
+placeholder
+placeholder
+
+func (s *AuthService) shouldApplyEmailFirstBindDefaults(
+	ctx context.Context,
+	userID int64,
+	identity *dbent.AuthIdentity,
+	created bool,
+) bool {
+	source := emailAuthIdentitySource(identity.Metadata)
+	if source == "auth_service_login_backfill" {
+		return false
+placeholder
+	if created {
+		return true
+placeholder
+	if s == nil || s.entClient == nil || userID <= 0 || identity == nil || identity.UserID != userID {
+		return false
+placeholder
+	if source != "auth_service_dual_write" {
+		return false
+placeholder
+
+	hasGrant, err := s.hasProviderGrantRecord(ctx, userID, "email", "first_bind")
+	if err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to inspect email first bind grant state: user_id=%d err=%v", userID, err)
+		return false
+placeholder
+	return !hasGrant
+placeholder
+
+func emailAuthIdentitySource(metadata map[string]any) string {
+	if len(metadata) == 0 {
+		return ""
+placeholder
+	raw, ok := metadata["source"]
+	if !ok {
+		return ""
+placeholder
+	return strings.TrimSpace(fmt.Sprint(raw))
+placeholder
+
+func (s *AuthService) hasProviderGrantRecord(
+	ctx context.Context,
+	userID int64,
+	providerType string,
+	grantReason string,
+) (bool, error) {
+	if s == nil || s.entClient == nil || userID <= 0 {
+		return false, nil
+placeholder
+
+	rows, err := s.entClient.QueryContext(
+		ctx,
+		`SELECT 1 FROM user_provider_default_grants WHERE user_id = $1 AND provider_type = $2 AND grant_reason = $3 LIMIT 1`,
+		userID,
+		strings.TrimSpace(providerType),
+		strings.TrimSpace(grantReason),
+	)
+	if err != nil {
+		return false, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+	return rows.Next(), rows.Err()
+placeholder
+
+func (s *AuthService) ensureEmailAuthIdentity(ctx context.Context, user *User, source string) (*dbent.AuthIdentity, bool) {
+	if s == nil || s.entClient == nil || user == nil || user.ID <= 0 {
+		return nil, false
+placeholder
+
+	email := strings.ToLower(strings.TrimSpace(user.Email))
+	if email == "" || isReservedEmail(email) {
+		return nil, false
+placeholder
+	if strings.TrimSpace(source) == "" {
+		source = "auth_service_dual_write"
+placeholder
+
+	client := s.entClient
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		client = tx.Client()
+placeholder
+
+	buildQuery := func() *dbent.AuthIdentityQuery {
+		return client.AuthIdentity.Query().Where(
+			authidentity.ProviderTypeEQ("email"),
+			authidentity.ProviderKeyEQ("email"),
+			authidentity.ProviderSubjectEQ(email),
+		)
+placeholder
+
+	existed, err := buildQuery().Exist(ctx)
+	if err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to inspect email auth identity: user_id=%d email=%s err=%v", user.ID, email, err)
+		return nil, false
+placeholder
+
+	if !existed {
+		if err := client.AuthIdentity.Create().
+			SetUserID(user.ID).
+			SetProviderType("email").
+			SetProviderKey("email").
+			SetProviderSubject(email).
+			SetVerifiedAt(time.Now().UTC()).
+			SetMetadata(map[string]any{
+				"source": strings.TrimSpace(source),
+		placeholder).
+			OnConflictColumns(
+				authidentity.FieldProviderType,
+				authidentity.FieldProviderKey,
+				authidentity.FieldProviderSubject,
+			).
+			DoNothing().
+			Exec(ctx); err != nil {
+			if isSQLNoRowsError(err) {
+				return nil, false
+		placeholder
+	placeholder
+		if err != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] Failed to ensure email auth identity: user_id=%d email=%s err=%v", user.ID, email, err)
+			return nil, false
+	placeholder
+placeholder
+
+	identity, err := buildQuery().Only(ctx)
+	if err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to reload email auth identity: user_id=%d email=%s err=%v", user.ID, email, err)
+		return nil, false
+placeholder
+	if identity.UserID != user.ID {
+		logger.LegacyPrintf("service.auth", "[Auth] Email auth identity ownership mismatch: user_id=%d email=%s owner_id=%d", user.ID, email, identity.UserID)
+		return nil, false
+placeholder
+
+	return identity, !existed
+placeholder
+
+func inferLegacySignupSource(email string) string {
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	switch {
+	case strings.HasSuffix(normalized, LinuxDoConnectSyntheticEmailDomain):
+		return "linuxdo"
+	case strings.HasSuffix(normalized, OIDCConnectSyntheticEmailDomain):
+		return "oidc"
+	case strings.HasSuffix(normalized, WeChatConnectSyntheticEmailDomain):
+		return "wechat"
+	default:
+		return "email"
 placeholder
 placeholder
 
@@ -834,7 +1028,8 @@ placeholder
 func isReservedEmail(email string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(email))
 	return strings.HasSuffix(normalized, LinuxDoConnectSyntheticEmailDomain) ||
-		strings.HasSuffix(normalized, OIDCConnectSyntheticEmailDomain)
+		strings.HasSuffix(normalized, OIDCConnectSyntheticEmailDomain) ||
+		strings.HasSuffix(normalized, WeChatConnectSyntheticEmailDomain)
 placeholder
 
 // GenerateToken 生成JWT access token

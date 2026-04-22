@@ -1,30 +1,66 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
-	"log/slog"
-	"strings"
-	"time"
-
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"image"
+	"image/color"
+	stddraw "image/draw"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
+	"log/slog"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	xdraw "golang.org/x/image/draw"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
-	ErrUserNotFound            = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
-	ErrPasswordIncorrect       = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
-	ErrInsufficientPerms       = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
-	ErrNotifyCodeUserRateLimit = infraerrors.TooManyRequests("NOTIFY_CODE_USER_RATE_LIMIT", "too many verification codes requested, please try again later")
+	ErrUserNotFound             = infraerrors.NotFound("USER_NOT_FOUND", "user not found")
+	ErrPasswordIncorrect        = infraerrors.BadRequest("PASSWORD_INCORRECT", "current password is incorrect")
+	ErrInsufficientPerms        = infraerrors.Forbidden("INSUFFICIENT_PERMISSIONS", "insufficient permissions")
+	ErrNotifyCodeUserRateLimit  = infraerrors.TooManyRequests("NOTIFY_CODE_USER_RATE_LIMIT", "too many verification codes requested, please try again later")
+	ErrAvatarInvalid            = infraerrors.BadRequest("AVATAR_INVALID", "avatar must be a valid image data URL or http(s) URL")
+	ErrAvatarTooLarge           = infraerrors.BadRequest("AVATAR_TOO_LARGE", "avatar image must be 100KB or smaller")
+	ErrAvatarNotImage           = infraerrors.BadRequest("AVATAR_NOT_IMAGE", "avatar content must be an image")
+	ErrIdentityProviderInvalid  = infraerrors.BadRequest("IDENTITY_PROVIDER_INVALID", "identity provider is invalid")
+	ErrIdentityRedirectInvalid  = infraerrors.BadRequest("IDENTITY_REDIRECT_INVALID", "identity redirect path is invalid")
+	ErrIdentityUnbindLastMethod = infraerrors.Conflict(
+		"IDENTITY_UNBIND_LAST_METHOD",
+		"bind another sign-in method before unbinding this provider",
+	)
 )
 
 const (
-	maxNotifyEmails = 3 // Maximum number of notification emails per user
+	maxNotifyEmails      = 3 // Maximum number of notification emails per user
+	maxInlineAvatarBytes = 100 * 1024
+	targetAvatarBytes    = 20 * 1024
 
 	// User-level rate limiting for notify email verification codes
 	notifyCodeUserRateLimit  = 5
 	notifyCodeUserRateWindow = 10 * time.Minute
+
+	defaultUserIdentityRedirect = "/settings/profile"
+	userLastActiveMinTouch      = 10 * time.Minute
+	userLastActiveFailBackoff   = 30 * time.Second
+)
+
+var (
+	avatarScaleSteps   = []float64{1, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36placeholder
+	avatarQualitySteps = []int{88, 80, 72, 64, 56, 48, 40, 32placeholder
 )
 
 // UserListFilters contains all filter options for listing users
@@ -47,9 +83,15 @@ type UserRepository interface {
 	GetFirstAdmin(ctx context.Context) (*User, error)
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id int64) error
+	GetUserAvatar(ctx context.Context, userID int64) (*UserAvatar, error)
+	UpsertUserAvatar(ctx context.Context, userID int64, input UpsertUserAvatarInput) (*UserAvatar, error)
+	DeleteUserAvatar(ctx context.Context, userID int64) error
 
 	List(ctx context.Context, params pagination.PaginationParams) ([]User, *pagination.PaginationResult, error)
 	ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters UserListFilters) ([]User, *pagination.PaginationResult, error)
+	GetLatestUsedAtByUserIDs(ctx context.Context, userIDs []int64) (map[int64]*time.Time, error)
+	GetLatestUsedAtByUserID(ctx context.Context, userID int64) (*time.Time, error)
+	UpdateUserLastActiveAt(ctx context.Context, userID int64, activeAt time.Time) error
 
 	UpdateBalance(ctx context.Context, id int64, amount float64) error
 	DeductBalance(ctx context.Context, id int64, amount float64) error
@@ -60,6 +102,8 @@ type UserRepository interface {
 	AddGroupToAllowedGroups(ctx context.Context, userID int64, groupID int64) error
 	// RemoveGroupFromUserAllowedGroups 移除单个用户的指定分组权限
 	RemoveGroupFromUserAllowedGroups(ctx context.Context, userID int64, groupID int64) error
+	ListUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error)
+	UnbindUserAuthProvider(ctx context.Context, userID int64, provider string) error
 
 	// TOTP 双因素认证
 	UpdateTotpSecret(ctx context.Context, userID int64, encryptedSecret *string) error
@@ -67,13 +111,80 @@ type UserRepository interface {
 	DisableTotp(ctx context.Context, userID int64) error
 placeholder
 
+type UserAuthIdentityRecord struct {
+	ProviderType    string
+	ProviderKey     string
+	ProviderSubject string
+	VerifiedAt      *time.Time
+	Issuer          *string
+	Metadata        map[string]any
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+placeholder
+
+type UserIdentitySummary struct {
+	Provider      string     `json:"provider"`
+	Bound         bool       `json:"bound"`
+	BoundCount    int        `json:"bound_count"`
+	DisplayName   string     `json:"display_name,omitempty"`
+	SubjectHint   string     `json:"subject_hint,omitempty"`
+	ProviderKey   string     `json:"provider_key,omitempty"`
+	VerifiedAt    *time.Time `json:"verified_at,omitempty"`
+	BindStartPath string     `json:"bind_start_path,omitempty"`
+	CanBind       bool       `json:"can_bind"`
+	CanUnbind     bool       `json:"can_unbind"`
+	Note          string     `json:"note,omitempty"`
+placeholder
+
+type UserIdentitySummarySet struct {
+	Email   UserIdentitySummary `json:"email"`
+	LinuxDo UserIdentitySummary `json:"linuxdo"`
+	OIDC    UserIdentitySummary `json:"oidc"`
+	WeChat  UserIdentitySummary `json:"wechat"`
+placeholder
+
+type StartUserIdentityBindingRequest struct {
+	Provider   string
+	RedirectTo string
+placeholder
+
+type StartUserIdentityBindingResult struct {
+	Provider           string `json:"provider"`
+	AuthorizeURL       string `json:"authorize_url"`
+	Method             string `json:"method"`
+	UseBrowserRedirect bool   `json:"use_browser_redirect"`
+placeholder
+
 // UpdateProfileRequest 更新用户资料请求
 type UpdateProfileRequest struct {
 	Email                  *string  `json:"email"`
 	Username               *string  `json:"username"`
+	AvatarURL              *string  `json:"avatar_url"`
 	Concurrency            *int     `json:"concurrency"`
 	BalanceNotifyEnabled   *bool    `json:"balance_notify_enabled"`
 	BalanceNotifyThreshold *float64 `json:"balance_notify_threshold"`
+placeholder
+
+type UserAvatar struct {
+	StorageProvider string
+	StorageKey      string
+	URL             string
+	ContentType     string
+	ByteSize        int
+	SHA256          string
+placeholder
+
+type UpsertUserAvatarInput struct {
+	StorageProvider string
+	StorageKey      string
+	URL             string
+	ContentType     string
+	ByteSize        int
+	SHA256          string
+placeholder
+
+type userProfileIdentityTxRunner interface {
+	WithUserProfileIdentityTx(ctx context.Context, fn func(txCtx context.Context) error) error
 placeholder
 
 // ChangePasswordRequest 修改密码请求
@@ -88,6 +199,8 @@ type UserService struct {
 	settingRepo          SettingRepository
 	authCacheInvalidator APIKeyAuthCacheInvalidator
 	billingCache         BillingCache
+	lastActiveTouchL1    sync.Map
+	lastActiveTouchSF    singleflight.Group
 placeholder
 
 // NewUserService 创建用户服务实例
@@ -115,14 +228,123 @@ func (s *UserService) GetProfile(ctx context.Context, userID int64) (*User, erro
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 placeholder
+	if err := s.hydrateUserAvatar(ctx, user); err != nil {
+		return nil, fmt.Errorf("get user avatar: %w", err)
+placeholder
 	return user, nil
+placeholder
+
+func (s *UserService) GetProfileIdentitySummaries(ctx context.Context, userID int64, user *User) (UserIdentitySummarySet, error) {
+	if user == nil {
+		var err error
+		user, err = s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return UserIdentitySummarySet{placeholder, fmt.Errorf("get user: %w", err)
+	placeholder
+placeholder
+
+	records, err := s.listUserAuthIdentities(ctx, userID)
+	if err != nil {
+		return UserIdentitySummarySet{placeholder, err
+placeholder
+
+	return UserIdentitySummarySet{
+		Email:   s.buildEmailIdentitySummary(user, records),
+		LinuxDo: s.buildProviderIdentitySummary("linuxdo", user, records),
+		OIDC:    s.buildProviderIdentitySummary("oidc", user, records),
+		WeChat:  s.buildProviderIdentitySummary("wechat", user, records),
+placeholder, nil
+placeholder
+
+func (s *UserService) PrepareIdentityBindingStart(_ context.Context, req StartUserIdentityBindingRequest) (*StartUserIdentityBindingResult, error) {
+	provider := normalizeUserIdentityProvider(req.Provider)
+	if provider == "" {
+		return nil, ErrIdentityProviderInvalid
+placeholder
+
+	authorizeURL, err := buildUserIdentityBindAuthorizeURL(provider, req.RedirectTo)
+	if err != nil {
+		return nil, err
+placeholder
+
+	return &StartUserIdentityBindingResult{
+		Provider:           provider,
+		AuthorizeURL:       authorizeURL,
+		Method:             "GET",
+		UseBrowserRedirect: true,
+placeholder, nil
+placeholder
+
+func (s *UserService) UnbindUserAuthProvider(ctx context.Context, userID int64, provider string) (*User, error) {
+	provider = normalizeUserIdentityProvider(provider)
+	if provider == "" || provider == "email" {
+		return nil, ErrIdentityProviderInvalid
+placeholder
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+placeholder
+
+	records, err := s.listUserAuthIdentities(ctx, userID)
+	if err != nil {
+		return nil, err
+placeholder
+	if len(filterUserAuthIdentities(records, provider)) == 0 {
+		return user, nil
+placeholder
+	if !s.canUnbindProvider(provider, user, records) {
+		return nil, ErrIdentityUnbindLastMethod
+placeholder
+
+	if err := s.userRepo.UnbindUserAuthProvider(ctx, userID, provider); err != nil {
+		return nil, err
+placeholder
+	if s.authCacheInvalidator != nil {
+		s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
+placeholder
+
+	updatedUser, err := s.GetProfile(ctx, userID)
+	if err != nil {
+		return nil, err
+placeholder
+	return updatedUser, nil
 placeholder
 
 // UpdateProfile 更新用户资料
 func (s *UserService) UpdateProfile(ctx context.Context, userID int64, req UpdateProfileRequest) (*User, error) {
+	if txRunner, ok := s.userRepo.(userProfileIdentityTxRunner); ok {
+		var (
+			updated        *User
+			oldConcurrency int
+		)
+		if err := txRunner.WithUserProfileIdentityTx(ctx, func(txCtx context.Context) error {
+			var err error
+			updated, oldConcurrency, err = s.updateProfile(txCtx, userID, req)
+			return err
+	placeholder); err != nil {
+			return nil, err
+	placeholder
+		if s.authCacheInvalidator != nil && updated != nil && updated.Concurrency != oldConcurrency {
+			s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
+	placeholder
+		return updated, nil
+placeholder
+
+	updated, oldConcurrency, err := s.updateProfile(ctx, userID, req)
+	if err != nil {
+		return nil, err
+placeholder
+	if s.authCacheInvalidator != nil && updated.Concurrency != oldConcurrency {
+		s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
+placeholder
+	return updated, nil
+placeholder
+
+func (s *UserService) updateProfile(ctx context.Context, userID int64, req UpdateProfileRequest) (*User, int, error) {
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("get user: %w", err)
+		return nil, 0, fmt.Errorf("get user: %w", err)
 placeholder
 	oldConcurrency := user.Concurrency
 
@@ -131,16 +353,24 @@ placeholder
 		// 检查新邮箱是否已被使用
 		exists, err := s.userRepo.ExistsByEmail(ctx, *req.Email)
 		if err != nil {
-			return nil, fmt.Errorf("check email exists: %w", err)
+			return nil, oldConcurrency, fmt.Errorf("check email exists: %w", err)
 	placeholder
 		if exists && *req.Email != user.Email {
-			return nil, ErrEmailExists
+			return nil, oldConcurrency, ErrEmailExists
 	placeholder
 		user.Email = *req.Email
 placeholder
 
 	if req.Username != nil {
 		user.Username = *req.Username
+placeholder
+
+	if req.AvatarURL != nil {
+		avatar, err := s.SetAvatar(ctx, userID, *req.AvatarURL)
+		if err != nil {
+			return nil, oldConcurrency, err
+	placeholder
+		applyUserAvatar(user, avatar)
 placeholder
 
 	if req.Concurrency != nil {
@@ -159,13 +389,423 @@ placeholder
 placeholder
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
-		return nil, fmt.Errorf("update user: %w", err)
-placeholder
-	if s.authCacheInvalidator != nil && user.Concurrency != oldConcurrency {
-		s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, userID)
+		return nil, oldConcurrency, fmt.Errorf("update user: %w", err)
 placeholder
 
-	return user, nil
+	return user, oldConcurrency, nil
+placeholder
+
+func (s *UserService) SetAvatar(ctx context.Context, userID int64, raw string) (*UserAvatar, error) {
+	avatarValue := strings.TrimSpace(raw)
+	if avatarValue == "" {
+		if err := s.userRepo.DeleteUserAvatar(ctx, userID); err != nil {
+			return nil, fmt.Errorf("delete avatar: %w", err)
+	placeholder
+		return nil, nil
+placeholder
+
+	avatarInput, err := normalizeUserAvatarInput(avatarValue)
+	if err != nil {
+		return nil, err
+placeholder
+
+	avatar, err := s.userRepo.UpsertUserAvatar(ctx, userID, avatarInput)
+	if err != nil {
+		return nil, fmt.Errorf("upsert avatar: %w", err)
+placeholder
+	return avatar, nil
+placeholder
+
+func applyUserAvatar(user *User, avatar *UserAvatar) {
+	if user == nil {
+		return
+placeholder
+	if avatar == nil {
+		user.AvatarURL = ""
+		user.AvatarSource = ""
+		user.AvatarMIME = ""
+		user.AvatarByteSize = 0
+		user.AvatarSHA256 = ""
+		return
+placeholder
+
+	user.AvatarURL = avatar.URL
+	user.AvatarSource = avatar.StorageProvider
+	user.AvatarMIME = avatar.ContentType
+	user.AvatarByteSize = avatar.ByteSize
+	user.AvatarSHA256 = avatar.SHA256
+placeholder
+
+func normalizeUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+	if strings.HasPrefix(raw, "data:") {
+		return normalizeInlineUserAvatarInput(raw)
+placeholder
+
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed == nil {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+	if !strings.EqualFold(parsed.Scheme, "http") && !strings.EqualFold(parsed.Scheme, "https") {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+	if strings.TrimSpace(parsed.Host) == "" {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+
+	return UpsertUserAvatarInput{
+		StorageProvider: "remote_url",
+		URL:             raw,
+placeholder, nil
+placeholder
+
+func ValidateUserAvatar(raw string) error {
+	_, err := normalizeUserAvatarInput(raw)
+	return err
+placeholder
+
+func normalizeInlineUserAvatarInput(raw string) (UpsertUserAvatarInput, error) {
+	body := strings.TrimPrefix(raw, "data:")
+	meta, encoded, ok := strings.Cut(body, ",")
+	if !ok {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+	meta = strings.TrimSpace(meta)
+	encoded = strings.TrimSpace(encoded)
+	if !strings.HasSuffix(strings.ToLower(meta), ";base64") {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+
+	contentType := strings.TrimSpace(meta[:len(meta)-len(";base64")])
+	if contentType == "" || !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarNotImage
+placeholder
+
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarInvalid
+placeholder
+	if len(decoded) > maxInlineAvatarBytes {
+		return UpsertUserAvatarInput{placeholder, ErrAvatarTooLarge
+placeholder
+
+	if len(decoded) > targetAvatarBytes {
+		decoded, contentType, err = compressInlineAvatar(decoded)
+		if err != nil {
+			return UpsertUserAvatarInput{placeholder, err
+	placeholder
+		raw = "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(decoded)
+placeholder
+
+	sum := sha256.Sum256(decoded)
+	return UpsertUserAvatarInput{
+		StorageProvider: "inline",
+		URL:             raw,
+		ContentType:     contentType,
+		ByteSize:        len(decoded),
+		SHA256:          hex.EncodeToString(sum[:]),
+placeholder, nil
+placeholder
+
+func compressInlineAvatar(decoded []byte) ([]byte, string, error) {
+	src, _, err := image.Decode(bytes.NewReader(decoded))
+	if err != nil {
+		return nil, "", ErrAvatarInvalid
+placeholder
+
+	srcBounds := src.Bounds()
+	if srcBounds.Empty() {
+		return nil, "", ErrAvatarInvalid
+placeholder
+
+	for _, scale := range avatarScaleSteps {
+		width := max(1, int(float64(srcBounds.Dx())*scale))
+		height := max(1, int(float64(srcBounds.Dy())*scale))
+		dst := image.NewRGBA(image.Rect(0, 0, width, height))
+		stddraw.Draw(dst, dst.Bounds(), &image.Uniform{C: color.Whiteplaceholder, image.Point{placeholder, stddraw.Src)
+		xdraw.CatmullRom.Scale(dst, dst.Bounds(), src, srcBounds, stddraw.Over, nil)
+
+		for _, quality := range avatarQualitySteps {
+			var buf bytes.Buffer
+			if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: qualityplaceholder); err != nil {
+				return nil, "", ErrAvatarInvalid
+		placeholder
+			if buf.Len() <= targetAvatarBytes {
+				return buf.Bytes(), "image/jpeg", nil
+		placeholder
+	placeholder
+placeholder
+
+	return nil, "", ErrAvatarTooLarge
+placeholder
+
+func (s *UserService) buildEmailIdentitySummary(user *User, records []UserAuthIdentityRecord) UserIdentitySummary {
+	summary := UserIdentitySummary{
+		Provider:  "email",
+		CanBind:   false,
+		CanUnbind: false,
+		Note:      "Primary account email is managed from the profile form.",
+placeholder
+	if user == nil {
+		return summary
+placeholder
+
+	filtered := filterUserAuthIdentities(records, "email")
+	if len(filtered) > 0 {
+		primary := selectPrimaryUserAuthIdentity(filtered)
+		email := strings.TrimSpace(firstStringIdentityValue(primary.Metadata, "email"))
+		if email == "" {
+			email = strings.TrimSpace(primary.ProviderSubject)
+	placeholder
+		if email == "" || isReservedEmail(email) {
+			email = strings.TrimSpace(user.Email)
+	placeholder
+		if email == "" || isReservedEmail(email) {
+			email = strings.TrimSpace(primary.ProviderKey)
+	placeholder
+
+		summary.Bound = true
+		summary.BoundCount = len(filtered)
+		summary.DisplayName = email
+		summary.SubjectHint = maskEmailIdentity(email)
+		summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
+		summary.VerifiedAt = primary.VerifiedAt
+		return summary
+placeholder
+
+	// Compatibility fallback for legacy normal-email users that predate auth_identities backfill.
+	email := strings.TrimSpace(user.Email)
+	if email == "" || isReservedEmail(email) {
+		return summary
+placeholder
+	summary.Bound = true
+	summary.BoundCount = 1
+	summary.DisplayName = email
+	summary.SubjectHint = maskEmailIdentity(email)
+	summary.ProviderKey = "email"
+	return summary
+placeholder
+
+func (s *UserService) buildProviderIdentitySummary(provider string, user *User, records []UserAuthIdentityRecord) UserIdentitySummary {
+	summary := UserIdentitySummary{
+		Provider:  provider,
+		CanUnbind: false,
+placeholder
+	filtered := filterUserAuthIdentities(records, provider)
+	if len(filtered) == 0 {
+		summary.CanBind = true
+		bindStartPath, err := buildUserIdentityBindAuthorizeURL(provider, "")
+		if err == nil {
+			summary.BindStartPath = bindStartPath
+	placeholder
+		return summary
+placeholder
+
+	primary := selectPrimaryUserAuthIdentity(filtered)
+	summary.Bound = true
+	summary.BoundCount = len(filtered)
+	summary.DisplayName = userAuthIdentityDisplayName(primary)
+	summary.SubjectHint = maskOpaqueIdentity(primary.ProviderSubject)
+	summary.ProviderKey = strings.TrimSpace(primary.ProviderKey)
+	summary.VerifiedAt = primary.VerifiedAt
+	summary.CanUnbind = s.canUnbindProvider(provider, user, records)
+	if summary.CanUnbind {
+		summary.Note = "You can unbind this sign-in method."
+placeholder else {
+		summary.Note = "Bind another sign-in method before unbinding."
+placeholder
+	return summary
+placeholder
+
+func (s *UserService) canUnbindProvider(provider string, user *User, records []UserAuthIdentityRecord) bool {
+	if provider == "" || provider == "email" || len(filterUserAuthIdentities(records, provider)) == 0 {
+		return false
+placeholder
+
+	if s.buildEmailIdentitySummary(user, records).Bound {
+		return true
+placeholder
+
+	for _, candidate := range []string{"linuxdo", "oidc", "wechat"placeholder {
+		if candidate == provider {
+			continue
+	placeholder
+		if len(filterUserAuthIdentities(records, candidate)) > 0 {
+			return true
+	placeholder
+placeholder
+
+	return false
+placeholder
+
+func (s *UserService) listUserAuthIdentities(ctx context.Context, userID int64) ([]UserAuthIdentityRecord, error) {
+	if userID <= 0 || s == nil || s.userRepo == nil {
+		return nil, nil
+placeholder
+	return s.userRepo.ListUserAuthIdentities(ctx, userID)
+placeholder
+
+func buildUserIdentityBindAuthorizeURL(provider, redirectTo string) (string, error) {
+	provider = normalizeUserIdentityProvider(provider)
+	if provider == "" || provider == "email" {
+		return "", ErrIdentityProviderInvalid
+placeholder
+
+	redirectTo, err := normalizeUserIdentityRedirect(redirectTo)
+	if err != nil {
+		return "", err
+placeholder
+
+	path := ""
+	switch provider {
+	case "linuxdo":
+		path = "/api/v1/auth/oauth/linuxdo/start"
+	case "oidc":
+		path = "/api/v1/auth/oauth/oidc/start"
+	case "wechat":
+		path = "/api/v1/auth/oauth/wechat/start"
+	default:
+		return "", ErrIdentityProviderInvalid
+placeholder
+
+	query := url.Values{placeholder
+	query.Set("redirect", redirectTo)
+	query.Set("intent", "bind_current_user")
+	return path + "?" + query.Encode(), nil
+placeholder
+
+func normalizeUserIdentityProvider(provider string) string {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "linuxdo":
+		return "linuxdo"
+	case "oidc":
+		return "oidc"
+	case "wechat":
+		return "wechat"
+	case "email":
+		return "email"
+	default:
+		return ""
+placeholder
+placeholder
+
+func normalizeUserIdentityRedirect(raw string) (string, error) {
+	redirect := strings.TrimSpace(raw)
+	if redirect == "" {
+		return defaultUserIdentityRedirect, nil
+placeholder
+	if len(redirect) > 2048 || !strings.HasPrefix(redirect, "/") || strings.HasPrefix(redirect, "//") {
+		return "", ErrIdentityRedirectInvalid
+placeholder
+	return redirect, nil
+placeholder
+
+func filterUserAuthIdentities(records []UserAuthIdentityRecord, provider string) []UserAuthIdentityRecord {
+	if len(records) == 0 {
+		return nil
+placeholder
+	filtered := make([]UserAuthIdentityRecord, 0, len(records))
+	for _, record := range records {
+		if strings.EqualFold(strings.TrimSpace(record.ProviderType), provider) {
+			filtered = append(filtered, record)
+	placeholder
+placeholder
+	return filtered
+placeholder
+
+func selectPrimaryUserAuthIdentity(records []UserAuthIdentityRecord) UserAuthIdentityRecord {
+	if len(records) == 0 {
+		return UserAuthIdentityRecord{placeholder
+placeholder
+	sort.SliceStable(records, func(i, j int) bool {
+		left := userAuthIdentitySortTime(records[i])
+		right := userAuthIdentitySortTime(records[j])
+		if !left.Equal(right) {
+			return left.After(right)
+	placeholder
+		return records[i].ProviderKey < records[j].ProviderKey
+placeholder)
+	return records[0]
+placeholder
+
+func userAuthIdentitySortTime(record UserAuthIdentityRecord) time.Time {
+	if record.VerifiedAt != nil && !record.VerifiedAt.IsZero() {
+		return record.VerifiedAt.UTC()
+placeholder
+	if !record.UpdatedAt.IsZero() {
+		return record.UpdatedAt.UTC()
+placeholder
+	if !record.CreatedAt.IsZero() {
+		return record.CreatedAt.UTC()
+placeholder
+	return time.Time{placeholder
+placeholder
+
+func userAuthIdentityDisplayName(record UserAuthIdentityRecord) string {
+	if displayName := firstStringIdentityValue(record.Metadata,
+		"display_name",
+		"suggested_display_name",
+		"username",
+		"name",
+		"nickname",
+		"email",
+	); displayName != "" {
+		return displayName
+placeholder
+	if subject := strings.TrimSpace(record.ProviderSubject); subject != "" {
+		return subject
+placeholder
+	return strings.TrimSpace(record.ProviderType)
+placeholder
+
+func firstStringIdentityValue(values map[string]any, keys ...string) string {
+	for _, key := range keys {
+		raw, ok := values[key]
+		if !ok {
+			continue
+	placeholder
+		switch value := raw.(type) {
+		case string:
+			if trimmed := strings.TrimSpace(value); trimmed != "" {
+				return trimmed
+		placeholder
+		case fmt.Stringer:
+			if trimmed := strings.TrimSpace(value.String()); trimmed != "" {
+				return trimmed
+		placeholder
+	placeholder
+placeholder
+	return ""
+placeholder
+
+func maskEmailIdentity(email string) string {
+	local, domain, ok := strings.Cut(strings.TrimSpace(email), "@")
+	if !ok || local == "" || domain == "" {
+		return maskOpaqueIdentity(email)
+placeholder
+	runes := []rune(local)
+	if len(runes) == 1 {
+		return string(runes[0]) + "***@" + domain
+placeholder
+	return string(runes[0]) + "***" + string(runes[len(runes)-1]) + "@" + domain
+placeholder
+
+func maskOpaqueIdentity(value string) string {
+	value = strings.TrimSpace(value)
+	runes := []rune(value)
+	switch {
+	case len(runes) == 0:
+		return ""
+	case len(runes) <= 4:
+		return string(runes[0]) + "***"
+	case len(runes) <= 8:
+		return string(runes[:2]) + "***" + string(runes[len(runes)-1:])
+	default:
+		return string(runes[:3]) + "***" + string(runes[len(runes)-3:])
+placeholder
 placeholder
 
 // ChangePassword 修改密码
@@ -202,7 +842,83 @@ func (s *UserService) GetByID(ctx context.Context, id int64) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get user: %w", err)
 placeholder
+	if err := s.hydrateUserAvatar(ctx, user); err != nil {
+		return nil, fmt.Errorf("get user avatar: %w", err)
+placeholder
 	return user, nil
+placeholder
+
+// TouchLastActive 通过防抖更新 users.last_active_at，减少鉴权热路径写放大。
+// 该操作为尽力而为，不应中断正常请求。
+func (s *UserService) TouchLastActive(ctx context.Context, userID int64) {
+	if s == nil || s.userRepo == nil || userID <= 0 {
+		return
+placeholder
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		slog.Debug("skip touch user last active after load failure", "user_id", userID, "error", err)
+		return
+placeholder
+	s.TouchLastActiveForUser(ctx, user)
+placeholder
+
+// TouchLastActiveForUser 使用已加载的用户信息更新 last_active_at，避免重复读取数据库。
+func (s *UserService) TouchLastActiveForUser(ctx context.Context, user *User) {
+	if s == nil || s.userRepo == nil || user == nil || user.ID <= 0 {
+		return
+placeholder
+
+	now := time.Now()
+	if userLastActiveFresh(user.LastActiveAt, now) {
+		return
+placeholder
+	if v, ok := s.lastActiveTouchL1.Load(user.ID); ok {
+		if nextAllowedAt, ok := v.(time.Time); ok && now.Before(nextAllowedAt) {
+			return
+	placeholder
+placeholder
+
+	_, err, _ := s.lastActiveTouchSF.Do(strconv.FormatInt(user.ID, 10), func() (any, error) {
+		latest := time.Now()
+		if v, ok := s.lastActiveTouchL1.Load(user.ID); ok {
+			if nextAllowedAt, ok := v.(time.Time); ok && latest.Before(nextAllowedAt) {
+				return nil, nil
+		placeholder
+	placeholder
+		if userLastActiveFresh(user.LastActiveAt, latest) {
+			return nil, nil
+	placeholder
+		if err := s.userRepo.UpdateUserLastActiveAt(ctx, user.ID, latest); err != nil {
+			s.lastActiveTouchL1.Store(user.ID, latest.Add(userLastActiveFailBackoff))
+			return nil, fmt.Errorf("touch user last active: %w", err)
+	placeholder
+		s.lastActiveTouchL1.Store(user.ID, latest.Add(userLastActiveMinTouch))
+		return nil, nil
+placeholder)
+	if err != nil {
+		slog.Warn("touch user last active failed", "user_id", user.ID, "error", err)
+placeholder
+placeholder
+
+func userLastActiveFresh(lastActiveAt *time.Time, now time.Time) bool {
+	if lastActiveAt == nil {
+		return false
+placeholder
+	return now.Before(lastActiveAt.Add(userLastActiveMinTouch))
+placeholder
+
+func (s *UserService) hydrateUserAvatar(ctx context.Context, user *User) error {
+	if s == nil || s.userRepo == nil || user == nil || user.ID == 0 {
+		return nil
+placeholder
+
+	avatar, err := s.userRepo.GetUserAvatar(ctx, user.ID)
+	if err != nil {
+		return err
+placeholder
+	applyUserAvatar(user, avatar)
+	return nil
 placeholder
 
 // List 获取用户列表（管理员功能）

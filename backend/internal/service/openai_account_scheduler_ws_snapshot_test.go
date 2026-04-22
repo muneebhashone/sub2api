@@ -38,11 +38,12 @@ placeholder
 	cfg.Gateway.OpenAIWS.IngressModeDefault = OpenAIWSIngressModeCtxPool
 
 	svc := &OpenAIGatewayService{
-		accountRepo:        stubOpenAIAccountRepo{accounts: []Account{*accountplaceholderplaceholder,
-		cache:              &stubGatewayCache{placeholder,
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: []Account{*accountplaceholderplaceholder,
+		cache:              &schedulerTestGatewayCache{placeholder,
 		cfg:                cfg,
+		rateLimitService:   newOpenAIAdvancedSchedulerRateLimitService("true"),
 		schedulerSnapshot:  &SchedulerSnapshotService{cache: snapshotCacheplaceholder,
-		concurrencyService: NewConcurrencyService(stubConcurrencyCache{placeholder),
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
 placeholder
 
 	selection, decision, err := svc.SelectAccountWithScheduler(

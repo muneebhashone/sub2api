@@ -47,11 +47,6 @@
           </div>
         </div>
 
-        <!-- Error -->
-        <div v-if="error" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
-          {{ error placeholderplaceholder
-        </div>
-
         <!-- Cancel button only -->
         <button
           type="button"
@@ -69,6 +64,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
+import { useAppStore placeholder from '@/stores'
 
 defineProps<{
   tempToken: string
@@ -81,9 +77,9 @@ const emit = defineEmits<{
 placeholder>()
 
 const { t placeholder = useI18n()
+const appStore = useAppStore()
 
 const verifying = ref(false)
-const error = ref('')
 const code = ref<string[]>(['', '', '', '', '', ''])
 const inputRefs = ref<(HTMLInputElement | null)[]>([])
 
@@ -100,7 +96,9 @@ watch(
 defineExpose({
   setVerifying: (value: boolean) => { verifying.value = value placeholder,
   setError: (message: string) => {
-    error.value = message
+    if (message) {
+      appStore.showError(message)
+    placeholder
     code.value = ['', '', '', '', '', '']
     // Clear input DOM values
     inputRefs.value.forEach(input => {

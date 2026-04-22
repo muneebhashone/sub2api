@@ -150,6 +150,9 @@ func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req C
 	if err := validateProviderRequest(req.ProviderKey, req.Name, typesStr); err != nil {
 		return nil, err
 placeholder
+	if err := s.validateVisibleMethodEnablementConflicts(ctx, 0, req.ProviderKey, typesStr, req.Enabled); err != nil {
+		return nil, err
+placeholder
 	if req.Enabled {
 		if err := s.validateProviderConfig(req.ProviderKey, req.Config); err != nil {
 			return nil, err
@@ -183,26 +186,25 @@ placeholder
 // NOTE: This function exceeds 30 lines due to per-field nil-check patch update
 // boilerplate and pending-order safety checks.
 func (s *PaymentConfigService) UpdateProviderInstance(ctx context.Context, id int64, req UpdateProviderInstanceRequest) (*dbent.PaymentProviderInstance, error) {
-	var cachedInst *dbent.PaymentProviderInstance
-	loadInst := func() (*dbent.PaymentProviderInstance, error) {
-		if cachedInst != nil {
-			return cachedInst, nil
-	placeholder
-		inst, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
-		if err != nil {
-			return nil, fmt.Errorf("load provider instance: %w", err)
-	placeholder
-		cachedInst = inst
-		return inst, nil
+	current, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("load provider instance: %w", err)
+placeholder
+	nextEnabled := current.Enabled
+	if req.Enabled != nil {
+		nextEnabled = *req.Enabled
+placeholder
+	nextSupportedTypes := current.SupportedTypes
+	if req.SupportedTypes != nil {
+		nextSupportedTypes = joinTypes(req.SupportedTypes)
+placeholder
+	if err := s.validateVisibleMethodEnablementConflicts(ctx, id, current.ProviderKey, nextSupportedTypes, nextEnabled); err != nil {
+		return nil, err
 placeholder
 	if req.Config != nil {
-		inst, err := loadInst()
-		if err != nil {
-			return nil, err
-	placeholder
 		hasSensitive := false
 		for k, v := range req.Config {
-			if v != "" && isSensitiveProviderConfigField(inst.ProviderKey, k) {
+			if v != "" && isSensitiveProviderConfigField(current.ProviderKey, k) {
 				hasSensitive = true
 				break
 		placeholder
@@ -231,11 +233,7 @@ placeholder
 	// Validate merged config when the instance will end up enabled.
 	// This surfaces provider-level errors (e.g. wxpay missing certSerial) at save time,
 	// so admins see them in the dialog instead of only when an order is created.
-	inst, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("load provider instance: %w", err)
-placeholder
-	finalEnabled := inst.Enabled
+	finalEnabled := current.Enabled
 	if req.Enabled != nil {
 		finalEnabled = *req.Enabled
 placeholder
@@ -249,12 +247,12 @@ placeholder
 	if finalEnabled {
 		configToValidate := mergedConfig
 		if configToValidate == nil {
-			configToValidate, err = s.decryptConfig(inst.Config)
+			configToValidate, err = s.decryptConfig(current.Config)
 			if err != nil {
 				return nil, fmt.Errorf("decrypt existing config: %w", err)
 		placeholder
 	placeholder
-		if err := s.validateProviderConfig(inst.ProviderKey, configToValidate); err != nil {
+		if err := s.validateProviderConfig(current.ProviderKey, configToValidate); err != nil {
 			return nil, err
 	placeholder
 placeholder
@@ -277,11 +275,7 @@ placeholder
 	placeholder
 		if count > 0 {
 			// Load current instance to compare types
-			inst, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
-			if err != nil {
-				return nil, fmt.Errorf("load provider instance: %w", err)
-		placeholder
-			oldTypes := strings.Split(inst.SupportedTypes, ",")
+			oldTypes := strings.Split(current.SupportedTypes, ",")
 			newTypes := req.SupportedTypes
 			for _, ot := range oldTypes {
 				ot = strings.TrimSpace(ot)
@@ -326,10 +320,7 @@ placeholder
 			if req.RefundEnabled != nil {
 				refundEnabled = *req.RefundEnabled
 		placeholder else {
-				inst, err := s.entClient.PaymentProviderInstance.Get(ctx, id)
-				if err == nil {
-					refundEnabled = inst.RefundEnabled
-			placeholder
+				refundEnabled = current.RefundEnabled
 		placeholder
 			if refundEnabled {
 				u.SetAllowUserRefund(true)
