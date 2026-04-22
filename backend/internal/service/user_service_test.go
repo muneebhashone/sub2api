@@ -51,6 +51,44 @@ type mockUserRepoTxState struct {
 	deleteAvatarIDs  []int64
 placeholder
 
+type mockUserSettingRepo struct {
+	values map[string]string
+placeholder
+
+func (m *mockUserSettingRepo) Get(context.Context, string) (*Setting, error) {
+	panic("unexpected Get call")
+placeholder
+
+func (m *mockUserSettingRepo) GetValue(context.Context, string) (string, error) {
+	panic("unexpected GetValue call")
+placeholder
+
+func (m *mockUserSettingRepo) Set(context.Context, string, string) error {
+	panic("unexpected Set call")
+placeholder
+
+func (m *mockUserSettingRepo) GetMultiple(_ context.Context, keys []string) (map[string]string, error) {
+	out := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if value, ok := m.values[key]; ok {
+			out[key] = value
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
+func (m *mockUserSettingRepo) SetMultiple(context.Context, map[string]string) error {
+	panic("unexpected SetMultiple call")
+placeholder
+
+func (m *mockUserSettingRepo) GetAll(context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+placeholder
+
+func (m *mockUserSettingRepo) Delete(context.Context, string) error {
+	panic("unexpected Delete call")
+placeholder
+
 func (m *mockUserRepo) Create(context.Context, *User) error { return nil placeholder
 func (m *mockUserRepo) GetByID(ctx context.Context, _ int64) (*User, error) {
 	if m.getByIDErr != nil {
@@ -349,6 +387,70 @@ placeholder
 	require.Empty(t, repo.unboundProviders)
 placeholder
 
+func TestGetProfileIdentitySummaries_DoesNotTreatOAuthOnlyCompatEmailAsAlternativeLoginMethod(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:           10,
+			Email:        "oauth-only@example.com",
+			SignupSource: "oidc",
+	placeholder,
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "oidc",
+				ProviderKey:     "https://issuer.example.com",
+				ProviderSubject: "oidc-only-subject",
+		placeholder,
+	placeholder,
+placeholder
+	svc := NewUserService(repo, nil, nil, nil)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 10, repo.getByIDUser)
+
+placeholder
+	require.False(t, summaries.OIDC.CanUnbind)
+
+	_, err = svc.UnbindUserAuthProvider(context.Background(), 10, "oidc")
+	require.ErrorIs(t, err, ErrIdentityUnbindLastMethod)
+	require.Empty(t, repo.unboundProviders)
+placeholder
+
+func TestGetProfileIdentitySummaries_DoesNotTreatCompatBackfilledEmailIdentityAsAlternativeLoginMethod(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:           11,
+			Email:        "oauth-only@example.com",
+			SignupSource: "wechat",
+	placeholder,
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "oauth-only@example.com",
+				Metadata: map[string]any{
+					"backfill_source": "users.email",
+					"migration":       "109_auth_identity_compat_backfill",
+			placeholder,
+		placeholder,
+			{
+				ProviderType:    "wechat",
+				ProviderKey:     "wechat",
+				ProviderSubject: "wechat-only-subject",
+		placeholder,
+	placeholder,
+placeholder
+	svc := NewUserService(repo, nil, nil, nil)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 11, repo.getByIDUser)
+
+placeholder
+	require.True(t, summaries.Email.Bound)
+	require.False(t, summaries.WeChat.CanUnbind)
+
+	_, err = svc.UnbindUserAuthProvider(context.Background(), 11, "wechat")
+	require.ErrorIs(t, err, ErrIdentityUnbindLastMethod)
+	require.Empty(t, repo.unboundProviders)
+placeholder
+
 func TestUnbindUserAuthProviderRemovesProviderAndReturnsUpdatedProfile(t *testing.T) {
 	repo := &mockUserRepo{
 		getByIDUser: &User{
@@ -368,18 +470,85 @@ func TestUnbindUserAuthProviderRemovesProviderAndReturnsUpdatedProfile(t *testin
 		placeholder,
 	placeholder,
 placeholder
-	svc := NewUserService(repo, nil, nil, nil)
+	invalidator := &mockAuthCacheInvalidator{placeholder
+	svc := NewUserService(repo, nil, invalidator, nil)
 
 	user, err := svc.UnbindUserAuthProvider(context.Background(), 12, "linuxdo")
 
 placeholder
 	require.Equal(t, []string{"linuxdo"placeholder, repo.unboundProviders)
 	require.Equal(t, int64(12), user.ID)
+	require.Equal(t, []int64{12placeholder, invalidator.invalidatedUserIDs)
 
 	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 12, user)
 placeholder
 	require.False(t, summaries.LinuxDo.Bound)
 	require.True(t, summaries.LinuxDo.CanBind)
+placeholder
+
+func TestGetProfileIdentitySummaries_HidesBindActionWhenProviderExplicitlyDisabled(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:    15,
+			Email: "alice@example.com",
+	placeholder,
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "alice@example.com",
+		placeholder,
+	placeholder,
+placeholder
+	settingRepo := &mockUserSettingRepo{
+		values: map[string]string{
+			SettingKeyLinuxDoConnectEnabled: "false",
+	placeholder,
+placeholder
+	svc := NewUserService(repo, settingRepo, nil, nil)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 15, repo.getByIDUser)
+
+placeholder
+	require.False(t, summaries.LinuxDo.Bound)
+	require.False(t, summaries.LinuxDo.CanBind)
+	require.Empty(t, summaries.LinuxDo.BindStartPath)
+placeholder
+
+func TestGetProfileIdentitySummaries_UsesBindStartRoute(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:    16,
+			Email: "alice@example.com",
+	placeholder,
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "alice@example.com",
+		placeholder,
+	placeholder,
+placeholder
+	svc := NewUserService(repo, nil, nil, nil)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 16, repo.getByIDUser)
+
+placeholder
+	require.Equal(
+		t,
+		"/api/v1/auth/oauth/linuxdo/bind/start?intent=bind_current_user&redirect=%2Fsettings%2Fprofile",
+		summaries.LinuxDo.BindStartPath,
+	)
+	require.Equal(
+		t,
+		"/api/v1/auth/oauth/oidc/bind/start?intent=bind_current_user&redirect=%2Fsettings%2Fprofile",
+		summaries.OIDC.BindStartPath,
+	)
+	require.Equal(
+		t,
+		"/api/v1/auth/oauth/wechat/bind/start?intent=bind_current_user&redirect=%2Fsettings%2Fprofile",
+		summaries.WeChat.BindStartPath,
+	)
 placeholder
 
 func TestUpdateBalance_NilBillingCache_NoPanic(t *testing.T) {

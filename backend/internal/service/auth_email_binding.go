@@ -11,6 +11,7 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/authidentity"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 )
 
 // BindEmailIdentity verifies and binds a local email/password identity to the
@@ -69,6 +70,7 @@ placeholder
 		if err := s.updateBoundEmailIdentityTx(ctx, currentUser, normalizedEmail, hashedPassword, firstRealEmailBind); err != nil {
 			return nil, err
 	placeholder
+		s.revokeEmailIdentitySessions(ctx, userID)
 		return currentUser, nil
 placeholder
 
@@ -87,6 +89,7 @@ placeholder
 	placeholder
 placeholder
 
+	s.revokeEmailIdentitySessions(ctx, userID)
 	return currentUser, nil
 placeholder
 
@@ -217,6 +220,12 @@ placeholder
 	currentUser.Concurrency = updatedUser.Concurrency
 	currentUser.UpdatedAt = updatedUser.UpdatedAt
 	return nil
+placeholder
+
+func (s *AuthService) revokeEmailIdentitySessions(ctx context.Context, userID int64) {
+	if err := s.RevokeAllUserSessions(ctx, userID); err != nil {
+		logger.LegacyPrintf("service.auth", "[Auth] Failed to revoke refresh sessions after email identity bind for user %d: %v", userID, err)
+placeholder
 placeholder
 
 func replaceBoundEmailAuthIdentityWithClient(

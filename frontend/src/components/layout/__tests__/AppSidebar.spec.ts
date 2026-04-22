@@ -21,7 +21,7 @@ placeholder)
 
 describe('AppSidebar header styles', () => {
   it('does not clip the version badge dropdown', () => {
-    const sidebarHeaderBlockMatch = styleSource.match(/\.sidebar-header\s*\{[\s\S]*?\n  \placeholder/)
+    const sidebarHeaderBlockMatch = styleSource.match(/\.sidebar-header\s*\{[\s\S]*?\n {2placeholder\placeholder/)
     const sidebarBrandBlockMatch = componentSource.match(/\.sidebar-brand\s*\{[\s\S]*?\n\placeholder/)
 
     expect(sidebarHeaderBlockMatch).not.toBeNull()

@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"sync"
 	"testing"
 	"time"
 
@@ -259,6 +260,107 @@ placeholder
 	require.Nil(t, reloadedFirst.IdentityID)
 placeholder
 
+func TestAuthPendingIdentityService_UpsertAdoptionDecision_IsIdempotentUnderConcurrency(t *testing.T) {
+	svc, client := newAuthPendingIdentityServiceTestClient(t)
+	ctx := context.Background()
+
+	user, err := client.User.Create().
+		SetEmail("adoption-concurrent@example.com").
+		SetPasswordHash("hash").
+		SetRole(RoleUser).
+		SetStatus(StatusActive).
+		Save(ctx)
+placeholder
+
+	identity, err := client.AuthIdentity.Create().
+		SetUserID(user.ID).
+		SetProviderType("wechat").
+		SetProviderKey("wechat-main").
+		SetProviderSubject("union-concurrent").
+		SetMetadata(map[string]any{placeholder).
+		Save(ctx)
+placeholder
+
+	session, err := svc.CreatePendingSession(ctx, CreatePendingAuthSessionInput{
+		Intent: "bind_current_user",
+		Identity: PendingAuthIdentityKey{
+			ProviderType:    "wechat",
+			ProviderKey:     "wechat-main",
+			ProviderSubject: "union-concurrent",
+	placeholder,
+placeholder)
+placeholder
+
+	firstCreateStarted := make(chan struct{placeholder)
+	releaseFirstCreate := make(chan struct{placeholder)
+	var firstCreate sync.Once
+	client.IdentityAdoptionDecision.Use(func(next dbent.Mutator) dbent.Mutator {
+		return dbent.MutateFunc(func(ctx context.Context, m dbent.Mutation) (dbent.Value, error) {
+			blocked := false
+			if m.Op().Is(dbent.OpCreate) {
+				firstCreate.Do(func() {
+					blocked = true
+					close(firstCreateStarted)
+			placeholder)
+		placeholder
+			if blocked {
+				<-releaseFirstCreate
+		placeholder
+			return next.Mutate(ctx, m)
+	placeholder)
+placeholder)
+
+	type adoptionResult struct {
+		decision *dbent.IdentityAdoptionDecision
+		err      error
+placeholder
+
+	input := PendingIdentityAdoptionDecisionInput{
+		PendingAuthSessionID: session.ID,
+		IdentityID:           &identity.ID,
+		AdoptDisplayName:     true,
+		AdoptAvatar:          true,
+placeholder
+
+	results := make(chan adoptionResult, 2)
+	go func() {
+		decision, err := svc.UpsertAdoptionDecision(ctx, input)
+		results <- adoptionResult{decision: decision, err: errplaceholder
+placeholder()
+
+	<-firstCreateStarted
+
+	go func() {
+		decision, err := svc.UpsertAdoptionDecision(ctx, input)
+		results <- adoptionResult{decision: decision, err: errplaceholder
+placeholder()
+
+	time.Sleep(100 * time.Millisecond)
+	close(releaseFirstCreate)
+
+	first := <-results
+	second := <-results
+
+	require.NoError(t, first.err)
+	require.NoError(t, second.err)
+	require.NotNil(t, first.decision)
+	require.NotNil(t, second.decision)
+	require.Equal(t, first.decision.ID, second.decision.ID)
+
+	count, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
+		Count(ctx)
+placeholder
+	require.Equal(t, 1, count)
+
+	loaded, err := client.IdentityAdoptionDecision.Query().
+		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
+		Only(ctx)
+placeholder
+	require.NotNil(t, loaded.IdentityID)
+	require.Equal(t, identity.ID, *loaded.IdentityID)
+placeholder
+
 func TestAuthPendingIdentityService_UpsertAdoptionDecision_ClearsLegacyNullSessionReference(t *testing.T) {
 	t.Skip("legacy NULL pending_auth_session_id rows only exist in production PostgreSQL history; sqlite unit schema rejects NULL")
 
@@ -355,4 +457,70 @@ placeholder
 
 	_, err = svc.ConsumeBrowserSession(ctx, session.SessionToken, "browser-session")
 	require.ErrorIs(t, err, ErrPendingAuthSessionConsumed)
+placeholder
+
+func TestAuthPendingIdentityService_ConsumeBrowserSessionRejectsStaleLoadedSessionReplay(t *testing.T) {
+	svc, _ := newAuthPendingIdentityServiceTestClient(t)
+	ctx := context.Background()
+
+	session, err := svc.CreatePendingSession(ctx, CreatePendingAuthSessionInput{
+		Intent: "login",
+		Identity: PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: "stale-replay-subject",
+	placeholder,
+		BrowserSessionKey: "browser-session",
+placeholder)
+placeholder
+
+	loaded, err := svc.getBrowserSession(ctx, session.SessionToken)
+placeholder
+
+	consumed, err := svc.consumeSession(ctx, loaded, "browser-session", ErrPendingAuthSessionExpired, ErrPendingAuthSessionConsumed)
+placeholder
+	require.NotNil(t, consumed.ConsumedAt)
+
+	_, err = svc.consumeSession(ctx, loaded, "browser-session", ErrPendingAuthSessionExpired, ErrPendingAuthSessionConsumed)
+	require.ErrorIs(t, err, ErrPendingAuthSessionConsumed)
+placeholder
+
+func TestAuthPendingIdentityService_ConsumeBrowserSessionScrubsLegacyCompletionTokens(t *testing.T) {
+	svc, client := newAuthPendingIdentityServiceTestClient(t)
+	ctx := context.Background()
+
+	session, err := svc.CreatePendingSession(ctx, CreatePendingAuthSessionInput{
+		Intent: "login",
+		Identity: PendingAuthIdentityKey{
+			ProviderType:    "linuxdo",
+			ProviderKey:     "linuxdo",
+			ProviderSubject: "legacy-token-subject",
+	placeholder,
+		BrowserSessionKey: "browser-session",
+		LocalFlowState: map[string]any{
+			"completion_response": map[string]any{
+				"access_token":  "legacy-access-token",
+				"refresh_token": "legacy-refresh-token",
+				"expires_in":    float64(3600),
+				"token_type":    "Bearer",
+				"redirect":      "/dashboard",
+		placeholder,
+	placeholder,
+placeholder)
+placeholder
+
+	consumed, err := svc.ConsumeBrowserSession(ctx, session.SessionToken, "browser-session")
+placeholder
+	require.NotNil(t, consumed.ConsumedAt)
+
+	stored, err := client.PendingAuthSession.Get(ctx, session.ID)
+placeholder
+
+	completion, ok := stored.LocalFlowState["completion_response"].(map[string]any)
+	require.True(t, ok)
+	require.NotContains(t, completion, "access_token")
+	require.NotContains(t, completion, "refresh_token")
+	require.NotContains(t, completion, "expires_in")
+	require.NotContains(t, completion, "token_type")
+	require.Equal(t, "/dashboard", completion["redirect"])
 placeholder

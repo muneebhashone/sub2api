@@ -101,7 +101,11 @@ import { ref, computed, onBeforeUnmount, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useRoute, useRouter placeholder from 'vue-router'
 import OrderStatusBadge from '@/components/payment/OrderStatusBadge.vue'
-import { PAYMENT_RECOVERY_STORAGE_KEY, readPaymentRecoverySnapshot placeholder from '@/components/payment/paymentFlow'
+import {
+  PAYMENT_RECOVERY_STORAGE_KEY,
+  clearPaymentRecoverySnapshot,
+  readPaymentRecoverySnapshot,
+placeholder from '@/components/payment/paymentFlow'
 import { usePaymentStore placeholder from '@/stores/payment'
 import { paymentAPI placeholder from '@/api/payment'
 import type { PaymentOrder placeholder from '@/types/payment'
@@ -177,9 +181,66 @@ function isPendingStatus(status: string | null | undefined): boolean {
   return PENDING_STATUSES.has(normalizeOrderStatus(status))
 placeholder
 
+function readRouteQueryString(key: string): string {
+  const value = route.query[key]
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : ''
+  placeholder
+  return typeof value === 'string' ? value : ''
+placeholder
+
+function restoreRecoverySnapshot(context: {
+  resumeToken: string
+  routeOrderId: number
+  routeOutTradeNo: string
+placeholder) {
+  if (typeof window === 'undefined') {
+    return null
+  placeholder
+
+  const rawSnapshot = window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)
+  if (!rawSnapshot) {
+    return null
+  placeholder
+
+  if (context.resumeToken) {
+    return readPaymentRecoverySnapshot(rawSnapshot, {
+      resumeToken: context.resumeToken,
+    placeholder)
+  placeholder
+
+  if (!context.routeOrderId && !context.routeOutTradeNo) {
+    return null
+  placeholder
+
+  const restored = readPaymentRecoverySnapshot(rawSnapshot)
+  if (!restored) {
+    return null
+  placeholder
+
+  if (context.routeOrderId > 0 && restored.orderId !== context.routeOrderId) {
+    return null
+  placeholder
+
+  if (context.routeOutTradeNo && restored.outTradeNo !== context.routeOutTradeNo) {
+    return null
+  placeholder
+
+  return restored
+placeholder
+
 async function resolveOrderFromResumeToken(resumeToken: string): Promise<PaymentOrder | null> {
   try {
     const result = await paymentAPI.resolveOrderPublicByResumeToken(resumeToken)
+    return result.data
+  placeholder catch (_err: unknown) {
+    return null
+  placeholder
+placeholder
+
+async function resolveOrderFromOutTradeNo(outTradeNo: string): Promise<PaymentOrder | null> {
+  try {
+    const result = await paymentAPI.verifyOrderPublic(outTradeNo)
     return result.data
   placeholder catch (_err: unknown) {
     return null
@@ -190,6 +251,18 @@ function clearStatusRefreshTimer(): void {
   if (statusRefreshTimer !== null) {
     clearTimeout(statusRefreshTimer)
     statusRefreshTimer = null
+  placeholder
+placeholder
+
+function clearRecoverySnapshot(): void {
+  if (typeof window === 'undefined') return
+  clearPaymentRecoverySnapshot(window.localStorage, PAYMENT_RECOVERY_STORAGE_KEY)
+placeholder
+
+function clearRecoverySnapshotForTerminalStatus(status: string | null | undefined): void {
+  if (!status) return
+  if (!isPendingStatus(status)) {
+    clearRecoverySnapshot()
   placeholder
 placeholder
 
@@ -204,6 +277,7 @@ function scheduleStatusRefresh(refreshOrder: (() => Promise<PaymentOrder | null>
     const refreshedOrder = await refreshOrder()
     if (refreshedOrder) {
       order.value = refreshedOrder
+      clearRecoverySnapshotForTerminalStatus(refreshedOrder.status)
     placeholder
 
     if (isPendingStatus(order.value?.status)) {
@@ -213,29 +287,22 @@ function scheduleStatusRefresh(refreshOrder: (() => Promise<PaymentOrder | null>
 placeholder
 
 onMounted(async () => {
-  const resumeToken = typeof route.query.resume_token === 'string'
-    ? route.query.resume_token
-    : ''
-  const routeOrderId = Number(route.query.order_id) || 0
-  const outTradeNo = String(route.query.out_trade_no || '')
+  const resumeToken = readRouteQueryString('resume_token')
+  const routeOrderId = Number(readRouteQueryString('order_id')) || 0
+  let outTradeNo = readRouteQueryString('out_trade_no')
   let orderId = 0
+  let resumeTokenLookupFailed = false
 
-  if (resumeToken && typeof window !== 'undefined') {
-    const restored = readPaymentRecoverySnapshot(
-      window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY),
-      { resumeToken placeholder,
-    )
-    if (restored?.orderId) {
-      orderId = restored.orderId
-    placeholder
+  const restored = restoreRecoverySnapshot({
+    resumeToken,
+    routeOrderId,
+    routeOutTradeNo: outTradeNo,
+  placeholder)
+  if (restored?.orderId) {
+    orderId = restored.orderId
   placeholder
-
-  if (!order.value && resumeToken && orderId) {
-    try {
-      order.value = await paymentStore.pollOrderStatus(orderId)
-    placeholder catch (_err: unknown) {
-      // Fall through to signed resume-token recovery below.
-    placeholder
+  if (!outTradeNo && restored?.outTradeNo) {
+    outTradeNo = restored.outTradeNo
   placeholder
 
   if (resumeToken) {
@@ -245,14 +312,20 @@ onMounted(async () => {
       if (!orderId) {
         orderId = resolvedOrder.id
       placeholder
+    placeholder else if (routeOrderId > 0) {
+      resumeTokenLookupFailed = true
+      orderId = routeOrderId
+    placeholder else {
+      resumeTokenLookupFailed = true
     placeholder
-  placeholder
-
-  if (!resumeToken) {
+  placeholder else if (routeOrderId > 0) {
     orderId = routeOrderId
   placeholder
 
-  if (!order.value && !resumeToken && orderId) {
+  const hasLegacyFallbackContext = readRouteQueryString('trade_status').trim() !== ''
+  const shouldUsePublicOutTradeNo = outTradeNo !== '' && (hasLegacyFallbackContext || routeOrderId > 0 || orderId > 0)
+
+  if (!order.value && orderId && (!resumeToken || routeOrderId > 0)) {
     try {
       order.value = await paymentStore.pollOrderStatus(orderId)
     placeholder catch (_err: unknown) {
@@ -260,9 +333,17 @@ onMounted(async () => {
     placeholder
   placeholder
 
-  const hasLegacyFallbackContext = typeof route.query.trade_status === 'string'
-    && route.query.trade_status.trim() !== ''
-  if (!order.value && !resumeToken && !orderId && outTradeNo && hasLegacyFallbackContext) {
+  if (!order.value && shouldUsePublicOutTradeNo && (!resumeToken || resumeTokenLookupFailed)) {
+    const legacyOrder = await resolveOrderFromOutTradeNo(outTradeNo)
+    if (legacyOrder) {
+      order.value = legacyOrder
+      if (!orderId) {
+        orderId = legacyOrder.id
+      placeholder
+    placeholder
+  placeholder
+
+  if (!order.value && !orderId && outTradeNo && hasLegacyFallbackContext) {
     returnInfo.value = {
       outTradeNo,
       money: String(route.query.money || ''),
@@ -273,11 +354,22 @@ onMounted(async () => {
 
   const refreshOrder = async (): Promise<PaymentOrder | null> => {
     if (resumeToken) {
-      return await resolveOrderFromResumeToken(resumeToken)
+      const resolvedOrder = await resolveOrderFromResumeToken(resumeToken)
+      if (resolvedOrder) {
+        return resolvedOrder
+      placeholder
     placeholder
 
     if (orderId) {
-      return await paymentStore.pollOrderStatus(orderId)
+      try {
+        return await paymentStore.pollOrderStatus(orderId)
+      placeholder catch (_err: unknown) {
+        // Fall through to legacy public verification when order polling is unavailable.
+      placeholder
+    placeholder
+
+    if (shouldUsePublicOutTradeNo) {
+      return await resolveOrderFromOutTradeNo(outTradeNo)
     placeholder
 
     return null
@@ -285,6 +377,10 @@ onMounted(async () => {
 
   if (isPendingStatus(order.value?.status)) {
     scheduleStatusRefresh(refreshOrder)
+  placeholder else if (order.value) {
+    clearRecoverySnapshotForTerminalStatus(order.value.status)
+  placeholder else if (returnInfo.value) {
+    clearRecoverySnapshot()
   placeholder
   loading.value = false
 placeholder)

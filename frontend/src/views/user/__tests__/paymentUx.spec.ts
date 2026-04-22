@@ -28,6 +28,16 @@ describe('describePaymentScenarioError', () => {
     placeholder)
   placeholder)
 
+  it('maps WeChat H5 authorization errors when provider aliases use wxpay_direct', () => {
+    expect(describePaymentScenarioError(
+      { reason: 'WECHAT_H5_NOT_AUTHORIZED' placeholder,
+      { paymentMethod: 'wxpay_direct', isMobile: true, isWechatBrowser: false placeholder,
+    )).toEqual({
+      messageKey: 'payment.errors.wechatH5NotAuthorized',
+      hintKey: 'payment.errors.wechatOpenInWeChatHint',
+    placeholder)
+  placeholder)
+
   it('maps missing WeixinJSBridge to a JSAPI-specific prompt', () => {
     expect(describePaymentScenarioError(
       new Error('WeixinJSBridge is unavailable'),

@@ -613,8 +613,12 @@ async function handleBindCurrentAccount() {
     return
   placeholder
 
-  prepareOAuthBindAccessTokenCookie()
-  window.location.href = startURL
+  try {
+    await prepareOAuthBindAccessTokenCookie()
+    window.location.href = startURL
+  placeholder catch (e: unknown) {
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  placeholder
 placeholder
 
 async function handleExistingAccountBinding() {
@@ -840,6 +844,14 @@ async function finalizePendingAccountResponse(completion: PendingWeChatCompletio
     return
   placeholder
 
+  if (completion.auth_result === 'pending_session') {
+    needsInvitation.value = false
+    needsAdoptionConfirmation.value = false
+    isProcessing.value = false
+    persistPendingAuthSession(redirect)
+    return
+  placeholder
+
   await finalizeCompletion(completion, redirect)
 placeholder
 
@@ -849,9 +861,9 @@ async function handleSubmitInvitation() {
 
   isSubmitting.value = true
   try {
-    const tokenData = legacyPendingOAuthToken.value
+    const completion: PendingWeChatCompletion = legacyPendingOAuthToken.value
       ? (
-          await apiClient.post<OAuthTokenResponse>('/auth/oauth/wechat/complete-registration', {
+          await apiClient.post<PendingWeChatCompletion>('/auth/oauth/wechat/complete-registration', {
             pending_oauth_token: legacyPendingOAuthToken.value,
             invitation_code: invitationCode.value.trim(),
             ...serializeAdoptionDecision(currentAdoptionDecision())
@@ -861,10 +873,7 @@ async function handleSubmitInvitation() {
           invitationCode.value.trim(),
           currentAdoptionDecision()
         )
-    persistOAuthTokenContext(tokenData)
-    await authStore.setToken(tokenData.access_token)
-    appStore.showSuccess(t('auth.loginSuccess'))
-    await router.replace(redirectTo.value)
+    await finalizePendingAccountResponse(completion)
   placeholder catch (e: unknown) {
     const err = e as { message?: string; response?: { data?: { message?: string placeholder placeholder placeholder
     invitationError.value =

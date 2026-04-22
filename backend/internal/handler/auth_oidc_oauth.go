@@ -157,21 +157,25 @@ placeholder else {
 placeholder
 
 	codeChallenge := ""
-	verifier, genErr := oauth.GenerateCodeVerifier()
-	if genErr != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(genErr))
-		return
+	if cfg.UsePKCE {
+		verifier, genErr := oauth.GenerateCodeVerifier()
+		if genErr != nil {
+			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_PKCE_GEN_FAILED", "failed to generate pkce verifier").WithCause(genErr))
+			return
+	placeholder
+		codeChallenge = oauth.GenerateCodeChallenge(verifier)
+		oidcSetCookie(c, oidcOAuthVerifierCookie, encodeCookieValue(verifier), oidcOAuthCookieMaxAgeSec, secureCookie)
 placeholder
-	codeChallenge = oauth.GenerateCodeChallenge(verifier)
-	oidcSetCookie(c, oidcOAuthVerifierCookie, encodeCookieValue(verifier), oidcOAuthCookieMaxAgeSec, secureCookie)
 
 	nonce := ""
-	nonce, err = oauth.GenerateState()
-	if err != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_NONCE_GEN_FAILED", "failed to generate oauth nonce").WithCause(err))
-		return
+	if cfg.ValidateIDToken {
+		nonce, err = oauth.GenerateState()
+		if err != nil {
+			response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_NONCE_GEN_FAILED", "failed to generate oauth nonce").WithCause(err))
+			return
+	placeholder
+		oidcSetCookie(c, oidcOAuthNonceCookie, encodeCookieValue(nonce), oidcOAuthCookieMaxAgeSec, secureCookie)
 placeholder
-	oidcSetCookie(c, oidcOAuthNonceCookie, encodeCookieValue(nonce), oidcOAuthCookieMaxAgeSec, secureCookie)
 
 	redirectURI := strings.TrimSpace(cfg.RedirectURL)
 	if redirectURI == "" {
@@ -244,17 +248,21 @@ placeholder
 	intent = normalizeOAuthIntent(intent)
 
 	codeVerifier := ""
-	codeVerifier, _ = readCookieDecoded(c, oidcOAuthVerifierCookie)
-	if codeVerifier == "" {
-		redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
-		return
+	if cfg.UsePKCE {
+		codeVerifier, _ = readCookieDecoded(c, oidcOAuthVerifierCookie)
+		if codeVerifier == "" {
+			redirectOAuthError(c, frontendCallback, "missing_verifier", "missing pkce verifier", "")
+			return
+	placeholder
 placeholder
 
 	expectedNonce := ""
-	expectedNonce, _ = readCookieDecoded(c, oidcOAuthNonceCookie)
-	if expectedNonce == "" {
-		redirectOAuthError(c, frontendCallback, "missing_nonce", "missing oauth nonce", "")
-		return
+	if cfg.ValidateIDToken {
+		expectedNonce, _ = readCookieDecoded(c, oidcOAuthNonceCookie)
+		if expectedNonce == "" {
+			redirectOAuthError(c, frontendCallback, "missing_nonce", "missing oauth nonce", "")
+			return
+	placeholder
 placeholder
 
 	redirectURI := strings.TrimSpace(cfg.RedirectURL)
@@ -284,16 +292,19 @@ placeholder
 		return
 placeholder
 
-	if strings.TrimSpace(tokenResp.IDToken) == "" {
-		redirectOAuthError(c, frontendCallback, "missing_id_token", "missing id_token", "")
-		return
-placeholder
+	var idClaims *oidcIDTokenClaims
+	if cfg.ValidateIDToken {
+		if strings.TrimSpace(tokenResp.IDToken) == "" {
+			redirectOAuthError(c, frontendCallback, "missing_id_token", "missing id_token", "")
+			return
+	placeholder
 
-	idClaims, err := oidcParseAndValidateIDToken(c.Request.Context(), cfg, tokenResp.IDToken, expectedNonce)
-	if err != nil {
-		log.Printf("[OIDC OAuth] id_token validation failed: %v", err)
-		redirectOAuthError(c, frontendCallback, "invalid_id_token", "failed to validate id_token", "")
-		return
+		idClaims, err = oidcParseAndValidateIDToken(c.Request.Context(), cfg, tokenResp.IDToken, expectedNonce)
+		if err != nil {
+			log.Printf("[OIDC OAuth] id_token validation failed: %v", err)
+			redirectOAuthError(c, frontendCallback, "invalid_id_token", "failed to validate id_token", "")
+			return
+	placeholder
 placeholder
 
 	userInfoClaims, err := oidcFetchUserInfo(c.Request.Context(), cfg, tokenResp)
@@ -303,7 +314,10 @@ placeholder
 		return
 placeholder
 
-	subject := strings.TrimSpace(idClaims.Subject)
+	subject := ""
+	if idClaims != nil {
+		subject = strings.TrimSpace(idClaims.Subject)
+placeholder
 	if subject == "" {
 		subject = strings.TrimSpace(userInfoClaims.Subject)
 placeholder
@@ -311,7 +325,10 @@ placeholder
 		redirectOAuthError(c, frontendCallback, "missing_subject", "missing subject claim", "")
 		return
 placeholder
-	issuer := strings.TrimSpace(idClaims.Issuer)
+	issuer := ""
+	if idClaims != nil {
+		issuer = strings.TrimSpace(idClaims.Issuer)
+placeholder
 	if issuer == "" {
 		issuer = strings.TrimSpace(cfg.IssuerURL)
 placeholder
@@ -321,21 +338,34 @@ placeholder
 placeholder
 
 	emailVerified := userInfoClaims.EmailVerified
-	if emailVerified == nil {
+	if emailVerified == nil && idClaims != nil {
 		emailVerified = idClaims.EmailVerified
 placeholder
-	if userInfoClaims.Subject != "" && idClaims.Subject != "" && strings.TrimSpace(userInfoClaims.Subject) != strings.TrimSpace(idClaims.Subject) {
+	if idClaims != nil && userInfoClaims.Subject != "" && idClaims.Subject != "" && strings.TrimSpace(userInfoClaims.Subject) != strings.TrimSpace(idClaims.Subject) {
 		redirectOAuthError(c, frontendCallback, "subject_mismatch", "userinfo subject does not match id_token", "")
 		return
 placeholder
 
 	identityKey := oidcIdentityKey(issuer, subject)
-	compatEmail := strings.TrimSpace(firstNonEmpty(userInfoClaims.Email, idClaims.Email))
+	compatEmail := strings.TrimSpace(userInfoClaims.Email)
+	if compatEmail == "" && idClaims != nil {
+		compatEmail = strings.TrimSpace(idClaims.Email)
+placeholder
 	email := oidcSyntheticEmailFromIdentityKey(identityKey)
 	username := firstNonEmpty(
 		userInfoClaims.Username,
-		idClaims.PreferredUsername,
-		idClaims.Name,
+		func() string {
+			if idClaims != nil {
+				return idClaims.PreferredUsername
+		placeholder
+			return ""
+	placeholder(),
+		func() string {
+			if idClaims != nil {
+				return idClaims.Name
+		placeholder
+			return ""
+	placeholder(),
 		oidcFallbackUsername(subject),
 	)
 	identityRef := service.PendingAuthIdentityKey{
@@ -344,14 +374,19 @@ placeholder
 		ProviderSubject: subject,
 placeholder
 	upstreamClaims := map[string]any{
-		"email":                  email,
-		"username":               username,
-		"subject":                subject,
-		"issuer":                 issuer,
-		"email_verified":         emailVerified != nil && *emailVerified,
-		"provider_fallback":      strings.TrimSpace(cfg.ProviderName),
-		"suggested_display_name": firstNonEmpty(userInfoClaims.DisplayName, idClaims.Name, username),
-		"suggested_avatar_url":   userInfoClaims.AvatarURL,
+		"email":             email,
+		"username":          username,
+		"subject":           subject,
+		"issuer":            issuer,
+		"email_verified":    emailVerified != nil && *emailVerified,
+		"provider_fallback": strings.TrimSpace(cfg.ProviderName),
+		"suggested_display_name": firstNonEmpty(userInfoClaims.DisplayName, func() string {
+			if idClaims != nil {
+				return idClaims.Name
+		placeholder
+			return ""
+	placeholder(), username),
+		"suggested_avatar_url": userInfoClaims.AvatarURL,
 placeholder
 	if compatEmail != "" && !strings.EqualFold(strings.TrimSpace(compatEmail), strings.TrimSpace(email)) {
 		upstreamClaims["compat_email"] = compatEmail
@@ -387,25 +422,16 @@ placeholder
 		return
 placeholder
 	if existingIdentityUser != nil {
-		tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), existingIdentityUser.Email, username, "")
-		if err != nil {
-			redirectOAuthError(c, frontendCallback, "login_failed", infraerrors.Reason(err), infraerrors.Message(err))
-			return
-	placeholder
 		if err := h.createOAuthPendingSession(c, oauthPendingSessionPayload{
 			Intent:                 oauthIntentLogin,
 			Identity:               identityRef,
-			TargetUserID:           &user.ID,
+			TargetUserID:           &existingIdentityUser.ID,
 			ResolvedEmail:          existingIdentityUser.Email,
 			RedirectTo:             redirectTo,
 			BrowserSessionKey:      browserSessionKey,
 			UpstreamIdentityClaims: upstreamClaims,
 			CompletionResponse: map[string]any{
-				"access_token":  tokenPair.AccessToken,
-				"refresh_token": tokenPair.RefreshToken,
-				"expires_in":    tokenPair.ExpiresIn,
-				"token_type":    "Bearer",
-				"redirect":      redirectTo,
+				"redirect": redirectTo,
 		placeholder,
 	placeholder); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
@@ -537,10 +563,15 @@ placeholder
 	if compatEmailUser != nil {
 		resolvedChoiceEmail = strings.TrimSpace(compatEmailUser.Email)
 placeholder
+	var targetUserID *int64
+	if compatEmailUser != nil && compatEmailUser.ID > 0 {
+		targetUserID = &compatEmailUser.ID
+placeholder
 
 	return h.createOAuthPendingSession(c, oauthPendingSessionPayload{
 		Intent:                 oauthIntentLogin,
 		Identity:               identity,
+		TargetUserID:           targetUserID,
 		ResolvedEmail:          resolvedChoiceEmail,
 		RedirectTo:             redirectTo,
 		BrowserSessionKey:      browserSessionKey,
@@ -596,6 +627,15 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if updatedSession, handled, err := h.legacyCompleteRegistrationSessionStatus(c, session); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder else if handled {
+		c.JSON(http.StatusOK, buildPendingOAuthSessionStatusPayload(updatedSession))
+		return
+placeholder else {
+		session = updatedSession
+placeholder
 	if err := h.ensureBackendModeAllowsNewUserLogin(c.Request.Context()); err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -608,12 +648,16 @@ placeholder
 		return
 placeholder
 
-	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
-	if err != nil {
-		response.ErrorFrom(c, err)
+	client := h.entClient()
+	if client == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("PENDING_AUTH_NOT_READY", "pending auth service is not ready"))
 		return
 placeholder
-	decision, err := h.upsertPendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
+	if err := ensurePendingOAuthRegistrationIdentityAvailable(c.Request.Context(), client, session); err != nil {
+		respondPendingOAuthBindingApplyError(c, err)
+		return
+placeholder
+	decision, err := h.ensurePendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
 		AdoptDisplayName: req.AdoptDisplayName,
 		AdoptAvatar:      req.AdoptAvatar,
 placeholder)
@@ -621,17 +665,16 @@ placeholder)
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	if err := applyPendingOAuthAdoption(c.Request.Context(), h.entClient(), h.authService, h.userService, session, decision, &user.ID); err != nil {
-		response.ErrorFrom(c, infraerrors.InternalServer("PENDING_AUTH_ADOPTION_APPLY_FAILED", "failed to apply oauth profile adoption").WithCause(err))
-		return
-placeholder
-	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
-	if _, err := pendingSvc.ConsumeBrowserSession(c.Request.Context(), sessionToken, browserSessionKey); err != nil {
-		clearOAuthPendingSessionCookie(c, secureCookie)
-		clearOAuthPendingBrowserCookie(c, secureCookie)
+	tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), email, username, req.InvitationCode)
+	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if err := applyPendingOAuthAdoptionAndConsumeSession(c.Request.Context(), client, h.authService, h.userService, session, decision, user.ID); err != nil {
+		respondPendingOAuthBindingApplyError(c, err)
+		return
+placeholder
+	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
 	clearOAuthPendingSessionCookie(c, secureCookie)
 	clearOAuthPendingBrowserCookie(c, secureCookie)
 
@@ -670,7 +713,9 @@ func oidcExchangeCode(
 	form.Set("client_id", cfg.ClientID)
 	form.Set("code", code)
 	form.Set("redirect_uri", redirectURI)
-	form.Set("code_verifier", codeVerifier)
+	if strings.TrimSpace(codeVerifier) != "" {
+		form.Set("code_verifier", codeVerifier)
+placeholder
 
 	r := client.R().
 		SetContext(ctx).
@@ -872,9 +917,13 @@ placeholder
 		q.Set("scope", cfg.Scopes)
 placeholder
 	q.Set("state", state)
-	q.Set("nonce", nonce)
-	q.Set("code_challenge", codeChallenge)
-	q.Set("code_challenge_method", "S256")
+	if strings.TrimSpace(nonce) != "" {
+		q.Set("nonce", nonce)
+placeholder
+	if strings.TrimSpace(codeChallenge) != "" {
+		q.Set("code_challenge", codeChallenge)
+		q.Set("code_challenge_method", "S256")
+placeholder
 
 	u.RawQuery = q.Encode()
 	return u.String(), nil

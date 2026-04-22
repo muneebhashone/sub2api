@@ -8,26 +8,40 @@ import type { AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey placeholde
 
 export interface AdminBindAuthIdentityChannelRequest {
   channel: string
-  channel_app_id?: string
+  channel_app_id: string
   channel_subject: string
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown> | null
 placeholder
 
 export interface AdminBindAuthIdentityRequest {
   provider_type: string
   provider_key: string
   provider_subject: string
-  issuer?: string
-  metadata?: Record<string, unknown>
+  issuer?: string | null
+  metadata?: Record<string, unknown> | null
   channel?: AdminBindAuthIdentityChannelRequest
 placeholder
 
+export interface AdminBoundAuthIdentityChannel {
+  channel: string
+  channel_app_id: string
+  channel_subject: string
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+placeholder
+
 export interface AdminBoundAuthIdentity {
-  identity_id: number
+  user_id: number
   provider_type: string
   provider_key: string
   provider_subject: string
-  channel_id?: number | null
+  verified_at?: string | null
+  issuer?: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+  channel?: AdminBoundAuthIdentityChannel | null
 placeholder
 
 /**

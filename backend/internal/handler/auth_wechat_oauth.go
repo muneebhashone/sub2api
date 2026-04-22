@@ -279,12 +279,7 @@ placeholder
 			redirectOAuthError(c, frontendCallback, "session_error", infraerrors.Reason(err), infraerrors.Message(err))
 			return
 	placeholder
-		tokenPair, user, err := h.authService.LoginOrRegisterOAuthWithTokenPair(c.Request.Context(), existingIdentityUser.Email, username, "")
-		if err != nil {
-			redirectOAuthError(c, frontendCallback, "login_failed", infraerrors.Reason(err), infraerrors.Message(err))
-			return
-	placeholder
-		if err := h.createWeChatPendingSession(c, normalizedIntent, providerSubject, existingIdentityUser.Email, redirectTo, browserSessionKey, upstreamClaims, tokenPair, nil, &user.ID); err != nil {
+		if err := h.createWeChatPendingSession(c, normalizedIntent, providerSubject, existingIdentityUser.Email, redirectTo, browserSessionKey, upstreamClaims, nil, nil, &existingIdentityUser.ID); err != nil {
 			redirectOAuthError(c, frontendCallback, "session_error", "failed to continue oauth login", "")
 			return
 	placeholder
@@ -476,11 +471,12 @@ placeholder
 placeholder
 
 func (h *AuthHandler) wechatPaymentResumeService() *service.PaymentResumeService {
+	var legacyKey []byte
 	key, err := payment.ProvideEncryptionKey(h.cfg)
-	if err != nil {
-		return service.NewPaymentResumeService(nil)
+	if err == nil {
+		legacyKey = []byte(key)
 placeholder
-	return service.NewPaymentResumeService([]byte(key))
+	return service.NewLegacyAwarePaymentResumeService(legacyKey)
 placeholder
 
 type completeWeChatOAuthRequest struct {
@@ -530,6 +526,15 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if updatedSession, handled, err := h.legacyCompleteRegistrationSessionStatus(c, session); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder else if handled {
+		c.JSON(http.StatusOK, buildPendingOAuthSessionStatusPayload(updatedSession))
+		return
+placeholder else {
+		session = updatedSession
+placeholder
 	if err := h.ensureBackendModeAllowsNewUserLogin(c.Request.Context()); err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -547,7 +552,7 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	decision, err := h.upsertPendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
+	decision, err := h.ensurePendingOAuthAdoptionDecision(c, session.ID, oauthAdoptionDecisionRequest{
 		AdoptDisplayName: req.AdoptDisplayName,
 		AdoptAvatar:      req.AdoptAvatar,
 placeholder)
@@ -823,7 +828,10 @@ placeholder
 			return nil, infraerrors.InternalServer("AUTH_IDENTITY_LOOKUP_FAILED", "failed to inspect auth identity ownership").WithCause(err)
 	placeholder
 		if user, err := singleWeChatIdentityUser(records); err != nil || user != nil {
-			return user, err
+			if err != nil || user == nil {
+				return user, err
+		placeholder
+			return findActiveUserByID(ctx, client, user.ID)
 	placeholder
 placeholder
 
@@ -847,7 +855,10 @@ placeholder
 			return nil, infraerrors.InternalServer("AUTH_IDENTITY_CHANNEL_LOOKUP_FAILED", "failed to inspect auth identity channel ownership").WithCause(err)
 	placeholder
 		if user, err := singleWeChatChannelUser(records); err != nil || user != nil {
-			return user, err
+			if err != nil || user == nil {
+				return user, err
+		placeholder
+			return findActiveUserByID(ctx, client, user.ID)
 	placeholder
 placeholder
 
@@ -866,7 +877,11 @@ placeholder
 	if err != nil {
 		return nil, infraerrors.InternalServer("AUTH_IDENTITY_LOOKUP_FAILED", "failed to inspect auth identity ownership").WithCause(err)
 placeholder
-	return singleWeChatIdentityUser(records)
+	user, err := singleWeChatIdentityUser(records)
+	if err != nil || user == nil {
+		return user, err
+placeholder
+	return findActiveUserByID(ctx, client, user.ID)
 placeholder
 
 func wechatCompatibleProviderKeys(providerKey string) []string {

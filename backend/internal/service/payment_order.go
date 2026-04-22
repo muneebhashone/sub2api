@@ -139,6 +139,10 @@ placeholder
 		tm = defaultOrderTimeoutMin
 placeholder
 	exp := time.Now().Add(time.Duration(tm) * time.Minute)
+	outTradeNo, err := s.allocateOutTradeNo(ctx, tx)
+	if err != nil {
+		return nil, err
+placeholder
 	providerSnapshot := buildPaymentOrderProviderSnapshot(sel, req)
 	selectedInstanceID := ""
 	selectedProviderKey := ""
@@ -155,7 +159,7 @@ placeholder
 		SetPayAmount(payAmount).
 		SetFeeRate(feeRate).
 		SetRechargeCode("").
-		SetOutTradeNo(generateOutTradeNo()).
+		SetOutTradeNo(outTradeNo).
 		SetPaymentType(req.PaymentType).
 		SetPaymentTradeNo("").
 		SetOrderType(req.OrderType).
@@ -191,6 +195,21 @@ placeholder
 		return nil, fmt.Errorf("commit order transaction: %w", err)
 placeholder
 	return order, nil
+placeholder
+
+func (s *PaymentService) allocateOutTradeNo(ctx context.Context, tx *dbent.Tx) (string, error) {
+	const maxAttempts = 5
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		candidate := generateOutTradeNo()
+		exists, err := tx.PaymentOrder.Query().Where(paymentorder.OutTradeNo(candidate)).Exist(ctx)
+		if err != nil {
+			return "", fmt.Errorf("check out_trade_no uniqueness: %w", err)
+	placeholder
+		if !exists {
+			return candidate, nil
+	placeholder
+placeholder
+	return "", fmt.Errorf("generate unique out_trade_no: exhausted %d attempts", maxAttempts)
 placeholder
 
 func (s *PaymentService) checkPendingLimit(ctx context.Context, tx *dbent.Tx, userID int64, max int) error {
@@ -360,13 +379,13 @@ func (s *PaymentService) invokeProvider(ctx context.Context, order *dbent.Paymen
 placeholder
 	subject := s.buildPaymentSubject(plan, limitAmount, cfg)
 	outTradeNo := order.OutTradeNo
-	canonicalReturnURL, err := CanonicalizeReturnURL(req.ReturnURL, req.SrcHost)
+	canonicalReturnURL, err := CanonicalizeReturnURL(req.ReturnURL, req.SrcHost, req.SrcURL)
 	if err != nil {
 		return nil, err
 placeholder
 	resumeToken := ""
 	if resume := s.paymentResume(); resume != nil {
-		if resume.isSigningConfigured() {
+		if canonicalReturnURL != "" && resume.isSigningConfigured() {
 			resumeToken, err = resume.CreateToken(ResumeTokenClaims{
 				OrderID:            order.ID,
 				UserID:             order.UserID,
@@ -380,7 +399,7 @@ placeholder
 		placeholder
 	placeholder
 placeholder
-	providerReturnURL, err := buildPaymentReturnURL(canonicalReturnURL, order.ID, resumeToken)
+	providerReturnURL, err := buildPaymentReturnURL(canonicalReturnURL, order.ID, outTradeNo, resumeToken)
 	if err != nil {
 		return nil, err
 placeholder
@@ -480,6 +499,9 @@ placeholder
 func (s *PaymentService) buildWeChatOAuthRequiredResponse(ctx context.Context, req CreateOrderRequest, amount, payAmount, feeRate float64) (*CreateOrderResponse, error) {
 	appID, _, err := s.getWeChatPaymentOAuthCredential(ctx)
 	if err != nil {
+		return nil, err
+placeholder
+	if err := s.paymentResume().ensureSigningKey(); err != nil {
 		return nil, err
 placeholder
 

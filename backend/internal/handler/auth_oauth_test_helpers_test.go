@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,4 +37,21 @@ placeholder
 	decoded, err := decodeCookieValue(value)
 placeholder
 	return decoded
+placeholder
+
+func assertOAuthRedirectError(t *testing.T, location string, errorCode string, errorMessage string) {
+placeholder
+	require.NotEmpty(t, location)
+
+	parsed, err := url.Parse(location)
+placeholder
+
+	rawValues := parsed.RawQuery
+	if rawValues == "" {
+		rawValues = parsed.Fragment
+placeholder
+	values, err := url.ParseQuery(rawValues)
+placeholder
+	require.Equal(t, errorCode, values.Get("error"))
+	require.Equal(t, errorMessage, values.Get("error_message"))
 placeholder

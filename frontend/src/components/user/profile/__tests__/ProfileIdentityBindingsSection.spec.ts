@@ -188,7 +188,7 @@ describe('ProfileIdentityBindingsSection', () => {
     expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(false)
   placeholder)
 
-  it('hides the WeChat bind action when only the legacy aggregate setting is present', () => {
+  it('keeps the WeChat bind action visible when only the legacy aggregate setting is present', () => {
     const wrapper = mount(ProfileIdentityBindingsSection, {
       global: {
         plugins: [pinia],
@@ -201,7 +201,28 @@ describe('ProfileIdentityBindingsSection', () => {
       placeholder,
     placeholder)
 
-    expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="profile-binding-wechat-action"]').exists()).toBe(true)
+  placeholder)
+
+  it('starts the WeChat bind flow when only the legacy aggregate setting is present', async () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser(),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: true,
+      placeholder,
+    placeholder)
+
+    await wrapper.get('[data-testid="profile-binding-wechat-action"]').trigger('click')
+
+    expect(locationState.current.href).toContain('/api/v1/auth/oauth/wechat/start?')
+    expect(locationState.current.href).toContain('mode=open')
+    expect(locationState.current.href).toContain('intent=bind_current_user')
+    expect(locationState.current.href).toContain('redirect=%2Fprofile')
   placeholder)
 
   it('uses explicit cached WeChat capabilities and ignores legacy prop fallbacks', () => {
@@ -333,6 +354,51 @@ describe('ProfileIdentityBindingsSection', () => {
 
     expect(wrapper.get('[data-testid="profile-binding-email-status"]').text()).toBe('Not bound')
     expect(wrapper.get('[data-testid="profile-binding-email-input"]').exists()).toBe(true)
+  placeholder)
+
+  it('does not show a synthetic oauth-only email as the bound email summary', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser({
+          email: 'legacy-user@linuxdo-connect.invalid',
+          email_bound: false,
+          auth_bindings: {
+            email: { bound: false placeholder,
+          placeholder,
+        placeholder),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: false,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.text()).not.toContain('legacy-user@linuxdo-connect.invalid')
+    expect(wrapper.get('[data-testid="profile-binding-email-status"]').text()).toBe('Not bound')
+  placeholder)
+
+  it('does not show a synthetic oauth-only email when only fallback auth bindings mark email as unbound', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser({
+          email: 'legacy-user@wechat-connect.invalid',
+          auth_bindings: {
+            email: { bound: false placeholder,
+          placeholder,
+        placeholder),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: false,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.text()).not.toContain('legacy-user@wechat-connect.invalid')
+    expect(wrapper.get('[data-testid="profile-binding-email-status"]').text()).toBe('Not bound')
   placeholder)
 
   it('keeps the email form available for replacing a bound primary email', async () => {
@@ -473,5 +539,27 @@ describe('ProfileIdentityBindingsSection', () => {
 
     expect(userApiMocks.unbindAuthIdentity).toHaveBeenCalledWith('linuxdo')
     expect(wrapper.get('[data-testid="profile-binding-linuxdo-status"]').text()).toBe('Not bound')
+  placeholder)
+
+  it('hides bind actions when provider details say bindable but the provider is disabled', () => {
+    const wrapper = mount(ProfileIdentityBindingsSection, {
+      global: {
+        plugins: [pinia],
+      placeholder,
+      props: {
+        user: createUser({
+          auth_bindings: {
+            linuxdo: { bound: false, can_bind: true placeholder,
+            oidc: { bound: false, can_bind: true placeholder,
+          placeholder,
+        placeholder),
+        linuxdoEnabled: false,
+        oidcEnabled: false,
+        wechatEnabled: false,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.find('[data-testid="profile-binding-linuxdo-action"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="profile-binding-oidc-action"]').exists()).toBe(false)
   placeholder)
 placeholder)

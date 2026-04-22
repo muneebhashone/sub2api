@@ -194,6 +194,7 @@ export interface OAuthTokenResponse {
 placeholder
 
 export interface PendingOAuthBindLoginResponse extends Partial<OAuthTokenResponse> {
+  auth_result?: string
   redirect?: string
   error?: string
   requires_2fa?: boolean
@@ -206,7 +207,9 @@ placeholder
 
 export type PendingOAuthExchangeResponse = PendingOAuthBindLoginResponse
 
-export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {placeholder
+export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {
+  auth_result?: string
+placeholder
 
 export interface PendingOAuthSendVerifyCodeResponse extends SendVerifyCodeResponse {
   auth_result?: string
@@ -278,33 +281,11 @@ export function persistOAuthTokenContext(tokens: Partial<OAuthTokenResponse>): v
   placeholder
 placeholder
 
-export function prepareOAuthBindAccessTokenCookie(): void {
-  if (typeof document === 'undefined' || typeof window === 'undefined') {
+export async function prepareOAuthBindAccessTokenCookie(): Promise<void> {
+  if (!getAuthToken()) {
     return
   placeholder
-
-  const token = getAuthToken()
-  if (!token) {
-    return
-  placeholder
-
-  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
-  const path = resolveOAuthBindCookiePath()
-  document.cookie =
-    `oauth_bind_access_token=${encodeURIComponent(token)placeholder; Path=${pathplaceholder/auth/oauth; Max-Age=600; SameSite=Lax${secureplaceholder`
-placeholder
-
-function resolveOAuthBindCookiePath(): string {
-  const apiBase = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1').replace(/\/$/, '')
-
-  try {
-    return new URL(apiBase, window.location.origin).pathname.replace(/\/$/, '') || '/api/v1'
-  placeholder catch {
-    if (apiBase.startsWith('/')) {
-      return apiBase
-    placeholder
-    return '/api/v1'
-  placeholder
+  await apiClient.post('/auth/oauth/bind-token')
 placeholder
 
 /**

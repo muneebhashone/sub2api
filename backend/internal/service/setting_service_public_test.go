@@ -112,3 +112,42 @@ placeholder
 	require.True(t, settings.WeChatOAuthOpenEnabled)
 	require.True(t, settings.WeChatOAuthMPEnabled)
 placeholder
+
+func TestSettingService_GetPublicSettings_DoesNotExposeMobileOnlyWeChatAsWebOAuthAvailable(t *testing.T) {
+	svc := NewSettingService(&settingPublicRepoStub{
+		values: map[string]string{
+			SettingKeyWeChatConnectEnabled:             "true",
+			SettingKeyWeChatConnectMobileEnabled:       "true",
+			SettingKeyWeChatConnectMode:                "mobile",
+			SettingKeyWeChatConnectMobileAppID:         "wx-mobile-app",
+			SettingKeyWeChatConnectMobileAppSecret:     "wx-mobile-secret",
+			SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
+	placeholder,
+placeholder, &config.Config{placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+placeholder
+	require.False(t, settings.WeChatOAuthEnabled)
+	require.False(t, settings.WeChatOAuthOpenEnabled)
+	require.False(t, settings.WeChatOAuthMPEnabled)
+	require.True(t, settings.WeChatOAuthMobileEnabled)
+placeholder
+
+func TestSettingService_GetPublicSettings_FallsBackToConfigForWeChatOAuthCapabilities(t *testing.T) {
+	svc := NewSettingService(&settingPublicRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{
+		WeChat: config.WeChatConnectConfig{
+			Enabled:             true,
+			OpenEnabled:         true,
+			OpenAppID:           "wx-open-config",
+			OpenAppSecret:       "wx-open-secret",
+			FrontendRedirectURL: "/auth/wechat/config-callback",
+	placeholder,
+placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+placeholder
+	require.True(t, settings.WeChatOAuthEnabled)
+	require.True(t, settings.WeChatOAuthOpenEnabled)
+	require.False(t, settings.WeChatOAuthMPEnabled)
+	require.False(t, settings.WeChatOAuthMobileEnabled)
+placeholder
