@@ -20,7 +20,7 @@ func (s *PaymentConfigService) GetAvailableMethodLimits(ctx context.Context) (*M
 		return nil, fmt.Errorf("query provider instances: %w", err)
 placeholder
 	typeInstances := pcGroupByPaymentType(instances)
-	typeInstances = pcApplyEnabledVisibleMethodInstances(typeInstances, instances)
+	typeInstances = s.pcApplyEnabledVisibleMethodInstances(ctx, typeInstances, instances)
 	resp := &MethodLimitsResponse{
 		Methods: make(map[string]MethodLimits, len(typeInstances)),
 placeholder
@@ -32,7 +32,7 @@ placeholder
 	return resp, nil
 placeholder
 
-func pcApplyEnabledVisibleMethodInstances(typeInstances map[string][]*dbent.PaymentProviderInstance, instances []*dbent.PaymentProviderInstance) map[string][]*dbent.PaymentProviderInstance {
+func (s *PaymentConfigService) pcApplyEnabledVisibleMethodInstances(ctx context.Context, typeInstances map[string][]*dbent.PaymentProviderInstance, instances []*dbent.PaymentProviderInstance) map[string][]*dbent.PaymentProviderInstance {
 	if len(typeInstances) == 0 {
 		return typeInstances
 placeholder
@@ -44,11 +44,17 @@ placeholder
 
 	for _, method := range []string{payment.TypeAlipay, payment.TypeWxpayplaceholder {
 		matching := filterEnabledVisibleMethodInstances(instances, method)
-		if len(matching) != 1 {
+		providerKey, err := s.resolveVisibleMethodProviderKey(ctx, method, matching)
+		if err != nil || providerKey == "" {
 			delete(filtered, method)
 			continue
 	placeholder
-		filtered[method] = []*dbent.PaymentProviderInstance{matching[0]placeholder
+		selectedInstances := filterVisibleMethodInstancesByProviderKey(instances, method, providerKey)
+		if len(selectedInstances) == 0 {
+			delete(filtered, method)
+			continue
+	placeholder
+		filtered[method] = selectedInstances
 placeholder
 	return filtered
 placeholder

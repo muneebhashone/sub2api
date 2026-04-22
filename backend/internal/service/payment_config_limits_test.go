@@ -301,65 +301,104 @@ placeholder)
 placeholder)
 placeholder
 
-func TestGetAvailableMethodLimitsHidesConflictingVisibleMethodProviders(t *testing.T) {
-	ctx := context.Background()
-	client := newPaymentConfigServiceTestClient(t)
-
-	_, err := client.PaymentProviderInstance.Create().
-		SetProviderKey(payment.TypeAlipay).
-		SetName("Official Alipay").
-		SetConfig("{placeholder").
-		SetSupportedTypes("alipay").
-		SetLimits(`{"alipay":{"singleMin":10,"singleMax":100placeholderplaceholder`).
-		SetEnabled(true).
-		Save(ctx)
-	if err != nil {
-		t.Fatalf("create official alipay instance: %v", err)
-placeholder
-	_, err = client.PaymentProviderInstance.Create().
-		SetProviderKey(payment.TypeEasyPay).
-		SetName("EasyPay Alipay").
-		SetConfig("{placeholder").
-		SetSupportedTypes("alipay").
-		SetLimits(`{"alipay":{"singleMin":20,"singleMax":200placeholderplaceholder`).
-		SetEnabled(true).
-		Save(ctx)
-	if err != nil {
-		t.Fatalf("create easypay alipay instance: %v", err)
-placeholder
-	_, err = client.PaymentProviderInstance.Create().
-		SetProviderKey(payment.TypeWxpay).
-		SetName("Official WeChat").
-		SetConfig("{placeholder").
-		SetSupportedTypes("wxpay").
-		SetLimits(`{"wxpay":{"singleMin":30,"singleMax":300placeholderplaceholder`).
-		SetEnabled(true).
-		Save(ctx)
-	if err != nil {
-		t.Fatalf("create official wxpay instance: %v", err)
+func TestGetAvailableMethodLimitsUsesConfiguredVisibleMethodSource(t *testing.T) {
+	tests := []struct {
+		name                string
+		sourceSetting       string
+		wantAlipaySingleMin float64
+		wantAlipaySingleMax float64
+		wantGlobalMin       float64
+		wantGlobalMax       float64
+placeholder{
+		{
+			name:                "official source",
+			sourceSetting:       VisibleMethodSourceOfficialAlipay,
+			wantAlipaySingleMin: 10,
+			wantAlipaySingleMax: 100,
+			wantGlobalMin:       10,
+			wantGlobalMax:       300,
+	placeholder,
+		{
+			name:                "easypay source",
+			sourceSetting:       VisibleMethodSourceEasyPayAlipay,
+			wantAlipaySingleMin: 20,
+			wantAlipaySingleMax: 200,
+			wantGlobalMin:       20,
+			wantGlobalMax:       300,
+	placeholder,
 placeholder
 
-	svc := &PaymentConfigService{
-		entClient: client,
-placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			client := newPaymentConfigServiceTestClient(t)
 
-	resp, err := svc.GetAvailableMethodLimits(ctx)
-	if err != nil {
-		t.Fatalf("GetAvailableMethodLimits returned error: %v", err)
-placeholder
+			_, err := client.PaymentProviderInstance.Create().
+				SetProviderKey(payment.TypeAlipay).
+				SetName("Official Alipay").
+				SetConfig("{placeholder").
+				SetSupportedTypes("alipay").
+				SetLimits(`{"alipay":{"singleMin":10,"singleMax":100placeholderplaceholder`).
+				SetEnabled(true).
+				Save(ctx)
+			if err != nil {
+				t.Fatalf("create official alipay instance: %v", err)
+		placeholder
+			_, err = client.PaymentProviderInstance.Create().
+				SetProviderKey(payment.TypeEasyPay).
+				SetName("EasyPay Alipay").
+				SetConfig("{placeholder").
+				SetSupportedTypes("alipay").
+				SetLimits(`{"alipay":{"singleMin":20,"singleMax":200placeholderplaceholder`).
+				SetEnabled(true).
+				Save(ctx)
+			if err != nil {
+				t.Fatalf("create easypay alipay instance: %v", err)
+		placeholder
+			_, err = client.PaymentProviderInstance.Create().
+				SetProviderKey(payment.TypeWxpay).
+				SetName("Official WeChat").
+				SetConfig("{placeholder").
+				SetSupportedTypes("wxpay").
+				SetLimits(`{"wxpay":{"singleMin":30,"singleMax":300placeholderplaceholder`).
+				SetEnabled(true).
+				Save(ctx)
+			if err != nil {
+				t.Fatalf("create official wxpay instance: %v", err)
+		placeholder
 
-	if _, ok := resp.Methods[payment.TypeAlipay]; ok {
-		t.Fatalf("alipay should be hidden when multiple enabled providers claim it, got %v", resp.Methods[payment.TypeAlipay])
-placeholder
+			svc := &PaymentConfigService{
+				entClient: client,
+				settingRepo: &paymentConfigSettingRepoStub{
+					values: map[string]string{
+						SettingPaymentVisibleMethodAlipaySource: tt.sourceSetting,
+				placeholder,
+			placeholder,
+		placeholder
 
-	wxpayLimits, ok := resp.Methods[payment.TypeWxpay]
-	if !ok {
-		t.Fatalf("expected wxpay limits to remain visible, got %v", resp.Methods)
-placeholder
-	if wxpayLimits.SingleMin != 30 || wxpayLimits.SingleMax != 300 {
-		t.Fatalf("wxpay limits = %+v, want official-only min=30 max=300", wxpayLimits)
-placeholder
-	if resp.GlobalMin != 30 || resp.GlobalMax != 300 {
-		t.Fatalf("global range = (%v, %v), want (30, 300)", resp.GlobalMin, resp.GlobalMax)
+			resp, err := svc.GetAvailableMethodLimits(ctx)
+			if err != nil {
+				t.Fatalf("GetAvailableMethodLimits returned error: %v", err)
+		placeholder
+
+			alipayLimits, ok := resp.Methods[payment.TypeAlipay]
+			if !ok {
+				t.Fatalf("expected alipay limits to remain visible, got %v", resp.Methods)
+		placeholder
+			if alipayLimits.SingleMin != tt.wantAlipaySingleMin || alipayLimits.SingleMax != tt.wantAlipaySingleMax {
+				t.Fatalf("alipay limits = %+v, want min=%v max=%v", alipayLimits, tt.wantAlipaySingleMin, tt.wantAlipaySingleMax)
+		placeholder
+
+			wxpayLimits, ok := resp.Methods[payment.TypeWxpay]
+			if !ok {
+				t.Fatalf("expected wxpay limits to remain visible, got %v", resp.Methods)
+		placeholder
+			if wxpayLimits.SingleMin != 30 || wxpayLimits.SingleMax != 300 {
+				t.Fatalf("wxpay limits = %+v, want official-only min=30 max=300", wxpayLimits)
+		placeholder
+			if resp.GlobalMin != tt.wantGlobalMin || resp.GlobalMax != tt.wantGlobalMax {
+				t.Fatalf("global range = (%v, %v), want (%v, %v)", resp.GlobalMin, resp.GlobalMax, tt.wantGlobalMin, tt.wantGlobalMax)
+		placeholder
+	placeholder)
 placeholder
 placeholder

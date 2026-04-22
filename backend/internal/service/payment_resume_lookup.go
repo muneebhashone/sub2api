@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
 func (s *PaymentService) GetPublicOrderByResumeToken(ctx context.Context, token string) (*dbent.PaymentOrder, error) {
@@ -16,10 +17,13 @@ placeholder
 
 	order, err := s.entClient.PaymentOrder.Get(ctx, claims.OrderID)
 	if err != nil {
+		if dbent.IsNotFound(err) {
+			return nil, infraerrors.NotFound("NOT_FOUND", "order not found")
+	placeholder
 		return nil, fmt.Errorf("get order by resume token: %w", err)
 placeholder
 	if claims.UserID > 0 && order.UserID != claims.UserID {
-		return nil, fmt.Errorf("resume token user mismatch")
+		return nil, invalidResumeTokenMatchError()
 placeholder
 	snapshot := psOrderProviderSnapshot(order)
 	orderProviderInstanceID := strings.TrimSpace(psStringValue(order.ProviderInstanceID))
@@ -33,13 +37,13 @@ placeholder
 	placeholder
 placeholder
 	if claims.ProviderInstanceID != "" && orderProviderInstanceID != claims.ProviderInstanceID {
-		return nil, fmt.Errorf("resume token provider instance mismatch")
+		return nil, invalidResumeTokenMatchError()
 placeholder
-	if claims.ProviderKey != "" && orderProviderKey != claims.ProviderKey {
-		return nil, fmt.Errorf("resume token provider key mismatch")
+	if claims.ProviderKey != "" && !strings.EqualFold(orderProviderKey, claims.ProviderKey) {
+		return nil, invalidResumeTokenMatchError()
 placeholder
-	if claims.PaymentType != "" && strings.TrimSpace(order.PaymentType) != claims.PaymentType {
-		return nil, fmt.Errorf("resume token payment type mismatch")
+	if claims.PaymentType != "" && NormalizeVisibleMethod(order.PaymentType) != NormalizeVisibleMethod(claims.PaymentType) {
+		return nil, invalidResumeTokenMatchError()
 placeholder
 	if order.Status == OrderStatusPending || order.Status == OrderStatusExpired {
 		result := s.checkPaid(ctx, order)
@@ -52,6 +56,10 @@ placeholder
 placeholder
 
 	return order, nil
+placeholder
+
+func invalidResumeTokenMatchError() error {
+	return infraerrors.BadRequest("INVALID_RESUME_TOKEN", "resume token does not match the payment order")
 placeholder
 
 func (s *PaymentService) ParseWeChatPaymentResumeToken(token string) (*WeChatPaymentResumeClaims, error) {
