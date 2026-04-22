@@ -132,3 +132,22 @@ placeholder
 	require.False(t, settings.WeChatOAuthMPEnabled)
 	require.True(t, settings.WeChatOAuthMobileEnabled)
 placeholder
+
+func TestSettingService_GetPublicSettings_FallsBackToConfigForWeChatOAuthCapabilities(t *testing.T) {
+	svc := NewSettingService(&settingPublicRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{
+		WeChat: config.WeChatConnectConfig{
+			Enabled:             true,
+			OpenEnabled:         true,
+			OpenAppID:           "wx-open-config",
+			OpenAppSecret:       "wx-open-secret",
+			FrontendRedirectURL: "/auth/wechat/config-callback",
+	placeholder,
+placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+placeholder
+	require.True(t, settings.WeChatOAuthEnabled)
+	require.True(t, settings.WeChatOAuthOpenEnabled)
+	require.False(t, settings.WeChatOAuthMPEnabled)
+	require.False(t, settings.WeChatOAuthMobileEnabled)
+placeholder
