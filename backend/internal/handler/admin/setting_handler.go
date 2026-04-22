@@ -653,20 +653,22 @@ placeholder
 				req.WeChatConnectScopes = service.DefaultWeChatConnectScopesForMode(req.WeChatConnectMode)
 		placeholder
 	placeholder
-		if req.WeChatConnectRedirectURL == "" {
-			response.BadRequest(c, "WeChat Redirect URL is required when enabled")
-			return
-	placeholder
-		if err := config.ValidateAbsoluteHTTPURL(req.WeChatConnectRedirectURL); err != nil {
-			response.BadRequest(c, "WeChat Redirect URL must be an absolute http(s) URL")
-			return
-	placeholder
-		if req.WeChatConnectFrontendRedirectURL == "" {
-			req.WeChatConnectFrontendRedirectURL = "/auth/wechat/callback"
-	placeholder
-		if err := config.ValidateFrontendRedirectURL(req.WeChatConnectFrontendRedirectURL); err != nil {
-			response.BadRequest(c, "WeChat Frontend Redirect URL is invalid")
-			return
+		if req.WeChatConnectOpenEnabled || req.WeChatConnectMPEnabled {
+			if req.WeChatConnectRedirectURL == "" {
+				response.BadRequest(c, "WeChat Redirect URL is required when web oauth is enabled")
+				return
+		placeholder
+			if err := config.ValidateAbsoluteHTTPURL(req.WeChatConnectRedirectURL); err != nil {
+				response.BadRequest(c, "WeChat Redirect URL must be an absolute http(s) URL")
+				return
+		placeholder
+			if req.WeChatConnectFrontendRedirectURL == "" {
+				req.WeChatConnectFrontendRedirectURL = "/auth/wechat/callback"
+		placeholder
+			if err := config.ValidateFrontendRedirectURL(req.WeChatConnectFrontendRedirectURL); err != nil {
+				response.BadRequest(c, "WeChat Frontend Redirect URL is invalid")
+				return
+		placeholder
 	placeholder
 placeholder
 
@@ -749,14 +751,6 @@ placeholder
 			response.BadRequest(c, "OIDC scopes must contain openid")
 			return
 	placeholder
-		if !req.OIDCConnectUsePKCE {
-			response.BadRequest(c, "OIDC PKCE must be enabled")
-			return
-	placeholder
-		if !req.OIDCConnectValidateIDToken {
-			response.BadRequest(c, "OIDC ID Token validation must be enabled")
-			return
-	placeholder
 		switch req.OIDCConnectTokenAuthMethod {
 		case "", "client_secret_post", "client_secret_basic", "none":
 		default:
@@ -767,7 +761,7 @@ placeholder
 			response.BadRequest(c, "OIDC clock skew seconds must be between 0 and 600")
 			return
 	placeholder
-		if req.OIDCConnectAllowedSigningAlgs == "" {
+		if req.OIDCConnectValidateIDToken && req.OIDCConnectAllowedSigningAlgs == "" {
 			response.BadRequest(c, "OIDC Allowed Signing Algs is required when validate_id_token=true")
 			return
 	placeholder

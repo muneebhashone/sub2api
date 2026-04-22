@@ -51,6 +51,44 @@ type mockUserRepoTxState struct {
 	deleteAvatarIDs  []int64
 placeholder
 
+type mockUserSettingRepo struct {
+	values map[string]string
+placeholder
+
+func (m *mockUserSettingRepo) Get(context.Context, string) (*Setting, error) {
+	panic("unexpected Get call")
+placeholder
+
+func (m *mockUserSettingRepo) GetValue(context.Context, string) (string, error) {
+	panic("unexpected GetValue call")
+placeholder
+
+func (m *mockUserSettingRepo) Set(context.Context, string, string) error {
+	panic("unexpected Set call")
+placeholder
+
+func (m *mockUserSettingRepo) GetMultiple(_ context.Context, keys []string) (map[string]string, error) {
+	out := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if value, ok := m.values[key]; ok {
+			out[key] = value
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
+func (m *mockUserSettingRepo) SetMultiple(context.Context, map[string]string) error {
+	panic("unexpected SetMultiple call")
+placeholder
+
+func (m *mockUserSettingRepo) GetAll(context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+placeholder
+
+func (m *mockUserSettingRepo) Delete(context.Context, string) error {
+	panic("unexpected Delete call")
+placeholder
+
 func (m *mockUserRepo) Create(context.Context, *User) error { return nil placeholder
 func (m *mockUserRepo) GetByID(ctx context.Context, _ int64) (*User, error) {
 	if m.getByIDErr != nil {
@@ -380,6 +418,35 @@ placeholder
 placeholder
 	require.False(t, summaries.LinuxDo.Bound)
 	require.True(t, summaries.LinuxDo.CanBind)
+placeholder
+
+func TestGetProfileIdentitySummaries_HidesBindActionWhenProviderExplicitlyDisabled(t *testing.T) {
+	repo := &mockUserRepo{
+		getByIDUser: &User{
+			ID:    15,
+			Email: "alice@example.com",
+	placeholder,
+		identities: []UserAuthIdentityRecord{
+			{
+				ProviderType:    "email",
+				ProviderKey:     "email",
+				ProviderSubject: "alice@example.com",
+		placeholder,
+	placeholder,
+placeholder
+	settingRepo := &mockUserSettingRepo{
+		values: map[string]string{
+			SettingKeyLinuxDoConnectEnabled: "false",
+	placeholder,
+placeholder
+	svc := NewUserService(repo, settingRepo, nil, nil)
+
+	summaries, err := svc.GetProfileIdentitySummaries(context.Background(), 15, repo.getByIDUser)
+
+placeholder
+	require.False(t, summaries.LinuxDo.Bound)
+	require.False(t, summaries.LinuxDo.CanBind)
+	require.Empty(t, summaries.LinuxDo.BindStartPath)
 placeholder
 
 func TestUpdateBalance_NilBillingCache_NoPanic(t *testing.T) {
