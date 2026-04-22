@@ -204,8 +204,8 @@ placeholder
 		if err == nil {
 			return resp, nil
 	placeholder
-		if strings.Contains(err.Error(), wxpayErrNoAuth) {
-			return nil, fmt.Errorf("wxpay h5 payments are not authorized for this merchant: %w", err)
+		if wxpayShouldFallbackToNative(err) {
+			return w.prepayNativeFallback(ctx, client, req, notifyURL, totalFen)
 	placeholder
 		return nil, err
 	case wxpayModeNative:
@@ -292,6 +292,23 @@ placeholder
 	return &payment.CreatePaymentResponse{TradeNo: req.OrderID, PayURL: h5URLplaceholder, nil
 placeholder
 
+func (w *Wxpay) prepayNativeFallback(ctx context.Context, c *core.Client, req payment.CreatePaymentRequest, notifyURL string, totalFen int64) (*payment.CreatePaymentResponse, error) {
+	resp, err := w.prepayNative(ctx, c, req, notifyURL, totalFen)
+	if err != nil {
+		return nil, fmt.Errorf("wxpay native fallback after NO_AUTH: %w", err)
+placeholder
+	nativeURL := strings.TrimSpace(resp.PayURL)
+	if nativeURL == "" {
+		nativeURL = strings.TrimSpace(resp.QRCode)
+placeholder
+	if nativeURL == "" {
+		return resp, nil
+placeholder
+	resp.PayURL = nativeURL
+	resp.QRCode = nativeURL
+	return resp, nil
+placeholder
+
 func buildWxpayH5Info(config map[string]string) *h5.H5Info {
 	tp := wxpayH5Type
 	info := &h5.H5Info{Type: &tpplaceholder
@@ -302,6 +319,10 @@ placeholder
 		info.AppUrl = core.String(appURL)
 placeholder
 	return info
+placeholder
+
+func wxpayShouldFallbackToNative(err error) bool {
+	return err != nil && strings.Contains(err.Error(), wxpayErrNoAuth)
 placeholder
 
 func resolveWxpayCreateMode(req payment.CreatePaymentRequest) (string, error) {

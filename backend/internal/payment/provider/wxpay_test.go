@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"net/url"
 	"strings"
 	"testing"
@@ -639,5 +640,70 @@ placeholder
 placeholder
 	if !strings.Contains(resp.PayURL, "redirect_url=") {
 		t.Fatalf("pay_url = %q, want redirect_url query appended", resp.PayURL)
+placeholder
+placeholder
+
+func TestCreatePaymentMobileH5FallsBackToNativeOnNoAuth(t *testing.T) {
+	origJSAPIPrepay := wxpayJSAPIPrepayWithRequestPayment
+	origNativePrepay := wxpayNativePrepay
+	origH5Prepay := wxpayH5Prepay
+	t.Cleanup(func() {
+		wxpayJSAPIPrepayWithRequestPayment = origJSAPIPrepay
+		wxpayNativePrepay = origNativePrepay
+		wxpayH5Prepay = origH5Prepay
+placeholder)
+
+	jsapiCalls := 0
+	nativeCalls := 0
+	h5Calls := 0
+	wxpayJSAPIPrepayWithRequestPayment = func(ctx context.Context, svc jsapi.JsapiApiService, req jsapi.PrepayRequest) (*jsapi.PrepayWithRequestPaymentResponse, *core.APIResult, error) {
+		jsapiCalls++
+		return &jsapi.PrepayWithRequestPaymentResponse{placeholder, nil, nil
+placeholder
+	wxpayH5Prepay = func(ctx context.Context, svc h5.H5ApiService, req h5.PrepayRequest) (*h5.PrepayResponse, *core.APIResult, error) {
+		h5Calls++
+		return nil, nil, errors.New("NO_AUTH")
+placeholder
+	wxpayNativePrepay = func(ctx context.Context, svc native.NativeApiService, req native.PrepayRequest) (*native.PrepayResponse, *core.APIResult, error) {
+		nativeCalls++
+		return &native.PrepayResponse{
+			CodeUrl: core.String("weixin://wxpay/bizpayurl?pr=fallback-native"),
+	placeholder, nil, nil
+placeholder
+
+	provider := &Wxpay{
+		config: map[string]string{
+			"appId": "wx123",
+			"mchId": "mch123",
+	placeholder,
+		coreClient: &core.Client{placeholder,
+placeholder
+
+	resp, err := provider.CreatePayment(context.Background(), payment.CreatePaymentRequest{
+		OrderID:     "sub2_100",
+		Amount:      "66.88",
+		PaymentType: payment.TypeWxpay,
+		Subject:     "Balance Recharge",
+		NotifyURL:   "https://merchant.example/payment/notify",
+		ClientIP:    "203.0.113.10",
+		IsMobile:    true,
+placeholder)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+	if jsapiCalls != 0 {
+		t.Fatalf("jsapi prepay calls = %d, want 0", jsapiCalls)
+placeholder
+	if h5Calls != 1 {
+		t.Fatalf("h5 prepay calls = %d, want 1", h5Calls)
+placeholder
+	if nativeCalls != 1 {
+		t.Fatalf("native prepay calls = %d, want 1", nativeCalls)
+placeholder
+	if resp.PayURL != "weixin://wxpay/bizpayurl?pr=fallback-native" {
+		t.Fatalf("pay_url = %q, want native fallback url", resp.PayURL)
+placeholder
+	if resp.QRCode != "weixin://wxpay/bizpayurl?pr=fallback-native" {
+		t.Fatalf("qr_code = %q, want native fallback url", resp.QRCode)
 placeholder
 placeholder
