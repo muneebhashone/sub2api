@@ -64,7 +64,7 @@ placeholder
 func TestCanonicalizeReturnURL(t *testing.T) {
 	t.Parallel()
 
-	got, err := CanonicalizeReturnURL("https://example.com/payment/result?b=2#a", "example.com")
+	got, err := CanonicalizeReturnURL("https://example.com/payment/result?b=2#a", "example.com", "")
 	if err != nil {
 		t.Fatalf("CanonicalizeReturnURL returned error: %v", err)
 placeholder
@@ -76,7 +76,7 @@ placeholder
 func TestCanonicalizeReturnURLRejectsRelativeURL(t *testing.T) {
 	t.Parallel()
 
-	if _, err := CanonicalizeReturnURL("/payment/result", "example.com"); err == nil {
+	if _, err := CanonicalizeReturnURL("/payment/result", "example.com", ""); err == nil {
 		t.Fatal("CanonicalizeReturnURL should reject relative URLs")
 placeholder
 placeholder
@@ -84,15 +84,31 @@ placeholder
 func TestCanonicalizeReturnURLRejectsExternalHost(t *testing.T) {
 	t.Parallel()
 
-	if _, err := CanonicalizeReturnURL("https://evil.example/payment/result", "app.example.com"); err == nil {
+	if _, err := CanonicalizeReturnURL("https://evil.example/payment/result", "app.example.com", ""); err == nil {
 		t.Fatal("CanonicalizeReturnURL should reject external hosts")
+placeholder
+placeholder
+
+func TestCanonicalizeReturnURLAllowsConfiguredFrontendHost(t *testing.T) {
+	t.Parallel()
+
+	got, err := CanonicalizeReturnURL(
+		"https://app.example.com/payment/result?from=checkout",
+		"api.example.com",
+		"https://app.example.com/purchase",
+	)
+	if err != nil {
+		t.Fatalf("CanonicalizeReturnURL returned error: %v", err)
+placeholder
+	if got != "https://app.example.com/payment/result?from=checkout" {
+		t.Fatalf("CanonicalizeReturnURL = %q, want %q", got, "https://app.example.com/payment/result?from=checkout")
 placeholder
 placeholder
 
 func TestCanonicalizeReturnURLRejectsNonCanonicalPath(t *testing.T) {
 	t.Parallel()
 
-	if _, err := CanonicalizeReturnURL("https://app.example.com/orders/42", "app.example.com"); err == nil {
+	if _, err := CanonicalizeReturnURL("https://app.example.com/orders/42", "app.example.com", ""); err == nil {
 		t.Fatal("CanonicalizeReturnURL should reject non-canonical result paths")
 placeholder
 placeholder
@@ -100,7 +116,7 @@ placeholder
 func TestBuildPaymentReturnURL(t *testing.T) {
 	t.Parallel()
 
-	got, err := buildPaymentReturnURL("https://example.com/payment/result?from=checkout#fragment", 42, "resume-token")
+	got, err := buildPaymentReturnURL("https://example.com/payment/result?from=checkout#fragment", 42, "sub2_42", "resume-token")
 	if err != nil {
 		t.Fatalf("buildPaymentReturnURL returned error: %v", err)
 placeholder
@@ -119,6 +135,9 @@ placeholder
 	if query.Get("order_id") != strconv.FormatInt(42, 10) {
 		t.Fatalf("order_id = %q", query.Get("order_id"))
 placeholder
+	if query.Get("out_trade_no") != "sub2_42" {
+		t.Fatalf("out_trade_no = %q", query.Get("out_trade_no"))
+placeholder
 	if query.Get("resume_token") != "resume-token" {
 		t.Fatalf("resume_token = %q", query.Get("resume_token"))
 placeholder
@@ -127,10 +146,34 @@ placeholder
 placeholder
 placeholder
 
+func TestBuildPaymentReturnURLWithoutResumeTokenStillIncludesOutTradeNo(t *testing.T) {
+	t.Parallel()
+
+	got, err := buildPaymentReturnURL("https://example.com/payment/result", 42, "sub2_42", "")
+	if err != nil {
+		t.Fatalf("buildPaymentReturnURL returned error: %v", err)
+placeholder
+
+	parsed, err := url.Parse(got)
+	if err != nil {
+		t.Fatalf("url.Parse returned error: %v", err)
+placeholder
+	query := parsed.Query()
+	if query.Get("order_id") != "42" {
+		t.Fatalf("order_id = %q", query.Get("order_id"))
+placeholder
+	if query.Get("out_trade_no") != "sub2_42" {
+		t.Fatalf("out_trade_no = %q", query.Get("out_trade_no"))
+placeholder
+	if query.Get("resume_token") != "" {
+		t.Fatalf("resume_token = %q, want empty", query.Get("resume_token"))
+placeholder
+placeholder
+
 func TestBuildPaymentReturnURLEmptyBase(t *testing.T) {
 	t.Parallel()
 
-	got, err := buildPaymentReturnURL("", 42, "resume-token")
+	got, err := buildPaymentReturnURL("", 42, "sub2_42", "resume-token")
 	if err != nil {
 		t.Fatalf("buildPaymentReturnURL returned error: %v", err)
 placeholder
