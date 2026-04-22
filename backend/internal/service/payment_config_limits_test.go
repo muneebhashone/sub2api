@@ -6,6 +6,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnionFloat(t *testing.T) {
@@ -401,4 +402,60 @@ placeholder
 		placeholder
 	placeholder)
 placeholder
+placeholder
+
+func TestGetAvailableMethodLimitsPreservesLegacyCrossProviderBehaviorWhenVisibleMethodSourceMissing(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+
+	_, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeAlipay).
+		SetName("Official Alipay").
+		SetConfig("{placeholder").
+		SetSupportedTypes("alipay").
+		SetLimits(`{"alipay":{"singleMin":10,"singleMax":100placeholderplaceholder`).
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	_, err = client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeEasyPay).
+		SetName("EasyPay Mixed").
+		SetConfig("{placeholder").
+		SetSupportedTypes("alipay,wxpay").
+		SetLimits(`{"alipay":{"singleMin":20,"singleMax":200placeholder,"wxpay":{"singleMin":40,"singleMax":400placeholderplaceholder`).
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	_, err = client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeWxpay).
+		SetName("Official WeChat").
+		SetConfig("{placeholder").
+		SetSupportedTypes("wxpay").
+		SetLimits(`{"wxpay":{"singleMin":30,"singleMax":300placeholderplaceholder`).
+		SetEnabled(true).
+		Save(ctx)
+placeholder
+
+	svc := &PaymentConfigService{
+		entClient:   client,
+		settingRepo: &paymentConfigSettingRepoStub{values: map[string]string{placeholderplaceholder,
+placeholder
+
+	resp, err := svc.GetAvailableMethodLimits(ctx)
+placeholder
+
+	alipayLimits, ok := resp.Methods[payment.TypeAlipay]
+	require.True(t, ok, "expected alipay limits to remain visible")
+	require.Equal(t, 10.0, alipayLimits.SingleMin)
+	require.Equal(t, 200.0, alipayLimits.SingleMax)
+
+	wxpayLimits, ok := resp.Methods[payment.TypeWxpay]
+	require.True(t, ok, "expected wxpay limits to remain visible")
+	require.Equal(t, 30.0, wxpayLimits.SingleMin)
+	require.Equal(t, 400.0, wxpayLimits.SingleMax)
+
+	require.Equal(t, 10.0, resp.GlobalMin)
+	require.Equal(t, 400.0, resp.GlobalMax)
 placeholder

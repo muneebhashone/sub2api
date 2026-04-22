@@ -45,8 +45,16 @@ placeholder
 	for _, method := range []string{payment.TypeAlipay, payment.TypeWxpayplaceholder {
 		matching := filterEnabledVisibleMethodInstances(instances, method)
 		providerKey, err := s.resolveVisibleMethodProviderKey(ctx, method, matching)
-		if err != nil || providerKey == "" {
+		if err != nil {
 			delete(filtered, method)
+			continue
+	placeholder
+		if providerKey == "" {
+			if len(matching) == 0 {
+				delete(filtered, method)
+				continue
+		placeholder
+			filtered[method] = matching
 			continue
 	placeholder
 		selectedInstances := filterVisibleMethodInstancesByProviderKey(instances, method, providerKey)
