@@ -25,12 +25,16 @@ placeholder{
 		{"/v1/messages", EndpointMessagesplaceholder,
 		{"/v1/chat/completions", EndpointChatCompletionsplaceholder,
 		{"/v1/responses", EndpointResponsesplaceholder,
+		{"/v1/images/generations", EndpointImagesGenerationsplaceholder,
+		{"/v1/images/edits", EndpointImagesEditsplaceholder,
 		{"/v1beta/models", EndpointGeminiModelsplaceholder,
 
 		// Prefixed paths (antigravity, openai).
 		{"/antigravity/v1/messages", EndpointMessagesplaceholder,
 		{"/openai/v1/responses", EndpointResponsesplaceholder,
 		{"/openai/v1/responses/compact", EndpointResponsesplaceholder,
+		{"/openai/v1/images/generations", EndpointImagesGenerationsplaceholder,
+		{"/openai/v1/images/edits", EndpointImagesEditsplaceholder,
 		{"/antigravity/v1beta/models/gemini:generateContent", EndpointGeminiModelsplaceholder,
 
 		// Gin route patterns with wildcards.
@@ -73,6 +77,8 @@ placeholder{
 		{"openai responses nested", EndpointResponses, "/openai/v1/responses/compact/detail", service.PlatformOpenAI, "/v1/responses/compact/detail"placeholder,
 		{"openai from messages", EndpointMessages, "/v1/messages", service.PlatformOpenAI, EndpointResponsesplaceholder,
 		{"openai from completions", EndpointChatCompletions, "/v1/chat/completions", service.PlatformOpenAI, EndpointResponsesplaceholder,
+		{"openai image generations", EndpointImagesGenerations, "/v1/images/generations", service.PlatformOpenAI, EndpointImagesGenerationsplaceholder,
+		{"openai image edits", EndpointImagesEdits, "/openai/v1/images/edits", service.PlatformOpenAI, EndpointImagesEditsplaceholder,
 
 		// Antigravity — uses inbound to pick Claude vs Gemini upstream.
 		{"antigravity claude", EndpointMessages, "/antigravity/v1/messages", service.PlatformAntigravity, EndpointMessagesplaceholder,
