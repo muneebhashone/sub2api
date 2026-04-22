@@ -153,10 +153,10 @@ export function buildOAuthBindingStartURL(
   return `${normalizedplaceholder/auth/oauth/${providerplaceholder/start?${params.toString()placeholder`
 placeholder
 
-export function startOAuthBinding(
+export async function startOAuthBinding(
   provider: BindableOAuthProvider,
   options: BuildOAuthBindingStartURLOptions = {placeholder
-): void {
+): Promise<void> {
   if (typeof window === 'undefined') {
     return
   placeholder
@@ -164,7 +164,7 @@ export function startOAuthBinding(
   if (!startURL) {
     return
   placeholder
-  prepareOAuthBindAccessTokenCookie()
+  await prepareOAuthBindAccessTokenCookie()
   window.location.href = startURL
 placeholder
 

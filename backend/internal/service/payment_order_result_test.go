@@ -159,6 +159,45 @@ placeholder
 placeholder
 placeholder
 
+func TestMaybeBuildWeChatOAuthRequiredResponseRequiresResumeSigningKey(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentService{
+		configService: &PaymentConfigService{
+			settingRepo: &paymentConfigSettingRepoStub{values: map[string]string{
+				SettingKeyWeChatConnectEnabled:             "true",
+				SettingKeyWeChatConnectAppID:               "wx123456",
+				SettingKeyWeChatConnectAppSecret:           "wechat-secret",
+				SettingKeyWeChatConnectMode:                "mp",
+				SettingKeyWeChatConnectScopes:              "snsapi_base",
+				SettingKeyWeChatConnectRedirectURL:         "https://api.example.com/api/v1/auth/oauth/wechat/callback",
+				SettingKeyWeChatConnectFrontendRedirectURL: "/auth/wechat/callback",
+	placeholder
+			// Intentionally missing payment resume signing key.
+			encryptionKey: nil,
+	placeholder,
+placeholder
+
+	resp, err := svc.maybeBuildWeChatOAuthRequiredResponse(context.Background(), CreateOrderRequest{
+		Amount:          12.5,
+		PaymentType:     payment.TypeWxpay,
+		IsWeChatBrowser: true,
+		SrcURL:          "https://merchant.example/payment?from=wechat",
+		OrderType:       payment.OrderTypeBalance,
+placeholder, 12.5, 12.88, 0.03)
+	if resp != nil {
+		t.Fatalf("expected nil response, got %+v", resp)
+placeholder
+	if err == nil {
+		t.Fatal("expected error, got nil")
+placeholder
+
+	appErr := infraerrors.FromError(err)
+	if appErr.Reason != "PAYMENT_RESUME_NOT_CONFIGURED" {
+		t.Fatalf("reason = %q, want %q", appErr.Reason, "PAYMENT_RESUME_NOT_CONFIGURED")
+placeholder
+placeholder
+
 func TestMaybeBuildWeChatOAuthRequiredResponseForSelectionSkipsEasyPayProvider(t *testing.T) {
 	svc := newWeChatPaymentOAuthTestService(map[string]string{
 		SettingKeyWeChatConnectEnabled:             "true",
@@ -189,7 +228,8 @@ placeholder
 func newWeChatPaymentOAuthTestService(values map[string]string) *PaymentService {
 	return &PaymentService{
 		configService: &PaymentConfigService{
-			settingRepo: &paymentConfigSettingRepoStub{values: valuesplaceholder,
+			settingRepo:   &paymentConfigSettingRepoStub{values: valuesplaceholder,
+			encryptionKey: []byte("placeholder"),
 	placeholder,
 placeholder
 placeholder

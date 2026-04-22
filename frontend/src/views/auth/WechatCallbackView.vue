@@ -613,7 +613,7 @@ async function handleBindCurrentAccount() {
     return
   placeholder
 
-  prepareOAuthBindAccessTokenCookie()
+  await prepareOAuthBindAccessTokenCookie()
   window.location.href = startURL
 placeholder
 
