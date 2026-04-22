@@ -133,7 +133,7 @@ placeholder)
 	require.True(t, got.OIDCConnectValidateIDToken)
 placeholder
 
-func TestSettingService_ParseSettings_UsesLegacyOIDCCompatibilityFlagsWhenSettingsMissing(t *testing.T) {
+func TestSettingService_ParseSettings_DefaultsOIDCCompatibilityFlagsToSafeDefaultsWhenSettingsMissing(t *testing.T) {
 	svc := NewSettingService(&settingOIDCRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{
 		OIDC: config.OIDCConnectConfig{
 			UsePKCE:         true,
@@ -145,8 +145,8 @@ placeholder)
 		SettingKeyOIDCConnectEnabled: "true",
 placeholder)
 
-	require.False(t, got.OIDCConnectUsePKCE)
-	require.False(t, got.OIDCConnectValidateIDToken)
+	require.True(t, got.OIDCConnectUsePKCE)
+	require.True(t, got.OIDCConnectValidateIDToken)
 placeholder
 
 func TestGetOIDCConnectOAuthConfig_AllowsCompatibilityFlagsToDisablePKCEAndIDTokenValidation(t *testing.T) {
@@ -216,7 +216,7 @@ placeholder
 	require.True(t, got.ValidateIDToken)
 placeholder
 
-func TestGetOIDCConnectOAuthConfig_UsesLegacyOIDCCompatibilityFlagsWhenSettingsMissing(t *testing.T) {
+func TestGetOIDCConnectOAuthConfig_DefaultsCompatibilityFlagsToSafeValuesWhenSettingsMissing(t *testing.T) {
 	cfg := &config.Config{
 		OIDC: config.OIDCConnectConfig{
 			Enabled:             true,
@@ -246,6 +246,6 @@ placeholderplaceholder
 
 	got, err := svc.GetOIDCConnectOAuthConfig(context.Background())
 placeholder
-	require.False(t, got.UsePKCE)
-	require.False(t, got.ValidateIDToken)
+	require.True(t, got.UsePKCE)
+	require.True(t, got.ValidateIDToken)
 placeholder
