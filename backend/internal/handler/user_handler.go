@@ -249,7 +249,7 @@ func (h *UserHandler) UnbindIdentity(c *gin.Context) {
 		return
 placeholder
 
-	updatedUser, err := h.userService.UnbindUserAuthProvider(
+	updatedUser, unbound, err := h.userService.UnbindUserAuthProviderWithResult(
 		c.Request.Context(),
 		subject.UserID,
 		c.Param("provider"),
@@ -258,7 +258,7 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	if h.authService != nil {
+	if unbound && h.authService != nil {
 		if err := h.authService.RevokeAllUserTokens(c.Request.Context(), subject.UserID); err != nil {
 			response.ErrorFrom(c, err)
 			return
@@ -512,7 +512,7 @@ placeholder
 	var avatarSource *userProfileSourceContext
 	avatarValue := strings.TrimSpace(user.AvatarURL)
 	for _, summary := range thirdParty {
-		if avatarValue != "" && avatarValue == strings.TrimSpace(summary.DisplayName) {
+		if avatarValue != "" && avatarValue == strings.TrimSpace(summary.AvatarURL) {
 			avatarSource = buildUserProfileSourceContext(summary.Provider)
 			break
 	placeholder

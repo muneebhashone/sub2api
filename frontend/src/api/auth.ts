@@ -194,6 +194,7 @@ export interface OAuthTokenResponse {
 placeholder
 
 export interface PendingOAuthBindLoginResponse extends Partial<OAuthTokenResponse> {
+  auth_result?: string
   redirect?: string
   error?: string
   requires_2fa?: boolean
@@ -206,7 +207,9 @@ placeholder
 
 export type PendingOAuthExchangeResponse = PendingOAuthBindLoginResponse
 
-export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {placeholder
+export interface PendingOAuthCreateAccountResponse extends OAuthTokenResponse {
+  auth_result?: string
+placeholder
 
 export interface PendingOAuthSendVerifyCodeResponse extends SendVerifyCodeResponse {
   auth_result?: string

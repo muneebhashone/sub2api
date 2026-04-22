@@ -621,6 +621,34 @@ describe('WechatCallbackView', () => {
     expect(locationState.current.href).toContain('mode=open')
   placeholder)
 
+  it('shows an error and stays on the page when preparing bind-token for the current account fails', async () => {
+    exchangePendingOAuthCompletionMock.mockResolvedValue({
+      error: 'invitation_required',
+      redirect: '/usage',
+    placeholder)
+    getAuthTokenMock.mockReturnValue('current-auth-token')
+    prepareOAuthBindAccessTokenCookieMock.mockRejectedValue(new Error('bind token failed'))
+
+    const wrapper = mount(WechatCallbackView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /></div>' placeholder,
+          Icon: true,
+          RouterLink: { template: '<a><slot /></a>' placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    await wrapper.get('[data-testid="existing-account-submit"]').trigger('click').catch(() => undefined)
+    await flushPromises()
+
+    expect(showErrorMock).toHaveBeenCalledWith('bind token failed')
+    expect(locationState.current.href).toBe('http://localhost/auth/wechat/callback')
+  placeholder)
+
   it('collects email, password, and verify code for pending oauth account creation and submits adoption decisions', async () => {
     getPublicSettingsMock.mockResolvedValue({
       invitation_code_enabled: true,

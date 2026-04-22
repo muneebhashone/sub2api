@@ -150,7 +150,7 @@ export function buildOAuthBindingStartURL(
     params.set('mode', mode)
   placeholder
 
-  return `${normalizedplaceholder/auth/oauth/${providerplaceholder/start?${params.toString()placeholder`
+  return `${normalizedplaceholder/auth/oauth/${providerplaceholder/bind/start?${params.toString()placeholder`
 placeholder
 
 export async function startOAuthBinding(

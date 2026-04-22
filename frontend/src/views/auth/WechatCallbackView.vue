@@ -613,8 +613,12 @@ async function handleBindCurrentAccount() {
     return
   placeholder
 
-  await prepareOAuthBindAccessTokenCookie()
-  window.location.href = startURL
+  try {
+    await prepareOAuthBindAccessTokenCookie()
+    window.location.href = startURL
+  placeholder catch (e: unknown) {
+    errorMessage.value = getRequestErrorMessage(e, t('auth.loginFailed'))
+  placeholder
 placeholder
 
 async function handleExistingAccountBinding() {
