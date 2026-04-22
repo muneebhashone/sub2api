@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -52,7 +53,13 @@ placeholder
 const (
 	defaultGeminiTextTestPrompt  = "hi"
 	defaultGeminiImageTestPrompt = "Generate a cute orange cat astronaut sticker on a clean pastel background."
+	defaultOpenAIImageTestPrompt = "Generate a cute orange cat astronaut sticker on a clean pastel background."
 )
+
+// isOpenAIImageModel checks if the model is an OpenAI image generation model (e.g. gpt-image-2).
+func isOpenAIImageModel(model string) bool {
+	return strings.HasPrefix(strings.ToLower(model), "gpt-image-")
+placeholder
 
 // AccountTestService handles account testing operations
 type AccountTestService struct {
@@ -170,7 +177,7 @@ placeholder
 
 	// Route to platform-specific test method
 	if account.IsOpenAI() {
-		return s.testOpenAIAccountConnection(c, account, modelID)
+		return s.testOpenAIAccountConnection(c, account, modelID, prompt)
 placeholder
 
 	if account.IsGemini() {
@@ -410,7 +417,7 @@ placeholder
 placeholder
 
 // testOpenAIAccountConnection tests an OpenAI account's connection
-func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account *Account, modelID string) error {
+func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account *Account, modelID string, prompt string) error {
 	ctx := c.Request.Context()
 
 	// Default to openai.DefaultTestModel for OpenAI testing
@@ -427,6 +434,18 @@ placeholder
 				testModelID = mappedModel
 		placeholder
 	placeholder
+placeholder
+
+	// Route to image generation test if an image model is selected
+	if isOpenAIImageModel(testModelID) {
+		imagePrompt := strings.TrimSpace(prompt)
+		if imagePrompt == "" {
+			imagePrompt = defaultOpenAIImageTestPrompt
+	placeholder
+		if account.Type == "apikey" {
+			return s.testOpenAIImageAPIKey(c, ctx, account, testModelID, imagePrompt)
+	placeholder
+		return s.testOpenAIImageOAuth(c, ctx, account, testModelID, imagePrompt)
 placeholder
 
 	// Determine authentication method and API URL
@@ -1025,7 +1044,336 @@ func (s *AccountTestService) processOpenAIStream(c *gin.Context, body io.Reader)
 placeholder
 placeholder
 
-// sendEvent sends a SSE event to the client
+// testOpenAIImageAPIKey tests OpenAI image generation using an API Key account.
+func (s *AccountTestService) testOpenAIImageAPIKey(c *gin.Context, ctx context.Context, account *Account, modelID, prompt string) error {
+	authToken := account.GetOpenAIApiKey()
+	if authToken == "" {
+		return s.sendErrorAndEnd(c, "No API key available")
+placeholder
+
+	baseURL := account.GetOpenAIBaseURL()
+	if baseURL == "" {
+		baseURL = "https://api.openai.com"
+placeholder
+	normalizedBaseURL, err := s.validateUpstreamBaseURL(baseURL)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Invalid base URL: %s", err.Error()))
+placeholder
+	apiURL := strings.TrimSuffix(normalizedBaseURL, "/") + "/v1/images/generations"
+
+	// Set SSE headers
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Flush()
+
+	s.sendEvent(c, TestEvent{Type: "test_start", Model: modelIDplaceholder)
+
+	payload := map[string]any{
+		"model":           modelID,
+		"prompt":          prompt,
+		"n":               1,
+		"response_format": "b64_json",
+placeholder
+	payloadBytes, _ := json.Marshal(payload)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewReader(payloadBytes))
+	if err != nil {
+		return s.sendErrorAndEnd(c, "Failed to create request")
+placeholder
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+authToken)
+
+	proxyURL := ""
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+
+	resp, err := s.httpUpstream.DoWithTLS(req, proxyURL, account.ID, account.Concurrency, s.tlsFPProfileService.ResolveTLSProfile(account))
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Request failed: %s", err.Error()))
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to read response: %s", err.Error()))
+placeholder
+
+	if resp.StatusCode != http.StatusOK {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("API returned %d: %s", resp.StatusCode, string(body)))
+placeholder
+
+	// Parse {"data": [{"b64_json": "...", "revised_prompt": "..."placeholder]placeholder
+	var result struct {
+		Data []struct {
+			B64JSON       string `json:"b64_json"`
+			RevisedPrompt string `json:"revised_prompt"`
+	placeholder `json:"data"`
+placeholder
+	if err := json.Unmarshal(body, &result); err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to parse response: %s", err.Error()))
+placeholder
+
+	if len(result.Data) == 0 {
+		return s.sendErrorAndEnd(c, "No images returned from API")
+placeholder
+
+	for _, item := range result.Data {
+		if item.RevisedPrompt != "" {
+			s.sendEvent(c, TestEvent{Type: "content", Text: item.RevisedPromptplaceholder)
+	placeholder
+		if item.B64JSON != "" {
+			s.sendEvent(c, TestEvent{
+				Type:     "image",
+				ImageURL: "data:image/png;base64," + item.B64JSON,
+				MimeType: "image/png",
+		placeholder)
+	placeholder
+placeholder
+
+	s.sendEvent(c, TestEvent{Type: "test_complete", Success: trueplaceholder)
+	return nil
+placeholder
+
+// testOpenAIImageOAuth tests OpenAI image generation using an OAuth account via ChatGPT backend API.
+func (s *AccountTestService) testOpenAIImageOAuth(c *gin.Context, ctx context.Context, account *Account, modelID, prompt string) error {
+	authToken := account.GetOpenAIAccessToken()
+	if authToken == "" {
+		return s.sendErrorAndEnd(c, "No access token available")
+placeholder
+
+	// Set SSE headers
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Flush()
+
+	s.sendEvent(c, TestEvent{Type: "test_start", Model: modelIDplaceholder)
+	s.sendEvent(c, TestEvent{Type: "content", Text: "Initializing ChatGPT backend...\n"placeholder)
+
+	// Build headers (replicating buildOpenAIBackendAPIHeaders logic)
+	headers := buildOpenAIBackendAPIHeadersForTest(ctx, account, authToken, s.accountRepo)
+
+	proxyURL := ""
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+
+	client, err := newOpenAIBackendAPIClient(proxyURL)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to create client: %s", err.Error()))
+placeholder
+
+	// Bootstrap
+	if bootstrapErr := bootstrapOpenAIBackendAPI(ctx, client, headers); bootstrapErr != nil {
+		log.Printf("OpenAI image test bootstrap warning: %v", bootstrapErr)
+placeholder
+
+	// Fetch chat requirements
+	s.sendEvent(c, TestEvent{Type: "content", Text: "Fetching chat requirements...\n"placeholder)
+	chatReqs, err := fetchOpenAIChatRequirements(ctx, client, headers)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Chat requirements failed: %s", err.Error()))
+placeholder
+	if chatReqs.Arkose.Required {
+		return s.sendErrorAndEnd(c, "Unsupported challenge: arkose required")
+placeholder
+
+	// Initialize and prepare conversation
+	s.sendEvent(c, TestEvent{Type: "content", Text: "Preparing image conversation...\n"placeholder)
+	parentMessageID := uuid.NewString()
+	proofToken := generateOpenAIProofToken(chatReqs.ProofOfWork.Required, chatReqs.ProofOfWork.Seed, chatReqs.ProofOfWork.Difficulty, headers.Get("User-Agent"))
+	_ = initializeOpenAIImageConversation(ctx, client, headers)
+	conduitToken, err := prepareOpenAIImageConversation(ctx, client, headers, prompt, parentMessageID, chatReqs.Token, proofToken)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Conversation prepare failed: %s", err.Error()))
+placeholder
+
+	// Build simplified conversation request (no file uploads)
+	convReq := buildOpenAIImageTestConversationRequest(prompt, parentMessageID)
+	convHeaders := cloneHTTPHeader(headers)
+	convHeaders.Set("Accept", "text/event-stream")
+	convHeaders.Set("Content-Type", "application/json")
+	convHeaders.Set("openai-sentinel-chat-requirements-token", chatReqs.Token)
+	if conduitToken != "" {
+		convHeaders.Set("x-conduit-token", conduitToken)
+placeholder
+	if proofToken != "" {
+		convHeaders.Set("openai-sentinel-proof-token", proofToken)
+placeholder
+
+	s.sendEvent(c, TestEvent{Type: "content", Text: "Generating image...\n"placeholder)
+
+	resp, err := client.R().
+		SetContext(ctx).
+		DisableAutoReadResponse().
+		SetHeaders(headerToMap(convHeaders)).
+		SetBodyJsonMarshal(convReq).
+		Post(openAIChatGPTConversationURL)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Conversation request failed: %s", err.Error()))
+placeholder
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+	placeholder
+placeholder()
+	if resp.StatusCode >= 400 {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Conversation API returned %d", resp.StatusCode))
+placeholder
+
+	startTime := time.Now()
+	conversationID, pointerInfos, _, _, err := readOpenAIImageConversationStream(resp, startTime)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Stream read failed: %s", err.Error()))
+placeholder
+
+	pointerInfos = mergeOpenAIImagePointerInfos(pointerInfos, nil)
+	if conversationID != "" && !hasOpenAIFileServicePointerInfos(pointerInfos) {
+		s.sendEvent(c, TestEvent{Type: "content", Text: "Waiting for image generation to complete...\n"placeholder)
+		polledPointers, pollErr := pollOpenAIImageConversation(ctx, client, headers, conversationID)
+		if pollErr != nil {
+			return s.sendErrorAndEnd(c, fmt.Sprintf("Poll failed: %s", pollErr.Error()))
+	placeholder
+		pointerInfos = mergeOpenAIImagePointerInfos(pointerInfos, polledPointers)
+placeholder
+	pointerInfos = preferOpenAIFileServicePointerInfos(pointerInfos)
+	if len(pointerInfos) == 0 {
+		return s.sendErrorAndEnd(c, "No images returned from conversation")
+placeholder
+
+	s.sendEvent(c, TestEvent{Type: "content", Text: "Downloading generated image...\n"placeholder)
+
+	// Download and encode each image
+	for _, pointer := range pointerInfos {
+		downloadURL, err := fetchOpenAIImageDownloadURL(ctx, client, headers, conversationID, pointer.Pointer)
+		if err != nil {
+			return s.sendErrorAndEnd(c, fmt.Sprintf("Download URL fetch failed: %s", err.Error()))
+	placeholder
+		data, err := downloadOpenAIImageBytes(ctx, client, headers, downloadURL)
+		if err != nil {
+			return s.sendErrorAndEnd(c, fmt.Sprintf("Image download failed: %s", err.Error()))
+	placeholder
+		b64 := base64.StdEncoding.EncodeToString(data)
+		mimeType := http.DetectContentType(data)
+		if pointer.Prompt != "" {
+			s.sendEvent(c, TestEvent{Type: "content", Text: pointer.Promptplaceholder)
+	placeholder
+		s.sendEvent(c, TestEvent{
+			Type:     "image",
+			ImageURL: "data:" + mimeType + ";base64," + b64,
+			MimeType: mimeType,
+	placeholder)
+placeholder
+
+	s.sendEvent(c, TestEvent{Type: "test_complete", Success: trueplaceholder)
+	return nil
+placeholder
+
+// buildOpenAIBackendAPIHeadersForTest builds ChatGPT backend API headers for test purposes.
+// Replicates the logic from OpenAIGatewayService.buildOpenAIBackendAPIHeaders without
+// requiring the full gateway service dependency.
+func buildOpenAIBackendAPIHeadersForTest(ctx context.Context, account *Account, token string, repo AccountRepository) http.Header {
+	// Ensure device and session IDs exist
+	deviceID := account.GetOpenAIDeviceID()
+	sessionID := account.GetOpenAISessionID()
+	if deviceID == "" || sessionID == "" {
+		updates := map[string]any{placeholder
+		if deviceID == "" {
+			deviceID = uuid.NewString()
+			updates["openai_device_id"] = deviceID
+	placeholder
+		if sessionID == "" {
+			sessionID = uuid.NewString()
+			updates["openai_session_id"] = sessionID
+	placeholder
+		if account.Extra == nil {
+			account.Extra = map[string]any{placeholder
+	placeholder
+		for key, value := range updates {
+			account.Extra[key] = value
+	placeholder
+		if repo != nil {
+			updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			_ = repo.UpdateExtra(updateCtx, account.ID, updates)
+	placeholder
+placeholder
+
+	headers := make(http.Header)
+	headers.Set("Authorization", "Bearer "+token)
+	headers.Set("Accept", "application/json")
+	headers.Set("Origin", "https://chatgpt.com")
+	headers.Set("Referer", "https://chatgpt.com/")
+	headers.Set("Sec-Fetch-Dest", "empty")
+	headers.Set("Sec-Fetch-Mode", "cors")
+	headers.Set("Sec-Fetch-Site", "same-origin")
+	headers.Set("User-Agent", openAIImageBackendUserAgent)
+	if customUA := strings.TrimSpace(account.GetOpenAIUserAgent()); customUA != "" {
+		headers.Set("User-Agent", customUA)
+placeholder
+	if chatgptAccountID := strings.TrimSpace(account.GetChatGPTAccountID()); chatgptAccountID != "" {
+		headers.Set("chatgpt-account-id", chatgptAccountID)
+placeholder
+	if deviceID != "" {
+		headers.Set("oai-device-id", deviceID)
+		headers.Set("Cookie", "oai-did="+deviceID)
+placeholder
+	if sessionID != "" {
+		headers.Set("oai-session-id", sessionID)
+placeholder
+	return headers
+placeholder
+
+// buildOpenAIImageTestConversationRequest creates a simplified image generation conversation request.
+func buildOpenAIImageTestConversationRequest(prompt, parentMessageID string) map[string]any {
+	promptText := strings.TrimSpace(prompt)
+	if promptText == "" {
+		promptText = "Generate an image."
+placeholder
+	metadata := map[string]any{
+		"developer_mode_connector_ids": []any{placeholder,
+		"selected_github_repos":        []any{placeholder,
+		"selected_all_github_repos":    false,
+		"system_hints":                 []string{"picture_v2"placeholder,
+		"serialization_metadata": map[string]any{
+			"custom_symbol_offsets": []any{placeholder,
+	placeholder,
+placeholder
+	message := map[string]any{
+		"id":     uuid.NewString(),
+		"author": map[string]any{"role": "user"placeholder,
+		"content": map[string]any{
+			"content_type": "text",
+			"parts":        []any{promptTextplaceholder,
+	placeholder,
+		"metadata":    metadata,
+		"create_time": float64(time.Now().UnixMilli()) / 1000,
+placeholder
+	return map[string]any{
+		"action":                   "next",
+		"client_prepare_state":     "sent",
+		"parent_message_id":        parentMessageID,
+		"messages":                 []any{messageplaceholder,
+		"model":                    "auto",
+		"timezone_offset_min":      openAITimezoneOffsetMinutes(),
+		"timezone":                 openAITimezoneName(),
+		"conversation_mode":        map[string]any{"kind": "primary_assistant"placeholder,
+		"system_hints":             []string{"picture_v2"placeholder,
+		"supports_buffering":       true,
+		"supported_encodings":      []string{"v1"placeholder,
+		"client_contextual_info":   map[string]any{"app_name": "chatgpt.com"placeholder,
+		"force_nulligen":           false,
+		"force_paragen":            false,
+		"force_paragen_model_slug": "",
+		"force_rate_limit":         false,
+		"websocket_request_id":     uuid.NewString(),
+placeholder
+placeholder
+
 func (s *AccountTestService) sendEvent(c *gin.Context, event TestEvent) {
 	eventJSON, _ := json.Marshal(event)
 	if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", eventJSON); err != nil {
