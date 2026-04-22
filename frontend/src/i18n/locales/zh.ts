@@ -1046,6 +1046,11 @@ export default {
         oidc: '{providerNameplaceholder',
         wechat: '微信',
       placeholder,
+      notes: {
+        emailManagedFromProfile: '主邮箱在资料表单中管理',
+        canUnbind: '你可以解绑这个登录方式。',
+        bindAnotherBeforeUnbind: '请先绑定其他登录方式，再解除当前绑定。',
+      placeholder,
       source: {
         avatar: '头像当前来自 {providerNameplaceholder',
         username: '昵称当前来自 {providerNameplaceholder',

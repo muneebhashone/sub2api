@@ -77,6 +77,7 @@ placeholder{
 							"can_unbind": false,
 							"display_name": "alice@example.com",
 							"subject_hint": "a***e@example.com",
+							"note_key": "profile.authBindings.notes.emailManagedFromProfile",
 							"note": "Primary account email is managed from the profile form."
 					placeholder,
 						"linuxdo": {
@@ -114,6 +115,7 @@ placeholder{
 							"can_unbind": false,
 							"display_name": "alice@example.com",
 							"subject_hint": "a***e@example.com",
+							"note_key": "profile.authBindings.notes.emailManagedFromProfile",
 							"note": "Primary account email is managed from the profile form."
 					placeholder,
 						"linuxdo": {
@@ -151,6 +153,7 @@ placeholder{
 							"can_unbind": false,
 							"display_name": "alice@example.com",
 							"subject_hint": "a***e@example.com",
+							"note_key": "profile.authBindings.notes.emailManagedFromProfile",
 							"note": "Primary account email is managed from the profile form."
 					placeholder,
 						"linuxdo": {
