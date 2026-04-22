@@ -778,6 +778,14 @@ placeholder
 	require.Equal(t, "https://cdn.example/existing-login.png", payload["suggested_avatar_url"])
 	require.NotContains(t, payload, "adoption_required")
 
+	accessToken, ok := payload["access_token"].(string)
+	require.True(t, ok)
+	claims, err := handler.authService.ValidateToken(accessToken)
+placeholder
+	reloadedUser, err := handler.userService.GetByID(ctx, userEntity.ID)
+placeholder
+	require.Equal(t, reloadedUser.TokenVersion, claims.TokenVersion)
+
 	decisionCount, err := client.IdentityAdoptionDecision.Query().
 		Where(identityadoptiondecision.PendingAuthSessionIDEQ(session.ID)).
 		Count(ctx)
@@ -2033,6 +2041,13 @@ placeholder
 	payload := decodeJSONResponseData(t, recorder)
 	require.NotEmpty(t, payload["access_token"])
 	require.NotEmpty(t, payload["refresh_token"])
+	accessToken, ok := payload["access_token"].(string)
+	require.True(t, ok)
+	claims, err := handler.authService.ValidateToken(accessToken)
+placeholder
+	reloadedUser, err := handler.userService.GetByID(ctx, existingUser.ID)
+placeholder
+	require.Equal(t, reloadedUser.TokenVersion, claims.TokenVersion)
 
 	identity, err := client.AuthIdentity.Query().
 		Where(
