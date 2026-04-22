@@ -851,6 +851,22 @@ placeholder
 	require.Nil(t, storedSession.ConsumedAt)
 placeholder
 
+func TestNormalizePendingOAuthCompletionResponseScrubsLegacyTokenPayload(t *testing.T) {
+	payload := normalizePendingOAuthCompletionResponse(map[string]any{
+		"access_token":  "legacy-access-token",
+		"refresh_token": "legacy-refresh-token",
+		"expires_in":    float64(3600),
+		"token_type":    "Bearer",
+		"redirect":      "/dashboard",
+placeholder)
+
+	require.NotContains(t, payload, "access_token")
+	require.NotContains(t, payload, "refresh_token")
+	require.NotContains(t, payload, "expires_in")
+	require.NotContains(t, payload, "token_type")
+	require.Equal(t, "/dashboard", payload["redirect"])
+placeholder
+
 func TestExchangePendingOAuthCompletionInvitationRequiredFalseFalsePersistsDecisionWithoutBinding(t *testing.T) {
 	handler, client := newOAuthPendingFlowTestHandler(t, true)
 	ctx := context.Background()
