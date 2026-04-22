@@ -409,6 +409,43 @@ async function redirectToPaymentResult(state: PaymentRecoverySnapshot): Promise<
   placeholder)
 placeholder
 
+function buildWechatOAuthAuthorizeUrl(
+  authorizeUrl: string,
+  context: { paymentType: string; orderType: OrderType; planId?: number; orderAmount: number placeholder,
+): string {
+  const normalizedUrl = authorizeUrl.trim()
+  if (!normalizedUrl || typeof window === 'undefined') {
+    return normalizedUrl
+  placeholder
+
+  try {
+    const targetUrl = new URL(normalizedUrl, window.location.origin)
+    const redirectPath = targetUrl.searchParams.get('redirect') || '/purchase'
+    const redirectUrl = new URL(redirectPath, window.location.origin)
+    const paymentType = normalizeVisibleMethod(context.paymentType) || context.paymentType.trim() || 'wxpay'
+
+    redirectUrl.searchParams.set('payment_type', paymentType)
+    redirectUrl.searchParams.set('order_type', context.orderType)
+
+    if (context.planId) {
+      redirectUrl.searchParams.set('plan_id', String(context.planId))
+    placeholder else {
+      redirectUrl.searchParams.delete('plan_id')
+    placeholder
+
+    if (context.orderAmount > 0) {
+      redirectUrl.searchParams.set('amount', String(context.orderAmount))
+    placeholder else {
+      redirectUrl.searchParams.delete('amount')
+    placeholder
+
+    targetUrl.searchParams.set('redirect', `${redirectUrl.pathnameplaceholder${redirectUrl.searchplaceholder`)
+    return targetUrl.toString()
+  placeholder catch {
+    return normalizedUrl
+  placeholder
+placeholder
+
 function onPaymentDone() {
   const wasSubscription = paymentState.value.orderType === 'subscription'
   resetPayment()
@@ -676,7 +713,12 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
     placeholder)
 
     if (decision.kind === 'wechat_oauth' && decision.oauth?.authorize_url) {
-      window.location.href = decision.oauth.authorize_url
+      window.location.href = buildWechatOAuthAuthorizeUrl(decision.oauth.authorize_url, {
+        paymentType: visibleMethod,
+        orderType,
+        planId,
+        orderAmount,
+      placeholder)
       return
     placeholder
 
