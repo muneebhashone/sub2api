@@ -1346,18 +1346,6 @@ placeholder
 placeholder, client
 placeholder
 
-func assertOAuthRedirectError(t *testing.T, location string, errorCode string, errorMessage string) {
-placeholder
-
-	parsed, err := url.Parse(location)
-placeholder
-
-	fragment, err := url.ParseQuery(parsed.Fragment)
-placeholder
-	require.Equal(t, errorCode, fragment.Get("error"))
-	require.Equal(t, errorMessage, fragment.Get("error_message"))
-placeholder
-
 type wechatOAuthSettingRepoStub struct {
 	values map[string]string
 placeholder
