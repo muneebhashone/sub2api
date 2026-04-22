@@ -1042,6 +1042,11 @@ export default {
         oidc: '{providerNameplaceholder',
         wechat: 'WeChat',
       placeholder,
+      notes: {
+        emailManagedFromProfile: 'Primary email is managed in the profile form',
+        canUnbind: 'You can unbind this sign-in method',
+        bindAnotherBeforeUnbind: 'Bind another sign-in method before unbinding',
+      placeholder,
       source: {
         avatar: 'Avatar is currently synced from {providerNameplaceholder',
         username: 'Nickname is currently synced from {providerNameplaceholder',
