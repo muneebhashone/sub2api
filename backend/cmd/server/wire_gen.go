@@ -457,6 +457,12 @@ func provideCleanup(
 			placeholder
 				return nil
 	placeholder
+			{"ChannelMonitorRunner", func() error {
+				if channelMonitorRunner != nil {
+					channelMonitorRunner.Stop()
+			placeholder
+				return nil
+	placeholder
 	placeholder
 
 		infraSteps := []cleanupStep{
