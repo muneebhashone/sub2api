@@ -246,10 +246,10 @@ jobs:
           if [ -n "$DOCKERHUB_USERNAME" ]; then
             DOCKER_IMAGE="${DOCKERHUB_USERNAMEplaceholder/sub2api"
             MESSAGE+="# Docker Hub"$'\n'
-            MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
+            MESSAGE+="docker pull ${DOCKER_IMAGEplaceholder:${VERSIONplaceholder"$'\n'
             MESSAGE+="# GitHub Container Registry"$'\n'
           fi
-          MESSAGE+="docker pull ${GHCR_IMAGEplaceholder:${TAG_NAMEplaceholder"$'\n'
+          MESSAGE+="docker pull ${GHCR_IMAGEplaceholder:${VERSIONplaceholder"$'\n'
           MESSAGE+="\`\`\`"$'\n'$'\n'
           MESSAGE+="🔗 *相关链接:*"$'\n'
           MESSAGE+="• [GitHub Release](https://github.com/${REPOplaceholder/releases/tag/${TAG_NAMEplaceholder)"$'\n'
