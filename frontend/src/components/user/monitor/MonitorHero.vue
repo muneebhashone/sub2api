@@ -42,8 +42,18 @@
         <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
       </button>
 
+      <AutoRefreshButton
+        v-if="autoRefresh"
+        :enabled="autoRefresh.enabled.value"
+        :interval-seconds="autoRefresh.intervalSeconds.value"
+        :countdown="autoRefresh.countdown.value"
+        :intervals="autoRefresh.intervals"
+        @update:enabled="autoRefresh.setEnabled"
+        @update:interval="autoRefresh.setInterval"
+      />
+
       <div class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-        {{ updatedLabel placeholderplaceholder<span v-if="intervalSeconds > 0"> · {{ t('monitorCommon.pollEvery', { n: intervalSeconds placeholder) placeholderplaceholder</span>
+        {{ updatedLabel placeholderplaceholder
       </div>
     </div>
   </section>
@@ -53,6 +63,7 @@
 import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
 import { useChannelMonitorFormat placeholder from '@/composables/useChannelMonitorFormat'
 
 export type MonitorWindow = '7d' | '15d' | '30d'
@@ -64,6 +75,14 @@ const props = defineProps<{
   intervalSeconds: number
   window: MonitorWindow
   loading: boolean
+  autoRefresh?: {
+    enabled: { value: boolean placeholder
+    intervalSeconds: { value: number placeholder
+    countdown: { value: number placeholder
+    intervals: readonly number[]
+    setEnabled: (v: boolean) => void
+    setInterval: (v: number) => void
+  placeholder
 placeholder>()
 
 const emit = defineEmits<{

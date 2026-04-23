@@ -308,6 +308,12 @@ export default {
     saving: 'Saving...',
     selectedCount: '({countplaceholder selected)',
     refresh: 'Refresh',
+    autoRefresh: {
+      title: 'Auto Refresh',
+      enable: 'Enable auto refresh',
+      countdown: 'Auto refresh: {secondsplaceholders',
+      seconds: '{nplaceholder seconds',
+    placeholder,
     view: 'View',
     settings: 'Settings',
     chooseFile: 'Choose File',
