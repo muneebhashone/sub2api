@@ -20,6 +20,7 @@ type rateLimitAccountRepoStub struct {
 	updateCredentialsCalls int
 	lastCredentials        map[string]any
 	lastErrorMsg           string
+	lastTempReason         string
 placeholder
 
 func (r *rateLimitAccountRepoStub) SetError(ctx context.Context, id int64, errorMsg string) error {
@@ -30,6 +31,7 @@ placeholder
 
 func (r *rateLimitAccountRepoStub) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
 	r.tempCalls++
+	r.lastTempReason = reason
 	return nil
 placeholder
 
@@ -42,6 +44,29 @@ placeholder
 type tokenCacheInvalidatorRecorder struct {
 	accounts []*Account
 	err      error
+placeholder
+
+type openAI403CounterCacheStub struct {
+	counts     []int64
+	resetCalls []int64
+	err        error
+placeholder
+
+func (s *openAI403CounterCacheStub) IncrementOpenAI403Count(_ context.Context, _ int64, _ int) (int64, error) {
+	if s.err != nil {
+		return 0, s.err
+placeholder
+	if len(s.counts) == 0 {
+		return 1, nil
+placeholder
+	count := s.counts[0]
+	s.counts = s.counts[1:]
+	return count, nil
+placeholder
+
+func (s *openAI403CounterCacheStub) ResetOpenAI403Count(_ context.Context, accountID int64) error {
+	s.resetCalls = append(s.resetCalls, accountID)
+	return nil
 placeholder
 
 func (r *tokenCacheInvalidatorRecorder) InvalidateToken(ctx context.Context, account *Account) error {
