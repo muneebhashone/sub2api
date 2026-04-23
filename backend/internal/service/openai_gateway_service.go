@@ -4643,32 +4643,6 @@ placeholder
 	return s.billingService.CalculateCostWithServiceTier(billingModel, tokens, multiplier, serviceTier)
 placeholder
 
-func (s *OpenAIGatewayService) calculateOpenAIImageTokenCost(
-	ctx context.Context,
-	apiKey *APIKey,
-	billingModel string,
-	multiplier float64,
-	tokens UsageTokens,
-	serviceTier string,
-	sizeTier string,
-) (*CostBreakdown, error) {
-	if s.resolver != nil && apiKey.Group != nil {
-		gid := apiKey.Group.ID
-		return s.billingService.CalculateCostUnified(CostInput{
-			Ctx:            ctx,
-			Model:          billingModel,
-			GroupID:        &gid,
-			Tokens:         tokens,
-			RequestCount:   1,
-			SizeTier:       sizeTier,
-			RateMultiplier: multiplier,
-			ServiceTier:    serviceTier,
-			Resolver:       s.resolver,
-	placeholder)
-placeholder
-	return s.billingService.CalculateCostWithServiceTier(billingModel, tokens, multiplier, serviceTier)
-placeholder
-
 func (s *OpenAIGatewayService) calculateOpenAIImageCost(
 	ctx context.Context,
 	billingModel string,
@@ -4716,17 +4690,6 @@ placeholder
 		return resolved
 placeholder
 	return nil
-placeholder
-
-func hasOpenAIImageUsageTokens(result *OpenAIForwardResult) bool {
-	if result == nil {
-		return false
-placeholder
-	return result.Usage.InputTokens > 0 ||
-		result.Usage.OutputTokens > 0 ||
-		result.Usage.CacheCreationInputTokens > 0 ||
-		result.Usage.CacheReadInputTokens > 0 ||
-		result.Usage.ImageOutputTokens > 0
 placeholder
 
 // ParseCodexRateLimitHeaders extracts Codex usage limits from response headers.
