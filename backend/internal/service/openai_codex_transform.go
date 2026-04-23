@@ -45,6 +45,11 @@ type codexTransformResult struct {
 	PromptCacheKey  string
 placeholder
 
+const (
+	codexImageGenerationBridgeMarker = "<sub2api-codex-image-generation>"
+	codexImageGenerationBridgeText   = codexImageGenerationBridgeMarker + "\nWhen the user asks for raster image generation or editing, use the OpenAI Responses native `image_generation` tool attached to this request. The local Codex client may not expose an `image_gen` namespace, but that does not mean image generation is unavailable. Do not ask the user to switch to CLI fallback solely because `image_gen` is absent.\n</sub2api-codex-image-generation>"
+)
+
 func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact bool) codexTransformResult {
 	result := codexTransformResult{placeholder
 	// 工具续链需求会影响存储策略与 input 过滤逻辑。
@@ -300,6 +305,61 @@ placeholder
 	return modified
 placeholder
 
+func ensureOpenAIResponsesImageGenerationTool(reqBody map[string]any) bool {
+	if len(reqBody) == 0 {
+		return false
+placeholder
+
+	tool := map[string]any{
+		"type":          "image_generation",
+		"output_format": "png",
+placeholder
+
+	rawTools, ok := reqBody["tools"]
+	if !ok || rawTools == nil {
+		reqBody["tools"] = []any{toolplaceholder
+		return true
+placeholder
+
+	tools, ok := rawTools.([]any)
+	if !ok {
+		reqBody["tools"] = []any{toolplaceholder
+		return true
+placeholder
+	for _, rawTool := range tools {
+		toolMap, ok := rawTool.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		if strings.TrimSpace(firstNonEmptyString(toolMap["type"])) == "image_generation" {
+			return false
+	placeholder
+placeholder
+
+	reqBody["tools"] = append(tools, tool)
+	return true
+placeholder
+
+func applyCodexImageGenerationBridgeInstructions(reqBody map[string]any) bool {
+	if len(reqBody) == 0 || !hasOpenAIImageGenerationTool(reqBody) {
+		return false
+placeholder
+
+	existing, _ := reqBody["instructions"].(string)
+	if strings.Contains(existing, codexImageGenerationBridgeMarker) {
+		return false
+placeholder
+
+	existing = strings.TrimRight(existing, " \t\r\n")
+	if strings.TrimSpace(existing) == "" {
+		reqBody["instructions"] = codexImageGenerationBridgeText
+		return true
+placeholder
+
+	reqBody["instructions"] = existing + "\n\n" + codexImageGenerationBridgeText
+	return true
+placeholder
+
 func validateOpenAIResponsesImageModel(reqBody map[string]any, model string) error {
 	if !hasOpenAIImageGenerationTool(reqBody) {
 		return nil
@@ -309,6 +369,82 @@ placeholder
 		return nil
 placeholder
 	return fmt.Errorf("/v1/responses image_generation requests require a Responses-capable text model; image-only model %q is not allowed", model)
+placeholder
+
+func normalizeOpenAIResponsesImageOnlyModel(reqBody map[string]any) bool {
+	if len(reqBody) == 0 {
+		return false
+placeholder
+	imageModel := strings.TrimSpace(firstNonEmptyString(reqBody["model"]))
+	if !isOpenAIImageGenerationModel(imageModel) {
+		return false
+placeholder
+
+	modified := false
+	tools, _ := reqBody["tools"].([]any)
+	imageToolIndex := -1
+	for i, rawTool := range tools {
+		toolMap, ok := rawTool.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		if strings.TrimSpace(firstNonEmptyString(toolMap["type"])) == "image_generation" {
+			imageToolIndex = i
+			break
+	placeholder
+placeholder
+	if imageToolIndex < 0 {
+		tools = append(tools, map[string]any{
+			"type":  "image_generation",
+			"model": imageModel,
+	placeholder)
+		imageToolIndex = len(tools) - 1
+		reqBody["tools"] = tools
+		modified = true
+placeholder
+
+	if toolMap, ok := tools[imageToolIndex].(map[string]any); ok {
+		if strings.TrimSpace(firstNonEmptyString(toolMap["model"])) == "" {
+			toolMap["model"] = imageModel
+			modified = true
+	placeholder
+		for _, key := range []string{
+			"size",
+			"quality",
+			"background",
+			"output_format",
+			"output_compression",
+			"moderation",
+			"style",
+			"partial_images",
+	placeholder {
+			if value, exists := reqBody[key]; exists && value != nil {
+				if _, toolHas := toolMap[key]; !toolHas {
+					toolMap[key] = value
+			placeholder
+				delete(reqBody, key)
+				modified = true
+		placeholder
+	placeholder
+placeholder
+
+	if prompt := strings.TrimSpace(firstNonEmptyString(reqBody["prompt"])); prompt != "" {
+		if _, hasInput := reqBody["input"]; !hasInput {
+			reqBody["input"] = prompt
+	placeholder
+		delete(reqBody, "prompt")
+		modified = true
+placeholder
+
+	if _, ok := reqBody["tool_choice"]; !ok {
+		reqBody["tool_choice"] = map[string]any{"type": "image_generation"placeholder
+		modified = true
+placeholder
+	if imageModel != openAIImagesResponsesMainModel {
+		modified = true
+placeholder
+	reqBody["model"] = openAIImagesResponsesMainModel
+	return modified
 placeholder
 
 func normalizeOpenAIModelForUpstream(account *Account, model string) string {
