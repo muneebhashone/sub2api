@@ -60,14 +60,11 @@ import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
-import { useChannelMonitorFormat placeholder from '@/composables/useChannelMonitorFormat'
-
 export type MonitorWindow = '7d' | '15d' | '30d'
 export type OverallStatus = 'operational' | 'degraded'
 
 const props = defineProps<{
   overallStatus: OverallStatus
-  updatedAt: string | null
   intervalSeconds: number
   window: MonitorWindow
   loading: boolean
@@ -87,7 +84,6 @@ const emit = defineEmits<{
 placeholder>()
 
 const { t placeholder = useI18n()
-const { formatRelativeTime placeholder = useChannelMonitorFormat()
 
 const windowOptions = computed<{ value: MonitorWindow; label: string placeholder[]>(() => [
   { value: '7d', label: t('channelStatus.windowTab.7d') placeholder,
@@ -117,8 +113,4 @@ const overallDotClass = computed(() => {
   placeholder
 placeholder)
 
-const updatedLabel = computed(() => {
-  if (!props.updatedAt) return t('monitorCommon.updatedAt', { time: '--' placeholder)
-  return t('monitorCommon.updatedAt', { time: formatRelativeTime(props.updatedAt) placeholder)
-placeholder)
 </script>
