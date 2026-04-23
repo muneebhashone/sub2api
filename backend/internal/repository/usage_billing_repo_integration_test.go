@@ -199,6 +199,94 @@ placeholder
 	require.InDelta(t, 3.5, quotaUsed, 0.000001)
 placeholder
 
+func TestUsageBillingRepositoryApply_EnqueuesSchedulerOutboxOnQuotaCrossing(t *testing.T) {
+	ctx := context.Background()
+	client := testEntClient(t)
+	repo := NewUsageBillingRepository(client, integrationDB)
+
+	newFixture := func(t *testing.T, extra map[string]any) (int64, int64) {
+	placeholder
+		user := mustCreateUser(t, client, &service.User{
+			Email:        fmt.Sprintf("usage-billing-outbox-user-%d-%s@example.com", time.Now().UnixNano(), uuid.NewString()),
+			PasswordHash: "hash",
+	placeholder)
+		apiKey := mustCreateApiKey(t, client, &service.APIKey{
+			UserID: user.ID,
+			Key:    "sk-usage-billing-outbox-" + uuid.NewString(),
+			Name:   "billing-outbox",
+	placeholder)
+		account := mustCreateAccount(t, client, &service.Account{
+			Name:  "usage-billing-outbox-" + uuid.NewString(),
+			Type:  service.AccountTypeAPIKey,
+			Extra: extra,
+	placeholder)
+		return apiKey.ID, account.ID
+placeholder
+
+	outboxCountFor := func(t *testing.T, accountID int64) int {
+	placeholder
+		var count int
+		require.NoError(t, integrationDB.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM scheduler_outbox WHERE event_type = $1 AND account_id = $2",
+			service.SchedulerOutboxEventAccountChanged, accountID,
+		).Scan(&count))
+		return count
+placeholder
+
+	t.Run("daily_first_crossing_enqueues", func(t *testing.T) {
+		apiKeyID, accountID := newFixture(t, map[string]any{
+			"quota_daily_limit": 10.0,
+	placeholder)
+		// 第一次低于日限额：不应入队 outbox
+		_, err := repo.Apply(ctx, &service.UsageBillingCommand{
+			RequestID:        uuid.NewString(),
+			APIKeyID:         apiKeyID,
+			AccountID:        accountID,
+			AccountType:      service.AccountTypeAPIKey,
+			AccountQuotaCost: 4,
+	placeholder)
+	placeholder
+		require.Equal(t, 0, outboxCountFor(t, accountID), "below limit should not enqueue")
+
+		// 第二次跨越日限额：应入队一次 outbox
+		_, err = repo.Apply(ctx, &service.UsageBillingCommand{
+			RequestID:        uuid.NewString(),
+			APIKeyID:         apiKeyID,
+			AccountID:        accountID,
+			AccountType:      service.AccountTypeAPIKey,
+			AccountQuotaCost: 8,
+	placeholder)
+	placeholder
+		require.Equal(t, 1, outboxCountFor(t, accountID), "crossing daily limit should enqueue once")
+
+		// 再次递增（已超）：不应重复入队
+		_, err = repo.Apply(ctx, &service.UsageBillingCommand{
+			RequestID:        uuid.NewString(),
+			APIKeyID:         apiKeyID,
+			AccountID:        accountID,
+			AccountType:      service.AccountTypeAPIKey,
+			AccountQuotaCost: 2,
+	placeholder)
+	placeholder
+		require.Equal(t, 1, outboxCountFor(t, accountID), "subsequent increments beyond limit should not re-enqueue")
+placeholder)
+
+	t.Run("weekly_first_crossing_enqueues", func(t *testing.T) {
+		apiKeyID, accountID := newFixture(t, map[string]any{
+			"quota_weekly_limit": 10.0,
+	placeholder)
+		_, err := repo.Apply(ctx, &service.UsageBillingCommand{
+			RequestID:        uuid.NewString(),
+			APIKeyID:         apiKeyID,
+			AccountID:        accountID,
+			AccountType:      service.AccountTypeAPIKey,
+			AccountQuotaCost: 15, // 单次即跨越
+	placeholder)
+	placeholder
+		require.Equal(t, 1, outboxCountFor(t, accountID), "single-shot crossing weekly limit should enqueue once")
+placeholder)
+placeholder
+
 func TestDashboardAggregationRepositoryCleanupUsageBillingDedup_BatchDeletesOldRows(t *testing.T) {
 	ctx := context.Background()
 	repo := newDashboardAggregationRepositoryWithSQL(integrationDB)
