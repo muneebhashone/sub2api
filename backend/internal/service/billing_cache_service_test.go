@@ -70,7 +70,7 @@ placeholder
 
 func TestBillingCacheServiceQueueHighLoad(t *testing.T) {
 	cache := &billingCacheWorkerStub{placeholder
-	svc := NewBillingCacheService(cache, nil, nil, nil, &config.Config{placeholder)
+	svc := NewBillingCacheService(cache, nil, nil, nil, nil, nil, &config.Config{placeholder)
 	t.Cleanup(svc.Stop)
 
 	start := time.Now()
@@ -92,7 +92,7 @@ placeholder
 
 func TestBillingCacheServiceEnqueueAfterStopReturnsFalse(t *testing.T) {
 	cache := &billingCacheWorkerStub{placeholder
-	svc := NewBillingCacheService(cache, nil, nil, nil, &config.Config{placeholder)
+	svc := NewBillingCacheService(cache, nil, nil, nil, nil, nil, &config.Config{placeholder)
 	svc.Stop()
 
 	enqueued := svc.enqueueCacheWrite(cacheWriteTask{

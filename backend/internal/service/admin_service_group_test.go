@@ -266,6 +266,31 @@ placeholder
 	require.Nil(t, repo.updated.ImagePrice4K)
 placeholder
 
+func TestAdminService_UpdateGroup_InvalidatesAuthCacheOnRPMLimitChange(t *testing.T) {
+	existingGroup := &Group{
+		ID:       1,
+		Name:     "existing-group",
+		Platform: PlatformAnthropic,
+		Status:   StatusActive,
+		RPMLimit: 10,
+placeholder
+	repo := &groupRepoStubForAdmin{getByID: existingGroupplaceholder
+	invalidator := &authCacheInvalidatorStub{placeholder
+	svc := &adminServiceImpl{
+		groupRepo:            repo,
+		authCacheInvalidator: invalidator,
+placeholder
+
+	rpmLimit := 60
+	group, err := svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{
+		RPMLimit: &rpmLimit,
+placeholder)
+placeholder
+	require.NotNil(t, group)
+	require.Equal(t, 60, repo.updated.RPMLimit)
+	require.Equal(t, []int64{1placeholder, invalidator.groupIDs, "分组 RPMLimit 写入 auth snapshot，变更后必须失效 API Key 认证缓存")
+placeholder
+
 func TestAdminService_CreateGroup_NormalizesMessagesDispatchModelConfig(t *testing.T) {
 	repo := &groupRepoStubForAdmin{placeholder
 	svc := &adminServiceImpl{groupRepo: repoplaceholder

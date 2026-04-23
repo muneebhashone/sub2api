@@ -567,6 +567,27 @@ placeholder
 	return _u
 placeholder
 
+// SetRpmLimit sets the "rpm_limit" field.
+func (_u *GroupUpdate) SetRpmLimit(v int) *GroupUpdate {
+	_u.mutation.ResetRpmLimit()
+	_u.mutation.SetRpmLimit(v)
+	return _u
+placeholder
+
+// SetNillableRpmLimit sets the "rpm_limit" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableRpmLimit(v *int) *GroupUpdate {
+	if v != nil {
+		_u.SetRpmLimit(*v)
+placeholder
+	return _u
+placeholder
+
+// AddRpmLimit adds value to the "rpm_limit" field.
+func (_u *GroupUpdate) AddRpmLimit(v int) *GroupUpdate {
+	_u.mutation.AddRpmLimit(v)
+	return _u
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdate) AddAPIKeyIDs(ids ...int64) *GroupUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1029,6 +1050,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.MessagesDispatchModelConfig(); ok {
 		_spec.SetField(group.FieldMessagesDispatchModelConfig, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.RpmLimit(); ok {
+		_spec.SetField(group.FieldRpmLimit, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.AddedRpmLimit(); ok {
+		_spec.AddField(group.FieldRpmLimit, field.TypeInt, value)
 placeholder
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1875,6 +1902,27 @@ placeholder
 	return _u
 placeholder
 
+// SetRpmLimit sets the "rpm_limit" field.
+func (_u *GroupUpdateOne) SetRpmLimit(v int) *GroupUpdateOne {
+	_u.mutation.ResetRpmLimit()
+	_u.mutation.SetRpmLimit(v)
+	return _u
+placeholder
+
+// SetNillableRpmLimit sets the "rpm_limit" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableRpmLimit(v *int) *GroupUpdateOne {
+	if v != nil {
+		_u.SetRpmLimit(*v)
+placeholder
+	return _u
+placeholder
+
+// AddRpmLimit adds value to the "rpm_limit" field.
+func (_u *GroupUpdateOne) AddRpmLimit(v int) *GroupUpdateOne {
+	_u.mutation.AddRpmLimit(v)
+	return _u
+placeholder
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdateOne) AddAPIKeyIDs(ids ...int64) *GroupUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -2367,6 +2415,12 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.MessagesDispatchModelConfig(); ok {
 		_spec.SetField(group.FieldMessagesDispatchModelConfig, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.RpmLimit(); ok {
+		_spec.SetField(group.FieldRpmLimit, field.TypeInt, value)
+placeholder
+	if value, ok := _u.mutation.AddedRpmLimit(); ok {
+		_spec.AddField(group.FieldRpmLimit, field.TypeInt, value)
 placeholder
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
