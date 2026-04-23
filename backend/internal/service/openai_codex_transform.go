@@ -187,8 +187,12 @@ placeholder
 placeholder
 
 func normalizeCodexModel(model string) string {
+	model = strings.TrimSpace(model)
 	if model == "" {
 		return "gpt-5.4"
+placeholder
+	if isOpenAIImageGenerationModel(model) {
+		return model
 placeholder
 
 	modelID := model
@@ -229,6 +233,78 @@ placeholder
 placeholder
 
 	return "gpt-5.4"
+placeholder
+
+func hasOpenAIImageGenerationTool(reqBody map[string]any) bool {
+	rawTools, ok := reqBody["tools"]
+	if !ok || rawTools == nil {
+		return false
+placeholder
+	tools, ok := rawTools.([]any)
+	if !ok {
+		return false
+placeholder
+	for _, rawTool := range tools {
+		toolMap, ok := rawTool.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		if strings.TrimSpace(firstNonEmptyString(toolMap["type"])) == "image_generation" {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func normalizeOpenAIResponsesImageGenerationTools(reqBody map[string]any) bool {
+	rawTools, ok := reqBody["tools"]
+	if !ok || rawTools == nil {
+		return false
+placeholder
+	tools, ok := rawTools.([]any)
+	if !ok {
+		return false
+placeholder
+
+	modified := false
+	for _, rawTool := range tools {
+		toolMap, ok := rawTool.(map[string]any)
+		if !ok || strings.TrimSpace(firstNonEmptyString(toolMap["type"])) != "image_generation" {
+			continue
+	placeholder
+		if _, ok := toolMap["output_format"]; !ok {
+			if value := strings.TrimSpace(firstNonEmptyString(toolMap["format"])); value != "" {
+				toolMap["output_format"] = value
+				modified = true
+		placeholder
+	placeholder
+		if _, ok := toolMap["output_compression"]; !ok {
+			if value, exists := toolMap["compression"]; exists && value != nil {
+				toolMap["output_compression"] = value
+				modified = true
+		placeholder
+	placeholder
+		if _, ok := toolMap["format"]; ok {
+			delete(toolMap, "format")
+			modified = true
+	placeholder
+		if _, ok := toolMap["compression"]; ok {
+			delete(toolMap, "compression")
+			modified = true
+	placeholder
+placeholder
+	return modified
+placeholder
+
+func validateOpenAIResponsesImageModel(reqBody map[string]any, model string) error {
+	if !hasOpenAIImageGenerationTool(reqBody) {
+		return nil
+placeholder
+	model = strings.TrimSpace(model)
+	if !isOpenAIImageGenerationModel(model) {
+		return nil
+placeholder
+	return fmt.Errorf("/v1/responses image_generation requests require a Responses-capable text model; image-only model %q is not allowed", model)
 placeholder
 
 func normalizeOpenAIModelForUpstream(account *Account, model string) string {
