@@ -96,15 +96,12 @@ export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
   ],
   wxpay: [
     { key: 'appId', label: 'App ID', sensitive: false placeholder,
-    { key: 'mpAppId', label: '', sensitive: false, optional: true placeholder,
     { key: 'mchId', label: '', sensitive: false placeholder,
     { key: 'privateKey', label: '', sensitive: true placeholder,
     { key: 'apiV3Key', label: '', sensitive: true placeholder,
     { key: 'certSerial', label: '', sensitive: false placeholder,
     { key: 'publicKey', label: '', sensitive: true placeholder,
     { key: 'publicKeyId', label: '', sensitive: false placeholder,
-    { key: 'h5AppName', label: '', sensitive: false, optional: true placeholder,
-    { key: 'h5AppUrl', label: '', sensitive: false, optional: true placeholder,
   ],
   stripe: [
     { key: 'secretKey', label: '', sensitive: true placeholder,
