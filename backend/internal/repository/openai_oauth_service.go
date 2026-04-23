@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -53,6 +54,9 @@ placeholder
 		Post(s.tokenURL)
 
 	if err != nil {
+		if shouldReturnOpenAINoProxyHint(ctx, proxyURL, err) {
+			return nil, newOpenAINoProxyHintError(err)
+	placeholder
 		return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_OAUTH_REQUEST_FAILED", "request failed: %v", err)
 placeholder
 
@@ -98,6 +102,9 @@ placeholder
 		Post(s.tokenURL)
 
 	if err != nil {
+		if shouldReturnOpenAINoProxyHint(ctx, proxyURL, err) {
+			return nil, newOpenAINoProxyHintError(err)
+	placeholder
 		return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_OAUTH_REQUEST_FAILED", "request failed: %v", err)
 placeholder
 
@@ -113,4 +120,22 @@ func createOpenAIReqClient(proxyURL string) (*req.Client, error) {
 		ProxyURL: proxyURL,
 		Timeout:  120 * time.Second,
 placeholder)
+placeholder
+
+func shouldReturnOpenAINoProxyHint(ctx context.Context, proxyURL string, err error) bool {
+	if strings.TrimSpace(proxyURL) != "" || err == nil {
+		return false
+placeholder
+	if ctx != nil && ctx.Err() != nil {
+		return false
+placeholder
+	return !errors.Is(err, context.Canceled)
+placeholder
+
+func newOpenAINoProxyHintError(cause error) error {
+	return infraerrors.New(
+		http.StatusBadGateway,
+		"OPENAI_OAUTH_PROXY_REQUIRED",
+		"OpenAI OAuth request failed: no proxy is configured and this server could not reach OpenAI directly. Select a proxy that can access OpenAI, then retry; if the authorization code has expired, regenerate the authorization URL.",
+	).WithCause(cause)
 placeholder
