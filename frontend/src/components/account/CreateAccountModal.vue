@@ -3322,7 +3322,12 @@ watch(
     if (newVal) {
       // Load TLS fingerprint profiles
       adminAPI.tlsFingerprintProfiles.list()
-        .then(profiles => { tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name placeholder)) placeholder)
+        .then(profiles => {
+          tlsFingerprintProfiles.value = profiles.map(p => ({
+            id: p.id,
+            name: p.name,
+          placeholder))
+        placeholder)
         .catch(() => { tlsFingerprintProfiles.value = [] placeholder)
       // Modal opened - fill related models
       allowedModels.value = [...getModelsByPlatform(form.platform)]

@@ -235,11 +235,9 @@ placeholder
 		PaymentCancelRateLimitWindow:           paymentCfg.CancelRateLimitWindow,
 		PaymentCancelRateLimitUnit:             paymentCfg.CancelRateLimitUnit,
 		PaymentCancelRateLimitMode:             paymentCfg.CancelRateLimitMode,
-
-		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
-		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
-
-		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
+		ChannelMonitorEnabled:                  settings.ChannelMonitorEnabled,
+		ChannelMonitorDefaultIntervalSeconds:   settings.ChannelMonitorDefaultIntervalSeconds,
+		AvailableChannelsEnabled:               settings.AvailableChannelsEnabled,
 placeholder
 	response.Success(c, systemSettingsResponseData(payload, authSourceDefaults))
 placeholder
@@ -1479,11 +1477,9 @@ placeholder
 		PaymentCancelRateLimitWindow:           updatedPaymentCfg.CancelRateLimitWindow,
 		PaymentCancelRateLimitUnit:             updatedPaymentCfg.CancelRateLimitUnit,
 		PaymentCancelRateLimitMode:             updatedPaymentCfg.CancelRateLimitMode,
-
-		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorEnabled,
-		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
-
-		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
+		ChannelMonitorEnabled:                  updatedSettings.ChannelMonitorEnabled,
+		ChannelMonitorDefaultIntervalSeconds:   updatedSettings.ChannelMonitorDefaultIntervalSeconds,
+		AvailableChannelsEnabled:               updatedSettings.AvailableChannelsEnabled,
 placeholder
 	response.Success(c, systemSettingsResponseData(payload, updatedAuthSourceDefaults))
 placeholder

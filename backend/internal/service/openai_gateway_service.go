@@ -1503,7 +1503,7 @@ placeholder
 		if !acc.IsSchedulable() {
 			continue
 	placeholder
-		if requestedModel != "" && !acc.IsModelSupported(requestedModel) {
+		if requestedModel != "" && !acc.IsOpenAIPassthroughEnabled() && !acc.IsModelSupported(requestedModel) {
 			continue
 	placeholder
 		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, acc, requestedModel) {
@@ -1665,7 +1665,7 @@ placeholder
 	if !fresh.IsSchedulable() || !fresh.IsOpenAI() {
 		return nil
 placeholder
-	if requestedModel != "" && !fresh.IsModelSupported(requestedModel) {
+	if requestedModel != "" && !fresh.IsOpenAIPassthroughEnabled() && !fresh.IsModelSupported(requestedModel) {
 		return nil
 placeholder
 	return fresh
@@ -1935,12 +1935,6 @@ placeholder
 		markPatchSet("instructions", "You are a helpful coding assistant.")
 placeholder
 
-	if normalizeOpenAIResponsesImageGenerationTools(reqBody) {
-		bodyModified = true
-		disablePatch()
-		logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Normalized /responses image_generation tool payload")
-placeholder
-
 	// 对所有请求执行模型映射（包含 Codex CLI）。
 	billingModel := account.GetMappedModel(reqModel)
 	if billingModel != reqModel {
@@ -1950,26 +1944,6 @@ placeholder
 		markPatchSet("model", billingModel)
 placeholder
 	upstreamModel := billingModel
-	if err := validateOpenAIResponsesImageModel(reqBody, upstreamModel); err != nil {
-		setOpsUpstreamError(c, http.StatusBadRequest, err.Error(), "")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": gin.H{
-				"type":    "invalid_request_error",
-				"message": err.Error(),
-				"param":   "model",
-		placeholder,
-	placeholder)
-		return nil, err
-placeholder
-	if hasOpenAIImageGenerationTool(reqBody) {
-		logger.LegacyPrintf(
-			"service.openai_gateway",
-			"[OpenAI] /responses image_generation request inbound_model=%s mapped_model=%s account_type=%s",
-			reqModel,
-			upstreamModel,
-			account.Type,
-		)
-placeholder
 
 	// OpenAI OAuth 账号走 ChatGPT internal Codex endpoint，需要将模型名规范化为
 	// 上游可识别的 Codex/GPT 系列。API Key 账号则应保留原始/映射后的模型名，

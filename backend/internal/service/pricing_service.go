@@ -812,16 +812,6 @@ placeholder
 		return openAIGPT54FallbackPricing
 placeholder
 
-	if isOpenAIImageGenerationModel(model) {
-		for _, candidate := range []string{"gpt-image-2", "gpt-image-1.5", "gpt-image-1"placeholder {
-			if pricing, ok := s.pricingData[candidate]; ok {
-				logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, candidate)
-				return pricing
-		placeholder
-	placeholder
-		return nil
-placeholder
-
 	// 最终回退到 DefaultTestModel
 	defaultModel := strings.ToLower(openai.DefaultTestModel)
 	if pricing, ok := s.pricingData[defaultModel]; ok {

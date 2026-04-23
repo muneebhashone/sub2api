@@ -73,6 +73,9 @@ placeholder
 func (m *sessionWindowMockRepo) FindByExtraField(context.Context, string, any) ([]Account, error) {
 	panic("unexpected")
 placeholder
+func (m *sessionWindowMockRepo) CountByTLSFingerprintProfile(context.Context) (map[int64]int, error) {
+	panic("unexpected")
+placeholder
 func (m *sessionWindowMockRepo) ListCRSAccountIDs(context.Context) (map[string]int64, error) {
 	panic("unexpected")
 placeholder
