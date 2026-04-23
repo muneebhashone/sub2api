@@ -47,6 +47,7 @@ const (
 
 	openAIImageBackendUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 	openAIImageRequirementsDiff = "0fffff"
+	openAIImageLifecycleTimeout = 2 * time.Minute
 )
 
 type OpenAIImagesCapability string
@@ -148,6 +149,9 @@ placeholder else {
 placeholder
 
 	applyOpenAIImagesDefaults(req)
+	if err := validateOpenAIImagesModel(req.Model); err != nil {
+		return nil, err
+placeholder
 	req.SizeTier = normalizeOpenAIImageSizeTier(req.Size)
 	req.RequiredCapability = classifyOpenAIImagesCapability(req)
 	return req, nil
@@ -295,6 +299,21 @@ placeholder
 	req.Model = "gpt-image-2"
 placeholder
 
+func isOpenAIImageGenerationModel(model string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(model)), "gpt-image-")
+placeholder
+
+func validateOpenAIImagesModel(model string) error {
+	model = strings.TrimSpace(model)
+	if isOpenAIImageGenerationModel(model) {
+		return nil
+placeholder
+	if model == "" {
+		return fmt.Errorf("images endpoint requires an image model")
+placeholder
+	return fmt.Errorf("images endpoint requires an image model, got %q", model)
+placeholder
+
 func normalizeOpenAIImagesEndpointPath(path string) string {
 	trimmed := strings.TrimSpace(path)
 	switch {
@@ -400,7 +419,21 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 	if mapped := strings.TrimSpace(channelMappedModel); mapped != "" {
 		requestModel = mapped
 placeholder
+	if err := validateOpenAIImagesModel(requestModel); err != nil {
+		return nil, err
+placeholder
 	upstreamModel := account.GetMappedModel(requestModel)
+	if err := validateOpenAIImagesModel(upstreamModel); err != nil {
+		return nil, err
+placeholder
+	logger.LegacyPrintf(
+		"service.openai_gateway",
+		"[OpenAI] Images request routing request_model=%s upstream_model=%s endpoint=%s account_type=%s",
+		strings.TrimSpace(parsed.Model),
+		upstreamModel,
+		parsed.Endpoint,
+		account.Type,
+	)
 	forwardBody, forwardContentType, err := rewriteOpenAIImagesModel(body, parsed.ContentType, upstreamModel)
 	if err != nil {
 		return nil, err
@@ -759,6 +792,17 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 	if mapped := strings.TrimSpace(channelMappedModel); mapped != "" {
 		requestModel = mapped
 placeholder
+	if err := validateOpenAIImagesModel(requestModel); err != nil {
+		return nil, err
+placeholder
+	logger.LegacyPrintf(
+		"service.openai_gateway",
+		"[OpenAI] Images request routing request_model=%s endpoint=%s account_type=%s uploads=%d",
+		requestModel,
+		parsed.Endpoint,
+		account.Type,
+		len(parsed.Uploads),
+	)
 
 	token, _, err := s.GetAccessToken(ctx, account)
 	if err != nil {
@@ -844,8 +888,18 @@ placeholder
 		return nil, err
 placeholder
 	pointerInfos = mergeOpenAIImagePointerInfos(pointerInfos, nil)
+	logger.LegacyPrintf(
+		"service.openai_gateway",
+		"[OpenAI] Image extraction stream conversation_id=%s total_assets=%d file_service_assets=%d direct_assets=%d",
+		conversationID,
+		len(pointerInfos),
+		countOpenAIFileServicePointerInfos(pointerInfos),
+		countOpenAIDirectImageAssets(pointerInfos),
+	)
+	lifecycleCtx, releaseLifecycleCtx := detachOpenAIImageLifecycleContext(ctx, openAIImageLifecycleTimeout)
+	defer releaseLifecycleCtx()
 	if conversationID != "" && !hasOpenAIFileServicePointerInfos(pointerInfos) {
-		polledPointers, pollErr := pollOpenAIImageConversation(ctx, client, headers, conversationID)
+		polledPointers, pollErr := pollOpenAIImageConversation(lifecycleCtx, client, headers, conversationID)
 		if pollErr != nil {
 			return nil, s.wrapOpenAIImageBackendError(ctx, c, account, pollErr)
 	placeholder
@@ -853,10 +907,11 @@ placeholder
 placeholder
 	pointerInfos = preferOpenAIFileServicePointerInfos(pointerInfos)
 	if len(pointerInfos) == 0 {
+		logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Image extraction yielded no assets conversation_id=%s", conversationID)
 		return nil, fmt.Errorf("openai image conversation returned no downloadable images")
 placeholder
 
-	responseBody, imageCount, err := buildOpenAIImageResponse(ctx, client, headers, conversationID, pointerInfos)
+	responseBody, imageCount, err := buildOpenAIImageResponse(lifecycleCtx, client, headers, conversationID, pointerInfos)
 	if err != nil {
 		return nil, s.wrapOpenAIImageBackendError(ctx, c, account, err)
 placeholder
@@ -1283,8 +1338,11 @@ placeholder
 placeholder
 
 type openAIImagePointerInfo struct {
-	Pointer string
-	Prompt  string
+	Pointer     string
+	DownloadURL string
+	B64JSON     string
+	MimeType    string
+	Prompt      string
 placeholder
 
 type openAIImageToolMessage struct {
@@ -1336,10 +1394,6 @@ func collectOpenAIImagePointers(body []byte) []openAIImagePointerInfo {
 	if len(body) == 0 {
 		return nil
 placeholder
-	matches := openAIImagePointerMatches(body)
-	if len(matches) == 0 {
-		return nil
-placeholder
 	prompt := ""
 	for _, path := range []string{
 		"message.metadata.dalle.prompt",
@@ -1351,11 +1405,12 @@ placeholder {
 			break
 	placeholder
 placeholder
+	matches := openAIImagePointerMatches(body)
 	out := make([]openAIImagePointerInfo, 0, len(matches))
 	for _, pointer := range matches {
 		out = append(out, openAIImagePointerInfo{Pointer: pointer, Prompt: promptplaceholder)
 placeholder
-	return out
+	return mergeOpenAIImagePointerInfos(out, collectOpenAIImageInlineAssets(body, prompt))
 placeholder
 
 func openAIImagePointerMatches(body []byte) []string {
@@ -1394,25 +1449,70 @@ placeholder
 	seen := make(map[string]openAIImagePointerInfo, len(existing)+len(next))
 	out := make([]openAIImagePointerInfo, 0, len(existing)+len(next))
 	for _, item := range existing {
-		seen[item.Pointer] = item
+		if key := item.identityKey(); key != "" {
+			seen[key] = item
+	placeholder
 		out = append(out, item)
 placeholder
 	for _, item := range next {
-		if existingItem, ok := seen[item.Pointer]; ok {
-			if existingItem.Prompt == "" && item.Prompt != "" {
+		key := item.identityKey()
+		if key == "" {
+			continue
+	placeholder
+		if existingItem, ok := seen[key]; ok {
+			merged := mergeOpenAIImagePointerInfo(existingItem, item)
+			if merged != existingItem {
 				for i := range out {
-					if out[i].Pointer == item.Pointer {
-						out[i].Prompt = item.Prompt
+					if out[i].identityKey() == key {
+						out[i] = merged
 						break
 				placeholder
 			placeholder
+				seen[key] = merged
 		placeholder
 			continue
 	placeholder
-		seen[item.Pointer] = item
+		seen[key] = item
 		out = append(out, item)
 placeholder
 	return out
+placeholder
+
+func (i openAIImagePointerInfo) identityKey() string {
+	switch {
+	case strings.TrimSpace(i.Pointer) != "":
+		return "pointer:" + strings.TrimSpace(i.Pointer)
+	case strings.TrimSpace(i.DownloadURL) != "":
+		return "download:" + strings.TrimSpace(i.DownloadURL)
+	case strings.TrimSpace(i.B64JSON) != "":
+		b64 := strings.TrimSpace(i.B64JSON)
+		if len(b64) > 64 {
+			b64 = b64[:64]
+	placeholder
+		return "b64:" + b64
+	default:
+		return ""
+placeholder
+placeholder
+
+func mergeOpenAIImagePointerInfo(existing, next openAIImagePointerInfo) openAIImagePointerInfo {
+	merged := existing
+	if strings.TrimSpace(merged.Pointer) == "" {
+		merged.Pointer = next.Pointer
+placeholder
+	if strings.TrimSpace(merged.DownloadURL) == "" {
+		merged.DownloadURL = next.DownloadURL
+placeholder
+	if strings.TrimSpace(merged.B64JSON) == "" {
+		merged.B64JSON = next.B64JSON
+placeholder
+	if strings.TrimSpace(merged.MimeType) == "" {
+		merged.MimeType = next.MimeType
+placeholder
+	if strings.TrimSpace(merged.Prompt) == "" {
+		merged.Prompt = next.Prompt
+placeholder
+	return merged
 placeholder
 
 func hasOpenAIFileServicePointerInfos(items []openAIImagePointerInfo) bool {
@@ -1422,6 +1522,26 @@ func hasOpenAIFileServicePointerInfos(items []openAIImagePointerInfo) bool {
 	placeholder
 placeholder
 	return false
+placeholder
+
+func countOpenAIFileServicePointerInfos(items []openAIImagePointerInfo) int {
+	count := 0
+	for _, item := range items {
+		if strings.HasPrefix(item.Pointer, "file-service://") {
+			count++
+	placeholder
+placeholder
+	return count
+placeholder
+
+func countOpenAIDirectImageAssets(items []openAIImagePointerInfo) int {
+	count := 0
+	for _, item := range items {
+		if strings.TrimSpace(item.DownloadURL) != "" || strings.TrimSpace(item.B64JSON) != "" {
+			count++
+	placeholder
+placeholder
+	return count
 placeholder
 
 func preferOpenAIFileServicePointerInfos(items []openAIImagePointerInfo) []openAIImagePointerInfo {
@@ -1591,11 +1711,7 @@ func buildOpenAIImageResponse(
 placeholder
 	items := make([]responseItem, 0, len(pointers))
 	for _, pointer := range pointers {
-		downloadURL, err := fetchOpenAIImageDownloadURL(ctx, client, headers, conversationID, pointer.Pointer)
-		if err != nil {
-			return nil, 0, err
-	placeholder
-		data, err := downloadOpenAIImageBytes(ctx, client, headers, downloadURL)
+		data, err := resolveOpenAIImageBytes(ctx, client, headers, conversationID, pointer)
 		if err != nil {
 			return nil, 0, err
 	placeholder
@@ -1613,6 +1729,136 @@ placeholder
 		return nil, 0, err
 placeholder
 	return body, len(items), nil
+placeholder
+
+func resolveOpenAIImageBytes(
+	ctx context.Context,
+	client *req.Client,
+	headers http.Header,
+	conversationID string,
+	pointer openAIImagePointerInfo,
+) ([]byte, error) {
+	if normalized := normalizeOpenAIImageBase64(pointer.B64JSON); normalized != "" {
+		return base64.StdEncoding.DecodeString(normalized)
+placeholder
+	if downloadURL := strings.TrimSpace(pointer.DownloadURL); downloadURL != "" {
+		return downloadOpenAIImageBytes(ctx, client, headers, downloadURL)
+placeholder
+	if strings.TrimSpace(pointer.Pointer) == "" {
+		return nil, fmt.Errorf("image asset is missing pointer, url, and base64 data")
+placeholder
+	downloadURL, err := fetchOpenAIImageDownloadURL(ctx, client, headers, conversationID, pointer.Pointer)
+	if err != nil {
+		return nil, err
+placeholder
+	return downloadOpenAIImageBytes(ctx, client, headers, downloadURL)
+placeholder
+
+func normalizeOpenAIImageBase64(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+placeholder
+	if strings.HasPrefix(strings.ToLower(raw), "data:") {
+		if idx := strings.Index(raw, ","); idx >= 0 && idx+1 < len(raw) {
+			raw = raw[idx+1:]
+	placeholder
+placeholder
+	raw = strings.TrimSpace(raw)
+	raw = strings.TrimRight(raw, "=") + strings.Repeat("=", (4-len(raw)%4)%4)
+	if raw == "" {
+		return ""
+placeholder
+	if _, err := base64.StdEncoding.DecodeString(raw); err != nil {
+		return ""
+placeholder
+	return raw
+placeholder
+
+func collectOpenAIImageInlineAssets(body []byte, fallbackPrompt string) []openAIImagePointerInfo {
+	if len(body) == 0 || !gjson.ValidBytes(body) {
+		return nil
+placeholder
+	var decoded any
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return nil
+placeholder
+	var out []openAIImagePointerInfo
+	walkOpenAIImageInlineAssets(decoded, strings.TrimSpace(fallbackPrompt), &out)
+	return out
+placeholder
+
+func walkOpenAIImageInlineAssets(node any, prompt string, out *[]openAIImagePointerInfo) {
+	switch value := node.(type) {
+	case map[string]any:
+		localPrompt := prompt
+		for _, key := range []string{"revised_prompt", "image_gen_title", "prompt"placeholder {
+			if v, ok := value[key].(string); ok && strings.TrimSpace(v) != "" {
+				localPrompt = strings.TrimSpace(v)
+				break
+		placeholder
+	placeholder
+		item := openAIImagePointerInfo{
+			Prompt:      localPrompt,
+			Pointer:     firstNonEmptyString(value["asset_pointer"], value["pointer"]),
+			DownloadURL: firstNonEmptyString(value["download_url"], value["url"], value["image_url"]),
+			B64JSON:     firstNonEmptyString(value["b64_json"], value["base64"], value["image_base64"]),
+			MimeType:    firstNonEmptyString(value["mime_type"], value["mimeType"], value["content_type"]),
+	placeholder
+		switch {
+		case strings.HasPrefix(strings.TrimSpace(item.Pointer), "file-service://"),
+			strings.HasPrefix(strings.TrimSpace(item.Pointer), "sediment://"),
+			isLikelyOpenAIImageDownloadURL(item.DownloadURL),
+			normalizeOpenAIImageBase64(item.B64JSON) != "":
+			*out = append(*out, item)
+	placeholder
+		for _, child := range value {
+			walkOpenAIImageInlineAssets(child, localPrompt, out)
+	placeholder
+	case []any:
+		for _, child := range value {
+			walkOpenAIImageInlineAssets(child, prompt, out)
+	placeholder
+placeholder
+placeholder
+
+func firstNonEmptyString(values ...any) string {
+	for _, value := range values {
+		if s, ok := value.(string); ok && strings.TrimSpace(s) != "" {
+			return strings.TrimSpace(s)
+	placeholder
+placeholder
+	return ""
+placeholder
+
+func isLikelyOpenAIImageDownloadURL(raw string) bool {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return false
+placeholder
+	if strings.HasPrefix(strings.ToLower(raw), "data:image/") {
+		return true
+placeholder
+	if !strings.HasPrefix(strings.ToLower(raw), "http://") && !strings.HasPrefix(strings.ToLower(raw), "https://") {
+		return false
+placeholder
+	lower := strings.ToLower(raw)
+	return strings.Contains(lower, "/download") ||
+		strings.Contains(lower, ".png") ||
+		strings.Contains(lower, ".jpg") ||
+		strings.Contains(lower, ".jpeg") ||
+		strings.Contains(lower, ".webp")
+placeholder
+
+func detachOpenAIImageLifecycleContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	base := context.Background()
+	if ctx != nil {
+		base = context.WithoutCancel(ctx)
+placeholder
+	if timeout <= 0 {
+		return base, func() {placeholder
+placeholder
+	return context.WithTimeout(base, timeout)
 placeholder
 
 func fetchOpenAIImageDownloadURL(

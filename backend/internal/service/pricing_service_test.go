@@ -128,6 +128,21 @@ placeholder
 	require.Zero(t, got.LongContextInputTokenThreshold)
 placeholder
 
+func TestGetModelPricing_ImageModelDoesNotFallbackToTextModel(t *testing.T) {
+	imagePricing := &LiteLLMModelPricing{InputCostPerToken: 3placeholder
+	textPricing := &LiteLLMModelPricing{InputCostPerToken: 9placeholder
+
+	svc := &PricingService{
+		pricingData: map[string]*LiteLLMModelPricing{
+			"gpt-image-2": imagePricing,
+			"gpt-5.4":     textPricing,
+	placeholder,
+placeholder
+
+	got := svc.GetModelPricing("gpt-image-3")
+	require.Same(t, imagePricing, got)
+placeholder
+
 func TestParsePricingData_PreservesPriorityAndServiceTierFields(t *testing.T) {
 	raw := map[string]any{
 		"gpt-5.4": map[string]any{
