@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCalculateOpenAI429ResetTime_7dExhausted(t *testing.T) {
@@ -257,6 +260,53 @@ placeholder
 	if normalized.Reset5hSeconds != nil {
 		t.Errorf("expected Reset5hSeconds=nil, got %v", *normalized.Reset5hSeconds)
 placeholder
+placeholder
+
+func TestRateLimitService_HandleUpstreamError_403PreservesOriginalUpstreamMessage(t *testing.T) {
+	repo := &rateLimitAccountRepoStub{placeholder
+	service := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	account := &Account{
+		ID:       201,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+
+	shouldDisable := service.HandleUpstreamError(
+		context.Background(),
+		account,
+		403,
+		http.Header{placeholder,
+		[]byte(`{"error":{"message":"workspace forbidden by policy","type":"invalid_request_error"placeholderplaceholder`),
+	)
+
+	require.True(t, shouldDisable)
+	require.Equal(t, 1, repo.setErrorCalls)
+	require.Contains(t, repo.lastErrorMsg, "workspace forbidden by policy")
+	require.NotContains(t, repo.lastErrorMsg, "account may be suspended or lack permissions")
+placeholder
+
+func TestRateLimitService_HandleUpstreamError_403FallsBackToRawBody(t *testing.T) {
+	repo := &rateLimitAccountRepoStub{placeholder
+	service := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	account := &Account{
+		ID:       202,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+
+	shouldDisable := service.HandleUpstreamError(
+		context.Background(),
+		account,
+		403,
+		http.Header{placeholder,
+		[]byte(`{"error":{"type":"access_denied","details":{"reason":"ip_blocked"placeholderplaceholderplaceholder`),
+	)
+
+	require.True(t, shouldDisable)
+	require.Equal(t, 1, repo.setErrorCalls)
+	require.Contains(t, repo.lastErrorMsg, `"access_denied"`)
+	require.Contains(t, repo.lastErrorMsg, `"ip_blocked"`)
+	require.NotContains(t, repo.lastErrorMsg, "account may be suspended or lack permissions")
 placeholder
 
 func TestNormalizedCodexLimits_OnlySecondaryData(t *testing.T) {

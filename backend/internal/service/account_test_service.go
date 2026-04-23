@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -1138,7 +1137,7 @@ placeholder
 	return nil
 placeholder
 
-// testOpenAIImageOAuth tests OpenAI image generation using an OAuth account via ChatGPT backend API.
+// testOpenAIImageOAuth tests OpenAI image generation using an OAuth account via Codex /responses API.
 func (s *AccountTestService) testOpenAIImageOAuth(c *gin.Context, ctx context.Context, account *Account, modelID, prompt string) error {
 	authToken := account.GetOpenAIAccessToken()
 	if authToken == "" {
@@ -1153,69 +1152,46 @@ placeholder
 	c.Writer.Flush()
 
 	s.sendEvent(c, TestEvent{Type: "test_start", Model: modelIDplaceholder)
-	s.sendEvent(c, TestEvent{Type: "content", Text: "Initializing ChatGPT backend...\n"placeholder)
+	s.sendEvent(c, TestEvent{Type: "content", Text: "Calling Codex /responses image tool...\n"placeholder)
 
-	// Build headers (replicating buildOpenAIBackendAPIHeaders logic)
-	headers := buildOpenAIBackendAPIHeadersForTest(ctx, account, authToken, s.accountRepo)
+	parsed := &OpenAIImagesRequest{
+		Endpoint: openAIImagesGenerationsEndpoint,
+		Model:    strings.TrimSpace(modelID),
+		Prompt:   prompt,
+placeholder
+	applyOpenAIImagesDefaults(parsed)
+
+	responsesBody, err := buildOpenAIImagesResponsesRequest(parsed, parsed.Model)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to build image request: %s", err.Error()))
+placeholder
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, chatgptCodexAPIURL, bytes.NewReader(responsesBody))
+	if err != nil {
+		return s.sendErrorAndEnd(c, "Failed to create request")
+placeholder
+	req.Host = "chatgpt.com"
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("OpenAI-Beta", "responses=experimental")
+	req.Header.Set("originator", "opencode")
+	if customUA := strings.TrimSpace(account.GetOpenAIUserAgent()); customUA != "" {
+		req.Header.Set("User-Agent", customUA)
+placeholder else {
+		req.Header.Set("User-Agent", codexCLIUserAgent)
+placeholder
+	if chatgptAccountID := strings.TrimSpace(account.GetChatGPTAccountID()); chatgptAccountID != "" {
+		req.Header.Set("chatgpt-account-id", chatgptAccountID)
+placeholder
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 placeholder
-
-	client, err := newOpenAIBackendAPIClient(proxyURL)
+	resp, err := s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to create client: %s", err.Error()))
-placeholder
-
-	// Bootstrap
-	if bootstrapErr := bootstrapOpenAIBackendAPI(ctx, client, headers); bootstrapErr != nil {
-		log.Printf("OpenAI image test bootstrap warning: %v", bootstrapErr)
-placeholder
-
-	// Fetch chat requirements
-	s.sendEvent(c, TestEvent{Type: "content", Text: "Fetching chat requirements...\n"placeholder)
-	chatReqs, err := fetchOpenAIChatRequirements(ctx, client, headers)
-	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Chat requirements failed: %s", err.Error()))
-placeholder
-	if chatReqs.Arkose.Required {
-		return s.sendErrorAndEnd(c, "Unsupported challenge: arkose required")
-placeholder
-
-	// Initialize and prepare conversation
-	s.sendEvent(c, TestEvent{Type: "content", Text: "Preparing image conversation...\n"placeholder)
-	parentMessageID := uuid.NewString()
-	proofToken := generateOpenAIProofToken(chatReqs.ProofOfWork.Required, chatReqs.ProofOfWork.Seed, chatReqs.ProofOfWork.Difficulty, headers.Get("User-Agent"))
-	_ = initializeOpenAIImageConversation(ctx, client, headers)
-	conduitToken, err := prepareOpenAIImageConversation(ctx, client, headers, prompt, parentMessageID, chatReqs.Token, proofToken)
-	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Conversation prepare failed: %s", err.Error()))
-placeholder
-
-	// Build simplified conversation request (no file uploads)
-	convReq := buildOpenAIImageTestConversationRequest(prompt, parentMessageID)
-	convHeaders := cloneHTTPHeader(headers)
-	convHeaders.Set("Accept", "text/event-stream")
-	convHeaders.Set("Content-Type", "application/json")
-	convHeaders.Set("openai-sentinel-chat-requirements-token", chatReqs.Token)
-	if conduitToken != "" {
-		convHeaders.Set("x-conduit-token", conduitToken)
-placeholder
-	if proofToken != "" {
-		convHeaders.Set("openai-sentinel-proof-token", proofToken)
-placeholder
-
-	s.sendEvent(c, TestEvent{Type: "content", Text: "Generating image...\n"placeholder)
-
-	resp, err := client.R().
-		SetContext(ctx).
-		DisableAutoReadResponse().
-		SetHeaders(headerToMap(convHeaders)).
-		SetBodyJsonMarshal(convReq).
-		Post(openAIChatGPTConversationURL)
-	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Conversation request failed: %s", err.Error()))
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Responses API request failed: %s", err.Error()))
 placeholder
 	defer func() {
 		if resp != nil && resp.Body != nil {
@@ -1223,156 +1199,41 @@ placeholder
 	placeholder
 placeholder()
 	if resp.StatusCode >= 400 {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Conversation API returned %d", resp.StatusCode))
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		message := strings.TrimSpace(extractUpstreamErrorMessage(body))
+		if message == "" {
+			message = fmt.Sprintf("Responses API returned %d", resp.StatusCode)
+	placeholder
+		return s.sendErrorAndEnd(c, message)
 placeholder
 
-	startTime := time.Now()
-	conversationID, pointerInfos, _, _, err := readOpenAIImageConversationStream(resp, startTime)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Stream read failed: %s", err.Error()))
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to read image response: %s", err.Error()))
 placeholder
 
-	pointerInfos = mergeOpenAIImagePointerInfos(pointerInfos, nil)
-	if conversationID != "" && !hasOpenAIFileServicePointerInfos(pointerInfos) {
-		s.sendEvent(c, TestEvent{Type: "content", Text: "Waiting for image generation to complete...\n"placeholder)
-		polledPointers, pollErr := pollOpenAIImageConversation(ctx, client, headers, conversationID)
-		if pollErr != nil {
-			return s.sendErrorAndEnd(c, fmt.Sprintf("Poll failed: %s", pollErr.Error()))
-	placeholder
-		pointerInfos = mergeOpenAIImagePointerInfos(pointerInfos, polledPointers)
+	results, _, _, _, _, err := collectOpenAIImagesFromResponsesBody(body)
+	if err != nil {
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to parse image response: %s", err.Error()))
 placeholder
-	pointerInfos = preferOpenAIFileServicePointerInfos(pointerInfos)
-	if len(pointerInfos) == 0 {
-		return s.sendErrorAndEnd(c, "No images returned from conversation")
+	if len(results) == 0 {
+		return s.sendErrorAndEnd(c, "No images returned from responses API")
 placeholder
 
-	s.sendEvent(c, TestEvent{Type: "content", Text: "Downloading generated image...\n"placeholder)
-
-	// Download and encode each image
-	for _, pointer := range pointerInfos {
-		downloadURL, err := fetchOpenAIImageDownloadURL(ctx, client, headers, conversationID, pointer.Pointer)
-		if err != nil {
-			return s.sendErrorAndEnd(c, fmt.Sprintf("Download URL fetch failed: %s", err.Error()))
+	for _, item := range results {
+		if item.RevisedPrompt != "" {
+			s.sendEvent(c, TestEvent{Type: "content", Text: item.RevisedPromptplaceholder)
 	placeholder
-		data, err := downloadOpenAIImageBytes(ctx, client, headers, downloadURL)
-		if err != nil {
-			return s.sendErrorAndEnd(c, fmt.Sprintf("Image download failed: %s", err.Error()))
-	placeholder
-		b64 := base64.StdEncoding.EncodeToString(data)
-		mimeType := http.DetectContentType(data)
-		if pointer.Prompt != "" {
-			s.sendEvent(c, TestEvent{Type: "content", Text: pointer.Promptplaceholder)
-	placeholder
+		mimeType := openAIImageOutputMIMEType(item.OutputFormat)
 		s.sendEvent(c, TestEvent{
 			Type:     "image",
-			ImageURL: "data:" + mimeType + ";base64," + b64,
+			ImageURL: "data:" + mimeType + ";base64," + item.Result,
 			MimeType: mimeType,
 	placeholder)
 placeholder
 
 	s.sendEvent(c, TestEvent{Type: "test_complete", Success: trueplaceholder)
 	return nil
-placeholder
-
-// buildOpenAIBackendAPIHeadersForTest builds ChatGPT backend API headers for test purposes.
-// Replicates the logic from OpenAIGatewayService.buildOpenAIBackendAPIHeaders without
-// requiring the full gateway service dependency.
-func buildOpenAIBackendAPIHeadersForTest(ctx context.Context, account *Account, token string, repo AccountRepository) http.Header {
-	// Ensure device and session IDs exist
-	deviceID := account.GetOpenAIDeviceID()
-	sessionID := account.GetOpenAISessionID()
-	if deviceID == "" || sessionID == "" {
-		updates := map[string]any{placeholder
-		if deviceID == "" {
-			deviceID = uuid.NewString()
-			updates["openai_device_id"] = deviceID
-	placeholder
-		if sessionID == "" {
-			sessionID = uuid.NewString()
-			updates["openai_session_id"] = sessionID
-	placeholder
-		if account.Extra == nil {
-			account.Extra = map[string]any{placeholder
-	placeholder
-		for key, value := range updates {
-			account.Extra[key] = value
-	placeholder
-		if repo != nil {
-			updateCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			_ = repo.UpdateExtra(updateCtx, account.ID, updates)
-	placeholder
-placeholder
-
-	headers := make(http.Header)
-	headers.Set("Authorization", "Bearer "+token)
-	headers.Set("Accept", "application/json")
-	headers.Set("Origin", "https://chatgpt.com")
-	headers.Set("Referer", "https://chatgpt.com/")
-	headers.Set("Sec-Fetch-Dest", "empty")
-	headers.Set("Sec-Fetch-Mode", "cors")
-	headers.Set("Sec-Fetch-Site", "same-origin")
-	headers.Set("User-Agent", openAIImageBackendUserAgent)
-	if customUA := strings.TrimSpace(account.GetOpenAIUserAgent()); customUA != "" {
-		headers.Set("User-Agent", customUA)
-placeholder
-	if chatgptAccountID := strings.TrimSpace(account.GetChatGPTAccountID()); chatgptAccountID != "" {
-		headers.Set("chatgpt-account-id", chatgptAccountID)
-placeholder
-	if deviceID != "" {
-		headers.Set("oai-device-id", deviceID)
-		headers.Set("Cookie", "oai-did="+deviceID)
-placeholder
-	if sessionID != "" {
-		headers.Set("oai-session-id", sessionID)
-placeholder
-	return headers
-placeholder
-
-// buildOpenAIImageTestConversationRequest creates a simplified image generation conversation request.
-func buildOpenAIImageTestConversationRequest(prompt, parentMessageID string) map[string]any {
-	promptText := strings.TrimSpace(prompt)
-	if promptText == "" {
-		promptText = "Generate an image."
-placeholder
-	metadata := map[string]any{
-		"developer_mode_connector_ids": []any{placeholder,
-		"selected_github_repos":        []any{placeholder,
-		"selected_all_github_repos":    false,
-		"system_hints":                 []string{"picture_v2"placeholder,
-		"serialization_metadata": map[string]any{
-			"custom_symbol_offsets": []any{placeholder,
-	placeholder,
-placeholder
-	message := map[string]any{
-		"id":     uuid.NewString(),
-		"author": map[string]any{"role": "user"placeholder,
-		"content": map[string]any{
-			"content_type": "text",
-			"parts":        []any{promptTextplaceholder,
-	placeholder,
-		"metadata":    metadata,
-		"create_time": float64(time.Now().UnixMilli()) / 1000,
-placeholder
-	return map[string]any{
-		"action":                   "next",
-		"client_prepare_state":     "sent",
-		"parent_message_id":        parentMessageID,
-		"messages":                 []any{messageplaceholder,
-		"model":                    "auto",
-		"timezone_offset_min":      openAITimezoneOffsetMinutes(),
-		"timezone":                 openAITimezoneName(),
-		"conversation_mode":        map[string]any{"kind": "primary_assistant"placeholder,
-		"system_hints":             []string{"picture_v2"placeholder,
-		"supports_buffering":       true,
-		"supported_encodings":      []string{"v1"placeholder,
-		"client_contextual_info":   map[string]any{"app_name": "chatgpt.com"placeholder,
-		"force_nulligen":           false,
-		"force_paragen":            false,
-		"force_paragen_model_slug": "",
-		"force_rate_limit":         false,
-		"websocket_request_id":     uuid.NewString(),
-placeholder
 placeholder
 
 func (s *AccountTestService) sendEvent(c *gin.Context, event TestEvent) {
