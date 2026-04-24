@@ -236,6 +236,11 @@ placeholder
 		PaymentCancelRateLimitWindow:           paymentCfg.CancelRateLimitWindow,
 		PaymentCancelRateLimitUnit:             paymentCfg.CancelRateLimitUnit,
 		PaymentCancelRateLimitMode:             paymentCfg.CancelRateLimitMode,
+
+		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
+		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
+
+		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
 placeholder
 	response.Success(c, systemSettingsResponseData(payload, authSourceDefaults))
 placeholder
@@ -427,6 +432,13 @@ type UpdateSettingsRequest struct {
 	PaymentCancelRateLimitWindow  *int    `json:"payment_cancel_rate_limit_window"`
 	PaymentCancelRateLimitUnit    *string `json:"payment_cancel_rate_limit_unit"`
 	PaymentCancelRateLimitMode    *string `json:"payment_cancel_rate_limit_window_mode"`
+
+	// Channel Monitor feature switch
+	ChannelMonitorEnabled                *bool `json:"channel_monitor_enabled"`
+	ChannelMonitorDefaultIntervalSeconds *int  `json:"channel_monitor_default_interval_seconds"`
+
+	// Available Channels feature switch (user-facing)
+	AvailableChannelsEnabled *bool `json:"available_channels_enabled"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -1222,6 +1234,24 @@ placeholder
 		placeholder
 			return previousSettings.AccountQuotaNotifyEmails
 	placeholder(),
+		ChannelMonitorEnabled: func() bool {
+			if req.ChannelMonitorEnabled != nil {
+				return *req.ChannelMonitorEnabled
+		placeholder
+			return previousSettings.ChannelMonitorEnabled
+	placeholder(),
+		ChannelMonitorDefaultIntervalSeconds: func() int {
+			if req.ChannelMonitorDefaultIntervalSeconds != nil {
+				return *req.ChannelMonitorDefaultIntervalSeconds
+		placeholder
+			return previousSettings.ChannelMonitorDefaultIntervalSeconds
+	placeholder(),
+		AvailableChannelsEnabled: func() bool {
+			if req.AvailableChannelsEnabled != nil {
+				return *req.AvailableChannelsEnabled
+		placeholder
+			return previousSettings.AvailableChannelsEnabled
+	placeholder(),
 placeholder
 
 	authSourceDefaults := &service.AuthSourceDefaultSettings{
@@ -1453,6 +1483,11 @@ placeholder
 		PaymentCancelRateLimitWindow:           updatedPaymentCfg.CancelRateLimitWindow,
 		PaymentCancelRateLimitUnit:             updatedPaymentCfg.CancelRateLimitUnit,
 		PaymentCancelRateLimitMode:             updatedPaymentCfg.CancelRateLimitMode,
+
+		ChannelMonitorEnabled:                updatedSettings.ChannelMonitorEnabled,
+		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
+
+		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
 placeholder
 	response.Success(c, systemSettingsResponseData(payload, updatedAuthSourceDefaults))
 placeholder
@@ -1808,6 +1843,15 @@ placeholder
 placeholder
 	if !equalNotifyEmailEntries(before.AccountQuotaNotifyEmails, after.AccountQuotaNotifyEmails) {
 		changed = append(changed, "account_quota_notify_emails")
+placeholder
+	if before.ChannelMonitorEnabled != after.ChannelMonitorEnabled {
+		changed = append(changed, "channel_monitor_enabled")
+placeholder
+	if before.ChannelMonitorDefaultIntervalSeconds != after.ChannelMonitorDefaultIntervalSeconds {
+		changed = append(changed, "channel_monitor_default_interval_seconds")
+placeholder
+	if before.AvailableChannelsEnabled != after.AvailableChannelsEnabled {
+		changed = append(changed, "available_channels_enabled")
 placeholder
 	changed = appendAuthSourceDefaultChanges(changed, beforeAuthSourceDefaults, afterAuthSourceDefaults)
 	return changed

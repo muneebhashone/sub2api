@@ -158,9 +158,6 @@ placeholder
 		UpdatedAt:      ch.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 placeholder
 	resp.BillingModelSource = ch.BillingModelSource
-	if resp.BillingModelSource == "" {
-		resp.BillingModelSource = service.BillingModelSourceChannelMapped
-placeholder
 	if resp.GroupIDs == nil {
 		resp.GroupIDs = []int64{placeholder
 placeholder

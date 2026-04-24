@@ -421,6 +421,169 @@ placeholder
 		placeholder,
 	placeholder,
 placeholder
+	// ChannelMonitorsColumns holds the columns for the "channel_monitors" table.
+	ChannelMonitorsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini"placeholderplaceholder,
+		{Name: "endpoint", Type: field.TypeString, Size: 500placeholder,
+		{Name: "api_key_encrypted", Type: field.TypeStringplaceholder,
+		{Name: "primary_model", Type: field.TypeString, Size: 200placeholder,
+		{Name: "extra_models", Type: field.TypeJSONplaceholder,
+		{Name: "group_name", Type: field.TypeString, Nullable: true, Size: 100, Default: ""placeholder,
+		{Name: "enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "interval_seconds", Type: field.TypeIntplaceholder,
+		{Name: "last_checked_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "created_by", Type: field.TypeInt64placeholder,
+		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
+		{Name: "body_override_mode", Type: field.TypeString, Size: 10, Default: "off"placeholder,
+		{Name: "body_override", Type: field.TypeJSON, Nullable: trueplaceholder,
+		{Name: "template_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+placeholder
+	// ChannelMonitorsTable holds the schema information for the "channel_monitors" table.
+	ChannelMonitorsTable = &schema.Table{
+		Name:       "channel_monitors",
+		Columns:    ChannelMonitorsColumns,
+		PrimaryKey: []*schema.Column{ChannelMonitorsColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "channel_monitors_channel_monitor_request_templates_request_template",
+				Columns:    []*schema.Column{ChannelMonitorsColumns[17]placeholder,
+				RefColumns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
+				OnDelete:   schema.SetNull,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "channelmonitor_enabled_last_checked_at",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[10], ChannelMonitorsColumns[12]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitor_provider",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[4]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitor_group_name",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[9]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitor_template_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[17]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// ChannelMonitorDailyRollupsColumns holds the columns for the "channel_monitor_daily_rollups" table.
+	ChannelMonitorDailyRollupsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "model", Type: field.TypeString, Size: 200placeholder,
+		{Name: "bucket_date", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "date"placeholderplaceholder,
+		{Name: "total_checks", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "ok_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "operational_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "degraded_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "failed_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "error_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "sum_latency_ms", Type: field.TypeInt64, Default: 0placeholder,
+		{Name: "count_latency", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "sum_ping_latency_ms", Type: field.TypeInt64, Default: 0placeholder,
+		{Name: "count_ping_latency", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "computed_at", Type: field.TypeTimeplaceholder,
+		{Name: "monitor_id", Type: field.TypeInt64placeholder,
+placeholder
+	// ChannelMonitorDailyRollupsTable holds the schema information for the "channel_monitor_daily_rollups" table.
+	ChannelMonitorDailyRollupsTable = &schema.Table{
+		Name:       "channel_monitor_daily_rollups",
+		Columns:    ChannelMonitorDailyRollupsColumns,
+		PrimaryKey: []*schema.Column{ChannelMonitorDailyRollupsColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "channel_monitor_daily_rollups_channel_monitors_daily_rollups",
+				Columns:    []*schema.Column{ChannelMonitorDailyRollupsColumns[14]placeholder,
+				RefColumns: []*schema.Column{ChannelMonitorsColumns[0]placeholder,
+				OnDelete:   schema.Cascade,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "channelmonitordailyrollup_monitor_id_model_bucket_date",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelMonitorDailyRollupsColumns[14], ChannelMonitorDailyRollupsColumns[1], ChannelMonitorDailyRollupsColumns[2]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitordailyrollup_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorDailyRollupsColumns[2]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// ChannelMonitorHistoriesColumns holds the columns for the "channel_monitor_histories" table.
+	ChannelMonitorHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "model", Type: field.TypeString, Size: 200placeholder,
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"operational", "degraded", "failed", "error"placeholderplaceholder,
+		{Name: "latency_ms", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "ping_latency_ms", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "message", Type: field.TypeString, Nullable: true, Size: 500, Default: ""placeholder,
+		{Name: "checked_at", Type: field.TypeTimeplaceholder,
+		{Name: "monitor_id", Type: field.TypeInt64placeholder,
+placeholder
+	// ChannelMonitorHistoriesTable holds the schema information for the "channel_monitor_histories" table.
+	ChannelMonitorHistoriesTable = &schema.Table{
+		Name:       "channel_monitor_histories",
+		Columns:    ChannelMonitorHistoriesColumns,
+		PrimaryKey: []*schema.Column{ChannelMonitorHistoriesColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "channel_monitor_histories_channel_monitors_history",
+				Columns:    []*schema.Column{ChannelMonitorHistoriesColumns[7]placeholder,
+				RefColumns: []*schema.Column{ChannelMonitorsColumns[0]placeholder,
+				OnDelete:   schema.Cascade,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "channelmonitorhistory_monitor_id_model_checked_at",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[7], ChannelMonitorHistoriesColumns[1], ChannelMonitorHistoriesColumns[6]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitorhistory_checked_at",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[6]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// ChannelMonitorRequestTemplatesColumns holds the columns for the "channel_monitor_request_templates" table.
+	ChannelMonitorRequestTemplatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "name", Type: field.TypeString, Size: 100placeholder,
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini"placeholderplaceholder,
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 500, Default: ""placeholder,
+		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
+		{Name: "body_override_mode", Type: field.TypeString, Size: 10, Default: "off"placeholder,
+		{Name: "body_override", Type: field.TypeJSON, Nullable: trueplaceholder,
+placeholder
+	// ChannelMonitorRequestTemplatesTable holds the schema information for the "channel_monitor_request_templates" table.
+	ChannelMonitorRequestTemplatesTable = &schema.Table{
+		Name:       "channel_monitor_request_templates",
+		Columns:    ChannelMonitorRequestTemplatesColumns,
+		PrimaryKey: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "channelmonitorrequesttemplate_provider_name",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[4], ChannelMonitorRequestTemplatesColumns[3]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// ErrorPassthroughRulesColumns holds the columns for the "error_passthrough_rules" table.
 	ErrorPassthroughRulesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -1522,6 +1685,10 @@ placeholder
 		AnnouncementReadsTable,
 		AuthIdentitiesTable,
 		AuthIdentityChannelsTable,
+		ChannelMonitorsTable,
+		ChannelMonitorDailyRollupsTable,
+		ChannelMonitorHistoriesTable,
+		ChannelMonitorRequestTemplatesTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
@@ -1578,6 +1745,21 @@ placeholder
 	AuthIdentityChannelsTable.ForeignKeys[0].RefTable = AuthIdentitiesTable
 	AuthIdentityChannelsTable.Annotation = &entsql.Annotation{
 		Table: "auth_identity_channels",
+placeholder
+	ChannelMonitorsTable.ForeignKeys[0].RefTable = ChannelMonitorRequestTemplatesTable
+	ChannelMonitorsTable.Annotation = &entsql.Annotation{
+		Table: "channel_monitors",
+placeholder
+	ChannelMonitorDailyRollupsTable.ForeignKeys[0].RefTable = ChannelMonitorsTable
+	ChannelMonitorDailyRollupsTable.Annotation = &entsql.Annotation{
+		Table: "channel_monitor_daily_rollups",
+placeholder
+	ChannelMonitorHistoriesTable.ForeignKeys[0].RefTable = ChannelMonitorsTable
+	ChannelMonitorHistoriesTable.Annotation = &entsql.Annotation{
+		Table: "channel_monitor_histories",
+placeholder
+	ChannelMonitorRequestTemplatesTable.Annotation = &entsql.Annotation{
+		Table: "channel_monitor_request_templates",
 placeholder
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",
