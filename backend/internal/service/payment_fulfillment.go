@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -268,6 +269,7 @@ func (s *PaymentService) doBalance(ctx context.Context, o *dbent.PaymentOrder) e
 
 	switch action {
 	case redeemActionSkipCompleted:
+		s.applyAffiliateRebateForOrder(ctx, o)
 		// Code already created and redeemed — just mark completed
 		return s.markCompleted(ctx, o, "RECHARGE_SUCCESS")
 	case redeemActionCreate:
@@ -281,6 +283,7 @@ placeholder
 	if _, err := s.redeemService.Redeem(ctx, o.UserID, o.RechargeCode); err != nil {
 		return fmt.Errorf("redeem balance: %w", err)
 placeholder
+	s.applyAffiliateRebateForOrder(ctx, o)
 	return s.markCompleted(ctx, o, "RECHARGE_SUCCESS")
 placeholder
 
@@ -356,6 +359,139 @@ func (s *PaymentService) hasAuditLog(ctx context.Context, orderID int64, action 
 		Where(paymentauditlog.OrderIDEQ(oid), paymentauditlog.ActionEQ(action)).
 		Limit(1).Count(ctx)
 	return c > 0
+placeholder
+
+func (s *PaymentService) applyAffiliateRebateForOrder(ctx context.Context, o *dbent.PaymentOrder) {
+	if o == nil || o.OrderType != payment.OrderTypeBalance || o.Amount <= 0 {
+		return
+placeholder
+	if s.affiliateService == nil {
+		return
+placeholder
+
+	tx, err := s.entClient.Tx(ctx)
+	if err != nil {
+		s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+			"error": fmt.Sprintf("begin affiliate rebate tx: %v", err),
+	placeholder)
+		return
+placeholder
+	defer func() { _ = tx.Rollback() placeholder()
+
+	txCtx := dbent.NewTxContext(ctx, tx)
+	claimed, err := s.tryClaimAffiliateRebateAudit(txCtx, tx.Client(), o.ID, o.Amount)
+	if err != nil {
+		s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+			"error": err.Error(),
+	placeholder)
+		return
+placeholder
+	if !claimed {
+		return
+placeholder
+
+	rebateAmount, err := s.affiliateService.AccrueInviteRebate(txCtx, o.UserID, o.Amount)
+	if err != nil {
+		s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+			"error": err.Error(),
+	placeholder)
+		return
+placeholder
+
+	if rebateAmount <= 0 {
+		if err := s.updateClaimedAffiliateRebateAudit(txCtx, tx.Client(), o.ID, "AFFILIATE_REBATE_SKIPPED", map[string]any{
+			"baseAmount": o.Amount,
+			"reason":     "no inviter bound or rebate amount <= 0",
+	placeholder); err != nil {
+			s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+				"error": err.Error(),
+		placeholder)
+			return
+	placeholder
+		if err := tx.Commit(); err != nil {
+			s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+				"error": fmt.Sprintf("commit affiliate rebate tx: %v", err),
+		placeholder)
+	placeholder
+		return
+placeholder
+
+	if err := s.updateClaimedAffiliateRebateAudit(txCtx, tx.Client(), o.ID, "AFFILIATE_REBATE_APPLIED", map[string]any{
+		"baseAmount":   o.Amount,
+		"rebateAmount": rebateAmount,
+placeholder); err != nil {
+		s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+			"error": err.Error(),
+	placeholder)
+		return
+placeholder
+
+	if err := tx.Commit(); err != nil {
+		s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
+			"error": fmt.Sprintf("commit affiliate rebate tx: %v", err),
+	placeholder)
+placeholder
+placeholder
+
+func (s *PaymentService) tryClaimAffiliateRebateAudit(ctx context.Context, client *dbent.Client, orderID int64, baseAmount float64) (bool, error) {
+	if client == nil {
+		return false, errors.New("nil payment client")
+placeholder
+	oid := strconv.FormatInt(orderID, 10)
+	detail, _ := json.Marshal(map[string]any{
+		"baseAmount": baseAmount,
+		"status":     "reserved",
+placeholder)
+	rows, err := client.QueryContext(ctx, `
+INSERT INTO payment_audit_logs (order_id, action, detail, operator, created_at)
+SELECT $1, 'AFFILIATE_REBATE_APPLIED', $2, 'system', NOW()
+WHERE NOT EXISTS (
+	SELECT 1
+	FROM payment_audit_logs
+	WHERE order_id = $1
+	  AND action IN ('AFFILIATE_REBATE_APPLIED', 'AFFILIATE_REBATE_SKIPPED')
+)
+ON CONFLICT (order_id, action) DO NOTHING
+RETURNING id`, oid, string(detail))
+	if err != nil {
+		return false, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return false, err
+	placeholder
+		return false, nil
+placeholder
+	var claimID int64
+	if err := rows.Scan(&claimID); err != nil {
+		return false, err
+placeholder
+	return true, nil
+placeholder
+
+func (s *PaymentService) updateClaimedAffiliateRebateAudit(ctx context.Context, client *dbent.Client, orderID int64, action string, detail map[string]any) error {
+	if client == nil {
+		return errors.New("nil payment client")
+placeholder
+	oid := strconv.FormatInt(orderID, 10)
+	detailJSON, _ := json.Marshal(detail)
+	updated, err := client.PaymentAuditLog.Update().
+		Where(
+			paymentauditlog.OrderIDEQ(oid),
+			paymentauditlog.ActionEQ("AFFILIATE_REBATE_APPLIED"),
+		).
+		SetAction(action).
+		SetDetail(string(detailJSON)).
+		SetOperator("system").
+		Save(ctx)
+	if err != nil {
+		return err
+placeholder
+	if updated == 0 {
+		return errors.New("affiliate rebate claim log not found")
+placeholder
+	return nil
 placeholder
 
 func (s *PaymentService) markFailed(ctx context.Context, oid int64, cause error) {
