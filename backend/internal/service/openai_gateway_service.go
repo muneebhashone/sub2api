@@ -4167,14 +4167,14 @@ placeholder
 	var output []json.RawMessage
 	if acc.HasContent() {
 		outputJSON, err := json.Marshal(acc.BuildOutput())
-		if err != nil {
-			return nil, false
-	placeholder
-		if err := json.Unmarshal(outputJSON, &output); err != nil {
-			return nil, false
+		if err == nil {
+			_ = json.Unmarshal(outputJSON, &output)
 	placeholder
 placeholder
 	output = append(output, imageOutputs...)
+	if len(output) == 0 {
+		return nil, false
+placeholder
 
 	outputJSON, err := json.Marshal(output)
 	if err != nil {
