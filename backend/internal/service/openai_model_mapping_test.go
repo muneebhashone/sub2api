@@ -15,9 +15,18 @@ placeholder{
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt-5.4",
+			requestedModel:     "claude-opus-4-6",
 			defaultMappedModel: "gpt-4o-mini",
 			expectedModel:      "gpt-4o-mini",
+	placeholder,
+		{
+			name: "preserves explicit gpt-5.4 instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt-5.4",
+			defaultMappedModel: "gpt-4o-mini",
+			expectedModel:      "gpt-5.4",
 	placeholder,
 		{
 			name: "preserves exact passthrough mapping instead of group default",
@@ -57,6 +66,42 @@ placeholder{
 			requestedModel:     "gpt-5",
 			defaultMappedModel: "gpt-4o-mini",
 			expectedModel:      "gpt-5.4",
+	placeholder,
+		{
+			name: "preserves codex spark instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt-5.3-codex-spark",
+			defaultMappedModel: "gpt-5.4",
+			expectedModel:      "gpt-5.3-codex-spark",
+	placeholder,
+		{
+			name: "preserves gpt-5.5 instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt-5.5",
+			defaultMappedModel: "gpt-5.4",
+			expectedModel:      "gpt-5.5",
+	placeholder,
+		{
+			name: "preserves openai namespaced gpt-5.5 instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "openai/gpt-5.5",
+			defaultMappedModel: "gpt-5.4",
+			expectedModel:      "openai/gpt-5.5",
+	placeholder,
+		{
+			name: "preserves compact gpt-5.5 instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt-5.5-openai-compact",
+			defaultMappedModel: "gpt-5.4",
+			expectedModel:      "gpt-5.5-openai-compact",
 	placeholder,
 placeholder
 

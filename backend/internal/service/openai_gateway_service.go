@@ -1995,6 +1995,17 @@ placeholder
 			account.Type,
 		)
 placeholder
+	if err := validateCodexSparkInput(reqBody, upstreamModel); err != nil {
+		setOpsUpstreamError(c, http.StatusBadRequest, err.Error(), "")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"type":    "invalid_request_error",
+				"message": err.Error(),
+				"param":   "input",
+		placeholder,
+	placeholder)
+		return nil, err
+placeholder
 
 	// OpenAI OAuth 账号走 ChatGPT internal Codex endpoint，需要将模型名规范化为
 	// 上游可识别的 Codex/GPT 系列。API Key 账号则应保留原始/映射后的模型名，
