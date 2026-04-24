@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -14,10 +15,11 @@ import (
 
 // UserHandler handles user-related requests
 type UserHandler struct {
-	userService  *service.UserService
-	authService  *service.AuthService
-	emailService *service.EmailService
-	emailCache   service.EmailCache
+	userService      *service.UserService
+	authService      *service.AuthService
+	emailService     *service.EmailService
+	emailCache       service.EmailCache
+	affiliateService *service.AffiliateService
 placeholder
 
 // NewUserHandler creates a new UserHandler
@@ -33,6 +35,13 @@ func NewUserHandler(
 		emailService: emailService,
 		emailCache:   emailCache,
 placeholder
+placeholder
+
+func (h *UserHandler) SetAffiliateService(affiliateService *service.AffiliateService) {
+	if h == nil {
+		return
+placeholder
+	h.affiliateService = affiliateService
 placeholder
 
 // ChangePasswordRequest represents the change password request payload
@@ -157,6 +166,63 @@ placeholder
 placeholder
 
 	response.Success(c, profileResp)
+placeholder
+
+func (h *UserHandler) affiliateServiceOrErr() (*service.AffiliateService, error) {
+	if h == nil || h.affiliateService == nil {
+		return nil, infraerrors.ServiceUnavailable("SERVICE_UNAVAILABLE", "affiliate service unavailable")
+placeholder
+	return h.affiliateService, nil
+placeholder
+
+// GetAffiliate returns the current user's affiliate details.
+// GET /api/v1/user/aff
+func (h *UserHandler) GetAffiliate(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+
+	affiliateSvc, err := h.affiliateServiceOrErr()
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	detail, err := affiliateSvc.GetAffiliateDetail(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, detail)
+placeholder
+
+// TransferAffiliateQuota transfers all available affiliate quota into current balance.
+// POST /api/v1/user/aff/transfer
+func (h *UserHandler) TransferAffiliateQuota(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+
+	affiliateSvc, err := h.affiliateServiceOrErr()
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	transferred, balance, err := affiliateSvc.TransferAffiliateQuota(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{
+		"transferred_quota": transferred,
+		"balance":           balance,
+placeholder)
 placeholder
 
 type StartIdentityBindingRequest struct {

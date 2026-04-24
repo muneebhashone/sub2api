@@ -9,7 +9,14 @@ import {
   prepareOAuthBindAccessTokenCookie,
   type WeChatOAuthPublicSettings,
 placeholder from './auth'
-import type { User, ChangePasswordRequest, NotifyEmailEntry, UserAuthProvider placeholder from '@/types'
+import type {
+  User,
+  ChangePasswordRequest,
+  NotifyEmailEntry,
+  UserAuthProvider,
+  UserAffiliateDetail,
+  AffiliateTransferResponse
+placeholder from '@/types'
 
 /**
  * Get current user profile
@@ -168,6 +175,16 @@ export async function startOAuthBinding(
   window.location.href = startURL
 placeholder
 
+export async function getAffiliateDetail(): Promise<UserAffiliateDetail> {
+  const { data placeholder = await apiClient.get<UserAffiliateDetail>('/user/aff')
+  return data
+placeholder
+
+export async function transferAffiliateQuota(): Promise<AffiliateTransferResponse> {
+  const { data placeholder = await apiClient.post<AffiliateTransferResponse>('/user/aff/transfer')
+  return data
+placeholder
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -180,7 +197,9 @@ export const userAPI = {
   bindEmailIdentity,
   unbindAuthIdentity,
   buildOAuthBindingStartURL,
-  startOAuthBinding
+  startOAuthBinding,
+  getAffiliateDetail,
+  transferAffiliateQuota
 placeholder
 
 export default userAPI
