@@ -332,7 +332,12 @@ placeholder
 	if s.responseHeaderFilter != nil {
 		responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 placeholder
-	c.JSON(http.StatusOK, responsesResp)
+	if respBytes, err := json.Marshal(responsesResp); err == nil {
+		respBytes = reverseToolNamesIfPresent(c, respBytes)
+		c.Data(http.StatusOK, "application/json; charset=utf-8", respBytes)
+placeholder else {
+		c.JSON(http.StatusOK, responsesResp)
+placeholder
 
 	return &ForwardResult{
 		RequestID:       requestID,
@@ -420,7 +425,8 @@ placeholder
 				)
 				continue
 		placeholder
-			if _, err := fmt.Fprint(c.Writer, sse); err != nil {
+			out := string(reverseToolNamesIfPresent(c, []byte(sse)))
+			if _, err := fmt.Fprint(c.Writer, out); err != nil {
 				logger.L().Info("forward_as_responses stream: client disconnected",
 					zap.String("request_id", requestID),
 				)
@@ -440,7 +446,8 @@ placeholder
 				if err != nil {
 					continue
 			placeholder
-				fmt.Fprint(c.Writer, sse) //nolint:errcheck
+				out := string(reverseToolNamesIfPresent(c, []byte(sse)))
+				fmt.Fprint(c.Writer, out) //nolint:errcheck
 		placeholder
 			c.Writer.Flush()
 	placeholder

@@ -313,7 +313,14 @@ placeholder
 	if s.responseHeaderFilter != nil {
 		responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 placeholder
-	c.JSON(http.StatusOK, ccResp)
+	// Marshal then bytes-replace so tool name mapping is reversed at byte level
+	// (parity with Parrot non-stream flow that marshals → restore → emit).
+	if respBytes, err := json.Marshal(ccResp); err == nil {
+		respBytes = reverseToolNamesIfPresent(c, respBytes)
+		c.Data(http.StatusOK, "application/json; charset=utf-8", respBytes)
+placeholder else {
+		c.JSON(http.StatusOK, ccResp)
+placeholder
 
 	return &ForwardResult{
 		RequestID:       requestID,
@@ -384,7 +391,10 @@ placeholder
 		if err != nil {
 			return false
 	placeholder
-		if _, err := fmt.Fprint(c.Writer, sse); err != nil {
+		// Reverse tool name mapping: fake → real, per-chunk bytes.Replace.
+		// c 可能持有请求侧注入的 ToolNameRewrite；无则仅做静态前缀还原。
+		out := string(reverseToolNamesIfPresent(c, []byte(sse)))
+		if _, err := fmt.Fprint(c.Writer, out); err != nil {
 			return true // client disconnected
 	placeholder
 		return false
