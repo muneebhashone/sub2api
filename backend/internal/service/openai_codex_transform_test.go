@@ -92,6 +92,78 @@ placeholder
 	require.Equal(t, "fc1", second["call_id"])
 placeholder
 
+func TestApplyCodexOAuthTransform_ToolSearchOutputPreservesCallID(t *testing.T) {
+	reqBody := map[string]any{
+		"model": "gpt-5.2",
+		"input": []any{
+			map[string]any{"type": "tool_search_output", "call_id": "call_1", "output": "ok"placeholder,
+	placeholder,
+placeholder
+
+	applyCodexOAuthTransform(reqBody, false, false)
+
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
+	require.Len(t, input, 1)
+
+	first, ok := input[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "tool_search_output", first["type"])
+	require.Equal(t, "fc1", first["call_id"])
+placeholder
+
+func TestApplyCodexOAuthTransform_CustomAndMCPToolOutputsPreserveCallID(t *testing.T) {
+	reqBody := map[string]any{
+		"model": "gpt-5.2",
+		"input": []any{
+			map[string]any{"type": "custom_tool_call_output", "call_id": "call_custom", "output": "ok"placeholder,
+			map[string]any{"type": "mcp_tool_call_output", "call_id": "call_mcp", "output": "ok"placeholder,
+	placeholder,
+placeholder
+
+	applyCodexOAuthTransform(reqBody, false, false)
+
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
+	require.Len(t, input, 2)
+
+	first, ok := input[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "fccustom", first["call_id"])
+
+	second, ok := input[1].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "fcmcp", second["call_id"])
+placeholder
+
+func TestApplyCodexOAuthTransform_ImageAndWebSearchCallsDoNotGainCallID(t *testing.T) {
+	reqBody := map[string]any{
+		"model": "gpt-5.2",
+		"input": []any{
+			map[string]any{"type": "image_generation_call", "id": "ig_123", "status": "completed"placeholder,
+			map[string]any{"type": "web_search_call", "call_id": "call_bad", "status": "completed"placeholder,
+	placeholder,
+		"tool_choice": "auto",
+placeholder
+
+	applyCodexOAuthTransform(reqBody, false, false)
+
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
+	require.Len(t, input, 2)
+
+	first, ok := input[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "ig_123", first["id"])
+	_, hasCallID := first["call_id"]
+	require.False(t, hasCallID)
+
+	second, ok := input[1].(map[string]any)
+	require.True(t, ok)
+	_, hasCallID = second["call_id"]
+	require.False(t, hasCallID)
+placeholder
+
 func TestApplyCodexOAuthTransform_ExplicitStoreFalsePreserved(t *testing.T) {
 	// 续链场景：显式 store=false 不再强制为 true，保持 false。
 
