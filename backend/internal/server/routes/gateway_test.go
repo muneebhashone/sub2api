@@ -45,7 +45,12 @@ placeholder
 func TestGatewayRoutesOpenAIResponsesCompactPathIsRegistered(t *testing.T) {
 	router := newGatewayRoutesTestRouter()
 
-	for _, path := range []string{"/v1/responses/compact", "/responses/compact"placeholder {
+	for _, path := range []string{
+		"/v1/responses/compact",
+		"/responses/compact",
+		"/backend-api/codex/responses",
+		"/backend-api/codex/responses/compact",
+placeholder {
 		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"model":"gpt-5"placeholder`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()

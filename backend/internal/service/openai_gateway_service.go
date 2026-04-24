@@ -1935,10 +1935,21 @@ placeholder
 		markPatchSet("instructions", "You are a helpful coding assistant.")
 placeholder
 
+	if isCodexCLI && ensureOpenAIResponsesImageGenerationTool(reqBody) {
+		bodyModified = true
+		disablePatch()
+		logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Injected /responses image_generation tool for Codex client")
+placeholder
+
 	if normalizeOpenAIResponsesImageGenerationTools(reqBody) {
 		bodyModified = true
 		disablePatch()
 		logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Normalized /responses image_generation tool payload")
+placeholder
+	if isCodexCLI && applyCodexImageGenerationBridgeInstructions(reqBody) {
+		bodyModified = true
+		disablePatch()
+		logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Added Codex image_generation bridge instructions")
 placeholder
 
 	// 对所有请求执行模型映射（包含 Codex CLI）。
@@ -1950,6 +1961,20 @@ placeholder
 		markPatchSet("model", billingModel)
 placeholder
 	upstreamModel := billingModel
+	if normalizeOpenAIResponsesImageOnlyModel(reqBody) {
+		bodyModified = true
+		disablePatch()
+		if model, ok := reqBody["model"].(string); ok {
+			upstreamModel = strings.TrimSpace(model)
+	placeholder
+		logger.LegacyPrintf(
+			"service.openai_gateway",
+			"[OpenAI] Normalized /responses image-only model request inbound_model=%s image_model=%s upstream_model=%s",
+			reqModel,
+			billingModel,
+			upstreamModel,
+		)
+placeholder
 	if err := validateOpenAIResponsesImageModel(reqBody, upstreamModel); err != nil {
 		setOpsUpstreamError(c, http.StatusBadRequest, err.Error(), "")
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -4118,11 +4143,16 @@ placeholder
 // Returns (nil, false) if no content was found in deltas.
 func reconstructResponseOutputFromSSE(bodyText string) ([]byte, bool) {
 	acc := apicompat.NewBufferedResponseAccumulator()
+	imageOutputs := make([]json.RawMessage, 0, 1)
+	seenImages := make(map[string]struct{placeholder)
 	lines := strings.Split(bodyText, "\n")
 	for _, line := range lines {
 		data, ok := extractOpenAISSEDataLine(line)
 		if !ok || data == "" || data == "[DONE]" {
 			continue
+	placeholder
+		if imageOutput, ok := extractImageGenerationOutputFromSSEData([]byte(data), seenImages); ok {
+			imageOutputs = append(imageOutputs, imageOutput)
 	placeholder
 		var event apicompat.ResponsesStreamEvent
 		if err := json.Unmarshal([]byte(data), &event); err != nil {
@@ -4130,15 +4160,54 @@ func reconstructResponseOutputFromSSE(bodyText string) ([]byte, bool) {
 	placeholder
 		acc.ProcessEvent(&event)
 placeholder
-	if !acc.HasContent() {
+	if !acc.HasContent() && len(imageOutputs) == 0 {
 		return nil, false
 placeholder
-	output := acc.BuildOutput()
+
+	var output []json.RawMessage
+	if acc.HasContent() {
+		outputJSON, err := json.Marshal(acc.BuildOutput())
+		if err != nil {
+			return nil, false
+	placeholder
+		if err := json.Unmarshal(outputJSON, &output); err != nil {
+			return nil, false
+	placeholder
+placeholder
+	output = append(output, imageOutputs...)
+
 	outputJSON, err := json.Marshal(output)
 	if err != nil {
 		return nil, false
 placeholder
 	return outputJSON, true
+placeholder
+
+func extractImageGenerationOutputFromSSEData(data []byte, seen map[string]struct{placeholder) (json.RawMessage, bool) {
+	if len(data) == 0 || !gjson.ValidBytes(data) {
+		return nil, false
+placeholder
+	if gjson.GetBytes(data, "type").String() != "response.output_item.done" {
+		return nil, false
+placeholder
+	item := gjson.GetBytes(data, "item")
+	if !item.Exists() || !item.IsObject() || item.Get("type").String() != "image_generation_call" {
+		return nil, false
+placeholder
+	if strings.TrimSpace(item.Get("result").String()) == "" {
+		return nil, false
+placeholder
+	key := strings.TrimSpace(item.Get("id").String())
+	if key == "" {
+		key = strings.TrimSpace(item.Get("output_format").String()) + "|" + strings.TrimSpace(item.Get("result").String())
+placeholder
+	if key != "" && seen != nil {
+		if _, exists := seen[key]; exists {
+			return nil, false
+	placeholder
+		seen[key] = struct{placeholder{placeholder
+placeholder
+	return json.RawMessage(item.Raw), true
 placeholder
 
 func (s *OpenAIGatewayService) parseSSEUsageFromBody(body string) *OpenAIUsage {
