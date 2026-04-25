@@ -109,6 +109,11 @@ export const FeatureFlags = {
     mode: 'opt-out',
     label: 'Payment',
   placeholder),
+  affiliate: defineFlag({
+    key: 'affiliate_enabled',
+    mode: 'opt-in',
+    label: 'Affiliate',
+  placeholder),
 placeholder as const
 
 export type RegisteredFeatureFlag = keyof typeof FeatureFlags

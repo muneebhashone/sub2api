@@ -242,6 +242,8 @@ placeholder
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
+
+		AffiliateEnabled: settings.AffiliateEnabled,
 placeholder
 	response.Success(c, systemSettingsResponseData(payload, authSourceDefaults))
 placeholder
@@ -441,6 +443,9 @@ type UpdateSettingsRequest struct {
 
 	// Available Channels feature switch (user-facing)
 	AvailableChannelsEnabled *bool `json:"available_channels_enabled"`
+
+	// Affiliate (邀请返利) feature switch
+	AffiliateEnabled *bool `json:"affiliate_enabled"`
 placeholder
 
 // UpdateSettings 更新系统设置
@@ -1265,6 +1270,12 @@ placeholder
 		placeholder
 			return previousSettings.AvailableChannelsEnabled
 	placeholder(),
+		AffiliateEnabled: func() bool {
+			if req.AffiliateEnabled != nil {
+				return *req.AffiliateEnabled
+		placeholder
+			return previousSettings.AffiliateEnabled
+	placeholder(),
 placeholder
 
 	authSourceDefaults := &service.AuthSourceDefaultSettings{
@@ -1502,6 +1513,8 @@ placeholder
 		ChannelMonitorDefaultIntervalSeconds: updatedSettings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
+
+		AffiliateEnabled: updatedSettings.AffiliateEnabled,
 placeholder
 	response.Success(c, systemSettingsResponseData(payload, updatedAuthSourceDefaults))
 placeholder
@@ -1869,6 +1882,9 @@ placeholder
 placeholder
 	if before.AvailableChannelsEnabled != after.AvailableChannelsEnabled {
 		changed = append(changed, "available_channels_enabled")
+placeholder
+	if before.AffiliateEnabled != after.AffiliateEnabled {
+		changed = append(changed, "affiliate_enabled")
 placeholder
 	changed = appendAuthSourceDefaultChanges(changed, beforeAuthSourceDefaults, afterAuthSourceDefaults)
 	return changed

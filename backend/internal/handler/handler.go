@@ -34,6 +34,7 @@ type AdminHandlers struct {
 	ChannelMonitor         *admin.ChannelMonitorHandler
 	ChannelMonitorTemplate *admin.ChannelMonitorRequestTemplateHandler
 	Payment                *admin.PaymentHandler
+	Affiliate              *admin.AffiliateHandler
 placeholder
 
 // Handlers contains all HTTP handlers

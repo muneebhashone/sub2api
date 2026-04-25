@@ -75,5 +75,7 @@ placeholder
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 
 		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
+
+		AffiliateEnabled: settings.AffiliateEnabled,
 placeholder)
 placeholder
