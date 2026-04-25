@@ -451,3 +451,50 @@ placeholder
 		t.Errorf("failure message should hint replace-mode, got %q", res.Message)
 placeholder
 placeholder
+
+func TestExtractAnthropicMonitorText(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+placeholder{
+		{
+			name: "text block after thinking",
+			body: `{"content":[{"type":"thinking","thinking":""placeholder,{"type":"text","text":"2"placeholder]placeholder`,
+			want: "2",
+	placeholder,
+		{
+			name: "single text block",
+			body: `{"content":[{"type":"text","text":"2"placeholder]placeholder`,
+			want: "2",
+	placeholder,
+		{
+			name: "thinking only",
+			body: `{"content":[{"type":"thinking","thinking":""placeholder]placeholder`,
+			want: "",
+	placeholder,
+		{
+			name: "multiple text blocks",
+			body: `{"content":[{"type":"text","text":"answer"placeholder,{"type":"tool_use","name":"x"placeholder,{"type":"text","text":"2"placeholder]placeholder`,
+			want: "answer\n2",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractAnthropicMonitorText([]byte(tt.body))
+			if got != tt.want {
+				t.Fatalf("extractAnthropicMonitorText() = %q, want %q", got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestValidateChallenge_AnthropicTextAfterThinking(t *testing.T) {
+	body := []byte(`{"content":[{"type":"thinking","thinking":""placeholder,{"type":"text","text":"答案是 2"placeholder]placeholder`)
+	respText := extractAnthropicMonitorText(body)
+
+	if !validateChallenge(respText, "2") {
+		t.Fatalf("validateChallenge(%q, %q) = false, want true", respText, "2")
+placeholder
+placeholder
