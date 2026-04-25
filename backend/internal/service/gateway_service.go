@@ -119,7 +119,7 @@ placeholder
 		return true
 placeholder
 	switch gjson.Get(trimmed, "type").String() {
-	case "response.completed", "response.done", "response.failed":
+	case "response.completed", "response.done", "response.failed", "response.incomplete", "response.cancelled", "response.canceled":
 		return true
 	default:
 		return false
