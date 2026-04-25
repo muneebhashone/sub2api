@@ -54,6 +54,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportResponsesWebsocketV2,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)

@@ -26,6 +26,13 @@ vi.mock('@/api/admin', () => ({
     accounts: {
       update: updateAccountMock,
       checkMixedChannelRisk: checkMixedChannelRiskMock
+    placeholder,
+    settings: {
+      getWebSearchEmulationConfig: vi.fn().mockResolvedValue({ enabled: false, providers: [] placeholder),
+      getSettings: vi.fn().mockResolvedValue({placeholder)
+    placeholder,
+    tlsFingerprintProfiles: {
+      list: vi.fn().mockResolvedValue([])
     placeholder
   placeholder
 placeholder))
@@ -82,6 +89,32 @@ const ModelWhitelistSelectorStub = defineComponent({
   `
 placeholder)
 
+const SelectStub = defineComponent({
+  name: 'SelectStub',
+  props: {
+    modelValue: {
+      type: [String, Number, Boolean, null],
+      default: ''
+    placeholder,
+    options: {
+      type: Array,
+      default: () => []
+    placeholder
+  placeholder,
+  emits: ['update:modelValue'],
+  template: `
+    <select
+      v-bind="$attrs"
+      :value="modelValue"
+      @change="$emit('update:modelValue', $event.target.value)"
+    >
+      <option v-for="option in options" :key="option.value" :value="option.value">
+        {{ option.label placeholderplaceholder
+      </option>
+    </select>
+  `
+placeholder)
+
 function buildAccount() {
   return {
     id: 1,
@@ -119,7 +152,7 @@ function mountModal(account = buildAccount()) {
     global: {
       stubs: {
         BaseDialog: BaseDialogStub,
-        Select: true,
+        Select: SelectStub,
         Icon: true,
         ProxySelector: true,
         GroupSelector: true,
@@ -154,6 +187,33 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock).toHaveBeenCalledTimes(1)
     expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.model_mapping).toEqual({
       'gpt-5.2': 'gpt-5.2'
+    placeholder)
+  placeholder)
+
+  it('submits OpenAI compact mode and compact-only model mapping', async () => {
+    const account = buildAccount()
+    account.extra = {
+      openai_compact_mode: 'force_on'
+    placeholder
+    account.credentials = {
+      ...account.credentials,
+      compact_model_mapping: {
+        'gpt-5.4': 'gpt-5.4-openai-compact'
+      placeholder
+    placeholder
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.openai_compact_mode).toBe('force_on')
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.compact_model_mapping).toEqual({
+      'gpt-5.4': 'gpt-5.4-openai-compact'
     placeholder)
   placeholder)
 placeholder)

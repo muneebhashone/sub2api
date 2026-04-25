@@ -289,6 +289,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -343,6 +344,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportResponsesWebsocketV2,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -384,6 +386,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportResponsesWebsocketV2,
+		false,
 	)
 	require.ErrorContains(t, err, "no available OpenAI accounts")
 	require.Nil(t, selection)
@@ -445,6 +448,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -486,7 +490,7 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyRateLimite
 		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
 placeholder
 
-	selection, decision, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_rate_limited", "gpt-5.1", nil, OpenAIUpstreamTransportAny)
+	selection, decision, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_rate_limited", "gpt-5.1", nil, OpenAIUpstreamTransportAny, false)
 placeholder
 	require.NotNil(t, selection)
 	require.NotNil(t, selection.Account)
@@ -540,7 +544,7 @@ placeholder
 		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
 placeholder
 
-	selection, decision, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_db_runtime_recheck", "gpt-5.1", nil, OpenAIUpstreamTransportAny)
+	selection, decision, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_db_runtime_recheck", "gpt-5.1", nil, OpenAIUpstreamTransportAny, false)
 placeholder
 	require.NotNil(t, selection)
 	require.NotNil(t, selection.Account)
@@ -616,6 +620,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -662,6 +667,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -740,6 +746,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -788,6 +795,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -857,6 +865,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportResponsesWebsocketV2,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -900,6 +909,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportResponsesWebsocketV2,
+		false,
 	)
 placeholder
 	require.Nil(t, selection)
@@ -976,6 +986,7 @@ placeholder
 		"gpt-5.1",
 		nil,
 		OpenAIUpstreamTransportAny,
+		false,
 	)
 placeholder
 	require.NotNil(t, selection)
@@ -1014,7 +1025,7 @@ placeholder
 		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
 placeholder
 
-	selection, _, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_metrics", "gpt-5.1", nil, OpenAIUpstreamTransportAny)
+	selection, _, err := svc.SelectAccountWithScheduler(ctx, &groupID, "", "session_hash_metrics", "gpt-5.1", nil, OpenAIUpstreamTransportAny, false)
 placeholder
 	require.NotNil(t, selection)
 	svc.ReportOpenAIAccountScheduleResult(account.ID, true, intPtrForTest(120))
@@ -1218,6 +1229,7 @@ placeholder
 			"gpt-5.1",
 			nil,
 			OpenAIUpstreamTransportAny,
+			false,
 		)
 	placeholder
 		require.NotNil(t, selection)

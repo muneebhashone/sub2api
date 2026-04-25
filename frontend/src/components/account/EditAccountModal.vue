@@ -1306,6 +1306,64 @@
         </div>
       </div>
 
+      <div
+        v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'apikey')"
+        class="border-t border-gray-200 pt-4 dark:border-dark-600 space-y-4"
+      >
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="input-label mb-0">{{ t('admin.accounts.openai.compactMode') placeholderplaceholder</label>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.accounts.openai.compactModeDesc') placeholderplaceholder
+            </p>
+          </div>
+          <div class="w-44">
+            <Select v-model="openAICompactMode" :options="openAICompactModeOptions" />
+          </div>
+        </div>
+        <div class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-dark-700 dark:text-gray-300">
+          <span class="font-medium">{{ t(openAICompactStatusKey) placeholderplaceholder</span>
+          <span
+            v-if="account?.extra?.openai_compact_checked_at"
+            class="ml-2 text-gray-500 dark:text-gray-400"
+          >
+            {{ t('admin.accounts.openai.compactLastChecked') placeholderplaceholder:
+            {{ formatDateTime(new Date(String(account.extra.openai_compact_checked_at))) placeholderplaceholder
+          </span>
+        </div>
+        <div>
+          <label class="input-label">{{ t('admin.accounts.openai.compactModelMapping') placeholderplaceholder</label>
+          <p class="input-hint">{{ t('admin.accounts.openai.compactModelMappingDesc') placeholderplaceholder</p>
+          <div v-if="openAICompactModelMappings.length > 0" class="mb-3 space-y-2">
+            <div
+              v-for="(mapping, index) in openAICompactModelMappings"
+              :key="getOpenAICompactModelMappingKey(mapping)"
+              class="flex items-center gap-2"
+            >
+              <input
+                v-model="mapping.from"
+                type="text"
+                class="input flex-1"
+                :placeholder="t('admin.accounts.fromModel')"
+              />
+              <span class="text-gray-400">→</span>
+              <input
+                v-model="mapping.to"
+                type="text"
+                class="input flex-1"
+                :placeholder="t('admin.accounts.toModel')"
+              />
+              <button type="button" @click="removeOpenAICompactModelMapping(index)" class="text-red-500 hover:text-red-700">
+                <Icon name="trash" size="sm" />
+              </button>
+            </div>
+          </div>
+          <button type="button" @click="addOpenAICompactModelMapping" class="btn btn-secondary text-sm">
+            + {{ t('admin.accounts.addMapping') placeholderplaceholder
+          </button>
+        </div>
+      </div>
+
       <div>
         <div class="flex items-center justify-between">
           <div>
@@ -1849,7 +1907,7 @@ import { useAppStore placeholder from '@/stores/app'
 import { useAuthStore placeholder from '@/stores/auth'
 import { adminAPI placeholder from '@/api/admin'
 import { useQuotaNotifyState placeholder from '@/composables/useQuotaNotifyState'
-import type { Account, Proxy, AdminGroup, CheckMixedChannelResponse placeholder from '@/types'
+import type { Account, Proxy, AdminGroup, CheckMixedChannelResponse, OpenAICompactMode placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
@@ -1859,7 +1917,7 @@ import GroupSelector from '@/components/common/GroupSelector.vue'
 import ModelWhitelistSelector from '@/components/account/ModelWhitelistSelector.vue'
 import QuotaLimitCard from '@/components/account/QuotaLimitCard.vue'
 import { applyInterceptWarmup placeholder from '@/components/account/credentialsBuilder'
-import { formatDateTimeLocalInput, parseDateTimeLocalInput placeholder from '@/utils/format'
+import { formatDateTime, formatDateTimeLocalInput, parseDateTimeLocalInput placeholder from '@/utils/format'
 import { createStableObjectKeyResolver placeholder from '@/utils/stableObjectKey'
 import {
   OPENAI_WS_MODE_CTX_POOL,
@@ -1934,6 +1992,7 @@ const isBedrockAPIKeyMode = computed(() =>
   (props.account?.credentials as Record<string, unknown>)?.auth_mode === 'apikey'
 )
 const modelMappings = ref<ModelMapping[]>([])
+const openAICompactModelMappings = ref<ModelMapping[]>([])
 const modelRestrictionMode = ref<'whitelist' | 'mapping'>('whitelist')
 const allowedModels = ref<string[]>([])
 const DEFAULT_POOL_MODE_RETRY_COUNT = 3
@@ -1953,6 +2012,7 @@ const antigravityModelMappings = ref<ModelMapping[]>([])
 const tempUnschedEnabled = ref(false)
 const tempUnschedRules = ref<TempUnschedRuleForm[]>([])
 const getModelMappingKey = createStableObjectKeyResolver<ModelMapping>('edit-model-mapping')
+const getOpenAICompactModelMappingKey = createStableObjectKeyResolver<ModelMapping>('edit-openai-compact-model-mapping')
 const getAntigravityModelMappingKey = createStableObjectKeyResolver<ModelMapping>('edit-antigravity-model-mapping')
 const getTempUnschedRuleKey = createStableObjectKeyResolver<TempUnschedRuleForm>('edit-temp-unsched-rule')
 
@@ -1992,6 +2052,7 @@ const customBaseUrl = ref('')
 
 // OpenAI 自动透传开关（OAuth/API Key）
 const openaiPassthroughEnabled = ref(false)
+const openAICompactMode = ref<OpenAICompactMode>('auto')
 const openaiOAuthResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const openaiAPIKeyResponsesWebSocketV2Mode = ref<OpenAIWSMode>(OPENAI_WS_MODE_OFF)
 const codexCLIOnlyEnabled = ref(false)
@@ -2045,9 +2106,27 @@ placeholder)
 const openAIWSModeConcurrencyHintKey = computed(() =>
   resolveOpenAIWSModeConcurrencyHintKey(openaiResponsesWebSocketV2Mode.value)
 )
+const openAICompactModeOptions = computed(() => [
+  { value: 'auto', label: t('admin.accounts.openai.compactModeAuto') placeholder,
+  { value: 'force_on', label: t('admin.accounts.openai.compactModeForceOn') placeholder,
+  { value: 'force_off', label: t('admin.accounts.openai.compactModeForceOff') placeholder
+])
 const isOpenAIModelRestrictionDisabled = computed(() =>
   props.account?.platform === 'openai' && openaiPassthroughEnabled.value
 )
+const openAICompactStatusKey = computed(() => {
+  const extra = props.account?.extra as Record<string, unknown> | undefined
+  if (!props.account || props.account.platform !== 'openai') return ''
+  const mode = typeof extra?.openai_compact_mode === 'string' ? extra.openai_compact_mode : 'auto'
+  if (mode === 'force_on') return 'admin.accounts.openai.compactSupported'
+  if (mode === 'force_off') return 'admin.accounts.openai.compactUnsupported'
+  if (typeof extra?.openai_compact_supported === 'boolean') {
+    return extra.openai_compact_supported
+      ? 'admin.accounts.openai.compactSupported'
+      : 'admin.accounts.openai.compactUnsupported'
+  placeholder
+  return 'admin.accounts.openai.compactUnknown'
+placeholder)
 
 // Computed: current preset mappings based on platform
 const presetMappings = computed(() => getPresetMappingsByPlatform(props.account?.platform || 'anthropic'))
@@ -2177,6 +2256,8 @@ const syncFormFromAccount = (newAccount: Account | null) => {
 
   // Load OpenAI passthrough toggle (OpenAI OAuth/API Key)
   openaiPassthroughEnabled.value = false
+  openAICompactMode.value = 'auto'
+  openAICompactModelMappings.value = []
   openaiOAuthResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
   openaiAPIKeyResponsesWebSocketV2Mode.value = OPENAI_WS_MODE_OFF
   codexCLIOnlyEnabled.value = false
@@ -2184,6 +2265,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   webSearchEmulationMode.value = 'default'
   if (newAccount.platform === 'openai' && (newAccount.type === 'oauth' || newAccount.type === 'apikey')) {
     openaiPassthroughEnabled.value = extra?.openai_passthrough === true || extra?.openai_oauth_passthrough === true
+    openAICompactMode.value = (extra?.openai_compact_mode as OpenAICompactMode) || 'auto'
     openaiOAuthResponsesWebSocketV2Mode.value = resolveOpenAIWSModeFromExtra(extra, {
       modeKey: 'openai_oauth_responses_websockets_v2_mode',
       enabledKey: 'openai_oauth_responses_websockets_v2_enabled',
@@ -2198,6 +2280,11 @@ const syncFormFromAccount = (newAccount: Account | null) => {
     placeholder)
     if (newAccount.type === 'oauth') {
       codexCLIOnlyEnabled.value = extra?.codex_cli_only === true
+    placeholder
+    const credentials = newAccount.credentials as Record<string, unknown> | undefined
+    const compactMappings = credentials?.compact_model_mapping as Record<string, string> | undefined
+    if (compactMappings && typeof compactMappings === 'object') {
+      openAICompactModelMappings.value = Object.entries(compactMappings).map(([from, to]) => ({ from, to placeholder))
     placeholder
   placeholder
   if (newAccount.platform === 'anthropic' && newAccount.type === 'apikey') {
@@ -2423,6 +2510,15 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   editApiKey.value = ''
 placeholder
 
+async function loadTLSProfiles() {
+  try {
+    const profiles = await adminAPI.tlsFingerprintProfiles.list()
+    tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name placeholder))
+  placeholder catch {
+    tlsFingerprintProfiles.value = []
+  placeholder
+placeholder
+
 watch(
   [() => props.show, () => props.account],
   ([show, newAccount], [wasShow, previousAccount]) => {
@@ -2436,15 +2532,6 @@ watch(
   placeholder,
   { immediate: true placeholder
 )
-
-const loadTLSProfiles = async () => {
-  try {
-    const profiles = await adminAPI.tlsFingerprintProfiles.list()
-    tlsFingerprintProfiles.value = profiles.map(p => ({ id: p.id, name: p.name placeholder))
-  placeholder catch {
-    tlsFingerprintProfiles.value = []
-  placeholder
-placeholder
 
 // Model mapping helpers
 const addModelMapping = () => {
@@ -2466,6 +2553,14 @@ placeholder
 
 const addAntigravityModelMapping = () => {
   antigravityModelMappings.value.push({ from: '', to: '' placeholder)
+placeholder
+
+const addOpenAICompactModelMapping = () => {
+  openAICompactModelMappings.value.push({ from: '', to: '' placeholder)
+placeholder
+
+const removeOpenAICompactModelMapping = (index: number) => {
+  openAICompactModelMappings.value.splice(index, 1)
 placeholder
 
 const removeAntigravityModelMapping = (index: number) => {
@@ -2911,6 +3006,14 @@ const handleSubmit = async () => {
       placeholder else if (currentCredentials.model_mapping) {
         newCredentials.model_mapping = currentCredentials.model_mapping
       placeholder
+      if (props.account.platform === 'openai') {
+        const compactModelMapping = buildModelMappingObject('mapping', [], openAICompactModelMappings.value)
+        if (compactModelMapping) {
+          newCredentials.compact_model_mapping = compactModelMapping
+        placeholder else {
+          delete newCredentials.compact_model_mapping
+        placeholder
+      placeholder
 
       // Add pool mode if enabled
       if (poolModeEnabled.value) {
@@ -3035,6 +3138,12 @@ const handleSubmit = async () => {
       placeholder else if (currentCredentials.model_mapping) {
         // 透传模式保留现有映射
         newCredentials.model_mapping = currentCredentials.model_mapping
+      placeholder
+      const compactModelMapping = buildModelMappingObject('mapping', [], openAICompactModelMappings.value)
+      if (compactModelMapping) {
+        newCredentials.compact_model_mapping = compactModelMapping
+      placeholder else {
+        delete newCredentials.compact_model_mapping
       placeholder
 
       updatePayload.credentials = newCredentials
@@ -3207,6 +3316,11 @@ const handleSubmit = async () => {
       placeholder else {
         delete newExtra.openai_passthrough
         delete newExtra.openai_oauth_passthrough
+      placeholder
+      if (openAICompactMode.value === 'auto') {
+        delete newExtra.openai_compact_mode
+      placeholder else {
+        newExtra.openai_compact_mode = openAICompactMode.value
       placeholder
 
       if (props.account.type === 'oauth') {

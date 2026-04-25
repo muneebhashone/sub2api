@@ -39,3 +39,22 @@ placeholder
 placeholder
 	return false
 placeholder
+
+// resolveOpenAICompactForwardModel determines the compact-only upstream model
+// for /responses/compact requests. It never affects normal /responses traffic.
+// When no compact-specific mapping matches, the input model is returned as-is.
+func resolveOpenAICompactForwardModel(account *Account, model string) string {
+	trimmedModel := strings.TrimSpace(model)
+	if trimmedModel == "" || account == nil {
+		return trimmedModel
+placeholder
+
+	mappedModel, matched := account.ResolveCompactMappedModel(trimmedModel)
+	if !matched {
+		return trimmedModel
+placeholder
+	if trimmedMapped := strings.TrimSpace(mappedModel); trimmedMapped != "" {
+		return trimmedMapped
+placeholder
+	return trimmedModel
+placeholder

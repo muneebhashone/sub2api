@@ -393,6 +393,56 @@ placeholder
 	return 0
 placeholder
 
+const (
+	// OpenAICompactModeAuto follows compact-probe results when deciding compact eligibility.
+	OpenAICompactModeAuto = "auto"
+	// OpenAICompactModeForceOn always treats the account as compact-supported.
+	OpenAICompactModeForceOn = "force_on"
+	// OpenAICompactModeForceOff always treats the account as compact-unsupported.
+	OpenAICompactModeForceOff = "force_off"
+)
+
+func normalizeOpenAICompactMode(mode string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case OpenAICompactModeForceOn:
+		return OpenAICompactModeForceOn
+	case OpenAICompactModeForceOff:
+		return OpenAICompactModeForceOff
+	default:
+		return OpenAICompactModeAuto
+placeholder
+placeholder
+
+func stringMappingFromRaw(raw any) map[string]string {
+	switch mapping := raw.(type) {
+	case map[string]any:
+		if len(mapping) == 0 {
+			return nil
+	placeholder
+		result := make(map[string]string, len(mapping))
+		for key, value := range mapping {
+			if str, ok := value.(string); ok {
+				result[key] = str
+		placeholder
+	placeholder
+		if len(result) == 0 {
+			return nil
+	placeholder
+		return result
+	case map[string]string:
+		if len(mapping) == 0 {
+			return nil
+	placeholder
+		result := make(map[string]string, len(mapping))
+		for key, value := range mapping {
+			result[key] = value
+	placeholder
+		return result
+	default:
+		return nil
+placeholder
+placeholder
+
 func (a *Account) GetModelMapping() map[string]string {
 	credentialsPtr := mapPtr(a.Credentials)
 	rawMapping, _ := a.Credentials["model_mapping"].(map[string]any)
@@ -594,6 +644,77 @@ placeholder
 		if mappedModel, matched := resolveRequestedModelInMapping(mapping, normalized); matched {
 			return mappedModel, true
 	placeholder
+placeholder
+	return requestedModel, false
+placeholder
+
+// GetOpenAICompactMode returns the compact routing mode for an OpenAI account.
+// Missing or invalid values fall back to "auto".
+func (a *Account) GetOpenAICompactMode() string {
+	if a == nil || !a.IsOpenAI() || a.Extra == nil {
+		return OpenAICompactModeAuto
+placeholder
+	mode, _ := a.Extra["openai_compact_mode"].(string)
+	return normalizeOpenAICompactMode(mode)
+placeholder
+
+// OpenAICompactSupportKnown reports whether compact capability is known for this
+// account and, when known, whether it is supported.
+func (a *Account) OpenAICompactSupportKnown() (supported bool, known bool) {
+	if a == nil || !a.IsOpenAI() {
+		return false, false
+placeholder
+
+	switch a.GetOpenAICompactMode() {
+	case OpenAICompactModeForceOn:
+		return true, true
+	case OpenAICompactModeForceOff:
+		return false, true
+placeholder
+
+	if a.Extra == nil {
+		return false, false
+placeholder
+	supported, ok := a.Extra["openai_compact_supported"].(bool)
+	if !ok {
+		return false, false
+placeholder
+	return supported, true
+placeholder
+
+// AllowsOpenAICompact reports whether the account may be considered for compact
+// requests. Unknown capability remains allowed to avoid breaking older accounts
+// before an explicit probe has been run.
+func (a *Account) AllowsOpenAICompact() bool {
+	if a == nil || !a.IsOpenAI() {
+		return false
+placeholder
+	supported, known := a.OpenAICompactSupportKnown()
+	if !known {
+		return true
+placeholder
+	return supported
+placeholder
+
+// GetCompactModelMapping returns compact-only model remapping configuration.
+// This mapping is intended for /responses/compact only and does not affect
+// normal /responses traffic.
+func (a *Account) GetCompactModelMapping() map[string]string {
+	if a == nil || a.Credentials == nil {
+		return nil
+placeholder
+	return stringMappingFromRaw(a.Credentials["compact_model_mapping"])
+placeholder
+
+// ResolveCompactMappedModel resolves compact-only model remapping and reports
+// whether a compact-specific mapping rule matched.
+func (a *Account) ResolveCompactMappedModel(requestedModel string) (mappedModel string, matched bool) {
+	mapping := a.GetCompactModelMapping()
+	if len(mapping) == 0 {
+		return requestedModel, false
+placeholder
+	if mappedModel, matched := resolveRequestedModelInMapping(mapping, requestedModel); matched {
+		return mappedModel, true
 placeholder
 	return requestedModel, false
 placeholder

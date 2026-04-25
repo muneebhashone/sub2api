@@ -117,7 +117,7 @@ func TestAccountTestService_OpenAISuccessPersistsSnapshotFromHeaders(t *testing.
 placeholder"access_token": "test-token"placeholder,
 placeholder
 
-	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "")
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
 placeholder
 	require.NotEmpty(t, repo.updatedExtra)
 	require.Equal(t, 42.0, repo.updatedExtra["codex_5h_used_percent"])
@@ -149,7 +149,7 @@ func TestAccountTestService_OpenAI429PersistsSnapshotAndRateLimitState(t *testin
 placeholder"access_token": "test-token"placeholder,
 placeholder
 
-	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "")
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
 placeholder
 	require.NotEmpty(t, repo.updatedExtra)
 	require.Equal(t, 100.0, repo.updatedExtra["codex_5h_used_percent"])
@@ -180,7 +180,7 @@ func TestAccountTestService_OpenAI429BodyOnlyPersistsRateLimitAndClearsStaleErro
 		Credentials:  map[string]any{"access_token": "test-token"placeholder,
 placeholder
 
-	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "")
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
 placeholder
 	require.Equal(t, account.ID, repo.rateLimitedID)
 	require.NotNil(t, repo.rateLimitedAt)
@@ -209,7 +209,7 @@ func TestAccountTestService_OpenAI429ActiveAccountDoesNotClearError(t *testing.T
 placeholder"access_token": "test-token"placeholder,
 placeholder
 
-	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "")
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
 placeholder
 	require.Equal(t, account.ID, repo.rateLimitedID)
 	require.NotNil(t, repo.rateLimitedAt)
@@ -237,7 +237,7 @@ func TestAccountTestService_OpenAI429WithoutResetSignalDoesNotMutateRuntimeState
 		Credentials:  map[string]any{"access_token": "test-token"placeholder,
 placeholder
 
-	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "")
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
 placeholder
 	require.Zero(t, repo.rateLimitedID)
 	require.Nil(t, repo.rateLimitedAt)
@@ -265,7 +265,7 @@ func TestAccountTestService_OpenAI401SetsPermanentErrorOnly(t *testing.T) {
 placeholder"access_token": "test-token"placeholder,
 placeholder
 
-	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "")
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
 placeholder
 	require.Equal(t, account.ID, repo.setErrorID)
 	require.Contains(t, repo.setErrorMsg, "Authentication failed (401)")
