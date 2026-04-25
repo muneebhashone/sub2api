@@ -35,7 +35,7 @@ placeholder
 			ExpireHour: 1,
 	placeholder,
 placeholder
-	authService := service.NewAuthService(nil, repo, nil, refreshTokenCache, cfg, nil, nil, nil, nil, nil, nil)
+	authService := service.NewAuthService(nil, repo, nil, refreshTokenCache, cfg, nil, nil, nil, nil, nil, nil, nil)
 	handler := &AuthHandler{authService: authServiceplaceholder
 
 	recorder := httptest.NewRecorder()

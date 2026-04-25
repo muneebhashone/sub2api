@@ -54,6 +54,7 @@ placeholder
 		nil, // emailQueueService
 		nil, // promoService
 		nil, // defaultSubAssigner
+		nil, // affiliateService
 	)
 placeholder
 

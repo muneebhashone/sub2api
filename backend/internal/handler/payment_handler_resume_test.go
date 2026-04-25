@@ -117,7 +117,7 @@ placeholder
 		Save(context.Background())
 placeholder
 
-	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, nil, nil, nil)
+	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, nil, nil, nil, nil)
 	h := NewPaymentHandler(paymentSvc, nil, nil)
 
 	recorder := httptest.NewRecorder()
@@ -215,7 +215,7 @@ placeholder)
 placeholder
 
 	configSvc := service.NewPaymentConfigService(client, nil, []byte("placeholder"))
-	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, configSvc, nil, nil)
+	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, configSvc, nil, nil, nil)
 	h := NewPaymentHandler(paymentSvc, nil, nil)
 
 	recorder := httptest.NewRecorder()
@@ -302,7 +302,7 @@ placeholder)
 placeholder
 
 	configSvc := service.NewPaymentConfigService(client, nil, []byte("placeholder"))
-	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, configSvc, nil, nil)
+	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, configSvc, nil, nil, nil)
 	h := NewPaymentHandler(paymentSvc, nil, nil)
 
 	recorder := httptest.NewRecorder()
@@ -342,7 +342,7 @@ placeholder
 	client := enttest.NewClient(t, enttest.WithOptions(dbent.Driver(drv)))
 	t.Cleanup(func() { _ = client.Close() placeholder)
 
-	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, nil, nil, nil)
+	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, nil, nil, nil, nil)
 	h := NewPaymentHandler(paymentSvc, nil, nil)
 
 	recorder := httptest.NewRecorder()
