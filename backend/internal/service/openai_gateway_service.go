@@ -3147,6 +3147,113 @@ type openaiStreamingResultPassthrough struct {
 	firstTokenMs *int
 placeholder
 
+func openAIStreamClientOutputStarted(c *gin.Context, localStarted bool) bool {
+	if localStarted {
+		return true
+placeholder
+	return c != nil && c.Writer != nil && c.Writer.Written()
+placeholder
+
+func openAIStreamEventIsPreamble(eventType string) bool {
+	switch strings.TrimSpace(eventType) {
+	case "response.created", "response.in_progress":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func openAIStreamDataStartsClientOutput(data, eventType string) bool {
+	trimmed := strings.TrimSpace(data)
+	if trimmed == "" {
+		return false
+placeholder
+	if strings.TrimSpace(eventType) == "response.failed" {
+		return false
+placeholder
+	return !openAIStreamEventIsPreamble(eventType)
+placeholder
+
+func openAIStreamFailedEventShouldFailover(payload []byte, message string) bool {
+	code := strings.ToLower(strings.TrimSpace(gjson.GetBytes(payload, "response.error.code").String()))
+	if code == "" {
+		code = strings.ToLower(strings.TrimSpace(gjson.GetBytes(payload, "error.code").String()))
+placeholder
+	errType := strings.ToLower(strings.TrimSpace(gjson.GetBytes(payload, "response.error.type").String()))
+	if errType == "" {
+		errType = strings.ToLower(strings.TrimSpace(gjson.GetBytes(payload, "error.type").String()))
+placeholder
+	combined := strings.ToLower(strings.TrimSpace(message + " " + code + " " + errType))
+	if combined == "" {
+		return true
+placeholder
+	nonRetryableMarkers := []string{
+		"invalid_request",
+		"content_policy",
+		"policy",
+		"safety",
+		"high-risk cyber",
+		"not allowed",
+		"violat",
+placeholder
+	for _, marker := range nonRetryableMarkers {
+		if strings.Contains(combined, marker) {
+			return false
+	placeholder
+placeholder
+	return true
+placeholder
+
+func (s *OpenAIGatewayService) newOpenAIStreamFailoverError(
+	c *gin.Context,
+	account *Account,
+	passthrough bool,
+	upstreamRequestID string,
+	payload []byte,
+	message string,
+) *UpstreamFailoverError {
+	message = sanitizeUpstreamErrorMessage(strings.TrimSpace(message))
+	if message == "" {
+		message = "OpenAI stream disconnected before completion"
+placeholder
+	detail := ""
+	if len(payload) > 0 && s != nil && s.cfg != nil && s.cfg.Gateway.LogUpstreamErrorBody {
+		maxBytes := s.cfg.Gateway.LogUpstreamErrorBodyMaxBytes
+		if maxBytes <= 0 {
+			maxBytes = 2048
+	placeholder
+		detail = truncateString(string(payload), maxBytes)
+placeholder
+	if c != nil {
+		setOpsUpstreamError(c, http.StatusBadGateway, message, detail)
+		event := OpsUpstreamErrorEvent{
+			Platform:           PlatformOpenAI,
+			UpstreamStatusCode: http.StatusBadGateway,
+			UpstreamRequestID:  strings.TrimSpace(upstreamRequestID),
+			Passthrough:        passthrough,
+			Kind:               "failover",
+			Message:            message,
+			Detail:             detail,
+	placeholder
+		if account != nil {
+			event.Platform = account.Platform
+			event.AccountID = account.ID
+			event.AccountName = account.Name
+	placeholder
+		appendOpsUpstreamError(c, event)
+placeholder
+	body, _ := json.Marshal(gin.H{
+		"error": gin.H{
+			"type":    "upstream_error",
+			"message": message,
+	placeholder,
+placeholder)
+	return &UpstreamFailoverError{
+		StatusCode:   http.StatusBadGateway,
+		ResponseBody: body,
+placeholder
+placeholder
+
 func (s *OpenAIGatewayService) handleStreamingResponsePassthrough(
 	ctx context.Context,
 	resp *http.Response,
@@ -3178,7 +3285,22 @@ placeholder
 	clientDisconnected := false
 	sawDone := false
 	sawTerminalEvent := false
+	sawFailedEvent := false
+	failedMessage := ""
+	clientOutputStarted := false
 	upstreamRequestID := strings.TrimSpace(resp.Header.Get("x-request-id"))
+	pendingLines := make([]string, 0, 8)
+	writePendingLines := func() bool {
+		for _, pending := range pendingLines {
+			if _, err := fmt.Fprintln(w, pending); err != nil {
+				clientDisconnected = true
+				logger.LegacyPrintf("service.openai_gateway", "[OpenAI passthrough] Client disconnected during streaming, continue draining upstream for usage: account=%d", account.ID)
+				return false
+		placeholder
+	placeholder
+		pendingLines = pendingLines[:0]
+		return true
+placeholder
 
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
@@ -3193,6 +3315,8 @@ placeholder
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		lineStartsClientOutput := false
+		forceFlushFailedEvent := false
 		if data, ok := extractOpenAISSEDataLine(line); ok {
 			dataBytes := []byte(data)
 			trimmedData := strings.TrimSpace(data)
@@ -3203,13 +3327,24 @@ placeholder
 					trimmedData = strings.TrimSpace(replacedData)
 			placeholder
 		placeholder
+			eventType := strings.TrimSpace(gjson.Get(trimmedData, "type").String())
+			if eventType == "response.failed" {
+				failedMessage = extractOpenAISSEErrorMessage(dataBytes)
+				if !openAIStreamClientOutputStarted(c, clientOutputStarted) && openAIStreamFailedEventShouldFailover(dataBytes, failedMessage) {
+					return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder,
+						s.newOpenAIStreamFailoverError(c, account, true, upstreamRequestID, dataBytes, failedMessage)
+			placeholder
+				forceFlushFailedEvent = true
+				sawFailedEvent = true
+		placeholder
 			if trimmedData == "[DONE]" {
 				sawDone = true
 		placeholder
 			if openAIStreamEventIsTerminal(trimmedData) {
 				sawTerminalEvent = true
 		placeholder
-			if firstTokenMs == nil && trimmedData != "" && trimmedData != "[DONE]" {
+			lineStartsClientOutput = forceFlushFailedEvent || openAIStreamDataStartsClientOutput(trimmedData, eventType)
+			if firstTokenMs == nil && lineStartsClientOutput && trimmedData != "[DONE]" {
 				ms := int(time.Since(startTime).Milliseconds())
 				firstTokenMs = &ms
 		placeholder
@@ -3217,20 +3352,30 @@ placeholder
 	placeholder
 
 		if !clientDisconnected {
+			if !clientOutputStarted && !lineStartsClientOutput {
+				pendingLines = append(pendingLines, line)
+				continue
+		placeholder
+			if !clientOutputStarted && len(pendingLines) > 0 {
+				if !writePendingLines() {
+					continue
+			placeholder
+		placeholder
 			if _, err := fmt.Fprintln(w, line); err != nil {
 				clientDisconnected = true
 				logger.LegacyPrintf("service.openai_gateway", "[OpenAI passthrough] Client disconnected during streaming, continue draining upstream for usage: account=%d", account.ID)
 		placeholder else {
+				clientOutputStarted = true
 				flusher.Flush()
 		placeholder
 	placeholder
 placeholder
 	if err := scanner.Err(); err != nil {
-		if sawTerminalEvent {
+		if sawTerminalEvent && !sawFailedEvent {
 			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, nil
 	placeholder
-		if clientDisconnected {
-			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream usage incomplete after disconnect: %w", err)
+		if sawFailedEvent {
+			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("upstream response failed: %s", failedMessage)
 	placeholder
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream usage incomplete: %w", err)
@@ -3238,6 +3383,17 @@ placeholder
 		if errors.Is(err, bufio.ErrTooLong) {
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI passthrough] SSE line too long: account=%d max_size=%d error=%v", account.ID, maxLineSize, err)
 			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, err
+	placeholder
+		if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
+			msg := "OpenAI stream disconnected before completion"
+			if errText := strings.TrimSpace(err.Error()); errText != "" {
+				msg += ": " + errText
+		placeholder
+			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder,
+				s.newOpenAIStreamFailoverError(c, account, true, upstreamRequestID, nil, msg)
+	placeholder
+		if clientDisconnected {
+			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream usage incomplete after disconnect: %w", err)
 	placeholder
 		logger.LegacyPrintf("service.openai_gateway",
 			"[OpenAI passthrough] 流读取异常中断: account=%d request_id=%s err=%v",
@@ -3247,12 +3403,19 @@ placeholder
 		)
 		return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream read error: %w", err)
 placeholder
+	if sawFailedEvent {
+		return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("upstream response failed: %s", failedMessage)
+placeholder
 	if !clientDisconnected && !sawDone && !sawTerminalEvent && ctx.Err() == nil {
 		logger.FromContext(ctx).With(
 			zap.String("component", "service.openai_gateway"),
 			zap.Int64("account_id", account.ID),
 			zap.String("upstream_request_id", upstreamRequestID),
 		).Info("OpenAI passthrough 上游流在未收到 [DONE] 时结束，疑似断流")
+		if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
+			return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder,
+				s.newOpenAIStreamFailoverError(c, account, true, upstreamRequestID, nil, "OpenAI stream ended before a terminal event")
+	placeholder
 		return &openaiStreamingResultPassthrough{usage: usage, firstTokenMs: firstTokenMsplaceholder, errors.New("stream usage incomplete: missing terminal event")
 placeholder
 
@@ -3854,6 +4017,11 @@ placeholder
 	errorEventSent := false
 	clientDisconnected := false // 客户端断开后继续 drain 上游以收集 usage
 	sawTerminalEvent := false
+	sawFailedEvent := false
+	failedMessage := ""
+	clientOutputStarted := false
+	upstreamRequestID := strings.TrimSpace(resp.Header.Get("x-request-id"))
+	var streamFailoverErr error
 	sendErrorEvent := func(reason string) {
 		if errorEventSent || clientDisconnected {
 			return
@@ -3870,7 +4038,9 @@ placeholder
 	placeholder
 		if err := flushBuffered(); err != nil {
 			clientDisconnected = true
+			return
 	placeholder
+		clientOutputStarted = true
 placeholder
 
 	needModelReplace := originalModel != mappedModel
@@ -3878,14 +4048,30 @@ placeholder
 		return &openaiStreamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder
 placeholder
 	finalizeStream := func() (*openaiStreamingResult, error) {
+		if !sawTerminalEvent {
+			if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
+				return resultWithUsage(), s.newOpenAIStreamFailoverError(
+					c,
+					account,
+					false,
+					upstreamRequestID,
+					nil,
+					"OpenAI stream ended before a terminal event",
+				)
+		placeholder
+			return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
+	placeholder
+		if sawFailedEvent {
+			return resultWithUsage(), fmt.Errorf("upstream response failed: %s", failedMessage)
+	placeholder
 		if !clientDisconnected {
+			hadBufferedData := bufferedWriter.Buffered() > 0
 			if err := flushBuffered(); err != nil {
 				clientDisconnected = true
 				logger.LegacyPrintf("service.openai_gateway", "Client disconnected during final flush, returning collected usage")
+		placeholder else if hadBufferedData {
+				clientOutputStarted = true
 		placeholder
-	placeholder
-		if !sawTerminalEvent {
-			return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
 	placeholder
 		return resultWithUsage(), nil
 placeholder
@@ -3893,28 +4079,41 @@ placeholder
 		if scanErr == nil {
 			return nil, nil, false
 	placeholder
-		if sawTerminalEvent {
+		if sawTerminalEvent && !sawFailedEvent {
 			logger.LegacyPrintf("service.openai_gateway", "Upstream scan ended after terminal event: %v", scanErr)
 			return resultWithUsage(), nil, true
+	placeholder
+		if sawFailedEvent {
+			return resultWithUsage(), fmt.Errorf("upstream response failed: %s", failedMessage), true
 	placeholder
 		// 客户端断开/取消请求时，上游读取往往会返回 context canceled。
 		// /v1/responses 的 SSE 事件必须符合 OpenAI 协议；这里不注入自定义 error event，避免下游 SDK 解析失败。
 		if errors.Is(scanErr, context.Canceled) || errors.Is(scanErr, context.DeadlineExceeded) {
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", scanErr), true
 	placeholder
-		// 客户端已断开时，上游出错仅影响体验，不影响计费；返回已收集 usage
-		if clientDisconnected {
-			return resultWithUsage(), fmt.Errorf("stream usage incomplete after disconnect: %w", scanErr), true
-	placeholder
 		if errors.Is(scanErr, bufio.ErrTooLong) {
 			logger.LegacyPrintf("service.openai_gateway", "SSE line too long: account=%d max_size=%d error=%v", account.ID, maxLineSize, scanErr)
 			sendErrorEvent("response_too_large")
 			return resultWithUsage(), scanErr, true
 	placeholder
+		if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
+			msg := "OpenAI stream disconnected before completion"
+			if errText := strings.TrimSpace(scanErr.Error()); errText != "" {
+				msg += ": " + errText
+		placeholder
+			return resultWithUsage(), s.newOpenAIStreamFailoverError(c, account, false, upstreamRequestID, nil, msg), true
+	placeholder
+		// 客户端已断开时，上游出错仅影响体验，不影响计费；返回已收集 usage
+		if clientDisconnected {
+			return resultWithUsage(), fmt.Errorf("stream usage incomplete after disconnect: %w", scanErr), true
+	placeholder
 		sendErrorEvent("stream_read_error")
 		return resultWithUsage(), fmt.Errorf("stream read error: %w", scanErr), true
 placeholder
 	processSSELine := func(line string, queueDrained bool) {
+		if streamFailoverErr != nil {
+			return
+	placeholder
 		lastDataAt = time.Now()
 
 		// Extract data from SSE line (supports both "data: " and "data:" formats)
@@ -3930,18 +4129,32 @@ placeholder
 			if openAIStreamEventIsTerminal(data) {
 				sawTerminalEvent = true
 		placeholder
+			eventType := strings.TrimSpace(gjson.GetBytes(dataBytes, "type").String())
+			forceFlushFailedEvent := false
+			if eventType == "response.failed" {
+				failedMessage = extractOpenAISSEErrorMessage(dataBytes)
+				if !openAIStreamClientOutputStarted(c, clientOutputStarted) && openAIStreamFailedEventShouldFailover(dataBytes, failedMessage) {
+					sawFailedEvent = true
+					streamFailoverErr = s.newOpenAIStreamFailoverError(c, account, false, upstreamRequestID, dataBytes, failedMessage)
+					return
+			placeholder
+				forceFlushFailedEvent = true
+				sawFailedEvent = true
+		placeholder
 
 			// Correct Codex tool calls if needed (apply_patch -> edit, etc.)
 			if correctedData, corrected := s.toolCorrector.CorrectToolCallsInSSEBytes(dataBytes); corrected {
 				dataBytes = correctedData
 				data = string(correctedData)
 				line = "data: " + data
+				eventType = strings.TrimSpace(gjson.GetBytes(dataBytes, "type").String())
 		placeholder
+			startsClientOutput := forceFlushFailedEvent || openAIStreamDataStartsClientOutput(data, eventType)
 
 			// 写入客户端（客户端断开后继续 drain 上游）
 			if !clientDisconnected {
-				shouldFlush := queueDrained
-				if firstTokenMs == nil && data != "" && data != "[DONE]" {
+				shouldFlush := queueDrained && (clientOutputStarted || startsClientOutput)
+				if firstTokenMs == nil && startsClientOutput {
 					// 保证首个 token 事件尽快出站，避免影响 TTFT。
 					shouldFlush = true
 			placeholder
@@ -3955,12 +4168,14 @@ placeholder
 					if err := flushBuffered(); err != nil {
 						clientDisconnected = true
 						logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming flush, continuing to drain upstream for billing")
+				placeholder else {
+						clientOutputStarted = true
 				placeholder
 			placeholder
 		placeholder
 
 			// Record first token time
-			if firstTokenMs == nil && data != "" && data != "[DONE]" {
+			if firstTokenMs == nil && startsClientOutput {
 				ms := int(time.Since(startTime).Milliseconds())
 				firstTokenMs = &ms
 		placeholder
@@ -3976,10 +4191,12 @@ placeholder
 		placeholder else if _, err := bufferedWriter.WriteString("\n"); err != nil {
 				clientDisconnected = true
 				logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming, continuing to drain upstream for billing")
-		placeholder else if queueDrained {
+		placeholder else if queueDrained && clientOutputStarted {
 				if err := flushBuffered(); err != nil {
 					clientDisconnected = true
 					logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming flush, continuing to drain upstream for billing")
+			placeholder else {
+					clientOutputStarted = true
 			placeholder
 		placeholder
 	placeholder
@@ -3990,6 +4207,9 @@ placeholder
 		defer putSSEScannerBuf64K(scanBuf)
 		for scanner.Scan() {
 			processSSELine(scanner.Text(), true)
+			if streamFailoverErr != nil {
+				return resultWithUsage(), streamFailoverErr
+		placeholder
 	placeholder
 		if result, err, done := handleScanErr(scanner.Err()); done {
 			return result, err
@@ -4039,6 +4259,9 @@ placeholder(scanBuf)
 				return result, err
 		placeholder
 			processSSELine(ev.line, len(events) == 0)
+			if streamFailoverErr != nil {
+				return resultWithUsage(), streamFailoverErr
+		placeholder
 
 		case <-intervalCh:
 			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
