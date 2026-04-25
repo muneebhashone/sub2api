@@ -93,6 +93,13 @@ type cancelReadCloser struct{placeholder
 func (c cancelReadCloser) Read(p []byte) (int, error) { return 0, context.Canceled placeholder
 func (c cancelReadCloser) Close() error               { return nil placeholder
 
+type errReadCloser struct {
+	err error
+placeholder
+
+func (r errReadCloser) Read([]byte) (int, error) { return 0, r.err placeholder
+func (r errReadCloser) Close() error             { return nil placeholder
+
 type failingGinWriter struct {
 	gin.ResponseWriter
 	failAfter int
@@ -1003,6 +1010,150 @@ placeholder
 placeholder
 placeholder
 
+func TestOpenAIStreamingReadErrorBeforeOutputReturnsFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       errReadCloser{err: io.ErrUnexpectedEOFplaceholder,
+		Header:     http.Header{"X-Request-Id": []string{"rid-disconnect"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "model", "model")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.Equal(t, http.StatusBadGateway, failoverErr.StatusCode)
+	require.False(t, c.Writer.Written())
+	require.Empty(t, rec.Body.String())
+placeholder
+
+func TestOpenAIStreamingResponseFailedBeforeOutputReturnsFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.in_progress",
+			`data: {"type":"response.in_progress","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.failed",
+			`data: {"type":"response.failed","error":{"message":"An error occurred while processing your request."placeholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-failed"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "model", "model")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.Equal(t, http.StatusBadGateway, failoverErr.StatusCode)
+	require.Contains(t, string(failoverErr.ResponseBody), "An error occurred while processing your request")
+	require.False(t, c.Writer.Written())
+	require.Empty(t, rec.Body.String())
+placeholder
+
+func TestOpenAIStreamingPreambleOnlyMissingTerminalReturnsFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.in_progress",
+			`data: {"type":"response.in_progress","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-missing-terminal"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "model", "model")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.False(t, c.Writer.Written())
+	require.Empty(t, rec.Body.String())
+placeholder
+
+func TestOpenAIStreamingPolicyResponseFailedBeforeOutputPassesThrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.failed",
+			`data: {"type":"response.failed","error":{"type":"safety_error","message":"This request has been flagged for potentially high-risk cyber activity."placeholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-policy-failed"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "model", "model")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	require.True(t, c.Writer.Written())
+	require.Contains(t, rec.Body.String(), "response.failed")
+	require.Contains(t, rec.Body.String(), "high-risk cyber activity")
+placeholder
+
 func TestOpenAIStreamingClientDisconnectDrainsUpstreamUsage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := &config.Config{
@@ -1072,7 +1223,7 @@ placeholder
 
 	go func() {
 		defer func() { _ = pw.Close() placeholder()
-		_, _ = pw.Write([]byte("data: {\"type\":\"response.in_progress\",\"response\":{placeholderplaceholder\n\n"))
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"message\"placeholder,\"output_index\":0placeholder\n\n"))
 placeholder()
 
 	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model")
@@ -1104,7 +1255,7 @@ placeholder
 
 	go func() {
 		defer func() { _ = pw.Close() placeholder()
-		_, _ = pw.Write([]byte("data: {\"type\":\"response.in_progress\",\"response\":{placeholderplaceholder\n\n"))
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"message\"placeholder,\"output_index\":0placeholder\n\n"))
 placeholder()
 
 	_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "", "")
@@ -1112,6 +1263,42 @@ placeholder()
 	if err == nil || !strings.Contains(err.Error(), "missing terminal event") {
 		t.Fatalf("expected missing terminal event error, got %v", err)
 placeholder
+placeholder
+
+func TestOpenAIStreamingPassthroughResponseFailedBeforeOutputReturnsFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.failed",
+			`data: {"type":"response.failed","error":{"message":"upstream processing failed"placeholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-passthrough-failed"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "", "")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.Equal(t, http.StatusBadGateway, failoverErr.StatusCode)
+	require.Contains(t, string(failoverErr.ResponseBody), "upstream processing failed")
+	require.False(t, c.Writer.Written())
+	require.Empty(t, rec.Body.String())
 placeholder
 
 func TestOpenAIStreamingPassthroughResponseDoneWithoutDoneMarkerStillSucceeds(t *testing.T) {
