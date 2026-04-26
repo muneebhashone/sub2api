@@ -23,9 +23,11 @@
 import { computed placeholder from 'vue'
 import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
+import { resolveAffiliateReferralCode, storeOAuthAffiliateCode placeholder from '@/utils/oauthAffiliate'
 
 const props = withDefaults(defineProps<{
   disabled?: boolean
+  affCode?: string
   providerName?: string
   showDivider?: boolean
 placeholder>(), {
@@ -45,6 +47,7 @@ const providerInitial = computed(() => normalizedProviderName.value.charAt(0).to
 
 function startLogin(): void {
   const redirectTo = (route.query.redirect as string) || '/dashboard'
+  storeOAuthAffiliateCode(resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code))
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
   const startURL = `${normalizedplaceholder/auth/oauth/oidc/start?redirect=${encodeURIComponent(redirectTo)placeholder`

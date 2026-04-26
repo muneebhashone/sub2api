@@ -564,9 +564,10 @@ placeholder
  */
 export async function completeLinuxDoOAuthRegistration(
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<OAuthTokenResponse> {
-  return createPendingLinuxDoOAuthAccount(invitationCode, decision)
+  return createPendingLinuxDoOAuthAccount(invitationCode, decision, affiliateCode)
 placeholder
 
 /**
@@ -576,27 +577,32 @@ placeholder
  */
 export async function completeOIDCOAuthRegistration(
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<OAuthTokenResponse> {
-  return createPendingOIDCOAuthAccount(invitationCode, decision)
+  return createPendingOIDCOAuthAccount(invitationCode, decision, affiliateCode)
 placeholder
 
 export async function completeWeChatOAuthRegistration(
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<OAuthTokenResponse> {
-  return createPendingWeChatOAuthAccount(invitationCode, decision)
+  return createPendingWeChatOAuthAccount(invitationCode, decision, affiliateCode)
 placeholder
 
 async function createPendingOAuthAccount(
   provider: 'linuxdo' | 'oidc' | 'wechat',
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<PendingOAuthCreateAccountResponse> {
+  const normalizedAffiliateCode = affiliateCode?.trim()
   const { data placeholder = await apiClient.post<PendingOAuthCreateAccountResponse>(
     `/auth/oauth/${providerplaceholder/complete-registration`,
     {
       invitation_code: invitationCode,
+      ...(normalizedAffiliateCode ? { aff_code: normalizedAffiliateCode placeholder : {placeholder),
       ...serializeOAuthAdoptionDecision(decision)
     placeholder
   )
@@ -605,23 +611,26 @@ placeholder
 
 export async function createPendingLinuxDoOAuthAccount(
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<PendingOAuthCreateAccountResponse> {
-  return createPendingOAuthAccount('linuxdo', invitationCode, decision)
+  return createPendingOAuthAccount('linuxdo', invitationCode, decision, affiliateCode)
 placeholder
 
 export async function createPendingOIDCOAuthAccount(
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<PendingOAuthCreateAccountResponse> {
-  return createPendingOAuthAccount('oidc', invitationCode, decision)
+  return createPendingOAuthAccount('oidc', invitationCode, decision, affiliateCode)
 placeholder
 
 export async function createPendingWeChatOAuthAccount(
   invitationCode: string,
-  decision?: OAuthAdoptionDecision
+  decision?: OAuthAdoptionDecision,
+  affiliateCode?: string
 ): Promise<PendingOAuthCreateAccountResponse> {
-  return createPendingOAuthAccount('wechat', invitationCode, decision)
+  return createPendingOAuthAccount('wechat', invitationCode, decision, affiliateCode)
 placeholder
 
 export async function completePendingOAuthBindLogin(

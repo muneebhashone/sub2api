@@ -93,6 +93,7 @@ describe('LinuxDoCallbackView', () => {
     placeholder)
     window.location.hash = ''
     localStorage.clear()
+    sessionStorage.clear()
   placeholder)
 
   it('accepts the legacy fragment token success callback without pending-session exchange', async () => {

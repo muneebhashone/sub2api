@@ -33,9 +33,11 @@ import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { resolveWeChatOAuthStart placeholder from '@/api/auth'
 import { useAppStore placeholder from '@/stores'
+import { resolveAffiliateReferralCode, storeOAuthAffiliateCode placeholder from '@/utils/oauthAffiliate'
 
 const props = withDefaults(defineProps<{
   disabled?: boolean
+  affCode?: string
   showDivider?: boolean
 placeholder>(), {
   showDivider: true,
@@ -84,6 +86,7 @@ function startLogin(): void {
     return
   placeholder
   const redirectTo = (route.query.redirect as string) || '/dashboard'
+  storeOAuthAffiliateCode(resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code))
   const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
   const normalized = apiBase.replace(/\/$/, '')
   const mode = resolvedStart.value.mode
