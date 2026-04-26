@@ -84,16 +84,32 @@ placeholder
 	out.StopReason = responsesStatusToAnthropicStopReason(resp.Status, resp.IncompleteDetails, blocks)
 
 	if resp.Usage != nil {
-		out.Usage = AnthropicUsage{
-			InputTokens:  resp.Usage.InputTokens,
-			OutputTokens: resp.Usage.OutputTokens,
-	placeholder
-		if resp.Usage.InputTokensDetails != nil {
-			out.Usage.CacheReadInputTokens = resp.Usage.InputTokensDetails.CachedTokens
-	placeholder
+		out.Usage = anthropicUsageFromResponsesUsage(resp.Usage)
 placeholder
 
 	return out
+placeholder
+
+func anthropicUsageFromResponsesUsage(usage *ResponsesUsage) AnthropicUsage {
+	if usage == nil {
+		return AnthropicUsage{placeholder
+placeholder
+
+	cachedTokens := 0
+	if usage.InputTokensDetails != nil {
+		cachedTokens = usage.InputTokensDetails.CachedTokens
+placeholder
+
+	inputTokens := usage.InputTokens - cachedTokens
+	if inputTokens < 0 {
+		inputTokens = 0
+placeholder
+
+	return AnthropicUsage{
+		InputTokens:          inputTokens,
+		OutputTokens:         usage.OutputTokens,
+		CacheReadInputTokens: cachedTokens,
+placeholder
 placeholder
 
 func responsesStatusToAnthropicStopReason(status string, details *ResponsesIncompleteDetails, blocks []AnthropicContentBlock) string {
@@ -466,11 +482,10 @@ placeholder
 	stopReason := "end_turn"
 	if evt.Response != nil {
 		if evt.Response.Usage != nil {
-			state.InputTokens = evt.Response.Usage.InputTokens
-			state.OutputTokens = evt.Response.Usage.OutputTokens
-			if evt.Response.Usage.InputTokensDetails != nil {
-				state.CacheReadInputTokens = evt.Response.Usage.InputTokensDetails.CachedTokens
-		placeholder
+			usage := anthropicUsageFromResponsesUsage(evt.Response.Usage)
+			state.InputTokens = usage.InputTokens
+			state.OutputTokens = usage.OutputTokens
+			state.CacheReadInputTokens = usage.CacheReadInputTokens
 	placeholder
 		switch evt.Response.Status {
 		case "incomplete":
