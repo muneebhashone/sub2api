@@ -134,7 +134,8 @@ placeholder
 
 // BulkUpdateAccountsRequest represents the payload for bulk editing accounts
 type BulkUpdateAccountsRequest struct {
-	AccountIDs              []int64        `json:"account_ids" binding:"required,min=1"`
+	AccountIDs              []int64        `json:"account_ids"`
+	Filters                 *BulkUpdateAccountFilters `json:"filters"`
 	Name                    string         `json:"name"`
 	ProxyID                 *int64         `json:"proxy_id"`
 	Concurrency             *int           `json:"concurrency"`
@@ -147,6 +148,15 @@ type BulkUpdateAccountsRequest struct {
 	Credentials             map[string]any `json:"credentials"`
 	Extra                   map[string]any `json:"extra"`
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
+placeholder
+
+type BulkUpdateAccountFilters struct {
+	Platform    string `json:"platform"`
+	Type        string `json:"type"`
+	Status      string `json:"status"`
+	Group       string `json:"group"`
+	Search      string `json:"search"`
+	PrivacyMode string `json:"privacy_mode"`
 placeholder
 
 // CheckMixedChannelRequest represents check mixed channel risk request
@@ -1369,6 +1379,10 @@ placeholder
 		response.BadRequest(c, "rate_multiplier must be >= 0")
 		return
 placeholder
+	if len(req.AccountIDs) == 0 && req.Filters == nil {
+		response.BadRequest(c, "account_ids or filters is required")
+		return
+placeholder
 	// base_rpm 输入校验：负值归零，超过 10000 截断
 	sanitizeExtraBaseRPM(req.Extra)
 
@@ -1394,6 +1408,7 @@ placeholder
 
 	result, err := h.adminService.BulkUpdateAccounts(c.Request.Context(), &service.BulkUpdateAccountsInput{
 		AccountIDs:            req.AccountIDs,
+		Filters:               toServiceBulkUpdateAccountFilters(req.Filters),
 		Name:                  req.Name,
 		ProxyID:               req.ProxyID,
 		Concurrency:           req.Concurrency,
@@ -1427,6 +1442,20 @@ placeholder)
 placeholder
 
 	response.Success(c, result)
+placeholder
+
+func toServiceBulkUpdateAccountFilters(filters *BulkUpdateAccountFilters) *service.BulkUpdateAccountFilters {
+	if filters == nil {
+		return nil
+placeholder
+	return &service.BulkUpdateAccountFilters{
+		Platform:    filters.Platform,
+		Type:        filters.Type,
+		Status:      filters.Status,
+		Group:       filters.Group,
+		Search:      filters.Search,
+		PrivacyMode: filters.PrivacyMode,
+placeholder
 placeholder
 
 // ========== OAuth Handlers ==========
