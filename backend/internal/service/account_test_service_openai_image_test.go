@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -45,6 +46,45 @@ placeholder
 	err := svc.testOpenAIImageOAuth(c, context.Background(), account, "gpt-image-2", "draw a cat")
 placeholder
 	require.Contains(t, rec.Body.String(), "Calling Codex /responses image tool")
+	require.Contains(t, rec.Body.String(), "data:image/png;base64,aGVsbG8=")
+	require.Contains(t, rec.Body.String(), "\"success\":true")
+placeholder
+
+func TestAccountTestService_OpenAIImageAPIKeyUsesConfiguredV1BaseURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/1/test", nil)
+
+	upstream := &httpUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type": []string{"application/json"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(`{"data":[{"b64_json":"aGVsbG8=","revised_prompt":"draw a cat"placeholder]placeholder`)),
+	placeholder,
+placeholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          &config.Config{placeholder,
+placeholder
+	account := &Account{
+		ID:       54,
+		Name:     "openai-apikey",
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key":  "test-api-key",
+			"base_url": "https://image-upstream.example/v1",
+	placeholder,
+placeholder
+
+	err := svc.testOpenAIImageAPIKey(c, context.Background(), account, "gpt-image-2", "draw a cat")
+placeholder
+	require.NotNil(t, upstream.lastReq)
+	require.Equal(t, "https://image-upstream.example/v1/images/generations", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer test-api-key", upstream.lastReq.Header.Get("Authorization"))
 	require.Contains(t, rec.Body.String(), "data:image/png;base64,aGVsbG8=")
 	require.Contains(t, rec.Body.String(), "\"success\":true")
 placeholder
