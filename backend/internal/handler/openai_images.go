@@ -117,12 +117,7 @@ placeholder
 		return
 placeholder
 
-	sessionHash := ""
-	if parsed.Multipart {
-		sessionHash = h.gatewayService.GenerateSessionHashWithFallback(c, nil, parsed.StickySessionSeed())
-placeholder else {
-		sessionHash = h.gatewayService.GenerateSessionHash(c, body)
-placeholder
+	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, body)
 
 	maxAccountSwitches := h.maxAccountSwitches
 	switchCount := 0
