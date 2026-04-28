@@ -75,7 +75,7 @@ placeholder
 //	{"type":"auto"placeholder            → "auto"
 //	{"type":"any"placeholder             → "required"
 //	{"type":"none"placeholder            → "none"
-//	{"type":"tool","name":"X"placeholder → {"type":"function","function":{"name":"X"placeholderplaceholder
+//	{"type":"tool","name":"X"placeholder → {"type":"function","name":"X"placeholder
 func convertAnthropicToolChoiceToResponses(raw json.RawMessage) (json.RawMessage, error) {
 	var tc struct {
 		Type string `json:"type"`
@@ -94,8 +94,8 @@ placeholder
 		return json.Marshal("none")
 	case "tool":
 		return json.Marshal(map[string]any{
-			"type":     "function",
-			"function": map[string]string{"name": tc.Nameplaceholder,
+			"type": "function",
+			"name": tc.Name,
 	placeholder)
 	default:
 		// Pass through unknown types as-is
