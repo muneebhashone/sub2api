@@ -52,7 +52,7 @@ placeholder
 				Type:  "tool_use",
 				ID:    fromResponsesCallID(item.CallID),
 				Name:  item.Name,
-				Input: json.RawMessage(item.Arguments),
+				Input: sanitizeAnthropicToolUseInput(item.Name, item.Arguments),
 		placeholder)
 		case "web_search_call":
 			toolUseID := "srvtoolu_" + item.ID
@@ -129,6 +129,28 @@ func responsesStatusToAnthropicStopReason(status string, details *ResponsesIncom
 placeholder
 placeholder
 
+func sanitizeAnthropicToolUseInput(name string, raw string) json.RawMessage {
+	if name != "Read" || raw == "" {
+		return json.RawMessage(raw)
+placeholder
+
+	var input map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		return json.RawMessage(raw)
+placeholder
+
+	if pages, ok := input["pages"]; !ok || string(pages) != `""` {
+		return json.RawMessage(raw)
+placeholder
+
+	delete(input, "pages")
+	sanitized, err := json.Marshal(input)
+	if err != nil {
+		return json.RawMessage(raw)
+placeholder
+	return sanitized
+placeholder
+
 // ---------------------------------------------------------------------------
 // Streaming: ResponsesStreamEvent → []AnthropicStreamEvent (stateful converter)
 // ---------------------------------------------------------------------------
@@ -142,6 +164,8 @@ type ResponsesEventToAnthropicState struct {
 	ContentBlockIndex int
 	ContentBlockOpen  bool
 	CurrentBlockType  string // "text" | "thinking" | "tool_use"
+	CurrentToolName   string
+	CurrentToolArgs   string
 
 	// OutputIndexToBlockIdx maps Responses output_index → Anthropic content block index.
 	OutputIndexToBlockIdx map[int]int
@@ -181,7 +205,7 @@ func ResponsesEventToAnthropicEvents(
 	case "response.function_call_arguments.delta":
 		return resToAnthHandleFuncArgsDelta(evt, state)
 	case "response.function_call_arguments.done":
-		return resToAnthHandleBlockDone(state)
+		return resToAnthHandleFuncArgsDone(evt, state)
 	case "response.output_item.done":
 		return resToAnthHandleOutputItemDone(evt, state)
 	case "response.reasoning_summary_text.delta":
@@ -278,6 +302,8 @@ placeholder
 		state.OutputIndexToBlockIdx[evt.OutputIndex] = idx
 		state.ContentBlockOpen = true
 		state.CurrentBlockType = "tool_use"
+		state.CurrentToolName = evt.Item.Name
+		state.CurrentToolArgs = ""
 
 		events = append(events, AnthropicStreamEvent{
 			Type:  "content_block_start",
@@ -358,6 +384,11 @@ func resToAnthHandleFuncArgsDelta(evt *ResponsesStreamEvent, state *ResponsesEve
 		return nil
 placeholder
 
+	if state.CurrentBlockType == "tool_use" && state.CurrentToolName == "Read" {
+		state.CurrentToolArgs += evt.Delta
+		return nil
+placeholder
+
 	blockIdx, ok := state.OutputIndexToBlockIdx[evt.OutputIndex]
 	if !ok {
 		return nil
@@ -371,6 +402,33 @@ placeholder
 			PartialJSON: evt.Delta,
 	placeholder,
 placeholderplaceholder
+placeholder
+
+func resToAnthHandleFuncArgsDone(evt *ResponsesStreamEvent, state *ResponsesEventToAnthropicState) []AnthropicStreamEvent {
+	if state.CurrentBlockType != "tool_use" || state.CurrentToolName != "Read" {
+		return resToAnthHandleBlockDone(state)
+placeholder
+
+	raw := evt.Arguments
+	if raw == "" {
+		raw = state.CurrentToolArgs
+placeholder
+	sanitized := sanitizeAnthropicToolUseInput(state.CurrentToolName, raw)
+	if len(sanitized) == 0 {
+		return closeCurrentBlock(state)
+placeholder
+
+	idx := state.ContentBlockIndex
+	events := []AnthropicStreamEvent{{
+		Type:  "content_block_delta",
+		Index: &idx,
+		Delta: &AnthropicDelta{
+			Type:        "input_json_delta",
+			PartialJSON: string(sanitized),
+	placeholder,
+placeholderplaceholder
+	events = append(events, closeCurrentBlock(state)...)
+	return events
 placeholder
 
 func resToAnthHandleReasoningDelta(evt *ResponsesStreamEvent, state *ResponsesEventToAnthropicState) []AnthropicStreamEvent {
@@ -524,6 +582,8 @@ placeholder
 	idx := state.ContentBlockIndex
 	state.ContentBlockOpen = false
 	state.ContentBlockIndex++
+	state.CurrentToolName = ""
+	state.CurrentToolArgs = ""
 	return []AnthropicStreamEvent{{
 		Type:  "content_block_stop",
 		Index: &idx,
