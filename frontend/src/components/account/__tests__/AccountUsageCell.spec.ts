@@ -57,6 +57,19 @@ placeholder
 describe('AccountUsageCell', () => {
   beforeEach(() => {
     getUsage.mockReset()
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(() => ({
+        matches: true,
+        media: '(min-width: 768px)',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      placeholder))
+    placeholder)
   placeholder)
 
   it('Antigravity 图片用量会聚合新旧 image 模型', async () => {
@@ -602,5 +615,44 @@ placeholder)
 		await flushPromises()
 
 		expect(wrapper.text().trim()).toBe('-')
+  placeholder)
+
+  it('Vertex 账号会在 Gemini 用量窗口里展示 today stats 徽章', async () => {
+		const wrapper = mount(AccountUsageCell, {
+		  props: {
+		    account: makeAccount({
+		      id: 4001,
+		      platform: 'gemini',
+		      type: 'service_account',
+          credentials: {
+            tier_id: 'vertex',
+            project_id: 'vertex-proj',
+            client_email: 'svc@vertex-proj.iam.gserviceaccount.com',
+            location: 'global'
+          placeholder,
+		      extra: {placeholder
+		    placeholder),
+		    todayStats: {
+		      requests: 0,
+		      tokens: 0,
+		      cost: 0,
+		      standard_cost: 0,
+		      user_cost: 0
+		    placeholder
+		  placeholder,
+		  global: {
+		    stubs: {
+		      UsageProgressBar: true,
+		      AccountQuotaInfo: true
+		    placeholder
+		  placeholder
+	placeholder)
+
+		await flushPromises()
+
+		expect(wrapper.text()).toContain('0 req')
+		expect(wrapper.text()).toContain('0')
+		expect(wrapper.text()).toContain('A $0.00')
+		expect(wrapper.text()).toContain('U $0.00')
   placeholder)
 placeholder)
