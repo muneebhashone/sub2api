@@ -141,9 +141,7 @@ placeholder
 			if name, ok := fcObj["name"].(string); ok && strings.TrimSpace(name) != "" {
 				reqBody["tool_choice"] = map[string]any{
 					"type": "function",
-					"function": map[string]any{
-						"name": name,
-				placeholder,
+					"name": name,
 			placeholder
 		placeholder
 	placeholder
@@ -219,8 +217,37 @@ placeholder
 		return false
 placeholder
 	choiceType := strings.TrimSpace(firstNonEmptyString(choiceMap["type"]))
-	if choiceType == "" || codexToolsContainType(reqBody["tools"], choiceType) {
+	if choiceType == "" {
 		return false
+placeholder
+	modified := false
+	if choiceType == "function" {
+		name := strings.TrimSpace(firstNonEmptyString(choiceMap["name"]))
+		if name == "" {
+			if function, ok := choiceMap["function"].(map[string]any); ok {
+				name = strings.TrimSpace(firstNonEmptyString(function["name"]))
+		placeholder
+	placeholder
+		if name == "" {
+			reqBody["tool_choice"] = "auto"
+			return true
+	placeholder
+		if strings.TrimSpace(firstNonEmptyString(choiceMap["name"])) != name {
+			choiceMap["name"] = name
+			modified = true
+	placeholder
+		if _, ok := choiceMap["function"]; ok {
+			delete(choiceMap, "function")
+			modified = true
+	placeholder
+		if !codexToolsContainFunctionName(reqBody["tools"], name) {
+			reqBody["tool_choice"] = "auto"
+			return true
+	placeholder
+		return modified
+placeholder
+	if codexToolsContainType(reqBody["tools"], choiceType) {
+		return modified
 placeholder
 	reqBody["tool_choice"] = "auto"
 	return true
@@ -237,6 +264,33 @@ placeholder
 			continue
 	placeholder
 		if strings.TrimSpace(firstNonEmptyString(tool["type"])) == toolType {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func codexToolsContainFunctionName(rawTools any, name string) bool {
+	tools, ok := rawTools.([]any)
+	if !ok || strings.TrimSpace(name) == "" {
+		return false
+placeholder
+	normalizedName := strings.TrimSpace(name)
+	for _, rawTool := range tools {
+		tool, ok := rawTool.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		if strings.TrimSpace(firstNonEmptyString(tool["type"])) != "function" {
+			continue
+	placeholder
+		toolName := strings.TrimSpace(firstNonEmptyString(tool["name"]))
+		if toolName == "" {
+			if function, ok := tool["function"].(map[string]any); ok {
+				toolName = strings.TrimSpace(firstNonEmptyString(function["name"]))
+		placeholder
+	placeholder
+		if toolName == normalizedName {
 			return true
 	placeholder
 placeholder

@@ -428,7 +428,8 @@ placeholder
 //	"auto"                                     → {"type":"auto"placeholder
 //	"required"                                 → {"type":"any"placeholder
 //	"none"                                     → {"type":"none"placeholder
-//	{"type":"function","function":{"name":"X"placeholderplaceholder → {"type":"tool","name":"X"placeholder
+//	{"type":"function","name":"X"placeholder                 → {"type":"tool","name":"X"placeholder
+//	{"type":"function","function":{"name":"X"placeholderplaceholder     → {"type":"tool","name":"X"placeholder // legacy
 func convertResponsesToAnthropicToolChoice(raw json.RawMessage) (json.RawMessage, error) {
 	// Try as string first
 	var s string
@@ -448,14 +449,22 @@ placeholder
 	// Try as object with type=function
 	var tc struct {
 		Type     string `json:"type"`
+		Name     string `json:"name"`
 		Function struct {
 			Name string `json:"name"`
 	placeholder `json:"function"`
 placeholder
-	if err := json.Unmarshal(raw, &tc); err == nil && tc.Type == "function" && tc.Function.Name != "" {
+	if err := json.Unmarshal(raw, &tc); err == nil && tc.Type == "function" {
+		name := strings.TrimSpace(tc.Name)
+		if name == "" {
+			name = strings.TrimSpace(tc.Function.Name)
+	placeholder
+		if name == "" {
+			return raw, nil
+	placeholder
 		return json.Marshal(map[string]string{
 			"type": "tool",
-			"name": tc.Function.Name,
+			"name": name,
 	placeholder)
 placeholder
 

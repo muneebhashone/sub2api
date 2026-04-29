@@ -420,7 +420,7 @@ placeholder
 //
 //	"auto" → "auto"
 //	"none" → "none"
-//	{"name":"X"placeholder → {"type":"function","function":{"name":"X"placeholderplaceholder
+//	{"name":"X"placeholder → {"type":"function","name":"X"placeholder
 func convertChatFunctionCallToToolChoice(raw json.RawMessage) (json.RawMessage, error) {
 	// Try string first ("auto", "none", etc.) — pass through as-is.
 	var s string
@@ -436,7 +436,7 @@ placeholder
 		return nil, err
 placeholder
 	return json.Marshal(map[string]any{
-		"type":     "function",
-		"function": map[string]string{"name": obj.Nameplaceholder,
+		"type": "function",
+		"name": obj.Name,
 placeholder)
 placeholder
