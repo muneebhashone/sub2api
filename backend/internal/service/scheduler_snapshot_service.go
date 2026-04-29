@@ -544,6 +544,9 @@ placeholder
 	if !ok {
 		return nil
 placeholder
+	defer func() {
+		_ = s.cache.UnlockBucket(ctx, bucket)
+placeholder()
 
 	rebuildCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
