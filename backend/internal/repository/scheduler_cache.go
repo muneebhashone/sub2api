@@ -449,9 +449,67 @@ func buildSchedulerMetadataAccount(account service.Account) service.Account {
 		SessionWindowStart:      account.SessionWindowStart,
 		SessionWindowEnd:        account.SessionWindowEnd,
 		SessionWindowStatus:     account.SessionWindowStatus,
+		AccountGroups:           filterSchedulerAccountGroups(account.AccountGroups),
+		GroupIDs:                filterSchedulerGroupIDs(account.GroupIDs, account.AccountGroups),
 		Credentials:             filterSchedulerCredentials(account.Credentials),
 		Extra:                   filterSchedulerExtra(account.Extra),
 placeholder
+placeholder
+
+func filterSchedulerAccountGroups(accountGroups []service.AccountGroup) []service.AccountGroup {
+	if len(accountGroups) == 0 {
+		return nil
+placeholder
+
+	filtered := make([]service.AccountGroup, 0, len(accountGroups))
+	for _, ag := range accountGroups {
+		if ag.GroupID <= 0 {
+			continue
+	placeholder
+		filtered = append(filtered, service.AccountGroup{
+			AccountID: ag.AccountID,
+			GroupID:   ag.GroupID,
+			Priority:  ag.Priority,
+			CreatedAt: ag.CreatedAt,
+	placeholder)
+placeholder
+	if len(filtered) == 0 {
+		return nil
+placeholder
+	return filtered
+placeholder
+
+func filterSchedulerGroupIDs(groupIDs []int64, accountGroups []service.AccountGroup) []int64 {
+	if len(groupIDs) == 0 && len(accountGroups) == 0 {
+		return nil
+placeholder
+
+	seen := make(map[int64]struct{placeholder, len(groupIDs)+len(accountGroups))
+	filtered := make([]int64, 0, len(groupIDs)+len(accountGroups))
+	for _, id := range groupIDs {
+		if id <= 0 {
+			continue
+	placeholder
+		if _, ok := seen[id]; ok {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		filtered = append(filtered, id)
+placeholder
+	for _, ag := range accountGroups {
+		if ag.GroupID <= 0 {
+			continue
+	placeholder
+		if _, ok := seen[ag.GroupID]; ok {
+			continue
+	placeholder
+		seen[ag.GroupID] = struct{placeholder{placeholder
+		filtered = append(filtered, ag.GroupID)
+placeholder
+	if len(filtered) == 0 {
+		return nil
+placeholder
+	return filtered
 placeholder
 
 func filterSchedulerCredentials(credentials map[string]any) map[string]any {
