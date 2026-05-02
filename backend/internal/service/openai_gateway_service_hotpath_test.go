@@ -596,6 +596,13 @@ placeholder{
 			wantValue: "xhigh",
 	placeholder,
 		{
+			name:      "DeepSeek max 归一化为 xhigh",
+			body:      []byte(`{"reasoning_effort":"max"placeholder`),
+			model:     "deepseek-v4-pro",
+			wantNil:   false,
+			wantValue: "xhigh",
+	placeholder,
+		{
 			name:    "minimal 归一化为空",
 			body:    []byte(`{"reasoning":{"effort":"minimal"placeholderplaceholder`),
 			model:   "gpt-5-high",

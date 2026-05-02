@@ -29,6 +29,12 @@ placeholder)
 		require.Equal(t, "xhigh", *got)
 placeholder)
 
+	t.Run("DeepSeek max", func(t *testing.T) {
+		got := extractCCReasoningEffortFromBody([]byte(`{"reasoning_effort":"Max"placeholder`))
+		require.NotNil(t, got)
+		require.Equal(t, "xhigh", *got)
+placeholder)
+
 	t.Run("missing effort", func(t *testing.T) {
 		require.Nil(t, extractCCReasoningEffortFromBody([]byte(`{"model":"gpt-5"placeholder`)))
 placeholder)
