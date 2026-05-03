@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -973,16 +974,213 @@ placeholder
 // GetUserBalanceHistory returns paginated balance/concurrency change records for a user.
 func (s *adminServiceImpl) GetUserBalanceHistory(ctx context.Context, userID int64, page, pageSize int, codeType string) ([]RedeemCode, int64, float64, error) {
 	params := pagination.PaginationParams{Page: page, PageSize: pageSizeplaceholder
+	if codeType == RedeemTypeAffiliateBalance {
+		codes, total, err := s.listAffiliateBalanceHistory(ctx, userID, params)
+		if err != nil {
+			return nil, 0, 0, err
+	placeholder
+		totalRecharged, err := s.redeemCodeRepo.SumPositiveBalanceByUser(ctx, userID)
+		if err != nil {
+			return nil, 0, 0, err
+	placeholder
+		return codes, total, totalRecharged, nil
+placeholder
+
+	if codeType == "" {
+		return s.getAllUserBalanceHistory(ctx, userID, params)
+placeholder
+
 	codes, result, err := s.redeemCodeRepo.ListByUserPaginated(ctx, userID, params, codeType)
 	if err != nil {
 		return nil, 0, 0, err
 placeholder
+	total := result.Total
 	// Aggregate total recharged amount (only once, regardless of type filter)
 	totalRecharged, err := s.redeemCodeRepo.SumPositiveBalanceByUser(ctx, userID)
 	if err != nil {
 		return nil, 0, 0, err
 placeholder
-	return codes, result.Total, totalRecharged, nil
+	return codes, total, totalRecharged, nil
+placeholder
+
+func (s *adminServiceImpl) getAllUserBalanceHistory(ctx context.Context, userID int64, params pagination.PaginationParams) ([]RedeemCode, int64, float64, error) {
+	needed := params.Offset() + params.Limit()
+	if needed < params.Limit() {
+		needed = params.Limit()
+placeholder
+
+	redeemCodes, redeemTotal, err := s.listRedeemBalanceHistoryForMerge(ctx, userID, needed)
+	if err != nil {
+		return nil, 0, 0, err
+placeholder
+	affiliateCodes, affiliateTotal, err := s.listAffiliateBalanceHistoryForMerge(ctx, userID, needed)
+	if err != nil {
+		return nil, 0, 0, err
+placeholder
+	codes := mergeBalanceHistoryCodes(redeemCodes, affiliateCodes, params)
+
+	totalRecharged, err := s.redeemCodeRepo.SumPositiveBalanceByUser(ctx, userID)
+	if err != nil {
+		return nil, 0, 0, err
+placeholder
+	return codes, redeemTotal + affiliateTotal, totalRecharged, nil
+placeholder
+
+func (s *adminServiceImpl) listRedeemBalanceHistoryForMerge(ctx context.Context, userID int64, needed int) ([]RedeemCode, int64, error) {
+	if needed <= 0 {
+		return nil, 0, nil
+placeholder
+
+	var (
+		out   []RedeemCode
+		total int64
+	)
+	for page := 1; len(out) < needed; page++ {
+		params := pagination.PaginationParams{Page: page, PageSize: 1000placeholder
+		codes, result, err := s.redeemCodeRepo.ListByUserPaginated(ctx, userID, params, "")
+		if err != nil {
+			return nil, 0, err
+	placeholder
+		if result != nil {
+			total = result.Total
+	placeholder
+		out = append(out, codes...)
+		if len(codes) < params.Limit() || int64(len(out)) >= total {
+			break
+	placeholder
+placeholder
+	if len(out) > needed {
+		out = out[:needed]
+placeholder
+	return out, total, nil
+placeholder
+
+func (s *adminServiceImpl) listAffiliateBalanceHistoryForMerge(ctx context.Context, userID int64, needed int) ([]RedeemCode, int64, error) {
+	if needed <= 0 {
+		return nil, 0, nil
+placeholder
+
+	var (
+		out   []RedeemCode
+		total int64
+	)
+	for page := 1; len(out) < needed; page++ {
+		params := pagination.PaginationParams{Page: page, PageSize: 1000placeholder
+		codes, currentTotal, err := s.listAffiliateBalanceHistory(ctx, userID, params)
+		if err != nil {
+			return nil, 0, err
+	placeholder
+		total = currentTotal
+		out = append(out, codes...)
+		if len(codes) < params.Limit() || int64(len(out)) >= total {
+			break
+	placeholder
+placeholder
+	if len(out) > needed {
+		out = out[:needed]
+placeholder
+	return out, total, nil
+placeholder
+
+func (s *adminServiceImpl) listAffiliateBalanceHistory(ctx context.Context, userID int64, params pagination.PaginationParams) ([]RedeemCode, int64, error) {
+	if s == nil || s.entClient == nil || userID <= 0 {
+		return nil, 0, nil
+placeholder
+
+	rows, err := s.entClient.QueryContext(ctx, `
+SELECT id,
+       amount::double precision,
+       created_at
+FROM user_affiliate_ledger
+WHERE user_id = $1
+  AND action = 'transfer'
+ORDER BY created_at DESC, id DESC
+OFFSET $2
+LIMIT $3`, userID, params.Offset(), params.Limit())
+	if err != nil {
+		return nil, 0, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	codes := make([]RedeemCode, 0, params.Limit())
+	for rows.Next() {
+		var id int64
+		var amount float64
+		var createdAt time.Time
+		if err := rows.Scan(&id, &amount, &createdAt); err != nil {
+			return nil, 0, err
+	placeholder
+		usedBy := userID
+		usedAt := createdAt
+		codes = append(codes, RedeemCode{
+			ID:        -id,
+			Code:      fmt.Sprintf("AFF-%d", id),
+			Type:      RedeemTypeAffiliateBalance,
+			Value:     amount,
+			Status:    StatusUsed,
+			UsedBy:    &usedBy,
+			UsedAt:    &usedAt,
+			CreatedAt: createdAt,
+	placeholder)
+placeholder
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+placeholder
+
+	total, err := countAffiliateBalanceHistory(ctx, s.entClient, userID)
+	if err != nil {
+		return nil, 0, err
+placeholder
+	return codes, total, nil
+placeholder
+
+func countAffiliateBalanceHistory(ctx context.Context, client *dbent.Client, userID int64) (int64, error) {
+	rows, err := client.QueryContext(ctx, `
+SELECT COUNT(*)
+FROM user_affiliate_ledger
+WHERE user_id = $1
+  AND action = 'transfer'`, userID)
+	if err != nil {
+		return 0, err
+placeholder
+	defer func() { _ = rows.Close() placeholder()
+
+	var total sql.NullInt64
+	if rows.Next() {
+		if err := rows.Scan(&total); err != nil {
+			return 0, err
+	placeholder
+placeholder
+	if err := rows.Err(); err != nil {
+		return 0, err
+placeholder
+	if !total.Valid {
+		return 0, nil
+placeholder
+	return total.Int64, nil
+placeholder
+
+func mergeBalanceHistoryCodes(redeemCodes, affiliateCodes []RedeemCode, params pagination.PaginationParams) []RedeemCode {
+	combined := append(append([]RedeemCode{placeholder, redeemCodes...), affiliateCodes...)
+	sort.SliceStable(combined, func(i, j int) bool {
+		return redeemCodeHistoryTime(combined[i]).After(redeemCodeHistoryTime(combined[j]))
+placeholder)
+	offset := params.Offset()
+	if offset >= len(combined) {
+		return []RedeemCode{placeholder
+placeholder
+	end := offset + params.Limit()
+	if end > len(combined) {
+		end = len(combined)
+placeholder
+	return combined[offset:end]
+placeholder
+
+func redeemCodeHistoryTime(code RedeemCode) time.Time {
+	if code.UsedAt != nil {
+		return *code.UsedAt
+placeholder
+	return code.CreatedAt
 placeholder
 
 func (s *adminServiceImpl) BindUserAuthIdentity(ctx context.Context, userID int64, input AdminBindAuthIdentityInput) (*AdminBoundAuthIdentity, error) {
