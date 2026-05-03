@@ -83,17 +83,17 @@
           <template #cell-amount="{ row placeholder">
             <AmountText :value="row.amount" strong />
           </template>
-          <template #cell-current_balance="{ row placeholder">
-            <AmountText :value="row.current_balance" />
+          <template #cell-balance_after="{ row placeholder">
+            <NullableAmountText :value="row.balance_after" />
           </template>
-          <template #cell-remaining_quota="{ row placeholder">
-            <AmountText :value="row.remaining_quota" />
+          <template #cell-available_quota_after="{ row placeholder">
+            <NullableAmountText :value="row.available_quota_after" />
           </template>
-          <template #cell-frozen_quota="{ row placeholder">
-            <AmountText :value="row.frozen_quota" />
+          <template #cell-frozen_quota_after="{ row placeholder">
+            <NullableAmountText :value="row.frozen_quota_after" />
           </template>
-          <template #cell-history_quota="{ row placeholder">
-            <AmountText :value="row.history_quota" />
+          <template #cell-history_quota_after="{ row placeholder">
+            <NullableAmountText :value="row.history_quota_after" />
           </template>
           <template #cell-created_at="{ row placeholder">
             <span class="text-sm text-gray-700 dark:text-gray-300">{{ formatDateTime(row.created_at) placeholderplaceholder</span>
@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, onMounted, reactive, ref placeholder from 'vue'
+import { computed, defineComponent, h, onMounted, reactive, ref, type PropType placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
@@ -202,10 +202,10 @@ const columns = computed<Column[]>(() => {
   return [
     { key: 'user', label: t('admin.affiliates.records.user'), sortable: true placeholder,
     { key: 'amount', label: t('admin.affiliates.records.transferAmount'), sortable: true placeholder,
-    { key: 'current_balance', label: t('admin.affiliates.records.currentBalance'), sortable: true placeholder,
-    { key: 'remaining_quota', label: t('admin.affiliates.records.remainingQuota'), sortable: true placeholder,
-    { key: 'frozen_quota', label: t('admin.affiliates.records.frozenQuota'), sortable: true placeholder,
-    { key: 'history_quota', label: t('admin.affiliates.records.historyQuota'), sortable: true placeholder,
+    { key: 'balance_after', label: t('admin.affiliates.records.balanceAfter'), sortable: true placeholder,
+    { key: 'available_quota_after', label: t('admin.affiliates.records.availableQuotaAfter'), sortable: true placeholder,
+    { key: 'frozen_quota_after', label: t('admin.affiliates.records.frozenQuotaAfter'), sortable: true placeholder,
+    { key: 'history_quota_after', label: t('admin.affiliates.records.historyQuotaAfter'), sortable: true placeholder,
     { key: 'created_at', label: t('admin.affiliates.records.transferredAt'), sortable: true placeholder,
   ]
 placeholder)
@@ -365,6 +365,21 @@ const AmountText = defineComponent({
         ? 'text-sm font-semibold text-emerald-600 dark:text-emerald-400'
         : 'text-sm text-gray-900 dark:text-white',
     placeholder, `$${formatAmount(amountProps.value)placeholder`)
+  placeholder,
+placeholder)
+
+const NullableAmountText = defineComponent({
+  props: {
+    value: { type: Number as PropType<number | null | undefined>, default: null placeholder,
+  placeholder,
+  setup(amountProps) {
+    return () => {
+      const value = amountProps.value
+      if (value === null || value === undefined) {
+        return h('span', { class: 'text-sm text-gray-400 dark:text-dark-500' placeholder, '-')
+      placeholder
+      return h(AmountText, { value placeholder)
+    placeholder
   placeholder,
 placeholder)
 

@@ -394,7 +394,8 @@ placeholder
 		return nil
 placeholder
 
-	rebateAmount, err := s.affiliateService.AccrueInviteRebate(txCtx, o.UserID, o.Amount)
+	sourceOrderID := o.ID
+	rebateAmount, err := s.affiliateService.AccrueInviteRebateForOrder(txCtx, o.UserID, o.Amount, &sourceOrderID)
 	if err != nil {
 		s.writeAuditLog(ctx, o.ID, "AFFILIATE_REBATE_FAILED", "system", map[string]any{
 			"error": err.Error(),
