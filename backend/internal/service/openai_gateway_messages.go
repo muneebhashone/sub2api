@@ -441,12 +441,12 @@ placeholder()
 				return nil, usage, acc, ev.err
 		placeholder
 
+			if isOpenAICompatDoneSentinelLine(ev.line) {
+				return nil, usage, acc, nil
+		placeholder
 			payload, ok := extractOpenAISSEDataLine(ev.line)
 			if !ok || payload == "" {
 				continue
-		placeholder
-			if strings.TrimSpace(payload) == "[DONE]" {
-				return nil, usage, acc, nil
 		placeholder
 
 			var event apicompat.ResponsesStreamEvent
@@ -640,12 +640,12 @@ placeholder
 	if streamInterval <= 0 && keepaliveInterval <= 0 {
 		for scanner.Scan() {
 			line := scanner.Text()
+			if isOpenAICompatDoneSentinelLine(line) {
+				return missingTerminalErr()
+		placeholder
 			payload, ok := extractOpenAISSEDataLine(line)
 			if !ok {
 				continue
-		placeholder
-			if strings.TrimSpace(payload) == "[DONE]" {
-				return missingTerminalErr()
 		placeholder
 			if processDataLine(payload) {
 				return finalizeStream()
@@ -713,12 +713,12 @@ placeholder
 		placeholder
 			lastDataAt = time.Now()
 			line := ev.line
+			if isOpenAICompatDoneSentinelLine(line) {
+				return missingTerminalErr()
+		placeholder
 			payload, ok := extractOpenAISSEDataLine(line)
 			if !ok {
 				continue
-		placeholder
-			if strings.TrimSpace(payload) == "[DONE]" {
-				return missingTerminalErr()
 		placeholder
 			if processDataLine(payload) {
 				return finalizeStream()
