@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
@@ -163,7 +164,9 @@ placeholder
 placeholder
 
 	// 6. Build upstream request
-	upstreamReq, err := s.buildUpstreamRequest(ctx, c, account, responsesBody, token, isStream, promptCacheKey, false)
+	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
+	upstreamReq, err := s.buildUpstreamRequest(upstreamCtx, c, account, responsesBody, token, isStream, promptCacheKey, false)
+	releaseUpstreamCtx()
 	if err != nil {
 		return nil, fmt.Errorf("build upstream request: %w", err)
 placeholder
@@ -296,61 +299,9 @@ func (s *OpenAIGatewayService) handleAnthropicBufferedStreamingResponse(
 ) (*OpenAIForwardResult, error) {
 	requestID := resp.Header.Get("x-request-id")
 
-	scanner := bufio.NewScanner(resp.Body)
-	maxLineSize := defaultMaxLineSize
-	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
-		maxLineSize = s.cfg.Gateway.MaxLineSize
-placeholder
-	scanner.Buffer(make([]byte, 0, 64*1024), maxLineSize)
-
-	var finalResponse *apicompat.ResponsesResponse
-	var usage OpenAIUsage
-	acc := apicompat.NewBufferedResponseAccumulator()
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if !strings.HasPrefix(line, "data: ") || line == "data: [DONE]" {
-			continue
-	placeholder
-		payload := line[6:]
-
-		var event apicompat.ResponsesStreamEvent
-		if err := json.Unmarshal([]byte(payload), &event); err != nil {
-			logger.L().Warn("openai messages buffered: failed to parse event",
-				zap.Error(err),
-				zap.String("request_id", requestID),
-			)
-			continue
-	placeholder
-
-		// Accumulate delta content for fallback when terminal output is empty.
-		acc.ProcessEvent(&event)
-
-		// Terminal events carry the complete ResponsesResponse with output + usage.
-		if (event.Type == "response.completed" || event.Type == "response.done" ||
-			event.Type == "response.incomplete" || event.Type == "response.failed") &&
-			event.Response != nil {
-			finalResponse = event.Response
-			if event.Response.Usage != nil {
-				usage = OpenAIUsage{
-					InputTokens:  event.Response.Usage.InputTokens,
-					OutputTokens: event.Response.Usage.OutputTokens,
-			placeholder
-				if event.Response.Usage.InputTokensDetails != nil {
-					usage.CacheReadInputTokens = event.Response.Usage.InputTokensDetails.CachedTokens
-			placeholder
-		placeholder
-	placeholder
-placeholder
-
-	if err := scanner.Err(); err != nil {
-		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-			logger.L().Warn("openai messages buffered: read error",
-				zap.Error(err),
-				zap.String("request_id", requestID),
-			)
-	placeholder
+	finalResponse, usage, acc, err := s.readOpenAICompatBufferedTerminal(resp, "openai messages buffered", requestID)
+	if err != nil {
+		return nil, err
 placeholder
 
 	if finalResponse == nil {
@@ -378,6 +329,153 @@ placeholder
 		Stream:        false,
 		Duration:      time.Since(startTime),
 placeholder, nil
+placeholder
+
+func isOpenAICompatResponsesTerminalEvent(eventType string) bool {
+	switch strings.TrimSpace(eventType) {
+	case "response.completed", "response.done", "response.incomplete", "response.failed":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func isOpenAICompatDoneSentinelLine(line string) bool {
+	payload, ok := extractOpenAISSEDataLine(line)
+	return ok && strings.TrimSpace(payload) == "[DONE]"
+placeholder
+
+func (s *OpenAIGatewayService) readOpenAICompatBufferedTerminal(
+	resp *http.Response,
+	logPrefix string,
+	requestID string,
+) (*apicompat.ResponsesResponse, OpenAIUsage, *apicompat.BufferedResponseAccumulator, error) {
+	acc := apicompat.NewBufferedResponseAccumulator()
+	var usage OpenAIUsage
+	if resp == nil || resp.Body == nil {
+		return nil, usage, acc, errors.New("upstream response body is nil")
+placeholder
+
+	scanner := bufio.NewScanner(resp.Body)
+	maxLineSize := defaultMaxLineSize
+	if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
+		maxLineSize = s.cfg.Gateway.MaxLineSize
+placeholder
+	scanner.Buffer(make([]byte, 0, 64*1024), maxLineSize)
+
+	streamInterval := time.Duration(0)
+	if s.cfg != nil && s.cfg.Gateway.StreamDataIntervalTimeout > 0 {
+		streamInterval = time.Duration(s.cfg.Gateway.StreamDataIntervalTimeout) * time.Second
+placeholder
+	var timeoutCh <-chan time.Time
+	var timeoutTimer *time.Timer
+	resetTimeout := func() {
+		if streamInterval <= 0 {
+			return
+	placeholder
+		if timeoutTimer == nil {
+			timeoutTimer = time.NewTimer(streamInterval)
+			timeoutCh = timeoutTimer.C
+			return
+	placeholder
+		if !timeoutTimer.Stop() {
+			select {
+			case <-timeoutTimer.C:
+			default:
+		placeholder
+	placeholder
+		timeoutTimer.Reset(streamInterval)
+placeholder
+	stopTimeout := func() {
+		if timeoutTimer == nil {
+			return
+	placeholder
+		if !timeoutTimer.Stop() {
+			select {
+			case <-timeoutTimer.C:
+			default:
+		placeholder
+	placeholder
+placeholder
+	resetTimeout()
+	defer stopTimeout()
+
+	type scanEvent struct {
+		line string
+		err  error
+placeholder
+	events := make(chan scanEvent, 16)
+	done := make(chan struct{placeholder)
+	go func() {
+		defer close(events)
+		for scanner.Scan() {
+			select {
+			case events <- scanEvent{line: scanner.Text()placeholder:
+			case <-done:
+				return
+		placeholder
+	placeholder
+		if err := scanner.Err(); err != nil {
+			select {
+			case events <- scanEvent{err: errplaceholder:
+			case <-done:
+		placeholder
+	placeholder
+placeholder()
+	defer close(done)
+
+	for {
+		select {
+		case ev, ok := <-events:
+			if !ok {
+				return nil, usage, acc, nil
+		placeholder
+			resetTimeout()
+			if ev.err != nil {
+				if !errors.Is(ev.err, context.Canceled) && !errors.Is(ev.err, context.DeadlineExceeded) {
+					logger.L().Warn(logPrefix+": read error",
+						zap.Error(ev.err),
+						zap.String("request_id", requestID),
+					)
+			placeholder
+				return nil, usage, acc, ev.err
+		placeholder
+
+			payload, ok := extractOpenAISSEDataLine(ev.line)
+			if !ok || payload == "" {
+				continue
+		placeholder
+			if strings.TrimSpace(payload) == "[DONE]" {
+				return nil, usage, acc, nil
+		placeholder
+
+			var event apicompat.ResponsesStreamEvent
+			if err := json.Unmarshal([]byte(payload), &event); err != nil {
+				logger.L().Warn(logPrefix+": failed to parse event",
+					zap.Error(err),
+					zap.String("request_id", requestID),
+				)
+				continue
+		placeholder
+
+			acc.ProcessEvent(&event)
+
+			if isOpenAICompatResponsesTerminalEvent(event.Type) && event.Response != nil {
+				if event.Response.Usage != nil {
+					usage = copyOpenAIUsageFromResponsesUsage(event.Response.Usage)
+			placeholder
+				return event.Response, usage, acc, nil
+		placeholder
+
+		case <-timeoutCh:
+			_ = resp.Body.Close()
+			logger.L().Warn(logPrefix+": data interval timeout",
+				zap.String("request_id", requestID),
+				zap.Duration("interval", streamInterval),
+			)
+			return nil, usage, acc, fmt.Errorf("stream data interval timeout")
+	placeholder
+placeholder
 placeholder
 
 // handleAnthropicStreamingResponse reads Responses SSE events from upstream,
@@ -409,6 +507,7 @@ placeholder
 	var usage OpenAIUsage
 	var firstTokenMs *int
 	firstChunk := true
+	clientDisconnected := false
 
 	scanner := bufio.NewScanner(resp.Body)
 	maxLineSize := defaultMaxLineSize
@@ -416,6 +515,20 @@ placeholder
 		maxLineSize = s.cfg.Gateway.MaxLineSize
 placeholder
 	scanner.Buffer(make([]byte, 0, 64*1024), maxLineSize)
+
+	streamInterval := time.Duration(0)
+	if s.cfg != nil && s.cfg.Gateway.StreamDataIntervalTimeout > 0 {
+		streamInterval = time.Duration(s.cfg.Gateway.StreamDataIntervalTimeout) * time.Second
+placeholder
+	var intervalTicker *time.Ticker
+	if streamInterval > 0 {
+		intervalTicker = time.NewTicker(streamInterval)
+		defer intervalTicker.Stop()
+placeholder
+	var intervalCh <-chan time.Time
+	if intervalTicker != nil {
+		intervalCh = intervalTicker.C
+placeholder
 
 	// resultWithUsage builds the final result snapshot.
 	resultWithUsage := func() *OpenAIForwardResult {
@@ -432,7 +545,6 @@ placeholder
 placeholder
 
 	// processDataLine handles a single "data: ..." SSE line from upstream.
-	// Returns (clientDisconnected bool).
 	processDataLine := func(payload string) bool {
 		if firstChunk {
 			firstChunk = false
@@ -449,53 +561,58 @@ placeholder
 			return false
 	placeholder
 
-		// Extract usage from completion events
-		if (event.Type == "response.completed" || event.Type == "response.incomplete" || event.Type == "response.failed") &&
-			event.Response != nil && event.Response.Usage != nil {
-			usage = OpenAIUsage{
-				InputTokens:  event.Response.Usage.InputTokens,
-				OutputTokens: event.Response.Usage.OutputTokens,
-		placeholder
-			if event.Response.Usage.InputTokensDetails != nil {
-				usage.CacheReadInputTokens = event.Response.Usage.InputTokensDetails.CachedTokens
-		placeholder
+		// 仅按兼容转换器支持的终止事件提取 usage，避免无意扩大事件语义。
+		isTerminalEvent := isOpenAICompatResponsesTerminalEvent(event.Type)
+		if isTerminalEvent && event.Response != nil && event.Response.Usage != nil {
+			usage = copyOpenAIUsageFromResponsesUsage(event.Response.Usage)
 	placeholder
 
 		// Convert to Anthropic events
 		events := apicompat.ResponsesEventToAnthropicEvents(&event, state)
-		for _, evt := range events {
-			sse, err := apicompat.ResponsesAnthropicEventToSSE(evt)
-			if err != nil {
-				logger.L().Warn("openai messages stream: failed to marshal event",
-					zap.Error(err),
-					zap.String("request_id", requestID),
-				)
-				continue
-		placeholder
-			if _, err := fmt.Fprint(c.Writer, sse); err != nil {
-				logger.L().Info("openai messages stream: client disconnected",
-					zap.String("request_id", requestID),
-				)
-				return true
+		if !clientDisconnected {
+			for _, evt := range events {
+				sse, err := apicompat.ResponsesAnthropicEventToSSE(evt)
+				if err != nil {
+					logger.L().Warn("openai messages stream: failed to marshal event",
+						zap.Error(err),
+						zap.String("request_id", requestID),
+					)
+					continue
+			placeholder
+				if _, err := fmt.Fprint(c.Writer, sse); err != nil {
+					clientDisconnected = true
+					logger.L().Info("openai messages stream: client disconnected, continuing to drain upstream for billing",
+						zap.String("request_id", requestID),
+					)
+					break
+			placeholder
 		placeholder
 	placeholder
-		if len(events) > 0 {
+		if len(events) > 0 && !clientDisconnected {
 			c.Writer.Flush()
 	placeholder
-		return false
+		return isTerminalEvent
 placeholder
 
 	// finalizeStream sends any remaining Anthropic events and returns the result.
 	finalizeStream := func() (*OpenAIForwardResult, error) {
-		if finalEvents := apicompat.FinalizeResponsesAnthropicStream(state); len(finalEvents) > 0 {
+		if finalEvents := apicompat.FinalizeResponsesAnthropicStream(state); len(finalEvents) > 0 && !clientDisconnected {
 			for _, evt := range finalEvents {
 				sse, err := apicompat.ResponsesAnthropicEventToSSE(evt)
 				if err != nil {
 					continue
 			placeholder
-				fmt.Fprint(c.Writer, sse) //nolint:errcheck
+				if _, err := fmt.Fprint(c.Writer, sse); err != nil {
+					clientDisconnected = true
+					logger.L().Info("openai messages stream: client disconnected during final flush",
+						zap.String("request_id", requestID),
+					)
+					break
+			placeholder
 		placeholder
-			c.Writer.Flush()
+			if !clientDisconnected {
+				c.Writer.Flush()
+		placeholder
 	placeholder
 		return resultWithUsage(), nil
 placeholder
@@ -509,6 +626,9 @@ placeholder
 			)
 	placeholder
 placeholder
+	missingTerminalErr := func() (*OpenAIForwardResult, error) {
+		return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
+placeholder
 
 	// ── Determine keepalive interval ──
 	keepaliveInterval := time.Duration(0)
@@ -517,18 +637,25 @@ placeholder
 placeholder
 
 	// ── No keepalive: fast synchronous path (no goroutine overhead) ──
-	if keepaliveInterval <= 0 {
+	if streamInterval <= 0 && keepaliveInterval <= 0 {
 		for scanner.Scan() {
 			line := scanner.Text()
-			if !strings.HasPrefix(line, "data: ") || line == "data: [DONE]" {
+			payload, ok := extractOpenAISSEDataLine(line)
+			if !ok {
 				continue
 		placeholder
-			if processDataLine(line[6:]) {
-				return resultWithUsage(), nil
+			if strings.TrimSpace(payload) == "[DONE]" {
+				return missingTerminalErr()
+		placeholder
+			if processDataLine(payload) {
+				return finalizeStream()
 		placeholder
 	placeholder
-		handleScanErr(scanner.Err())
-		return finalizeStream()
+		if err := scanner.Err(); err != nil {
+			handleScanErr(err)
+			return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", err)
+	placeholder
+		return missingTerminalErr()
 placeholder
 
 	// ── With keepalive: goroutine + channel + select ──
@@ -538,6 +665,8 @@ placeholder
 placeholder
 	events := make(chan scanEvent, 16)
 	done := make(chan struct{placeholder)
+	var lastReadAt int64
+	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 	sendEvent := func(ev scanEvent) bool {
 		select {
 		case events <- ev:
@@ -549,6 +678,7 @@ placeholder
 	go func() {
 		defer close(events)
 		for scanner.Scan() {
+			atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
 			if !sendEvent(scanEvent{line: scanner.Text()placeholder) {
 				return
 		placeholder
@@ -559,8 +689,15 @@ placeholder
 placeholder()
 	defer close(done)
 
-	keepaliveTicker := time.NewTicker(keepaliveInterval)
-	defer keepaliveTicker.Stop()
+	var keepaliveTicker *time.Ticker
+	if keepaliveInterval > 0 {
+		keepaliveTicker = time.NewTicker(keepaliveInterval)
+		defer keepaliveTicker.Stop()
+placeholder
+	var keepaliveCh <-chan time.Time
+	if keepaliveTicker != nil {
+		keepaliveCh = keepaliveTicker.C
+placeholder
 	lastDataAt := time.Now()
 
 	for {
@@ -568,22 +705,44 @@ placeholder()
 		case ev, ok := <-events:
 			if !ok {
 				// Upstream closed
-				return finalizeStream()
+				return missingTerminalErr()
 		placeholder
 			if ev.err != nil {
 				handleScanErr(ev.err)
-				return finalizeStream()
+				return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", ev.err)
 		placeholder
 			lastDataAt = time.Now()
 			line := ev.line
-			if !strings.HasPrefix(line, "data: ") || line == "data: [DONE]" {
+			payload, ok := extractOpenAISSEDataLine(line)
+			if !ok {
 				continue
 		placeholder
-			if processDataLine(line[6:]) {
-				return resultWithUsage(), nil
+			if strings.TrimSpace(payload) == "[DONE]" {
+				return missingTerminalErr()
+		placeholder
+			if processDataLine(payload) {
+				return finalizeStream()
 		placeholder
 
-		case <-keepaliveTicker.C:
+		case <-intervalCh:
+			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+			if time.Since(lastRead) < streamInterval {
+				continue
+		placeholder
+			if clientDisconnected {
+				return resultWithUsage(), fmt.Errorf("stream usage incomplete after timeout")
+		placeholder
+			logger.L().Warn("openai messages stream: data interval timeout",
+				zap.String("request_id", requestID),
+				zap.String("model", originalModel),
+				zap.Duration("interval", streamInterval),
+			)
+			return resultWithUsage(), fmt.Errorf("stream data interval timeout")
+
+		case <-keepaliveCh:
+			if clientDisconnected {
+				continue
+		placeholder
 			if time.Since(lastDataAt) < keepaliveInterval {
 				continue
 		placeholder
@@ -593,7 +752,8 @@ placeholder()
 				logger.L().Info("openai messages stream: client disconnected during keepalive",
 					zap.String("request_id", requestID),
 				)
-				return resultWithUsage(), nil
+				clientDisconnected = true
+				continue
 		placeholder
 			c.Writer.Flush()
 	placeholder
@@ -609,4 +769,18 @@ func writeAnthropicError(c *gin.Context, statusCode int, errType, message string
 			"message": message,
 	placeholder,
 placeholder)
+placeholder
+
+func copyOpenAIUsageFromResponsesUsage(usage *apicompat.ResponsesUsage) OpenAIUsage {
+	if usage == nil {
+		return OpenAIUsage{placeholder
+placeholder
+	result := OpenAIUsage{
+		InputTokens:  usage.InputTokens,
+		OutputTokens: usage.OutputTokens,
+placeholder
+	if usage.InputTokensDetails != nil {
+		result.CacheReadInputTokens = usage.InputTokensDetails.CachedTokens
+placeholder
+	return result
 placeholder

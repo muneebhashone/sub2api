@@ -8174,9 +8174,16 @@ placeholder
 placeholder
 
 func detachStreamUpstreamContext(ctx context.Context, stream bool) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		return context.Background(), func() {placeholder
+placeholder
 	if !stream {
 		return ctx, func() {placeholder
 placeholder
+	return context.WithoutCancel(ctx), func() {placeholder
+placeholder
+
+func detachUpstreamContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	if ctx == nil {
 		return context.Background(), func() {placeholder
 placeholder
