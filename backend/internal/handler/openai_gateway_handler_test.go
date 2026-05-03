@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	pkghttputil "github.com/Wei-Shaw/sub2api/internal/pkg/httputil"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -651,6 +652,46 @@ placeholder
 	require.Contains(t, strings.ToLower(closeErr.Reason), "failed to acquire user concurrency slot")
 placeholder
 
+func TestOpenAIResponsesWebSocket_PassthroughUsageLogPersistsUserAgentAndReasoningEffort(t *testing.T) {
+	got := runOpenAIResponsesWebSocketUsageLogCase(t, openAIResponsesWSUsageLogCase{
+		firstPayload: `{"type":"response.create","model":"gpt-5.4","stream":false,"reasoning":{"effort":"HIGH"placeholderplaceholder`,
+		userAgent:    testStringPtr("codex_cli_rs/0.125.0 test"),
+placeholder)
+
+	require.NotNil(t, got.log.UserAgent)
+	require.Equal(t, "codex_cli_rs/0.125.0 test", *got.log.UserAgent)
+	require.NotNil(t, got.log.ReasoningEffort)
+	require.Equal(t, "high", *got.log.ReasoningEffort)
+	require.True(t, got.log.OpenAIWSMode)
+placeholder
+
+func TestOpenAIResponsesWebSocket_PassthroughUsageLogInfersReasoningFromInitialRequestModel(t *testing.T) {
+	got := runOpenAIResponsesWebSocketUsageLogCase(t, openAIResponsesWSUsageLogCase{
+		firstPayload: `{"type":"response.create","model":"gpt-5.4-xhigh","stream":falseplaceholder`,
+		userAgent:    testStringPtr("codex_cli_rs/0.125.0 mapped"),
+		channelMapping: map[string]string{
+			"gpt-5.4-xhigh": "gpt-5.4",
+	placeholder,
+placeholder)
+
+	require.Equal(t, "gpt-5.4", gjson.GetBytes(got.upstreamFirstPayload, "model").String(),
+		"上游首帧应使用渠道映射后的模型")
+	require.NotNil(t, got.log.ReasoningEffort)
+	require.Equal(t, "xhigh", *got.log.ReasoningEffort,
+		"usage log reasoning effort 必须使用渠道映射前首帧模型后缀推导")
+placeholder
+
+func TestOpenAIResponsesWebSocket_PassthroughUsageLogLeavesUserAgentNilWhenMissing(t *testing.T) {
+	got := runOpenAIResponsesWebSocketUsageLogCase(t, openAIResponsesWSUsageLogCase{
+		firstPayload: `{"type":"response.create","model":"gpt-5.4","stream":false,"reasoning":{"effort":"medium"placeholderplaceholder`,
+		userAgent:    testStringPtr(""),
+placeholder)
+
+	require.Nil(t, got.log.UserAgent, "空入站 User-Agent 不应由上游握手 UA 或默认 UA 兜底")
+	require.NotNil(t, got.log.ReasoningEffort)
+	require.Equal(t, "medium", *got.log.ReasoningEffort)
+placeholder
+
 func TestSetOpenAIClientTransportHTTP(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -795,4 +836,279 @@ placeholder
 placeholder)
 	router.GET("/openai/v1/responses", h.ResponsesWebSocket)
 	return httptest.NewServer(router)
+placeholder
+
+type openAIResponsesWSUsageLogCase struct {
+	firstPayload   string
+	userAgent      *string
+	channelMapping map[string]string
+placeholder
+
+type openAIResponsesWSUsageLogResult struct {
+	log                  *service.UsageLog
+	upstreamFirstPayload []byte
+placeholder
+
+type openAIWSUsageHandlerAccountRepoStub struct {
+	service.AccountRepository
+	account service.Account
+placeholder
+
+func (s *openAIWSUsageHandlerAccountRepoStub) ListSchedulableByPlatform(ctx context.Context, platform string) ([]service.Account, error) {
+	if s.account.Platform != platform {
+		return nil, nil
+placeholder
+	return []service.Account{s.accountplaceholder, nil
+placeholder
+
+func (s *openAIWSUsageHandlerAccountRepoStub) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]service.Account, error) {
+	return s.ListSchedulableByPlatform(ctx, platform)
+placeholder
+
+func (s *openAIWSUsageHandlerAccountRepoStub) GetByID(ctx context.Context, id int64) (*service.Account, error) {
+	if s.account.ID != id {
+		return nil, nil
+placeholder
+	account := s.account
+	return &account, nil
+placeholder
+
+type openAIWSUsageHandlerUsageLogRepoStub struct {
+	service.UsageLogRepository
+	created chan *service.UsageLog
+placeholder
+
+func (s *openAIWSUsageHandlerUsageLogRepoStub) Create(ctx context.Context, log *service.UsageLog) (bool, error) {
+	if s.created != nil {
+		s.created <- log
+placeholder
+	return true, nil
+placeholder
+
+type openAIWSUsageHandlerChannelRepoStub struct {
+	service.ChannelRepository
+	channels       []service.Channel
+	groupPlatforms map[int64]string
+placeholder
+
+func (s *openAIWSUsageHandlerChannelRepoStub) ListAll(ctx context.Context) ([]service.Channel, error) {
+	return s.channels, nil
+placeholder
+
+func (s *openAIWSUsageHandlerChannelRepoStub) GetGroupPlatforms(ctx context.Context, groupIDs []int64) (map[int64]string, error) {
+	out := make(map[int64]string, len(groupIDs))
+	for _, groupID := range groupIDs {
+		if platform := strings.TrimSpace(s.groupPlatforms[groupID]); platform != "" {
+			out[groupID] = platform
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
+func runOpenAIResponsesWebSocketUsageLogCase(t *testing.T, tc openAIResponsesWSUsageLogCase) openAIResponsesWSUsageLogResult {
+placeholder
+	gin.SetMode(gin.TestMode)
+
+	upstreamPayloadCh := make(chan []byte, 1)
+	upstreamErrCh := make(chan error, 1)
+	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := coderws.Accept(w, r, &coderws.AcceptOptions{
+			CompressionMode: coderws.CompressionContextTakeover,
+	placeholder)
+		if err != nil {
+			upstreamErrCh <- err
+			return
+	placeholder
+		defer func() {
+			_ = conn.CloseNow()
+	placeholder()
+
+		readCtx, cancelRead := context.WithTimeout(r.Context(), 3*time.Second)
+		msgType, payload, readErr := conn.Read(readCtx)
+		cancelRead()
+		if readErr != nil {
+			upstreamErrCh <- readErr
+			return
+	placeholder
+		if msgType != coderws.MessageText && msgType != coderws.MessageBinary {
+			upstreamErrCh <- errors.New("unexpected upstream websocket message type")
+			return
+	placeholder
+		upstreamPayloadCh <- payload
+
+		writeCtx, cancelWrite := context.WithTimeout(r.Context(), 3*time.Second)
+		writeErr := conn.Write(writeCtx, coderws.MessageText, []byte(
+			`{"type":"response.completed","response":{"id":"resp_usage_e2e","model":"gpt-5.4","usage":{"input_tokens":2,"output_tokens":1placeholderplaceholderplaceholder`,
+		))
+		cancelWrite()
+		if writeErr != nil {
+			upstreamErrCh <- writeErr
+			return
+	placeholder
+		_ = conn.Close(coderws.StatusNormalClosure, "done")
+		upstreamErrCh <- nil
+placeholder))
+	defer upstreamServer.Close()
+
+	groupID := int64(4201)
+	account := service.Account{
+		ID:          9901,
+		Name:        "openai-ws-passthrough-usage-e2e",
+		Platform:    service.PlatformOpenAI,
+		Type:        service.AccountTypeAPIKey,
+		Status:      service.StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": upstreamServer.URL,
+	placeholder,
+		Extra: map[string]any{
+			"openai_apikey_responses_websockets_v2_enabled": true,
+			"openai_apikey_responses_websockets_v2_mode":    service.OpenAIWSIngressModePassthrough,
+	placeholder,
+placeholder
+
+	cfg := &config.Config{placeholder
+	cfg.RunMode = config.RunModeSimple
+	cfg.Default.RateMultiplier = 1
+	cfg.Security.URLAllowlist.Enabled = false
+	cfg.Security.URLAllowlist.AllowInsecureHTTP = true
+	cfg.Gateway.OpenAIWS.Enabled = true
+	cfg.Gateway.OpenAIWS.APIKeyEnabled = true
+	cfg.Gateway.OpenAIWS.ResponsesWebsocketsV2 = true
+	cfg.Gateway.OpenAIWS.ModeRouterV2Enabled = true
+	cfg.Gateway.OpenAIWS.DialTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.ReadTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.WriteTimeoutSeconds = 3
+
+	accountRepo := &openAIWSUsageHandlerAccountRepoStub{account: accountplaceholder
+	usageRepo := &openAIWSUsageHandlerUsageLogRepoStub{created: make(chan *service.UsageLog, 1)placeholder
+
+	var channelSvc *service.ChannelService
+	if len(tc.channelMapping) > 0 {
+		channelSvc = service.NewChannelService(&openAIWSUsageHandlerChannelRepoStub{
+			channels: []service.Channel{{
+				ID:           7701,
+				Name:         "openai-ws-e2e-channel",
+				Status:       service.StatusActive,
+				GroupIDs:     []int64{groupIDplaceholder,
+				ModelMapping: map[string]map[string]string{service.PlatformOpenAI: tc.channelMappingplaceholder,
+	placeholder
+			groupPlatforms: map[int64]string{groupID: service.PlatformOpenAIplaceholder,
+	placeholder, nil, nil, nil)
+placeholder
+
+	billingCacheSvc := service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, cfg)
+	gatewaySvc := service.NewOpenAIGatewayService(
+		accountRepo,
+		usageRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		cfg,
+		nil,
+		nil,
+		service.NewBillingService(cfg, nil),
+		nil,
+		billingCacheSvc,
+		nil,
+		&service.DeferredService{placeholder,
+		nil,
+		nil,
+		channelSvc,
+		nil,
+		nil,
+	)
+
+	cache := &concurrencyCacheMock{
+		acquireUserSlotFn: func(ctx context.Context, userID int64, maxConcurrency int, requestID string) (bool, error) {
+			return true, nil
+	placeholder,
+		acquireAccountSlotFn: func(ctx context.Context, accountID int64, maxConcurrency int, requestID string) (bool, error) {
+			return true, nil
+	placeholder,
+placeholder
+	h := &OpenAIGatewayHandler{
+		gatewayService:      gatewaySvc,
+		billingCacheService: billingCacheSvc,
+		apiKeyService:       &service.APIKeyService{placeholder,
+		concurrencyHelper:   NewConcurrencyHelper(service.NewConcurrencyService(cache), SSEPingFormatNone, time.Second),
+placeholder
+
+	apiKey := &service.APIKey{
+		ID:      1801,
+		GroupID: &groupID,
+		User:    &service.User{ID: 1701, Status: service.StatusActiveplaceholder,
+placeholder
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(string(middleware.ContextKeyAPIKey), apiKey)
+		c.Set(string(middleware.ContextKeyUser), middleware.AuthSubject{UserID: apiKey.User.ID, Concurrency: 1placeholder)
+		c.Next()
+placeholder)
+	router.GET("/openai/v1/responses", h.ResponsesWebSocket)
+	handlerServer := httptest.NewServer(router)
+	defer handlerServer.Close()
+
+	headers := http.Header{placeholder
+	if tc.userAgent != nil {
+		headers.Set("User-Agent", *tc.userAgent)
+placeholder
+	dialCtx, cancelDial := context.WithTimeout(context.Background(), 3*time.Second)
+	clientConn, _, err := coderws.Dial(
+		dialCtx,
+		"ws"+strings.TrimPrefix(handlerServer.URL, "http")+"/openai/v1/responses",
+		&coderws.DialOptions{HTTPHeader: headers, CompressionMode: coderws.CompressionContextTakeoverplaceholder,
+	)
+	cancelDial()
+placeholder
+	defer func() {
+		_ = clientConn.CloseNow()
+placeholder()
+
+	writeCtx, cancelWrite := context.WithTimeout(context.Background(), 3*time.Second)
+	err = clientConn.Write(writeCtx, coderws.MessageText, []byte(tc.firstPayload))
+	cancelWrite()
+placeholder
+
+	readCtx, cancelRead := context.WithTimeout(context.Background(), 3*time.Second)
+	_, event, err := clientConn.Read(readCtx)
+	cancelRead()
+placeholder
+	require.Equal(t, "response.completed", gjson.GetBytes(event, "type").String())
+	_ = clientConn.Close(coderws.StatusNormalClosure, "done")
+
+	var usageLog *service.UsageLog
+	select {
+	case usageLog = <-usageRepo.created:
+		require.NotNil(t, usageLog)
+	case <-time.After(3 * time.Second):
+		t.Fatal("等待 WebSocket usage log 写入超时")
+placeholder
+
+	var upstreamFirstPayload []byte
+	select {
+	case upstreamFirstPayload = <-upstreamPayloadCh:
+	case <-time.After(3 * time.Second):
+		t.Fatal("等待上游 WebSocket 首帧超时")
+placeholder
+
+	select {
+	case upstreamErr := <-upstreamErrCh:
+		require.NoError(t, upstreamErr)
+	case <-time.After(3 * time.Second):
+		t.Fatal("等待上游 WebSocket 结束超时")
+placeholder
+
+	return openAIResponsesWSUsageLogResult{
+		log:                  usageLog,
+		upstreamFirstPayload: upstreamFirstPayload,
+placeholder
+placeholder
+
+func testStringPtr(v string) *string {
+	return &v
 placeholder
