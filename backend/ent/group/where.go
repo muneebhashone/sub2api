@@ -125,6 +125,21 @@ func DefaultValidityDays(v int) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldDefaultValidityDays, v))
 placeholder
 
+// AllowImageGeneration applies equality check predicate on the "allow_image_generation" field. It's identical to AllowImageGenerationEQ.
+func AllowImageGeneration(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldAllowImageGeneration, v))
+placeholder
+
+// ImageRateIndependent applies equality check predicate on the "image_rate_independent" field. It's identical to ImageRateIndependentEQ.
+func ImageRateIndependent(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldImageRateIndependent, v))
+placeholder
+
+// ImageRateMultiplier applies equality check predicate on the "image_rate_multiplier" field. It's identical to ImageRateMultiplierEQ.
+func ImageRateMultiplier(v float64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldImageRateMultiplier, v))
+placeholder
+
 // ImagePrice1k applies equality check predicate on the "image_price_1k" field. It's identical to ImagePrice1kEQ.
 func ImagePrice1k(v float64) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldImagePrice1k, v))
@@ -898,6 +913,66 @@ placeholder
 // DefaultValidityDaysLTE applies the LTE predicate on the "default_validity_days" field.
 func DefaultValidityDaysLTE(v int) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldDefaultValidityDays, v))
+placeholder
+
+// AllowImageGenerationEQ applies the EQ predicate on the "allow_image_generation" field.
+func AllowImageGenerationEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldAllowImageGeneration, v))
+placeholder
+
+// AllowImageGenerationNEQ applies the NEQ predicate on the "allow_image_generation" field.
+func AllowImageGenerationNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldAllowImageGeneration, v))
+placeholder
+
+// ImageRateIndependentEQ applies the EQ predicate on the "image_rate_independent" field.
+func ImageRateIndependentEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldImageRateIndependent, v))
+placeholder
+
+// ImageRateIndependentNEQ applies the NEQ predicate on the "image_rate_independent" field.
+func ImageRateIndependentNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldImageRateIndependent, v))
+placeholder
+
+// ImageRateMultiplierEQ applies the EQ predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierEQ(v float64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldImageRateMultiplier, v))
+placeholder
+
+// ImageRateMultiplierNEQ applies the NEQ predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierNEQ(v float64) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldImageRateMultiplier, v))
+placeholder
+
+// ImageRateMultiplierIn applies the In predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierIn(vs ...float64) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldImageRateMultiplier, vs...))
+placeholder
+
+// ImageRateMultiplierNotIn applies the NotIn predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierNotIn(vs ...float64) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldImageRateMultiplier, vs...))
+placeholder
+
+// ImageRateMultiplierGT applies the GT predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierGT(v float64) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldImageRateMultiplier, v))
+placeholder
+
+// ImageRateMultiplierGTE applies the GTE predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierGTE(v float64) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldImageRateMultiplier, v))
+placeholder
+
+// ImageRateMultiplierLT applies the LT predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierLT(v float64) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldImageRateMultiplier, v))
+placeholder
+
+// ImageRateMultiplierLTE applies the LTE predicate on the "image_rate_multiplier" field.
+func ImageRateMultiplierLTE(v float64) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldImageRateMultiplier, v))
 placeholder
 
 // ImagePrice1kEQ applies the EQ predicate on the "image_price_1k" field.

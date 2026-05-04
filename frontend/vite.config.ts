@@ -44,7 +44,6 @@ export default defineConfig(({ mode placeholder) => {
     plugins: [
       vue(),
       checker({
-        typescript: true,
         vueTsc: true
       placeholder),
       injectPublicSettings(backendUrl)

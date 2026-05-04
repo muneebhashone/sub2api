@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"math"
 	"sort"
 	"strconv"
@@ -345,7 +346,7 @@ placeholder
 		_ = s.service.deleteStickySessionAccountID(ctx, req.GroupID, sessionHash)
 		return nil, nil
 placeholder
-	if !s.isAccountRequestCompatible(account, req) {
+	if !s.isAccountRequestCompatible(ctx, account, req) {
 		return nil, nil
 placeholder
 	if !s.isAccountTransportCompatible(account, req.RequiredTransport) {
@@ -621,7 +622,7 @@ placeholder
 				fmt.Sprintf("Privacy not set, required by group [%s]", schedGroup.Name))
 			continue
 	placeholder
-		if !s.isAccountRequestCompatible(account, req) {
+		if !s.isAccountRequestCompatible(ctx, account, req) {
 			continue
 	placeholder
 		if !s.isAccountTransportCompatible(account, req.RequiredTransport) {
@@ -822,11 +823,11 @@ placeholder
 	for i := 0; i < len(selectionOrder); i++ {
 		candidate := selectionOrder[i]
 		fresh := s.service.resolveFreshSchedulableOpenAIAccount(ctx, candidate.account, req.RequestedModel, false)
-		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(fresh, req) {
+		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(ctx, fresh, req) {
 			continue
 	placeholder
 		fresh = s.service.recheckSelectedOpenAIAccountFromDB(ctx, fresh, req.RequestedModel, false)
-		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(fresh, req) {
+		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(ctx, fresh, req) {
 			continue
 	placeholder
 		if req.RequireCompact && openAICompactSupportTier(fresh) == 0 {
@@ -853,11 +854,11 @@ placeholder
 	// WaitPlan.MaxConcurrency 使用 Concurrency（非 EffectiveLoadFactor），因为 WaitPlan 控制的是 Redis 实际并发槽位等待。
 	for _, candidate := range selectionOrder {
 		fresh := s.service.resolveFreshSchedulableOpenAIAccount(ctx, candidate.account, req.RequestedModel, false)
-		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(fresh, req) {
+		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(ctx, fresh, req) {
 			continue
 	placeholder
 		fresh = s.service.recheckSelectedOpenAIAccountFromDB(ctx, fresh, req.RequestedModel, false)
-		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(fresh, req) {
+		if fresh == nil || !s.isAccountTransportCompatible(fresh, req.RequiredTransport) || !s.isAccountRequestCompatible(ctx, fresh, req) {
 			continue
 	placeholder
 		if req.RequireCompact && openAICompactSupportTier(fresh) == 0 {
@@ -888,11 +889,16 @@ placeholder
 	return s.service.isOpenAIAccountTransportCompatible(account, requiredTransport)
 placeholder
 
-func (s *defaultOpenAIAccountScheduler) isAccountRequestCompatible(account *Account, req OpenAIAccountScheduleRequest) bool {
+func (s *defaultOpenAIAccountScheduler) isAccountRequestCompatible(ctx context.Context, account *Account, req OpenAIAccountScheduleRequest) bool {
 	if account == nil {
 		return false
 placeholder
 	if req.RequestedModel != "" && !account.IsModelSupported(req.RequestedModel) {
+		return false
+placeholder
+	if req.GroupID != nil && s != nil && s.service != nil &&
+		s.service.needsUpstreamChannelRestrictionCheck(ctx, req.GroupID) &&
+		s.service.isUpstreamModelRestrictedByChannel(ctx, *req.GroupID, account, req.RequestedModel, req.RequireCompact) {
 		return false
 placeholder
 	return account.SupportsOpenAIImageCapability(req.RequiredImageCapability)
@@ -1104,6 +1110,13 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 		placeholder
 			effectiveExcludedIDs[selection.Account.ID] = struct{placeholder{placeholder
 	placeholder
+placeholder
+
+	if s.checkChannelPricingRestriction(ctx, groupID, requestedModel) {
+		slog.Warn("channel pricing restriction blocked request",
+			"group_id", derefGroupID(groupID),
+			"model", requestedModel)
+		return nil, decision, fmt.Errorf("%w supporting model: %s (channel pricing restriction)", ErrNoAvailableAccounts, requestedModel)
 placeholder
 
 	var stickyAccountID int64
