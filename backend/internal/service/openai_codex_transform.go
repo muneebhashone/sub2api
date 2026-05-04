@@ -38,6 +38,29 @@ var codexModelMap = map[string]string{
 	"gpt-5.2-medium":             "gpt-5.2",
 	"gpt-5.2-high":               "gpt-5.2",
 	"gpt-5.2-xhigh":              "gpt-5.2",
+	"gpt-5":                      "gpt-5.4",
+	"gpt-5-mini":                 "gpt-5.4",
+	"gpt-5-nano":                 "gpt-5.4",
+	"gpt-5.1":                    "gpt-5.4",
+	"gpt-5.1-codex":              "gpt-5.3-codex",
+	"gpt-5.1-codex-max":          "gpt-5.3-codex",
+	"gpt-5.1-codex-mini":         "gpt-5.3-codex",
+	"gpt-5.2-codex":              "gpt-5.2",
+	"codex-mini-latest":          "gpt-5.3-codex",
+	"gpt-5-codex":                "gpt-5.3-codex",
+placeholder
+
+var codexVersionModelPrefixes = []struct {
+	prefix string
+	target string
+placeholder{
+	{prefix: "gpt-5.3-codex-spark", target: "gpt-5.3-codex-spark"placeholder,
+	{prefix: "gpt-5.3-codex", target: "gpt-5.3-codex"placeholder,
+	{prefix: "gpt-5.4-mini", target: "gpt-5.4-mini"placeholder,
+	{prefix: "gpt-5.4-nano", target: "gpt-5.4-nano"placeholder,
+	{prefix: "gpt-5.5", target: "gpt-5.5"placeholder,
+	{prefix: "gpt-5.4", target: "gpt-5.4"placeholder,
+	{prefix: "gpt-5.2", target: "gpt-5.2"placeholder,
 placeholder
 
 type codexTransformResult struct {
@@ -447,8 +470,19 @@ func normalizeCodexModel(model string) string {
 	if model == "" {
 		return "gpt-5.4"
 placeholder
+	if mapped, ok := normalizeKnownCodexModel(model); ok {
+		return mapped
+placeholder
+	return model
+placeholder
+
+func normalizeKnownCodexModel(model string) (string, bool) {
+	model = strings.TrimSpace(model)
+	if model == "" {
+		return "", false
+placeholder
 	if isOpenAIImageGenerationModel(model) {
-		return model
+		return model, true
 placeholder
 
 	modelID := model
@@ -457,41 +491,58 @@ placeholder
 		modelID = parts[len(parts)-1]
 placeholder
 
-	if mapped := getNormalizedCodexModel(modelID); mapped != "" {
-		return mapped
+	key := codexModelLookupKey(modelID)
+	if key == "" {
+		return "", false
+placeholder
+	if mapped := getNormalizedCodexModel(key); mapped != "" {
+		return mapped, true
+placeholder
+	for _, item := range codexVersionModelPrefixes {
+		if key == item.prefix {
+			return item.target, true
+	placeholder
+		suffix, ok := strings.CutPrefix(key, item.prefix+"-")
+		if ok && isKnownCodexModelSuffix(suffix) {
+			return item.target, true
+	placeholder
+placeholder
+	return "", false
 placeholder
 
-	normalized := strings.ToLower(modelID)
-
-	if strings.Contains(normalized, "gpt-5.5") || strings.Contains(normalized, "gpt 5.5") {
-		return "gpt-5.5"
+func codexModelLookupKey(modelID string) string {
+	modelID = strings.TrimSpace(modelID)
+	if modelID == "" {
+		return ""
 placeholder
-	if strings.Contains(normalized, "gpt-5.4-mini") || strings.Contains(normalized, "gpt 5.4 mini") {
-		return "gpt-5.4-mini"
+	if strings.Contains(modelID, "/") {
+		parts := strings.Split(modelID, "/")
+		modelID = parts[len(parts)-1]
 placeholder
-	if strings.Contains(normalized, "gpt-5.4") || strings.Contains(normalized, "gpt 5.4") {
-		return "gpt-5.4"
-placeholder
-	if strings.Contains(normalized, "gpt-5.2") || strings.Contains(normalized, "gpt 5.2") {
-		return "gpt-5.2"
-placeholder
-	if strings.Contains(normalized, "gpt-5.3-codex-spark") || strings.Contains(normalized, "gpt 5.3 codex spark") {
-		return "gpt-5.3-codex-spark"
-placeholder
-	if strings.Contains(normalized, "gpt-5.3-codex") || strings.Contains(normalized, "gpt 5.3 codex") {
-		return "gpt-5.3-codex"
-placeholder
-	if strings.Contains(normalized, "gpt-5.3") || strings.Contains(normalized, "gpt 5.3") {
-		return "gpt-5.3-codex"
-placeholder
-	if strings.Contains(normalized, "codex") {
-		return "gpt-5.3-codex"
-placeholder
-	if strings.Contains(normalized, "gpt-5") || strings.Contains(normalized, "gpt 5") {
-		return "gpt-5.4"
+	return strings.ToLower(strings.Join(strings.Fields(modelID), "-"))
 placeholder
 
-	return "gpt-5.4"
+func isKnownCodexModelSuffix(suffix string) bool {
+	switch suffix {
+	case "none", "minimal", "low", "medium", "high", "xhigh":
+		return true
+placeholder
+	return isCodexDateSuffix(suffix)
+placeholder
+
+func isCodexDateSuffix(suffix string) bool {
+	parts := strings.Split(suffix, "-")
+	if len(parts) != 3 || len(parts[0]) != 4 || len(parts[1]) != 2 || len(parts[2]) != 2 {
+		return false
+placeholder
+	for _, part := range parts {
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return false
+		placeholder
+	placeholder
+placeholder
+	return true
 placeholder
 
 func isCodexSparkModel(model string) bool {
@@ -789,17 +840,12 @@ placeholder
 placeholder
 
 func getNormalizedCodexModel(modelID string) string {
-	if modelID == "" {
+	key := codexModelLookupKey(modelID)
+	if key == "" {
 		return ""
 placeholder
-	if mapped, ok := codexModelMap[modelID]; ok {
+	if mapped, ok := codexModelMap[key]; ok {
 		return mapped
-placeholder
-	lower := strings.ToLower(modelID)
-	for key, value := range codexModelMap {
-		if strings.ToLower(key) == lower {
-			return value
-	placeholder
 placeholder
 	return ""
 placeholder

@@ -11,13 +11,22 @@ func TestResolveOpenAIForwardModel(t *testing.T) {
 		expectedModel      string
 placeholder{
 		{
-			name: "falls back to group default when account has no mapping",
+			name: "uses messages dispatch default for claude model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
 			requestedModel:     "claude-opus-4-6",
 			defaultMappedModel: "gpt-4o-mini",
 			expectedModel:      "gpt-4o-mini",
+	placeholder,
+		{
+			name: "does not fall back to group default for invalid gpt model",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt6",
+			defaultMappedModel: "gpt-5.4",
+			expectedModel:      "gpt6",
 	placeholder,
 		{
 			name: "preserves explicit gpt-5.4 instead of group default",
@@ -119,14 +128,14 @@ func TestResolveOpenAIForwardModel_PreventsClaudeModelFromFallingBackToGpt54(t *
 placeholderplaceholder,
 placeholder
 
-	withoutDefault := normalizeCodexModel(resolveOpenAIForwardModel(account, "claude-opus-4-6", ""))
-	if withoutDefault != "gpt-5.4" {
-		t.Fatalf("normalizeCodexModel(...) = %q, want %q", withoutDefault, "gpt-5.4")
+	withoutDefault := resolveOpenAIForwardModel(account, "claude-opus-4-6", "")
+	if withoutDefault != "claude-opus-4-6" {
+		t.Fatalf("resolveOpenAIForwardModel(...) = %q, want %q", withoutDefault, "claude-opus-4-6")
 placeholder
 
-	withDefault := normalizeCodexModel(resolveOpenAIForwardModel(account, "claude-opus-4-6", "gpt-5.4"))
+	withDefault := resolveOpenAIForwardModel(account, "claude-opus-4-6", "gpt-5.4")
 	if withDefault != "gpt-5.4" {
-		t.Fatalf("normalizeCodexModel(...) = %q, want %q", withDefault, "gpt-5.4")
+		t.Fatalf("resolveOpenAIForwardModel(...) = %q, want %q", withDefault, "gpt-5.4")
 placeholder
 placeholder
 
@@ -205,6 +214,10 @@ func TestNormalizeCodexModel(t *testing.T) {
 		"gpt-5.3-codex-spark-xhigh": "gpt-5.3-codex-spark",
 		"gpt-5.3":                   "gpt-5.3-codex",
 		"gpt-image-2":               "gpt-image-2",
+		"gpt-5.4-nano":              "gpt-5.4-nano",
+		"gpt-5.4-nano-high":         "gpt-5.4-nano",
+		"gpt6":                      "gpt6",
+		"claude-opus-4-6":           "claude-opus-4-6",
 placeholder
 
 	for input, expected := range cases {
@@ -222,9 +235,21 @@ func TestNormalizeOpenAIModelForUpstream(t *testing.T) {
 		want    string
 placeholder{
 		{
-			name:    "oauth keeps codex normalization behavior",
+			name:    "oauth preserves unknown non codex model",
 			account: &Account{Type: AccountTypeOAuthplaceholder,
 			model:   "gemini-3-flash-preview",
+			want:    "gemini-3-flash-preview",
+	placeholder,
+		{
+			name:    "oauth preserves invalid gpt model",
+			account: &Account{Type: AccountTypeOAuthplaceholder,
+			model:   "gpt6",
+			want:    "gpt6",
+	placeholder,
+		{
+			name:    "oauth normalizes known codex alias",
+			account: &Account{Type: AccountTypeOAuthplaceholder,
+			model:   "gpt-5.4-high",
 			want:    "gpt-5.4",
 	placeholder,
 		{

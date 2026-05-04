@@ -37,16 +37,6 @@ type OpenAIGatewayHandler struct {
 	cfg                     *config.Config
 placeholder
 
-func resolveOpenAIForwardDefaultMappedModel(apiKey *service.APIKey, fallbackModel string) string {
-	if fallbackModel = strings.TrimSpace(fallbackModel); fallbackModel != "" {
-		return fallbackModel
-placeholder
-	if apiKey == nil || apiKey.Group == nil {
-		return ""
-placeholder
-	return strings.TrimSpace(apiKey.Group.DefaultMappedModel)
-placeholder
-
 func resolveOpenAIMessagesDispatchMappedModel(apiKey *service.APIKey, requestedModel string) string {
 	if apiKey == nil || apiKey.Group == nil {
 		return ""

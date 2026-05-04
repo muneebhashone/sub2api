@@ -353,30 +353,6 @@ placeholder)
 placeholder)
 placeholder
 
-func TestResolveOpenAIForwardDefaultMappedModel(t *testing.T) {
-	t.Run("prefers_explicit_fallback_model", func(t *testing.T) {
-		apiKey := &service.APIKey{
-			Group: &service.Group{DefaultMappedModel: "gpt-5.4"placeholder,
-	placeholder
-		require.Equal(t, "gpt-5.2", resolveOpenAIForwardDefaultMappedModel(apiKey, " gpt-5.2 "))
-placeholder)
-
-	t.Run("uses_group_default_when_explicit_fallback_absent", func(t *testing.T) {
-		apiKey := &service.APIKey{
-			Group: &service.Group{DefaultMappedModel: "gpt-5.4"placeholder,
-	placeholder
-		require.Equal(t, "gpt-5.4", resolveOpenAIForwardDefaultMappedModel(apiKey, ""))
-placeholder)
-
-	t.Run("returns_empty_without_group_default", func(t *testing.T) {
-		require.Empty(t, resolveOpenAIForwardDefaultMappedModel(nil, ""))
-		require.Empty(t, resolveOpenAIForwardDefaultMappedModel(&service.APIKey{placeholder, ""))
-		require.Empty(t, resolveOpenAIForwardDefaultMappedModel(&service.APIKey{
-			Group: &service.Group{placeholder,
-	placeholder, ""))
-placeholder)
-placeholder
-
 func TestResolveOpenAIMessagesDispatchMappedModel(t *testing.T) {
 	t.Run("exact_claude_model_override_wins", func(t *testing.T) {
 		apiKey := &service.APIKey{
