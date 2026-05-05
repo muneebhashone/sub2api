@@ -32,7 +32,13 @@ placeholder
 	var items []ResponsesInputItem
 	require.NoError(t, json.Unmarshal(resp.Input, &items))
 	require.Len(t, items, 1)
+	assert.Equal(t, "message", items[0].Type)
 	assert.Equal(t, "user", items[0].Role)
+	var parts []ResponsesContentPart
+	require.NoError(t, json.Unmarshal(items[0].Content, &parts))
+	require.Len(t, parts, 1)
+	assert.Equal(t, "input_text", parts[0].Type)
+	assert.Equal(t, "Hello", parts[0].Text)
 placeholder
 
 func TestAnthropicToResponses_SystemPrompt(t *testing.T) {
@@ -49,7 +55,12 @@ func TestAnthropicToResponses_SystemPrompt(t *testing.T) {
 		var items []ResponsesInputItem
 		require.NoError(t, json.Unmarshal(resp.Input, &items))
 		require.Len(t, items, 2)
-		assert.Equal(t, "system", items[0].Role)
+		assert.Equal(t, "developer", items[0].Role)
+		var parts []ResponsesContentPart
+		require.NoError(t, json.Unmarshal(items[0].Content, &parts))
+		require.Len(t, parts, 1)
+		assert.Equal(t, "input_text", parts[0].Type)
+		assert.Equal(t, "You are helpful.", parts[0].Text)
 placeholder)
 
 	t.Run("array", func(t *testing.T) {
@@ -65,11 +76,33 @@ placeholder)
 		var items []ResponsesInputItem
 		require.NoError(t, json.Unmarshal(resp.Input, &items))
 		require.Len(t, items, 2)
-		assert.Equal(t, "system", items[0].Role)
-		// System text should be joined with double newline.
-		var text string
-		require.NoError(t, json.Unmarshal(items[0].Content, &text))
-		assert.Equal(t, "Part 1\n\nPart 2", text)
+		assert.Equal(t, "developer", items[0].Role)
+		var parts []ResponsesContentPart
+		require.NoError(t, json.Unmarshal(items[0].Content, &parts))
+		require.Len(t, parts, 2)
+		assert.Equal(t, "input_text", parts[0].Type)
+		assert.Equal(t, "Part 1", parts[0].Text)
+		assert.Equal(t, "input_text", parts[1].Type)
+		assert.Equal(t, "Part 2", parts[1].Text)
+placeholder)
+
+	t.Run("billing header skipped", func(t *testing.T) {
+		req := &AnthropicRequest{
+			Model:     "gpt-5.2",
+			MaxTokens: 100,
+			System:    json.RawMessage(`[{"type":"text","text":"x-anthropic-billing-header: cc_version=1;"placeholder,{"type":"text","text":"Project prompt"placeholder]`),
+			Messages:  []AnthropicMessage{{Role: "user", Content: json.RawMessage(`"Hi"`)placeholderplaceholder,
+	placeholder
+		resp, err := AnthropicToResponses(req)
+	placeholder
+
+		var items []ResponsesInputItem
+		require.NoError(t, json.Unmarshal(resp.Input, &items))
+		require.Len(t, items, 2)
+		var parts []ResponsesContentPart
+		require.NoError(t, json.Unmarshal(items[0].Content, &parts))
+		require.Len(t, parts, 1)
+		assert.Equal(t, "Project prompt", parts[0].Text)
 placeholder)
 placeholder
 
@@ -94,6 +127,8 @@ placeholder
 	require.Len(t, resp.Tools, 1)
 	assert.Equal(t, "function", resp.Tools[0].Type)
 	assert.Equal(t, "get_weather", resp.Tools[0].Name)
+	require.NotNil(t, resp.Tools[0].Strict)
+	assert.False(t, *resp.Tools[0].Strict)
 
 	// Check input items
 	var items []ResponsesInputItem
@@ -104,10 +139,10 @@ placeholder
 	assert.Equal(t, "user", items[0].Role)
 	assert.Equal(t, "assistant", items[1].Role)
 	assert.Equal(t, "function_call", items[2].Type)
-	assert.Equal(t, "fc_call_1", items[2].CallID)
+	assert.Equal(t, "call_1", items[2].CallID)
 	assert.Empty(t, items[2].ID)
 	assert.Equal(t, "function_call_output", items[3].Type)
-	assert.Equal(t, "fc_call_1", items[3].CallID)
+	assert.Equal(t, "call_1", items[3].CallID)
 	assert.Equal(t, "Sunny, 72°F", items[3].Output)
 placeholder
 
@@ -259,6 +294,34 @@ placeholder
 	assert.Equal(t, "call_1", anth.Content[1].ID)
 	assert.Equal(t, "get_weather", anth.Content[1].Name)
 	assert.JSONEq(t, `{"city":"NYC"placeholder`, string(anth.Content[1].Input))
+placeholder
+
+func TestResponsesToAnthropic_ToolUseStopReasonDoesNotDependOnLastBlock(t *testing.T) {
+	resp := &ResponsesResponse{
+		ID:     "resp_tool_then_text",
+		Model:  "gpt-5.5",
+		Status: "completed",
+		Output: []ResponsesOutput{
+			{
+				Type:      "function_call",
+				CallID:    "call_todo",
+				Name:      "TodoWrite",
+				Arguments: `{"todos":[{"content":"review changes","status":"in_progress"placeholder]placeholder`,
+		placeholder,
+			{
+				Type: "message",
+				Content: []ResponsesContentPart{
+					{Type: "output_text", Text: "Task list updated."placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	anth := ResponsesToAnthropic(resp, "claude-opus-4-6")
+	assert.Equal(t, "tool_use", anth.StopReason)
+	require.Len(t, anth.Content, 2)
+	assert.Equal(t, "tool_use", anth.Content[0].Type)
+	assert.Equal(t, "text", anth.Content[1].Type)
 placeholder
 
 func TestResponsesToAnthropic_ReadToolDropsEmptyPages(t *testing.T) {
@@ -553,6 +616,81 @@ placeholder, state)
 	assert.Equal(t, "tool_use", events[0].Delta.StopReason)
 placeholder
 
+func TestStreamingToolCallStopReasonSurvivesLaterText(t *testing.T) {
+	state := NewResponsesEventToAnthropicState()
+
+	ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:     "response.created",
+		Response: &ResponsesResponse{ID: "resp_tool_then_text", Model: "gpt-5.5"placeholder,
+placeholder, state)
+
+	events := ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:        "response.output_item.added",
+		OutputIndex: 0,
+		Item:        &ResponsesOutput{Type: "function_call", CallID: "call_todo", Name: "TodoWrite"placeholder,
+placeholder, state)
+	require.Len(t, events, 1)
+	assert.Equal(t, "content_block_start", events[0].Type)
+
+	events = ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:        "response.function_call_arguments.done",
+		OutputIndex: 0,
+		Arguments:   `{"todos":[{"content":"review changes","status":"in_progress","activeForm":"reviewing changes"placeholder]placeholder`,
+placeholder, state)
+	require.Len(t, events, 2)
+	assert.Equal(t, "content_block_delta", events[0].Type)
+	assert.Equal(t, "content_block_stop", events[1].Type)
+
+	events = ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:        "response.output_text.delta",
+		OutputIndex: 1,
+		Delta:       "I will continue after the task list updates.",
+placeholder, state)
+	require.Len(t, events, 2)
+	assert.Equal(t, "content_block_start", events[0].Type)
+	assert.Equal(t, "content_block_delta", events[1].Type)
+
+	events = ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type: "response.completed",
+		Response: &ResponsesResponse{
+			Status: "completed",
+			Usage:  &ResponsesUsage{InputTokens: 20, OutputTokens: 10placeholder,
+	placeholder,
+placeholder, state)
+	require.Len(t, events, 3)
+	assert.Equal(t, "content_block_stop", events[0].Type)
+	assert.Equal(t, "tool_use", events[1].Delta.StopReason)
+	assert.Equal(t, "message_stop", events[2].Type)
+placeholder
+
+func TestStreamingToolCallDoneWithoutDeltaEmitsArguments(t *testing.T) {
+	state := NewResponsesEventToAnthropicState()
+
+	ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:     "response.created",
+		Response: &ResponsesResponse{ID: "resp_bash", Model: "gpt-5.5"placeholder,
+placeholder, state)
+
+	events := ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:        "response.output_item.added",
+		OutputIndex: 0,
+		Item:        &ResponsesOutput{Type: "function_call", CallID: "call_bash", Name: "Bash"placeholder,
+placeholder, state)
+	require.Len(t, events, 1)
+	assert.Equal(t, "content_block_start", events[0].Type)
+
+	events = ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:        "response.function_call_arguments.done",
+		OutputIndex: 0,
+		Arguments:   `{"command":"git -C \"/mnt/d/nodejs/other/edmt\" status --short --ignored"placeholder`,
+placeholder, state)
+	require.Len(t, events, 2)
+	assert.Equal(t, "content_block_delta", events[0].Type)
+	assert.Equal(t, "input_json_delta", events[0].Delta.Type)
+	assert.JSONEq(t, `{"command":"git -C \"/mnt/d/nodejs/other/edmt\" status --short --ignored"placeholder`, events[0].Delta.PartialJSON)
+	assert.Equal(t, "content_block_stop", events[1].Type)
+placeholder
+
 func TestStreamingReadToolDropsEmptyPages(t *testing.T) {
 	state := NewResponsesEventToAnthropicState()
 
@@ -692,6 +830,27 @@ placeholder, state)
 	assert.Equal(t, "message_stop", events[2].Type)
 placeholder
 
+func TestFinalizeStream_ToolCallAbnormalTerminationKeepsToolUseStopReason(t *testing.T) {
+	state := NewResponsesEventToAnthropicState()
+
+	ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:     "response.created",
+		Response: &ResponsesResponse{ID: "resp_tool_interrupted", Model: "gpt-5.5"placeholder,
+placeholder, state)
+	ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
+		Type:        "response.output_item.added",
+		OutputIndex: 0,
+		Item:        &ResponsesOutput{Type: "function_call", CallID: "call_todo", Name: "TodoWrite"placeholder,
+placeholder, state)
+
+	events := FinalizeResponsesAnthropicStream(state)
+	require.Len(t, events, 3)
+	assert.Equal(t, "content_block_stop", events[0].Type)
+	assert.Equal(t, "message_delta", events[1].Type)
+	assert.Equal(t, "tool_use", events[1].Delta.StopReason)
+	assert.Equal(t, "message_stop", events[2].Type)
+placeholder
+
 func TestStreamingEmptyResponse(t *testing.T) {
 	state := NewResponsesEventToAnthropicState()
 
@@ -827,8 +986,8 @@ placeholder
 	resp, err := AnthropicToResponses(req)
 placeholder
 	require.NotNil(t, resp.Reasoning)
-	// thinking.type is ignored for effort; default high applies.
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	// thinking.type is ignored for effort; Codex bridge default medium applies.
+	assert.Equal(t, "medium", resp.Reasoning.Effort)
 	assert.Equal(t, "auto", resp.Reasoning.Summary)
 	assert.Contains(t, resp.Include, "reasoning.encrypted_content")
 	assert.NotContains(t, resp.Include, "reasoning.summary")
@@ -845,8 +1004,8 @@ placeholder
 	resp, err := AnthropicToResponses(req)
 placeholder
 	require.NotNil(t, resp.Reasoning)
-	// thinking.type is ignored for effort; default high applies.
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	// thinking.type is ignored for effort; Codex bridge default medium applies.
+	assert.Equal(t, "medium", resp.Reasoning.Effort)
 	assert.Equal(t, "auto", resp.Reasoning.Summary)
 	assert.NotContains(t, resp.Include, "reasoning.summary")
 placeholder
@@ -861,9 +1020,9 @@ placeholder
 
 	resp, err := AnthropicToResponses(req)
 placeholder
-	// Default effort applies (high → high) even when thinking is disabled.
+	// Default effort applies (medium) even when thinking is disabled.
 	require.NotNil(t, resp.Reasoning)
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	assert.Equal(t, "medium", resp.Reasoning.Effort)
 placeholder
 
 func TestAnthropicToResponses_NoThinking(t *testing.T) {
@@ -875,9 +1034,9 @@ placeholder
 
 	resp, err := AnthropicToResponses(req)
 placeholder
-	// Default effort applies (high → high) when no thinking/output_config is set.
+	// Default effort applies (medium) when no thinking/output_config is set.
 	require.NotNil(t, resp.Reasoning)
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	assert.Equal(t, "medium", resp.Reasoning.Effort)
 placeholder
 
 // ---------------------------------------------------------------------------
@@ -885,7 +1044,7 @@ placeholder
 // ---------------------------------------------------------------------------
 
 func TestAnthropicToResponses_OutputConfigOverridesDefault(t *testing.T) {
-	// Default is high, but output_config.effort="low" overrides. low→low after mapping.
+	// Default is medium, but output_config.effort="low" overrides. low→low after mapping.
 	req := &AnthropicRequest{
 		Model:        "gpt-5.2",
 		MaxTokens:    1024,
@@ -919,7 +1078,7 @@ placeholder
 placeholder
 
 func TestAnthropicToResponses_OutputConfigHigh(t *testing.T) {
-	// output_config.effort="high" → mapped to "high" (1:1, both sides' default).
+	// output_config.effort="high" → mapped to "high" (1:1).
 	req := &AnthropicRequest{
 		Model:        "gpt-5.2",
 		MaxTokens:    1024,
@@ -951,7 +1110,7 @@ placeholder
 placeholder
 
 func TestAnthropicToResponses_NoOutputConfig(t *testing.T) {
-	// No output_config → default high regardless of thinking.type.
+	// No output_config → default medium regardless of thinking.type.
 	req := &AnthropicRequest{
 		Model:     "gpt-5.2",
 		MaxTokens: 1024,
@@ -962,11 +1121,11 @@ placeholder
 	resp, err := AnthropicToResponses(req)
 placeholder
 	require.NotNil(t, resp.Reasoning)
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	assert.Equal(t, "medium", resp.Reasoning.Effort)
 placeholder
 
 func TestAnthropicToResponses_OutputConfigWithoutEffort(t *testing.T) {
-	// output_config present but effort empty (e.g. only format set) → default high.
+	// output_config present but effort empty (e.g. only format set) → default medium.
 	req := &AnthropicRequest{
 		Model:        "gpt-5.2",
 		MaxTokens:    1024,
@@ -977,7 +1136,7 @@ placeholder
 	resp, err := AnthropicToResponses(req)
 placeholder
 	require.NotNil(t, resp.Reasoning)
-	assert.Equal(t, "high", resp.Reasoning.Effort)
+	assert.Equal(t, "medium", resp.Reasoning.Effort)
 placeholder
 
 // ---------------------------------------------------------------------------
@@ -1149,7 +1308,7 @@ placeholder
 
 	// function_call_output should have text-only output (no image).
 	assert.Equal(t, "function_call_output", items[2].Type)
-	assert.Equal(t, "fc_toolu_1", items[2].CallID)
+	assert.Equal(t, "toolu_1", items[2].CallID)
 	assert.Equal(t, "(empty)", items[2].Output)
 
 	// Image should be in a separate user message.
