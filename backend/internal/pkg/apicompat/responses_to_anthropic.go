@@ -120,13 +120,22 @@ func responsesStatusToAnthropicStopReason(status string, details *ResponsesIncom
 	placeholder
 		return "end_turn"
 	case "completed":
-		if len(blocks) > 0 && blocks[len(blocks)-1].Type == "tool_use" {
+		if containsAnthropicToolUseBlock(blocks) {
 			return "tool_use"
 	placeholder
 		return "end_turn"
 	default:
 		return "end_turn"
 placeholder
+placeholder
+
+func containsAnthropicToolUseBlock(blocks []AnthropicContentBlock) bool {
+	for _, block := range blocks {
+		if block.Type == "tool_use" {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func sanitizeAnthropicToolUseInput(name string, raw string) json.RawMessage {
@@ -161,11 +170,13 @@ type ResponsesEventToAnthropicState struct {
 	MessageStartSent bool
 	MessageStopSent  bool
 
-	ContentBlockIndex int
-	ContentBlockOpen  bool
-	CurrentBlockType  string // "text" | "thinking" | "tool_use"
-	CurrentToolName   string
-	CurrentToolArgs   string
+	ContentBlockIndex   int
+	ContentBlockOpen    bool
+	CurrentBlockType    string // "text" | "thinking" | "tool_use"
+	CurrentToolName     string
+	CurrentToolArgs     string
+	CurrentToolHadDelta bool
+	HasToolCall         bool
 
 	// OutputIndexToBlockIdx maps Responses output_index → Anthropic content block index.
 	OutputIndexToBlockIdx map[int]int
@@ -231,11 +242,16 @@ placeholder
 	var events []AnthropicStreamEvent
 	events = append(events, closeCurrentBlock(state)...)
 
+	stopReason := "end_turn"
+	if state.HasToolCall {
+		stopReason = "tool_use"
+placeholder
+
 	events = append(events,
 		AnthropicStreamEvent{
 			Type: "message_delta",
 			Delta: &AnthropicDelta{
-				StopReason: "end_turn",
+				StopReason: stopReason,
 		placeholder,
 			Usage: &AnthropicUsage{
 				InputTokens:          state.InputTokens,
@@ -306,6 +322,8 @@ placeholder
 		state.CurrentBlockType = "tool_use"
 		state.CurrentToolName = evt.Item.Name
 		state.CurrentToolArgs = ""
+		state.CurrentToolHadDelta = false
+		state.HasToolCall = true
 
 		events = append(events, AnthropicStreamEvent{
 			Type:  "content_block_start",
@@ -390,6 +408,9 @@ placeholder
 		state.CurrentToolArgs += evt.Delta
 		return nil
 placeholder
+	if state.CurrentBlockType == "tool_use" {
+		state.CurrentToolHadDelta = true
+placeholder
 
 	blockIdx, ok := state.OutputIndexToBlockIdx[evt.OutputIndex]
 	if !ok {
@@ -407,7 +428,7 @@ placeholderplaceholder
 placeholder
 
 func resToAnthHandleFuncArgsDone(evt *ResponsesStreamEvent, state *ResponsesEventToAnthropicState) []AnthropicStreamEvent {
-	if state.CurrentBlockType != "tool_use" || state.CurrentToolName != "Read" {
+	if state.CurrentBlockType != "tool_use" {
 		return resToAnthHandleBlockDone(state)
 placeholder
 
@@ -415,9 +436,15 @@ placeholder
 	if raw == "" {
 		raw = state.CurrentToolArgs
 placeholder
-	sanitized := sanitizeAnthropicToolUseInput(state.CurrentToolName, raw)
-	if len(sanitized) == 0 {
+	if raw == "" || state.CurrentToolHadDelta {
 		return closeCurrentBlock(state)
+placeholder
+	if state.CurrentToolName == "Read" {
+		sanitized := sanitizeAnthropicToolUseInput(state.CurrentToolName, raw)
+		if len(sanitized) == 0 {
+			return closeCurrentBlock(state)
+	placeholder
+		raw = string(sanitized)
 placeholder
 
 	idx := state.ContentBlockIndex
@@ -426,7 +453,7 @@ placeholder
 		Index: &idx,
 		Delta: &AnthropicDelta{
 			Type:        "input_json_delta",
-			PartialJSON: string(sanitized),
+			PartialJSON: raw,
 	placeholder,
 placeholderplaceholder
 	events = append(events, closeCurrentBlock(state)...)
@@ -553,7 +580,7 @@ placeholder
 				stopReason = "max_tokens"
 		placeholder
 		case "completed":
-			if state.ContentBlockIndex > 0 && state.CurrentBlockType == "tool_use" {
+			if state.HasToolCall {
 				stopReason = "tool_use"
 		placeholder
 	placeholder
@@ -586,6 +613,7 @@ placeholder
 	state.ContentBlockIndex++
 	state.CurrentToolName = ""
 	state.CurrentToolArgs = ""
+	state.CurrentToolHadDelta = false
 	return []AnthropicStreamEvent{{
 		Type:  "content_block_stop",
 		Index: &idx,

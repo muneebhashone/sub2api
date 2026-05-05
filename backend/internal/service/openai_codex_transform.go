@@ -69,6 +69,13 @@ type codexTransformResult struct {
 	PromptCacheKey  string
 placeholder
 
+type codexOAuthTransformOptions struct {
+	IsCodexCLI              bool
+	IsCompact               bool
+	SkipDefaultInstructions bool
+	PreserveToolCallIDs     bool
+placeholder
+
 const (
 	codexImageGenerationBridgeMarker = "<sub2api-codex-image-generation>"
 	codexImageGenerationBridgeText   = codexImageGenerationBridgeMarker + "\nWhen the user asks for raster image generation or editing, use the OpenAI Responses native `image_generation` tool attached to this request. The local Codex client may not expose an `image_gen` namespace, but that does not mean image generation is unavailable. Do not ask the user to switch to CLI fallback solely because `image_gen` is absent.\n</sub2api-codex-image-generation>"
@@ -94,6 +101,13 @@ var openAICodexOAuthUnsupportedFields = append([]string{
 placeholder, openAIChatGPTInternalUnsupportedFields...)
 
 func applyCodexOAuthTransform(reqBody map[string]any, isCodexCLI bool, isCompact bool) codexTransformResult {
+	return applyCodexOAuthTransformWithOptions(reqBody, codexOAuthTransformOptions{
+		IsCodexCLI: isCodexCLI,
+		IsCompact:  isCompact,
+placeholder)
+placeholder
+
+func applyCodexOAuthTransformWithOptions(reqBody map[string]any, opts codexOAuthTransformOptions) codexTransformResult {
 	result := codexTransformResult{placeholder
 	// 工具续链需求会影响存储策略与 input 过滤逻辑。
 	needsToolContinuation := NeedsToolContinuation(reqBody)
@@ -111,7 +125,7 @@ placeholder
 		result.NormalizedModel = normalizedModel
 placeholder
 
-	if isCompact {
+	if opts.IsCompact {
 		if _, ok := reqBody["store"]; ok {
 			delete(reqBody, "store")
 			result.Modified = true
@@ -183,6 +197,10 @@ placeholder
 
 	if v, ok := reqBody["prompt_cache_key"].(string); ok {
 		result.PromptCacheKey = strings.TrimSpace(v)
+		if isOpenAICompatMessagesBridgeRequestBody(reqBody) {
+			delete(reqBody, "prompt_cache_key")
+			result.Modified = true
+	placeholder
 placeholder
 
 	// 提取 input 中 role:"system" 消息至 instructions（OAuth 上游不支持 system role）。
@@ -191,7 +209,7 @@ placeholder
 placeholder
 
 	// instructions 处理逻辑：根据是否是 Codex CLI 分别调用不同方法
-	if applyInstructions(reqBody, isCodexCLI) {
+	if !opts.SkipDefaultInstructions && applyInstructions(reqBody, opts.IsCodexCLI) {
 		result.Modified = true
 placeholder
 	if isCodexSparkModel(normalizedModel) && applyCodexSparkImageUnsupportedInstructions(reqBody) {
@@ -208,7 +226,10 @@ placeholder
 			input = normalizedInput
 			result.Modified = true
 	placeholder
-		input = filterCodexInput(input, needsToolContinuation)
+		input = filterCodexInputWithOptions(input, codexInputFilterOptions{
+			PreserveReferences: needsToolContinuation,
+			PreserveCallIDs:    opts.PreserveToolCallIDs,
+	placeholder)
 		reqBody["input"] = input
 		result.Modified = true
 placeholder else if inputStr, ok := reqBody["input"].(string); ok {
@@ -853,7 +874,7 @@ placeholder
 placeholder
 
 // extractTextFromContent extracts plain text from a content value that is either
-// a Go string or a []any of content-part maps with type:"text".
+// a Go string or a []any of text-like content-part maps.
 func extractTextFromContent(content any) string {
 	switch v := content.(type) {
 	case string:
@@ -865,7 +886,8 @@ func extractTextFromContent(content any) string {
 			if !ok {
 				continue
 		placeholder
-			if t, _ := m["type"].(string); t == "text" {
+			switch t, _ := m["type"].(string); t {
+			case "text", "input_text", "output_text":
 				if text, ok := m["text"].(string); ok {
 					parts = append(parts, text)
 			placeholder
@@ -919,6 +941,28 @@ placeholder
 	return true
 placeholder
 
+func extractPromptLikeInstructionsFromInput(reqBody map[string]any) string {
+	input, ok := reqBody["input"].([]any)
+	if !ok || len(input) == 0 {
+		return ""
+placeholder
+	var texts []string
+	for _, item := range input {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		role, _ := m["role"].(string)
+		switch role {
+		case "developer", "system":
+			if text := strings.TrimSpace(extractTextFromContent(m["content"])); text != "" {
+				texts = append(texts, text)
+		placeholder
+	placeholder
+placeholder
+	return strings.Join(texts, "\n\n")
+placeholder
+
 // applyInstructions 处理 instructions 字段：仅在 instructions 为空时填充默认值。
 func applyInstructions(reqBody map[string]any, isCodexCLI bool) bool {
 	if !isInstructionsEmpty(reqBody) {
@@ -945,9 +989,20 @@ placeholder
 	return strings.TrimSpace(str) == ""
 placeholder
 
+type codexInputFilterOptions struct {
+	PreserveReferences bool
+	PreserveCallIDs    bool
+placeholder
+
 // filterCodexInput 按需过滤 item_reference 与 id。
 // preserveReferences 为 true 时保持引用与 id，以满足续链请求对上下文的依赖。
 func filterCodexInput(input []any, preserveReferences bool) []any {
+	return filterCodexInputWithOptions(input, codexInputFilterOptions{
+		PreserveReferences: preserveReferences,
+placeholder)
+placeholder
+
+func filterCodexInputWithOptions(input []any, opts codexInputFilterOptions) []any {
 	filtered := make([]any, 0, len(input))
 	for _, item := range input {
 		m, ok := item.(map[string]any)
@@ -968,6 +1023,9 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 		// 仅修正真正的 tool/function call 标识，避免误改普通 message/reasoning id；
 		// 若 item_reference 指向 legacy call_* 标识，则仅修正该引用本身。
 		fixCallIDPrefix := func(id string) string {
+			if opts.PreserveCallIDs {
+				return id
+		placeholder
 			if id == "" || strings.HasPrefix(id, "fc") {
 				return id
 		placeholder
@@ -978,7 +1036,7 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 	placeholder
 
 		if typ == "item_reference" {
-			if !preserveReferences {
+			if !opts.PreserveReferences {
 				continue
 		placeholder
 			newItem := make(map[string]any, len(m))
@@ -1046,7 +1104,7 @@ func filterCodexInput(input []any, preserveReferences bool) []any {
 		placeholder
 	placeholder
 
-		if !preserveReferences {
+		if !opts.PreserveReferences {
 			ensureCopy()
 			delete(newItem, "id")
 	placeholder
