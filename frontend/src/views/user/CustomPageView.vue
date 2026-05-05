@@ -202,7 +202,9 @@ async function fetchAndRenderMarkdown(slug: string) {
   tocItems.value = []
   activeHeadingId.value = ''
   try {
-    const resp = await fetch(`/api/v1/pages/${encodeURIComponent(slug)placeholder`)
+    const resp = await fetch(`/api/v1/pages/${encodeURIComponent(slug)placeholder`, {
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.tokenplaceholder` placeholder : {placeholder,
+    placeholder)
     if (!resp.ok) {
       renderedHtml.value = '<p class="text-red-500">Page not found</p>'
       return
