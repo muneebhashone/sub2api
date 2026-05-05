@@ -477,3 +477,63 @@ placeholder
 
 	response.Success(c, status)
 placeholder
+
+// BatchUpdateConcurrency 批量修改用户并发数
+// POST /api/v1/admin/users/batch-concurrency
+type BatchUpdateConcurrencyRequest struct {
+	UserIDs     []int64 `json:"user_ids"`
+	All         bool    `json:"all"`
+	Concurrency int     `json:"concurrency"`
+	Mode        string  `json:"mode" binding:"required,oneof=set add"`
+placeholder
+
+func (h *UserHandler) BatchUpdateConcurrency(c *gin.Context) {
+	var req BatchUpdateConcurrencyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	if !req.All && len(req.UserIDs) == 0 {
+		response.BadRequest(c, "user_ids is required unless all=true")
+		return
+placeholder
+	if len(req.UserIDs) > 500 {
+		response.BadRequest(c, "user_ids cannot exceed 500")
+		return
+placeholder
+
+	var userIDs []int64
+	if req.All {
+		// Fetch all user IDs via pagination
+		page := 1
+		const pageSize = 500
+		for {
+			users, _, err := h.adminService.ListUsers(c.Request.Context(), page, pageSize, service.UserListFilters{placeholder, "id", "asc")
+			if err != nil {
+				response.ErrorFrom(c, err)
+				return
+		placeholder
+			for _, u := range users {
+				userIDs = append(userIDs, u.ID)
+		placeholder
+			if len(users) < pageSize {
+				break
+		placeholder
+			page++
+	placeholder
+placeholder else {
+		userIDs = req.UserIDs
+placeholder
+
+	if len(userIDs) == 0 {
+		response.Success(c, gin.H{"affected": 0placeholder)
+		return
+placeholder
+
+	affected, err := h.adminService.BatchUpdateConcurrency(c.Request.Context(), userIDs, req.Concurrency, req.Mode)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, gin.H{"affected": affectedplaceholder)
+placeholder
