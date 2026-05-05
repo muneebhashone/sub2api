@@ -129,3 +129,63 @@ placeholder)
 placeholder)
 	require.True(t, called.Load(), "panic 后后续任务应仍可执行")
 placeholder
+
+func TestOpenAIGatewayHandlerSubmitMandatoryUsageRecordTask_DroppedTaskSyncFallback(t *testing.T) {
+	pool := service.NewUsageRecordWorkerPoolWithOptions(service.UsageRecordWorkerPoolOptions{
+		WorkerCount:           1,
+		QueueSize:             1,
+		TaskTimeout:           time.Second,
+		OverflowPolicy:        "drop",
+		OverflowSamplePercent: 0,
+		AutoScaleEnabled:      false,
+placeholder)
+	t.Cleanup(pool.Stop)
+	h := &OpenAIGatewayHandler{usageRecordWorkerPool: poolplaceholder
+
+	block := make(chan struct{placeholder)
+	release := make(chan struct{placeholder)
+	pool.Submit(func(ctx context.Context) {
+		close(block)
+		<-release
+placeholder)
+	<-block
+	pool.Submit(func(ctx context.Context) {placeholder)
+
+	var called atomic.Bool
+	h.submitMandatoryUsageRecordTask(func(ctx context.Context) {
+		called.Store(true)
+placeholder)
+	close(release)
+
+	require.True(t, called.Load(), "mandatory usage task must run synchronously when async submit is dropped")
+placeholder
+
+func TestOpenAIGatewayHandlerSubmitOpenAIUsageRecordTask_ImageResultUsesMandatoryFallback(t *testing.T) {
+	pool := service.NewUsageRecordWorkerPoolWithOptions(service.UsageRecordWorkerPoolOptions{
+		WorkerCount:           1,
+		QueueSize:             1,
+		TaskTimeout:           time.Second,
+		OverflowPolicy:        "drop",
+		OverflowSamplePercent: 0,
+		AutoScaleEnabled:      false,
+placeholder)
+	t.Cleanup(pool.Stop)
+	h := &OpenAIGatewayHandler{usageRecordWorkerPool: poolplaceholder
+
+	block := make(chan struct{placeholder)
+	release := make(chan struct{placeholder)
+	pool.Submit(func(ctx context.Context) {
+		close(block)
+		<-release
+placeholder)
+	<-block
+	pool.Submit(func(ctx context.Context) {placeholder)
+
+	var called atomic.Bool
+	h.submitOpenAIUsageRecordTask(&service.OpenAIForwardResult{ImageCount: 1placeholder, func(ctx context.Context) {
+		called.Store(true)
+placeholder)
+	close(release)
+
+	require.True(t, called.Load(), "image usage task must be mandatory when async submit is dropped")
+placeholder

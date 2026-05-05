@@ -95,6 +95,15 @@ placeholder{
 			expectedModel:      "gpt-5.5",
 	placeholder,
 		{
+			name: "preserves compact-spelled gpt5.5 instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt5.5",
+			defaultMappedModel: "gpt-5.4",
+			expectedModel:      "gpt5.5",
+	placeholder,
+		{
 			name: "preserves openai namespaced gpt-5.5 instead of group default",
 			account: &Account{
 		placeholderplaceholder,

@@ -625,6 +625,9 @@ placeholder
 placeholder
 
 	model = strings.TrimLeft(model, "/")
+	if canonical := canonicalizeOpenAIModelAliasSpelling(model); canonical != "" {
+		return canonical
+placeholder
 	return model
 placeholder
 

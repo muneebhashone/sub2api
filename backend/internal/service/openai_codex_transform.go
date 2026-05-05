@@ -485,12 +485,14 @@ placeholder
 		return model, true
 placeholder
 
-	modelID := model
-	if strings.Contains(modelID, "/") {
-		parts := strings.Split(modelID, "/")
-		modelID = parts[len(parts)-1]
-placeholder
+	modelID := lastOpenAIModelSegment(model)
 
+	if normalized := canonicalizeOpenAIModelAliasSpelling(modelID); normalized != "" {
+		modelID = normalized
+placeholder
+	if mapped := normalizeKnownOpenAICodexModel(modelID); mapped != "" {
+		return mapped, true
+placeholder
 	key := codexModelLookupKey(modelID)
 	if key == "" {
 		return "", false

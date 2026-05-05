@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -16,6 +17,20 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
+
+type failingOpenAIImageWriter struct {
+	gin.ResponseWriter
+	failAfter int
+	writes    int
+placeholder
+
+func (w *failingOpenAIImageWriter) Write(p []byte) (int, error) {
+	if w.writes >= w.failAfter {
+		return 0, errors.New("write failed: client disconnected")
+placeholder
+	w.writes++
+	return w.ResponseWriter.Write(p)
+placeholder
 
 func TestOpenAIGatewayServiceParseOpenAIImagesRequest_JSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -73,6 +88,100 @@ placeholder
 	require.Equal(t, "2K", parsed.SizeTier)
 	require.Len(t, parsed.Uploads, 1)
 	require.Equal(t, OpenAIImagesCapabilityNative, parsed.RequiredCapability)
+placeholder
+
+func TestOpenAIGatewayServiceParseOpenAIImagesRequest_NormalizesOfficialAndCustomSizes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		size     string
+		wantTier string
+placeholder{
+		{size: "1024x1024", wantTier: "1K"placeholder,
+		{size: "1536x1024", wantTier: "2K"placeholder,
+		{size: "1024x1536", wantTier: "2K"placeholder,
+		{size: "2048x2048", wantTier: "2K"placeholder,
+		{size: "2048x1152", wantTier: "2K"placeholder,
+		{size: "3840x2160", wantTier: "4K"placeholder,
+		{size: "2160x3840", wantTier: "4K"placeholder,
+		{size: "1024X768", wantTier: "2K"placeholder,
+		{size: "1280x768", wantTier: "2K"placeholder,
+		{size: "2560x1440", wantTier: "2K"placeholder,
+		{size: "2560x1600", wantTier: "4K"placeholder,
+		{size: "auto", wantTier: "2K"placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{placeholder
+	for _, tt := range tests {
+		t.Run(tt.size, func(t *testing.T) {
+			body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","size":"` + tt.size + `"placeholder`)
+
+			req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = req
+
+			parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+		placeholder
+			require.NotNil(t, parsed)
+			require.Equal(t, tt.size, parsed.Size)
+			require.Equal(t, tt.wantTier, parsed.SizeTier)
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIGatewayServiceParseOpenAIImagesRequest_UnknownSizesDoNotBlockPassthrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		size     string
+		wantTier string
+placeholder{
+		{size: "2048x1153", wantTier: "2K"placeholder,
+		{size: "4096x1024", wantTier: "4K"placeholder,
+		{size: "3840x1024", wantTier: "4K"placeholder,
+		{size: "512x512", wantTier: "2K"placeholder,
+		{size: "invalid", wantTier: "2K"placeholder,
+		{size: "999999999999999999999999999x2", wantTier: "2K"placeholder,
+placeholder
+
+	svc := &OpenAIGatewayService{placeholder
+	for _, tt := range tests {
+		t.Run(tt.size, func(t *testing.T) {
+			body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","size":"` + tt.size + `"placeholder`)
+
+			req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = req
+
+			parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+		placeholder
+			require.NotNil(t, parsed)
+			require.Equal(t, tt.size, parsed.Size)
+			require.Equal(t, tt.wantTier, parsed.SizeTier)
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIGatewayServiceParseOpenAIImagesRequest_LegacyImageModelUnknownSizePassthrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-image-1.5","prompt":"draw a cat","size":"2048x1152"placeholder`)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+
+	svc := &OpenAIGatewayService{placeholder
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+placeholder
+	require.NotNil(t, parsed)
+	require.Equal(t, "2048x1152", parsed.Size)
+	require.Equal(t, "2K", parsed.SizeTier)
 placeholder
 
 func TestOpenAIGatewayServiceParseOpenAIImagesRequest_MultipartEditWithMaskAndNativeOptions(t *testing.T) {
@@ -543,6 +652,57 @@ placeholder
 	require.Equal(t, "ZmluYWw=", gjson.Get(rec.Body.String(), "data.0.b64_json").String())
 placeholder
 
+func TestOpenAIGatewayServiceForwardImages_APIKeyStreamMultilineSSEDataBillsImage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","stream":true,"response_format":"b64_json"placeholder`)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+
+	svc := &OpenAIGatewayService{
+		cfg: &config.Config{placeholder,
+		httpUpstream: &httpUpstreamRecorder{
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type": []string{"text/event-stream"placeholder,
+					"X-Request-Id": []string{"req_img_stream_multiline"placeholder,
+			placeholder,
+				Body: io.NopCloser(strings.NewReader(
+					"data: {\"type\":\"image_generation.completed\",\n" +
+						"data: \"usage\":{\"input_tokens\":10,\"output_tokens\":18,\"output_tokens_details\":{\"image_tokens\":8placeholderplaceholder,\n" +
+						"data: \"b64_json\":\"ZmluYWw=\",\"output_format\":\"png\"placeholder\n\n" +
+						"data: [DONE]\n\n",
+				)),
+		placeholder,
+	placeholder,
+placeholder
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+placeholder
+
+	account := &Account{
+		ID:       8,
+		Name:     "openai-apikey",
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key": "test-api-key",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardImages(context.Background(), c, account, body, parsed, "")
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.Stream)
+	require.Equal(t, 1, result.ImageCount)
+	require.Equal(t, 10, result.Usage.InputTokens)
+	require.Equal(t, 18, result.Usage.OutputTokens)
+	require.Equal(t, 8, result.Usage.ImageOutputTokens)
+placeholder
+
 func TestExtractOpenAIImagesBillableCountFromJSONBytes_CompletedEvent(t *testing.T) {
 	body := []byte(`{"type":"image_generation.completed","b64_json":"ZmluYWw=","usage":{"input_tokens":10,"output_tokens":18placeholderplaceholder`)
 
@@ -684,6 +844,61 @@ placeholder
 	require.Equal(t, "auto", gjson.Get(completed.Data, "background").String())
 	require.JSONEq(t, `{"images":1placeholder`, gjson.Get(completed.Data, "usage").Raw)
 	require.False(t, gjson.Get(completed.Data, "revised_prompt").Exists())
+placeholder
+
+func TestOpenAIGatewayServiceForwardImages_APIKeyStreamingDrainsAfterClientDisconnect(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","stream":trueplaceholder`)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	c.Writer = &failingOpenAIImageWriter{ResponseWriter: c.Writer, failAfter: 1placeholder
+
+	svc := &OpenAIGatewayService{
+		cfg: &config.Config{
+			Gateway: config.GatewayConfig{
+				ImageStreamDataIntervalTimeout: 1,
+				ImageStreamKeepaliveInterval:   0,
+		placeholder,
+	placeholder,
+		httpUpstream: &httpUpstreamRecorder{
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header: http.Header{
+					"Content-Type": []string{"text/event-stream"placeholder,
+					"X-Request-Id": []string{"req_img_stream_disconnect_apikey"placeholder,
+			placeholder,
+				Body: io.NopCloser(strings.NewReader(
+					"data: {\"type\":\"image_generation.partial_image\",\"b64_json\":\"cGFydGlhbA==\"placeholder\n\n" +
+						"data: {\"type\":\"image_generation.completed\",\"usage\":{\"input_tokens\":3,\"output_tokens\":4,\"output_tokens_details\":{\"image_tokens\":2placeholderplaceholder,\"b64_json\":\"ZmluYWw=\",\"output_format\":\"png\"placeholder\n\n" +
+						"data: [DONE]\n\n",
+				)),
+		placeholder,
+	placeholder,
+placeholder
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+placeholder
+
+	account := &Account{
+		ID:       8,
+		Name:     "openai-apikey",
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key": "test-api-key",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardImages(context.Background(), c, account, body, parsed, "")
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, 1, result.ImageCount)
+	require.Equal(t, 3, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Equal(t, 2, result.Usage.ImageOutputTokens)
 placeholder
 
 func TestOpenAIGatewayServiceForwardImages_OAuthEditsMultipartUsesResponsesAPI(t *testing.T) {
@@ -901,6 +1116,23 @@ placeholder
 	require.JSONEq(t, `{"images":1placeholder`, string(usageRaw))
 placeholder
 
+func TestCollectOpenAIImagesFromResponsesBody_MultilineSSE(t *testing.T) {
+	body := []byte(
+		"data: {\"type\":\"response.completed\",\n" +
+			"data: \"response\":{\"created_at\":1710000010,\"usage\":{\"input_tokens\":5,\"output_tokens\":9,\"output_tokens_details\":{\"image_tokens\":4placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"images\":1placeholderplaceholder,\"output\":[{\"type\":\"image_generation_call\",\"result\":\"ZmluYWw=\",\"output_format\":\"png\"placeholder]placeholderplaceholder\n\n" +
+			"data: [DONE]\n\n",
+	)
+
+	results, createdAt, usageRaw, firstMeta, foundFinal, err := collectOpenAIImagesFromResponsesBody(body)
+placeholder
+	require.True(t, foundFinal)
+	require.Equal(t, int64(1710000010), createdAt)
+	require.Len(t, results, 1)
+	require.Equal(t, "ZmluYWw=", results[0].Result)
+	require.Equal(t, "png", firstMeta.OutputFormat)
+	require.JSONEq(t, `{"images":1placeholder`, string(usageRaw))
+placeholder
+
 func TestOpenAIGatewayServiceForwardImages_OAuthStreamingHandlesOutputItemDoneFallback(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","stream":true,"response_format":"url"placeholder`)
@@ -956,4 +1188,117 @@ placeholder
 	require.Equal(t, "gpt-image-2", gjson.Get(completed.Data, "model").String())
 	require.JSONEq(t, `{"images":1placeholder`, gjson.Get(completed.Data, "usage").Raw)
 	require.NotContains(t, rec.Body.String(), "event: error")
+placeholder
+
+func TestOpenAIGatewayServiceForwardImages_OAuthStreamingHandlesMultilineSSE(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","stream":true,"response_format":"b64_json"placeholder`)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+
+	svc := &OpenAIGatewayService{placeholder
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+placeholder
+
+	svc.httpUpstream = &httpUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type": []string{"text/event-stream"placeholder,
+				"X-Request-Id": []string{"req_img_stream_multiline_oauth"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(
+				"data: {\"type\":\"response.completed\",\n" +
+					"data: \"response\":{\"created_at\":1710000011,\"usage\":{\"input_tokens\":6,\"output_tokens\":10,\"output_tokens_details\":{\"image_tokens\":5placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"images\":1placeholderplaceholder,\"output\":[{\"type\":\"image_generation_call\",\"result\":\"TXVsdGlsaW5l\",\"output_format\":\"png\"placeholder]placeholderplaceholder\n\n" +
+					"data: [DONE]\n\n",
+			)),
+	placeholder,
+placeholder
+
+	account := &Account{
+		ID:       11,
+		Name:     "openai-oauth",
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"access_token": "token-123",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardImages(context.Background(), c, account, body, parsed, "")
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.Stream)
+	require.Equal(t, 1, result.ImageCount)
+	require.Equal(t, 6, result.Usage.InputTokens)
+	require.Equal(t, 10, result.Usage.OutputTokens)
+	require.Equal(t, 5, result.Usage.ImageOutputTokens)
+	events := parseOpenAIImageTestSSEEvents(rec.Body.String())
+	completed, ok := findOpenAIImageTestSSEEvent(events, "image_generation.completed")
+	require.True(t, ok)
+	require.Equal(t, "TXVsdGlsaW5l", gjson.Get(completed.Data, "b64_json").String())
+	require.JSONEq(t, `{"images":1placeholder`, gjson.Get(completed.Data, "usage").Raw)
+	require.NotContains(t, rec.Body.String(), "event: error")
+placeholder
+
+func TestOpenAIGatewayServiceForwardImages_OAuthStreamingDrainsAfterClientDisconnect(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","stream":true,"response_format":"url"placeholder`)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	c.Writer = &failingOpenAIImageWriter{ResponseWriter: c.Writer, failAfter: 1placeholder
+
+	svc := &OpenAIGatewayService{
+		cfg: &config.Config{
+			Gateway: config.GatewayConfig{
+				ImageStreamDataIntervalTimeout: 1,
+				ImageStreamKeepaliveInterval:   0,
+		placeholder,
+	placeholder,
+placeholder
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+placeholder
+
+	upstream := &httpUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type": []string{"text/event-stream"placeholder,
+				"X-Request-Id": []string{"req_img_stream_disconnect_oauth"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(
+				"data: {\"type\":\"response.image_generation_call.partial_image\",\"partial_image_b64\":\"cGFydGlhbA==\",\"partial_image_index\":0,\"output_format\":\"png\"placeholder\n\n" +
+					"data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1710000009,\"usage\":{\"input_tokens\":5,\"output_tokens\":9,\"output_tokens_details\":{\"image_tokens\":4placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"images\":1placeholderplaceholder,\"output\":[{\"type\":\"image_generation_call\",\"result\":\"ZmluYWw=\",\"output_format\":\"png\"placeholder]placeholderplaceholder\n\n" +
+					"data: [DONE]\n\n",
+			)),
+	placeholder,
+placeholder
+	svc.httpUpstream = upstream
+
+	account := &Account{
+		ID:       9,
+		Name:     "openai-oauth",
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"access_token": "token-123",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardImages(context.Background(), c, account, body, parsed, "")
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.Stream)
+	require.Equal(t, 1, result.ImageCount)
+	require.Equal(t, 5, result.Usage.InputTokens)
+	require.Equal(t, 9, result.Usage.OutputTokens)
+	require.Equal(t, 4, result.Usage.ImageOutputTokens)
 placeholder

@@ -16,6 +16,7 @@ import (
 	"net/textproto"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
@@ -468,14 +469,54 @@ placeholder
 placeholder
 
 func normalizeOpenAIImageSizeTier(size string) string {
-	switch strings.ToLower(strings.TrimSpace(size)) {
+	trimmed := strings.TrimSpace(size)
+	normalized := strings.ToLower(trimmed)
+	switch normalized {
+	case "", "auto":
+		return "2K"
 	case "1024x1024":
 		return "1K"
-	case "1536x1024", "1024x1536", "1792x1024", "1024x1792", "", "auto":
+	case "1536x1024", "1024x1536", "1792x1024", "1024x1792", "2048x2048", "2048x1152", "1152x2048":
 		return "2K"
-	default:
+	case "3840x2160", "2160x3840":
+		return "4K"
+placeholder
+	width, height, ok := parseOpenAIImageSizeDimensions(trimmed)
+	if !ok {
 		return "2K"
 placeholder
+	return classifyUnknownOpenAIImageSizeTier(width, height)
+placeholder
+
+const (
+	openAIImage2KMaxPixels = 2560 * 1440
+)
+
+func parseOpenAIImageSizeDimensions(size string) (int, int, bool) {
+	trimmed := strings.TrimSpace(size)
+	parts := strings.Split(strings.ToLower(trimmed), "x")
+	if len(parts) != 2 {
+		return 0, 0, false
+placeholder
+	width, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, 0, false
+placeholder
+	height, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return 0, 0, false
+placeholder
+	if width <= 0 || height <= 0 {
+		return 0, 0, false
+placeholder
+	return width, height, true
+placeholder
+
+func classifyUnknownOpenAIImageSizeTier(width int, height int) string {
+	if height > 0 && width > openAIImage2KMaxPixels/height {
+		return "4K"
+placeholder
+	return "2K"
 placeholder
 
 func (s *OpenAIGatewayService) ForwardImages(
@@ -535,11 +576,14 @@ placeholder
 		setOpsUpstreamRequestBody(c, forwardBody)
 placeholder
 
-	token, _, err := s.GetAccessToken(ctx, account)
+	upstreamCtx, releaseUpstreamCtx := detachStreamUpstreamContext(ctx, parsed.Stream)
+	defer releaseUpstreamCtx()
+
+	token, _, err := s.GetAccessToken(upstreamCtx, account)
 	if err != nil {
 		return nil, err
 placeholder
-	upstreamReq, err := s.buildOpenAIImagesRequest(ctx, c, account, forwardBody, forwardContentType, token, parsed.Endpoint)
+	upstreamReq, err := s.buildOpenAIImagesRequest(upstreamCtx, c, account, forwardBody, forwardContentType, token, parsed.Endpoint)
 	if err != nil {
 		return nil, err
 placeholder
@@ -582,14 +626,14 @@ placeholder
 				Kind:               "failover",
 				Message:            upstreamMsg,
 		placeholder)
-			s.handleFailoverSideEffects(ctx, resp, account)
+			s.handleFailoverSideEffects(upstreamCtx, resp, account)
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,
 				RetryableOnSameAccount: account.IsPoolMode() && isPoolModeRetryableStatus(resp.StatusCode),
 		placeholder
 	placeholder
-		return s.handleErrorResponse(ctx, resp, c, account, forwardBody)
+		return s.handleErrorResponse(upstreamCtx, resp, c, account, forwardBody)
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
@@ -599,6 +643,20 @@ placeholder
 	if parsed.Stream && isEventStreamResponse(resp.Header) {
 		streamUsage, streamCount, ttft, err := s.handleOpenAIImagesStreamingResponse(resp, c, startTime)
 		if err != nil {
+			if streamCount > 0 {
+				return &OpenAIForwardResult{
+					RequestID:       resp.Header.Get("x-request-id"),
+					Usage:           streamUsage,
+					Model:           requestModel,
+					UpstreamModel:   upstreamModel,
+					Stream:          parsed.Stream,
+					ResponseHeaders: resp.Header.Clone(),
+					Duration:        time.Since(startTime),
+					FirstTokenMs:    ttft,
+					ImageCount:      streamCount,
+					ImageSize:       parsed.SizeTier,
+			placeholder, err
+		placeholder
 			return nil, err
 	placeholder
 		usage = streamUsage
@@ -807,66 +865,205 @@ placeholder
 		return OpenAIUsage{placeholder, 0, nil, fmt.Errorf("streaming is not supported by response writer")
 placeholder
 
-	reader := bufio.NewReader(resp.Body)
 	usage := OpenAIUsage{placeholder
-	imageCount := 0
+	imageCounter := newOpenAIImageOutputCounter()
 	var firstTokenMs *int
+	clientDisconnected := false
+	lastDownstreamWriteAt := time.Now()
 	var fallbackBody bytes.Buffer
 	fallbackBytes := int64(0)
 	fallbackLimit := resolveUpstreamResponseReadLimit(s.cfg)
 	seenSSEData := false
 	fallbackTooLarge := false
+	var sseData openAISSEDataAccumulator
+
+	processSSEData := func(dataBytes []byte) {
+		seenSSEData = true
+		fallbackBody.Reset()
+		fallbackBytes = 0
+		mergeOpenAIUsage(&usage, dataBytes)
+		imageCounter.AddSSEData(dataBytes)
+placeholder
+
+	flushSSEEvent := func() {
+		sseData.Flush(processSSEData)
+placeholder
+
+	processLine := func(line []byte) {
+		if len(line) == 0 {
+			return
+	placeholder
+		if firstTokenMs == nil {
+			ms := int(time.Since(startTime).Milliseconds())
+			firstTokenMs = &ms
+	placeholder
+		if !clientDisconnected {
+			if _, writeErr := c.Writer.Write(line); writeErr != nil {
+				clientDisconnected = true
+				logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Images stream client disconnected, continue draining upstream for billing")
+		placeholder else {
+				flusher.Flush()
+				lastDownstreamWriteAt = time.Now()
+		placeholder
+	placeholder
+
+		trimmedLine := strings.TrimRight(string(line), "\r\n")
+		if _, ok := extractOpenAISSEDataLine(trimmedLine); ok || strings.TrimSpace(trimmedLine) == "" {
+			sseData.AddLine(trimmedLine, processSSEData)
+			return
+	placeholder
+		if !seenSSEData && !fallbackTooLarge {
+			fallbackBytes += int64(len(line))
+			if fallbackBytes <= fallbackLimit {
+				_, _ = fallbackBody.Write(line)
+		placeholder else {
+				fallbackTooLarge = true
+				fallbackBody.Reset()
+		placeholder
+	placeholder
+placeholder
+
+	finalizeFallbackBody := func() {
+		if seenSSEData || fallbackBody.Len() == 0 {
+			return
+	placeholder
+		body := bytes.TrimSpace(fallbackBody.Bytes())
+		if len(body) == 0 {
+			return
+	placeholder
+		mergeOpenAIUsage(&usage, body)
+		imageCounter.AddJSONResponse(body)
+placeholder
+
+	streamInterval := s.openAIImageStreamDataInterval()
+	keepaliveInterval := s.openAIImageStreamKeepaliveInterval()
+	if streamInterval <= 0 && keepaliveInterval <= 0 {
+		reader := bufio.NewReader(resp.Body)
+		for {
+			line, err := reader.ReadBytes('\n')
+			processLine(line)
+			if err == io.EOF {
+				break
+		placeholder
+			if err != nil {
+				flushSSEEvent()
+				return usage, imageCounter.Count(), firstTokenMs, err
+		placeholder
+	placeholder
+		flushSSEEvent()
+		finalizeFallbackBody()
+		return usage, imageCounter.Count(), firstTokenMs, nil
+placeholder
+
+	type readEvent struct {
+		line []byte
+		err  error
+placeholder
+	events := make(chan readEvent, 16)
+	done := make(chan struct{placeholder)
+	sendEvent := func(ev readEvent) bool {
+		select {
+		case events <- ev:
+			return true
+		case <-done:
+			return false
+	placeholder
+placeholder
+	var lastReadAt int64
+	atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
+	go func() {
+		defer close(events)
+		reader := bufio.NewReader(resp.Body)
+		for {
+			line, err := reader.ReadBytes('\n')
+			if len(line) > 0 {
+				atomic.StoreInt64(&lastReadAt, time.Now().UnixNano())
+		placeholder
+			if len(line) > 0 && !sendEvent(readEvent{line: lineplaceholder) {
+				return
+		placeholder
+			if err == io.EOF {
+				return
+		placeholder
+			if err != nil {
+				_ = sendEvent(readEvent{err: errplaceholder)
+				return
+		placeholder
+	placeholder
+placeholder()
+	defer close(done)
+
+	var intervalTicker *time.Ticker
+	if streamInterval > 0 {
+		intervalTicker = time.NewTicker(streamInterval)
+		defer intervalTicker.Stop()
+placeholder
+	var intervalCh <-chan time.Time
+	if intervalTicker != nil {
+		intervalCh = intervalTicker.C
+placeholder
+
+	var keepaliveTicker *time.Ticker
+	if keepaliveInterval > 0 {
+		keepaliveTicker = time.NewTicker(keepaliveInterval)
+		defer keepaliveTicker.Stop()
+placeholder
+	var keepaliveCh <-chan time.Time
+	if keepaliveTicker != nil {
+		keepaliveCh = keepaliveTicker.C
+placeholder
 
 	for {
-		line, err := reader.ReadBytes('\n')
-		if len(line) > 0 {
-			if firstTokenMs == nil {
-				ms := int(time.Since(startTime).Milliseconds())
-				firstTokenMs = &ms
+		select {
+		case ev, ok := <-events:
+			if !ok {
+				flushSSEEvent()
+				finalizeFallbackBody()
+				return usage, imageCounter.Count(), firstTokenMs, nil
 		placeholder
-			if _, writeErr := c.Writer.Write(line); writeErr != nil {
-				return OpenAIUsage{placeholder, 0, firstTokenMs, writeErr
+			if ev.err != nil {
+				flushSSEEvent()
+				return usage, imageCounter.Count(), firstTokenMs, ev.err
+		placeholder
+			processLine(ev.line)
+		case <-intervalCh:
+			lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+			if time.Since(lastRead) < streamInterval {
+				continue
+		placeholder
+			if clientDisconnected {
+				return usage, imageCounter.Count(), firstTokenMs, fmt.Errorf("image stream incomplete after timeout")
+		placeholder
+			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Images stream data interval timeout: interval=%s", streamInterval)
+			_ = s.writeOpenAIImagesStreamEvent(c, flusher, "error", buildOpenAIImagesStreamErrorBody(fmt.Sprintf("upstream image stream idle for %s", streamInterval)))
+			return usage, imageCounter.Count(), firstTokenMs, fmt.Errorf("image stream data interval timeout")
+		case <-keepaliveCh:
+			if clientDisconnected || time.Since(lastDownstreamWriteAt) < keepaliveInterval {
+				continue
+		placeholder
+			if _, writeErr := io.WriteString(c.Writer, ":\n\n"); writeErr != nil {
+				clientDisconnected = true
+				logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Images stream client disconnected during keepalive, continue draining upstream for billing")
+				continue
 		placeholder
 			flusher.Flush()
+			lastDownstreamWriteAt = time.Now()
+	placeholder
+placeholder
+placeholder
 
-			if data, ok := extractOpenAISSEDataLine(strings.TrimRight(string(line), "\r\n")); ok {
-				if data != "" && data != "[DONE]" {
-					seenSSEData = true
-					fallbackBody.Reset()
-					fallbackBytes = 0
-					dataBytes := []byte(data)
-					mergeOpenAIUsage(&usage, dataBytes)
-					if count := extractOpenAIImagesBillableCountFromJSONBytes(dataBytes); count > imageCount {
-						imageCount = count
-				placeholder
-			placeholder
-		placeholder else if !seenSSEData && !fallbackTooLarge {
-				fallbackBytes += int64(len(line))
-				if fallbackBytes <= fallbackLimit {
-					_, _ = fallbackBody.Write(line)
-			placeholder else {
-					fallbackTooLarge = true
-					fallbackBody.Reset()
-			placeholder
-		placeholder
-	placeholder
-		if err == io.EOF {
-			break
-	placeholder
-		if err != nil {
-			return OpenAIUsage{placeholder, 0, firstTokenMs, err
-	placeholder
+func (s *OpenAIGatewayService) openAIImageStreamDataInterval() time.Duration {
+	if s == nil || s.cfg == nil || s.cfg.Gateway.ImageStreamDataIntervalTimeout <= 0 {
+		return 0
 placeholder
-	if !seenSSEData && fallbackBody.Len() > 0 {
-		body := bytes.TrimSpace(fallbackBody.Bytes())
-		if len(body) > 0 {
-			mergeOpenAIUsage(&usage, body)
-			if count := extractOpenAIImagesBillableCountFromJSONBytes(body); count > imageCount {
-				imageCount = count
-		placeholder
-	placeholder
+	return time.Duration(s.cfg.Gateway.ImageStreamDataIntervalTimeout) * time.Second
 placeholder
-	return usage, imageCount, firstTokenMs, nil
+
+func (s *OpenAIGatewayService) openAIImageStreamKeepaliveInterval() time.Duration {
+	if s == nil || s.cfg == nil || s.cfg.Gateway.ImageStreamKeepaliveInterval <= 0 {
+		return 0
+placeholder
+	return time.Duration(s.cfg.Gateway.ImageStreamKeepaliveInterval) * time.Second
 placeholder
 
 func extractOpenAIImagesBillableCountFromJSONBytes(body []byte) int {
@@ -913,14 +1110,7 @@ placeholder
 placeholder
 
 func extractOpenAIImageCountFromJSONBytes(body []byte) int {
-	if len(body) == 0 || !gjson.ValidBytes(body) {
-		return 0
-placeholder
-	data := gjson.GetBytes(body, "data")
-	if data.Exists() && data.IsArray() {
-		return len(data.Array())
-placeholder
-	return 0
+	return countOpenAIResponseImageOutputsFromJSONBytes(body)
 placeholder
 
 type openAIImagePointerInfo struct {
