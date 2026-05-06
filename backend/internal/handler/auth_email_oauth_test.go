@@ -73,6 +73,7 @@ placeholder
 	require.True(t, ok)
 	require.Equal(t, oauthPendingChoiceStep, completion["step"])
 	require.Equal(t, "invitation_required", completion["error"])
+	require.Equal(t, true, completion["invitation_required"])
 	require.Equal(t, "fresh@example.com", completion["email"])
 	require.Equal(t, "fresh@example.com", completion["resolved_email"])
 	require.Equal(t, true, completion["create_account_allowed"])
@@ -129,7 +130,7 @@ placeholder
 	_ = user
 placeholder
 
-func TestEmailOAuthCallbackAutoRegistrationAppliesAffiliateCode(t *testing.T) {
+func TestEmailOAuthCallbackCreatesPasswordRegistrationSessionForNewEmail(t *testing.T) {
 	affiliateRepo := newOAuthEmailAffiliateRepoStub(map[string]int64{"AFF123": 1001placeholder)
 	handler, client := newOAuthPendingFlowTestHandlerWithDependencies(t, oauthPendingFlowTestHandlerOptions{
 		settingValues: map[string]string{
@@ -161,11 +162,26 @@ placeholder, "/auth/oauth/callback", "/dashboard", &emailOAuthProfile{
 placeholder)
 
 	require.Equal(t, http.StatusFound, recorder.Code)
-	require.Contains(t, recorder.Header().Get("Location"), "access_token=")
-	user, err := client.User.Query().Where(dbuser.EmailEQ("aff-user@example.com")).Only(ctx)
+	require.NotContains(t, recorder.Header().Get("Location"), "access_token=")
+	userCount, err := client.User.Query().Where(dbuser.EmailEQ("aff-user@example.com")).Count(ctx)
 placeholder
-	require.Equal(t, []int64{user.ID, user.IDplaceholder, affiliateRepo.ensureUserIDs)
-	require.Equal(t, []oauthEmailAffiliateBindCall{{userID: user.ID, inviterID: 1001placeholderplaceholder, affiliateRepo.bindCalls)
+	require.Zero(t, userCount)
+	require.Empty(t, affiliateRepo.ensureUserIDs)
+	require.Empty(t, affiliateRepo.bindCalls)
+
+	session, err := client.PendingAuthSession.Query().Only(ctx)
+placeholder
+	require.Equal(t, "aff-user@example.com", session.ResolvedEmail)
+	require.Equal(t, "AFF123", pendingSessionStringValue(session.UpstreamIdentityClaims, "aff_code"))
+
+	completion, ok := readCompletionResponse(session.LocalFlowState)
+	require.True(t, ok)
+	require.Equal(t, oauthPendingChoiceStep, completion["step"])
+	require.Equal(t, "registration_completion_required", completion["error"])
+	require.Equal(t, false, completion["invitation_required"])
+	require.Equal(t, true, completion["create_account_allowed"])
+	require.Equal(t, true, completion["force_email_on_signup"])
+	require.Equal(t, "aff-user@example.com", completion["resolved_email"])
 placeholder
 
 func TestCompleteEmailOAuthRegistrationUsesAffiliateCodeFromPendingSession(t *testing.T) {
@@ -216,7 +232,7 @@ placeholder
 
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/complete-registration", strings.NewReader(`{"invitation_code":"INVITE456"placeholder`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/google/complete-registration", strings.NewReader(`{"password":"secret-123","invitation_code":"INVITE456","email":"tampered@example.com"placeholder`))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
 	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("browser-aff-key")placeholder)
@@ -227,11 +243,76 @@ placeholder
 	require.Equal(t, http.StatusOK, recorder.Code)
 	user, err := client.User.Query().Where(dbuser.EmailEQ("pending-aff@example.com")).Only(ctx)
 placeholder
+	require.NotEmpty(t, user.PasswordHash)
+	require.NotEqual(t, "secret-123", user.PasswordHash)
+	tamperedCount, err := client.User.Query().Where(dbuser.EmailEQ("tampered@example.com")).Count(ctx)
+placeholder
+	require.Zero(t, tamperedCount)
 	require.Equal(t, []oauthEmailAffiliateBindCall{{userID: user.ID, inviterID: 2002placeholderplaceholder, affiliateRepo.bindCalls)
 	storedInvitation, err := client.RedeemCode.Query().Where(redeemcode.IDEQ(invitation.ID)).Only(ctx)
 placeholder
 	require.NotNil(t, storedInvitation.UsedBy)
 	require.Equal(t, user.ID, *storedInvitation.UsedBy)
+placeholder
+
+func TestCompleteEmailOAuthRegistrationRequiresPassword(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandler(t, false)
+	ctx := context.Background()
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("email-oauth-password-session-token").
+		SetIntent(oauthIntentLogin).
+		SetProviderType("github").
+		SetProviderKey("github").
+		SetProviderSubject("github-password-user").
+		SetResolvedEmail("password-required@example.com").
+		SetRedirectTo("/dashboard").
+		SetBrowserSessionKey("browser-password-key").
+		SetUpstreamIdentityClaims(map[string]any{
+			"email":            "password-required@example.com",
+			"email_verified":   true,
+			"username":         "password-required",
+			"provider":         "github",
+			"provider_key":     "github",
+			"provider_subject": "github-password-user",
+	placeholder).
+		SetLocalFlowState(map[string]any{
+			"step":  oauthPendingChoiceStep,
+			"error": "registration_completion_required",
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/github/complete-registration", strings.NewReader(`{placeholder`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("browser-password-key")placeholder)
+	c.Request = req
+
+	handler.completeEmailOAuthRegistration(c, "github")
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	userCount, err := client.User.Query().Where(dbuser.EmailEQ("password-required@example.com")).Count(ctx)
+placeholder
+	require.Zero(t, userCount)
+placeholder
+
+func TestParseGitHubOAuthProfileRejectsPublicEmailWhenEmailsEndpointFails(t *testing.T) {
+	emailServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "missing scope", http.StatusForbidden)
+placeholder))
+	t.Cleanup(emailServer.Close)
+
+	profile, err := parseGitHubOAuthProfile(context.Background(), config.EmailOAuthProviderConfig{
+		EmailsURL: emailServer.URL,
+placeholder, &emailOAuthTokenResponse{AccessToken: "token"placeholder, `{"id":123,"login":"octo","email":"public@example.com"placeholder`)
+
+placeholder
+	require.Nil(t, profile)
+	require.Contains(t, err.Error(), "github emails endpoint status 403")
 placeholder
 
 type oauthEmailAffiliateBindCall struct {

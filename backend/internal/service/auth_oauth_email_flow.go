@@ -10,6 +10,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/redeemcode"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
 func normalizeOAuthSignupSource(signupSource string) string {
@@ -149,6 +150,87 @@ placeholder
 		Role:         RoleUser,
 		Balance:      grantPlan.Balance,
 		Concurrency:  grantPlan.Concurrency,
+		Status:       StatusActive,
+		SignupSource: signupSource,
+placeholder
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		if errors.Is(err, ErrEmailExists) {
+			return nil, nil, ErrEmailExists
+	placeholder
+		return nil, nil, ErrServiceUnavailable
+placeholder
+
+	tokenPair, err := s.GenerateTokenPair(ctx, user, "")
+	if err != nil {
+		_ = s.RollbackOAuthEmailAccountCreation(ctx, user.ID, "")
+		return nil, nil, fmt.Errorf("generate token pair: %w", err)
+placeholder
+	return tokenPair, user, nil
+placeholder
+
+// RegisterVerifiedOAuthEmailAccount creates a local account from an OAuth
+// provider that has already returned a verified email address.
+func (s *AuthService) RegisterVerifiedOAuthEmailAccount(
+	ctx context.Context,
+	email string,
+	password string,
+	invitationCode string,
+	signupSource string,
+) (*TokenPair, *User, error) {
+	if s == nil {
+		return nil, nil, ErrServiceUnavailable
+placeholder
+	if s.settingService == nil || !s.settingService.IsRegistrationEnabled(ctx) {
+		return nil, nil, ErrRegDisabled
+placeholder
+
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" || len(email) > 255 {
+		return nil, nil, ErrEmailVerifyRequired
+placeholder
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, nil, ErrEmailVerifyRequired
+placeholder
+	if isReservedEmail(email) {
+		return nil, nil, ErrEmailReserved
+placeholder
+	if err := s.validateRegistrationEmailPolicy(ctx, email); err != nil {
+		return nil, nil, err
+placeholder
+	if strings.TrimSpace(password) == "" {
+		return nil, nil, infraerrors.BadRequest("PASSWORD_REQUIRED", "password is required")
+placeholder
+	if _, err := s.validateOAuthRegistrationInvitation(ctx, invitationCode); err != nil {
+		return nil, nil, err
+placeholder
+
+	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
+	if err != nil {
+		return nil, nil, ErrServiceUnavailable
+placeholder
+	if existsEmail {
+		return nil, nil, ErrEmailExists
+placeholder
+
+	hashedPassword, err := s.HashPassword(password)
+	if err != nil {
+		return nil, nil, fmt.Errorf("hash password: %w", err)
+placeholder
+
+	signupSource = normalizeOAuthSignupSource(signupSource)
+	grantPlan := s.resolveSignupGrantPlan(ctx, signupSource)
+	var defaultRPMLimit int
+	if s.settingService != nil {
+		defaultRPMLimit = s.settingService.GetDefaultUserRPMLimit(ctx)
+placeholder
+	user := &User{
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Role:         RoleUser,
+		Balance:      grantPlan.Balance,
+		Concurrency:  grantPlan.Concurrency,
+		RPMLimit:     defaultRPMLimit,
 		Status:       StatusActive,
 		SignupSource: signupSource,
 placeholder
