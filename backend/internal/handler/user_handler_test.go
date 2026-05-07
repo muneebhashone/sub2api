@@ -87,6 +87,8 @@ placeholder
 func (s *userHandlerRepoStub) UpdateBalance(context.Context, int64, float64) error { return nil placeholder
 func (s *userHandlerRepoStub) DeductBalance(context.Context, int64, float64) error { return nil placeholder
 func (s *userHandlerRepoStub) UpdateConcurrency(context.Context, int64, int) error { return nil placeholder
+func (s *userHandlerRepoStub) BatchSetConcurrency(context.Context, []int64, int) (int, error) { return 0, nil placeholder
+func (s *userHandlerRepoStub) BatchAddConcurrency(context.Context, []int64, int) (int, error) { return 0, nil placeholder
 func (s *userHandlerRepoStub) ExistsByEmail(context.Context, string) (bool, error) { return false, nil placeholder
 func (s *userHandlerRepoStub) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {
 	return 0, nil
