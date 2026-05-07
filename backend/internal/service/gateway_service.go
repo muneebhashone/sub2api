@@ -5343,6 +5343,12 @@ placeholder
 					flusher.Flush()
 			placeholder
 				if !sawTerminalEvent {
+					if clientDisconnected && streamInterval > 0 {
+						lastRead := time.Unix(0, atomic.LoadInt64(&lastReadAt))
+						if time.Since(lastRead) >= streamInterval {
+							return &streamingResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: trueplaceholder, fmt.Errorf("stream usage incomplete after timeout")
+					placeholder
+				placeholder
 					return &streamingResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: clientDisconnectedplaceholder, fmt.Errorf("stream usage incomplete: missing terminal event")
 			placeholder
 				return &streamingResult{usage: usage, firstTokenMs: firstTokenMs, clientDisconnect: clientDisconnectedplaceholder, nil
