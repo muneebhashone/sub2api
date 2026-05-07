@@ -267,7 +267,7 @@ func (in *ContentModerationInput) Normalize() {
 		return
 placeholder
 	in.Text = trimRunes(normalizeContentModerationText(in.Text), maxModerationInputRunes)
-	in.Images = limitContentModerationImages(normalizeModerationImages(in.Images))
+	in.Images = normalizeModerationImages(in.Images)
 placeholder
 
 func (in ContentModerationInput) IsEmpty() bool {
