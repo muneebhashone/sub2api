@@ -69,6 +69,7 @@ placeholder
 
 	got, err := repo.GetByKeyForAuth(ctx, key.Key)
 placeholder
+	require.Equal(t, key.Name, got.Name)
 	require.NotNil(t, got.Group)
 	require.Equal(t, group.MessagesDispatchModelConfig, got.Group.MessagesDispatchModelConfig)
 placeholder

@@ -109,6 +109,11 @@ export const FeatureFlags = {
     mode: 'opt-out',
     label: 'Payment',
   placeholder),
+  riskControl: defineFlag({
+    key: 'risk_control_enabled',
+    mode: 'opt-in',
+    label: 'Risk Control',
+  placeholder),
   affiliate: defineFlag({
     key: 'affiliate_enabled',
     mode: 'opt-in',

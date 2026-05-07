@@ -90,6 +90,69 @@ type OpenAIImagesRequest struct {
 	bodyHash           string
 placeholder
 
+func (r *OpenAIImagesRequest) ModerationBody() []byte {
+	if r == nil {
+		return nil
+placeholder
+	payload := map[string]any{placeholder
+	if prompt := strings.TrimSpace(r.Prompt); prompt != "" {
+		payload["prompt"] = prompt
+placeholder
+	images := r.moderationImages()
+	if len(images) > 0 {
+		payload["images"] = images
+placeholder
+	if len(payload) == 0 {
+		return nil
+placeholder
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil
+placeholder
+	return body
+placeholder
+
+func (r *OpenAIImagesRequest) moderationImages() []map[string]string {
+	if r == nil {
+		return nil
+placeholder
+	images := make([]map[string]string, 0, len(r.InputImageURLs)+len(r.Uploads)+1)
+	for _, imageURL := range r.InputImageURLs {
+		imageURL = strings.TrimSpace(imageURL)
+		if imageURL != "" {
+			images = append(images, map[string]string{"image_url": imageURLplaceholder)
+	placeholder
+placeholder
+	for _, upload := range r.Uploads {
+		if dataURL := upload.ModerationDataURL(); dataURL != "" {
+			images = append(images, map[string]string{"image_url": dataURLplaceholder)
+	placeholder
+placeholder
+	if maskURL := strings.TrimSpace(r.MaskImageURL); maskURL != "" {
+		images = append(images, map[string]string{"image_url": maskURLplaceholder)
+placeholder
+	if r.MaskUpload != nil {
+		if dataURL := r.MaskUpload.ModerationDataURL(); dataURL != "" {
+			images = append(images, map[string]string{"image_url": dataURLplaceholder)
+	placeholder
+placeholder
+	return images
+placeholder
+
+func (u OpenAIImagesUpload) ModerationDataURL() string {
+	if len(u.Data) == 0 {
+		return ""
+placeholder
+	contentType := strings.TrimSpace(u.ContentType)
+	if contentType == "" {
+		contentType = http.DetectContentType(u.Data)
+placeholder
+	if !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		return ""
+placeholder
+	return fmt.Sprintf("data:%s;base64,%s", contentType, base64.StdEncoding.EncodeToString(u.Data))
+placeholder
+
 func (r *OpenAIImagesRequest) IsEdits() bool {
 	return r != nil && r.Endpoint == openAIImagesEditsEndpoint
 placeholder
