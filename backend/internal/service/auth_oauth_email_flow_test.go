@@ -229,6 +229,67 @@ placeholder
 	require.Equal(t, "oidc", userRepo.created[0].SignupSource)
 placeholder
 
+func TestRegisterOAuthEmailAccountKeepsGitHubAndGoogleSignupSource(t *testing.T) {
+	tests := []struct {
+		name         string
+		email        string
+		signupSource string
+		want         string
+placeholder{
+		{
+			name:         "github",
+			email:        "github@example.com",
+			signupSource: " GitHub ",
+			want:         "github",
+	placeholder,
+		{
+			name:         "google",
+			email:        "google@example.com",
+			signupSource: " Google ",
+			want:         "google",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			userRepo := &userRepoStub{nextID: 43placeholder
+			emailCache := &emailCacheStub{
+				data: &VerificationCodeData{
+					Code:      "246810",
+					Attempts:  0,
+					CreatedAt: time.Now().UTC(),
+					ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
+			placeholder,
+		placeholder
+			authService := newOAuthEmailFlowAuthService(
+				userRepo,
+				&redeemCodeRepoStub{placeholder,
+				&refreshTokenCacheStub{placeholder,
+				map[string]string{
+					SettingKeyRegistrationEnabled: "true",
+					SettingKeyEmailVerifyEnabled:  "true",
+			placeholder,
+				emailCache,
+			)
+
+			tokenPair, user, err := authService.RegisterOAuthEmailAccount(
+				context.Background(),
+				tt.email,
+				"secret-123",
+				"246810",
+				"",
+				tt.signupSource,
+			)
+
+		placeholder
+			require.NotNil(t, tokenPair)
+			require.NotNil(t, user)
+			require.Len(t, userRepo.created, 1)
+			require.Equal(t, tt.want, userRepo.created[0].SignupSource)
+	placeholder)
+placeholder
+placeholder
+
 func TestRegisterOAuthEmailAccountFallsBackUnknownSignupSourceToEmail(t *testing.T) {
 	userRepo := &userRepoStub{nextID: 43placeholder
 	emailCache := &emailCacheStub{
@@ -256,7 +317,7 @@ placeholder
 		"secret-123",
 		"246810",
 		"",
-		"github",
+		"unknown-provider",
 	)
 
 placeholder

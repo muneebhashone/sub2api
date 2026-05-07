@@ -63,6 +63,8 @@ placeholder
 		WeChatOAuthMobileEnabled:         settings.WeChatOAuthMobileEnabled,
 		OIDCOAuthEnabled:                 settings.OIDCOAuthEnabled,
 		OIDCOAuthProviderName:            settings.OIDCOAuthProviderName,
+		GitHubOAuthEnabled:               settings.GitHubOAuthEnabled,
+		GoogleOAuthEnabled:               settings.GoogleOAuthEnabled,
 		BackendModeEnabled:               settings.BackendModeEnabled,
 		PaymentEnabled:                   settings.PaymentEnabled,
 		Version:                          h.version,

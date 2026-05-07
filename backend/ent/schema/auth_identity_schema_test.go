@@ -83,10 +83,10 @@ placeholder
 	require.Equal(t, 1, signupSource.Validators)
 
 	validator := requireStringFieldValidator(t, User{placeholder.Fields(), "signup_source")
-	for _, value := range []string{"email", "linuxdo", "wechat", "oidc"placeholder {
+	for _, value := range []string{"email", "linuxdo", "wechat", "oidc", "github", "google"placeholder {
 		require.NoError(t, validator(value))
 placeholder
-	require.Error(t, validator("github"))
+	require.Error(t, validator("unknown"))
 placeholder
 
 func requireSchema(t *testing.T, schemas map[string]*load.Schema, name string) *load.Schema {
