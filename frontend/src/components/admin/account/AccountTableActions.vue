@@ -5,7 +5,6 @@
       <Icon name="refresh" size="md" :class="[loading ? 'animate-spin' : '']" />
     </button>
     <slot name="after"></slot>
-    <button @click="$emit('sync')" class="btn btn-secondary">{{ t('admin.accounts.syncFromCrs') placeholderplaceholder</button>
     <slot name="beforeCreate"></slot>
     <button @click="$emit('create')" class="btn btn-primary">{{ t('admin.accounts.createAccount') placeholderplaceholder</button>
     <slot name="afterCreate"></slot>
@@ -17,7 +16,7 @@ import { useI18n placeholder from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 
 defineProps(['loading'])
-defineEmits(['refresh', 'sync', 'create'])
+defineEmits(['refresh', 'create'])
 
 const { t placeholder = useI18n()
 </script>
