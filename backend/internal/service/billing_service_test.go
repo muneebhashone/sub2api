@@ -332,11 +332,14 @@ placeholder
 func TestGetFallbackPricing_FamilyMatching(t *testing.T) {
 	svc := newTestBillingService()
 
+	// expectedOutput / expectedCacheRead 为 0 时跳过该字段断言（保持与原有用例兼容）。
 	tests := []struct {
-		name             string
-		model            string
-		expectedInput    float64
-		expectNilPricing bool
+		name              string
+		model             string
+		expectedInput     float64
+		expectedOutput    float64
+		expectedCacheRead float64
+		expectNilPricing  bool
 placeholder{
 		{name: "empty model", model: "   ", expectNilPricing: trueplaceholder,
 		{name: "claude opus 4.6", model: "claude-opus-4.6-20260201", expectedInput: 5e-6placeholder,
@@ -352,10 +355,34 @@ placeholder{
 		{name: "openai legacy gpt5.1 codex falls back to gpt5.3 codex", model: "gpt-5.1-codex", expectedInput: placeholder,
 		{name: "openai legacy codex mini latest falls back to gpt5.3 codex", model: "codex-mini-latest", expectedInput: placeholder,
 		{name: "openai unknown no fallback", model: "gpt-unknown-model", expectNilPricing: trueplaceholder,
-		{name: "deepseek v4 pro", model: "deepseek-v4-pro", expectedInput: 4.35e-7placeholder,
-		{name: "deepseek v4 flash", model: "deepseek-v4-flash", expectedInput: 1.4e-7placeholder,
-		{name: "deepseek chat alias → flash", model: "deepseek-chat", expectedInput: 1.4e-7placeholder,
-		{name: "deepseek reasoner alias → flash", model: "deepseek-reasoner", expectedInput: 1.4e-7placeholder,
+		{
+			name:              "deepseek v4 pro",
+			model:             "deepseek-v4-pro",
+			expectedInput:     4.35e-7,
+			expectedOutput:    8.7e-7,
+			expectedCacheRead: 3.625e-9,
+	placeholder,
+		{
+			name:              "deepseek v4 flash",
+			model:             "deepseek-v4-flash",
+			expectedInput:     1.4e-7,
+			expectedOutput:    2.8e-7,
+			expectedCacheRead: 2.8e-9,
+	placeholder,
+		{
+			name:              "deepseek chat alias → flash",
+			model:             "deepseek-chat",
+			expectedInput:     1.4e-7,
+			expectedOutput:    2.8e-7,
+			expectedCacheRead: 2.8e-9,
+	placeholder,
+		{
+			name:              "deepseek reasoner alias → flash",
+			model:             "deepseek-reasoner",
+			expectedInput:     1.4e-7,
+			expectedOutput:    2.8e-7,
+			expectedCacheRead: 2.8e-9,
+	placeholder,
 		{name: "non supported family", model: "qwen-max", expectNilPricing: trueplaceholder,
 placeholder
 
@@ -368,6 +395,14 @@ placeholder
 		placeholder
 			require.NotNil(t, pricing)
 			require.InDelta(t, tt.expectedInput, pricing.InputPricePerToken, 1e-12)
+			if tt.expectedOutput != 0 {
+				require.InDelta(t, tt.expectedOutput, pricing.OutputPricePerToken, 1e-12,
+					"OutputPricePerToken mismatch for %s", tt.model)
+		placeholder
+			if tt.expectedCacheRead != 0 {
+				require.InDelta(t, tt.expectedCacheRead, pricing.CacheReadPricePerToken, 1e-14,
+					"CacheReadPricePerToken mismatch for %s", tt.model)
+		placeholder
 	placeholder)
 placeholder
 placeholder
