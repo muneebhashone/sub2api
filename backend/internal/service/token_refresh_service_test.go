@@ -532,6 +532,7 @@ placeholder{
 		{name: "network_error", err: errors.New("network timeout"), expected: falseplaceholder,
 		{name: "invalid_grant", err: errors.New("invalid_grant"), expected: trueplaceholder,
 		{name: "invalid_client", err: errors.New("invalid_client"), expected: trueplaceholder,
+		{name: "refresh_token_reused", err: errors.New(`OPENAI_OAUTH_TOKEN_REFRESH_FAILED: token refresh failed: status 401, body: {"error":{"code":"refresh_token_reused"placeholderplaceholder`), expected: trueplaceholder,
 		{name: "unauthorized_client", err: errors.New("unauthorized_client"), expected: trueplaceholder,
 		{name: "access_denied", err: errors.New("access_denied"), expected: trueplaceholder,
 		{name: "no_refresh_token", err: errors.New("no refresh token available"), expected: trueplaceholder,
