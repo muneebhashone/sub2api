@@ -563,9 +563,7 @@ placeholder
 placeholder
 	if item.IDToken != "" {
 		item.Credentials["id_token"] = item.IDToken
-		if err := enrichCodexImportAccountFromJWT(item, item.IDToken, false, now); err != nil {
-			return nil, err
-	placeholder
+		_ = enrichCodexImportAccountFromJWT(item, item.IDToken, false, now)
 placeholder
 	if err := enrichCodexImportAccountFromJWT(item, item.AccessToken, true, now); err != nil {
 		return nil, err
