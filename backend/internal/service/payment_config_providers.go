@@ -110,10 +110,11 @@ placeholder
 // Key matching is case-insensitive. Non-listed keys (e.g. appId, notifyUrl,
 // stripe publishableKey) are returned in plaintext by the admin GET API.
 var providerSensitiveConfigFields = map[string]map[string]struct{placeholder{
-	payment.TypeEasyPay: {"pkey": {placeholderplaceholder,
-	payment.TypeAlipay:  {"privatekey": {placeholder, "publickey": {placeholder, "alipaypublickey": {placeholderplaceholder,
-	payment.TypeWxpay:   {"privatekey": {placeholder, "apiv3key": {placeholder, "publickey": {placeholderplaceholder,
-	payment.TypeStripe:  {"secretkey": {placeholder, "webhooksecret": {placeholderplaceholder,
+	payment.TypeEasyPay:   {"pkey": {placeholderplaceholder,
+	payment.TypeAlipay:    {"privatekey": {placeholder, "publickey": {placeholder, "alipaypublickey": {placeholderplaceholder,
+	payment.TypeWxpay:     {"privatekey": {placeholder, "apiv3key": {placeholder, "publickey": {placeholderplaceholder,
+	payment.TypeStripe:    {"secretkey": {placeholder, "webhooksecret": {placeholderplaceholder,
+	payment.TypeAirwallex: {"apikey": {placeholder, "webhooksecret": {placeholderplaceholder,
 placeholder
 
 // providerPendingOrderProtectedConfigFields lists config keys that cannot be
@@ -121,10 +122,11 @@ placeholder
 // all provider identity fields that are snapshotted into orders or used by
 // webhook/refund verification.
 var providerPendingOrderProtectedConfigFields = map[string]map[string]struct{placeholder{
-	payment.TypeEasyPay: {"pkey": {placeholder, "pid": {placeholderplaceholder,
-	payment.TypeAlipay:  {"privatekey": {placeholder, "publickey": {placeholder, "alipaypublickey": {placeholder, "appid": {placeholderplaceholder,
-	payment.TypeWxpay:   {"privatekey": {placeholder, "apiv3key": {placeholder, "publickey": {placeholder, "appid": {placeholder, "mpappid": {placeholder, "mchid": {placeholder, "publickeyid": {placeholder, "certserial": {placeholderplaceholder,
-	payment.TypeStripe:  {"secretkey": {placeholder, "webhooksecret": {placeholderplaceholder,
+	payment.TypeEasyPay:   {"pkey": {placeholder, "pid": {placeholderplaceholder,
+	payment.TypeAlipay:    {"privatekey": {placeholder, "publickey": {placeholder, "alipaypublickey": {placeholder, "appid": {placeholderplaceholder,
+	payment.TypeWxpay:     {"privatekey": {placeholder, "apiv3key": {placeholder, "publickey": {placeholder, "appid": {placeholder, "mpappid": {placeholder, "mchid": {placeholder, "publickeyid": {placeholder, "certserial": {placeholderplaceholder,
+	payment.TypeStripe:    {"secretkey": {placeholder, "webhooksecret": {placeholder, "currency": {placeholderplaceholder,
+	payment.TypeAirwallex: {"clientid": {placeholder, "apikey": {placeholder, "webhooksecret": {placeholder, "apibase": {placeholder, "accountid": {placeholder, "currency": {placeholderplaceholder,
 placeholder
 
 func isSensitiveProviderConfigField(providerKey, fieldName string) bool {
@@ -175,7 +177,7 @@ func (s *PaymentConfigService) countPendingOrdersByPlan(ctx context.Context, pla
 placeholder
 
 var validProviderKeys = map[string]bool{
-	payment.TypeEasyPay: true, payment.TypeAlipay: true, payment.TypeWxpay: true, payment.TypeStripe: true,
+	payment.TypeEasyPay: true, payment.TypeAlipay: true, payment.TypeWxpay: true, payment.TypeStripe: true, payment.TypeAirwallex: true,
 placeholder
 
 func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req CreateProviderInstanceRequest) (*dbent.PaymentProviderInstance, error) {

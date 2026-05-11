@@ -48,6 +48,13 @@ placeholder{
 			wantBody:        "",
 	placeholder,
 		{
+			name:            "airwallex returns empty 200",
+			providerKey:     payment.TypeAirwallex,
+			wantCode:        http.StatusOK,
+			wantContentType: "text/plain",
+			wantBody:        "",
+	placeholder,
+		{
 			name:            "easypay returns plain text success",
 			providerKey:     "easypay",
 			wantCode:        http.StatusOK,
@@ -165,6 +172,12 @@ placeholder{
 			rawBody:     "{placeholder",
 			want:        "",
 	placeholder,
+		{
+			name:        "airwallex payment intent payload",
+			providerKey: payment.TypeAirwallex,
+			rawBody:     `{"name":"payment_intent.succeeded","data":{"object":{"merchant_order_id":"sub2_awx_123"placeholderplaceholderplaceholder`,
+			want:        "sub2_awx_123",
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -220,7 +233,7 @@ type webhookHandlerProviderStub struct {
 	verifyErr    error
 placeholder
 
-func (p webhookHandlerProviderStub) Name() string { return p.key placeholder
+func (p webhookHandlerProviderStub) Name() string        { return p.key placeholder
 func (p webhookHandlerProviderStub) ProviderKey() string { return p.key placeholder
 func (p webhookHandlerProviderStub) SupportedTypes() []payment.PaymentType {
 	return []payment.PaymentType{payment.PaymentType(p.key)placeholder

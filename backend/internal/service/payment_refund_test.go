@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -183,4 +184,27 @@ placeholder
 		Reason:        "snapshot mismatch",
 placeholder)
 	require.ErrorContains(t, err, "alipay app_id mismatch")
+placeholder
+
+func TestCalculateGatewayRefundAmountUsesCurrencyPrecision(t *testing.T) {
+	require.InDelta(t, 6.173, calculateGatewayRefundAmount(100, 12.345, 50, "KWD"), 1e-12)
+	require.InDelta(t, 12.345, calculateGatewayRefundAmount(100, 12.345, 100, "KWD"), 1e-12)
+	require.InDelta(t, 52, calculateGatewayRefundAmount(100, 103, 50, "JPY"), 1e-12)
+placeholder
+
+func TestFormatGatewayRefundAmountUsesOrderCurrency(t *testing.T) {
+	order := &dbent.PaymentOrder{
+		ProviderSnapshot: map[string]any{
+			"currency": "KWD",
+	placeholder,
+placeholder
+
+	require.Equal(t, "12.345", formatGatewayRefundAmount(12.345, order))
+placeholder
+
+func TestValidateRefundProviderResponseAcceptsPending(t *testing.T) {
+	require.NoError(t, validateRefundProviderResponse(&payment.RefundResponse{Status: payment.ProviderStatusPendingplaceholder))
+	require.NoError(t, validateRefundProviderResponse(&payment.RefundResponse{Status: payment.ProviderStatusSuccessplaceholder))
+	require.Error(t, validateRefundProviderResponse(&payment.RefundResponse{Status: payment.ProviderStatusFailedplaceholder))
+	require.Error(t, validateRefundProviderResponse(nil))
 placeholder

@@ -109,3 +109,55 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestCalculatePayAmountForCurrency(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		amount   float64
+		feeRate  float64
+		currency string
+		expected string
+placeholder{
+		{
+			name:     "zero decimal currency rounds fee up to whole unit",
+			amount:   100,
+			feeRate:  2.5,
+			currency: "JPY",
+			expected: "103",
+	placeholder,
+		{
+			name:     "three decimal currency keeps three decimal places",
+			amount:   12.345,
+			feeRate:  1,
+			currency: "KWD",
+			expected: "12.469",
+	placeholder,
+		{
+			name:     "stripe legacy zero decimal currency displays whole unit",
+			amount:   100,
+			feeRate:  2.5,
+			currency: "ISK",
+			expected: "103",
+	placeholder,
+		{
+			name:     "default currency keeps existing two decimal behavior",
+			amount:   10,
+			feeRate:  3.33,
+			currency: "CNY",
+			expected: "10.34",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := CalculatePayAmountForCurrency(tt.amount, tt.feeRate, tt.currency)
+			if got != tt.expected {
+				t.Fatalf("CalculatePayAmountForCurrency(%v, %v, %q) = %q, want %q", tt.amount, tt.feeRate, tt.currency, got, tt.expected)
+		placeholder
+	placeholder)
+placeholder
+placeholder

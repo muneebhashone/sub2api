@@ -164,6 +164,30 @@ placeholder, CreateOrderRequest{PaymentType: payment.TypeAlipayplaceholder)
 	require.NotContains(t, snapshot, "pkey")
 placeholder
 
+func TestBuildPaymentOrderProviderSnapshot_IncludesProviderCurrency(t *testing.T) {
+	t.Parallel()
+
+	stripeSnapshot := buildPaymentOrderProviderSnapshot(&payment.InstanceSelection{
+		InstanceID:  "77",
+		ProviderKey: payment.TypeStripe,
+		Config: map[string]string{
+			"currency": "hkd",
+	placeholder,
+placeholder, CreateOrderRequest{placeholder)
+	require.Equal(t, "HKD", stripeSnapshot["currency"])
+
+	airwallexSnapshot := buildPaymentOrderProviderSnapshot(&payment.InstanceSelection{
+		InstanceID:  "78",
+		ProviderKey: payment.TypeAirwallex,
+		Config: map[string]string{
+			"currency":  "usd",
+			"accountId": "acct-78",
+	placeholder,
+placeholder, CreateOrderRequest{placeholder)
+	require.Equal(t, "USD", airwallexSnapshot["currency"])
+	require.Equal(t, "acct-78", airwallexSnapshot["merchant_id"])
+placeholder
+
 func valueOrEmpty(v *string) string {
 	if v == nil {
 		return ""
