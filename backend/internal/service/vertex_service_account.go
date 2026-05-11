@@ -202,7 +202,11 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected default transport type %T", http.DefaultTransport)
+placeholder
+	transport := defaultTransport.Clone()
 	transport.Proxy = nil
 	if err := proxyutil.ConfigureTransportProxy(transport, parsedProxy); err != nil {
 		return nil, err
