@@ -37,10 +37,7 @@ placeholder
 		return
 placeholder
 
-	start := len(items) - 1
-	for start > 0 && items[start].Type == "function_call_output" {
-		start--
-placeholder
+	start := latestAnthropicCompatResponsesInputTurnStart(items)
 	trimmed := append([]apicompat.ResponsesInputItem(nil), items[start:]...)
 	if len(trimmed) == len(items) {
 		return
@@ -48,6 +45,63 @@ placeholder
 	if input, err := json.Marshal(trimmed); err == nil {
 		req.Input = input
 placeholder
+placeholder
+
+func latestAnthropicCompatResponsesInputTurnStart(items []apicompat.ResponsesInputItem) int {
+	if len(items) == 0 {
+		return 0
+placeholder
+
+	start := len(items) - 1
+	last := items[start]
+	switch {
+	case last.Type == "function_call_output":
+		for start > 0 && items[start-1].Type == "function_call_output" {
+			start--
+	placeholder
+	case last.Type == "message" && last.Role == "user":
+		for start > 0 && items[start-1].Type == "function_call_output" {
+			start--
+	placeholder
+	default:
+		return start
+placeholder
+
+	return expandAnthropicCompatResponsesInputToolCallStart(items, start)
+placeholder
+
+func expandAnthropicCompatResponsesInputToolCallStart(items []apicompat.ResponsesInputItem, start int) int {
+	if start < 0 || start >= len(items) {
+		return start
+placeholder
+
+	needed := make(map[string]struct{placeholder)
+	for i := start; i < len(items); i++ {
+		if items[i].Type != "function_call_output" {
+			continue
+	placeholder
+		callID := strings.TrimSpace(items[i].CallID)
+		if callID != "" {
+			needed[callID] = struct{placeholder{placeholder
+	placeholder
+placeholder
+	if len(needed) == 0 {
+		return start
+placeholder
+
+	expandedStart := start
+	for i := start - 1; i >= 0 && len(needed) > 0; i-- {
+		if items[i].Type != "function_call" {
+			continue
+	placeholder
+		callID := strings.TrimSpace(items[i].CallID)
+		if _, ok := needed[callID]; !ok {
+			continue
+	placeholder
+		delete(needed, callID)
+		expandedStart = i
+placeholder
+	return expandedStart
 placeholder
 
 func isOpenAICompatPreviousResponseNotFound(statusCode int, upstreamMsg string, upstreamBody []byte) bool {
