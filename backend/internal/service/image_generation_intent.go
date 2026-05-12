@@ -176,14 +176,6 @@ type OpenAIResponsesImageBillingConfig struct {
 	InputSize string
 placeholder
 
-func resolveOpenAIResponsesImageBillingConfig(reqBody map[string]any, fallbackModel string) (string, string, error) {
-	cfg, err := resolveOpenAIResponsesImageBillingConfigDetailed(reqBody, fallbackModel)
-	if err != nil {
-		return "", "", err
-placeholder
-	return cfg.Model, cfg.SizeTier, nil
-placeholder
-
 func resolveOpenAIResponsesImageBillingConfigDetailed(reqBody map[string]any, fallbackModel string) (OpenAIResponsesImageBillingConfig, error) {
 	imageModel := ""
 	imageSize := ""

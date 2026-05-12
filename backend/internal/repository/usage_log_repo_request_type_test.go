@@ -263,7 +263,9 @@ placeholder)
 	require.Equal(t, sql.NullString{String: inputSize, Valid: trueplaceholder, prepared.args[35])
 	require.Equal(t, sql.NullString{String: outputSize, Valid: trueplaceholder, prepared.args[36])
 	require.Equal(t, sql.NullString{String: source, Valid: trueplaceholder, prepared.args[37])
-	require.JSONEq(t, `{"1K":1,"4K":1placeholder`, prepared.args[38].(string))
+	breakdownJSON, ok := prepared.args[38].(string)
+	require.True(t, ok)
+	require.JSONEq(t, `{"1K":1,"4K":1placeholder`, breakdownJSON)
 placeholder
 
 func TestCoalesceTrimmedString(t *testing.T) {
