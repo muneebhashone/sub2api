@@ -2351,18 +2351,19 @@ placeholder
 	)
 
 	return &OpenAIForwardResult{
-		RequestID:       responseID,
-		Usage:           *usage,
-		Model:           originalModel,
-		UpstreamModel:   mappedModel,
-		ImageCount:      imageCounter.Count(),
-		ServiceTier:     extractOpenAIServiceTier(reqBody),
-		ReasoningEffort: extractOpenAIReasoningEffort(reqBody, originalModel),
-		Stream:          reqStream,
-		OpenAIWSMode:    true,
-		ResponseHeaders: lease.HandshakeHeaders(),
-		Duration:        time.Since(startTime),
-		FirstTokenMs:    firstTokenMs,
+		RequestID:        responseID,
+		Usage:            *usage,
+		Model:            originalModel,
+		UpstreamModel:    mappedModel,
+		ImageCount:       imageCounter.Count(),
+		ImageOutputSizes: imageCounter.Sizes(),
+		ServiceTier:      extractOpenAIServiceTier(reqBody),
+		ReasoningEffort:  extractOpenAIReasoningEffort(reqBody, originalModel),
+		Stream:           reqStream,
+		OpenAIWSMode:     true,
+		ResponseHeaders:  lease.HandshakeHeaders(),
+		Duration:         time.Since(startTime),
+		FirstTokenMs:     firstTokenMs,
 placeholder, nil
 placeholder
 
@@ -2464,6 +2465,7 @@ placeholder
 		originalModel      string
 		imageBillingModel  string
 		imageSizeTier      string
+		imageInputSize     string
 		payloadBytes       int
 placeholder
 
@@ -2567,12 +2569,16 @@ placeholder
 	placeholder
 		imageBillingModel := ""
 		imageSizeTier := ""
+		imageInputSize := ""
 		if imageIntent {
 			var imageCfgErr error
-			imageBillingModel, imageSizeTier, imageCfgErr = resolveOpenAIResponsesImageBillingConfigFromBody(normalized, originalModel)
+			imageCfg, imageCfgErr := resolveOpenAIResponsesImageBillingConfigDetailedFromBody(normalized, originalModel)
 			if imageCfgErr != nil {
 				return openAIWSClientPayload{placeholder, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, imageCfgErr.Error(), imageCfgErr)
 		placeholder
+			imageBillingModel = imageCfg.Model
+			imageSizeTier = imageCfg.SizeTier
+			imageInputSize = imageCfg.InputSize
 	placeholder
 
 		// Apply OpenAI Fast Policy on the response.create frame using the same
@@ -2621,6 +2627,7 @@ placeholder
 			originalModel:      originalModel,
 			imageBillingModel:  imageBillingModel,
 			imageSizeTier:      imageSizeTier,
+			imageInputSize:     imageInputSize,
 			payloadBytes:       len(normalized),
 	placeholder, nil
 placeholder
@@ -2822,7 +2829,7 @@ placeholder
 		return payload, nil
 placeholder
 
-	sendAndRelay := func(turn int, lease *openAIWSConnLease, payload []byte, payloadBytes int, originalModel string, imageBillingModel string, imageSizeTier string) (*OpenAIForwardResult, error) {
+	sendAndRelay := func(turn int, lease *openAIWSConnLease, payload []byte, payloadBytes int, originalModel string, imageBillingModel string, imageSizeTier string, imageInputSize string) (*OpenAIForwardResult, error) {
 		if lease == nil {
 			return nil, errors.New("upstream websocket lease is nil")
 	placeholder
@@ -3046,6 +3053,8 @@ placeholder
 				if imageCount > 0 {
 					result.ImageCount = imageCount
 					result.ImageSize = imageSizeTier
+					result.ImageInputSize = imageInputSize
+					result.ImageOutputSizes = imageCounter.Sizes()
 					result.BillingModel = imageBillingModel
 			placeholder
 				return result, nil
@@ -3057,6 +3066,7 @@ placeholder
 	currentOriginalModel := firstPayload.originalModel
 	currentImageBillingModel := firstPayload.imageBillingModel
 	currentImageSizeTier := firstPayload.imageSizeTier
+	currentImageInputSize := firstPayload.imageInputSize
 	currentPayloadBytes := firstPayload.payloadBytes
 	isStrictAffinityTurn := func(payload []byte) bool {
 		if !storeDisabled {
@@ -3534,7 +3544,7 @@ placeholder
 			)
 	placeholder
 
-		result, relayErr := sendAndRelay(turn, sessionLease, currentPayload, currentPayloadBytes, currentOriginalModel, currentImageBillingModel, currentImageSizeTier)
+		result, relayErr := sendAndRelay(turn, sessionLease, currentPayload, currentPayloadBytes, currentOriginalModel, currentImageBillingModel, currentImageSizeTier, currentImageInputSize)
 		if relayErr != nil {
 			lastTurnClean = false
 			if recoverIngressPrevResponseNotFound(relayErr, turn, connID) {
@@ -3658,6 +3668,7 @@ placeholder
 		currentOriginalModel = nextPayload.originalModel
 		currentImageBillingModel = nextPayload.imageBillingModel
 		currentImageSizeTier = nextPayload.imageSizeTier
+		currentImageInputSize = nextPayload.imageInputSize
 		currentPayloadBytes = nextPayload.payloadBytes
 		storeDisabled = s.isOpenAIWSStoreDisabledInRequestRaw(currentPayload, account)
 		if !storeDisabled {

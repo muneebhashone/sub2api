@@ -10,12 +10,18 @@ import (
 
 type openAIImageOutputCounter struct {
 	seen         map[string]struct{placeholder
+	seenSizes    map[string]string
+	seenOrder    []string
+	dataSizes    []string
 	count        int
 	maxDataCount int
 placeholder
 
 func newOpenAIImageOutputCounter() *openAIImageOutputCounter {
-	return &openAIImageOutputCounter{seen: make(map[string]struct{placeholder)placeholder
+	return &openAIImageOutputCounter{
+		seen:      make(map[string]struct{placeholder),
+		seenSizes: make(map[string]string),
+placeholder
 placeholder
 
 func (c *openAIImageOutputCounter) Count() int {
@@ -26,6 +32,25 @@ placeholder
 		return c.maxDataCount
 placeholder
 	return c.count
+placeholder
+
+func (c *openAIImageOutputCounter) Sizes() []string {
+	if c == nil {
+		return nil
+placeholder
+	sizes := make([]string, 0, len(c.seenOrder)+len(c.dataSizes))
+	for _, key := range c.seenOrder {
+		if size := strings.TrimSpace(c.seenSizes[key]); size != "" {
+			sizes = append(sizes, size)
+	placeholder
+placeholder
+	if len(sizes) == 0 && len(c.dataSizes) > 0 {
+		sizes = append(sizes, c.dataSizes...)
+placeholder
+	if len(sizes) == 0 {
+		return nil
+placeholder
+	return sizes
 placeholder
 
 func (c *openAIImageOutputCounter) AddJSONResponse(body []byte) {
@@ -73,9 +98,19 @@ func (c *openAIImageOutputCounter) addDataArray(data gjson.Result) {
 	if !data.IsArray() {
 		return
 placeholder
-	count := len(data.Array())
+	items := data.Array()
+	count := len(items)
 	if count > c.maxDataCount {
 		c.maxDataCount = count
+placeholder
+	sizes := make([]string, 0, len(items))
+	for _, item := range items {
+		if size := strings.TrimSpace(item.Get("size").String()); size != "" {
+			sizes = append(sizes, size)
+	placeholder
+placeholder
+	if len(sizes) > 0 {
+		c.dataSizes = sizes
 placeholder
 placeholder
 
@@ -120,10 +155,18 @@ placeholder
 	if key == "" {
 		return
 placeholder
+	size := strings.TrimSpace(item.Get("size").String())
 	if _, exists := c.seen[key]; exists {
+		if size != "" && strings.TrimSpace(c.seenSizes[key]) == "" {
+			c.seenSizes[key] = size
+	placeholder
 		return
 placeholder
 	c.seen[key] = struct{placeholder{placeholder
+	c.seenOrder = append(c.seenOrder, key)
+	if size != "" {
+		c.seenSizes[key] = size
+placeholder
 	c.count++
 placeholder
 
@@ -142,8 +185,20 @@ func countOpenAIResponseImageOutputsFromJSONBytes(body []byte) int {
 	return counter.Count()
 placeholder
 
+func collectOpenAIResponseImageOutputSizesFromJSONBytes(body []byte) []string {
+	counter := newOpenAIImageOutputCounter()
+	counter.AddJSONResponse(body)
+	return counter.Sizes()
+placeholder
+
 func countOpenAIImageOutputsFromSSEBody(body string) int {
 	counter := newOpenAIImageOutputCounter()
 	counter.AddSSEBody(body)
 	return counter.Count()
+placeholder
+
+func collectOpenAIImageOutputSizesFromSSEBody(body string) []string {
+	counter := newOpenAIImageOutputCounter()
+	counter.AddSSEBody(body)
+	return counter.Sizes()
 placeholder

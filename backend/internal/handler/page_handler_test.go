@@ -58,7 +58,7 @@ placeholder
 	if !ok {
 		t.Fatal("expected direct image path to be accepted")
 placeholder
-	want := filepath.Join(base, "logo.png")
+	want := mustEvalSymlinks(t, filepath.Join(base, "logo.png"))
 	if got != want {
 		t.Fatalf("path = %q, want %q", got, want)
 placeholder
@@ -67,7 +67,7 @@ placeholder
 	if !ok {
 		t.Fatal("expected nested image path to be accepted")
 placeholder
-	want = filepath.Join(base, "images", "logo.png")
+	want = mustEvalSymlinks(t, filepath.Join(base, "images", "logo.png"))
 	if got != want {
 		t.Fatalf("path = %q, want %q", got, want)
 placeholder
@@ -99,4 +99,14 @@ placeholder
 	if got, ok := resolvePageImagePath(pagesDir, base, "images/secret.png"); ok {
 		t.Fatalf("expected symlink escape to be rejected, got %q", got)
 placeholder
+placeholder
+
+func mustEvalSymlinks(t *testing.T, path string) string {
+placeholder
+
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatalf("eval symlinks for %q: %v", path, err)
+placeholder
+	return realPath
 placeholder
