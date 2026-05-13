@@ -36,6 +36,7 @@ placeholder{
 		// 第三方上游常见形式
 		{"third-party bare domain", "https://api.deepseek.com", "https://api.deepseek.com/v1/chat/completions"placeholder,
 		{"third-party with path prefix", "https://api.gptgod.online/api", "https://api.gptgod.online/api/v1/chat/completions"placeholder,
+		{"third-party versioned path", "https://open.bigmodel.cn/api/paas/v4", "https://open.bigmodel.cn/api/paas/v4/chat/completions"placeholder,
 		// 带空白字符
 		{"whitespace trimmed", "  https://api.openai.com/v1  ", "https://api.openai.com/v1/chat/completions"placeholder,
 placeholder
@@ -64,6 +65,7 @@ placeholder{
 		{"bare /v1", "https://api.openai.com/v1", "https://api.openai.com/v1/responses"placeholder,
 		{"already /responses", "https://api.openai.com/v1/responses", "https://api.openai.com/v1/responses"placeholder,
 		{"third-party bare domain", "https://api.deepseek.com", "https://api.deepseek.com/v1/responses"placeholder,
+		{"third-party versioned path", "https://open.bigmodel.cn/api/paas/v4", "https://open.bigmodel.cn/api/paas/v4/responses"placeholder,
 		{"only domain, no scheme", "api.gptgod.online", "api.gptgod.online/v1/responses"placeholder,
 placeholder
 
@@ -191,6 +193,49 @@ placeholder
 	require.NotNil(t, result)
 	require.NotNil(t, upstream.lastReq)
 	require.NoError(t, upstream.lastReq.Context().Err())
+placeholder
+
+func TestForwardAsChatCompletions_UnknownResponsesSupportFallbackUsesVersionedChatURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"glm-4.5-air","messages":[{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstream := &httpUpstreamRecorder{responses: []*http.Response{
+		{
+			StatusCode: http.StatusNotFound,
+			Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"not found"placeholderplaceholder`)),
+	placeholder,
+		{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "x-request-id": []string{"rid_raw_fallback"placeholderplaceholder,
+			Body: io.NopCloser(strings.NewReader(
+				`{"id":"chatcmpl_1","object":"chat.completion","model":"glm-4.5-air","choices":[{"index":0,"message":{"role":"assistant","content":"ok"placeholder,"finish_reason":"stop"placeholder],"usage":{"prompt_tokens":1,"completion_tokens":2,"total_tokens":3placeholderplaceholder`,
+			)),
+	placeholder,
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
+placeholder
+	account := rawChatCompletionsTestAccount()
+	account.Credentials["base_url"] = "https://open.bigmodel.cn/api/paas/v4"
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "")
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, 1, result.Usage.InputTokens)
+	require.Equal(t, 2, result.Usage.OutputTokens)
+	require.Len(t, upstream.requests, 2)
+	require.Equal(t, "https://open.bigmodel.cn/api/paas/v4/responses", upstream.requests[0].URL.String())
+	require.Equal(t, "https://open.bigmodel.cn/api/paas/v4/chat/completions", upstream.requests[1].URL.String())
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Contains(t, rec.Body.String(), `"content":"ok"`)
 placeholder
 
 func TestIsOpenAIChatUsageOnlyStreamChunk(t *testing.T) {
