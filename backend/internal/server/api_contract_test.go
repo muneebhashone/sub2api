@@ -784,14 +784,7 @@ placeholder{
 					"payment_visible_method_wxpay_enabled": false,
 					"openai_advanced_scheduler_enabled": true,
 					"openai_fast_policy_settings": {
-						"rules": [
-							{
-								"service_tier": "priority",
-								"action": "filter",
-								"scope": "all",
-								"fallback_action": "pass"
-						placeholder
-						]
+						"rules": []
 				placeholder,
 					"custom_menu_items": [],
 					"custom_endpoints": [],
@@ -999,14 +992,7 @@ placeholder{
 					"payment_visible_method_wxpay_enabled": false,
 					"openai_advanced_scheduler_enabled": false,
 					"openai_fast_policy_settings": {
-						"rules": [
-							{
-								"service_tier": "priority",
-								"action": "filter",
-								"scope": "all",
-								"fallback_action": "pass"
-						placeholder
-						]
+						"rules": []
 				placeholder,
 					"payment_enabled": false,
 					"payment_min_amount": 0,
