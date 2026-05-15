@@ -1113,6 +1113,9 @@ placeholder
 		if strings.Contains(lower, "an error occurred while processing your request") {
 			return true
 	placeholder
+		if strings.Contains(lower, "selected model is at capacity") {
+			return true
+	placeholder
 		return strings.Contains(lower, "you can retry your request") &&
 			strings.Contains(lower, "help.openai.com") &&
 			strings.Contains(lower, "request id")
@@ -3400,6 +3403,9 @@ placeholder
 placeholder
 
 func openAIStreamFailedEventShouldFailover(payload []byte, message string) bool {
+	if isOpenAITransientProcessingError(http.StatusBadRequest, message, payload) {
+		return true
+placeholder
 	code := strings.ToLower(strings.TrimSpace(gjson.GetBytes(payload, "response.error.code").String()))
 	if code == "" {
 		code = strings.ToLower(strings.TrimSpace(gjson.GetBytes(payload, "error.code").String()))
