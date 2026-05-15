@@ -141,10 +141,11 @@ type UserIdentitySummary struct {
 placeholder
 
 type UserIdentitySummarySet struct {
-	Email   UserIdentitySummary `json:"email"`
-	LinuxDo UserIdentitySummary `json:"linuxdo"`
-	OIDC    UserIdentitySummary `json:"oidc"`
-	WeChat  UserIdentitySummary `json:"wechat"`
+	Email    UserIdentitySummary `json:"email"`
+	LinuxDo  UserIdentitySummary `json:"linuxdo"`
+	OIDC     UserIdentitySummary `json:"oidc"`
+	WeChat   UserIdentitySummary `json:"wechat"`
+	DingTalk UserIdentitySummary `json:"dingtalk"`
 placeholder
 
 type StartUserIdentityBindingRequest struct {
@@ -260,10 +261,11 @@ placeholder
 placeholder
 
 	summaries := UserIdentitySummarySet{
-		Email:   s.buildEmailIdentitySummary(user, records),
-		LinuxDo: s.buildProviderIdentitySummary("linuxdo", user, records),
-		OIDC:    s.buildProviderIdentitySummary("oidc", user, records),
-		WeChat:  s.buildProviderIdentitySummary("wechat", user, records),
+		Email:    s.buildEmailIdentitySummary(user, records),
+		LinuxDo:  s.buildProviderIdentitySummary("linuxdo", user, records),
+		OIDC:     s.buildProviderIdentitySummary("oidc", user, records),
+		WeChat:   s.buildProviderIdentitySummary("wechat", user, records),
+		DingTalk: s.buildProviderIdentitySummary("dingtalk", user, records),
 placeholder
 
 	s.applyExplicitProviderAvailability(ctx, &summaries)
@@ -283,6 +285,7 @@ placeholder
 		SettingKeyWeChatConnectMPEnabled,
 		SettingKeyWeChatConnectMobileEnabled,
 		SettingKeyWeChatConnectMode,
+		SettingKeyDingTalkConnectEnabled,
 placeholder)
 	if err != nil {
 		return
@@ -290,6 +293,9 @@ placeholder
 
 	if raw, ok := settings[SettingKeyLinuxDoConnectEnabled]; ok && strings.TrimSpace(raw) != "" && raw != "true" {
 		disableIdentityBindAction(&summaries.LinuxDo)
+placeholder
+	if raw, ok := settings[SettingKeyDingTalkConnectEnabled]; ok && strings.TrimSpace(raw) != "" && raw != "true" {
+		disableIdentityBindAction(&summaries.DingTalk)
 placeholder
 	if raw, ok := settings[SettingKeyOIDCConnectEnabled]; ok && strings.TrimSpace(raw) != "" && raw != "true" {
 		disableIdentityBindAction(&summaries.OIDC)
@@ -696,7 +702,7 @@ placeholder
 		return true
 placeholder
 
-	for _, candidate := range []string{"linuxdo", "oidc", "wechat"placeholder {
+	for _, candidate := range []string{"linuxdo", "oidc", "wechat", "dingtalk"placeholder {
 		if candidate == provider {
 			continue
 	placeholder
@@ -772,6 +778,8 @@ placeholder
 		path = "/api/v1/auth/oauth/oidc/bind/start"
 	case "wechat":
 		path = "/api/v1/auth/oauth/wechat/bind/start"
+	case "dingtalk":
+		path = "/api/v1/auth/oauth/dingtalk/bind/start"
 	default:
 		return "", ErrIdentityProviderInvalid
 placeholder
@@ -790,6 +798,8 @@ func normalizeUserIdentityProvider(provider string) string {
 		return "oidc"
 	case "wechat":
 		return "wechat"
+	case "dingtalk":
+		return "dingtalk"
 	case "email":
 		return "email"
 	default:

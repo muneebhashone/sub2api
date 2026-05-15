@@ -67,6 +67,7 @@ type userProfileResponse struct {
 	LinuxDoBound      bool                                   `json:"linuxdo_bound"`
 	OIDCBound         bool                                   `json:"oidc_bound"`
 	WeChatBound       bool                                   `json:"wechat_bound"`
+	DingTalkBound     bool                                   `json:"dingtalk_bound"`
 placeholder
 
 type userProfileSourceContext struct {
@@ -528,15 +529,17 @@ placeholder
 		LinuxDoBound:      identities.LinuxDo.Bound,
 		OIDCBound:         identities.OIDC.Bound,
 		WeChatBound:       identities.WeChat.Bound,
+		DingTalkBound:     identities.DingTalk.Bound,
 placeholder
 placeholder
 
 func userProfileBindingMap(identities service.UserIdentitySummarySet) map[string]service.UserIdentitySummary {
 	return map[string]service.UserIdentitySummary{
-		"email":   identities.Email,
-		"linuxdo": identities.LinuxDo,
-		"oidc":    identities.OIDC,
-		"wechat":  identities.WeChat,
+		"email":    identities.Email,
+		"linuxdo":  identities.LinuxDo,
+		"oidc":     identities.OIDC,
+		"wechat":   identities.WeChat,
+		"dingtalk": identities.DingTalk,
 placeholder
 placeholder
 
@@ -585,7 +588,7 @@ placeholder
 
 func thirdPartyIdentityProviders(identities service.UserIdentitySummarySet) []service.UserIdentitySummary {
 	out := make([]service.UserIdentitySummary, 0, 3)
-	for _, summary := range []service.UserIdentitySummary{identities.LinuxDo, identities.OIDC, identities.WeChatplaceholder {
+	for _, summary := range []service.UserIdentitySummary{identities.LinuxDo, identities.OIDC, identities.WeChat, identities.DingTalkplaceholder {
 		if summary.Bound {
 			out = append(out, summary)
 	placeholder
