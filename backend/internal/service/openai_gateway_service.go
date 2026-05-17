@@ -4578,6 +4578,76 @@ placeholder
 	return line[start:], true
 placeholder
 
+func extractOpenAISSEEventLine(line string) (string, bool) {
+	if !strings.HasPrefix(line, "event:") {
+		return "", false
+placeholder
+	start := len("event:")
+	for start < len(line) {
+		if line[start] != ' ' && line[start] != '	' {
+			break
+	placeholder
+		start++
+placeholder
+	return strings.TrimSpace(line[start:]), true
+placeholder
+
+type openAICompatSSEFrame struct {
+	EventType string
+	Data      string
+placeholder
+
+type openAICompatSSEFrameParser struct {
+	eventType string
+	dataLines []string
+placeholder
+
+func (p *openAICompatSSEFrameParser) AddLine(line string) (openAICompatSSEFrame, bool) {
+	if line == "" {
+		return p.dispatch()
+placeholder
+	if strings.HasPrefix(line, ":") {
+		return openAICompatSSEFrame{placeholder, false
+placeholder
+	if eventType, ok := extractOpenAISSEEventLine(line); ok {
+		p.eventType = eventType
+		return openAICompatSSEFrame{placeholder, false
+placeholder
+	if data, ok := extractOpenAISSEDataLine(line); ok {
+		p.dataLines = append(p.dataLines, data)
+placeholder
+	return openAICompatSSEFrame{placeholder, false
+placeholder
+
+func (p *openAICompatSSEFrameParser) Finish() (openAICompatSSEFrame, bool) {
+	return p.dispatch()
+placeholder
+
+func (p *openAICompatSSEFrameParser) dispatch() (openAICompatSSEFrame, bool) {
+	frame := openAICompatSSEFrame{
+		EventType: p.eventType,
+		Data:      strings.Join(p.dataLines, "\n"),
+placeholder
+	p.eventType = ""
+	p.dataLines = nil
+	return frame, frame.Data != ""
+placeholder
+
+func openAICompatPayloadWithEventType(payload, eventType string) string {
+	eventType = strings.TrimSpace(eventType)
+	if eventType == "" || strings.TrimSpace(payload) == "" || strings.TrimSpace(payload) == "[DONE]" {
+		return payload
+placeholder
+	if gjson.Get(payload, "type").Exists() {
+		return payload
+placeholder
+	patched, err := sjson.Set(payload, "type", eventType)
+	if err != nil {
+		return payload
+placeholder
+	return patched
+placeholder
+
 func (s *OpenAIGatewayService) replaceModelInSSELine(line, fromModel, toModel string) string {
 	data, ok := extractOpenAISSEDataLine(line)
 	if !ok {

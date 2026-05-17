@@ -554,6 +554,13 @@ placeholder
 	missingTerminalErr := func() (*OpenAIForwardResult, error) {
 		return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
 placeholder
+	processFrame := func(frame openAICompatSSEFrame) bool {
+		payload := openAICompatPayloadWithEventType(frame.Data, frame.EventType)
+		if strings.TrimSpace(payload) == "[DONE]" {
+			return false
+	placeholder
+		return processDataLine(payload)
+placeholder
 
 	// Determine keepalive interval
 	keepaliveInterval := time.Duration(0)
@@ -563,22 +570,31 @@ placeholder
 
 	// No keepalive: fast synchronous path
 	if streamInterval <= 0 && keepaliveInterval <= 0 {
+		var parser openAICompatSSEFrameParser
 		for scanner.Scan() {
 			line := scanner.Text()
-			payload, ok := extractOpenAISSEDataLine(line)
+			frame, ok := parser.AddLine(line)
 			if !ok {
 				continue
 		placeholder
-			if strings.TrimSpace(payload) == "[DONE]" {
+			if strings.TrimSpace(frame.Data) == "[DONE]" {
 				return missingTerminalErr()
 		placeholder
-			if processDataLine(payload) {
+			if processFrame(frame) {
 				return finalizeStream()
 		placeholder
 	placeholder
 		if err := scanner.Err(); err != nil {
 			handleScanErr(err)
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", err)
+	placeholder
+		if frame, ok := parser.Finish(); ok {
+			if strings.TrimSpace(frame.Data) == "[DONE]" {
+				return missingTerminalErr()
+		placeholder
+			if processFrame(frame) {
+				return finalizeStream()
+		placeholder
 	placeholder
 		return missingTerminalErr()
 placeholder
@@ -624,11 +640,20 @@ placeholder
 		keepaliveCh = keepaliveTicker.C
 placeholder
 	lastDataAt := time.Now()
+	var parser openAICompatSSEFrameParser
 
 	for {
 		select {
 		case ev, ok := <-events:
 			if !ok {
+				if frame, ok := parser.Finish(); ok {
+					if strings.TrimSpace(frame.Data) == "[DONE]" {
+						return missingTerminalErr()
+				placeholder
+					if processFrame(frame) {
+						return finalizeStream()
+				placeholder
+			placeholder
 				return missingTerminalErr()
 		placeholder
 			if ev.err != nil {
@@ -637,14 +662,14 @@ placeholder
 		placeholder
 			lastDataAt = time.Now()
 			line := ev.line
-			payload, ok := extractOpenAISSEDataLine(line)
+			frame, ok := parser.AddLine(line)
 			if !ok {
 				continue
 		placeholder
-			if strings.TrimSpace(payload) == "[DONE]" {
+			if strings.TrimSpace(frame.Data) == "[DONE]" {
 				return missingTerminalErr()
 		placeholder
-			if processDataLine(payload) {
+			if processFrame(frame) {
 				return finalizeStream()
 		placeholder
 
