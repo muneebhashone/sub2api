@@ -236,6 +236,120 @@ placeholder()
 placeholder
 placeholder
 
+func TestForwardAsChatCompletions_EventNamedTerminalWithoutUpstreamCloseReturns(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := []byte(strings.Join([]string{
+		`event: response.created`,
+		`data: {"response":{"id":"resp_1","model":"gpt-5.4","status":"in_progress","output":[]placeholderplaceholder`,
+		``,
+		`event: response.output_text.delta`,
+		`data: {"delta":"ok"placeholder`,
+		``,
+		`event: response.completed`,
+		`data: {"response":{"id":"resp_1","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"placeholder]placeholder],"usage":{"input_tokens":17,"output_tokens":8,"total_tokens":25,"input_tokens_details":{"cached_tokens":6placeholderplaceholderplaceholderplaceholder`,
+		``,
+		``,
+placeholder, "\n"))
+	upstreamStream := newOpenAICompatBlockingReadCloser(upstreamBody)
+	defer func() {
+		require.NoError(t, upstreamStream.Close())
+placeholder()
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_chat_event_named_terminal"placeholderplaceholder,
+		Body:       upstreamStream,
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	type forwardResult struct {
+		result *OpenAIForwardResult
+		err    error
+placeholder
+	resultCh := make(chan forwardResult, 1)
+	go func() {
+		result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "gpt-5.1")
+		resultCh <- forwardResult{result: result, err: errplaceholder
+placeholder()
+
+	select {
+	case got := <-resultCh:
+		require.NoError(t, got.err)
+		require.NotNil(t, got.result)
+		require.Equal(t, 17, got.result.Usage.InputTokens)
+		require.Equal(t, 8, got.result.Usage.OutputTokens)
+		require.Equal(t, 6, got.result.Usage.CacheReadInputTokens)
+		require.Contains(t, rec.Body.String(), `"content":"ok"`)
+	case <-time.After(time.Second):
+		require.Fail(t, "ForwardAsChatCompletions should use SSE event names when data payloads omit type")
+placeholder
+placeholder
+
+func TestForwardAsChatCompletions_EventTypeDoesNotLeakAcrossFrames(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`event: response.created`,
+		`data: {"response":{"id":"resp_1","model":"gpt-5.4","status":"in_progress","output":[]placeholderplaceholder`,
+		``,
+		`data: {"type":"response.output_text.delta","delta":"ok"placeholder`,
+		``,
+		`event: response.completed`,
+		`data: {"response":{"id":"resp_1","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"placeholder]placeholder],"usage":{"input_tokens":17,"output_tokens":8,"total_tokens":25,"input_tokens_details":{"cached_tokens":6placeholderplaceholderplaceholderplaceholder`,
+		``,
+		`data: [DONE]`,
+		``,
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_chat_event_boundary"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "gpt-5.1")
+placeholder
+	require.NotNil(t, result)
+	require.Contains(t, rec.Body.String(), `"content":"ok"`)
+	require.Contains(t, rec.Body.String(), `data: [DONE]`)
+placeholder
+
 func TestForwardAsChatCompletions_BufferedTerminalWithoutUpstreamCloseReturns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

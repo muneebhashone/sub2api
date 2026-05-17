@@ -1360,6 +1360,135 @@ placeholder()
 placeholder
 placeholder
 
+func TestForwardAsAnthropic_EventNamedTerminalWithoutUpstreamCloseReturns(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Writer = &openAICompatFailingWriter{ResponseWriter: c.Writer, failAfter: 0placeholder
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := []byte(strings.Join([]string{
+		`event: response.completed`,
+		`data: {"response":{"id":"resp_1","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"placeholder]placeholder],"usage":{"input_tokens":15,"output_tokens":6,"total_tokens":21,"input_tokens_details":{"cached_tokens":5placeholderplaceholderplaceholderplaceholder`,
+		``,
+		``,
+placeholder, "\n"))
+	upstreamStream := newOpenAICompatBlockingReadCloser(upstreamBody)
+	defer func() {
+		require.NoError(t, upstreamStream.Close())
+placeholder()
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_messages_event_named_terminal"placeholderplaceholder,
+		Body:       upstreamStream,
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	type forwardResult struct {
+		result *OpenAIForwardResult
+		err    error
+placeholder
+	resultCh := make(chan forwardResult, 1)
+	go func() {
+		result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
+		resultCh <- forwardResult{result: result, err: errplaceholder
+placeholder()
+
+	select {
+	case got := <-resultCh:
+		require.NoError(t, got.err)
+		require.NotNil(t, got.result)
+		require.Equal(t, 15, got.result.Usage.InputTokens)
+		require.Equal(t, 6, got.result.Usage.OutputTokens)
+		require.Equal(t, 5, got.result.Usage.CacheReadInputTokens)
+	case <-time.After(time.Second):
+		require.Fail(t, "ForwardAsAnthropic should use SSE event names when data payloads omit type")
+placeholder
+placeholder
+
+func TestForwardAsAnthropic_EventNamedTerminalWithKeepaliveReturns(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Writer = &openAICompatFailingWriter{ResponseWriter: c.Writer, failAfter: 0placeholder
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := []byte(strings.Join([]string{
+		`: upstream ping`,
+		``,
+		`event: response.completed`,
+		`data: {"response":{"id":"resp_1","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"placeholder]placeholder],"usage":{"input_tokens":15,"output_tokens":6,"total_tokens":21,"input_tokens_details":{"cached_tokens":5placeholderplaceholderplaceholderplaceholder`,
+		``,
+		``,
+placeholder, "\n"))
+	upstreamStream := newOpenAICompatBlockingReadCloser(upstreamBody)
+	defer func() {
+		require.NoError(t, upstreamStream.Close())
+placeholder()
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_messages_event_named_keepalive"placeholderplaceholder,
+		Body:       upstreamStream,
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{
+		cfg: &config.Config{Gateway: config.GatewayConfig{
+			StreamKeepaliveInterval: 5,
+placeholder
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	type forwardResult struct {
+		result *OpenAIForwardResult
+		err    error
+placeholder
+	resultCh := make(chan forwardResult, 1)
+	go func() {
+		result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
+		resultCh <- forwardResult{result: result, err: errplaceholder
+placeholder()
+
+	select {
+	case got := <-resultCh:
+		require.NoError(t, got.err)
+		require.NotNil(t, got.result)
+		require.Equal(t, 15, got.result.Usage.InputTokens)
+		require.Equal(t, 6, got.result.Usage.OutputTokens)
+		require.Equal(t, 5, got.result.Usage.CacheReadInputTokens)
+	case <-time.After(time.Second):
+		require.Fail(t, "ForwardAsAnthropic keepalive path should use SSE event names when data payloads omit type")
+placeholder
+placeholder
+
 func TestForwardAsAnthropic_BufferedTerminalWithoutUpstreamCloseReturns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -1413,6 +1542,67 @@ placeholder()
 		require.Contains(t, rec.Body.String(), `"stop_reason":"end_turn"`)
 	case <-time.After(time.Second):
 		require.Fail(t, "ForwardAsAnthropic buffered response should return after terminal usage event even if upstream keeps the connection open")
+placeholder
+placeholder
+
+func TestForwardAsAnthropic_BufferedEventNamedTerminalWithoutUpstreamCloseReturns(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := []byte(strings.Join([]string{
+		`event: response.completed`,
+		`data: {"response":{"id":"resp_1","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"placeholder]placeholder],"usage":{"input_tokens":15,"output_tokens":6,"total_tokens":21,"input_tokens_details":{"cached_tokens":5placeholderplaceholderplaceholderplaceholder`,
+		``,
+		``,
+placeholder, "\n"))
+	upstreamStream := newOpenAICompatBlockingReadCloser(upstreamBody)
+	defer func() {
+		require.NoError(t, upstreamStream.Close())
+placeholder()
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_messages_buffered_event_named"placeholderplaceholder,
+		Body:       upstreamStream,
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	type forwardResult struct {
+		result *OpenAIForwardResult
+		err    error
+placeholder
+	resultCh := make(chan forwardResult, 1)
+	go func() {
+		result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
+		resultCh <- forwardResult{result: result, err: errplaceholder
+placeholder()
+
+	select {
+	case got := <-resultCh:
+		require.NoError(t, got.err)
+		require.NotNil(t, got.result)
+		require.Equal(t, 15, got.result.Usage.InputTokens)
+		require.Equal(t, 6, got.result.Usage.OutputTokens)
+		require.Equal(t, 5, got.result.Usage.CacheReadInputTokens)
+		require.Contains(t, rec.Body.String(), `"stop_reason":"end_turn"`)
+	case <-time.After(time.Second):
+		require.Fail(t, "ForwardAsAnthropic buffered response should use SSE event names when data payloads omit type")
 placeholder
 placeholder
 
