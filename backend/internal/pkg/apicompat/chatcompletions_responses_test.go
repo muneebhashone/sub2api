@@ -225,6 +225,41 @@ placeholder
 	assert.Equal(t, "Describe this", parts[0].Text)
 placeholder
 
+func TestChatCompletionsToResponses_EmptyContentNeverNull(t *testing.T) {
+	// Regression for #2515: the upstream Responses API rejects an input item
+	// whose content field is JSON null. Any chat-completions message that
+	// yields no usable content parts must serialize content as a string.
+	cases := []struct {
+		name    string
+		content json.RawMessage
+placeholder{
+		{"null content", json.RawMessage(`null`)placeholder,
+		{"empty array content", json.RawMessage(`[]`)placeholder,
+		{"only empty text part", json.RawMessage(`[{"type":"text","text":""placeholder]`)placeholder,
+		{"only empty base64 image part", json.RawMessage(`[{"type":"image_url","image_url":{"url":"data:image/png;base64,"placeholderplaceholder]`)placeholder,
+placeholder
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &ChatCompletionsRequest{
+				Model: "gpt-5.5",
+				Messages: []ChatMessage{
+					{Role: "user", Content: tc.contentplaceholder,
+			placeholder,
+		placeholder
+			resp, err := ChatCompletionsToResponses(req)
+		placeholder
+			assert.NotContains(t, string(resp.Input), `"content":null`,
+				"converted input must not contain a null content field")
+
+			var items []ResponsesInputItem
+			require.NoError(t, json.Unmarshal(resp.Input, &items))
+			require.Len(t, items, 1)
+			assert.Equal(t, `""`, string(items[0].Content),
+				"content must be an empty string, not null")
+	placeholder)
+placeholder
+placeholder
+
 func TestChatCompletionsToResponses_SystemArrayContent(t *testing.T) {
 	req := &ChatCompletionsRequest{
 		Model: "gpt-4o",
