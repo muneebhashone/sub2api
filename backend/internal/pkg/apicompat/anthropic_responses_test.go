@@ -744,6 +744,10 @@ placeholder, state)
 	assert.Equal(t, "content_block_start", events[0].Type)
 	assert.Equal(t, "thinking", events[0].ContentBlock.Type)
 
+	sse, err := ResponsesAnthropicEventToSSE(events[0])
+placeholder
+	assert.Contains(t, sse, `"content_block":{"thinking":"","type":"thinking"placeholder`)
+
 	// reasoning text delta
 	events = ResponsesEventToAnthropicEvents(&ResponsesStreamEvent{
 		Type:        "response.reasoning_summary_text.delta",
