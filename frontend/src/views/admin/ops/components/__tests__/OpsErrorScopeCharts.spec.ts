@@ -30,7 +30,7 @@ vi.mock('vue-chartjs', async () => {
       template: '<div class="doughnut-stub" />',
     placeholder),
     Line: defineComponent({
-      name: 'Line',
+      name: 'LineChartStub',
       props: {
         data: { type: Object, required: true placeholder,
         options: { type: Object, default: () => ({placeholder) placeholder,
