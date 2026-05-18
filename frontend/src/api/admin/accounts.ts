@@ -446,6 +446,20 @@ export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
   return data
 placeholder
 
+export interface SyncUpstreamModelsResult {
+  models: string[]
+placeholder
+
+/**
+ * Sync live supported models from the account's upstream model-list endpoint
+ * @param id - Account ID
+ * @returns List of model IDs returned by the upstream
+ */
+export async function syncUpstreamModels(id: number): Promise<SyncUpstreamModelsResult> {
+  const { data placeholder = await apiClient.post<SyncUpstreamModelsResult>(`/admin/accounts/${idplaceholder/models/sync-upstream`)
+  return data
+placeholder
+
 export interface CRSPreviewAccount {
   crs_account_id: string
   kind: string
@@ -660,6 +674,7 @@ export const accountsAPI = {
   resetTempUnschedulable,
   setSchedulable,
   getAvailableModels,
+  syncUpstreamModels,
   generateAuthUrl,
   exchangeCode,
   refreshOpenAIToken,
