@@ -157,6 +157,7 @@ placeholder
 				zap.Int("excluded_account_count", len(failedAccountIDs)),
 			)
 			if len(failedAccountIDs) == 0 {
+				markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
 				h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available compatible accounts", streamStarted)
 				return
 		placeholder
@@ -168,6 +169,7 @@ placeholder
 			return
 	placeholder
 		if selection == nil || selection.Account == nil {
+			markOpsRoutingCapacityLimited(c)
 			h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "api_error", "No available compatible accounts", streamStarted)
 			return
 	placeholder
