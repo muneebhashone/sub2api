@@ -267,10 +267,15 @@ placeholder
 
 async function resolveOrderFromOutTradeNo(outTradeNo: string): Promise<PaymentOrder | null> {
   try {
-    const result = await paymentAPI.verifyOrderPublic(outTradeNo)
+    const result = await paymentAPI.verifyOrder(outTradeNo)
     return result.data
   placeholder catch (_err: unknown) {
-    return null
+    try {
+      const result = await paymentAPI.verifyOrderPublic(outTradeNo)
+      return result.data
+    placeholder catch (_innerErr: unknown) {
+      return null
+    placeholder
   placeholder
 placeholder
 
