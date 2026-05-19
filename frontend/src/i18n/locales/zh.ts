@@ -2760,6 +2760,9 @@ export default {
       resetInMinutes: '{minutesplaceholder 分钟后重置',
       resetInHoursMinutes: '{hoursplaceholder 小时 {minutesplaceholder 分钟后重置',
       resetInDaysHours: '{daysplaceholder 天 {hoursplaceholder 小时后重置',
+      quotaEndsInMinutes: '额度将在 {minutesplaceholder 分钟后结束',
+      quotaEndsInHoursMinutes: '额度将在 {hoursplaceholder 小时 {minutesplaceholder 分钟后结束',
+      quotaEndsInDaysHours: '额度将在 {daysplaceholder 天 {hoursplaceholder 小时后结束',
       daysRemaining: '天剩余',
       remainingDays: '剩余天数',
       noExpiration: '无过期时间',
@@ -6442,6 +6445,7 @@ export default {
     daysRemaining: '剩余 {daysplaceholder 天',
     expiresOn: '{dateplaceholder 到期',
     resetIn: '{timeplaceholder 后重置',
+    quotaEndsIn: '额度将在 {timeplaceholder 后结束',
     windowNotActive: '等待首次使用',
     usageOf: '已用 {usedplaceholder / {limitplaceholder'
   placeholder,
