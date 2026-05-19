@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach placeholder from 'vitest'
 import { setActivePinia, createPinia placeholder from 'pinia'
+import { resolveCompletedSetupRedirectPath placeholder from '@/router/setupRedirect'
 
 // Mock 导航加载状态
 vi.mock('@/composables/useNavigationLoading', () => {
@@ -53,6 +54,7 @@ interface MockAuthState {
   isSimpleMode: boolean
   backendModeEnabled: boolean
   hasPendingAuthSession: boolean
+  setupNeedsSetup?: boolean
 placeholder
 
 /**
@@ -65,6 +67,10 @@ function simulateGuard(
 ): string | null {
   const requiresAuth = toMeta.requiresAuth !== false
   const requiresAdmin = toMeta.requiresAdmin === true
+
+  if (toPath === '/setup' && authState.setupNeedsSetup === false) {
+    return resolveCompletedSetupRedirectPath(authState.isAuthenticated, authState.isAdmin)
+  placeholder
 
   // 不需要认证的路由
   if (!requiresAuth) {
@@ -376,6 +382,32 @@ describe('路由守卫逻辑', () => {
       placeholder
       const redirect = simulateGuard('/setup', { requiresAuth: false placeholder, authState)
       expect(redirect).toBeNull()
+    placeholder)
+
+    it('unauthenticated: initialized /setup redirects to /login', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: false,
+        isAdmin: false,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+        setupNeedsSetup: false,
+      placeholder
+      const redirect = simulateGuard('/setup', { requiresAuth: false placeholder, authState)
+      expect(redirect).toBe('/login')
+    placeholder)
+
+    it('admin: initialized /setup redirects to /admin/dashboard', () => {
+      const authState: MockAuthState = {
+        isAuthenticated: true,
+        isAdmin: true,
+        isSimpleMode: false,
+        backendModeEnabled: true,
+        hasPendingAuthSession: false,
+        setupNeedsSetup: false,
+      placeholder
+      const redirect = simulateGuard('/setup', { requiresAuth: false placeholder, authState)
+      expect(redirect).toBe('/admin/dashboard')
     placeholder)
 
     it('admin: /admin/dashboard is allowed', () => {
