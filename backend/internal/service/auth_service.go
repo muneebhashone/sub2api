@@ -157,7 +157,7 @@ placeholder
 			return "", nil, ErrInvitationCodeInvalid
 	placeholder
 		// 检查类型和状态
-		if redeemCode.Type != RedeemTypeInvitation || redeemCode.Status != StatusUnused {
+		if redeemCode.Type != RedeemTypeInvitation || !redeemCode.CanUse() {
 			logger.LegacyPrintf("service.auth", "[Auth] Invitation code invalid: type=%s, status=%s", redeemCode.Type, redeemCode.Status)
 			return "", nil, ErrInvitationCodeInvalid
 	placeholder
@@ -601,7 +601,7 @@ placeholder
 				if err != nil {
 					return nil, nil, ErrInvitationCodeInvalid
 			placeholder
-				if redeemCode.Type != RedeemTypeInvitation || redeemCode.Status != StatusUnused {
+				if redeemCode.Type != RedeemTypeInvitation || !redeemCode.CanUse() {
 					return nil, nil, ErrInvitationCodeInvalid
 			placeholder
 				invitationRedeemCode = redeemCode
