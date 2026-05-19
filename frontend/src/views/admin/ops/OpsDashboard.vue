@@ -310,8 +310,6 @@ const applyRouteQueryToState = () => {
   placeholder
 placeholder
 
-applyRouteQueryToState()
-
 const buildQueryFromState = () => {
   const next: Record<string, any> = { ...route.query placeholder
 
@@ -379,6 +377,8 @@ placeholder)
 
 const showSettingsDialog = ref(false)
 const showAlertRulesCard = ref(false)
+
+applyRouteQueryToState()
 
 // Auto refresh settings
 const showAlertEvents = ref(true)
