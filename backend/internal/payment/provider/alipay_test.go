@@ -189,8 +189,63 @@ placeholder
 	if resp.PayURL == "" {
 		t.Fatal("expected pay_url for desktop page pay")
 placeholder
-	if resp.QRCode != resp.PayURL {
-		t.Fatalf("qr_code = %q, want same as pay_url %q", resp.QRCode, resp.PayURL)
+	// page.pay returns a checkout page URL, not a scannable QR payload —
+	// it must never be exposed via QRCode (the frontend would render an
+	// unscannable image from it).
+	if resp.QRCode != "" {
+		t.Fatalf("qr_code = %q, want empty for page pay", resp.QRCode)
+placeholder
+placeholder
+
+// When the provider instance is configured with paymentMode == "redirect",
+// the desktop flow must skip precreate and go straight to page.pay.
+func TestCreateTradeRedirectModeSkipsPrecreate(t *testing.T) {
+	origPreCreate := alipayTradePreCreate
+	origPagePay := alipayTradePagePay
+	t.Cleanup(func() {
+		alipayTradePreCreate = origPreCreate
+		alipayTradePagePay = origPagePay
+placeholder)
+
+	preCreateCalls := 0
+	pagePayCalls := 0
+	alipayTradePreCreate = func(ctx context.Context, client *alipay.Client, param alipay.TradePreCreate) (*alipay.TradePreCreateRsp, error) {
+		preCreateCalls++
+		return &alipay.TradePreCreateRsp{
+			Error:  alipay.Error{Code: alipay.CodeSuccessplaceholder,
+			QRCode: "https://qr.alipay.example.com/precreate-token",
+	placeholder, nil
+placeholder
+	alipayTradePagePay = func(client *alipay.Client, param alipay.TradePagePay) (*url.URL, error) {
+		pagePayCalls++
+		if param.ProductCode != alipayProductCodePagePay {
+			t.Fatalf("product_code = %q, want %q", param.ProductCode, alipayProductCodePagePay)
+	placeholder
+		return url.Parse("https://openapi.alipay.com/gateway.do?page-pay")
+placeholder
+
+	provider := &Alipay{
+		config: map[string]string{"paymentMode": "redirect"placeholder,
+placeholder
+	resp, err := provider.createDesktopTrade(context.Background(), &alipay.Client{placeholder, payment.CreatePaymentRequest{
+		OrderID: "sub2_103",
+		Amount:  "12.00",
+		Subject: "Balance recharge",
+placeholder, "https://merchant.example.com/api/v1/payment/webhook/alipay", "https://merchant.example.com/payment/result")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+	if preCreateCalls != 0 {
+		t.Fatalf("precreate calls = %d, want 0 (redirect mode must skip precreate)", preCreateCalls)
+placeholder
+	if pagePayCalls != 1 {
+		t.Fatalf("page pay calls = %d, want 1", pagePayCalls)
+placeholder
+	if resp.PayURL == "" {
+		t.Fatal("expected pay_url for redirect mode")
+placeholder
+	if resp.QRCode != "" {
+		t.Fatalf("qr_code = %q, want empty for redirect mode", resp.QRCode)
 placeholder
 placeholder
 
