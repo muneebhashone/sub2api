@@ -150,12 +150,10 @@ placeholder
 // empty/nil and there are tool_calls, only function_call items are emitted.
 func chatAssistantToResponses(m ChatMessage) ([]ResponsesInputItem, error) {
 	var items []ResponsesInputItem
-	var content strings.Builder
+	content := ""
 
 	if m.ReasoningContent != "" {
-		content.WriteString("<thinking>")
-		content.WriteString(m.ReasoningContent)
-		content.WriteString("</thinking>")
+		content = "<thinking>" + m.ReasoningContent + "</thinking>"
 placeholder
 
 	// Emit assistant message with output_text if content is non-empty.
@@ -165,15 +163,15 @@ placeholder
 			return nil, err
 	placeholder
 		if s != "" {
-			if content.Len() > 0 {
-				content.WriteByte('\n')
+			if content != "" {
+				content += "\n"
 		placeholder
-			content.WriteString(s)
+			content += s
 	placeholder
 placeholder
 
-	if content.Len() > 0 {
-		parts := []ResponsesContentPart{{Type: "output_text", Text: content.String()placeholderplaceholder
+	if content != "" {
+		parts := []ResponsesContentPart{{Type: "output_text", Text: contentplaceholderplaceholder
 		partsJSON, err := json.Marshal(parts)
 		if err != nil {
 			return nil, err
