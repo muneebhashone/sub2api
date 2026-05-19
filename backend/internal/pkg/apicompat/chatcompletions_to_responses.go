@@ -150,6 +150,11 @@ placeholder
 // empty/nil and there are tool_calls, only function_call items are emitted.
 func chatAssistantToResponses(m ChatMessage) ([]ResponsesInputItem, error) {
 	var items []ResponsesInputItem
+	content := ""
+
+	if m.ReasoningContent != "" {
+		content = "<thinking>" + m.ReasoningContent + "</thinking>"
+placeholder
 
 	// Emit assistant message with output_text if content is non-empty.
 	if len(m.Content) > 0 {
@@ -158,13 +163,20 @@ func chatAssistantToResponses(m ChatMessage) ([]ResponsesInputItem, error) {
 			return nil, err
 	placeholder
 		if s != "" {
-			parts := []ResponsesContentPart{{Type: "output_text", Text: splaceholderplaceholder
-			partsJSON, err := json.Marshal(parts)
-			if err != nil {
-				return nil, err
+			if content != "" {
+				content += "\n"
 		placeholder
-			items = append(items, ResponsesInputItem{Role: "assistant", Content: partsJSONplaceholder)
+			content += s
 	placeholder
+placeholder
+
+	if content != "" {
+		parts := []ResponsesContentPart{{Type: "output_text", Text: contentplaceholderplaceholder
+		partsJSON, err := json.Marshal(parts)
+		if err != nil {
+			return nil, err
+	placeholder
+		items = append(items, ResponsesInputItem{Role: "assistant", Content: partsJSONplaceholder)
 placeholder
 
 	// Emit one function_call item per tool_call.
