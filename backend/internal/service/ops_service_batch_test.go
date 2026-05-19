@@ -31,11 +31,10 @@ placeholder
 			UpstreamErrorDetail:  strPtr(detail),
 			UpstreamErrors: []*OpsUpstreamErrorEvent{
 				{
-					AccountID:           -2,
-					UpstreamStatusCode:  429,
-					Message:             " token leaked ",
-					Detail:              `{"refresh_token":"secret"placeholder`,
-					UpstreamRequestBody: `{"api_key":"secret","messages":[{"role":"user","content":"hello"placeholder]placeholder`,
+					AccountID:          -2,
+					UpstreamStatusCode: 429,
+					Message:            " token leaked ",
+					Detail:             `{"refresh_token":"secret"placeholder`,
 			placeholder,
 		placeholder,
 	placeholder,

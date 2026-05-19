@@ -44,49 +44,6 @@ placeholder
 	opsErrorLogDrained.Store(false)
 placeholder
 
-func TestAttachOpsRequestBodyToEntry_SanitizeAndTrim(t *testing.T) {
-	resetOpsErrorLoggerStateForTest(t)
-	gin.SetMode(gin.TestMode)
-
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
-
-	raw := []byte(`{"access_token":"secret-token","messages":[{"role":"user","content":"hello"placeholder]placeholder`)
-	setOpsRequestContext(c, "claude-3", false, raw)
-
-	entry := &service.OpsInsertErrorLogInput{placeholder
-	attachOpsRequestBodyToEntry(c, entry)
-
-	require.NotNil(t, entry.RequestBodyBytes)
-	require.Equal(t, len(raw), *entry.RequestBodyBytes)
-	require.NotNil(t, entry.RequestBodyJSON)
-	require.NotContains(t, *entry.RequestBodyJSON, "secret-token")
-	require.Contains(t, *entry.RequestBodyJSON, "[placeholder]")
-	require.Equal(t, int64(1), OpsErrorLogSanitizedTotal())
-placeholder
-
-func TestAttachOpsRequestBodyToEntry_InvalidJSONKeepsSize(t *testing.T) {
-	resetOpsErrorLoggerStateForTest(t)
-	gin.SetMode(gin.TestMode)
-
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
-
-	raw := []byte("not-json")
-	setOpsRequestContext(c, "claude-3", false, raw)
-
-	entry := &service.OpsInsertErrorLogInput{placeholder
-	attachOpsRequestBodyToEntry(c, entry)
-
-	require.Nil(t, entry.RequestBodyJSON)
-	require.NotNil(t, entry.RequestBodyBytes)
-	require.Equal(t, len(raw), *entry.RequestBodyBytes)
-	require.False(t, entry.RequestBodyTruncated)
-	require.Equal(t, int64(1), OpsErrorLogSanitizedTotal())
-placeholder
-
 func TestEnqueueOpsErrorLog_QueueFullDrop(t *testing.T) {
 	resetOpsErrorLoggerStateForTest(t)
 
@@ -106,39 +63,6 @@ func TestEnqueueOpsErrorLog_QueueFullDrop(t *testing.T) {
 	require.Equal(t, int64(1), OpsErrorLogEnqueuedTotal())
 	require.Equal(t, int64(1), OpsErrorLogDroppedTotal())
 	require.Equal(t, int64(1), OpsErrorLogQueueLength())
-placeholder
-
-func TestAttachOpsRequestBodyToEntry_EarlyReturnBranches(t *testing.T) {
-	resetOpsErrorLoggerStateForTest(t)
-	gin.SetMode(gin.TestMode)
-
-	entry := &service.OpsInsertErrorLogInput{placeholder
-	attachOpsRequestBodyToEntry(nil, entry)
-	attachOpsRequestBodyToEntry(&gin.Context{placeholder, nil)
-
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
-
-	// 无请求体 key
-	attachOpsRequestBodyToEntry(c, entry)
-	require.Nil(t, entry.RequestBodyJSON)
-	require.Nil(t, entry.RequestBodyBytes)
-	require.False(t, entry.RequestBodyTruncated)
-
-	// 错误类型
-	c.Set(opsRequestBodyKey, "not-bytes")
-	attachOpsRequestBodyToEntry(c, entry)
-	require.Nil(t, entry.RequestBodyJSON)
-	require.Nil(t, entry.RequestBodyBytes)
-
-	// 空 bytes
-	c.Set(opsRequestBodyKey, []byte{placeholder)
-	attachOpsRequestBodyToEntry(c, entry)
-	require.Nil(t, entry.RequestBodyJSON)
-	require.Nil(t, entry.RequestBodyBytes)
-
-	require.Equal(t, int64(0), OpsErrorLogSanitizedTotal())
 placeholder
 
 func TestEnqueueOpsErrorLog_EarlyReturnBranches(t *testing.T) {
