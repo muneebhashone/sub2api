@@ -1120,6 +1120,7 @@ placeholder
 		{Name: "used_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "validity_days", Type: field.TypeInt, Default: 30placeholder,
 		{Name: "group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "used_by", Type: field.TypeInt64, Nullable: trueplaceholder,
@@ -1132,13 +1133,13 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "redeem_codes_groups_redeem_codes",
-				Columns:    []*schema.Column{RedeemCodesColumns[9]placeholder,
+				Columns:    []*schema.Column{RedeemCodesColumns[10]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "redeem_codes_users_redeem_codes",
-				Columns:    []*schema.Column{RedeemCodesColumns[10]placeholder,
+				Columns:    []*schema.Column{RedeemCodesColumns[11]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -1152,12 +1153,17 @@ placeholder
 			{
 				Name:    "redeemcode_used_by",
 				Unique:  false,
-				Columns: []*schema.Column{RedeemCodesColumns[10]placeholder,
+				Columns: []*schema.Column{RedeemCodesColumns[11]placeholder,
 		placeholder,
 			{
 				Name:    "redeemcode_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{RedeemCodesColumns[9]placeholder,
+				Columns: []*schema.Column{RedeemCodesColumns[10]placeholder,
+		placeholder,
+			{
+				Name:    "redeemcode_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{RedeemCodesColumns[8]placeholder,
 		placeholder,
 	placeholder,
 placeholder

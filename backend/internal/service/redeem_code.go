@@ -16,6 +16,7 @@ type RedeemCode struct {
 	UsedAt    *time.Time
 	Notes     string
 	CreatedAt time.Time
+	ExpiresAt *time.Time
 
 	GroupID      *int64
 	ValidityDays int
@@ -28,8 +29,22 @@ func (r *RedeemCode) IsUsed() bool {
 	return r.Status == StatusUsed
 placeholder
 
+func (r *RedeemCode) IsExpired() bool {
+	return r.IsExpiredAt(time.Now())
+placeholder
+
+func (r *RedeemCode) IsExpiredAt(now time.Time) bool {
+	if r == nil {
+		return false
+placeholder
+	if r.Status == StatusExpired {
+		return true
+placeholder
+	return r.Status == StatusUnused && r.ExpiresAt != nil && !r.ExpiresAt.After(now)
+placeholder
+
 func (r *RedeemCode) CanUse() bool {
-	return r.Status == StatusUnused
+	return r.Status == StatusUnused && !r.IsExpired()
 placeholder
 
 func GenerateRedeemCode() (string, error) {
