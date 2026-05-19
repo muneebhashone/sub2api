@@ -266,7 +266,8 @@ placeholder
 placeholder
 
 	imageCount := 0
-	imageSize := s.extractImageSize(claudeBody)
+	imageInputSize := s.extractImageInputSize(claudeBody)
+	imageSize := normalizeOpenAIImageSizeTier(imageInputSize)
 	if isImageGenerationModel(originalModel) {
 		imageCount = 1
 placeholder
@@ -282,6 +283,7 @@ placeholder
 		ReasoningEffort:  reasoningEffort,
 		ImageCount:       imageCount,
 		ImageSize:        imageSize,
+		ImageInputSize:   imageInputSize,
 		ClientDisconnect: false,
 placeholder, nil
 placeholder
