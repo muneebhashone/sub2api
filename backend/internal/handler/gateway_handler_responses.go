@@ -174,6 +174,7 @@ placeholder
 		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), apiKey.GroupID, sessionHash, reqModel, fs.FailedAccountIDs, "", int64(0))
 		if err != nil {
 			if len(fs.FailedAccountIDs) == 0 {
+				markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
 				h.responsesErrorResponse(c, http.StatusServiceUnavailable, "api_error", "No available accounts: "+err.Error())
 				return
 		placeholder
@@ -199,6 +200,7 @@ placeholder
 		accountReleaseFunc := selection.ReleaseFunc
 		if !selection.Acquired {
 			if selection.WaitPlan == nil {
+				markOpsRoutingCapacityLimited(c)
 				h.responsesErrorResponse(c, http.StatusServiceUnavailable, "api_error", "No available accounts")
 				return
 		placeholder
