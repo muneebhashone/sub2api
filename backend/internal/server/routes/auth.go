@@ -182,6 +182,32 @@ func RegisterAuthRoutes(
 		placeholder),
 			h.Auth.CreateOIDCOAuthAccount,
 		)
+		auth.GET("/oauth/dingtalk/start", h.Auth.DingTalkOAuthStart)
+		auth.GET("/oauth/dingtalk/bind/start", func(c *gin.Context) {
+			query := c.Request.URL.Query()
+			query.Set("intent", "bind_current_user")
+			c.Request.URL.RawQuery = query.Encode()
+			h.Auth.DingTalkOAuthStart(c)
+	placeholder)
+		auth.GET("/oauth/dingtalk/callback", h.Auth.DingTalkOAuthCallback)
+		auth.POST("/oauth/dingtalk/complete-registration",
+			rateLimiter.LimitWithOptions("oauth-dingtalk-complete", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+		placeholder),
+			h.Auth.CompleteDingTalkOAuthRegistration,
+		)
+		auth.POST("/oauth/dingtalk/bind-login",
+			rateLimiter.LimitWithOptions("oauth-dingtalk-bind-login", 20, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+		placeholder),
+			h.Auth.BindDingTalkOAuthLogin,
+		)
+		auth.POST("/oauth/dingtalk/create-account",
+			rateLimiter.LimitWithOptions("oauth-dingtalk-create-account", 10, time.Minute, middleware.RateLimitOptions{
+				FailureMode: middleware.RateLimitFailClose,
+		placeholder),
+			h.Auth.CreateDingTalkOAuthAccount,
+		)
 placeholder
 
 	// 公开设置（无需认证）
