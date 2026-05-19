@@ -140,7 +140,7 @@ placeholder
 	placeholder,
 placeholder
 
-	usage, err := svc.getOpenAIUsage(context.Background(), account)
+	usage, err := svc.getOpenAIUsage(context.Background(), account, false)
 	if err != nil {
 		t.Fatalf("getOpenAIUsage() error = %v", err)
 placeholder

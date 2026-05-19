@@ -232,9 +232,12 @@ placeholder
  * @param id - Account ID
  * @returns Account usage info
  */
-export async function getUsage(id: number, source?: 'passive' | 'active'): Promise<AccountUsageInfo> {
+export async function getUsage(id: number, source?: 'passive' | 'active', force?: boolean): Promise<AccountUsageInfo> {
+  const params: Record<string, string> = {placeholder
+  if (source) params.source = source
+  if (force) params.force = 'true'
   const { data placeholder = await apiClient.get<AccountUsageInfo>(`/admin/accounts/${idplaceholder/usage`, {
-    params: source ? { source placeholder : undefined
+    params: Object.keys(params).length > 0 ? params : undefined
   placeholder)
   return data
 placeholder
