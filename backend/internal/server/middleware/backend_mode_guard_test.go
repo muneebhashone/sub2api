@@ -271,6 +271,36 @@ placeholder{
 			wantStatus: http.StatusOK,
 	placeholder,
 		{
+			name:       "enabled_blocks_dingtalk_oauth_start",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/dingtalk/start",
+			wantStatus: http.StatusForbidden,
+	placeholder,
+		{
+			name:       "enabled_allows_dingtalk_oauth_callback",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/dingtalk/callback",
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
+			name:       "enabled_allows_dingtalk_complete_registration",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/dingtalk/complete-registration",
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
+			name:       "enabled_allows_dingtalk_create_account",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/dingtalk/create-account",
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
+			name:       "enabled_allows_dingtalk_bind_login",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/dingtalk/bind-login",
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
 			name:       "enabled_allows_oauth_pending_exchange",
 			enabled:    "true",
 			path:       "/api/v1/auth/oauth/pending/exchange",

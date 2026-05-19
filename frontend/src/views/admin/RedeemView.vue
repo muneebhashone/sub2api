@@ -137,6 +137,19 @@
             placeholderplaceholder</span>
           </template>
 
+          <template #cell-expires_at="{ value, row placeholder">
+            <span
+              :class="[
+                'text-sm',
+                row.status === 'expired'
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-gray-500 dark:text-dark-400'
+              ]"
+            >
+              {{ value ? formatDateTime(value) : t('admin.redeem.neverExpires') placeholderplaceholder
+            </span>
+          </template>
+
           <template #cell-actions="{ row placeholder">
             <div class="flex items-center space-x-2">
               <button
@@ -287,6 +300,35 @@
                 />
               </div>
             </template>
+            <div>
+              <label class="input-label">{{ t('admin.redeem.codeExpiry') placeholderplaceholder</label>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <button
+                  v-for="option in redeemCodeExpiryOptions"
+                  :key="option.value"
+                  type="button"
+                  @click="generateForm.expiry_option = option.value"
+                  :class="[
+                    'rounded-lg border px-3 py-2 text-sm transition-colors',
+                    generateForm.expiry_option === option.value
+                      ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/20 dark:text-primary-300'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-dark-600 dark:text-gray-300 dark:hover:bg-dark-700'
+                  ]"
+                >
+                  {{ option.label placeholderplaceholder
+                </button>
+              </div>
+              <input
+                v-if="generateForm.expiry_option === 'custom'"
+                v-model.number="generateForm.custom_expiry_days"
+                type="number"
+                min="1"
+                max="3650"
+                required
+                class="input mt-2"
+                :placeholder="t('admin.redeem.customExpiryDays')"
+              />
+            </div>
             <div>
               <label class="input-label">{{ t('admin.redeem.count') placeholderplaceholder</label>
               <input
@@ -476,14 +518,12 @@ const closeResultDialog = () => {
 placeholder
 
 const copyGeneratedCodes = async () => {
-  try {
-    await navigator.clipboard.writeText(generatedCodesText.value)
+  const success = await clipboardCopy(generatedCodesText.value, t('admin.redeem.copied'))
+  if (success) {
     copiedAll.value = true
     setTimeout(() => {
       copiedAll.value = false
     placeholder, 2000)
-  placeholder catch (error) {
-    appStore.showError(t('admin.redeem.failedToCopy'))
   placeholder
 placeholder
 
@@ -506,6 +546,7 @@ const columns = computed<Column[]>(() => [
   { key: 'status', label: t('admin.redeem.columns.status'), sortable: true placeholder,
   { key: 'used_by', label: t('admin.redeem.columns.usedBy') placeholder,
   { key: 'used_at', label: t('admin.redeem.columns.usedAt'), sortable: true placeholder,
+  { key: 'expires_at', label: t('admin.redeem.columns.expiresAt'), sortable: true placeholder,
   { key: 'actions', label: t('admin.redeem.columns.actions') placeholder
 ])
 
@@ -557,12 +598,24 @@ const showDeleteUnusedDialog = ref(false)
 const deletingCode = ref<RedeemCode | null>(null)
 const copiedCode = ref<string | null>(null)
 
+type RedeemCodeExpiryOption = 'never' | '1' | '3' | '7' | 'custom'
+
+const redeemCodeExpiryOptions = computed<{ value: RedeemCodeExpiryOption; label: string placeholder[]>(() => [
+  { value: 'never', label: t('admin.redeem.neverExpires') placeholder,
+  { value: '1', label: t('admin.redeem.expiryPresetDays', { days: 1 placeholder) placeholder,
+  { value: '3', label: t('admin.redeem.expiryPresetDays', { days: 3 placeholder) placeholder,
+  { value: '7', label: t('admin.redeem.expiryPresetDays', { days: 7 placeholder) placeholder,
+  { value: 'custom', label: t('admin.redeem.customExpiry') placeholder
+])
+
 const generateForm = reactive({
   type: 'balance' as RedeemCodeType,
   value: 10,
   count: 1,
   group_id: null as number | null,
-  validity_days: 30
+  validity_days: 30,
+  expiry_option: 'never' as RedeemCodeExpiryOption,
+  custom_expiry_days: 7
 placeholder)
 
 // 监听类型变化，邀请码类型时自动设置 value 为 0
@@ -652,10 +705,32 @@ const handleSort = (key: string, order: 'asc' | 'desc') => {
   loadCodes()
 placeholder
 
+const getRedeemCodeExpiresInDays = () => {
+  if (generateForm.expiry_option === 'never') {
+    return undefined
+  placeholder
+  if (generateForm.expiry_option === 'custom') {
+    if (
+      !Number.isFinite(generateForm.custom_expiry_days) ||
+      generateForm.custom_expiry_days < 1
+    ) {
+      return null
+    placeholder
+    return Math.floor(generateForm.custom_expiry_days)
+  placeholder
+  return Number(generateForm.expiry_option)
+placeholder
+
 const handleGenerateCodes = async () => {
   // 订阅类型必须选择分组
   if (generateForm.type === 'subscription' && !generateForm.group_id) {
     appStore.showError(t('admin.redeem.groupRequired'))
+    return
+  placeholder
+
+  const expiresInDays = getRedeemCodeExpiresInDays()
+  if (expiresInDays === null) {
+    appStore.showError(t('admin.redeem.expiryDaysRequired'))
     return
   placeholder
 
@@ -666,7 +741,8 @@ const handleGenerateCodes = async () => {
       generateForm.type,
       generateForm.value,
       generateForm.type === 'subscription' ? generateForm.group_id : undefined,
-      generateForm.type === 'subscription' ? generateForm.validity_days : undefined
+      generateForm.type === 'subscription' ? generateForm.validity_days : undefined,
+      expiresInDays
     )
     showGenerateDialog.value = false
     generatedCodes.value = result
@@ -674,6 +750,8 @@ const handleGenerateCodes = async () => {
     // 重置表单
     generateForm.group_id = null
     generateForm.validity_days = 30
+    generateForm.expiry_option = 'never'
+    generateForm.custom_expiry_days = 7
     loadCodes()
   placeholder catch (error: any) {
     appStore.showError(error.response?.data?.detail || t('admin.redeem.failedToGenerate'))

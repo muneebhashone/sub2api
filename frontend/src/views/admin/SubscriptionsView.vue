@@ -246,7 +246,7 @@
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span>{{ formatResetTime(row.daily_window_start, 'daily') placeholderplaceholder</span>
+                  <span>{{ formatDailyUsageWindow(row) placeholderplaceholder</span>
                 </div>
               </div>
 
@@ -758,6 +758,7 @@ import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { getRemainingDurationParts, isOneTimeDailyQuota, type RemainingDurationParts placeholder from '@/utils/subscriptionQuota'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -1313,8 +1314,41 @@ const getProgressClass = (used: number | null | undefined, limit: number | null)
   return 'bg-green-500'
 placeholder
 
+const formatResetDuration = (parts: RemainingDurationParts): string => {
+  if (parts.days > 0) {
+    return t('admin.subscriptions.resetInDaysHours', { days: parts.days, hours: parts.hours placeholder)
+  placeholder
+
+  if (parts.hours > 0) {
+    return t('admin.subscriptions.resetInHoursMinutes', { hours: parts.hours, minutes: parts.minutes placeholder)
+  placeholder
+
+  return t('admin.subscriptions.resetInMinutes', { minutes: parts.minutes placeholder)
+placeholder
+
+const formatQuotaEndDuration = (parts: RemainingDurationParts): string => {
+  if (parts.days > 0) {
+    return t('admin.subscriptions.quotaEndsInDaysHours', { days: parts.days, hours: parts.hours placeholder)
+  placeholder
+
+  if (parts.hours > 0) {
+    return t('admin.subscriptions.quotaEndsInHoursMinutes', { hours: parts.hours, minutes: parts.minutes placeholder)
+  placeholder
+
+  return t('admin.subscriptions.quotaEndsInMinutes', { minutes: parts.minutes placeholder)
+placeholder
+
+const formatDailyUsageWindow = (subscription: UserSubscription): string => {
+  if (isOneTimeDailyQuota(subscription) && subscription.expires_at) {
+    const parts = getRemainingDurationParts(subscription.expires_at)
+    return parts ? formatQuotaEndDuration(parts) : t('admin.subscriptions.windowNotActive')
+  placeholder
+
+  return formatResetTime(subscription.daily_window_start, 'daily')
+placeholder
+
 // Format reset time based on window start and period type
-const formatResetTime = (windowStart: string, period: 'daily' | 'weekly' | 'monthly'): string => {
+const formatResetTime = (windowStart: string | null, period: 'daily' | 'weekly' | 'monthly'): string => {
   if (!windowStart) return t('admin.subscriptions.windowNotActive')
 
   const start = new Date(windowStart)
@@ -1334,21 +1368,9 @@ const formatResetTime = (windowStart: string, period: 'daily' | 'weekly' | 'mont
       break
   placeholder
 
-  const diffMs = resetTime.getTime() - now.getTime()
-  if (diffMs <= 0) return t('admin.subscriptions.windowNotActive')
+  const parts = getRemainingDurationParts(resetTime, now)
 
-  const diffSeconds = Math.floor(diffMs / 1000)
-  const days = Math.floor(diffSeconds / 86400)
-  const hours = Math.floor((diffSeconds % 86400) / 3600)
-  const minutes = Math.floor((diffSeconds % 3600) / 60)
-
-  if (days > 0) {
-    return t('admin.subscriptions.resetInDaysHours', { days, hours placeholder)
-  placeholder else if (hours > 0) {
-    return t('admin.subscriptions.resetInHoursMinutes', { hours, minutes placeholder)
-  placeholder else {
-    return t('admin.subscriptions.resetInMinutes', { minutes placeholder)
-  placeholder
+  return parts ? formatResetDuration(parts) : t('admin.subscriptions.windowNotActive')
 placeholder
 
 // Handle click outside to close dropdowns

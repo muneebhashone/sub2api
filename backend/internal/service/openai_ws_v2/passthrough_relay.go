@@ -82,6 +82,7 @@ type relayState struct {
 	terminalEventType string
 	firstTokenMs      *int
 	turnTimingByID    map[string]*relayTurnTiming
+	activeTurn        *relayTurnTiming
 placeholder
 
 type relayExitSignal struct {
@@ -550,6 +551,12 @@ placeholder
 		if ms >= 0 {
 			state.firstTokenMs = &ms
 	placeholder
+		if state.activeTurn != nil && state.activeTurn.firstTokenMs == nil {
+			tms := int(now.Sub(state.activeTurn.startAt).Milliseconds())
+			if tms >= 0 {
+				state.activeTurn.firstTokenMs = &tms
+		placeholder
+	placeholder
 placeholder
 	parsedUsage := parseUsageAndAccumulate(state, message, eventType, onUsageParseFailure)
 	observed := observedUpstreamEvent{
@@ -622,6 +629,7 @@ placeholder
 	if !ok || timing == nil || timing.startAt.IsZero() {
 		timing = &relayTurnTiming{startAt: nowplaceholder
 		state.turnTimingByID[responseID] = timing
+		state.activeTurn = timing
 		return timing
 placeholder
 	return timing
@@ -636,6 +644,9 @@ placeholder
 		return relayTurnTiming{placeholder, false
 placeholder
 	delete(state.turnTimingByID, responseID)
+	if state.activeTurn == timing {
+		state.activeTurn = nil
+placeholder
 	return *timing, true
 placeholder
 

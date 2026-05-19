@@ -9,6 +9,8 @@ import { useAppStore placeholder from '@/stores/app'
 import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 import { useNavigationLoadingState placeholder from '@/composables/useNavigationLoading'
 import { useRoutePrefetch placeholder from '@/composables/useRoutePrefetch'
+import { getSetupStatus placeholder from '@/api/setup'
+import { resolveCompletedSetupRedirectPath placeholder from './setupRedirect'
 import { resolveDocumentTitle placeholder from './title'
 
 /**
@@ -104,6 +106,25 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       title: 'WeChat Payment Callback',
       titleKey: 'auth.wechatPaymentCallbackPageTitle'
+    placeholder
+  placeholder,
+  {
+    path: '/auth/dingtalk/callback',
+    name: 'DingTalkOAuthCallback',
+    component: () => import('@/views/auth/DingTalkCallbackView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'DingTalk OAuth Callback',
+      titleKey: 'auth.dingtalkCallbackPageTitle'
+    placeholder
+  placeholder,
+  {
+    path: '/auth/dingtalk/email-completion',
+    name: 'dingtalk-email-completion',
+    component: () => import('@/views/auth/DingTalkEmailCompletionView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'DingTalk Email Completion'
     placeholder
   placeholder,
   {
@@ -672,6 +693,8 @@ const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
   '/auth/linuxdo/callback',
+  '/auth/dingtalk/callback',
+  '/auth/dingtalk/email-completion',
   '/auth/oidc/callback',
   '/auth/wechat/callback',
   '/auth/wechat/payment/callback',
@@ -694,7 +717,7 @@ function isBackendModePublicRouteAllowed(path: string, hasPendingAuthSession: bo
   return false
 placeholder
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   // 开始导航加载状态
   navigationLoading.startNavigation()
 
@@ -728,6 +751,18 @@ router.beforeEach((to, _from, next) => {
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
   const requiresAdmin = to.meta.requiresAdmin === true
+
+  if (to.path === '/setup') {
+    try {
+      const status = await getSetupStatus()
+      if (!status.needs_setup) {
+        next(resolveCompletedSetupRedirectPath(authStore.isAuthenticated, authStore.isAdmin))
+        return
+      placeholder
+    placeholder catch {
+      // If setup status cannot be determined, keep the setup page reachable.
+    placeholder
+  placeholder
 
   // If route doesn't require auth, allow access
   if (!requiresAuth) {

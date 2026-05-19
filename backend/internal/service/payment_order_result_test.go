@@ -138,6 +138,41 @@ placeholder
 placeholder
 placeholder
 
+func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanProductName(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentService{placeholder
+	cfg := &PaymentConfig{
+		ProductNamePrefix: "PRE",
+		ProductNameSuffix: "SUF",
+placeholder
+	plan := &dbent.SubscriptionPlan{
+		Name:        "Pro Monthly",
+		ProductName: "Claude Pro",
+placeholder
+
+	got := svc.buildPaymentSubject(plan, 0, cfg, nil)
+	if got != "PRE Claude Pro SUF" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Claude Pro SUF")
+placeholder
+placeholder
+
+func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanDefaultName(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentService{placeholder
+	cfg := &PaymentConfig{
+		ProductNamePrefix: "PRE",
+		ProductNameSuffix: "SUF",
+placeholder
+	plan := &dbent.SubscriptionPlan{Name: "Team Monthly"placeholder
+
+	got := svc.buildPaymentSubject(plan, 0, cfg, nil)
+	if got != "PRE Sub2API Subscription Team Monthly SUF" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Sub2API Subscription Team Monthly SUF")
+placeholder
+placeholder
+
 func TestMaybeBuildWeChatOAuthRequiredResponse(t *testing.T) {
 	t.Setenv("PAYMENT_RESUME_SIGNING_KEY", "placeholder")
 

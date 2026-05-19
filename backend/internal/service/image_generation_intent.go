@@ -170,7 +170,13 @@ placeholder
 	return out
 placeholder
 
-func resolveOpenAIResponsesImageBillingConfig(reqBody map[string]any, fallbackModel string) (string, string, error) {
+type OpenAIResponsesImageBillingConfig struct {
+	Model     string
+	SizeTier  string
+	InputSize string
+placeholder
+
+func resolveOpenAIResponsesImageBillingConfigDetailed(reqBody map[string]any, fallbackModel string) (OpenAIResponsesImageBillingConfig, error) {
 	imageModel := ""
 	imageSize := ""
 	hasImageTool := false
@@ -203,12 +209,24 @@ placeholder
 		imageModel = strings.TrimSpace(fallbackModel)
 placeholder
 	sizeTier := normalizeOpenAIImageSizeTier(imageSize)
-	return imageModel, sizeTier, nil
+	return OpenAIResponsesImageBillingConfig{
+		Model:     imageModel,
+		SizeTier:  sizeTier,
+		InputSize: imageSize,
+placeholder, nil
 placeholder
 
 func resolveOpenAIResponsesImageBillingConfigFromBody(body []byte, fallbackModel string) (string, string, error) {
+	cfg, err := resolveOpenAIResponsesImageBillingConfigDetailedFromBody(body, fallbackModel)
+	if err != nil {
+		return "", "", err
+placeholder
+	return cfg.Model, cfg.SizeTier, nil
+placeholder
+
+func resolveOpenAIResponsesImageBillingConfigDetailedFromBody(body []byte, fallbackModel string) (OpenAIResponsesImageBillingConfig, error) {
 	reqBody := cloneRequestMapForImageIntent(body)
-	return resolveOpenAIResponsesImageBillingConfig(reqBody, fallbackModel)
+	return resolveOpenAIResponsesImageBillingConfigDetailed(reqBody, fallbackModel)
 placeholder
 
 func isOpenAIImageBillingModelAlias(model string) bool {

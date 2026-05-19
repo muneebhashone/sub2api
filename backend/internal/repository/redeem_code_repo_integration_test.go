@@ -51,11 +51,13 @@ placeholder
 // --- Create / CreateBatch / GetByID / GetByCode ---
 
 func (s *RedeemCodeRepoSuite) TestCreate() {
+	expiresAt := time.Now().UTC().Add(2 * time.Hour)
 	code := &service.RedeemCode{
-		Code:   "TEST-CREATE",
-		Type:   service.RedeemTypeBalance,
-		Value:  100,
-		Status: service.StatusUnused,
+		Code:      "TEST-CREATE",
+		Type:      service.RedeemTypeBalance,
+		Value:     100,
+		Status:    service.StatusUnused,
+		ExpiresAt: &expiresAt,
 placeholder
 
 	err := s.repo.Create(s.ctx, code)
@@ -65,6 +67,8 @@ placeholder
 	got, err := s.repo.GetByID(s.ctx, code.ID)
 	s.Require().NoError(err, "GetByID")
 	s.Require().Equal("TEST-CREATE", got.Code)
+	s.Require().NotNil(got.ExpiresAt)
+	s.Require().WithinDuration(expiresAt, *got.ExpiresAt, time.Second)
 placeholder
 
 func (s *RedeemCodeRepoSuite) TestCreateBatch() {
@@ -164,6 +168,23 @@ func (s *RedeemCodeRepoSuite) TestListWithFilters_Status() {
 	s.Require().NoError(err)
 	s.Require().Len(codes, 1)
 	s.Require().Equal(service.StatusUsed, codes[0].Status)
+placeholder
+
+func (s *RedeemCodeRepoSuite) TestListWithFilters_StatusExpiredByExpiresAt() {
+	past := time.Now().UTC().Add(-time.Hour)
+	future := time.Now().UTC().Add(time.Hour)
+	s.Require().NoError(s.repo.Create(s.ctx, &service.RedeemCode{Code: "STAT-EXPIRED-BY-TIME", Type: service.RedeemTypeBalance, Value: 0, Status: service.StatusUnused, ExpiresAt: &pastplaceholder))
+	s.Require().NoError(s.repo.Create(s.ctx, &service.RedeemCode{Code: "STAT-UNUSED-FUTURE", Type: service.RedeemTypeBalance, Value: 0, Status: service.StatusUnused, ExpiresAt: &futureplaceholder))
+
+	expired, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", service.StatusExpired, "")
+	s.Require().NoError(err)
+	s.Require().Len(expired, 1)
+	s.Require().Equal("STAT-EXPIRED-BY-TIME", expired[0].Code)
+
+	unused, _, err := s.repo.ListWithFilters(s.ctx, pagination.PaginationParams{Page: 1, PageSize: 10placeholder, "", service.StatusUnused, "")
+	s.Require().NoError(err)
+	s.Require().Len(unused, 1)
+	s.Require().Equal("STAT-UNUSED-FUTURE", unused[0].Code)
 placeholder
 
 func (s *RedeemCodeRepoSuite) TestListWithFilters_Search() {

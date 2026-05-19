@@ -149,9 +149,9 @@ placeholder{
 		{size: "2048x1152", wantTier: "2K"placeholder,
 		{size: "3840x2160", wantTier: "4K"placeholder,
 		{size: "2160x3840", wantTier: "4K"placeholder,
-		{size: "1024X768", wantTier: "2K"placeholder,
+		{size: "1024X768", wantTier: "1K"placeholder,
 		{size: "1280x768", wantTier: "2K"placeholder,
-		{size: "2560x1440", wantTier: "2K"placeholder,
+		{size: "2560x1440", wantTier: "4K"placeholder,
 		{size: "2560x1600", wantTier: "4K"placeholder,
 		{size: "auto", wantTier: "2K"placeholder,
 placeholder
@@ -186,7 +186,7 @@ placeholder{
 		{size: "2048x1153", wantTier: "2K"placeholder,
 		{size: "4096x1024", wantTier: "4K"placeholder,
 		{size: "3840x1024", wantTier: "4K"placeholder,
-		{size: "512x512", wantTier: "2K"placeholder,
+		{size: "512x512", wantTier: "1K"placeholder,
 		{size: "invalid", wantTier: "2K"placeholder,
 		{size: "999999999999999999999999999x2", wantTier: "2K"placeholder,
 placeholder
@@ -417,6 +417,10 @@ func TestBuildOpenAIImagesURL_HandlesVersionedBaseURL(t *testing.T) {
 	require.Equal(t,
 		"https://image-upstream.example/v1/images/generations",
 		buildOpenAIImagesURL("https://image-upstream.example/v1", openAIImagesGenerationsEndpoint),
+	)
+	require.Equal(t,
+		"https://open.bigmodel.cn/api/paas/v4/images/generations",
+		buildOpenAIImagesURL("https://open.bigmodel.cn/api/paas/v4", openAIImagesGenerationsEndpoint),
 	)
 	require.Equal(t,
 		"https://image-upstream.example/v1/images/edits",

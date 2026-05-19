@@ -532,54 +532,7 @@ placeholder
 placeholder
 
 func normalizeOpenAIImageSizeTier(size string) string {
-	trimmed := strings.TrimSpace(size)
-	normalized := strings.ToLower(trimmed)
-	switch normalized {
-	case "", "auto":
-		return "2K"
-	case "1024x1024":
-		return "1K"
-	case "1536x1024", "1024x1536", "1792x1024", "1024x1792", "2048x2048", "2048x1152", "1152x2048":
-		return "2K"
-	case "3840x2160", "2160x3840":
-		return "4K"
-placeholder
-	width, height, ok := parseOpenAIImageSizeDimensions(trimmed)
-	if !ok {
-		return "2K"
-placeholder
-	return classifyUnknownOpenAIImageSizeTier(width, height)
-placeholder
-
-const (
-	openAIImage2KMaxPixels = 2560 * 1440
-)
-
-func parseOpenAIImageSizeDimensions(size string) (int, int, bool) {
-	trimmed := strings.TrimSpace(size)
-	parts := strings.Split(strings.ToLower(trimmed), "x")
-	if len(parts) != 2 {
-		return 0, 0, false
-placeholder
-	width, err := strconv.Atoi(strings.TrimSpace(parts[0]))
-	if err != nil {
-		return 0, 0, false
-placeholder
-	height, err := strconv.Atoi(strings.TrimSpace(parts[1]))
-	if err != nil {
-		return 0, 0, false
-placeholder
-	if width <= 0 || height <= 0 {
-		return 0, 0, false
-placeholder
-	return width, height, true
-placeholder
-
-func classifyUnknownOpenAIImageSizeTier(width int, height int) string {
-	if height > 0 && width > openAIImage2KMaxPixels/height {
-		return "4K"
-placeholder
-	return "2K"
+	return NormalizeImageBillingTierOrDefault(size)
 placeholder
 
 func (s *OpenAIGatewayService) ForwardImages(
@@ -639,7 +592,7 @@ placeholder
 		setOpsUpstreamRequestBody(c, forwardBody)
 placeholder
 
-	upstreamCtx, releaseUpstreamCtx := detachStreamUpstreamContext(ctx, parsed.Stream)
+	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
 	defer releaseUpstreamCtx()
 
 	token, _, err := s.GetAccessToken(upstreamCtx, account)
@@ -704,29 +657,46 @@ placeholder
 	imageCount := parsed.N
 	var firstTokenMs *int
 	if parsed.Stream && isEventStreamResponse(resp.Header) {
-		streamUsage, streamCount, ttft, err := s.handleOpenAIImagesStreamingResponse(resp, c, startTime)
+		streamUsage, streamCount, streamSizes, ttft, err := s.handleOpenAIImagesStreamingResponse(resp, c, startTime)
 		if err != nil {
 			if streamCount > 0 {
 				return &OpenAIForwardResult{
-					RequestID:       resp.Header.Get("x-request-id"),
-					Usage:           streamUsage,
-					Model:           requestModel,
-					UpstreamModel:   upstreamModel,
-					Stream:          parsed.Stream,
-					ResponseHeaders: resp.Header.Clone(),
-					Duration:        time.Since(startTime),
-					FirstTokenMs:    ttft,
-					ImageCount:      streamCount,
-					ImageSize:       parsed.SizeTier,
+					RequestID:        resp.Header.Get("x-request-id"),
+					Usage:            streamUsage,
+					Model:            requestModel,
+					UpstreamModel:    upstreamModel,
+					Stream:           parsed.Stream,
+					ResponseHeaders:  resp.Header.Clone(),
+					Duration:         time.Since(startTime),
+					FirstTokenMs:     ttft,
+					ImageCount:       streamCount,
+					ImageSize:        parsed.SizeTier,
+					ImageInputSize:   parsed.Size,
+					ImageOutputSizes: streamSizes,
 			placeholder, err
 		placeholder
 			return nil, err
 	placeholder
 		usage = streamUsage
 		imageCount = streamCount
+		imageOutputSizes := streamSizes
 		firstTokenMs = ttft
+		return &OpenAIForwardResult{
+			RequestID:        resp.Header.Get("x-request-id"),
+			Usage:            usage,
+			Model:            requestModel,
+			UpstreamModel:    upstreamModel,
+			Stream:           parsed.Stream,
+			ResponseHeaders:  resp.Header.Clone(),
+			Duration:         time.Since(startTime),
+			FirstTokenMs:     firstTokenMs,
+			ImageCount:       imageCount,
+			ImageSize:        parsed.SizeTier,
+			ImageInputSize:   parsed.Size,
+			ImageOutputSizes: imageOutputSizes,
+	placeholder, nil
 placeholder else {
-		nonStreamUsage, nonStreamCount, err := s.handleOpenAIImagesNonStreamingResponse(resp, c)
+		nonStreamUsage, nonStreamCount, nonStreamSizes, err := s.handleOpenAIImagesNonStreamingResponse(resp, c)
 		if err != nil {
 			return nil, err
 	placeholder
@@ -734,19 +704,21 @@ placeholder else {
 		if nonStreamCount > 0 {
 			imageCount = nonStreamCount
 	placeholder
+		return &OpenAIForwardResult{
+			RequestID:        resp.Header.Get("x-request-id"),
+			Usage:            usage,
+			Model:            requestModel,
+			UpstreamModel:    upstreamModel,
+			Stream:           parsed.Stream,
+			ResponseHeaders:  resp.Header.Clone(),
+			Duration:         time.Since(startTime),
+			FirstTokenMs:     firstTokenMs,
+			ImageCount:       imageCount,
+			ImageSize:        parsed.SizeTier,
+			ImageInputSize:   parsed.Size,
+			ImageOutputSizes: nonStreamSizes,
+	placeholder, nil
 placeholder
-	return &OpenAIForwardResult{
-		RequestID:       resp.Header.Get("x-request-id"),
-		Usage:           usage,
-		Model:           requestModel,
-		UpstreamModel:   upstreamModel,
-		Stream:          parsed.Stream,
-		ResponseHeaders: resp.Header.Clone(),
-		Duration:        time.Since(startTime),
-		FirstTokenMs:    firstTokenMs,
-		ImageCount:      imageCount,
-		ImageSize:       parsed.SizeTier,
-placeholder, nil
 placeholder
 
 func (s *OpenAIGatewayService) buildOpenAIImagesRequest(
@@ -795,15 +767,7 @@ placeholder
 placeholder
 
 func buildOpenAIImagesURL(base string, endpoint string) string {
-	normalized := strings.TrimRight(strings.TrimSpace(base), "/")
-	relative := strings.TrimPrefix(strings.TrimSpace(endpoint), "/v1")
-	if strings.HasSuffix(normalized, endpoint) || strings.HasSuffix(normalized, relative) {
-		return normalized
-placeholder
-	if strings.HasSuffix(normalized, "/v1") {
-		return normalized + relative
-placeholder
-	return normalized + endpoint
+	return buildOpenAIEndpointURL(base, endpoint)
 placeholder
 
 func rewriteOpenAIImagesModel(body []byte, contentType string, model string) ([]byte, string, error) {
@@ -892,10 +856,10 @@ placeholder
 	return dst
 placeholder
 
-func (s *OpenAIGatewayService) handleOpenAIImagesNonStreamingResponse(resp *http.Response, c *gin.Context) (OpenAIUsage, int, error) {
+func (s *OpenAIGatewayService) handleOpenAIImagesNonStreamingResponse(resp *http.Response, c *gin.Context) (OpenAIUsage, int, []string, error) {
 	body, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, openAITooLargeError)
 	if err != nil {
-		return OpenAIUsage{placeholder, 0, err
+		return OpenAIUsage{placeholder, 0, nil, err
 placeholder
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	contentType := "application/json"
@@ -907,14 +871,14 @@ placeholder
 	c.Data(resp.StatusCode, contentType, body)
 
 	usage, _ := extractOpenAIUsageFromJSONBytes(body)
-	return usage, extractOpenAIImageCountFromJSONBytes(body), nil
+	return usage, extractOpenAIImageCountFromJSONBytes(body), collectOpenAIResponseImageOutputSizesFromJSONBytes(body), nil
 placeholder
 
 func (s *OpenAIGatewayService) handleOpenAIImagesStreamingResponse(
 	resp *http.Response,
 	c *gin.Context,
 	startTime time.Time,
-) (OpenAIUsage, int, *int, error) {
+) (OpenAIUsage, int, []string, *int, error) {
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
 	if contentType == "" {
@@ -925,7 +889,7 @@ placeholder
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		return OpenAIUsage{placeholder, 0, nil, fmt.Errorf("streaming is not supported by response writer")
+		return OpenAIUsage{placeholder, 0, nil, nil, fmt.Errorf("streaming is not supported by response writer")
 placeholder
 
 	usage := OpenAIUsage{placeholder
@@ -1010,12 +974,12 @@ placeholder
 		placeholder
 			if err != nil {
 				flushSSEEvent()
-				return usage, imageCounter.Count(), firstTokenMs, err
+				return usage, imageCounter.Count(), imageCounter.Sizes(), firstTokenMs, err
 		placeholder
 	placeholder
 		flushSSEEvent()
 		finalizeFallbackBody()
-		return usage, imageCounter.Count(), firstTokenMs, nil
+		return usage, imageCounter.Count(), imageCounter.Sizes(), firstTokenMs, nil
 placeholder
 
 	type readEvent struct {
@@ -1082,11 +1046,11 @@ placeholder
 			if !ok {
 				flushSSEEvent()
 				finalizeFallbackBody()
-				return usage, imageCounter.Count(), firstTokenMs, nil
+				return usage, imageCounter.Count(), imageCounter.Sizes(), firstTokenMs, nil
 		placeholder
 			if ev.err != nil {
 				flushSSEEvent()
-				return usage, imageCounter.Count(), firstTokenMs, ev.err
+				return usage, imageCounter.Count(), imageCounter.Sizes(), firstTokenMs, ev.err
 		placeholder
 			processLine(ev.line)
 		case <-intervalCh:
@@ -1095,11 +1059,11 @@ placeholder
 				continue
 		placeholder
 			if clientDisconnected {
-				return usage, imageCounter.Count(), firstTokenMs, fmt.Errorf("image stream incomplete after timeout")
+				return usage, imageCounter.Count(), imageCounter.Sizes(), firstTokenMs, fmt.Errorf("image stream incomplete after timeout")
 		placeholder
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Images stream data interval timeout: interval=%s", streamInterval)
 			_ = s.writeOpenAIImagesStreamEvent(c, flusher, "error", buildOpenAIImagesStreamErrorBody(fmt.Sprintf("upstream image stream idle for %s", streamInterval)))
-			return usage, imageCounter.Count(), firstTokenMs, fmt.Errorf("image stream data interval timeout")
+			return usage, imageCounter.Count(), imageCounter.Sizes(), firstTokenMs, fmt.Errorf("image stream data interval timeout")
 		case <-keepaliveCh:
 			if clientDisconnected || time.Since(lastDownstreamWriteAt) < keepaliveInterval {
 				continue
