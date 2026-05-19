@@ -140,9 +140,10 @@ placeholder
 func TestOpenAIImageOutputCounterDeduplicatesFinalImages(t *testing.T) {
 	counter := newOpenAIImageOutputCounter()
 	counter.AddSSEData([]byte(`{"type":"response.image_generation_call.partial_image","partial_image_b64":"abc"placeholder`))
-	counter.AddSSEData([]byte(`{"type":"response.output_item.done","item":{"id":"ig_1","type":"image_generation_call","result":"final-a"placeholderplaceholder`))
-	counter.AddSSEData([]byte(`{"type":"response.completed","response":{"output":[{"id":"ig_1","type":"image_generation_call","result":"final-a"placeholder,{"id":"ig_2","type":"image_generation_call","result":"final-b"placeholder]placeholderplaceholder`))
+	counter.AddSSEData([]byte(`{"type":"response.output_item.done","item":{"id":"ig_1","type":"image_generation_call","result":"final-a","size":"1024x1024"placeholderplaceholder`))
+	counter.AddSSEData([]byte(`{"type":"response.completed","response":{"output":[{"id":"ig_1","type":"image_generation_call","result":"final-a"placeholder,{"id":"ig_2","type":"image_generation_call","result":"final-b","size":"3840x2160"placeholder]placeholderplaceholder`))
 	require.Equal(t, 2, counter.Count())
+	require.Equal(t, []string{"1024x1024", "3840x2160"placeholder, counter.Sizes())
 placeholder
 
 func TestOpenAIImageOutputCounterCountsImagesAPIStreamShapes(t *testing.T) {
@@ -181,4 +182,37 @@ func TestOpenAIImageOutputCounterFallsBackForInvalidMultilineSSEBody(t *testing.
 			"data: {\"type\":\"image_generation.completed\",\"b64_json\":\"final-b\"placeholder\n\n",
 	)
 	require.Equal(t, 2, counter.Count())
+placeholder
+
+func TestCollectOpenAIResponseImageOutputSizesFromJSONBytes(t *testing.T) {
+	body := []byte(`{
+		"output": [
+			{"id":"ig_1","type":"image_generation_call","result":"final-a","size":"3840x2160"placeholder,
+			{"id":"ig_2","type":"image_generation_call","result":"final-b","size":"1024x1024"placeholder
+		]
+placeholder`)
+
+	require.Equal(t, 2, countOpenAIResponseImageOutputsFromJSONBytes(body))
+	require.Equal(t, []string{"3840x2160", "1024x1024"placeholder, collectOpenAIResponseImageOutputSizesFromJSONBytes(body))
+placeholder
+
+func TestCollectOpenAIResponseImageOutputSizesFromImagesAPIData(t *testing.T) {
+	body := []byte(`{
+		"data": [
+			{"b64_json":"final-a","size":"2048x1152"placeholder,
+			{"b64_json":"final-b","size":"2048x1152"placeholder
+		]
+placeholder`)
+
+	require.Equal(t, 2, countOpenAIResponseImageOutputsFromJSONBytes(body))
+	require.Equal(t, []string{"2048x1152", "2048x1152"placeholder, collectOpenAIResponseImageOutputSizesFromJSONBytes(body))
+placeholder
+
+func TestCollectOpenAIImageOutputSizesFromSSEBody(t *testing.T) {
+	body := "data: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"ig_1\",\"type\":\"image_generation_call\",\"result\":\"final-a\",\"size\":\"3840x2160\"placeholderplaceholder\n\n" +
+		"data: {\"type\":\"response.completed\",\"response\":{\"output\":[{\"id\":\"ig_1\",\"type\":\"image_generation_call\",\"result\":\"final-a\"placeholder,{\"id\":\"ig_2\",\"type\":\"image_generation_call\",\"result\":\"final-b\",\"size\":\"1024x1024\"placeholder]placeholderplaceholder\n\n" +
+		"data: [DONE]\n\n"
+
+	require.Equal(t, 2, countOpenAIImageOutputsFromSSEBody(body))
+	require.Equal(t, []string{"3840x2160", "1024x1024"placeholder, collectOpenAIImageOutputSizesFromSSEBody(body))
 placeholder
