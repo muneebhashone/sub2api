@@ -428,6 +428,7 @@ placeholder
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
 		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini"placeholderplaceholder,
+		{Name: "api_mode", Type: field.TypeString, Size: 32, Default: "chat_completions"placeholder,
 		{Name: "endpoint", Type: field.TypeString, Size: 500placeholder,
 		{Name: "api_key_encrypted", Type: field.TypeStringplaceholder,
 		{Name: "primary_model", Type: field.TypeString, Size: 200placeholder,
@@ -450,7 +451,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "channel_monitors_channel_monitor_request_templates_request_template",
-				Columns:    []*schema.Column{ChannelMonitorsColumns[17]placeholder,
+				Columns:    []*schema.Column{ChannelMonitorsColumns[18]placeholder,
 				RefColumns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -459,7 +460,7 @@ placeholder
 			{
 				Name:    "channelmonitor_enabled_last_checked_at",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[10], ChannelMonitorsColumns[12]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[11], ChannelMonitorsColumns[13]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitor_provider",
@@ -467,14 +468,19 @@ placeholder
 				Columns: []*schema.Column{ChannelMonitorsColumns[4]placeholder,
 		placeholder,
 			{
+				Name:    "channelmonitor_provider_api_mode",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[4], ChannelMonitorsColumns[5]placeholder,
+		placeholder,
+			{
 				Name:    "channelmonitor_group_name",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[9]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[10]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitor_template_id",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[17]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[18]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -566,6 +572,7 @@ placeholder
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
 		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini"placeholderplaceholder,
+		{Name: "api_mode", Type: field.TypeString, Size: 32, Default: "chat_completions"placeholder,
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 500, Default: ""placeholder,
 		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
 		{Name: "body_override_mode", Type: field.TypeString, Size: 10, Default: "off"placeholder,
@@ -581,6 +588,11 @@ placeholder
 				Name:    "channelmonitorrequesttemplate_provider_name",
 				Unique:  true,
 				Columns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[4], ChannelMonitorRequestTemplatesColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitorrequesttemplate_provider_api_mode",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[4], ChannelMonitorRequestTemplatesColumns[5]placeholder,
 		placeholder,
 	placeholder,
 placeholder
