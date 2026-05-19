@@ -5357,6 +5357,22 @@ placeholder
 		intervalCh = intervalTicker.C
 placeholder
 
+	keepaliveInterval := time.Duration(0)
+	if s.cfg != nil && s.cfg.Gateway.StreamKeepaliveInterval > 0 {
+		keepaliveInterval = time.Duration(s.cfg.Gateway.StreamKeepaliveInterval) * time.Second
+placeholder
+	var keepaliveTicker *time.Ticker
+	if keepaliveInterval > 0 {
+		keepaliveTicker = time.NewTicker(keepaliveInterval)
+		defer keepaliveTicker.Stop()
+placeholder
+	var keepaliveCh <-chan time.Time
+	if keepaliveTicker != nil {
+		keepaliveCh = keepaliveTicker.C
+placeholder
+	lastDataAt := time.Now()
+	inPartialEvent := false
+
 	for {
 		select {
 		case ev, ok := <-events:
@@ -5422,6 +5438,10 @@ placeholder
 			placeholder else if line == "" {
 					// 按 SSE 事件边界刷出，减少每行 flush 带来的 syscall 开销。
 					flusher.Flush()
+					lastDataAt = time.Now()
+					inPartialEvent = false
+			placeholder else {
+					inPartialEvent = true
 			placeholder
 		placeholder
 
@@ -5438,6 +5458,21 @@ placeholder
 				s.rateLimitService.HandleStreamTimeout(ctx, account, model)
 		placeholder
 			return &streamingResult{usage: usage, firstTokenMs: firstTokenMsplaceholder, fmt.Errorf("stream data interval timeout")
+
+		case <-keepaliveCh:
+			if clientDisconnected || inPartialEvent {
+				continue
+		placeholder
+			if time.Since(lastDataAt) < keepaliveInterval {
+				continue
+		placeholder
+			if _, err := fmt.Fprint(w, "event: ping\ndata: {\"type\": \"ping\"placeholder\n\n"); err != nil {
+				clientDisconnected = true
+				logger.LegacyPrintf("service.gateway", "[Anthropic passthrough] Client disconnected during keepalive ping, continue draining upstream for usage: account=%d", account.ID)
+				continue
+		placeholder
+			flusher.Flush()
+			lastDataAt = time.Now()
 	placeholder
 placeholder
 placeholder
