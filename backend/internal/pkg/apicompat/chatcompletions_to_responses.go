@@ -30,11 +30,16 @@ placeholder
 		Model:        req.Model,
 		Instructions: req.Instructions,
 		Input:        inputJSON,
-		Temperature:  req.Temperature,
-		TopP:         req.TopP,
 		Stream:       true, // upstream always streams
 		Include:      []string{"reasoning.encrypted_content"placeholder,
 		ServiceTier:  req.ServiceTier,
+placeholder
+
+	// Reasoning models (gpt-5.x) do not accept sampling parameters.
+	// See isReasoningModel in anthropic_to_responses.go.
+	if !isReasoningModel(req.Model) {
+		out.Temperature = req.Temperature
+		out.TopP = req.TopP
 placeholder
 
 	storeFalse := false
