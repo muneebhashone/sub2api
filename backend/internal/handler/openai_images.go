@@ -63,9 +63,9 @@ placeholder
 placeholder
 
 	if isMultipartImagesContentType(c.GetHeader("Content-Type")) {
-		setOpsRequestContext(c, "", false, nil)
+		setOpsRequestContext(c, "", false)
 placeholder else {
-		setOpsRequestContext(c, "", false, body)
+		setOpsRequestContext(c, "", false)
 placeholder
 
 	parsed, err := h.gatewayService.ParseOpenAIImagesRequest(c, body)
@@ -98,9 +98,9 @@ placeholder
 placeholder
 
 	if parsed.Multipart {
-		setOpsRequestContext(c, parsed.Model, parsed.Stream, nil)
+		setOpsRequestContext(c, parsed.Model, parsed.Stream)
 placeholder else {
-		setOpsRequestContext(c, parsed.Model, parsed.Stream, body)
+		setOpsRequestContext(c, parsed.Model, parsed.Stream)
 placeholder
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(parsed.Stream, false)))
 

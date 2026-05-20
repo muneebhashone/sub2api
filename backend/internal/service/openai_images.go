@@ -588,11 +588,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	if !parsed.Multipart {
-		setOpsUpstreamRequestBody(c, forwardBody)
-placeholder
-
-	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
+	upstreamCtx, releaseUpstreamCtx := detachStreamUpstreamContext(ctx, parsed.Stream)
 	defer releaseUpstreamCtx()
 
 	token, _, err := s.GetAccessToken(upstreamCtx, account)

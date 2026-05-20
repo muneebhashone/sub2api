@@ -766,12 +766,6 @@ placeholder
 	placeholder
 		requestIDHeader = idHeader
 
-		// Capture upstream request body for ops retry of this attempt.
-		if c != nil {
-			// In this code path `body` is already the JSON sent to upstream.
-			c.Set(OpsUpstreamRequestBodyKey, string(body))
-	placeholder
-
 		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 		if err != nil {
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
@@ -1292,12 +1286,6 @@ placeholder
 			return nil, s.writeGoogleError(c, http.StatusBadGateway, err.Error())
 	placeholder
 		requestIDHeader = idHeader
-
-		// Capture upstream request body for ops retry of this attempt.
-		if c != nil {
-			// In this code path `body` is already the JSON sent to upstream.
-			c.Set(OpsUpstreamRequestBodyKey, string(body))
-	placeholder
 
 		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 		if err != nil {
