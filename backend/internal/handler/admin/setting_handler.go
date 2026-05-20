@@ -56,13 +56,14 @@ placeholder
 
 // SettingHandler 系统设置处理器
 type SettingHandler struct {
-	settingService       *service.SettingService
-	emailService         *service.EmailService
-	turnstileService     *service.TurnstileService
-	opsService           *service.OpsService
-	paymentConfigService *service.PaymentConfigService
-	paymentService       *service.PaymentService
-	userAttributeService *service.UserAttributeService
+	settingService           *service.SettingService
+	emailService             *service.EmailService
+	turnstileService         *service.TurnstileService
+	opsService               *service.OpsService
+	paymentConfigService     *service.PaymentConfigService
+	paymentService           *service.PaymentService
+	userAttributeService     *service.UserAttributeService
+	notificationEmailService *service.NotificationEmailService
 placeholder
 
 // NewSettingHandler 创建系统设置处理器
@@ -76,6 +77,12 @@ func NewSettingHandler(settingService *service.SettingService, emailService *ser
 		paymentService:       paymentService,
 		userAttributeService: userAttributeService,
 placeholder
+placeholder
+
+// SetNotificationEmailService attaches the notification template service without changing
+// the constructor signature used by existing unit tests.
+func (h *SettingHandler) SetNotificationEmailService(notificationEmailService *service.NotificationEmailService) {
+	h.notificationEmailService = notificationEmailService
 placeholder
 
 // GetSettings 获取所有系统设置
@@ -3331,4 +3338,161 @@ placeholder); err != nil {
 		return
 placeholder
 	slog.Info("dingtalk: created user attribute definition", "key", key, "name", name, "type", attrType)
+placeholder
+
+// ListEmailTemplates returns all editable notification email templates.
+// GET /api/v1/admin/settings/email-templates
+func (h *SettingHandler) ListEmailTemplates(c *gin.Context) {
+	if h.notificationEmailService == nil {
+		response.InternalError(c, "notification email service is not configured")
+		return
+placeholder
+	events := h.notificationEmailService.ListEventInfos()
+	templates, err := h.notificationEmailService.ListTemplates(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, dto.EmailTemplateListResponse{
+		Events:       emailTemplateEventOptionsToDTO(events),
+		Locales:      h.notificationEmailService.SupportedLocales(),
+		Templates:    emailTemplateSummariesToDTO(templates),
+		Placeholders: emailTemplatePlaceholderUnion(events),
+placeholder)
+placeholder
+
+// GetEmailTemplate returns one editable notification email template.
+// GET /api/v1/admin/settings/email-templates/:event/:locale
+func (h *SettingHandler) GetEmailTemplate(c *gin.Context) {
+	if h.notificationEmailService == nil {
+		response.InternalError(c, "notification email service is not configured")
+		return
+placeholder
+	tmpl, err := h.notificationEmailService.GetTemplate(c.Request.Context(), c.Param("event"), c.Param("locale"))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+	response.Success(c, emailTemplateDetailToDTO(tmpl))
+placeholder
+
+// UpdateEmailTemplate saves an override for one event/locale template.
+// PUT /api/v1/admin/settings/email-templates/:event/:locale
+func (h *SettingHandler) UpdateEmailTemplate(c *gin.Context) {
+	if h.notificationEmailService == nil {
+		response.InternalError(c, "notification email service is not configured")
+		return
+placeholder
+	var req dto.UpdateEmailTemplateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	tmpl, err := h.notificationEmailService.UpdateTemplate(c.Request.Context(), c.Param("event"), c.Param("locale"), req.Subject, req.HTML)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+	response.Success(c, emailTemplateDetailToDTO(tmpl))
+placeholder
+
+// RestoreOfficialEmailTemplate removes an override and returns the built-in template.
+// POST /api/v1/admin/settings/email-templates/:event/:locale/restore-official
+func (h *SettingHandler) RestoreOfficialEmailTemplate(c *gin.Context) {
+	if h.notificationEmailService == nil {
+		response.InternalError(c, "notification email service is not configured")
+		return
+placeholder
+	tmpl, err := h.notificationEmailService.RestoreOfficialTemplate(c.Request.Context(), c.Param("event"), c.Param("locale"))
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+	response.Success(c, emailTemplateDetailToDTO(tmpl))
+placeholder
+
+// PreviewEmailTemplate renders a template with safe sample variables without saving it.
+// POST /api/v1/admin/settings/email-templates/preview
+func (h *SettingHandler) PreviewEmailTemplate(c *gin.Context) {
+	if h.notificationEmailService == nil {
+		response.InternalError(c, "notification email service is not configured")
+		return
+placeholder
+	var req dto.PreviewEmailTemplateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	preview, err := h.notificationEmailService.PreviewTemplate(c.Request.Context(), service.NotificationEmailPreviewInput{
+		Event:     req.Event,
+		Locale:    req.Locale,
+		Subject:   req.Subject,
+		HTML:      req.HTML,
+		Variables: req.Variables,
+placeholder)
+	if err != nil {
+		response.BadRequest(c, err.Error())
+		return
+placeholder
+	response.Success(c, dto.EmailTemplatePreviewResponse{Subject: preview.Subject, HTML: preview.HTMLplaceholder)
+placeholder
+
+func emailTemplateEventOptionsToDTO(events []service.NotificationEmailEventInfo) []dto.EmailTemplateEventOption {
+	items := make([]dto.EmailTemplateEventOption, 0, len(events))
+	for _, event := range events {
+		items = append(items, dto.EmailTemplateEventOption{
+			Value:       event.Event,
+			Label:       event.Label,
+			Description: event.Description,
+	placeholder)
+placeholder
+	return items
+placeholder
+
+func emailTemplateSummariesToDTO(templates []service.NotificationEmailTemplate) []dto.EmailTemplateSummary {
+	items := make([]dto.EmailTemplateSummary, 0, len(templates))
+	for _, tmpl := range templates {
+		items = append(items, dto.EmailTemplateSummary{
+			Event:     tmpl.Event,
+			Locale:    tmpl.Locale,
+			Subject:   tmpl.Subject,
+			IsCustom:  tmpl.IsCustom,
+			UpdatedAt: emailTemplateUpdatedAt(tmpl),
+	placeholder)
+placeholder
+	return items
+placeholder
+
+func emailTemplateDetailToDTO(tmpl service.NotificationEmailTemplate) dto.EmailTemplateDetail {
+	return dto.EmailTemplateDetail{
+		Event:        tmpl.Event,
+		Locale:       tmpl.Locale,
+		Subject:      tmpl.Subject,
+		HTML:         tmpl.HTML,
+		IsCustom:     tmpl.IsCustom,
+		UpdatedAt:    emailTemplateUpdatedAt(tmpl),
+		Placeholders: tmpl.Placeholders,
+placeholder
+placeholder
+
+func emailTemplateUpdatedAt(tmpl service.NotificationEmailTemplate) string {
+	if tmpl.UpdatedAt == nil {
+		return ""
+placeholder
+	return tmpl.UpdatedAt.Format("2006-01-02T15:04:05Z07:00")
+placeholder
+
+func emailTemplatePlaceholderUnion(events []service.NotificationEmailEventInfo) []string {
+	seen := make(map[string]struct{placeholder)
+	placeholders := make([]string, 0)
+	for _, event := range events {
+		for _, placeholder := range event.Placeholders {
+			if _, ok := seen[placeholder]; ok {
+				continue
+		placeholder
+			seen[placeholder] = struct{placeholder{placeholder
+			placeholders = append(placeholders, placeholder)
+	placeholder
+placeholder
+	return placeholders
 placeholder
