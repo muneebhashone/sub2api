@@ -769,6 +769,17 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         placeholder
       placeholder
     placeholder,
+    'gemini-3.5-flash': {
+      name: 'Gemini 3.5 Flash',
+      limit: {
+        context: 1048576,
+        output: 65536
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder
+    placeholder,
     'gemini-3-flash-preview': {
       name: 'Gemini 3 Flash Preview',
       limit: {
