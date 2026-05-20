@@ -264,6 +264,7 @@ placeholder
 		PaymentSource:   req.PaymentSource,
 		OrderType:       req.OrderType,
 		PlanID:          req.PlanID,
+		Locale:          c.GetHeader("Accept-Language"),
 placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
