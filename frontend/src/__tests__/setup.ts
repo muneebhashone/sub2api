@@ -5,6 +5,45 @@
 import { config placeholder from '@vue/test-utils'
 import { vi placeholder from 'vitest'
 
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>()
+
+  return {
+    get length() {
+      return values.size
+    placeholder,
+    clear() {
+      values.clear()
+    placeholder,
+    getItem(key: string) {
+      return values.has(key) ? values.get(key)! : null
+    placeholder,
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null
+    placeholder,
+    removeItem(key: string) {
+      values.delete(key)
+    placeholder,
+    setItem(key: string, value: string) {
+      values.set(key, String(value))
+    placeholder
+  placeholder
+placeholder
+
+if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: createMemoryStorage()
+  placeholder)
+placeholder
+
+if (typeof window !== 'undefined' && typeof window.localStorage.getItem !== 'function') {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: globalThis.localStorage
+  placeholder)
+placeholder
+
 // Mock requestIdleCallback (Safari < 15 不支持)
 if (typeof globalThis.requestIdleCallback === 'undefined') {
   globalThis.requestIdleCallback = ((callback: IdleRequestCallback) => {

@@ -48,6 +48,9 @@ placeholder
 	if user.Status != payment.EntityStatusActive {
 		return nil, infraerrors.Forbidden("USER_INACTIVE", "user account is disabled")
 placeholder
+	if s.notificationEmailService != nil {
+		s.notificationEmailService.RememberRecipientLocale(ctx, req.UserID, user.Email, req.Locale)
+placeholder
 	orderAmount := req.Amount
 	limitAmount := req.Amount
 	if plan != nil {
