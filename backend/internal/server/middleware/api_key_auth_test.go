@@ -300,6 +300,104 @@ placeholder)
 	require.Equal(t, http.StatusOK, w.Code)
 placeholder
 
+func TestAPIKeyAuthRejectsUnavailableGroup(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(101)
+	user := &service.User{
+		ID:          7,
+		Role:        service.RoleUser,
+		Status:      service.StatusActive,
+		Balance:     10,
+		Concurrency: 3,
+placeholder
+
+	tests := []struct {
+		name       string
+		group      *service.Group
+		wantStatus int
+		wantCode   string
+placeholder{
+		{
+			name: "active group passes",
+			group: &service.Group{
+				ID:       groupID,
+				Name:     "active",
+				Status:   service.StatusActive,
+				Platform: service.PlatformAnthropic,
+				Hydrated: true,
+		placeholder,
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
+			name: "disabled group is forbidden",
+			group: &service.Group{
+				ID:       groupID,
+				Name:     "disabled",
+				Status:   service.StatusDisabled,
+				Platform: service.PlatformAnthropic,
+				Hydrated: true,
+		placeholder,
+			wantStatus: http.StatusForbidden,
+			wantCode:   "GROUP_DISABLED",
+	placeholder,
+		{
+			name: "deleted status group is forbidden",
+			group: &service.Group{
+				ID:       groupID,
+				Name:     "deleted",
+				Status:   "deleted",
+				Platform: service.PlatformAnthropic,
+				Hydrated: true,
+		placeholder,
+			wantStatus: http.StatusForbidden,
+			wantCode:   "GROUP_DELETED",
+	placeholder,
+		{
+			name:       "missing group edge is forbidden",
+			group:      nil,
+			wantStatus: http.StatusForbidden,
+			wantCode:   "GROUP_DELETED",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			apiKey := &service.APIKey{
+				ID:      100,
+				UserID:  user.ID,
+				GroupID: &groupID,
+				Key:     "test-key",
+				Status:  service.StatusActive,
+				User:    user,
+				Group:   tt.group,
+		placeholder
+			apiKeyRepo := &stubApiKeyRepo{
+				getByKey: func(ctx context.Context, key string) (*service.APIKey, error) {
+					if key != apiKey.Key {
+						return nil, service.ErrAPIKeyNotFound
+				placeholder
+					clone := *apiKey
+					return &clone, nil
+			placeholder,
+		placeholder
+			cfg := &config.Config{RunMode: config.RunModeStandardplaceholder
+			apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, nil, nil, nil, cfg)
+			router := newAuthTestRouter(apiKeyService, nil, cfg)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/t", nil)
+			req.Header.Set("x-api-key", apiKey.Key)
+			router.ServeHTTP(w, req)
+
+			require.Equal(t, tt.wantStatus, w.Code)
+			if tt.wantCode != "" {
+				require.Contains(t, w.Body.String(), tt.wantCode)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func TestAPIKeyAuthIPRestrictionDoesNotTrustSpoofedForwardHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
