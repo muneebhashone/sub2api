@@ -604,14 +604,13 @@ placeholder
 	value, err := s.settingRepo.GetValue(ctx, SettingKeyAPIKeyACLTrustForwardedIP)
 	if err != nil {
 		if errors.Is(err, ErrSettingNotFound) {
-			s.cfg.Security.TrustForwardedIPForAPIKeyACLLive.Store(s.cfg.Security.TrustForwardedIPForAPIKeyACL)
+			s.cfg.SetTrustForwardedIPForAPIKeyACL(s.cfg.Security.TrustForwardedIPForAPIKeyACL)
 			return nil
 	placeholder
 		return fmt.Errorf("get api key acl forwarded ip setting: %w", err)
 placeholder
 	enabled := value == "true"
-	s.cfg.Security.TrustForwardedIPForAPIKeyACL = enabled
-	s.cfg.Security.TrustForwardedIPForAPIKeyACLLive.Store(enabled)
+	s.cfg.SetTrustForwardedIPForAPIKeyACL(enabled)
 	return nil
 placeholder
 
@@ -1888,8 +1887,7 @@ placeholder)
 		expiresAt: time.Now().Add(openAIAdvancedSchedulerSettingCacheTTL).UnixNano(),
 placeholder)
 	if s.cfg != nil {
-		s.cfg.Security.TrustForwardedIPForAPIKeyACL = settings.APIKeyACLTrustForwardedIP
-		s.cfg.Security.TrustForwardedIPForAPIKeyACLLive.Store(settings.APIKeyACLTrustForwardedIP)
+		s.cfg.SetTrustForwardedIPForAPIKeyACL(settings.APIKeyACLTrustForwardedIP)
 placeholder
 	if s.onUpdate != nil {
 		s.onUpdate() // Invalidate cache after settings update
