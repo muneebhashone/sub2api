@@ -70,6 +70,11 @@ func Name(v string) predicate.ChannelMonitorRequestTemplate {
 	return predicate.ChannelMonitorRequestTemplate(sql.FieldEQ(FieldName, v))
 placeholder
 
+// APIMode applies equality check predicate on the "api_mode" field. It's identical to APIModeEQ.
+func APIMode(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldEQ(FieldAPIMode, v))
+placeholder
+
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.ChannelMonitorRequestTemplate {
 	return predicate.ChannelMonitorRequestTemplate(sql.FieldEQ(FieldDescription, v))
@@ -243,6 +248,71 @@ placeholder
 // ProviderNotIn applies the NotIn predicate on the "provider" field.
 func ProviderNotIn(vs ...Provider) predicate.ChannelMonitorRequestTemplate {
 	return predicate.ChannelMonitorRequestTemplate(sql.FieldNotIn(FieldProvider, vs...))
+placeholder
+
+// APIModeEQ applies the EQ predicate on the "api_mode" field.
+func APIModeEQ(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldEQ(FieldAPIMode, v))
+placeholder
+
+// APIModeNEQ applies the NEQ predicate on the "api_mode" field.
+func APIModeNEQ(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldNEQ(FieldAPIMode, v))
+placeholder
+
+// APIModeIn applies the In predicate on the "api_mode" field.
+func APIModeIn(vs ...string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldIn(FieldAPIMode, vs...))
+placeholder
+
+// APIModeNotIn applies the NotIn predicate on the "api_mode" field.
+func APIModeNotIn(vs ...string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldNotIn(FieldAPIMode, vs...))
+placeholder
+
+// APIModeGT applies the GT predicate on the "api_mode" field.
+func APIModeGT(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldGT(FieldAPIMode, v))
+placeholder
+
+// APIModeGTE applies the GTE predicate on the "api_mode" field.
+func APIModeGTE(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldGTE(FieldAPIMode, v))
+placeholder
+
+// APIModeLT applies the LT predicate on the "api_mode" field.
+func APIModeLT(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldLT(FieldAPIMode, v))
+placeholder
+
+// APIModeLTE applies the LTE predicate on the "api_mode" field.
+func APIModeLTE(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldLTE(FieldAPIMode, v))
+placeholder
+
+// APIModeContains applies the Contains predicate on the "api_mode" field.
+func APIModeContains(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldContains(FieldAPIMode, v))
+placeholder
+
+// APIModeHasPrefix applies the HasPrefix predicate on the "api_mode" field.
+func APIModeHasPrefix(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldHasPrefix(FieldAPIMode, v))
+placeholder
+
+// APIModeHasSuffix applies the HasSuffix predicate on the "api_mode" field.
+func APIModeHasSuffix(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldHasSuffix(FieldAPIMode, v))
+placeholder
+
+// APIModeEqualFold applies the EqualFold predicate on the "api_mode" field.
+func APIModeEqualFold(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldEqualFold(FieldAPIMode, v))
+placeholder
+
+// APIModeContainsFold applies the ContainsFold predicate on the "api_mode" field.
+func APIModeContainsFold(v string) predicate.ChannelMonitorRequestTemplate {
+	return predicate.ChannelMonitorRequestTemplate(sql.FieldContainsFold(FieldAPIMode, v))
 placeholder
 
 // DescriptionEQ applies the EQ predicate on the "description" field.

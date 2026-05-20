@@ -14,14 +14,14 @@ type ChannelMonitorRequestTemplateRepository interface {
 	Update(ctx context.Context, t *ChannelMonitorRequestTemplate) error
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, params ChannelMonitorRequestTemplateListParams) ([]*ChannelMonitorRequestTemplate, error)
-	// ApplyToMonitors 把模板当前的 extra_headers / body_override_mode / body_override
+	// ApplyToMonitors 把模板当前的 api_mode / extra_headers / body_override_mode / body_override
 	// 批量覆盖到指定 monitorIDs 的监控上（同时还要求这些监控当前 template_id = id，
 	// 防止误覆盖未关联的监控）。monitorIDs 必须非空；空列表直接返回 0 不写库。
 	// 返回被覆盖的监控数量。
 	ApplyToMonitors(ctx context.Context, id int64, monitorIDs []int64) (int64, error)
 	// CountAssociatedMonitors 统计 template_id = id 的监控数（用于 UI 展示「应用到 N 个配置」）。
 	CountAssociatedMonitors(ctx context.Context, id int64) (int64, error)
-	// ListAssociatedMonitors 列出所有 template_id = id 的监控简略信息（id/name/provider/enabled）
+	// ListAssociatedMonitors 列出所有 template_id = id 的监控简略信息（id/name/provider/api_mode/enabled）
 	// 给 apply picker UI 用，避免前端再做一次 list+filter。
 	ListAssociatedMonitors(ctx context.Context, id int64) ([]*AssociatedMonitorBrief, error)
 placeholder
@@ -31,6 +31,7 @@ type AssociatedMonitorBrief struct {
 	ID       int64
 	Name     string
 	Provider string
+	APIMode  string
 	Enabled  bool
 placeholder
 
@@ -53,6 +54,15 @@ func (s *ChannelMonitorRequestTemplateService) List(ctx context.Context, params 
 			return nil, err
 	placeholder
 placeholder
+	if params.APIMode != "" {
+		if params.Provider == "" {
+			if err := validateAPIMode(MonitorProviderOpenAI, params.APIMode); err != nil {
+				return nil, err
+		placeholder
+	placeholder else if err := validateAPIMode(params.Provider, params.APIMode); err != nil {
+			return nil, err
+	placeholder
+placeholder
 	return s.repo.List(ctx, params)
 placeholder
 
@@ -69,6 +79,7 @@ placeholder
 	t := &ChannelMonitorRequestTemplate{
 		Name:             strings.TrimSpace(p.Name),
 		Provider:         p.Provider,
+		APIMode:          defaultAPIMode(p.APIMode),
 		Description:      strings.TrimSpace(p.Description),
 		ExtraHeaders:     emptyHeadersIfNil(p.ExtraHeaders),
 		BodyOverrideMode: defaultBodyMode(p.BodyOverrideMode),
@@ -144,7 +155,10 @@ placeholder
 	if err := validateProvider(p.Provider); err != nil {
 		return ErrChannelMonitorTemplateInvalidProvider
 placeholder
-	if err := validateBodyModeParams(p.BodyOverrideMode, p.BodyOverride); err != nil {
+	if err := validateAPIMode(p.Provider, p.APIMode); err != nil {
+		return ErrChannelMonitorTemplateInvalidAPIMode
+placeholder
+	if err := validateBodyModeForProtocol(p.Provider, p.APIMode, p.BodyOverrideMode, p.BodyOverride); err != nil {
 		return err
 placeholder
 	if err := validateExtraHeaders(p.ExtraHeaders); err != nil {
@@ -165,6 +179,13 @@ placeholder
 	if p.Description != nil {
 		existing.Description = strings.TrimSpace(*p.Description)
 placeholder
+	newAPIMode := defaultAPIMode(existing.APIMode)
+	if p.APIMode != nil {
+		newAPIMode = defaultAPIMode(*p.APIMode)
+placeholder
+	if err := validateAPIMode(existing.Provider, newAPIMode); err != nil {
+		return ErrChannelMonitorTemplateInvalidAPIMode
+placeholder
 	if p.ExtraHeaders != nil {
 		if err := validateExtraHeaders(*p.ExtraHeaders); err != nil {
 			return err
@@ -180,11 +201,26 @@ placeholder
 	if p.BodyOverride != nil {
 		newBody = *p.BodyOverride
 placeholder
-	if err := validateBodyModeParams(newMode, newBody); err != nil {
+	if err := validateBodyModeForProtocol(existing.Provider, newAPIMode, newMode, newBody); err != nil {
 		return err
 placeholder
+	existing.APIMode = newAPIMode
 	existing.BodyOverrideMode = defaultBodyMode(newMode)
 	existing.BodyOverride = newBody
+	return nil
+placeholder
+
+// validateBodyModeForProtocol 校验 body_override_mode 与 provider/api_mode 的协议特定要求。
+func validateBodyModeForProtocol(provider, apiMode, mode string, body map[string]any) error {
+	if err := validateBodyModeParams(mode, body); err != nil {
+		return err
+placeholder
+	if defaultBodyMode(mode) != MonitorBodyOverrideModeReplace {
+		return nil
+placeholder
+	if err := validateReplaceRequestBody(provider, defaultAPIMode(apiMode), body); err != nil {
+		return ErrChannelMonitorInvalidRequestBody
+placeholder
 	return nil
 placeholder
 

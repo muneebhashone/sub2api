@@ -66,6 +66,20 @@ placeholder
 	return _u
 placeholder
 
+// SetAPIMode sets the "api_mode" field.
+func (_u *ChannelMonitorUpdate) SetAPIMode(v string) *ChannelMonitorUpdate {
+	_u.mutation.SetAPIMode(v)
+	return _u
+placeholder
+
+// SetNillableAPIMode sets the "api_mode" field if the given value is not nil.
+func (_u *ChannelMonitorUpdate) SetNillableAPIMode(v *string) *ChannelMonitorUpdate {
+	if v != nil {
+		_u.SetAPIMode(*v)
+placeholder
+	return _u
+placeholder
+
 // SetEndpoint sets the "endpoint" field.
 func (_u *ChannelMonitorUpdate) SetEndpoint(v string) *ChannelMonitorUpdate {
 	_u.mutation.SetEndpoint(v)
@@ -418,6 +432,11 @@ placeholder
 			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.provider": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.APIMode(); ok {
+		if err := channelmonitor.APIModeValidator(v); err != nil {
+			return &ValidationError{Name: "api_mode", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.api_mode": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.Endpoint(); ok {
 		if err := channelmonitor.EndpointValidator(v); err != nil {
 			return &ValidationError{Name: "endpoint", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.endpoint": %w`, err)placeholder
@@ -471,6 +490,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Provider(); ok {
 		_spec.SetField(channelmonitor.FieldProvider, field.TypeEnum, value)
+placeholder
+	if value, ok := _u.mutation.APIMode(); ok {
+		_spec.SetField(channelmonitor.FieldAPIMode, field.TypeString, value)
 placeholder
 	if value, ok := _u.mutation.Endpoint(); ok {
 		_spec.SetField(channelmonitor.FieldEndpoint, field.TypeString, value)
@@ -697,6 +719,20 @@ placeholder
 func (_u *ChannelMonitorUpdateOne) SetNillableProvider(v *channelmonitor.Provider) *ChannelMonitorUpdateOne {
 	if v != nil {
 		_u.SetProvider(*v)
+placeholder
+	return _u
+placeholder
+
+// SetAPIMode sets the "api_mode" field.
+func (_u *ChannelMonitorUpdateOne) SetAPIMode(v string) *ChannelMonitorUpdateOne {
+	_u.mutation.SetAPIMode(v)
+	return _u
+placeholder
+
+// SetNillableAPIMode sets the "api_mode" field if the given value is not nil.
+func (_u *ChannelMonitorUpdateOne) SetNillableAPIMode(v *string) *ChannelMonitorUpdateOne {
+	if v != nil {
+		_u.SetAPIMode(*v)
 placeholder
 	return _u
 placeholder
@@ -1066,6 +1102,11 @@ placeholder
 			return &ValidationError{Name: "provider", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.provider": %w`, err)placeholder
 	placeholder
 placeholder
+	if v, ok := _u.mutation.APIMode(); ok {
+		if err := channelmonitor.APIModeValidator(v); err != nil {
+			return &ValidationError{Name: "api_mode", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.api_mode": %w`, err)placeholder
+	placeholder
+placeholder
 	if v, ok := _u.mutation.Endpoint(); ok {
 		if err := channelmonitor.EndpointValidator(v); err != nil {
 			return &ValidationError{Name: "endpoint", err: fmt.Errorf(`ent: validator failed for field "ChannelMonitor.endpoint": %w`, err)placeholder
@@ -1136,6 +1177,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.Provider(); ok {
 		_spec.SetField(channelmonitor.FieldProvider, field.TypeEnum, value)
+placeholder
+	if value, ok := _u.mutation.APIMode(); ok {
+		_spec.SetField(channelmonitor.FieldAPIMode, field.TypeString, value)
 placeholder
 	if value, ok := _u.mutation.Endpoint(); ok {
 		_spec.SetField(channelmonitor.FieldEndpoint, field.TypeString, value)
