@@ -28,7 +28,7 @@ placeholder
 
 // SendPendingOAuthVerifyCode sends a local verification code for pending OAuth
 // account-creation flows without relying on the public registration gate.
-func (s *AuthService) SendPendingOAuthVerifyCode(ctx context.Context, email string) (*SendVerifyCodeResult, error) {
+func (s *AuthService) SendPendingOAuthVerifyCode(ctx context.Context, email string, locale ...string) (*SendVerifyCodeResult, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
 		return nil, ErrEmailVerifyRequired
@@ -47,7 +47,7 @@ placeholder
 	if s.settingService != nil {
 		siteName = s.settingService.GetSiteName(ctx)
 placeholder
-	if err := s.emailService.SendVerifyCode(ctx, email, siteName); err != nil {
+	if err := s.emailService.SendVerifyCode(ctx, email, siteName, firstEmailLocale(locale)); err != nil {
 		return nil, err
 placeholder
 	return &SendVerifyCodeResult{
