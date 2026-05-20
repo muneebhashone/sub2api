@@ -307,6 +307,51 @@ placeholder
 placeholder)
 placeholder
 
+// BatchUpdate handles batch updating redeem codes
+// POST /api/v1/admin/redeem-codes/batch-update
+func (h *RedeemHandler) BatchUpdate(c *gin.Context) {
+	if h.redeemService == nil {
+		response.InternalError(c, "redeem service not configured")
+		return
+placeholder
+
+	var req dto.BatchUpdateRedeemCodesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	result, err := h.redeemService.BatchUpdate(c.Request.Context(), &service.RedeemCodeBatchUpdateInput{
+		IDs:    req.IDs,
+		Fields: redeemBatchUpdateFieldsFromDTO(req.Fields),
+placeholder)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{
+		"updated": result.Updated,
+		"message": "Redeem codes updated successfully",
+placeholder)
+placeholder
+
+func redeemBatchUpdateFieldsFromDTO(in dto.BatchUpdateRedeemCodeFields) service.RedeemCodeBatchUpdateFields {
+	out := service.RedeemCodeBatchUpdateFields{
+		Status: in.Status,
+		Notes:  in.Notes,
+		Type:   in.Type,
+		Value:  in.Value,
+placeholder
+	if in.ExpiresAt.Set {
+		out.ExpiresAt = service.NullableTimeUpdate{Set: true, Value: in.ExpiresAt.Valueplaceholder
+placeholder
+	if in.GroupID.Set {
+		out.GroupID = service.NullableInt64Update{Set: true, Value: in.GroupID.Valueplaceholder
+placeholder
+	return out
+placeholder
+
 // Expire handles expiring a redeem code
 // POST /api/v1/admin/redeem-codes/:id/expire
 func (h *RedeemHandler) Expire(c *gin.Context) {

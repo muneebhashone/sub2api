@@ -244,6 +244,21 @@ func (s *groupRepoStub) UpdateSortOrders(ctx context.Context, updates []GroupSor
 	return nil
 placeholder
 
+type deleteGroupAPIKeyRepoStub struct {
+	apiKeyRepoStubForGroupUpdate
+	keys         []string
+	listErr      error
+	listGroupIDs []int64
+placeholder
+
+func (s *deleteGroupAPIKeyRepoStub) ListKeysByGroupID(ctx context.Context, groupID int64) ([]string, error) {
+	s.listGroupIDs = append(s.listGroupIDs, groupID)
+	if s.listErr != nil {
+		return nil, s.listErr
+placeholder
+	return s.keys, nil
+placeholder
+
 type proxyRepoStub struct {
 	deleteErr    error
 	countErr     error
@@ -310,6 +325,12 @@ placeholder
 type redeemRepoStub struct {
 	deleteErrByID map[int64]error
 	deletedIDs    []int64
+
+	batchUpdateIDs    []int64
+	batchUpdateFields RedeemCodeBatchUpdateFields
+	batchUpdateResult int64
+	batchUpdateErr    error
+	batchUpdateCalled bool
 placeholder
 
 func (s *redeemRepoStub) Create(ctx context.Context, code *RedeemCode) error {
@@ -330,6 +351,19 @@ placeholder
 
 func (s *redeemRepoStub) Update(ctx context.Context, code *RedeemCode) error {
 	panic("unexpected Update call")
+placeholder
+
+func (s *redeemRepoStub) BatchUpdate(ctx context.Context, ids []int64, fields RedeemCodeBatchUpdateFields) (int64, error) {
+	s.batchUpdateCalled = true
+	s.batchUpdateIDs = append([]int64(nil), ids...)
+	s.batchUpdateFields = fields
+	if s.batchUpdateErr != nil {
+		return 0, s.batchUpdateErr
+placeholder
+	if s.batchUpdateResult != 0 {
+		return s.batchUpdateResult, nil
+placeholder
+	return int64(len(ids)), nil
 placeholder
 
 func (s *redeemRepoStub) Delete(ctx context.Context, id int64) error {
@@ -498,6 +532,23 @@ placeholder
 		{userID: 11, groupID: 5placeholder,
 		{userID: 12, groupID: 5placeholder,
 placeholder, calls)
+placeholder
+
+func TestAdminService_DeleteGroup_InvalidatesAuthCacheForBoundKeys(t *testing.T) {
+	repo := &groupRepoStub{placeholder
+	apiKeyRepo := &deleteGroupAPIKeyRepoStub{keys: []string{"k1", "k2"placeholderplaceholder
+	invalidator := &authCacheInvalidatorStub{placeholder
+	svc := &adminServiceImpl{
+		groupRepo:            repo,
+		apiKeyRepo:           apiKeyRepo,
+		authCacheInvalidator: invalidator,
+placeholder
+
+	err := svc.DeleteGroup(context.Background(), 5)
+placeholder
+	require.Equal(t, []int64{5placeholder, repo.deleteCalls)
+	require.Equal(t, []int64{5placeholder, apiKeyRepo.listGroupIDs)
+	require.Equal(t, []string{"k1", "k2"placeholder, invalidator.keys)
 placeholder
 
 func TestAdminService_DeleteGroup_NotFound(t *testing.T) {

@@ -236,6 +236,91 @@ placeholder
 	return nil
 placeholder
 
+func (r *redeemCodeRepository) BatchUpdate(ctx context.Context, ids []int64, fields service.RedeemCodeBatchUpdateFields) (int64, error) {
+	uniqueIDs := make([]int64, 0, len(ids))
+	seen := make(map[int64]struct{placeholder, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		uniqueIDs = append(uniqueIDs, id)
+placeholder
+	if len(uniqueIDs) == 0 {
+		return 0, nil
+placeholder
+
+	if tx := dbent.TxFromContext(ctx); tx != nil {
+		return r.batchUpdate(ctx, tx.Client(), uniqueIDs, fields)
+placeholder
+
+	tx, err := r.client.Tx(ctx)
+	if err != nil {
+		return 0, err
+placeholder
+	txCtx := dbent.NewTxContext(ctx, tx)
+	defer func() { _ = tx.Rollback() placeholder()
+
+	updated, err := r.batchUpdate(txCtx, tx.Client(), uniqueIDs, fields)
+	if err != nil {
+		return 0, err
+placeholder
+	if err := tx.Commit(); err != nil {
+		return 0, err
+placeholder
+	return updated, nil
+placeholder
+
+func (r *redeemCodeRepository) batchUpdate(ctx context.Context, client *dbent.Client, ids []int64, fields service.RedeemCodeBatchUpdateFields) (int64, error) {
+	existing, err := client.RedeemCode.Query().
+		Where(redeemcode.IDIn(ids...)).
+		All(ctx)
+	if err != nil {
+		return 0, err
+placeholder
+	if len(existing) != len(ids) {
+		return 0, service.ErrRedeemCodeNotFound
+placeholder
+	if fields.TouchesUsedSensitiveFields() {
+		for _, code := range existing {
+			if code.Status == service.StatusUsed {
+				return 0, service.ErrRedeemCodeUsed
+		placeholder
+	placeholder
+placeholder
+
+	up := client.RedeemCode.Update().Where(redeemcode.IDIn(ids...))
+	if fields.Status != nil {
+		up.SetStatus(*fields.Status)
+placeholder
+	if fields.Notes != nil {
+		up.SetNotes(*fields.Notes)
+placeholder
+	if fields.ExpiresAt.Set {
+		if fields.ExpiresAt.Value != nil {
+			up.SetExpiresAt(*fields.ExpiresAt.Value)
+	placeholder else {
+			up.ClearExpiresAt()
+	placeholder
+placeholder
+	if fields.GroupID.Set {
+		if fields.GroupID.Value != nil {
+			up.SetGroupID(*fields.GroupID.Value)
+	placeholder else {
+			up.ClearGroupID()
+	placeholder
+placeholder
+
+	affected, err := up.Save(ctx)
+	if err != nil {
+		return 0, err
+placeholder
+	if affected != len(ids) {
+		return 0, service.ErrRedeemCodeNotFound
+placeholder
+	return int64(affected), nil
+placeholder
+
 func (r *redeemCodeRepository) Use(ctx context.Context, id, userID int64) error {
 	now := time.Now()
 	client := clientFromContext(ctx, r.client)
