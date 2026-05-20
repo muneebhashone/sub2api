@@ -234,3 +234,60 @@ placeholder
 	require.InDelta(t, 0.0000005, pricing.CacheReadInputTokenCostPriority, 1e-12)
 	require.True(t, pricing.SupportsServiceTier)
 placeholder
+
+// ---------------------------------------------------------------------------
+// ListModelNamesByProvider
+// ---------------------------------------------------------------------------
+
+func TestListModelNamesByProvider_ReturnsMatchingModels(t *testing.T) {
+	svc := &PricingService{
+		pricingData: map[string]*LiteLLMModelPricing{
+			"claude-opus-4-5-20251101": {LiteLLMProvider: "anthropic", InputCostPerToken: 1.5e-5placeholder,
+			"claude-sonnet-4-5":        {LiteLLMProvider: "anthropic", InputCostPerToken: 3e-6placeholder,
+			"gpt-4o":                   {LiteLLMProvider: "openai", InputCostPerToken: 5e-6placeholder,
+			"gemini-2.5-pro":           {LiteLLMProvider: "google", InputCostPerToken: 1.placeholder,
+	placeholder,
+placeholder
+
+	got := svc.ListModelNamesByProvider("anthropic")
+	require.ElementsMatch(t, []string{"claude-opus-4-5-20251101", "claude-sonnet-4-5"placeholder, got)
+	// Must be sorted
+	require.Equal(t, "claude-opus-4-5-20251101", got[0])
+	require.Equal(t, "claude-sonnet-4-5", got[1])
+placeholder
+
+func TestListModelNamesByProvider_CaseInsensitive(t *testing.T) {
+	svc := &PricingService{
+		pricingData: map[string]*LiteLLMModelPricing{
+			"gpt-4o": {LiteLLMProvider: "OpenAI", InputCostPerToken: 5e-6placeholder,
+	placeholder,
+placeholder
+
+	got := svc.ListModelNamesByProvider("openai")
+	require.Equal(t, []string{"gpt-4o"placeholder, got)
+
+	got2 := svc.ListModelNamesByProvider("OPENAI")
+	require.Equal(t, []string{"gpt-4o"placeholder, got2)
+placeholder
+
+func TestListModelNamesByProvider_NoMatch(t *testing.T) {
+	svc := &PricingService{
+		pricingData: map[string]*LiteLLMModelPricing{
+			"gpt-4o": {LiteLLMProvider: "openai", InputCostPerToken: 5e-6placeholder,
+	placeholder,
+placeholder
+
+	got := svc.ListModelNamesByProvider("anthropic")
+	require.NotNil(t, got)
+	require.Empty(t, got)
+placeholder
+
+func TestListModelNamesByProvider_EmptyCatalog(t *testing.T) {
+	svc := &PricingService{
+		pricingData: map[string]*LiteLLMModelPricing{placeholder,
+placeholder
+
+	got := svc.ListModelNamesByProvider("openai")
+	require.NotNil(t, got)
+	require.Empty(t, got)
+placeholder

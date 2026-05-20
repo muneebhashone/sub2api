@@ -2370,10 +2370,15 @@ export default {
         searchAccountPlaceholder: 'Search accounts...',
         ruleAccountsHint: 'Leave empty to match all accounts',
         ruleModelPricing: 'Model Pricing',
-        noGroupsInChannel: 'No groups selected in platform tabs above',
-        unnamed: 'Unnamed'
-      placeholder
-    placeholder,
+         noGroupsInChannel: 'No groups selected in platform tabs above',
+         unnamed: 'Unnamed',
+         syncLatestModels: 'Sync Latest Models',
+         syncingModels: 'Syncing...',
+         syncModelsSuccess: 'Synced {countplaceholder new model(s)',
+         syncModelsAlreadyUpToDate: 'Models already up to date',
+         syncModelsError: 'Failed to sync models'
+       placeholder
+     placeholder,
 
     riskControl: {
       title: 'Risk Control',
