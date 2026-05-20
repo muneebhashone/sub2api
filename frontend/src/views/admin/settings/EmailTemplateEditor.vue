@@ -208,14 +208,18 @@ placeholder from "@/api/admin/settings";
 import { useAppStore placeholder from "@/stores";
 import { extractApiErrorMessage placeholder from "@/utils/apiError";
 
-const { t placeholder = useI18n();
+const { t, locale placeholder = useI18n();
 const appStore = useAppStore();
 
 const fallbackPlaceholders = [
   "{{site_nameplaceholderplaceholder",
   "{{recipient_nameplaceholderplaceholder",
   "{{recipient_emailplaceholderplaceholder",
+  "{{verification_codeplaceholderplaceholder",
+  "{{expires_in_minutesplaceholderplaceholder",
+  "{{reset_urlplaceholderplaceholder",
   "{{subscription_groupplaceholderplaceholder",
+  "{{subscription_daysplaceholderplaceholder",
   "{{expiry_timeplaceholderplaceholder",
   "{{days_remainingplaceholderplaceholder",
   "{{current_balanceplaceholderplaceholder",
@@ -224,6 +228,33 @@ const fallbackPlaceholders = [
   "{{recharge_amountplaceholderplaceholder",
   "{{order_idplaceholderplaceholder",
   "{{unsubscribe_urlplaceholderplaceholder",
+  "{{account_idplaceholderplaceholder",
+  "{{account_nameplaceholderplaceholder",
+  "{{platformplaceholderplaceholder",
+  "{{quota_dimensionplaceholderplaceholder",
+  "{{quota_usedplaceholderplaceholder",
+  "{{quota_limitplaceholderplaceholder",
+  "{{quota_remainingplaceholderplaceholder",
+  "{{quota_thresholdplaceholderplaceholder",
+  "{{triggered_atplaceholderplaceholder",
+  "{{group_nameplaceholderplaceholder",
+  "{{moderation_categoryplaceholderplaceholder",
+  "{{moderation_scoreplaceholderplaceholder",
+  "{{violation_countplaceholderplaceholder",
+  "{{ban_thresholdplaceholderplaceholder",
+  "{{rule_nameplaceholderplaceholder",
+  "{{severityplaceholderplaceholder",
+  "{{alert_statusplaceholderplaceholder",
+  "{{metric_typeplaceholderplaceholder",
+  "{{operatorplaceholderplaceholder",
+  "{{metric_valueplaceholderplaceholder",
+  "{{threshold_valueplaceholderplaceholder",
+  "{{alert_descriptionplaceholderplaceholder",
+  "{{report_nameplaceholderplaceholder",
+  "{{report_typeplaceholderplaceholder",
+  "{{report_start_timeplaceholderplaceholder",
+  "{{report_end_timeplaceholderplaceholder",
+  "{{report_htmlplaceholderplaceholder",
 ];
 
 const loadingList = ref(true);
@@ -297,6 +328,22 @@ function formatLocale(locale: string): string {
   return locale;
 placeholder
 
+function selectInitialLocale(locales: string[]): string {
+  const currentLocale = locale.value.toLowerCase();
+  const exactMatch = locales.find(
+    (availableLocale) => availableLocale.toLowerCase() === currentLocale,
+  );
+  if (exactMatch) return exactMatch;
+
+  const currentLanguage = currentLocale.split("-")[0];
+  const languageMatch = locales.find(
+    (availableLocale) => availableLocale.toLowerCase().split("-")[0] === currentLanguage,
+  );
+  if (languageMatch) return languageMatch;
+
+  return locales[0] || "";
+placeholder
+
 function applyTemplate(template: {
   subject: string;
   html: string;
@@ -306,9 +353,7 @@ placeholder) {
   subject.value = template.subject;
   html.value = template.html;
   isCustomTemplate.value = template.is_custom === true;
-  if (template.placeholders?.length) {
-    placeholders.value = template.placeholders;
-  placeholder
+  placeholders.value = template.placeholders || [];
 placeholder
 
 async function loadTemplate() {
@@ -337,7 +382,7 @@ async function loadTemplateList() {
     placeholders.value = response.placeholders || [];
     initializingSelection.value = true;
     selectedEvent.value = eventOptions.value[0]?.value || "";
-    selectedLocale.value = response.locales[0] || "";
+    selectedLocale.value = selectInitialLocale(response.locales);
     await loadTemplate();
     initializingSelection.value = false;
   placeholder catch (err: unknown) {
