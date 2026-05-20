@@ -128,6 +128,19 @@ const antigravityUserAgentVersionCacheTTL = 60 * time.Second
 const antigravityUserAgentVersionErrorTTL = 5 * time.Second
 const antigravityUserAgentVersionDBTimeout = 5 * time.Second
 
+// DefaultOpenAICodexUserAgent OpenAI Codex 默认 User-Agent（用于规避 Cloudflare 对浏览器 UA 的质询）
+const DefaultOpenAICodexUserAgent = "codex-tui/0.125.0 (Ubuntu 22.4.0; x86_64) xterm-256color (codex-tui; 0.125.0)"
+
+// cachedOpenAICodexUserAgent 缓存 OpenAI Codex UA（进程内缓存，60s TTL）
+type cachedOpenAICodexUserAgent struct {
+	value     string
+	expiresAt int64 // unix nano
+placeholder
+
+const openAICodexUserAgentCacheTTL = 60 * time.Second
+const openAICodexUserAgentErrorTTL = 5 * time.Second
+const openAICodexUserAgentDBTimeout = 5 * time.Second
+
 // DefaultSubscriptionGroupReader validates group references used by default subscriptions.
 type DefaultSubscriptionGroupReader interface {
 	GetByID(ctx context.Context, id int64) (*Group, error)
@@ -148,6 +161,8 @@ type SettingService struct {
 	webSearchManagerBuilder   WebSearchManagerBuilder
 	antigravityUAVersionCache atomic.Value // *cachedAntigravityUserAgentVersion
 	antigravityUAVersionSF    singleflight.Group
+	openAICodexUACache        atomic.Value // *cachedOpenAICodexUserAgent
+	openAICodexUASF           singleflight.Group
 placeholder
 
 type ProviderDefaultGrantSettings struct {
@@ -903,6 +918,55 @@ placeholder
 placeholder)
 	if version, ok := result.(string); ok && version != "" {
 		return version
+placeholder
+	return fallback
+placeholder
+
+// GetOpenAICodexUserAgent 返回 OpenAI Codex 上游请求使用的 User-Agent。
+// 后台设置优先；为空时回退到内置默认值。
+func (s *SettingService) GetOpenAICodexUserAgent(ctx context.Context) string {
+	fallback := DefaultOpenAICodexUserAgent
+	if s == nil || s.settingRepo == nil {
+		return fallback
+placeholder
+	if cached, ok := s.openAICodexUACache.Load().(*cachedOpenAICodexUserAgent); ok && cached != nil {
+		if time.Now().UnixNano() < cached.expiresAt {
+			return cached.value
+	placeholder
+placeholder
+
+	result, _, _ := s.openAICodexUASF.Do("openai_codex_user_agent", func() (any, error) {
+		if cached, ok := s.openAICodexUACache.Load().(*cachedOpenAICodexUserAgent); ok && cached != nil {
+			if time.Now().UnixNano() < cached.expiresAt {
+				return cached.value, nil
+		placeholder
+	placeholder
+		if ctx == nil {
+			ctx = context.Background()
+	placeholder
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), openAICodexUserAgentDBTimeout)
+		defer cancel()
+		value, err := s.settingRepo.GetValue(dbCtx, SettingKeyOpenAICodexUserAgent)
+		if err != nil && !errors.Is(err, ErrSettingNotFound) {
+			slog.Warn("failed to get openai codex user agent setting", "error", err)
+			s.openAICodexUACache.Store(&cachedOpenAICodexUserAgent{
+				value:     fallback,
+				expiresAt: time.Now().Add(openAICodexUserAgentErrorTTL).UnixNano(),
+		placeholder)
+			return fallback, nil
+	placeholder
+		ua := strings.TrimSpace(value)
+		if ua == "" {
+			ua = fallback
+	placeholder
+		s.openAICodexUACache.Store(&cachedOpenAICodexUserAgent{
+			value:     ua,
+			expiresAt: time.Now().Add(openAICodexUserAgentCacheTTL).UnixNano(),
+	placeholder)
+		return ua, nil
+placeholder)
+	if ua, ok := result.(string); ok && ua != "" {
+		return ua
 placeholder
 	return fallback
 placeholder
@@ -1706,6 +1770,7 @@ placeholder
 	updates[SettingKeyEnableAnthropicCacheTTL1hInjection] = strconv.FormatBool(settings.EnableAnthropicCacheTTL1hInjection)
 	updates[SettingKeyRewriteMessageCacheControl] = strconv.FormatBool(settings.RewriteMessageCacheControl)
 	updates[SettingKeyAntigravityUserAgentVersion] = antigravity.NormalizeUserAgentVersion(settings.AntigravityUserAgentVersion)
+	updates[SettingKeyOpenAICodexUserAgent] = strings.TrimSpace(settings.OpenAICodexUserAgent)
 	updates[SettingPaymentVisibleMethodAlipaySource] = settings.PaymentVisibleMethodAlipaySource
 	updates[SettingPaymentVisibleMethodWxpaySource] = settings.PaymentVisibleMethodWxpaySource
 	updates[SettingPaymentVisibleMethodAlipayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodAlipayEnabled)
@@ -1787,6 +1852,15 @@ placeholder
 	s.antigravityUAVersionCache.Store(&cachedAntigravityUserAgentVersion{
 		version:   antigravityUserAgentVersion,
 		expiresAt: time.Now().Add(antigravityUserAgentVersionCacheTTL).UnixNano(),
+placeholder)
+	s.openAICodexUASF.Forget("openai_codex_user_agent")
+	codexUA := strings.TrimSpace(settings.OpenAICodexUserAgent)
+	if codexUA == "" {
+		codexUA = DefaultOpenAICodexUserAgent
+placeholder
+	s.openAICodexUACache.Store(&cachedOpenAICodexUserAgent{
+		value:     codexUA,
+		expiresAt: time.Now().Add(openAICodexUserAgentCacheTTL).UnixNano(),
 placeholder)
 	openAIAdvancedSchedulerSettingSF.Forget(openAIAdvancedSchedulerSettingKey)
 	openAIAdvancedSchedulerSettingCache.Store(&cachedOpenAIAdvancedSchedulerSetting{
@@ -2529,6 +2603,7 @@ placeholder
 		SettingKeyEnableAnthropicCacheTTL1hInjection: "false",
 		SettingKeyRewriteMessageCacheControl:         strconv.FormatBool(s.defaultRewriteMessageCacheControl()),
 		SettingKeyAntigravityUserAgentVersion:        "",
+		SettingKeyOpenAICodexUserAgent:               "",
 		SettingPaymentVisibleMethodAlipaySource:      "",
 		SettingPaymentVisibleMethodWxpaySource:       "",
 		SettingPaymentVisibleMethodAlipayEnabled:     "false",
@@ -3041,6 +3116,7 @@ placeholder else {
 		result.RewriteMessageCacheControl = s.defaultRewriteMessageCacheControl()
 placeholder
 	result.AntigravityUserAgentVersion = antigravity.NormalizeUserAgentVersion(settings[SettingKeyAntigravityUserAgentVersion])
+	result.OpenAICodexUserAgent = strings.TrimSpace(settings[SettingKeyOpenAICodexUserAgent])
 
 	// Web search emulation: quick enabled check from the JSON config
 	if raw := settings[SettingKeyWebSearchEmulationConfig]; raw != "" {
