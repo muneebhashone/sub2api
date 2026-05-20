@@ -290,6 +290,30 @@ placeholder
 	require.Equal(t, "1.23.2", repo.updates[SettingKeyAntigravityUserAgentVersion])
 placeholder
 
+func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(t *testing.T) {
+	repo := &settingUpdateRepoStub{placeholder
+	cfg := &config.Config{placeholder
+	svc := NewSettingService(repo, cfg)
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		APIKeyACLTrustForwardedIP: true,
+placeholder)
+placeholder
+	require.Equal(t, "true", repo.updates[SettingKeyAPIKeyACLTrustForwardedIP])
+	require.True(t, cfg.Security.TrustForwardedIPForAPIKeyACL)
+	require.True(t, cfg.Security.TrustForwardedIPForAPIKeyACLLive.Load())
+placeholder
+
+func TestSettingService_ParseSettings_APIKeyACLTrustForwardedIPFallsBackToConfigWhenMissing(t *testing.T) {
+	cfg := &config.Config{placeholder
+	cfg.Security.TrustForwardedIPForAPIKeyACL = true
+	svc := NewSettingService(&settingUpdateRepoStub{placeholder, cfg)
+
+	got := svc.parseSettings(map[string]string{placeholder)
+
+	require.True(t, got.APIKeyACLTrustForwardedIP)
+placeholder
+
 func TestSettingService_GetAntigravityUserAgentVersion_Precedence(t *testing.T) {
 	t.Run("后台设置优先", func(t *testing.T) {
 		svc := NewSettingService(&settingAntigravityUARepoStub{values: map[string]string{
