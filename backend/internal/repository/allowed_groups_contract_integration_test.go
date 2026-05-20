@@ -80,7 +80,7 @@ placeholder
 	require.NotContains(t, u2After.AllowedGroups, targetGroup.ID)
 placeholder
 
-func TestGroupRepository_DeleteCascade_RemovesAllowedGroupsAndClearsApiKeys(t *testing.T) {
+func TestGroupRepository_DeleteCascade_PreservesApiKeyGroupID(t *testing.T) {
 	ctx := context.Background()
 	tx := testEntTx(t)
 	entClient := tx.Client()
@@ -138,8 +138,10 @@ placeholder
 	require.NotContains(t, uAfter.AllowedGroups, targetGroup.ID)
 	require.Contains(t, uAfter.AllowedGroups, otherGroup.ID)
 
-	// API keys bound to the deleted group should have group_id cleared.
+	// API keys keep their group_id so auth can reject keys bound to a deleted group.
 	keyAfter, err := apiKeyRepo.GetByID(ctx, key.ID)
 placeholder
-	require.Nil(t, keyAfter.GroupID)
+	require.NotNil(t, keyAfter.GroupID)
+	require.Equal(t, targetGroup.ID, *keyAfter.GroupID)
+	require.Nil(t, keyAfter.Group)
 placeholder
