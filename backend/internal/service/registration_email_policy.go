@@ -26,12 +26,17 @@ func IsRegistrationEmailSuffixAllowed(email string, whitelist []string) bool {
 	if len(whitelist) == 0 {
 		return true
 placeholder
-	suffix := RegistrationEmailSuffix(email)
-	if suffix == "" {
+	_, domain, ok := splitEmailForPolicy(email)
+	if !ok {
 		return false
 placeholder
+	suffix := "@" + domain
 	for _, allowed := range whitelist {
-		if suffix == allowed {
+		allowed = strings.ToLower(strings.TrimSpace(allowed))
+		if strings.HasPrefix(allowed, "@") && suffix == allowed {
+			return true
+	placeholder
+		if strings.HasPrefix(allowed, "*.") && registrationEmailDomainMatchesWildcard(domain, allowed) {
 			return true
 	placeholder
 placeholder
@@ -98,6 +103,14 @@ func normalizeRegistrationEmailSuffix(raw string) (string, error) {
 		return "", nil
 placeholder
 
+	if strings.HasPrefix(value, "*.") {
+		domain := strings.TrimPrefix(value, "*.")
+		if !isValidRegistrationEmailDomain(domain) {
+			return "", fmt.Errorf("invalid email suffix: %q", raw)
+	placeholder
+		return "*." + domain, nil
+placeholder
+
 	domain := value
 	if strings.Contains(value, "@") {
 		if !strings.HasPrefix(value, "@") || strings.Count(value, "@") != 1 {
@@ -106,11 +119,25 @@ placeholder
 		domain = strings.TrimPrefix(value, "@")
 placeholder
 
-	if domain == "" || strings.Contains(domain, "@") || !registrationEmailDomainPattern.MatchString(domain) {
+	if !isValidRegistrationEmailDomain(domain) {
 		return "", fmt.Errorf("invalid email suffix: %q", raw)
 placeholder
 
 	return "@" + domain, nil
+placeholder
+
+func isValidRegistrationEmailDomain(domain string) bool {
+	return domain != "" &&
+		!strings.Contains(domain, "@") &&
+		registrationEmailDomainPattern.MatchString(domain)
+placeholder
+
+func registrationEmailDomainMatchesWildcard(domain string, allowed string) bool {
+	base := strings.TrimPrefix(allowed, "*.")
+	if !isValidRegistrationEmailDomain(base) {
+		return false
+placeholder
+	return domain == base || strings.HasSuffix(domain, "."+base)
 placeholder
 
 func splitEmailForPolicy(raw string) (local string, domain string, ok bool) {
