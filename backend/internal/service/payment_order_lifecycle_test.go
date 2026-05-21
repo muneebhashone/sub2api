@@ -115,6 +115,10 @@ func (r *paymentOrderLifecycleRedeemRepo) Update(context.Context, *RedeemCode) e
 	panic("unexpected call")
 placeholder
 
+func (r *paymentOrderLifecycleRedeemRepo) BatchUpdate(context.Context, []int64, RedeemCodeBatchUpdateFields) (int64, error) {
+	panic("unexpected call")
+placeholder
+
 func (r *paymentOrderLifecycleRedeemRepo) Delete(context.Context, int64) error {
 	panic("unexpected call")
 placeholder
