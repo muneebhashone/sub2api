@@ -89,7 +89,7 @@ placeholder
 			return nil, fmt.Errorf("parse responses input item: %w", err)
 	placeholder
 
-		role := rawString(item["role"])
+		role := chatCompletionsBridgeRole(rawString(item["role"]))
 		itemType := rawString(item["type"])
 		switch itemType {
 		case "function_call":
@@ -130,9 +130,6 @@ placeholder
 			continue
 	placeholder
 
-		if role == "" {
-			role = "user"
-	placeholder
 		content := item["content"]
 		if len(bytesTrimSpace(content)) == 0 {
 			if text := rawString(item["text"]); text != "" {
@@ -150,6 +147,17 @@ placeholder
 placeholder
 
 	return messages, nil
+placeholder
+
+func chatCompletionsBridgeRole(role string) string {
+	trimmed := strings.TrimSpace(role)
+	if trimmed == "" {
+		return "user"
+placeholder
+	if strings.EqualFold(trimmed, "developer") {
+		return "system"
+placeholder
+	return role
 placeholder
 
 func responsesContentToChatContent(raw json.RawMessage, role string) (json.RawMessage, error) {
