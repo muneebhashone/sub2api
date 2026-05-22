@@ -12,10 +12,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
-
-	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
+	"github.com/tidwall/gjson"
 )
 
 // --- shared test helpers ---
@@ -332,4 +334,146 @@ placeholder
 	require.Zero(t, repo.rateLimitedID)
 	require.Zero(t, repo.clearedErrorID)
 	require.Nil(t, account.RateLimitResetAt)
+placeholder
+
+func TestAccountTestService_OpenAIAPIKeyResponsesUnsupportedUsesChatCompletionsPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx, recorder := newTestContext()
+
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"pong"placeholder,"finish_reason":nullplaceholder]placeholder`,
+		"",
+		`data: {"id":"chatcmpl_test","object":"chat.completion.chunk","choices":[{"index":0,"delta":{placeholder,"finish_reason":"stop"placeholder]placeholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholderplaceholderplaceholder,
+placeholder
+	account := &Account{
+		ID:          91,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": "https://compat-upstream.example/v1",
+	placeholder,
+		Extra: map[string]any{openai_compat.ExtraKeyResponsesSupported: falseplaceholder,
+placeholder
+
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "hello", "")
+placeholder
+	require.NotNil(t, upstream.lastReq)
+	require.Equal(t, "https://compat-upstream.example/v1/chat/completions", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer sk-test", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "text/event-stream", upstream.lastReq.Header.Get("Accept"))
+	require.Equal(t, "gpt-5.4", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.True(t, gjson.GetBytes(upstream.lastBody, "stream").Bool())
+	require.Equal(t, "hello", gjson.GetBytes(upstream.lastBody, "messages.0.content").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input").Exists())
+	body := recorder.Body.String()
+	require.Contains(t, body, "pong")
+	require.Contains(t, body, "已通过 /v1/chat/completions 验证")
+	require.Contains(t, body, `"success":true`)
+	require.NotContains(t, body, "当前测试接口仅支持 Responses API 路径")
+placeholder
+
+func TestAccountTestService_OpenAIChatCompletionsPathReturns4xx(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx, recorder := newTestContext()
+
+	upstream := &httpUpstreamRecorder{resp: newJSONResponse(http.StatusBadRequest, `{"error":{"message":"bad request"placeholderplaceholder`)placeholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholderplaceholderplaceholder,
+placeholder
+	account := &Account{
+		ID:          92,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": "https://compat-upstream.example",
+	placeholder,
+		Extra: map[string]any{openai_compat.ExtraKeyResponsesSupported: falseplaceholder,
+placeholder
+
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
+placeholder
+	require.Equal(t, "https://compat-upstream.example/v1/chat/completions", upstream.lastReq.URL.String())
+	require.Contains(t, err.Error(), "Chat Completions API (/v1/chat/completions) returned 400")
+	require.Contains(t, recorder.Body.String(), "/v1/chat/completions")
+	require.NotContains(t, recorder.Body.String(), `"success":true`)
+placeholder
+
+func TestAccountTestService_OpenAIChatCompletionsPathTimeout(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx, recorder := newTestContext()
+
+	upstream := &httpUpstreamRecorder{err: context.DeadlineExceededplaceholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholderplaceholderplaceholder,
+placeholder
+	account := &Account{
+		ID:          93,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": "https://compat-upstream.example",
+	placeholder,
+		Extra: map[string]any{openai_compat.ExtraKeyResponsesSupported: falseplaceholder,
+placeholder
+
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
+placeholder
+	require.Equal(t, "https://compat-upstream.example/v1/chat/completions", upstream.lastReq.URL.String())
+	require.Contains(t, err.Error(), "Chat Completions API (/v1/chat/completions) request failed")
+	require.Contains(t, err.Error(), context.DeadlineExceeded.Error())
+	require.Contains(t, recorder.Body.String(), "/v1/chat/completions")
+	require.NotContains(t, recorder.Body.String(), `"success":true`)
+placeholder
+
+func TestAccountTestService_OpenAIChatCompletionsPathRejectsNonJSONStream(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx, recorder := newTestContext()
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: not-json\n\n")),
+placeholderplaceholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholderplaceholderplaceholder,
+placeholder
+	account := &Account{
+		ID:          94,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": "https://compat-upstream.example",
+	placeholder,
+		Extra: map[string]any{openai_compat.ExtraKeyResponsesSupported: falseplaceholder,
+placeholder
+
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
+placeholder
+	require.Equal(t, "https://compat-upstream.example/v1/chat/completions", upstream.lastReq.URL.String())
+	require.Contains(t, err.Error(), "Invalid Chat Completions response from /v1/chat/completions")
+	require.Contains(t, recorder.Body.String(), "/v1/chat/completions")
+	require.NotContains(t, recorder.Body.String(), `"success":true`)
 placeholder
