@@ -318,6 +318,7 @@ import {
 placeholder from '@/api/auth'
 import { buildAuthErrorMessage placeholder from '@/utils/authError'
 import {
+  formatRegistrationEmailSuffixWhitelistForMessage,
   isRegistrationEmailSuffixAllowed,
   normalizeRegistrationEmailSuffixWhitelist
 placeholder from '@/utils/registrationEmailPolicy'
@@ -739,7 +740,10 @@ function buildEmailSuffixNotAllowedMessage(): string {
   placeholder
   const separator = String(locale.value || '').toLowerCase().startsWith('zh') ? '、' : ', '
   return t('auth.emailSuffixNotAllowedWithAllowed', {
-    suffixes: normalizedWhitelist.join(separator)
+    suffixes: formatRegistrationEmailSuffixWhitelistForMessage(normalizedWhitelist, {
+      separator,
+      more: (count) => t('auth.emailSuffixAllowedMore', { count placeholder)
+    placeholder)
   placeholder)
 placeholder
 

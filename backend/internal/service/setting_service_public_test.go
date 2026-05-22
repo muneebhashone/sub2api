@@ -53,14 +53,14 @@ func TestSettingService_GetPublicSettings_ExposesRegistrationEmailSuffixWhitelis
 		values: map[string]string{
 			SettingKeyRegistrationEnabled:              "true",
 			SettingKeyEmailVerifyEnabled:               "true",
-			SettingKeyRegistrationEmailSuffixWhitelist: `["@EXAMPLE.com"," @foo.bar ","@invalid_domain",""]`,
+			SettingKeyRegistrationEmailSuffixWhitelist: `["@EXAMPLE.com"," @foo.bar ","*.EDU.CN","@invalid_domain",""]`,
 	placeholder,
 placeholder
 	svc := NewSettingService(repo, &config.Config{placeholder)
 
 	settings, err := svc.GetPublicSettings(context.Background())
 placeholder
-	require.Equal(t, []string{"@example.com", "@foo.bar"placeholder, settings.RegistrationEmailSuffixWhitelist)
+	require.Equal(t, []string{"@example.com", "@foo.bar", "*.edu.cn"placeholder, settings.RegistrationEmailSuffixWhitelist)
 placeholder
 
 func TestSettingService_GetPublicSettings_ExposesTablePreferences(t *testing.T) {

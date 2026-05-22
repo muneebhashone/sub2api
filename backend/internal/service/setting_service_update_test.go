@@ -213,10 +213,10 @@ func TestSettingService_UpdateSettings_RegistrationEmailSuffixWhitelist_Normaliz
 	svc := NewSettingService(repo, &config.Config{placeholder)
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
-		RegistrationEmailSuffixWhitelist: []string{"example.com", "@EXAMPLE.com", " @foo.bar "placeholder,
+		RegistrationEmailSuffixWhitelist: []string{"example.com", "@EXAMPLE.com", " @foo.bar ", "*.EDU.CN"placeholder,
 placeholder)
 placeholder
-	require.Equal(t, `["@example.com","@foo.bar"]`, repo.updates[SettingKeyRegistrationEmailSuffixWhitelist])
+	require.Equal(t, `["@example.com","@foo.bar","*.edu.cn"]`, repo.updates[SettingKeyRegistrationEmailSuffixWhitelist])
 placeholder
 
 func TestSettingService_UpdateSettings_RegistrationEmailSuffixWhitelist_Invalid(t *testing.T) {
