@@ -333,11 +333,15 @@ placeholder
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMapping.MappedModel)
 	placeholder
 		writerSizeBeforeForward := c.Writer.Size()
-		result, err := h.gatewayService.Forward(c.Request.Context(), c, account, forwardBody)
+		result, err := func() (*service.OpenAIForwardResult, error) {
+			defer func() {
+				if accountReleaseFunc != nil {
+					accountReleaseFunc()
+			placeholder
+		placeholder()
+			return h.gatewayService.Forward(c.Request.Context(), c, account, forwardBody)
+	placeholder()
 		forwardDurationMs := time.Since(forwardStart).Milliseconds()
-		if accountReleaseFunc != nil {
-			accountReleaseFunc()
-	placeholder
 		upstreamLatencyMs, _ := getContextInt64(c, service.OpsUpstreamLatencyMsKey)
 		responseLatencyMs := forwardDurationMs
 		if upstreamLatencyMs > 0 && forwardDurationMs > upstreamLatencyMs {
@@ -389,6 +393,10 @@ placeholder
 						return
 				placeholder
 					switchCount++
+					if h.gatewayService.ShouldStopOpenAIOAuth429Failover(account, failoverErr.StatusCode, switchCount) {
+						h.handleFailoverExhausted(c, failoverErr, streamStarted)
+						return
+				placeholder
 					reqLog.Warn("openai.upstream_failover_switching",
 						zap.Int64("account_id", account.ID),
 						zap.Int("upstream_status", failoverErr.StatusCode),
@@ -722,12 +730,16 @@ placeholder
 		if channelMappingMsg.Mapped {
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMappingMsg.MappedModel)
 	placeholder
-		result, err := h.gatewayService.ForwardAsAnthropic(c.Request.Context(), c, account, forwardBody, promptCacheKey, defaultMappedModel)
+		result, err := func() (*service.OpenAIForwardResult, error) {
+			defer func() {
+				if accountReleaseFunc != nil {
+					accountReleaseFunc()
+			placeholder
+		placeholder()
+			return h.gatewayService.ForwardAsAnthropic(c.Request.Context(), c, account, forwardBody, promptCacheKey, defaultMappedModel)
+	placeholder()
 
 		forwardDurationMs := time.Since(forwardStart).Milliseconds()
-		if accountReleaseFunc != nil {
-			accountReleaseFunc()
-	placeholder
 		upstreamLatencyMs, _ := getContextInt64(c, service.OpsUpstreamLatencyMsKey)
 		responseLatencyMs := forwardDurationMs
 		if upstreamLatencyMs > 0 && forwardDurationMs > upstreamLatencyMs {
@@ -775,6 +787,10 @@ placeholder
 						return
 				placeholder
 					switchCount++
+					if h.gatewayService.ShouldStopOpenAIOAuth429Failover(account, failoverErr.StatusCode, switchCount) {
+						h.handleAnthropicFailoverExhausted(c, failoverErr, streamStarted)
+						return
+				placeholder
 					reqLog.Warn("openai_messages.upstream_failover_switching",
 						zap.Int64("account_id", account.ID),
 						zap.Int("upstream_status", failoverErr.StatusCode),

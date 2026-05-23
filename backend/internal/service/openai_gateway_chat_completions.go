@@ -276,9 +276,7 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			if s.rateLimitService != nil {
-				s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
-		placeholder
+			s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,

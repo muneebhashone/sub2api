@@ -80,6 +80,7 @@ type OpenAITokenProvider struct {
 	accountRepo        AccountRepository
 	tokenCache         OpenAITokenCache
 	openAIOAuthService *OpenAIOAuthService
+	runtimeBlocker     AccountRuntimeBlocker
 	metrics            *openAITokenRuntimeMetricsStore
 	refreshAPI         *OAuthRefreshAPI
 	executor           OAuthRefreshExecutor
@@ -109,6 +110,10 @@ placeholder
 // SetRefreshPolicy injects caller-side refresh policy.
 func (p *OpenAITokenProvider) SetRefreshPolicy(policy ProviderRefreshPolicy) {
 	p.refreshPolicy = policy
+placeholder
+
+func (p *OpenAITokenProvider) SetAccountRuntimeBlocker(blocker AccountRuntimeBlocker) {
+	p.runtimeBlocker = blocker
 placeholder
 
 func (p *OpenAITokenProvider) SnapshotRuntimeMetrics() OpenAITokenRuntimeMetrics {
@@ -274,6 +279,9 @@ placeholder
 func (p *OpenAITokenProvider) disableAccountMissingRefreshToken(account *Account, reason string) {
 	if p == nil || p.accountRepo == nil || account == nil {
 		return
+placeholder
+	if p.runtimeBlocker != nil {
+		p.runtimeBlocker.BlockAccountScheduling(account, time.Time{placeholder, "missing_refresh_token")
 placeholder
 	bgCtx := context.Background()
 	if err := p.accountRepo.SetError(bgCtx, account.ID, reason); err != nil {

@@ -179,12 +179,16 @@ placeholder
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMapping.MappedModel)
 	placeholder
 		writerSizeBeforeForward := c.Writer.Size()
-		result, err := h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), c, account, forwardBody, promptCacheKey, "")
+		result, err := func() (*service.OpenAIForwardResult, error) {
+			defer func() {
+				if accountReleaseFunc != nil {
+					accountReleaseFunc()
+			placeholder
+		placeholder()
+			return h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), c, account, forwardBody, promptCacheKey, "")
+	placeholder()
 
 		forwardDurationMs := time.Since(forwardStart).Milliseconds()
-		if accountReleaseFunc != nil {
-			accountReleaseFunc()
-	placeholder
 		upstreamLatencyMs, _ := getContextInt64(c, service.OpsUpstreamLatencyMsKey)
 		responseLatencyMs := forwardDurationMs
 		if upstreamLatencyMs > 0 && forwardDurationMs > upstreamLatencyMs {
@@ -236,6 +240,10 @@ placeholder
 						return
 				placeholder
 					switchCount++
+					if h.gatewayService.ShouldStopOpenAIOAuth429Failover(account, failoverErr.StatusCode, switchCount) {
+						h.handleFailoverExhausted(c, failoverErr, streamStarted)
+						return
+				placeholder
 					reqLog.Warn("openai_chat_completions.upstream_failover_switching",
 						zap.Int64("account_id", account.ID),
 						zap.Int("upstream_status", failoverErr.StatusCode),

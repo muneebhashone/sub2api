@@ -531,6 +531,7 @@ type adminServiceImpl struct {
 	defaultSubAssigner   DefaultSubscriptionAssigner
 	userSubRepo          UserSubscriptionRepository
 	privacyClientFactory PrivacyClientFactory
+	runtimeBlocker       AccountRuntimeBlocker
 placeholder
 
 type userGroupRateBatchReader interface {
@@ -556,6 +557,7 @@ func NewAdminService(
 	defaultSubAssigner DefaultSubscriptionAssigner,
 	userSubRepo UserSubscriptionRepository,
 	privacyClientFactory PrivacyClientFactory,
+	runtimeBlocker AccountRuntimeBlocker,
 ) AdminService {
 	return &adminServiceImpl{
 		userRepo:             userRepo,
@@ -575,6 +577,7 @@ func NewAdminService(
 		defaultSubAssigner:   defaultSubAssigner,
 		userSubRepo:          userSubRepo,
 		privacyClientFactory: privacyClientFactory,
+		runtimeBlocker:       runtimeBlocker,
 placeholder
 placeholder
 
@@ -2790,6 +2793,9 @@ placeholder
 placeholder
 	if err := s.accountRepo.ClearTempUnschedulable(ctx, id); err != nil {
 		return nil, err
+placeholder
+	if s.runtimeBlocker != nil {
+		s.runtimeBlocker.ClearAccountSchedulingBlock(id)
 placeholder
 	return s.accountRepo.GetByID(ctx, id)
 placeholder

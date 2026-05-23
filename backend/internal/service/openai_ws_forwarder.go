@@ -4091,7 +4091,7 @@ placeholder
 	if !isOpenAIWSRateLimitError(codeRaw, errTypeRaw, msgRaw) {
 		return
 placeholder
-	s.rateLimitService.HandleUpstreamError(ctx, account, http.StatusTooManyRequests, headers, responseBody)
+	s.handleOpenAIAccountUpstreamError(ctx, account, http.StatusTooManyRequests, headers, responseBody)
 placeholder
 
 func classifyOpenAIWSErrorEventFromRaw(codeRaw, errTypeRaw, msgRaw string) (string, bool) {

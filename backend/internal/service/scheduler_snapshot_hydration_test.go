@@ -114,6 +114,31 @@ placeholder
 placeholder
 placeholder
 
+func TestOpenAINewAcquiredSelectionResult_ReleasesSlotWhenHydrationFails(t *testing.T) {
+	cache := &snapshotHydrationCache{
+		accounts: map[int64]*Account{placeholder,
+placeholder
+	schedulerSnapshot := NewSchedulerSnapshotService(cache, nil, stubOpenAIAccountRepo{placeholder, nil, nil)
+	svc := &OpenAIGatewayService{
+		schedulerSnapshot: schedulerSnapshot,
+placeholder
+	releaseCalls := 0
+
+	selection, err := svc.newAcquiredSelectionResult(context.Background(), &Account{ID: 1001placeholder, func() {
+		releaseCalls++
+placeholder)
+
+	if err == nil {
+		t.Fatalf("expected hydration error")
+placeholder
+	if selection != nil {
+		t.Fatalf("expected nil selection on hydration error")
+placeholder
+	if releaseCalls != 1 {
+		t.Fatalf("expected release to be called once, got %d", releaseCalls)
+placeholder
+placeholder
+
 func TestGatewaySelectAccountWithLoadAwareness_HydratesSelectedAccountFromSchedulerSnapshot(t *testing.T) {
 	cache := &snapshotHydrationCache{
 		snapshot: []*Account{
