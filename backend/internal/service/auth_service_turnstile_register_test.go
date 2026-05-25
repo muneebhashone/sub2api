@@ -55,6 +55,7 @@ placeholder
 		nil, // promoService
 		nil, // defaultSubAssigner
 		nil, // affiliateService
+		nil, // userPlatformQuotaRepo
 	)
 placeholder
 

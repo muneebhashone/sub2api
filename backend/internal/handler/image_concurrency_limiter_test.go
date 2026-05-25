@@ -206,7 +206,7 @@ placeholder)
 
 	h := &OpenAIGatewayHandler{
 		gatewayService:      &service.OpenAIGatewayService{placeholder,
-		billingCacheService: service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, &config.Config{RunMode: config.RunModeSimpleplaceholder),
+		billingCacheService: service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, &config.Config{RunMode: config.RunModeSimpleplaceholder, nil),
 		apiKeyService:       &service.APIKeyService{placeholder,
 		concurrencyHelper:   &ConcurrencyHelper{concurrencyService: service.NewConcurrencyService(&helperConcurrencyCacheStub{userSeq: []bool{trueplaceholderplaceholder)placeholder,
 		cfg: &config.Config{Gateway: config.GatewayConfig{ImageConcurrency: config.ImageConcurrencyConfig{

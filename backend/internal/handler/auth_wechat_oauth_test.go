@@ -1400,6 +1400,7 @@ placeholder
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	return &AuthHandler{

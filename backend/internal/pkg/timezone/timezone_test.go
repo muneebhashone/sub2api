@@ -135,3 +135,29 @@ placeholder
 	_ = Now()
 	_ = StartOfDay(Now())
 placeholder
+
+func TestStartOfWeek_Boundaries(t *testing.T) {
+	if err := Init("Asia/Shanghai"); err != nil {
+		t.Fatalf("Init: %v", err)
+placeholder
+	t.Cleanup(func() { _ = Init("UTC") placeholder)
+
+	loc := Location()
+	wantMon := time.Date(2026, 5, 18, 0, 0, 0, 0, loc) // 2026-05-18 是周一
+
+	cases := []struct {
+		name string
+		in   time.Time
+placeholder{
+		{"friday", time.Date(2026, 5, 22, 14, 30, 0, 0, loc)placeholder,
+		{"sunday", time.Date(2026, 5, 24, 10, 0, 0, 0, loc)placeholder,
+		{"monday-self", time.Date(2026, 5, 18, 9, 15, 30, 0, loc)placeholder,
+placeholder
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := StartOfWeek(c.in); !got.Equal(wantMon) {
+				t.Errorf("StartOfWeek(%v) = %v, want %v", c.in, got, wantMon)
+		placeholder
+	placeholder)
+placeholder
+placeholder
