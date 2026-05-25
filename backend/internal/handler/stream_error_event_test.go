@@ -186,7 +186,7 @@ func TestInboundIsResponses_CoversAllRoutes(t *testing.T) {
 placeholder{
 		{"/v1/responses", trueplaceholder,
 		{"/v1/responses/compact", trueplaceholder,
-		{"/responses", trueplaceholder,                       // <-- 用户 16 实际走这条
+		{"/responses", trueplaceholder, // <-- 用户 16 实际走这条
 		{"/responses/compact", trueplaceholder,
 		{"/backend-api/codex/responses", trueplaceholder,
 		{"/backend-api/codex/responses/compact", trueplaceholder,
