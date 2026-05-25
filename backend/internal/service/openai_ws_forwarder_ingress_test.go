@@ -696,6 +696,36 @@ placeholder)
 placeholder)
 placeholder
 
+func TestOpenAIWSRawPayloadHasToolCallOutput(t *testing.T) {
+	t.Parallel()
+
+	for _, typ := range []string{
+		"function_call_output",
+		"tool_search_output",
+		"custom_tool_call_output",
+		"mcp_tool_call_output",
+placeholder {
+		typ := typ
+		t.Run(typ, func(t *testing.T) {
+			t.Parallel()
+			payload := []byte(`{"input":[{"type":"` + typ + `","call_id":"call_1","output":"ok"placeholder]placeholder`)
+			require.True(t, openAIWSRawPayloadHasToolCallOutput(payload))
+	placeholder)
+placeholder
+
+	t.Run("object_input", func(t *testing.T) {
+		t.Parallel()
+		payload := []byte(`{"input":{"type":"tool_search_output","call_id":"call_1","output":"ok"placeholderplaceholder`)
+		require.True(t, openAIWSRawPayloadHasToolCallOutput(payload))
+placeholder)
+
+	t.Run("non_tool_output", func(t *testing.T) {
+		t.Parallel()
+		payload := []byte(`{"input":[{"type":"input_text","text":"hello"placeholder]placeholder`)
+		require.False(t, openAIWSRawPayloadHasToolCallOutput(payload))
+placeholder)
+placeholder
+
 func TestSetOpenAIWSPayloadInputSequence(t *testing.T) {
 	t.Parallel()
 
