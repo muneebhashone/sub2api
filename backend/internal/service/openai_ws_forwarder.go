@@ -1548,9 +1548,31 @@ placeholder
 
 func openAIWSRawItemsHasFunctionCallOutput(items []json.RawMessage) bool {
 	for _, item := range items {
-		if gjson.GetBytes(item, "type").String() == "function_call_output" {
+		if isCodexToolCallOutputItemType(gjson.GetBytes(item, "type").String()) {
 			return true
 	placeholder
+placeholder
+	return false
+placeholder
+
+func openAIWSRawPayloadHasToolCallOutput(payload []byte) bool {
+	if len(payload) == 0 {
+		return false
+placeholder
+	input := gjson.GetBytes(payload, "input")
+	if !input.Exists() {
+		return false
+placeholder
+	if input.IsArray() {
+		for _, item := range input.Array() {
+			if isCodexToolCallOutputItemType(item.Get("type").String()) {
+				return true
+		placeholder
+	placeholder
+		return false
+placeholder
+	if input.Type == gjson.JSON {
+		return isCodexToolCallOutputItemType(input.Get("type").String())
 placeholder
 	return false
 placeholder
@@ -2855,7 +2877,7 @@ placeholder
 		turnPreviousResponseIDKind := ClassifyOpenAIPreviousResponseIDKind(turnPreviousResponseID)
 		turnPromptCacheKey := openAIWSPayloadStringFromRaw(payload, "prompt_cache_key")
 		turnStoreDisabled := s.isOpenAIWSStoreDisabledInRequestRaw(payload, account)
-		turnHasFunctionCallOutput := gjson.GetBytes(payload, `input.#(type=="function_call_output")`).Exists()
+		turnHasFunctionCallOutput := openAIWSRawPayloadHasToolCallOutput(payload)
 		eventCount := 0
 		tokenEventCount := 0
 		terminalEventCount := 0
@@ -3131,7 +3153,7 @@ placeholder
 	currentTurnReplayInputExists := false
 	skipBeforeTurn := false
 	hasCurrentOrReplayFunctionCallOutput := func(payload []byte) bool {
-		if gjson.GetBytes(payload, `input.#(type=="function_call_output")`).Exists() {
+		if openAIWSRawPayloadHasToolCallOutput(payload) {
 			return true
 	placeholder
 		return currentTurnReplayInputExists && openAIWSRawItemsHasFunctionCallOutput(currentTurnReplayInput)
@@ -3256,7 +3278,7 @@ placeholder
 		currentPreviousResponseID := openAIWSPayloadStringFromRaw(currentPayload, "previous_response_id")
 		expectedPrev := strings.TrimSpace(lastTurnResponseID)
 		toolSignals := ToolContinuationSignals{
-			HasFunctionCallOutput: gjson.GetBytes(currentPayload, `input.#(type=="function_call_output")`).Exists(),
+			HasFunctionCallOutput: openAIWSRawPayloadHasToolCallOutput(currentPayload),
 	placeholder
 		if toolSignals.HasFunctionCallOutput {
 			var currentReqBody map[string]any
