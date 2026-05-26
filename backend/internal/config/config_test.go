@@ -163,6 +163,41 @@ placeholder
 placeholder
 placeholder
 
+func TestLoadDefaultOpenAIHTTP2Enabled(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+placeholder
+	require.True(t, cfg.Gateway.OpenAIHTTP2.Enabled)
+	require.True(t, cfg.Gateway.OpenAIHTTP2.AllowProxyFallbackToHTTP1)
+placeholder
+
+func TestLoadOpenAIHTTP2DisabledFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_OPENAI_HTTP2_ENABLED", "false")
+
+	cfg, err := Load()
+placeholder
+	require.False(t, cfg.Gateway.OpenAIHTTP2.Enabled)
+placeholder
+
+func TestLoadDefaultOpenAIResponseHeaderTimeoutUnlimited(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+placeholder
+	require.Equal(t, 0, cfg.Gateway.OpenAIResponseHeaderTimeout)
+placeholder
+
+func TestLoadOpenAIResponseHeaderTimeoutFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_OPENAI_RESPONSE_HEADER_TIMEOUT", "1800")
+
+	cfg, err := Load()
+placeholder
+	require.Equal(t, 1800, cfg.Gateway.OpenAIResponseHeaderTimeout)
+placeholder
+
 func TestLoadOpenAIWSStickyTTLCompatibility(t *testing.T) {
 	resetViperWithJWTSecret(t)
 	t.Setenv("GATEWAY_OPENAI_WS_STICKY_RESPONSE_ID_TTL_SECONDS", "0")
@@ -1221,6 +1256,16 @@ placeholder{
 			wantErr: "gateway.max_body_size",
 	placeholder,
 		{
+			name:    "gateway response header timeout",
+			mutate:  func(c *Config) { c.Gateway.ResponseHeaderTimeout = -1 placeholder,
+			wantErr: "gateway.response_header_timeout",
+	placeholder,
+		{
+			name:    "gateway openai response header timeout",
+			mutate:  func(c *Config) { c.Gateway.OpenAIResponseHeaderTimeout = -1 placeholder,
+			wantErr: "gateway.openai_response_header_timeout",
+	placeholder,
+		{
 			name:    "gateway max idle conns",
 			mutate:  func(c *Config) { c.Gateway.MaxIdleConns = 0 placeholder,
 			wantErr: "gateway.max_idle_conns",
@@ -1274,6 +1319,21 @@ placeholder{
 			name:    "gateway openai ws apikey max conns factor",
 			mutate:  func(c *Config) { c.Gateway.OpenAIWS.APIKeyMaxConnsFactor = 0 placeholder,
 			wantErr: "gateway.openai_ws.apikey_max_conns_factor",
+	placeholder,
+		{
+			name:    "gateway openai http2 fallback threshold",
+			mutate:  func(c *Config) { c.Gateway.OpenAIHTTP2.FallbackErrorThreshold = -1 placeholder,
+			wantErr: "gateway.openai_http2.fallback_error_threshold",
+	placeholder,
+		{
+			name:    "gateway openai http2 fallback window",
+			mutate:  func(c *Config) { c.Gateway.OpenAIHTTP2.FallbackWindowSeconds = -1 placeholder,
+			wantErr: "gateway.openai_http2.fallback_window_seconds",
+	placeholder,
+		{
+			name:    "gateway openai http2 fallback ttl",
+			mutate:  func(c *Config) { c.Gateway.OpenAIHTTP2.FallbackTTLSeconds = -1 placeholder,
+			wantErr: "gateway.openai_http2.fallback_ttl_seconds",
 	placeholder,
 		{
 			name:    "gateway stream data interval range",
