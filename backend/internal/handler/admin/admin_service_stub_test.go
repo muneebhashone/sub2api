@@ -349,6 +349,10 @@ placeholder
 	return &account, nil
 placeholder
 
+func (s *stubAdminService) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
+	return nil
+placeholder
+
 func (s *stubAdminService) DeleteAccount(ctx context.Context, id int64) error {
 	return nil
 placeholder
