@@ -95,11 +95,13 @@ type UserEdges struct {
 	AuthIdentities []*AuthIdentity `json:"auth_identities,omitempty"`
 	// PendingAuthSessions holds the value of the pending_auth_sessions edge.
 	PendingAuthSessions []*PendingAuthSession `json:"pending_auth_sessions,omitempty"`
+	// PlatformQuotas holds the value of the platform_quotas edge.
+	PlatformQuotas []*UserPlatformQuota `json:"platform_quotas,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [13]bool
+	loadedTypes [14]bool
 placeholder
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -210,10 +212,19 @@ placeholder
 	return nil, &NotLoadedError{edge: "pending_auth_sessions"placeholder
 placeholder
 
+// PlatformQuotasOrErr returns the PlatformQuotas value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PlatformQuotasOrErr() ([]*UserPlatformQuota, error) {
+	if e.loadedTypes[12] {
+		return e.PlatformQuotas, nil
+placeholder
+	return nil, &NotLoadedError{edge: "platform_quotas"placeholder
+placeholder
+
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[12] {
+	if e.loadedTypes[13] {
 		return e.UserAllowedGroups, nil
 placeholder
 	return nil, &NotLoadedError{edge: "user_allowed_groups"placeholder
@@ -470,6 +481,11 @@ placeholder
 // QueryPendingAuthSessions queries the "pending_auth_sessions" edge of the User entity.
 func (_m *User) QueryPendingAuthSessions() *PendingAuthSessionQuery {
 	return NewUserClient(_m.config).QueryPendingAuthSessions(_m)
+placeholder
+
+// QueryPlatformQuotas queries the "platform_quotas" edge of the User entity.
+func (_m *User) QueryPlatformQuotas() *UserPlatformQuotaQuery {
+	return NewUserClient(_m.config).QueryPlatformQuotas(_m)
 placeholder
 
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.

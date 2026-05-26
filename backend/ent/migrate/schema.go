@@ -1612,6 +1612,53 @@ placeholder
 		placeholder,
 	placeholder,
 placeholder
+	// UserPlatformQuotasColumns holds the columns for the "user_platform_quotas" table.
+	UserPlatformQuotasColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "platform", Type: field.TypeString, Size: 32placeholder,
+		{Name: "daily_limit_usd", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "weekly_limit_usd", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "monthly_limit_usd", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "daily_usage_usd", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "weekly_usage_usd", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "monthly_usage_usd", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "daily_window_start", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "weekly_window_start", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "monthly_window_start", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+placeholder
+	// UserPlatformQuotasTable holds the schema information for the "user_platform_quotas" table.
+	UserPlatformQuotasTable = &schema.Table{
+		Name:       "user_platform_quotas",
+		Columns:    UserPlatformQuotasColumns,
+		PrimaryKey: []*schema.Column{UserPlatformQuotasColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "user_platform_quotas_users_platform_quotas",
+				Columns:    []*schema.Column{UserPlatformQuotasColumns[14]placeholder,
+				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "userplatformquota_user_id_platform",
+				Unique:  true,
+				Columns: []*schema.Column{UserPlatformQuotasColumns[14], UserPlatformQuotasColumns[4]placeholder,
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+			placeholder,
+		placeholder,
+			{
+				Name:    "userplatformquota_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{UserPlatformQuotasColumns[14]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// UserSubscriptionsColumns holds the columns for the "user_subscriptions" table.
 	UserSubscriptionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -1736,6 +1783,7 @@ placeholder
 		UserAllowedGroupsTable,
 		UserAttributeDefinitionsTable,
 		UserAttributeValuesTable,
+		UserPlatformQuotasTable,
 		UserSubscriptionsTable,
 placeholder
 )
@@ -1868,6 +1916,10 @@ placeholder
 	UserAttributeValuesTable.ForeignKeys[1].RefTable = UserAttributeDefinitionsTable
 	UserAttributeValuesTable.Annotation = &entsql.Annotation{
 		Table: "user_attribute_values",
+placeholder
+	UserPlatformQuotasTable.ForeignKeys[0].RefTable = UsersTable
+	UserPlatformQuotasTable.Annotation = &entsql.Annotation{
+		Table: "user_platform_quotas",
 placeholder
 	UserSubscriptionsTable.ForeignKeys[0].RefTable = GroupsTable
 	UserSubscriptionsTable.ForeignKeys[1].RefTable = UsersTable

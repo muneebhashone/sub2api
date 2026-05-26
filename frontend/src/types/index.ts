@@ -1854,3 +1854,11 @@ placeholder
 
 // Payment types
 export type { SubscriptionPlan, PaymentOrder, CheckoutInfoResponse placeholder from './payment'
+
+export type {
+  PlatformQuotaItem,
+  PlatformQuotaUpdateItem,
+  PlatformQuotaPlatform,
+  PlatformQuotaWindow,
+  PlatformQuotasResponse,
+placeholder from '@/api/admin/users'

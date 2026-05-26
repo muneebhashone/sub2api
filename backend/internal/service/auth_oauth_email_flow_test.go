@@ -112,6 +112,7 @@ func newOAuthEmailFlowAuthService(
 	refreshTokenCache RefreshTokenCache,
 	settings map[string]string,
 	emailCache EmailCache,
+	quotaRepo UserPlatformQuotaRepository, // 新增
 ) *AuthService {
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
@@ -142,6 +143,7 @@ placeholder
 		nil,
 		nil,
 		nil,
+		quotaRepo, // 替换原来的 nil
 	)
 placeholder
 
@@ -175,6 +177,7 @@ placeholder
 			SettingKeyEmailVerifyEnabled:    "true",
 	placeholder,
 		emailCache,
+		nil,
 	)
 
 	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
@@ -215,6 +218,7 @@ placeholder
 			SettingKeyEmailVerifyEnabled:  "true",
 	placeholder,
 		emailCache,
+		nil,
 	)
 
 	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
@@ -274,6 +278,7 @@ placeholder
 					SettingKeyEmailVerifyEnabled:  "true",
 			placeholder,
 				emailCache,
+				nil,
 			)
 
 			tokenPair, user, err := authService.RegisterOAuthEmailAccount(
@@ -313,6 +318,7 @@ placeholder
 			SettingKeyEmailVerifyEnabled:  "true",
 	placeholder,
 		emailCache,
+		nil,
 	)
 
 	tokenPair, user, err := authService.RegisterOAuthEmailAccount(
@@ -360,6 +366,7 @@ placeholder
 			SettingKeyInvitationCodeEnabled: "true",
 	placeholder,
 		&emailCacheStub{placeholder,
+		nil,
 	)
 
 	err := authService.RollbackOAuthEmailAccountCreation(context.Background(), 42, "INVITE123")
@@ -382,10 +389,62 @@ func TestRollbackOAuthEmailAccountCreationPropagatesDeleteError(t *testing.T) {
 			SettingKeyRegistrationEnabled: "true",
 	placeholder,
 		&emailCacheStub{placeholder,
+		nil,
 	)
 
 	err := authService.RollbackOAuthEmailAccountCreation(context.Background(), 42, "")
 
 placeholder
 	require.Contains(t, err.Error(), "delete created oauth user")
+placeholder
+
+func TestFinalizeOAuthEmailAccount_SnapshotsPlatformQuotaDefaults(t *testing.T) {
+	userRepo := &userRepoStub{nextID: 99placeholder
+	quotaRepo := &userPlatformQuotaRepoStub{placeholder
+
+	authService := newOAuthEmailFlowAuthService(
+		userRepo,
+		nil,
+		&refreshTokenCacheStub{placeholder,
+		map[string]string{
+			SettingKeyRegistrationEnabled:   "true",
+			SettingKeyEmailVerifyEnabled:    "true",
+			SettingKeyDefaultPlatformQuotas: `{"anthropic": {"daily": 5.5placeholderplaceholder`,
+	placeholder,
+		&emailCacheStub{placeholder,
+		quotaRepo,
+	)
+
+	user := &User{
+		ID:           99,
+		Email:        "newuser@example.com",
+		Role:         RoleUser,
+		Status:       StatusActive,
+		SignupSource: "oidc",
+placeholder
+
+	err := authService.FinalizeOAuthEmailAccount(
+		context.Background(),
+		user,
+		"",
+		"oidc",
+		"",
+	)
+
+placeholder
+
+	require.Len(t, quotaRepo.bulkInsertCalls, 1, "snapshotPlatformQuotaDefaults must call BulkInsertInitial once on successful OAuth signup")
+
+	records := quotaRepo.bulkInsertCalls[0]
+	var anthropicRecord *UserPlatformQuotaRecord
+	for i := range records {
+		if records[i].Platform == "anthropic" {
+			anthropicRecord = &records[i]
+			break
+	placeholder
+placeholder
+	require.NotNil(t, anthropicRecord, "expected anthropic platform record")
+	require.Equal(t, int64(99), anthropicRecord.UserID)
+	require.NotNil(t, anthropicRecord.DailyLimitUSD)
+	require.InDelta(t, 5.5, *anthropicRecord.DailyLimitUSD, 0.0001)
 placeholder

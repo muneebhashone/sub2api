@@ -137,7 +137,7 @@ placeholder
 		values: settings,
 placeholder, cfg)
 
-	svc := service.NewAuthService(client, repo, nil, nil, cfg, settingSvc, nil, nil, nil, nil, defaultSubAssigner, nil)
+	svc := service.NewAuthService(client, repo, nil, nil, cfg, settingSvc, nil, nil, nil, nil, defaultSubAssigner, nil, nil)
 	return svc, repo, client
 placeholder
 

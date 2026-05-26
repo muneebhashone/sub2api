@@ -15,7 +15,8 @@ import type {
   NotifyEmailEntry,
   UserAuthProvider,
   UserAffiliateDetail,
-  AffiliateTransferResponse
+  AffiliateTransferResponse,
+  PlatformQuotasResponse,
 placeholder from '@/types'
 
 /**
@@ -185,6 +186,14 @@ export async function transferAffiliateQuota(): Promise<AffiliateTransferRespons
   return data
 placeholder
 
+/**
+ * 获取当前用户的平台限额 + 用量。
+ */
+export async function getMyPlatformQuotas(): Promise<PlatformQuotasResponse> {
+  const { data placeholder = await apiClient.get<PlatformQuotasResponse>('/user/platform-quotas')
+  return data
+placeholder
+
 export const userAPI = {
   getProfile,
   updateProfile,
@@ -199,7 +208,8 @@ export const userAPI = {
   buildOAuthBindingStartURL,
   startOAuthBinding,
   getAffiliateDetail,
-  transferAffiliateQuota
+  transferAffiliateQuota,
+  getMyPlatformQuotas,
 placeholder
 
 export default userAPI
