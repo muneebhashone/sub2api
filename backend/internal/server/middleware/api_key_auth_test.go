@@ -317,6 +317,7 @@ placeholder
 		group      *service.Group
 		wantStatus int
 		wantCode   string
+		wantMarked bool
 placeholder{
 		{
 			name: "active group passes",
@@ -340,6 +341,7 @@ placeholder{
 		placeholder,
 			wantStatus: http.StatusForbidden,
 			wantCode:   "GROUP_DISABLED",
+			wantMarked: true,
 	placeholder,
 		{
 			name: "deleted status group is forbidden",
@@ -352,12 +354,14 @@ placeholder{
 		placeholder,
 			wantStatus: http.StatusForbidden,
 			wantCode:   "GROUP_DELETED",
+			wantMarked: true,
 	placeholder,
 		{
 			name:       "missing group edge is forbidden",
 			group:      nil,
 			wantStatus: http.StatusForbidden,
 			wantCode:   "GROUP_DELETED",
+			wantMarked: true,
 	placeholder,
 placeholder
 
@@ -383,7 +387,20 @@ placeholder
 		placeholder
 			cfg := &config.Config{RunMode: config.RunModeStandardplaceholder
 			apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, nil, nil, nil, cfg)
-			router := newAuthTestRouter(apiKeyService, nil, cfg)
+			router := gin.New()
+			var markedBusinessLimited bool
+			var businessLimitedReason string
+			router.Use(func(c *gin.Context) {
+				c.Next()
+				markedBusinessLimited = service.HasOpsClientBusinessLimited(c)
+				if v, ok := c.Get(service.OpsClientBusinessLimitedReasonKey); ok {
+					businessLimitedReason, _ = v.(string)
+			placeholder
+		placeholder)
+			router.Use(gin.HandlerFunc(NewAPIKeyAuthMiddleware(apiKeyService, nil, cfg)))
+			router.GET("/t", func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"ok": trueplaceholder)
+		placeholder)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/t", nil)
@@ -394,8 +411,55 @@ placeholder
 			if tt.wantCode != "" {
 				require.Contains(t, w.Body.String(), tt.wantCode)
 		placeholder
+			require.Equal(t, tt.wantMarked, markedBusinessLimited)
+			if tt.wantMarked {
+				require.Equal(t, service.OpsClientBusinessLimitedReasonAPIKeyGroupUnavailable, businessLimitedReason)
+		placeholder
 	placeholder)
 placeholder
+placeholder
+
+func TestRequireGroupAssignmentMarksUngroupedKeyBusinessLimited(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	settingService := service.NewSettingService(fakeSettingRepo{
+		values: map[string]string{
+			service.SettingKeyAllowUngroupedKeyScheduling: "false",
+	placeholder,
+placeholder, &config.Config{placeholder)
+	apiKey := &service.APIKey{
+		ID:     100,
+		Key:    "ungrouped-key",
+		Status: service.StatusActive,
+placeholder
+
+	router := gin.New()
+	var markedBusinessLimited bool
+	var businessLimitedReason string
+	router.Use(func(c *gin.Context) {
+		c.Next()
+		markedBusinessLimited = service.HasOpsClientBusinessLimited(c)
+		if v, ok := c.Get(service.OpsClientBusinessLimitedReasonKey); ok {
+			businessLimitedReason, _ = v.(string)
+	placeholder
+placeholder)
+	router.Use(func(c *gin.Context) {
+		c.Set(string(ContextKeyAPIKey), apiKey)
+		c.Next()
+placeholder)
+	router.Use(RequireGroupAssignment(settingService, AnthropicErrorWriter))
+	router.GET("/t", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": trueplaceholder)
+placeholder)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/t", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Contains(t, w.Body.String(), "not assigned to any group")
+	require.True(t, markedBusinessLimited)
+	require.Equal(t, service.OpsClientBusinessLimitedReasonAPIKeyGroupUnassigned, businessLimitedReason)
 placeholder
 
 func TestAPIKeyAuthIPRestrictionDoesNotTrustForwardedClientIPByDefault(t *testing.T) {
@@ -769,6 +833,41 @@ type stubUserSubscriptionRepo struct {
 	resetDaily     func(ctx context.Context, id int64, start time.Time) error
 	resetWeekly    func(ctx context.Context, id int64, start time.Time) error
 	resetMonthly   func(ctx context.Context, id int64, start time.Time) error
+placeholder
+
+type fakeSettingRepo struct {
+	values map[string]string
+placeholder
+
+func (r fakeSettingRepo) Get(ctx context.Context, key string) (*service.Setting, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (r fakeSettingRepo) GetValue(ctx context.Context, key string) (string, error) {
+	if v, ok := r.values[key]; ok {
+		return v, nil
+placeholder
+	return "", service.ErrSettingNotFound
+placeholder
+
+func (r fakeSettingRepo) Set(ctx context.Context, key, value string) error {
+	return errors.New("not implemented")
+placeholder
+
+func (r fakeSettingRepo) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (r fakeSettingRepo) SetMultiple(ctx context.Context, settings map[string]string) error {
+	return errors.New("not implemented")
+placeholder
+
+func (r fakeSettingRepo) GetAll(ctx context.Context) (map[string]string, error) {
+	return nil, errors.New("not implemented")
+placeholder
+
+func (r fakeSettingRepo) Delete(ctx context.Context, key string) error {
+	return errors.New("not implemented")
 placeholder
 
 func (r *stubUserSubscriptionRepo) Create(ctx context.Context, sub *service.UserSubscription) error {
