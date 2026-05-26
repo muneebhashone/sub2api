@@ -31,7 +31,7 @@ func isOpenAIAccount(account *Account) bool {
 	return account != nil && account.Platform == PlatformOpenAI
 placeholder
 
-func (s *OpenAIGatewayService) handleOpenAIAccountUpstreamError(ctx context.Context, account *Account, statusCode int, headers http.Header, responseBody []byte) bool {
+func (s *OpenAIGatewayService) handleOpenAIAccountUpstreamError(ctx context.Context, account *Account, statusCode int, headers http.Header, responseBody []byte, requestedModel ...string) bool {
 	stateCtx, cancel := openAIAccountStateContext(ctx)
 	defer cancel()
 
@@ -40,6 +40,9 @@ func (s *OpenAIGatewayService) handleOpenAIAccountUpstreamError(ctx context.Cont
 placeholder
 	if s == nil || account == nil || s.rateLimitService == nil {
 		return false
+placeholder
+	if len(requestedModel) > 0 && s.rateLimitService.HandleUpstreamModelNotFound(stateCtx, account, requestedModel[0], statusCode, responseBody) {
+		return true
 placeholder
 	shouldDisable := s.rateLimitService.HandleUpstreamError(stateCtx, account, statusCode, headers, responseBody)
 	if shouldDisable {

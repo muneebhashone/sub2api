@@ -521,6 +521,50 @@ placeholder
 	require.Equal(t, int64(32002), account.ID)
 placeholder
 
+func TestOpenAIGatewayService_SelectAccountForModelWithExclusions_ModelRateLimitOnlySkipsThatModel(t *testing.T) {
+	ctx := context.Background()
+	resetAt := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
+	primary := Account{
+		ID:          32101,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+		Priority:    0,
+		Extra: map[string]any{
+			modelRateLimitsKey: map[string]any{
+				"gpt-5.4": map[string]any{
+					"rate_limit_reset_at": resetAt,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	secondary := Account{
+		ID:          32102,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+		Priority:    5,
+placeholder
+	svc := &OpenAIGatewayService{
+		accountRepo: schedulerTestOpenAIAccountRepo{accounts: []Account{primary, secondaryplaceholderplaceholder,
+		cfg:         &config.Config{placeholder,
+placeholder
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, nil, "", "gpt-5.4", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, int64(32102), account.ID)
+
+	account, err = svc.SelectAccountForModelWithExclusions(ctx, nil, "", "gpt-5.3", nil)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, int64(32101), account.ID)
+placeholder
+
 func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyDBRuntimeRecheckSkipsStaleCachedAccount(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(10103)

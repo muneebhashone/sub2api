@@ -1312,8 +1312,8 @@ placeholder
 
 // isOpenAIAccountEligibleForRequest centralises the schedulable / OpenAI / model /
 // compact-support checks used during account selection.
-func isOpenAIAccountEligibleForRequest(account *Account, requestedModel string, requireCompact bool) bool {
-	if account == nil || !account.IsSchedulable() || !account.IsOpenAI() {
+func isOpenAIAccountEligibleForRequest(ctx context.Context, account *Account, requestedModel string, requireCompact bool) bool {
+	if account == nil || !account.IsOpenAI() || !account.IsSchedulableForModelWithContext(ctx, requestedModel) {
 		return false
 placeholder
 	if requestedModel != "" && !account.IsModelSupported(requestedModel) {
@@ -1446,7 +1446,7 @@ placeholder
 
 	// 验证账号是否可用于当前请求
 	// Verify account is usable for current request
-	if !isOpenAIAccountEligibleForRequest(account, requestedModel, false) {
+	if !isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, false) {
 		return nil
 placeholder
 	if s.isOpenAIAccountRuntimeBlocked(account) {
@@ -1646,7 +1646,7 @@ placeholder
 				if clearSticky {
 					_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 			placeholder
-				if !clearSticky && isOpenAIAccountEligibleForRequest(account, requestedModel, false) {
+				if !clearSticky && isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, false) {
 					account = s.recheckSelectedOpenAIAccountFromDB(ctx, account, requestedModel, requireCompact)
 					if account == nil {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
@@ -1924,7 +1924,7 @@ placeholder
 		fresh = current
 placeholder
 
-	if !isOpenAIAccountEligibleForRequest(fresh, requestedModel, requireCompact) {
+	if !isOpenAIAccountEligibleForRequest(ctx, fresh, requestedModel, requireCompact) {
 		return nil
 placeholder
 	if s.isOpenAIAccountRuntimeBlocked(fresh) {
@@ -1938,7 +1938,7 @@ func (s *OpenAIGatewayService) recheckSelectedOpenAIAccountFromDB(ctx context.Co
 		return nil
 placeholder
 	if s.schedulerSnapshot == nil || s.accountRepo == nil {
-		if !isOpenAIAccountEligibleForRequest(account, requestedModel, requireCompact) {
+		if !isOpenAIAccountEligibleForRequest(ctx, account, requestedModel, requireCompact) {
 			return nil
 	placeholder
 		return account
@@ -1948,7 +1948,7 @@ placeholder
 	if err != nil || latest == nil {
 		return nil
 placeholder
-	if !isOpenAIAccountEligibleForRequest(latest, requestedModel, requireCompact) {
+	if !isOpenAIAccountEligibleForRequest(ctx, latest, requestedModel, requireCompact) {
 		return nil
 placeholder
 	if s.isOpenAIAccountRuntimeBlocked(latest) {
@@ -2067,8 +2067,12 @@ placeholder
 	return isOpenAITransientProcessingError(statusCode, upstreamMsg, upstreamBody)
 placeholder
 
-func (s *OpenAIGatewayService) handleFailoverSideEffects(ctx context.Context, resp *http.Response, account *Account) {
+func (s *OpenAIGatewayService) handleFailoverSideEffects(ctx context.Context, resp *http.Response, account *Account, requestedModel ...string) {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if len(requestedModel) > 0 {
+		s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body, requestedModel[0])
+		return
+placeholder
 	s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
 placeholder
 
@@ -2850,14 +2854,14 @@ placeholder
 					Detail:             upstreamDetail,
 			placeholder)
 
-				s.handleFailoverSideEffects(ctx, resp, account)
+				s.handleFailoverSideEffects(ctx, resp, account, upstreamModel)
 				return nil, &UpstreamFailoverError{
 					StatusCode:             resp.StatusCode,
 					ResponseBody:           respBody,
 					RetryableOnSameAccount: account.IsPoolMode() && (isPoolModeRetryableStatus(resp.StatusCode) || isOpenAITransientProcessingError(resp.StatusCode, upstreamMsg, respBody)),
 			placeholder
 		placeholder
-			return s.handleErrorResponse(ctx, resp, c, account, body)
+			return s.handleErrorResponse(ctx, resp, c, account, body, billingModel)
 	placeholder
 		defer func() { _ = resp.Body.Close() placeholder()
 
@@ -3352,7 +3356,8 @@ func (s *OpenAIGatewayService) handleFailoverErrorResponsePassthrough(
 placeholder
 	setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, upstreamDetail)
 	logOpenAIInstructionsRequiredDebug(ctx, c, account, resp.StatusCode, upstreamMsg, requestBody, body)
-	_ = s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
+	reqModel, _, _ := extractOpenAIRequestMetaFromBody(requestBody)
+	_ = s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body, reqModel)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 		Platform:             account.Platform,
 		AccountID:            account.ID,
@@ -3395,7 +3400,8 @@ placeholder
 	logOpenAIInstructionsRequiredDebug(ctx, c, account, resp.StatusCode, upstreamMsg, requestBody, body)
 	// 透传模式保留原始上游错误响应，但运行态账号状态仍需更新，
 	// 避免粘性路由继续复用刚被限流的账号。
-	_ = s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
+	reqModel, _, _ := extractOpenAIRequestMetaFromBody(requestBody)
+	_ = s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body, reqModel)
 	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 		Platform:             account.Platform,
 		AccountID:            account.ID,
@@ -4069,6 +4075,7 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 	c *gin.Context,
 	account *Account,
 	requestBody []byte,
+	requestedModel ...string,
 ) (*OpenAIForwardResult, error) {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 
@@ -4145,7 +4152,14 @@ placeholder
 placeholder
 
 	// Handle upstream error (mark account status)
-	shouldDisable := s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
+	var reqModel string
+	if len(requestedModel) > 0 {
+		reqModel = strings.TrimSpace(requestedModel[0])
+placeholder
+	if reqModel == "" {
+		reqModel, _, _ = extractOpenAIRequestMetaFromBody(requestBody)
+placeholder
+	shouldDisable := s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, body, reqModel)
 	kind := "http_error"
 	if shouldDisable {
 		kind = "failover"
@@ -4222,6 +4236,7 @@ func (s *OpenAIGatewayService) handleCompatErrorResponse(
 	c *gin.Context,
 	account *Account,
 	writeError compatErrorWriter,
+	requestedModel ...string,
 ) (*OpenAIForwardResult, error) {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 
@@ -4277,8 +4292,12 @@ placeholder
 placeholder
 
 	// Track rate limits and decide whether to trigger secondary failover.
+	var modelForCooldown string
+	if len(requestedModel) > 0 {
+		modelForCooldown = requestedModel[0]
+placeholder
 	shouldDisable := s.handleOpenAIAccountUpstreamError(
-		c.Request.Context(), account, resp.StatusCode, resp.Header, body,
+		c.Request.Context(), account, resp.StatusCode, resp.Header, body, modelForCooldown,
 	)
 	kind := "http_error"
 	if shouldDisable {
