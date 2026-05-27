@@ -197,6 +197,25 @@ describe('BulkEditAccountModal', () => {
     placeholder)
   placeholder)
 
+  it('OpenAI OAuth 批量编辑应提交 codex_cli_only_allowed_clients 字段', async () => {
+    const wrapper = mountModal({
+      selectedPlatforms: ['openai'],
+      selectedTypes: ['oauth']
+    placeholder)
+
+    await wrapper.get('#bulk-edit-openai-codex-allow-claude-code-enabled').setValue(true)
+    await wrapper.get('#bulk-edit-openai-codex-allow-claude-code-toggle').trigger('click')
+    await wrapper.get('#bulk-edit-account-form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(adminAPI.accounts.bulkUpdate).toHaveBeenCalledTimes(1)
+    expect(adminAPI.accounts.bulkUpdate).toHaveBeenCalledWith([1, 2], {
+      extra: {
+        codex_cli_only_allowed_clients: ['claude_code']
+      placeholder
+    placeholder)
+  placeholder)
+
   it('OpenAI API Key 批量编辑应提交 API Key 专属 WS mode 字段', async () => {
     const wrapper = mountModal({
       selectedPlatforms: ['openai'],
