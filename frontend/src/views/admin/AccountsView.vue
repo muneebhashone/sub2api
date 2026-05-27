@@ -301,6 +301,9 @@
           <template #cell-last_used_at="{ value placeholder">
             <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatRelativeTime(value) placeholderplaceholder</span>
           </template>
+          <template #cell-created_at="{ value placeholder">
+            <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatDateTime(value) placeholderplaceholder</span>
+          </template>
           <template #cell-expires_at="{ row, value placeholder">
             <div class="flex flex-col items-start gap-1">
               <span class="text-sm text-gray-500 dark:text-dark-400">{{ formatExpiresAt(value) placeholderplaceholder</span>
@@ -509,6 +512,7 @@ const ACCOUNT_SORTABLE_KEYS = new Set([
   'priority',
   'rate_multiplier',
   'last_used_at',
+  'created_at',
   'expires_at'
 ])
 const loadInitialAccountSortState = (): AccountSortState => {
@@ -1127,6 +1131,7 @@ const allColumns = computed(() => {
     { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true placeholder,
     { key: 'rate_multiplier', label: t('admin.accounts.columns.billingRateMultiplier'), sortable: true placeholder,
     { key: 'last_used_at', label: t('admin.accounts.columns.lastUsed'), sortable: true placeholder,
+    { key: 'created_at', label: t('admin.accounts.columns.createdAt'), sortable: true placeholder,
     { key: 'expires_at', label: t('admin.accounts.columns.expiresAt'), sortable: true placeholder,
     { key: 'notes', label: t('admin.accounts.columns.notes'), sortable: false placeholder,
     { key: 'actions', label: t('admin.accounts.columns.actions'), sortable: false placeholder
