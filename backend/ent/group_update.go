@@ -616,6 +616,20 @@ placeholder
 	return _u
 placeholder
 
+// SetModelsListConfig sets the "models_list_config" field.
+func (_u *GroupUpdate) SetModelsListConfig(v domain.GroupModelsListConfig) *GroupUpdate {
+	_u.mutation.SetModelsListConfig(v)
+	return _u
+placeholder
+
+// SetNillableModelsListConfig sets the "models_list_config" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableModelsListConfig(v *domain.GroupModelsListConfig) *GroupUpdate {
+	if v != nil {
+		_u.SetModelsListConfig(*v)
+placeholder
+	return _u
+placeholder
+
 // SetRpmLimit sets the "rpm_limit" field.
 func (_u *GroupUpdate) SetRpmLimit(v int) *GroupUpdate {
 	_u.mutation.ResetRpmLimit()
@@ -1111,6 +1125,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.MessagesDispatchModelConfig(); ok {
 		_spec.SetField(group.FieldMessagesDispatchModelConfig, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.ModelsListConfig(); ok {
+		_spec.SetField(group.FieldModelsListConfig, field.TypeJSON, value)
 placeholder
 	if value, ok := _u.mutation.RpmLimit(); ok {
 		_spec.SetField(group.FieldRpmLimit, field.TypeInt, value)
@@ -2012,6 +2029,20 @@ placeholder
 	return _u
 placeholder
 
+// SetModelsListConfig sets the "models_list_config" field.
+func (_u *GroupUpdateOne) SetModelsListConfig(v domain.GroupModelsListConfig) *GroupUpdateOne {
+	_u.mutation.SetModelsListConfig(v)
+	return _u
+placeholder
+
+// SetNillableModelsListConfig sets the "models_list_config" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableModelsListConfig(v *domain.GroupModelsListConfig) *GroupUpdateOne {
+	if v != nil {
+		_u.SetModelsListConfig(*v)
+placeholder
+	return _u
+placeholder
+
 // SetRpmLimit sets the "rpm_limit" field.
 func (_u *GroupUpdateOne) SetRpmLimit(v int) *GroupUpdateOne {
 	_u.mutation.ResetRpmLimit()
@@ -2537,6 +2568,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.MessagesDispatchModelConfig(); ok {
 		_spec.SetField(group.FieldMessagesDispatchModelConfig, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.ModelsListConfig(); ok {
+		_spec.SetField(group.FieldModelsListConfig, field.TypeJSON, value)
 placeholder
 	if value, ok := _u.mutation.RpmLimit(); ok {
 		_spec.SetField(group.FieldRpmLimit, field.TypeInt, value)

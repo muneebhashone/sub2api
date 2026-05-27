@@ -25,7 +25,11 @@ type gatewayModelsResponseForTest struct {
 placeholder
 
 type gatewayModelItemForTest struct {
-	ID string `json:"id"`
+	ID        string `json:"id"`
+	Object    string `json:"object"`
+	Created   int64  `json:"created"`
+	OwnedBy   string `json:"owned_by"`
+	CreatedAt string `json:"created_at"`
 placeholder
 
 func (s *gatewayModelsAccountRepoStub) ListSchedulableByGroupID(ctx context.Context, groupID int64) ([]service.Account, error) {
@@ -125,6 +129,267 @@ placeholder)
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	require.Equal(t, []string{"gemini-2.5-flash"placeholder, modelIDsForTest(got.Data))
+placeholder
+
+func TestGatewayModels_CustomModelsListDisabledKeepsOriginalModels(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(22)
+	h := newGatewayModelsHandlerForTest(
+		&gatewayModelsAccountRepoStub{
+			byGroup: map[int64][]service.Account{
+				groupID: {
+					{
+						ID:       1,
+						Platform: service.PlatformOpenAI,
+				placeholder
+							"model_mapping": map[string]any{
+								"gpt-5.5": "gpt-5.5",
+								"gpt-5.4": "gpt-5.4",
+						placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+	)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{
+			ID:       groupID,
+			Platform: service.PlatformOpenAI,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: false,
+				Models:  []string{"gpt-5.5"placeholder,
+		placeholder,
+	placeholder,
+placeholder)
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Equal(t, []string{"gpt-5.4", "gpt-5.5"placeholder, modelIDsForTest(got.Data))
+placeholder
+
+func TestGatewayModels_CustomModelsListFiltersAndOrdersMappedModels(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(23)
+	h := newGatewayModelsHandlerForTest(
+		&gatewayModelsAccountRepoStub{
+			byGroup: map[int64][]service.Account{
+				groupID: {
+					{
+						ID:       1,
+						Platform: service.PlatformOpenAI,
+				placeholder
+							"model_mapping": map[string]any{
+								"gpt-5.4":         "gpt-5.4",
+								"gpt-5.5":         "gpt-5.5",
+								"legacy-gpt-2024": "legacy-gpt-2024",
+						placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+	)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{
+			ID:       groupID,
+			Platform: service.PlatformOpenAI,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: true,
+				Models:  []string{"gpt-5.5", "missing-model", "gpt-5.4"placeholder,
+		placeholder,
+	placeholder,
+placeholder)
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Equal(t, []string{"gpt-5.5", "gpt-5.4"placeholder, modelIDsForTest(got.Data))
+placeholder
+
+func TestGatewayModels_CustomModelsListKeepsConcreteModelAllowedByWildcardMapping(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(26)
+	h := newGatewayModelsHandlerForTest(
+		&gatewayModelsAccountRepoStub{
+			byGroup: map[int64][]service.Account{
+				groupID: {
+					{
+						ID:       1,
+						Platform: service.PlatformAnthropic,
+				placeholder
+							"model_mapping": map[string]any{
+								"claude-*": "claude-sonnet-4-6",
+						placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+	)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{
+			ID:       groupID,
+			Platform: service.PlatformAnthropic,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: true,
+				Models:  []string{"claude-sonnet-4-6"placeholder,
+		placeholder,
+	placeholder,
+placeholder)
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Equal(t, []string{"claude-sonnet-4-6"placeholder, modelIDsForTest(got.Data))
+placeholder
+
+func TestGatewayModels_CustomModelsListCanReturnEmptyWhenSelectionsUnavailable(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(24)
+	h := newGatewayModelsHandlerForTest(
+		&gatewayModelsAccountRepoStub{
+			byGroup: map[int64][]service.Account{
+				groupID: {
+					{
+						ID:       1,
+						Platform: service.PlatformOpenAI,
+				placeholder
+							"model_mapping": map[string]any{
+								"gpt-5.4": "gpt-5.4",
+						placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+	)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{
+			ID:       groupID,
+			Platform: service.PlatformOpenAI,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: true,
+				Models:  []string{"gpt-5.5"placeholder,
+		placeholder,
+	placeholder,
+placeholder)
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Empty(t, modelIDsForTest(got.Data))
+placeholder
+
+func TestGatewayModels_CustomModelsListFiltersDefaultFallbackModels(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(25)
+	h := newGatewayModelsHandlerForTest(
+		&gatewayModelsAccountRepoStub{
+			byGroup: map[int64][]service.Account{
+				groupID: {
+					{ID: 1, Platform: service.PlatformOpenAIplaceholder,
+			placeholder,
+		placeholder,
+	placeholder,
+	)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{
+			ID:       groupID,
+			Platform: service.PlatformOpenAI,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: true,
+				Models:  []string{"gpt-5.5", "legacy-gpt-2024", "gpt-5.4"placeholder,
+		placeholder,
+	placeholder,
+placeholder)
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Equal(t, []string{"gpt-5.5", "gpt-5.4"placeholder, modelIDsForTest(got.Data))
+placeholder
+
+func TestGatewayModels_OpenAICustomModelsListKeepsOpenAIResponseShapeForDefaultFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	groupID := int64(27)
+	h := newGatewayModelsHandlerForTest(
+		&gatewayModelsAccountRepoStub{
+			byGroup: map[int64][]service.Account{
+				groupID: {
+					{ID: 1, Platform: service.PlatformOpenAIplaceholder,
+			placeholder,
+		placeholder,
+	placeholder,
+	)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{
+			ID:       groupID,
+			Platform: service.PlatformOpenAI,
+			ModelsListConfig: service.GroupModelsListConfig{
+				Enabled: true,
+				Models:  []string{"gpt-5.5", "gpt-5.4"placeholder,
+		placeholder,
+	placeholder,
+placeholder)
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Equal(t, []string{"gpt-5.5", "gpt-5.4"placeholder, modelIDsForTest(got.Data))
+	require.Equal(t, "model", got.Data[0].Object)
+	require.NotZero(t, got.Data[0].Created)
+	require.Equal(t, "openai", got.Data[0].OwnedBy)
+	require.Empty(t, got.Data[0].CreatedAt)
 placeholder
 
 func modelIDsForTest(models []gatewayModelItemForTest) []string {
