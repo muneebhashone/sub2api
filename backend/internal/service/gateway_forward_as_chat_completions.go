@@ -166,7 +166,7 @@ placeholder
 				Message:            upstreamMsg,
 		placeholder)
 			if s.rateLimitService != nil {
-				s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+				s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody, mappedModel)
 		placeholder
 			return nil, &UpstreamFailoverError{
 				StatusCode:   resp.StatusCode,

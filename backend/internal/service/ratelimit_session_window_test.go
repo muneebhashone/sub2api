@@ -137,7 +137,7 @@ placeholder
 func (m *sessionWindowMockRepo) SetRateLimited(context.Context, int64, time.Time) error {
 	panic("unexpected")
 placeholder
-func (m *sessionWindowMockRepo) SetModelRateLimit(context.Context, int64, string, time.Time) error {
+func (m *sessionWindowMockRepo) SetModelRateLimit(context.Context, int64, string, time.Time, ...string) error {
 	panic("unexpected")
 placeholder
 func (m *sessionWindowMockRepo) SetOverloaded(context.Context, int64, time.Time) error {

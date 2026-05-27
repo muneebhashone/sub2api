@@ -338,7 +338,7 @@ placeholder
 				Message:            upstreamMsg,
 				Detail:             upstreamDetail,
 		placeholder)
-			s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+			s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody, upstreamModel)
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,
@@ -346,7 +346,7 @@ placeholder
 		placeholder
 	placeholder
 		// Non-failover error: return Anthropic-formatted error to client
-		return s.handleAnthropicErrorResponse(resp, c, account)
+		return s.handleAnthropicErrorResponse(resp, c, account, billingModel)
 placeholder
 
 	if account.Type == AccountTypeOAuth && promptCacheKey != "" {
@@ -413,8 +413,9 @@ func (s *OpenAIGatewayService) handleAnthropicErrorResponse(
 	resp *http.Response,
 	c *gin.Context,
 	account *Account,
+	requestedModel ...string,
 ) (*OpenAIForwardResult, error) {
-	return s.handleCompatErrorResponse(resp, c, account, writeAnthropicError)
+	return s.handleCompatErrorResponse(resp, c, account, writeAnthropicError, requestedModel...)
 placeholder
 
 // handleAnthropicBufferedStreamingResponse reads all Responses SSE events from
