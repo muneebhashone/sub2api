@@ -467,6 +467,20 @@ placeholder
 	return _c
 placeholder
 
+// SetModelsListConfig sets the "models_list_config" field.
+func (_c *GroupCreate) SetModelsListConfig(v domain.GroupModelsListConfig) *GroupCreate {
+	_c.mutation.SetModelsListConfig(v)
+	return _c
+placeholder
+
+// SetNillableModelsListConfig sets the "models_list_config" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableModelsListConfig(v *domain.GroupModelsListConfig) *GroupCreate {
+	if v != nil {
+		_c.SetModelsListConfig(*v)
+placeholder
+	return _c
+placeholder
+
 // SetRpmLimit sets the "rpm_limit" field.
 func (_c *GroupCreate) SetRpmLimit(v int) *GroupCreate {
 	_c.mutation.SetRpmLimit(v)
@@ -698,6 +712,10 @@ placeholder
 		v := group.DefaultMessagesDispatchModelConfig
 		_c.mutation.SetMessagesDispatchModelConfig(v)
 placeholder
+	if _, ok := _c.mutation.ModelsListConfig(); !ok {
+		v := group.DefaultModelsListConfig
+		_c.mutation.SetModelsListConfig(v)
+placeholder
 	if _, ok := _c.mutation.RpmLimit(); !ok {
 		v := group.DefaultRpmLimit
 		_c.mutation.SetRpmLimit(v)
@@ -797,6 +815,9 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.MessagesDispatchModelConfig(); !ok {
 		return &ValidationError{Name: "messages_dispatch_model_config", err: errors.New(`ent: missing required field "Group.messages_dispatch_model_config"`)placeholder
+placeholder
+	if _, ok := _c.mutation.ModelsListConfig(); !ok {
+		return &ValidationError{Name: "models_list_config", err: errors.New(`ent: missing required field "Group.models_list_config"`)placeholder
 placeholder
 	if _, ok := _c.mutation.RpmLimit(); !ok {
 		return &ValidationError{Name: "rpm_limit", err: errors.New(`ent: missing required field "Group.rpm_limit"`)placeholder
@@ -959,6 +980,10 @@ placeholder
 	if value, ok := _c.mutation.MessagesDispatchModelConfig(); ok {
 		_spec.SetField(group.FieldMessagesDispatchModelConfig, field.TypeJSON, value)
 		_node.MessagesDispatchModelConfig = value
+placeholder
+	if value, ok := _c.mutation.ModelsListConfig(); ok {
+		_spec.SetField(group.FieldModelsListConfig, field.TypeJSON, value)
+		_node.ModelsListConfig = value
 placeholder
 	if value, ok := _c.mutation.RpmLimit(); ok {
 		_spec.SetField(group.FieldRpmLimit, field.TypeInt, value)
@@ -1642,6 +1667,18 @@ func (u *GroupUpsert) UpdateMessagesDispatchModelConfig() *GroupUpsert {
 	return u
 placeholder
 
+// SetModelsListConfig sets the "models_list_config" field.
+func (u *GroupUpsert) SetModelsListConfig(v domain.GroupModelsListConfig) *GroupUpsert {
+	u.Set(group.FieldModelsListConfig, v)
+	return u
+placeholder
+
+// UpdateModelsListConfig sets the "models_list_config" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateModelsListConfig() *GroupUpsert {
+	u.SetExcluded(group.FieldModelsListConfig)
+	return u
+placeholder
+
 // SetRpmLimit sets the "rpm_limit" field.
 func (u *GroupUpsert) SetRpmLimit(v int) *GroupUpsert {
 	u.Set(group.FieldRpmLimit, v)
@@ -2311,6 +2348,20 @@ placeholder
 func (u *GroupUpsertOne) UpdateMessagesDispatchModelConfig() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateMessagesDispatchModelConfig()
+placeholder)
+placeholder
+
+// SetModelsListConfig sets the "models_list_config" field.
+func (u *GroupUpsertOne) SetModelsListConfig(v domain.GroupModelsListConfig) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetModelsListConfig(v)
+placeholder)
+placeholder
+
+// UpdateModelsListConfig sets the "models_list_config" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateModelsListConfig() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateModelsListConfig()
 placeholder)
 placeholder
 
@@ -3152,6 +3203,20 @@ placeholder
 func (u *GroupUpsertBulk) UpdateMessagesDispatchModelConfig() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateMessagesDispatchModelConfig()
+placeholder)
+placeholder
+
+// SetModelsListConfig sets the "models_list_config" field.
+func (u *GroupUpsertBulk) SetModelsListConfig(v domain.GroupModelsListConfig) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetModelsListConfig(v)
+placeholder)
+placeholder
+
+// UpdateModelsListConfig sets the "models_list_config" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateModelsListConfig() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateModelsListConfig()
 placeholder)
 placeholder
 
