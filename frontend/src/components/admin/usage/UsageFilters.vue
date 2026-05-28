@@ -35,7 +35,7 @@
               @click="selectUser(u)"
               class="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <span>{{ u.email placeholderplaceholder</span>
+              <span>{{ u.email placeholderplaceholder<span v-if="u.deleted" class="ml-1 text-xs text-gray-400">（{{ t('admin.usage.userDeletedBadge') placeholderplaceholder）</span></span>
               <span class="ml-2 text-xs text-gray-400">#{{ u.id placeholderplaceholder</span>
             </button>
           </div>
@@ -255,7 +255,8 @@ const debounceUserSearch = () => {
       return
     placeholder
     try {
-      userResults.value = await adminAPI.usage.searchUsers(userKeyword.value)
+      const results = await adminAPI.usage.searchUsers(userKeyword.value)
+      userResults.value = results.sort((a, b) => Number(a.deleted) - Number(b.deleted))
     placeholder catch {
       userResults.value = []
     placeholder

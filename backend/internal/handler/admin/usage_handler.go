@@ -344,23 +344,25 @@ func (h *UsageHandler) SearchUsers(c *gin.Context) {
 placeholder
 
 	// Limit to 30 results
-	users, _, err := h.adminService.ListUsers(c.Request.Context(), 1, 30, service.UserListFilters{Search: keywordplaceholder, "email", "asc")
+	users, _, err := h.adminService.ListUsers(c.Request.Context(), 1, 30, service.UserListFilters{Search: keyword, IncludeDeleted: trueplaceholder, "email", "asc")
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 placeholder
 
-	// Return simplified user list (only id and email)
+	// Return simplified user list (only id, email and deleted flag)
 	type SimpleUser struct {
-		ID    int64  `json:"id"`
-		Email string `json:"email"`
+		ID      int64  `json:"id"`
+		Email   string `json:"email"`
+		Deleted bool   `json:"deleted"`
 placeholder
 
 	result := make([]SimpleUser, len(users))
 	for i, u := range users {
 		result[i] = SimpleUser{
-			ID:    u.ID,
-			Email: u.Email,
+			ID:      u.ID,
+			Email:   u.Email,
+			Deleted: u.DeletedAt != nil,
 	placeholder
 placeholder
 

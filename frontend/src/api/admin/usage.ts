@@ -27,6 +27,7 @@ placeholder
 export interface SimpleUser {
   id: number
   email: string
+  deleted: boolean
 placeholder
 
 export interface SimpleApiKey {

@@ -236,3 +236,7 @@ placeholder
 func (s *stubUserRepo) DisableTotp(ctx context.Context, userID int64) error {
 	panic("unexpected DisableTotp call")
 placeholder
+
+func (s *stubUserRepo) GetByIDIncludeDeleted(ctx context.Context, id int64) (*service.User, error) {
+	panic("unexpected GetByIDIncludeDeleted call")
+placeholder
