@@ -211,6 +211,20 @@ type ContentModerationAPIKeyStatus struct {
 	Configured     bool       `json:"configured"`
 placeholder
 
+type ContentModerationAPIKeyLoad struct {
+	Index          int    `json:"index"`
+	KeyHash        string `json:"key_hash"`
+	Masked         string `json:"masked"`
+	Status         string `json:"status"`
+	Active         int64  `json:"active"`
+	Total          int64  `json:"total"`
+	Success        int64  `json:"success"`
+	Errors         int64  `json:"errors"`
+	AvgLatencyMS   int64  `json:"avg_latency_ms"`
+	LastLatencyMS  int    `json:"last_latency_ms"`
+	LastHTTPStatus int    `json:"last_http_status"`
+placeholder
+
 type TestContentModerationAPIKeysInput struct {
 	APIKeys   []string `json:"api_keys"`
 	BaseURL   string   `json:"base_url"`
@@ -399,25 +413,35 @@ type ContentModerationCleanupResult struct {
 placeholder
 
 type ContentModerationRuntimeStatus struct {
-	Enabled                  bool                            `json:"enabled"`
-	RiskControlEnabled       bool                            `json:"risk_control_enabled"`
-	Mode                     string                          `json:"mode"`
-	WorkerCount              int                             `json:"worker_count"`
-	MaxWorkers               int                             `json:"max_workers"`
-	ActiveWorkers            int                             `json:"active_workers"`
-	IdleWorkers              int                             `json:"idle_workers"`
-	QueueSize                int                             `json:"queue_size"`
-	QueueLength              int                             `json:"queue_length"`
-	QueueUsagePercent        float64                         `json:"queue_usage_percent"`
-	Enqueued                 int64                           `json:"enqueued"`
-	Dropped                  int64                           `json:"dropped"`
-	Processed                int64                           `json:"processed"`
-	Errors                   int64                           `json:"errors"`
-	APIKeyStatuses           []ContentModerationAPIKeyStatus `json:"api_key_statuses"`
-	FlaggedHashCount         int64                           `json:"flagged_hash_count"`
-	LastCleanupAt            *time.Time                      `json:"last_cleanup_at,omitempty"`
-	LastCleanupDeletedHit    int64                           `json:"last_cleanup_deleted_hit"`
-	LastCleanupDeletedNonHit int64                           `json:"last_cleanup_deleted_non_hit"`
+	Enabled                      bool                            `json:"enabled"`
+	RiskControlEnabled           bool                            `json:"risk_control_enabled"`
+	Mode                         string                          `json:"mode"`
+	WorkerCount                  int                             `json:"worker_count"`
+	MaxWorkers                   int                             `json:"max_workers"`
+	ActiveWorkers                int                             `json:"active_workers"`
+	IdleWorkers                  int                             `json:"idle_workers"`
+	QueueSize                    int                             `json:"queue_size"`
+	QueueLength                  int                             `json:"queue_length"`
+	QueueUsagePercent            float64                         `json:"queue_usage_percent"`
+	Enqueued                     int64                           `json:"enqueued"`
+	Dropped                      int64                           `json:"dropped"`
+	Processed                    int64                           `json:"processed"`
+	Errors                       int64                           `json:"errors"`
+	PreBlockActive               int                             `json:"pre_block_active"`
+	PreBlockChecked              int64                           `json:"pre_block_checked"`
+	PreBlockAllowed              int64                           `json:"pre_block_allowed"`
+	PreBlockBlocked              int64                           `json:"pre_block_blocked"`
+	PreBlockErrors               int64                           `json:"pre_block_errors"`
+	PreBlockAvgLatencyMS         int64                           `json:"pre_block_avg_latency_ms"`
+	PreBlockAPIKeyActive         int64                           `json:"pre_block_api_key_active"`
+	PreBlockAPIKeyAvailableCount int64                           `json:"pre_block_api_key_available_count"`
+	PreBlockAPIKeyTotalCalls     int64                           `json:"pre_block_api_key_total_calls"`
+	PreBlockAPIKeyLoads          []ContentModerationAPIKeyLoad   `json:"pre_block_api_key_loads"`
+	APIKeyStatuses               []ContentModerationAPIKeyStatus `json:"api_key_statuses"`
+	FlaggedHashCount             int64                           `json:"flagged_hash_count"`
+	LastCleanupAt                *time.Time                      `json:"last_cleanup_at,omitempty"`
+	LastCleanupDeletedHit        int64                           `json:"last_cleanup_deleted_hit"`
+	LastCleanupDeletedNonHit     int64                           `json:"last_cleanup_deleted_non_hit"`
 placeholder
 
 type ContentModerationUnbanUserResult struct {
@@ -466,6 +490,12 @@ type ContentModerationService struct {
 	asyncDropped             atomic.Int64
 	asyncProcessed           atomic.Int64
 	asyncErrors              atomic.Int64
+	preBlockActive           atomic.Int64
+	preBlockChecked          atomic.Int64
+	preBlockAllowed          atomic.Int64
+	preBlockBlocked          atomic.Int64
+	preBlockErrors           atomic.Int64
+	preBlockLatencyTotalMS   atomic.Int64
 	lastCleanupUnix          atomic.Int64
 	lastCleanupDeletedHit    atomic.Int64
 	lastCleanupDeletedNonHit atomic.Int64
@@ -474,10 +504,14 @@ type ContentModerationService struct {
 placeholder
 
 type contentModerationTask struct {
-	input      ContentModerationCheckInput
-	content    ContentModerationInput
-	inputHash  string
-	enqueuedAt time.Time
+	input            ContentModerationCheckInput
+	content          ContentModerationInput
+	inputHash        string
+	log              *ContentModerationLog
+	config           *ContentModerationConfig
+	recordHash       bool
+	applySideEffects bool
+	enqueuedAt       time.Time
 placeholder
 
 type contentModerationKeyHealth struct {
@@ -491,6 +525,11 @@ type contentModerationKeyHealth struct {
 	LastLatencyMS  int
 	LastHTTPStatus int
 	LastTested     bool
+	SyncActive     int64
+	SyncTotal      int64
+	SyncSuccess    int64
+	SyncErrors     int64
+	SyncLatencyMS  int64
 placeholder
 
 func NewContentModerationService(
@@ -827,9 +866,11 @@ placeholder
 		"protocol", input.Protocol,
 		"text_runes", len([]rune(content.Text)),
 		"image_count", len(content.Images))
+	hashText := content.Hash()
 	if cfg.Mode == ContentModerationModePreBlock {
 		if cfg.KeywordBlockingMode != ContentModerationKeywordModeAPIOnly && len(cfg.BlockedKeywords) > 0 {
 			if keyword, hit := matchBlockedKeyword(content.Text, cfg.BlockedKeywords); hit {
+				s.recordPreBlockSyncMetric(0, ContentModerationActionKeywordBlock)
 				slog.Info("content_moderation.keyword_block",
 					"user_id", input.UserID,
 					"api_key_id", input.APIKeyID,
@@ -840,8 +881,7 @@ placeholder
 					"keyword", keyword)
 				scores := map[string]float64{contentModerationKeywordCategory: 1.0placeholder
 				log := s.buildLog(input, cfg, ContentModerationActionKeywordBlock, true, contentModerationKeywordCategory, 1.0, scores, content.ExcerptText(), nil, nil, "")
-				s.applyFlaggedSideEffects(ctx, cfg, log)
-				_ = s.repo.CreateLog(ctx, log)
+				s.enqueueRecord(input, cfg, log, hashText, false, true)
 				return &ContentModerationDecision{
 					Allowed:         false,
 					Blocked:         true,
@@ -856,6 +896,7 @@ placeholder
 		placeholder
 	placeholder
 		if cfg.KeywordBlockingMode == ContentModerationKeywordModeKeywordOnly {
+			s.recordPreBlockSyncMetric(0, ContentModerationActionAllow)
 			slog.Info("content_moderation.skip_api_keyword_only",
 				"user_id", input.UserID,
 				"api_key_id", input.APIKeyID,
@@ -865,13 +906,15 @@ placeholder
 			return allow, nil
 	placeholder
 placeholder
-	hashText := content.Hash()
 	if cfg.PreHashCheckEnabled && s.hashCache != nil {
 		matched, err := s.hashCache.HasFlaggedInputHash(ctx, hashText)
 		if err != nil {
 			slog.Warn("content_moderation.hash_check_failed", "user_id", input.UserID, "endpoint", input.Endpoint, "error", err)
 	placeholder
 		if matched {
+			if cfg.Mode == ContentModerationModePreBlock {
+				s.recordPreBlockSyncMetric(0, ContentModerationActionHashBlock)
+		placeholder
 			slog.Info("content_moderation.hash_block",
 				"user_id", input.UserID,
 				"api_key_id", input.APIKeyID,
@@ -883,6 +926,9 @@ placeholder
 			if message != "" {
 				message = fmt.Sprintf("%s（hash: %s）", message, hashText)
 		placeholder
+			scores := map[string]float64{"hash": 1.0placeholder
+			log := s.buildLog(input, cfg, ContentModerationActionHashBlock, true, "hash", 1.0, scores, content.ExcerptText(), nil, nil, "")
+			s.enqueueRecord(input, cfg, log, hashText, false, false)
 			return &ContentModerationDecision{
 				Allowed:    false,
 				Blocked:    true,
@@ -895,6 +941,9 @@ placeholder
 	placeholder
 placeholder
 	if !cfg.shouldSample(hashText) {
+		if cfg.Mode == ContentModerationModePreBlock {
+			s.recordPreBlockSyncMetric(0, ContentModerationActionAllow)
+	placeholder
 		slog.Info("content_moderation.skip_sample_rate",
 			"user_id", input.UserID,
 			"api_key_id", input.APIKeyID,
@@ -905,6 +954,9 @@ placeholder
 		return allow, nil
 placeholder
 	if len(cfg.apiKeys()) == 0 {
+		if cfg.Mode == ContentModerationModePreBlock {
+			s.recordPreBlockSyncMetric(0, ContentModerationActionError)
+	placeholder
 		slog.Warn("content_moderation.skip_no_audit_api_keys",
 			"user_id", input.UserID,
 			"api_key_id", input.APIKeyID,
@@ -930,10 +982,18 @@ placeholder
 
 func (s *ContentModerationService) checkSync(ctx context.Context, input ContentModerationCheckInput, cfg *ContentModerationConfig, content ContentModerationInput, hashText string, queueDelay *int, allowBlock bool) *ContentModerationDecision {
 	allow := &ContentModerationDecision{Allowed: true, Action: ContentModerationActionAllowplaceholder
+	trackPreBlock := queueDelay == nil && allowBlock && cfg != nil && cfg.Mode == ContentModerationModePreBlock
+	if trackPreBlock {
+		s.preBlockActive.Add(1)
+		defer s.preBlockActive.Add(-1)
+placeholder
 	start := time.Now()
-	result, err := s.callModeration(ctx, cfg, content.ModerationInput())
+	result, err := s.callModeration(ctx, cfg, content.ModerationInput(), trackPreBlock)
 	latency := int(time.Since(start).Milliseconds())
 	if err != nil {
+		if trackPreBlock {
+			s.recordPreBlockSyncMetric(latency, ContentModerationActionError)
+	placeholder
 		slog.Warn("content_moderation.audit_api_failed",
 			"user_id", input.UserID,
 			"api_key_id", input.APIKeyID,
@@ -962,6 +1022,9 @@ placeholder
 		action = ContentModerationActionBlock
 		blocked = true
 placeholder
+	if trackPreBlock {
+		s.recordPreBlockSyncMetric(latency, action)
+placeholder
 	slog.Info("content_moderation.audit_result",
 		"user_id", input.UserID,
 		"api_key_id", input.APIKeyID,
@@ -980,13 +1043,11 @@ placeholder
 		"queue_delay_ms", queueDelay)
 	if flagged || cfg.RecordNonHits {
 		log := s.buildLog(input, cfg, action, flagged, highestCategory, highestScore, result.CategoryScores, content.ExcerptText(), &latency, queueDelay, "")
-		if flagged && s.hashCache != nil {
-			if err := s.hashCache.RecordFlaggedInputHash(ctx, hashText); err != nil {
-				slog.Warn("content_moderation.record_hash_failed", "user_id", input.UserID, "endpoint", input.Endpoint, "error", err)
-		placeholder
+		if queueDelay == nil && cfg.Mode == ContentModerationModePreBlock {
+			s.enqueueRecord(input, cfg, log, hashText, flagged, flagged)
+	placeholder else {
+			s.persistContentModerationLog(ctx, cfg, log, hashText, flagged, flagged)
 	placeholder
-		s.applyFlaggedSideEffects(ctx, cfg, log)
-		_ = s.repo.CreateLog(ctx, log)
 placeholder
 	if blocked {
 		return &ContentModerationDecision{
@@ -1009,6 +1070,25 @@ placeholder
 		HighestScore:    highestScore,
 		CategoryScores:  result.CategoryScores,
 		Action:          action,
+placeholder
+placeholder
+
+func (s *ContentModerationService) recordPreBlockSyncMetric(latencyMS int, action string) {
+	if s == nil {
+		return
+placeholder
+	s.preBlockChecked.Add(1)
+	if latencyMS < 0 {
+		latencyMS = 0
+placeholder
+	s.preBlockLatencyTotalMS.Add(int64(latencyMS))
+	switch action {
+	case ContentModerationActionBlock, ContentModerationActionHashBlock, ContentModerationActionKeywordBlock:
+		s.preBlockBlocked.Add(1)
+	case ContentModerationActionError:
+		s.preBlockErrors.Add(1)
+	default:
+		s.preBlockAllowed.Add(1)
 placeholder
 placeholder
 
@@ -1040,11 +1120,49 @@ placeholder
 placeholder
 placeholder
 
+func (s *ContentModerationService) enqueueRecord(input ContentModerationCheckInput, cfg *ContentModerationConfig, log *ContentModerationLog, inputHash string, recordHash bool, applySideEffects bool) {
+	if s == nil || s.asyncQueue == nil || log == nil {
+		return
+placeholder
+	queueSize := defaultContentModerationQueueSize
+	if cfg != nil && cfg.QueueSize > 0 {
+		queueSize = cfg.QueueSize
+placeholder
+	if len(s.asyncQueue) >= queueSize {
+		slog.Warn("content_moderation.record_queue_full",
+			"user_id", input.UserID,
+			"endpoint", input.Endpoint,
+			"action", log.Action,
+			"queue_size", queueSize)
+		s.asyncDropped.Add(1)
+		return
+placeholder
+	task := contentModerationTask{
+		input:            input,
+		inputHash:        inputHash,
+		log:              log,
+		config:           cloneContentModerationConfig(cfg),
+		recordHash:       recordHash,
+		applySideEffects: applySideEffects,
+		enqueuedAt:       time.Now(),
+placeholder
+	select {
+	case s.asyncQueue <- task:
+		s.asyncEnqueued.Add(1)
+	default:
+		slog.Warn("content_moderation.record_queue_full",
+			"user_id", input.UserID,
+			"endpoint", input.Endpoint,
+			"action", log.Action)
+		s.asyncDropped.Add(1)
+placeholder
+placeholder
+
 func (s *ContentModerationService) worker(id int) {
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), maxContentModerationTimeoutMS*time.Millisecond+10*time.Second)
 		cfg, err := s.loadConfig(ctx)
-		if err != nil || !cfg.Enabled || cfg.Mode == ContentModerationModeOff || len(cfg.apiKeys()) == 0 || id >= cfg.WorkerCount {
+		if err != nil || id >= cfg.WorkerCount {
 			cancel()
 			time.Sleep(time.Second)
 			continue
@@ -1061,6 +1179,22 @@ func (s *ContentModerationService) worker(id int) {
 					slog.Error("content_moderation.worker_panic", "worker_id", id, "recover", r)
 			placeholder
 		placeholder()
+			if task.log != nil {
+				s.asyncActive.Add(1)
+				defer s.asyncActive.Add(-1)
+				queueDelay := int(time.Since(task.enqueuedAt).Milliseconds())
+				task.log.QueueDelayMS = &queueDelay
+				taskCfg := task.config
+				if taskCfg == nil {
+					taskCfg = cfg
+			placeholder
+				s.persistContentModerationLog(ctx, taskCfg, task.log, task.inputHash, task.recordHash, task.applySideEffects)
+				s.asyncProcessed.Add(1)
+				return
+		placeholder
+			if !cfg.Enabled || cfg.Mode == ContentModerationModeOff || len(cfg.apiKeys()) == 0 {
+				return
+		placeholder
 			if !cfg.includesGroup(task.input.GroupID) {
 				return
 		placeholder
@@ -1186,6 +1320,15 @@ placeholder
 	if active > cfg.WorkerCount {
 		active = cfg.WorkerCount
 placeholder
+	preBlockActive := int(s.preBlockActive.Load())
+	if preBlockActive < 0 {
+		preBlockActive = 0
+placeholder
+	preBlockChecked := s.preBlockChecked.Load()
+	preBlockAvgLatency := int64(0)
+	if preBlockChecked > 0 {
+		preBlockAvgLatency = s.preBlockLatencyTotalMS.Load() / preBlockChecked
+placeholder
 	queueLength := 0
 	if s.asyncQueue != nil {
 		queueLength = len(s.asyncQueue)
@@ -1208,25 +1351,35 @@ placeholder
 		lastCleanupAt = &t
 placeholder
 	return &ContentModerationRuntimeStatus{
-		Enabled:                  cfg.Enabled,
-		RiskControlEnabled:       riskEnabled,
-		Mode:                     cfg.Mode,
-		WorkerCount:              cfg.WorkerCount,
-		MaxWorkers:               maxContentModerationWorkerCount,
-		ActiveWorkers:            active,
-		IdleWorkers:              cfg.WorkerCount - active,
-		QueueSize:                cfg.QueueSize,
-		QueueLength:              queueLength,
-		QueueUsagePercent:        queueUsage,
-		Enqueued:                 s.asyncEnqueued.Load(),
-		Dropped:                  s.asyncDropped.Load(),
-		Processed:                s.asyncProcessed.Load(),
-		Errors:                   s.asyncErrors.Load(),
-		APIKeyStatuses:           s.apiKeyStatuses(cfg.apiKeys()),
-		FlaggedHashCount:         flaggedHashCount,
-		LastCleanupAt:            lastCleanupAt,
-		LastCleanupDeletedHit:    s.lastCleanupDeletedHit.Load(),
-		LastCleanupDeletedNonHit: s.lastCleanupDeletedNonHit.Load(),
+		Enabled:                      cfg.Enabled,
+		RiskControlEnabled:           riskEnabled,
+		Mode:                         cfg.Mode,
+		WorkerCount:                  cfg.WorkerCount,
+		MaxWorkers:                   maxContentModerationWorkerCount,
+		ActiveWorkers:                active,
+		IdleWorkers:                  cfg.WorkerCount - active,
+		QueueSize:                    cfg.QueueSize,
+		QueueLength:                  queueLength,
+		QueueUsagePercent:            queueUsage,
+		Enqueued:                     s.asyncEnqueued.Load(),
+		Dropped:                      s.asyncDropped.Load(),
+		Processed:                    s.asyncProcessed.Load(),
+		Errors:                       s.asyncErrors.Load(),
+		PreBlockActive:               preBlockActive,
+		PreBlockChecked:              preBlockChecked,
+		PreBlockAllowed:              s.preBlockAllowed.Load(),
+		PreBlockBlocked:              s.preBlockBlocked.Load(),
+		PreBlockErrors:               s.preBlockErrors.Load(),
+		PreBlockAvgLatencyMS:         preBlockAvgLatency,
+		PreBlockAPIKeyActive:         s.preBlockAPIKeyActive(cfg.apiKeys()),
+		PreBlockAPIKeyAvailableCount: s.preBlockAPIKeyAvailableCount(cfg.apiKeys()),
+		PreBlockAPIKeyTotalCalls:     s.preBlockAPIKeyTotalCalls(cfg.apiKeys()),
+		PreBlockAPIKeyLoads:          s.preBlockAPIKeyLoads(cfg.apiKeys()),
+		APIKeyStatuses:               s.apiKeyStatuses(cfg.apiKeys()),
+		FlaggedHashCount:             flaggedHashCount,
+		LastCleanupAt:                lastCleanupAt,
+		LastCleanupDeletedHit:        s.lastCleanupDeletedHit.Load(),
+		LastCleanupDeletedNonHit:     s.lastCleanupDeletedNonHit.Load(),
 placeholder, nil
 placeholder
 
@@ -1325,7 +1478,7 @@ placeholder
 	return nil
 placeholder
 
-func (s *ContentModerationService) callModeration(ctx context.Context, cfg *ContentModerationConfig, input any) (*moderationAPIResult, error) {
+func (s *ContentModerationService) callModeration(ctx context.Context, cfg *ContentModerationConfig, input any, trackKeyLoad ...bool) (*moderationAPIResult, error) {
 	attempts := cfg.RetryCount + 1
 	if attempts <= 0 {
 		attempts = 1
@@ -1333,6 +1486,7 @@ placeholder
 	if attempts > maxContentModerationRetryCount+1 {
 		attempts = maxContentModerationRetryCount + 1
 placeholder
+	trackLoad := len(trackKeyLoad) > 0 && trackKeyLoad[0]
 	var lastErr error
 	for attempt := 0; attempt < attempts; attempt++ {
 		key, ok := s.nextUsableAPIKey(cfg)
@@ -1340,13 +1494,22 @@ placeholder
 			lastErr = errors.New("no moderation api key available")
 			break
 	placeholder
+		if trackLoad {
+			s.beginModerationAPIKeyCall(key)
+	placeholder
 		start := time.Now()
 		httpStatus := 0
 		result, err := s.callModerationOnceWithInput(ctx, cfg, key, input, &httpStatus)
 		latency := int(time.Since(start).Milliseconds())
 		if err == nil {
+			if trackLoad {
+				s.finishModerationAPIKeyCall(key, latency, true)
+		placeholder
 			s.markAPIKeySuccess(key, latency, httpStatus)
 			return result, nil
+	placeholder
+		if trackLoad {
+			s.finishModerationAPIKeyCall(key, latency, false)
 	placeholder
 		s.markAPIKeyError(key, err.Error(), latency, httpStatus)
 		lastErr = err
@@ -1452,9 +1615,31 @@ placeholder
 placeholder
 placeholder
 
-func (s *ContentModerationService) applyFlaggedSideEffects(ctx context.Context, cfg *ContentModerationConfig, log *ContentModerationLog) {
-	if s == nil || cfg == nil || log == nil || !log.Flagged || log.UserID == nil || *log.UserID <= 0 {
+func (s *ContentModerationService) persistContentModerationLog(ctx context.Context, cfg *ContentModerationConfig, log *ContentModerationLog, hashText string, recordHash bool, applySideEffects bool) {
+	if s == nil || log == nil {
 		return
+placeholder
+	if recordHash && s.hashCache != nil {
+		if err := s.hashCache.RecordFlaggedInputHash(ctx, hashText); err != nil {
+			slog.Warn("content_moderation.record_hash_failed", "user_id", contentModerationEmailUserID(log), "endpoint", log.Endpoint, "error", err)
+	placeholder
+placeholder
+	autoBanJustApplied := false
+	if applySideEffects {
+		autoBanJustApplied = s.applyFlaggedAccountSideEffects(ctx, cfg, log)
+		s.sendFlaggedNotificationSideEffects(ctx, cfg, log, autoBanJustApplied)
+placeholder
+	if s.repo != nil {
+		if err := s.repo.CreateLog(ctx, log); err != nil {
+			slog.Warn("content_moderation.create_log_failed", "user_id", contentModerationEmailUserID(log), "endpoint", log.Endpoint, "action", log.Action, "error", err)
+			return
+	placeholder
+placeholder
+placeholder
+
+func (s *ContentModerationService) applyFlaggedAccountSideEffects(ctx context.Context, cfg *ContentModerationConfig, log *ContentModerationLog) bool {
+	if s == nil || cfg == nil || log == nil || !log.Flagged || log.UserID == nil || *log.UserID <= 0 {
+		return false
 placeholder
 	count := 1
 	if s.repo != nil && cfg.ViolationWindowHours > 0 {
@@ -1469,13 +1654,13 @@ placeholder
 		user, err := s.userRepo.GetByID(ctx, *log.UserID)
 		if err != nil {
 			slog.Warn("content_moderation.ban_get_user_failed", "user_id", *log.UserID, "error", err)
-			return
+			return false
 	placeholder
 		if user.Status != StatusDisabled {
 			user.Status = StatusDisabled
 			if err := s.userRepo.Update(ctx, user); err != nil {
 				slog.Warn("content_moderation.ban_update_user_failed", "user_id", *log.UserID, "error", err)
-				return
+				return false
 		placeholder
 			if s.authCacheInvalidator != nil {
 				s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, *log.UserID)
@@ -1484,7 +1669,13 @@ placeholder
 	placeholder
 		log.AutoBanned = true
 placeholder
+	return autoBanJustApplied
+placeholder
 
+func (s *ContentModerationService) sendFlaggedNotificationSideEffects(ctx context.Context, cfg *ContentModerationConfig, log *ContentModerationLog, autoBanJustApplied bool) {
+	if s == nil || cfg == nil || log == nil || !log.Flagged {
+		return
+placeholder
 	if s.emailService == nil || strings.TrimSpace(log.UserEmail) == "" {
 		return
 placeholder
@@ -1640,6 +1831,22 @@ func defaultContentModerationConfig() *ContentModerationConfig {
 			Models: []string{placeholder,
 	placeholder,
 placeholder
+placeholder
+
+func cloneContentModerationConfig(cfg *ContentModerationConfig) *ContentModerationConfig {
+	if cfg == nil {
+		return nil
+placeholder
+	clone := *cfg
+	clone.APIKeys = append([]string(nil), cfg.APIKeys...)
+	clone.GroupIDs = append([]int64(nil), cfg.GroupIDs...)
+	clone.BlockedKeywords = append([]string(nil), cfg.BlockedKeywords...)
+	clone.Thresholds = cloneFloatMap(cfg.Thresholds)
+	clone.ModelFilter = ContentModerationModelFilter{
+		Type:   cfg.ModelFilter.Type,
+		Models: append([]string(nil), cfg.ModelFilter.Models...),
+placeholder
+	return &clone
 placeholder
 
 func (cfg *ContentModerationConfig) normalize() {
@@ -1807,6 +2014,40 @@ placeholder
 	return state != nil && state.FrozenUntil.After(now)
 placeholder
 
+func (s *ContentModerationService) beginModerationAPIKeyCall(key string) {
+	hash := moderationAPIKeyHash(key)
+	if hash == "" || s == nil {
+		return
+placeholder
+	s.keyHealthMu.Lock()
+	defer s.keyHealthMu.Unlock()
+	state := s.ensureAPIKeyHealthLocked(hash, maskSecretTail(key))
+	state.SyncActive++
+placeholder
+
+func (s *ContentModerationService) finishModerationAPIKeyCall(key string, latencyMS int, success bool) {
+	hash := moderationAPIKeyHash(key)
+	if hash == "" || s == nil {
+		return
+placeholder
+	if latencyMS < 0 {
+		latencyMS = 0
+placeholder
+	s.keyHealthMu.Lock()
+	defer s.keyHealthMu.Unlock()
+	state := s.ensureAPIKeyHealthLocked(hash, maskSecretTail(key))
+	if state.SyncActive > 0 {
+		state.SyncActive--
+placeholder
+	state.SyncTotal++
+	state.SyncLatencyMS += int64(latencyMS)
+	if success {
+		state.SyncSuccess++
+		return
+placeholder
+	state.SyncErrors++
+placeholder
+
 func (s *ContentModerationService) markAPIKeySuccess(key string, latencyMS int, httpStatus int) {
 	hash := moderationAPIKeyHash(key)
 	if hash == "" || s == nil {
@@ -1924,6 +2165,71 @@ func (s *ContentModerationService) apiKeyStatuses(keys []string) []ContentModera
 		out = append(out, s.apiKeyStatusForHash(idx, moderationAPIKeyHash(key), maskSecretTail(key), true))
 placeholder
 	return out
+placeholder
+
+func (s *ContentModerationService) preBlockAPIKeyLoads(keys []string) []ContentModerationAPIKeyLoad {
+	out := make([]ContentModerationAPIKeyLoad, 0, len(keys))
+	for idx, key := range keys {
+		out = append(out, s.preBlockAPIKeyLoadForHash(idx, moderationAPIKeyHash(key), maskSecretTail(key)))
+placeholder
+	return out
+placeholder
+
+func (s *ContentModerationService) preBlockAPIKeyActive(keys []string) int64 {
+	var total int64
+	for _, item := range s.preBlockAPIKeyLoads(keys) {
+		total += item.Active
+placeholder
+	return total
+placeholder
+
+func (s *ContentModerationService) preBlockAPIKeyAvailableCount(keys []string) int64 {
+	now := time.Now()
+	var count int64
+	for _, key := range keys {
+		if !s.isAPIKeyFrozen(key, now) {
+			count++
+	placeholder
+placeholder
+	return count
+placeholder
+
+func (s *ContentModerationService) preBlockAPIKeyTotalCalls(keys []string) int64 {
+	var total int64
+	for _, item := range s.preBlockAPIKeyLoads(keys) {
+		total += item.Total
+placeholder
+	return total
+placeholder
+
+func (s *ContentModerationService) preBlockAPIKeyLoadForHash(index int, hash string, masked string) ContentModerationAPIKeyLoad {
+	load := ContentModerationAPIKeyLoad{
+		Index:   index,
+		KeyHash: hash,
+		Masked:  masked,
+		Status:  "unknown",
+placeholder
+	status := s.apiKeyStatusForHash(index, hash, masked, true)
+	load.Status = status.Status
+	load.LastLatencyMS = status.LastLatencyMS
+	load.LastHTTPStatus = status.LastHTTPStatus
+	if hash == "" || s == nil {
+		return load
+placeholder
+	s.keyHealthMu.Lock()
+	defer s.keyHealthMu.Unlock()
+	state := s.keyHealth[hash]
+	if state == nil {
+		return load
+placeholder
+	load.Active = state.SyncActive
+	load.Total = state.SyncTotal
+	load.Success = state.SyncSuccess
+	load.Errors = state.SyncErrors
+	if state.SyncTotal > 0 {
+		load.AvgLatencyMS = state.SyncLatencyMS / state.SyncTotal
+placeholder
+	return load
 placeholder
 
 func (s *ContentModerationService) apiKeyStatusForHash(index int, hash string, masked string, configured bool) ContentModerationAPIKeyStatus {
