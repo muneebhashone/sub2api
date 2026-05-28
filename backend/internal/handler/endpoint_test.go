@@ -24,6 +24,7 @@ placeholder{
 		// Direct canonical paths.
 		{"/v1/messages", EndpointMessagesplaceholder,
 		{"/v1/chat/completions", EndpointChatCompletionsplaceholder,
+		{"/v1/embeddings", EndpointEmbeddingsplaceholder,
 		{"/v1/responses", EndpointResponsesplaceholder,
 		{"/v1/images/generations", EndpointImagesGenerationsplaceholder,
 		{"/v1/images/edits", EndpointImagesEditsplaceholder,
@@ -77,6 +78,7 @@ placeholder{
 		{"openai responses nested", EndpointResponses, "/openai/v1/responses/compact/detail", service.PlatformOpenAI, "/v1/responses/compact/detail"placeholder,
 		{"openai from messages", EndpointMessages, "/v1/messages", service.PlatformOpenAI, EndpointResponsesplaceholder,
 		{"openai from completions", EndpointChatCompletions, "/v1/chat/completions", service.PlatformOpenAI, EndpointResponsesplaceholder,
+		{"openai embeddings", EndpointEmbeddings, "/v1/embeddings", service.PlatformOpenAI, EndpointEmbeddingsplaceholder,
 		{"openai image generations", EndpointImagesGenerations, "/v1/images/generations", service.PlatformOpenAI, EndpointImagesGenerationsplaceholder,
 		{"openai image edits", EndpointImagesEdits, "/openai/v1/images/edits", service.PlatformOpenAI, EndpointImagesEditsplaceholder,
 
