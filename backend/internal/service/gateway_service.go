@@ -9311,6 +9311,7 @@ func (s *GatewayService) buildCountTokensRequestAnthropicAPIKeyPassthrough(
 	placeholder
 		targetURL = validatedURL + "/v1/messages/count_tokens?beta=true"
 placeholder
+	body = sanitizeCountTokensRequestBody(body)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(body))
 	if err != nil {
@@ -9405,6 +9406,7 @@ placeholder
 	if ctEnableCCH {
 		body = signBillingHeaderCCH(body)
 placeholder
+	body = sanitizeCountTokensRequestBody(body)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewReader(body))
 	if err != nil {
@@ -9499,6 +9501,25 @@ placeholder
 placeholder
 
 	return req, nil
+placeholder
+
+func sanitizeCountTokensRequestBody(body []byte) []byte {
+	out := body
+	for _, path := range []string{
+		"temperature",
+		"top_p",
+		"top_k",
+		"stream",
+		"stop_sequences",
+		"stop",
+placeholder {
+		if gjson.GetBytes(out, path).Exists() {
+			if next, ok := deleteJSONPathBytes(out, path); ok {
+				out = next
+		placeholder
+	placeholder
+placeholder
+	return out
 placeholder
 
 // countTokensError 返回 count_tokens 错误响应
