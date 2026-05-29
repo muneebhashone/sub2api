@@ -51,6 +51,12 @@ type SessionContext struct {
 	APIKeyID  int64
 placeholder
 
+type jsonRange struct {
+	start int        // 原始请求体中的起始偏移（闭区间）
+	end   int        // 原始请求体中的结束偏移（开区间）
+	kind  gjson.Type // JSON 值类型，用于调用方做轻量分支
+placeholder
+
 type RequestBodyRef struct {
 	data []byte
 placeholder
@@ -80,6 +86,76 @@ placeholder
 	b.data = data
 placeholder
 
+func missingJSONRange() jsonRange {
+	return jsonRange{start: -1, end: -1placeholder
+placeholder
+
+func rangeFromResult(r gjson.Result) jsonRange {
+	if r.Raw == "" || r.Index <= 0 {
+		return missingJSONRange()
+placeholder
+	end := r.Index + len(r.Raw)
+	if end < r.Index {
+		return missingJSONRange()
+placeholder
+	return jsonRange{start: r.Index, end: end, kind: r.Typeplaceholder
+placeholder
+
+func (r jsonRange) exists() bool {
+	return r.start >= 0 && r.end >= r.start
+placeholder
+
+func clearGatewayRequestRanges(parsed *ParsedRequest) {
+	if parsed == nil {
+		return
+placeholder
+	parsed.HasSystem = false
+	parsed.systemRange = missingJSONRange()
+	parsed.messagesRange = missingJSONRange()
+placeholder
+
+func setGatewayRequestRanges(parsed *ParsedRequest, protocol string, jsonStr string) {
+	if parsed == nil {
+		return
+placeholder
+	switch protocol {
+	case domain.PlatformGemini:
+		if sysParts := gjson.Get(jsonStr, "systemInstruction.parts"); sysParts.Exists() && sysParts.IsArray() {
+			parsed.systemRange = rangeFromResult(sysParts)
+	placeholder
+		if contents := gjson.Get(jsonStr, "contents"); contents.Exists() && contents.IsArray() {
+			parsed.messagesRange = rangeFromResult(contents)
+	placeholder
+	default:
+		if sys := gjson.Get(jsonStr, "system"); sys.Exists() {
+			parsed.HasSystem = true
+			parsed.systemRange = rangeFromResult(sys)
+	placeholder
+		if msgs := gjson.Get(jsonStr, "messages"); msgs.Exists() && msgs.IsArray() {
+			parsed.messagesRange = rangeFromResult(msgs)
+	placeholder
+placeholder
+placeholder
+
+func refreshGatewayRequestRanges(parsed *ParsedRequest, protocol string) error {
+	if parsed == nil {
+		return fmt.Errorf("empty request body")
+placeholder
+	clearGatewayRequestRanges(parsed)
+	if parsed.Body == nil {
+		return fmt.Errorf("empty request body")
+placeholder
+
+	bodyBytes := parsed.Body.Bytes()
+	if !gjson.ValidBytes(bodyBytes) {
+		return fmt.Errorf("invalid json")
+placeholder
+
+	jsonStr := *(*string)(unsafe.Pointer(&bodyBytes))
+	setGatewayRequestRanges(parsed, protocol, jsonStr)
+	return nil
+placeholder
+
 // ParsedRequest 保存网关请求的预解析结果
 //
 // 性能优化说明：
@@ -93,17 +169,19 @@ placeholder
 // 2. 将解析结果 ParsedRequest 传递给 Service 层
 // 3. 避免重复 json.Unmarshal，减少 CPU 和内存开销
 type ParsedRequest struct {
-	Body            *RequestBodyRef // 原始请求体引用（保留用于转发）
+	Body            *RequestBodyRef // 原始请求体引用（保留用于转发）；替换内容请走 ReplaceBody
 	Model           string          // 请求的模型名称
 	Stream          bool            // 是否为流式请求
 	MetadataUserID  string          // metadata.user_id（用于会话亲和）
-	System          any             // system 字段内容
-	Messages        []any           // messages 数组
 	HasSystem       bool            // 是否包含 system 字段（包含 null 也视为显式传入）
 	ThinkingEnabled bool            // 是否开启 thinking（部分平台会影响最终模型名）
 	OutputEffort    string          // output_config.effort（Claude API 的推理强度控制）
 	MaxTokens       int             // max_tokens 值（用于探测请求拦截）
 	SessionContext  *SessionContext // 可选：请求上下文区分因子（nil 时行为不变）
+
+	protocol      string    // 当前 Body 的协议格式，用于 Body 替换后刷新 raw range
+	systemRange   jsonRange // system/systemInstruction.parts 的 raw JSON 范围，绑定 Body 当前内容
+	messagesRange jsonRange // messages/contents 的 raw JSON 范围，绑定 Body 当前内容
 
 	// GroupID 请求所属分组 ID（来自 API Key）
 	GroupID *int64
@@ -173,7 +251,10 @@ placeholder
 	jsonStr := *(*string)(unsafe.Pointer(&bodyBytes))
 
 	parsed := &ParsedRequest{
-		Body: body,
+		Body:          body,
+		protocol:      protocol,
+		systemRange:   missingJSONRange(),
+		messagesRange: missingJSONRange(),
 placeholder
 
 	// --- gjson 提取简单字段（避免完整 Unmarshal） ---
@@ -219,58 +300,71 @@ placeholder
 placeholder
 
 	// --- system/messages 提取 ---
-	// 避免把整个 body Unmarshal 到 map（会产生大量 map/接口分配）。
-	// 使用 gjson 抽取目标字段的 Raw，再对该子树进行 Unmarshal。
-
-	switch protocol {
-	case domain.PlatformGemini:
-		// Gemini 原生格式: systemInstruction.parts / contents
-		if sysParts := gjson.Get(jsonStr, "systemInstruction.parts"); sysParts.Exists() && sysParts.IsArray() {
-			var parts []any
-			if err := json.Unmarshal(sliceRawFromBody(bodyBytes, sysParts), &parts); err != nil {
-				return nil, err
-		placeholder
-			parsed.System = parts
-	placeholder
-
-		if contents := gjson.Get(jsonStr, "contents"); contents.Exists() && contents.IsArray() {
-			var msgs []any
-			if err := json.Unmarshal(sliceRawFromBody(bodyBytes, contents), &msgs); err != nil {
-				return nil, err
-		placeholder
-			parsed.Messages = msgs
-	placeholder
-	default:
-		// Anthropic / OpenAI 格式: system / messages
-		// system 字段只要存在就视为显式提供（即使为 null），
-		// 以避免客户端传 null 时被默认 system 误注入。
-		if sys := gjson.Get(jsonStr, "system"); sys.Exists() {
-			parsed.HasSystem = true
-			switch sys.Type {
-			case gjson.Null:
-				parsed.System = nil
-			case gjson.String:
-				// 与 encoding/json 的 Unmarshal 行为一致：返回解码后的字符串。
-				parsed.System = sys.String()
-			default:
-				var system any
-				if err := json.Unmarshal(sliceRawFromBody(bodyBytes, sys), &system); err != nil {
-					return nil, err
-			placeholder
-				parsed.System = system
-		placeholder
-	placeholder
-
-		if msgs := gjson.Get(jsonStr, "messages"); msgs.Exists() && msgs.IsArray() {
-			var messages []any
-			if err := json.Unmarshal(sliceRawFromBody(bodyBytes, msgs), &messages); err != nil {
-				return nil, err
-		placeholder
-			parsed.Messages = messages
-	placeholder
-placeholder
+	// 只保存大字段 raw range，不默认反序列化成 []any/map[string]any 对象图。
+	setGatewayRequestRanges(parsed, protocol, jsonStr)
 
 	return parsed, nil
+placeholder
+
+func (p *ParsedRequest) raw(r jsonRange) []byte {
+	if p == nil || p.Body == nil || !r.exists() {
+		return nil
+placeholder
+	body := p.Body.Bytes()
+	if r.end > len(body) {
+		return nil
+placeholder
+	return body[r.start:r.end]
+placeholder
+
+func (p *ParsedRequest) SystemRaw() []byte {
+	return p.raw(p.systemRange)
+placeholder
+
+func (p *ParsedRequest) MessagesRaw() []byte {
+	return p.raw(p.messagesRange)
+placeholder
+
+func (p *ParsedRequest) DecodeSystem(dst any) error {
+	raw := p.SystemRaw()
+	if len(raw) == 0 {
+		return nil
+placeholder
+	return json.Unmarshal(raw, dst)
+placeholder
+
+func (p *ParsedRequest) DecodeMessages(dst any) error {
+	raw := p.MessagesRaw()
+	if len(raw) == 0 {
+		return nil
+placeholder
+	return json.Unmarshal(raw, dst)
+placeholder
+
+func (p *ParsedRequest) SystemValue() (any, bool) {
+	raw := p.SystemRaw()
+	if len(raw) == 0 {
+		return nil, false
+placeholder
+	var system any
+	if err := json.Unmarshal(raw, &system); err != nil {
+		return nil, false
+placeholder
+	return system, true
+placeholder
+
+func (p *ParsedRequest) ReplaceBody(data []byte) {
+	if p == nil {
+		return
+placeholder
+	if p.Body == nil {
+		p.Body = NewRequestBodyRef(data)
+placeholder else {
+		p.Body.Replace(data)
+placeholder
+	if err := refreshGatewayRequestRanges(p, p.protocol); err != nil {
+		clearGatewayRequestRanges(p)
+placeholder
 placeholder
 
 // sliceRawFromBody 返回 Result.Raw 对应的原始字节切片。

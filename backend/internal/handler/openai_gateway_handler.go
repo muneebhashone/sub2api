@@ -954,7 +954,7 @@ placeholder
 		return true
 placeholder
 
-	c.Set(service.OpenAIParsedRequestBodyKey, reqBody)
+	service.CacheOpenAIParsedRequestBody(c, body, reqBody)
 	validation := service.ValidateFunctionCallOutputContext(reqBody)
 	if !validation.HasFunctionCallOutput {
 		return true

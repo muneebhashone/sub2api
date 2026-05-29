@@ -74,8 +74,12 @@ placeholder
 	bodyMap := map[string]any{
 		"model": parsedReq.Model,
 placeholder
-	if parsedReq.System != nil || parsedReq.HasSystem {
-		bodyMap["system"] = parsedReq.System
+	if parsedReq.HasSystem {
+		if system, ok := parsedReq.SystemValue(); ok {
+			bodyMap["system"] = system
+	placeholder else {
+			bodyMap["system"] = nil
+	placeholder
 placeholder
 	if parsedReq.MetadataUserID != "" {
 		bodyMap["metadata"] = map[string]any{"user_id": parsedReq.MetadataUserIDplaceholder
@@ -87,10 +91,8 @@ func claudeCodeBodyMapFromContextCache(c *gin.Context) map[string]any {
 	if c == nil {
 		return nil
 placeholder
-	if cached, ok := c.Get(service.OpenAIParsedRequestBodyKey); ok {
-		if bodyMap, ok := cached.(map[string]any); ok {
-			return bodyMap
-	placeholder
+	if bodyMap := service.CachedOpenAIParsedRequestBody(c); bodyMap != nil {
+		return bodyMap
 placeholder
 	if cached, ok := c.Get(claudeCodeParsedRequestContextKey); ok {
 		switch v := cached.(type) {

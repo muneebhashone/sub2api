@@ -748,31 +748,10 @@ placeholder
 		_, _ = combined.WriteString(strconv.FormatInt(parsed.SessionContext.APIKeyID, 10))
 		_, _ = combined.WriteString("|")
 placeholder
-	if parsed.System != nil {
-		systemText := s.extractTextFromSystem(parsed.System)
-		if systemText != "" {
-			_, _ = combined.WriteString(systemText)
-	placeholder
+	if systemText := extractTextFromSystemRaw(parsed.SystemRaw()); systemText != "" {
+		_, _ = combined.WriteString(systemText)
 placeholder
-	for _, msg := range parsed.Messages {
-		if m, ok := msg.(map[string]any); ok {
-			if content, exists := m["content"]; exists {
-				// Anthropic: messages[].content
-				if msgText := s.extractTextFromContent(content); msgText != "" {
-					_, _ = combined.WriteString(msgText)
-			placeholder
-		placeholder else if parts, ok := m["parts"].([]any); ok {
-				// Gemini: contents[].parts[].text
-				for _, part := range parts {
-					if partMap, ok := part.(map[string]any); ok {
-						if text, ok := partMap["text"].(string); ok {
-							_, _ = combined.WriteString(text)
-					placeholder
-				placeholder
-			placeholder
-		placeholder
-	placeholder
-placeholder
+	appendMessageTextsFromRaw(&combined, parsed.MessagesRaw())
 	if combined.Len() > 0 {
 		hash := s.hashContent(combined.String())
 		slog.Info("sticky.hash_source",
@@ -847,80 +826,125 @@ func (s *GatewayService) extractCacheableContent(parsed *ParsedRequest) string {
 		return ""
 placeholder
 
-	var builder strings.Builder
-
-	// 检查 system 中的 cacheable 内容
-	if system, ok := parsed.System.([]any); ok {
-		for _, part := range system {
-			if partMap, ok := part.(map[string]any); ok {
-				if cc, ok := partMap["cache_control"].(map[string]any); ok {
-					if cc["type"] == "ephemeral" {
-						if text, ok := partMap["text"].(string); ok {
-							_, _ = builder.WriteString(text)
-					placeholder
-				placeholder
-			placeholder
-		placeholder
-	placeholder
+	systemText := extractCacheableTextFromSystemRaw(parsed.SystemRaw())
+	if messageText := extractCacheableTextFromMessagesRaw(parsed.MessagesRaw()); messageText != "" {
+		return messageText
 placeholder
-	systemText := builder.String()
-
-	// 检查 messages 中的 cacheable 内容
-	for _, msg := range parsed.Messages {
-		if msgMap, ok := msg.(map[string]any); ok {
-			if msgContent, ok := msgMap["content"].([]any); ok {
-				for _, part := range msgContent {
-					if partMap, ok := part.(map[string]any); ok {
-						if cc, ok := partMap["cache_control"].(map[string]any); ok {
-							if cc["type"] == "ephemeral" {
-								return s.extractTextFromContent(msgMap["content"])
-						placeholder
-					placeholder
-				placeholder
-			placeholder
-		placeholder
-	placeholder
-placeholder
-
 	return systemText
 placeholder
 
-func (s *GatewayService) extractTextFromSystem(system any) string {
-	switch v := system.(type) {
-	case string:
-		return v
-	case []any:
-		var texts []string
-		for _, part := range v {
-			if partMap, ok := part.(map[string]any); ok {
-				if text, ok := partMap["text"].(string); ok {
-					texts = append(texts, text)
-			placeholder
-		placeholder
+func extractTextFromSystemRaw(raw []byte) string {
+	system := gjson.ParseBytes(raw)
+	switch system.Type {
+	case gjson.String:
+		return system.String()
+	case gjson.JSON:
+		if !system.IsArray() {
+			return ""
 	placeholder
-		return strings.Join(texts, "")
+		var builder strings.Builder
+		system.ForEach(func(_, part gjson.Result) bool {
+			if text := part.Get("text").String(); text != "" {
+				_, _ = builder.WriteString(text)
+		placeholder
+			return true
+	placeholder)
+		return builder.String()
 placeholder
 	return ""
 placeholder
 
-func (s *GatewayService) extractTextFromContent(content any) string {
-	switch v := content.(type) {
-	case string:
-		return v
-	case []any:
-		var texts []string
-		for _, part := range v {
-			if partMap, ok := part.(map[string]any); ok {
-				if partMap["type"] == "text" {
-					if text, ok := partMap["text"].(string); ok {
-						texts = append(texts, text)
-				placeholder
+func extractTextFromContentRaw(content gjson.Result) string {
+	switch content.Type {
+	case gjson.String:
+		return content.String()
+	case gjson.JSON:
+		if !content.IsArray() {
+			return ""
+	placeholder
+		var builder strings.Builder
+		content.ForEach(func(_, part gjson.Result) bool {
+			if part.Get("type").String() == "text" {
+				if text := part.Get("text").String(); text != "" {
+					_, _ = builder.WriteString(text)
 			placeholder
 		placeholder
-	placeholder
-		return strings.Join(texts, "")
+			return true
+	placeholder)
+		return builder.String()
 placeholder
 	return ""
+placeholder
+
+func appendMessageTextsFromRaw(builder *strings.Builder, raw []byte) {
+	if builder == nil || len(raw) == 0 {
+		return
+placeholder
+	messages := gjson.ParseBytes(raw)
+	if !messages.IsArray() {
+		return
+placeholder
+	messages.ForEach(func(_, msg gjson.Result) bool {
+		if content := msg.Get("content"); content.Exists() {
+			_, _ = builder.WriteString(extractTextFromContentRaw(content))
+			return true
+	placeholder
+		parts := msg.Get("parts")
+		if parts.IsArray() {
+			parts.ForEach(func(_, part gjson.Result) bool {
+				if text := part.Get("text").String(); text != "" {
+					_, _ = builder.WriteString(text)
+			placeholder
+				return true
+		placeholder)
+	placeholder
+		return true
+placeholder)
+placeholder
+
+func extractCacheableTextFromSystemRaw(raw []byte) string {
+	system := gjson.ParseBytes(raw)
+	if !system.IsArray() {
+		return ""
+placeholder
+	var builder strings.Builder
+	system.ForEach(func(_, part gjson.Result) bool {
+		if part.Get("cache_control.type").String() == "ephemeral" {
+			if text := part.Get("text").String(); text != "" {
+				_, _ = builder.WriteString(text)
+		placeholder
+	placeholder
+		return true
+placeholder)
+	return builder.String()
+placeholder
+
+func extractCacheableTextFromMessagesRaw(raw []byte) string {
+	messages := gjson.ParseBytes(raw)
+	if !messages.IsArray() {
+		return ""
+placeholder
+	var text string
+	messages.ForEach(func(_, msg gjson.Result) bool {
+		content := msg.Get("content")
+		if !content.IsArray() {
+			return true
+	placeholder
+		found := false
+		content.ForEach(func(_, part gjson.Result) bool {
+			if part.Get("cache_control.type").String() == "ephemeral" {
+				found = true
+				return false
+		placeholder
+			return true
+	placeholder)
+		if found {
+			text = extractTextFromContentRaw(content)
+			return false
+	placeholder
+		return true
+placeholder)
+	return text
 placeholder
 
 func (s *GatewayService) hashContent(content string) string {
@@ -1284,7 +1308,7 @@ placeholder
 
 	systemRewritten := false
 	if !strings.Contains(strings.ToLower(model), "haiku") {
-		body = rewriteSystemForNonClaudeCode(body, systemRaw)
+		body = rewriteSystemForNonClaudeCode(body, normalizeSystemParam(systemRaw))
 		systemRewritten = true
 placeholder
 
@@ -4474,7 +4498,8 @@ placeholder
 		// Parrot 的 transform_request 从不检查客户端 system 内容，直接覆盖。
 		systemRewritten := false
 		if !strings.Contains(strings.ToLower(reqModel), "haiku") {
-			body = rewriteSystemForNonClaudeCode(body, parsed.System)
+			systemRaw, _ := parsed.SystemValue()
+			body = rewriteSystemForNonClaudeCode(body, systemRaw)
 			systemRewritten = true
 	placeholder
 
