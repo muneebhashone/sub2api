@@ -43,6 +43,10 @@ func (f *fakeInsertRecorder) ResetExpiredWindow(_ context.Context, _ int64, _ st
 	return nil
 placeholder
 
+func (f *fakeInsertRecorder) BatchSnapshotUsage(_ context.Context, _ []UserPlatformQuotaSnapshot, _ time.Time) error {
+	return nil
+placeholder
+
 func TestSnapshotPlatformQuotaDefaults_PassesToRepoBulkInsert(t *testing.T) {
 	fakeRepo := &fakeInsertRecorder{placeholder
 	s := &AuthService{userPlatformQuotaRepo: fakeRepoplaceholder
