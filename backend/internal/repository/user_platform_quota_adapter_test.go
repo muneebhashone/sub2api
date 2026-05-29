@@ -38,6 +38,9 @@ func (f *fakeRepoForAdapter) UpsertForUser(_ context.Context, userID int64, reco
 	f.upsertCalledWith = records
 	return f.upsertErr
 placeholder
+func (f *fakeRepoForAdapter) BatchSnapshotUsage(_ context.Context, _ []UserPlatformQuotaSnapshot, _ time.Time) error {
+	return nil
+placeholder
 
 func TestGenericAdapter_UpsertForUser_ForwardsRecords(t *testing.T) {
 	fake := &fakeRepoForAdapter{placeholder
