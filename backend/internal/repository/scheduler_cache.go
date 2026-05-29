@@ -557,6 +557,8 @@ placeholder
 		"codex_usage_updated_at",
 		"auto_pause_5h_threshold",
 		"auto_pause_7d_threshold",
+		"auto_pause_5h_disabled",
+		"auto_pause_7d_disabled",
 placeholder
 	filtered := make(map[string]any)
 	for _, key := range keys {
