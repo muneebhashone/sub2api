@@ -832,3 +832,108 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+// TestGeminiMessagesHandleStreamingResponse_ClosesToolBlockBeforeText guards the
+// tool→text ordering in the Gemini→Anthropic (messages) streaming bridge. When
+// Gemini emits a functionCall part followed by a text part, the tool_use content
+// block must be closed before the text block opens; otherwise the Anthropic SSE
+// stream contains overlapping content blocks. The chat-completions sibling
+// already enforces this via closeOpenTool().
+func TestGeminiMessagesHandleStreamingResponse_ClosesToolBlockBeforeText(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	upstreamBody := `data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"get_weather","args":{"city":"SF"placeholderplaceholderplaceholder]placeholderplaceholder]placeholder` + "\n\n" +
+		`data: {"candidates":[{"content":{"parts":[{"text":"All done."placeholder]placeholder,"finishReason":"STOP"placeholder],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":3placeholderplaceholder` + "\n\n" +
+		"data: [DONE]\n\n"
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+
+	svc := &GeminiMessagesCompatService{placeholder
+	result, err := svc.handleStreamingResponse(c, resp, time.Now(), "claude-3-5-sonnet")
+placeholder
+	require.NotNil(t, result)
+
+	events := parseAnthropicContentBlockEvents(t, rec.Body.String())
+
+	// Anthropic allows at most one content block open at a time: every
+	// content_block_start must be matched by a content_block_stop before the
+	// next start. Replay the lifecycle and assert there is no overlap.
+	open := -1
+	blockTypes := map[int]string{placeholder
+	textStarted := false
+	toolClosed := false
+	toolClosedBeforeText := false
+	for _, ev := range events {
+		switch ev.event {
+		case "content_block_start":
+			require.Equalf(t, -1, open,
+				"content block %d opened while block %d was still open (overlapping blocks)", ev.index, open)
+			open = ev.index
+			blockTypes[ev.index] = ev.blockType
+			if ev.blockType == "text" {
+				textStarted = true
+				if toolClosed {
+					toolClosedBeforeText = true
+			placeholder
+		placeholder
+		case "content_block_stop":
+			require.Equalf(t, open, ev.index,
+				"content_block_stop index %d does not match the open block %d", ev.index, open)
+			if blockTypes[ev.index] == "tool_use" {
+				toolClosed = true
+		placeholder
+			open = -1
+	placeholder
+placeholder
+
+	require.True(t, textStarted, "expected a text content block to be emitted after the tool call")
+	require.True(t, toolClosedBeforeText, "tool_use block must be closed before the text block starts")
+	require.Equal(t, -1, open, "stream ended with a content block still open")
+placeholder
+
+type anthropicContentBlockEvent struct {
+	event     string
+	index     int
+	blockType string
+placeholder
+
+// parseAnthropicContentBlockEvents extracts content_block_start/stop events (with
+// their index and, for starts, the content block type) from an Anthropic SSE body.
+func parseAnthropicContentBlockEvents(t *testing.T, raw string) []anthropicContentBlockEvent {
+placeholder
+	var events []anthropicContentBlockEvent
+	for _, chunk := range strings.Split(raw, "\n\n") {
+		var eventName, dataLine string
+		for _, line := range strings.Split(chunk, "\n") {
+			switch {
+			case strings.HasPrefix(line, "event:"):
+				eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+			case strings.HasPrefix(line, "data:"):
+				dataLine = strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		placeholder
+	placeholder
+		if eventName != "content_block_start" && eventName != "content_block_stop" {
+			continue
+	placeholder
+		var payload struct {
+			Index        int `json:"index"`
+			ContentBlock struct {
+				Type string `json:"type"`
+		placeholder `json:"content_block"`
+	placeholder
+		require.NoError(t, json.Unmarshal([]byte(dataLine), &payload))
+		events = append(events, anthropicContentBlockEvent{
+			event:     eventName,
+			index:     payload.Index,
+			blockType: payload.ContentBlock.Type,
+	placeholder)
+placeholder
+	return events
+placeholder
