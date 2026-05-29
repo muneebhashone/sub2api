@@ -867,8 +867,11 @@ placeholder else {
 		require.Equal(t, coderws.StatusPolicyViolation, closeErr.Code)
 		require.Contains(t, closeErr.Reason, "内容审计测试阻断")
 placeholder
-	logs := repo.logSnapshot()
-	require.Len(t, logs, 1)
+	var logs []service.ContentModerationLog
+	require.Eventually(t, func() bool {
+		logs = repo.logSnapshot()
+		return len(logs) == 1
+placeholder, time.Second, 10*time.Millisecond)
 	require.True(t, logs[0].Flagged)
 	require.Equal(t, service.ContentModerationActionBlock, logs[0].Action)
 	require.Equal(t, "bad prompt", logs[0].InputExcerpt)
