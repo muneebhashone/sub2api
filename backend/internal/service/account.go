@@ -66,6 +66,15 @@ type Account struct {
 	modelMappingCacheRawSig         uint64
 placeholder
 
+type OpenAIEndpointCapability string
+
+const (
+	OpenAIEndpointCapabilityChatCompletions OpenAIEndpointCapability = "chat_completions"
+	OpenAIEndpointCapabilityEmbeddings      OpenAIEndpointCapability = "embeddings"
+)
+
+const openAIEndpointCapabilitiesCredentialKey = "openai_capabilities"
+
 type TempUnschedulableRule struct {
 	ErrorCode       int      `json:"error_code"`
 	Keywords        []string `json:"keywords"`
@@ -1120,6 +1129,80 @@ func (a *Account) GetOpenAISessionID() string {
 		return ""
 placeholder
 	return strings.TrimSpace(a.GetExtraString("openai_session_id"))
+placeholder
+
+func (a *Account) SupportsOpenAIEndpointCapability(capability OpenAIEndpointCapability) bool {
+	if a == nil {
+		return false
+placeholder
+	if capability == "" {
+		return true
+placeholder
+	if !a.IsOpenAI() {
+		return false
+placeholder
+	switch capability {
+	case OpenAIEndpointCapabilityChatCompletions:
+	case OpenAIEndpointCapabilityEmbeddings:
+		if a.Type != AccountTypeAPIKey {
+			return false
+	placeholder
+	default:
+		return false
+placeholder
+
+	configured, found := a.openAIEndpointCapabilitySet()
+	if !found {
+		return true
+placeholder
+	return configured[string(capability)]
+placeholder
+
+func (a *Account) openAIEndpointCapabilitySet() (map[string]bool, bool) {
+	if a == nil || a.Credentials == nil {
+		return nil, false
+placeholder
+	raw, found := a.Credentials[openAIEndpointCapabilitiesCredentialKey]
+	if !found || raw == nil {
+		return nil, false
+placeholder
+
+	result := make(map[string]bool)
+	add := func(value string) {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if value == "" {
+			return
+	placeholder
+		result[value] = true
+placeholder
+
+	switch capabilities := raw.(type) {
+	case []any:
+		for _, item := range capabilities {
+			if value, ok := item.(string); ok {
+				add(value)
+		placeholder
+	placeholder
+	case []string:
+		for _, value := range capabilities {
+			add(value)
+	placeholder
+	case map[string]any:
+		for key, value := range capabilities {
+			enabled, ok := value.(bool)
+			if ok && enabled {
+				add(key)
+		placeholder
+	placeholder
+	case map[string]bool:
+		for key, enabled := range capabilities {
+			if enabled {
+				add(key)
+		placeholder
+	placeholder
+placeholder
+
+	return result, true
 placeholder
 
 func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapability) bool {

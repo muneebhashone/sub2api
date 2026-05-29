@@ -413,6 +413,79 @@ placeholder
 	require.True(t, account.SupportsOpenAIImageCapability(OpenAIImagesCapabilityNative))
 placeholder
 
+func TestAccountSupportsOpenAIEndpointCapability(t *testing.T) {
+	t.Run("OpenAI APIKey 默认兼容 chat 和 embeddings", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeAPIKey,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityEmbeddings))
+placeholder)
+
+	t.Run("OpenAI OAuth 默认仅兼容 chat", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+		require.False(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityEmbeddings))
+placeholder)
+
+	t.Run("显式列表支持同时声明 chat 和 embeddings", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeAPIKey,
+	placeholder
+				"openai_capabilities": []any{"chat_completions", "embeddings"placeholder,
+		placeholder,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityEmbeddings))
+placeholder)
+
+	t.Run("显式列表只声明 chat 时不支持 embeddings", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeAPIKey,
+	placeholder
+				"openai_capabilities": []any{"chat_completions"placeholder,
+		placeholder,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+		require.False(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityEmbeddings))
+placeholder)
+
+	t.Run("显式 map 支持单独关闭 chat 并开启 embeddings", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeAPIKey,
+	placeholder
+				"openai_capabilities": map[string]any{
+					"chat_completions": false,
+					"embeddings":       true,
+			placeholder,
+		placeholder,
+	placeholder
+
+		require.False(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityEmbeddings))
+placeholder)
+
+	t.Run("未知能力不应默认放行", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeAPIKey,
+	placeholder
+
+		require.False(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapability("unknown")))
+placeholder)
+placeholder
+
 func TestBuildOpenAIImagesURL_HandlesVersionedBaseURL(t *testing.T) {
 	require.Equal(t,
 		"https://image-upstream.example/v1/images/generations",

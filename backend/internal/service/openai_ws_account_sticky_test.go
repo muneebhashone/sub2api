@@ -268,6 +268,52 @@ placeholder
 	require.Equal(t, int64(21), selection.WaitPlan.AccountID)
 placeholder
 
+func TestOpenAIGatewayService_SelectAccountByPreviousResponseID_CapabilityMismatchKeepsSticky(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(25)
+	account := Account{
+		ID:          31,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"openai_capabilities": []any{"chat_completions"placeholder,
+	placeholder,
+		Extra: map[string]any{
+			"openai_apikey_responses_websockets_v2_enabled": true,
+	placeholder,
+placeholder
+	cache := &stubGatewayCache{placeholder
+	store := NewOpenAIWSStateStore(cache)
+	cfg := newOpenAIWSV2TestConfig()
+	svc := &OpenAIGatewayService{
+		accountRepo:        stubOpenAIAccountRepo{accounts: []Account{accountplaceholderplaceholder,
+		cache:              cache,
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(stubConcurrencyCache{placeholder),
+		openaiWSStateStore: store,
+placeholder
+
+	require.NoError(t, store.BindResponseAccount(ctx, groupID, "resp_prev_capability", account.ID, time.Hour))
+
+	selection, err := svc.selectAccountByPreviousResponseIDForCapability(
+		ctx,
+		&groupID,
+		"resp_prev_capability",
+		"text-embedding-3-small",
+		nil,
+		OpenAIEndpointCapabilityEmbeddings,
+		false,
+	)
+placeholder
+	require.Nil(t, selection)
+	boundAccountID, getErr := store.GetResponseAccount(ctx, groupID, "resp_prev_capability")
+	require.NoError(t, getErr)
+	require.Equal(t, account.ID, boundAccountID)
+placeholder
+
 func newOpenAIWSV2TestConfig() *config.Config {
 	cfg := &config.Config{placeholder
 	cfg.Gateway.OpenAIWS.Enabled = true
