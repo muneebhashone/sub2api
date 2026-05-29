@@ -2692,10 +2692,18 @@
             <Select
               v-model="openAIResponsesMode"
               :options="openAIResponsesModeOptions"
+              :disabled="!openAITextGenerationCapabilityEnabled"
               data-testid="openai-responses-mode-select"
             />
           </div>
         </div>
+        <p
+          v-if="!openAITextGenerationCapabilityEnabled"
+          class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+          data-testid="openai-responses-mode-not-applicable"
+        >
+          {{ t('admin.accounts.openai.responsesModeTextDisabledHint') placeholderplaceholder
+        </p>
         <div>
           <label class="input-label mb-2 block">{{ t('admin.accounts.openai.endpointCapabilities') placeholderplaceholder</label>
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -3434,10 +3442,22 @@ const openAIResponsesModeOptions = computed(() => [
   { value: 'force_responses', label: t('admin.accounts.openai.responsesModeForceResponses') placeholder,
   { value: 'force_chat_completions', label: t('admin.accounts.openai.responsesModeForceChatCompletions') placeholder
 ])
+const openAITextEndpointCapabilityLabel = computed(() => {
+  if (openAIResponsesMode.value === 'force_responses') {
+    return t('admin.accounts.openai.capabilityResponses')
+  placeholder
+  if (openAIResponsesMode.value === 'force_chat_completions') {
+    return t('admin.accounts.openai.capabilityChatCompletions')
+  placeholder
+  return t('admin.accounts.openai.capabilityTextAuto')
+placeholder)
 const openAIEndpointCapabilityOptions = computed<{ value: OpenAIEndpointCapability; label: string placeholder[]>(() => [
-  { value: 'chat_completions', label: t('admin.accounts.openai.capabilityChatCompletions') placeholder,
+  { value: 'chat_completions', label: openAITextEndpointCapabilityLabel.value placeholder,
   { value: 'embeddings', label: t('admin.accounts.openai.capabilityEmbeddings') placeholder
 ])
+const openAITextGenerationCapabilityEnabled = computed(() =>
+  openAIEndpointCapabilities.value.includes('chat_completions')
+)
 
 const normalizeOpenAIEndpointCapabilities = (values: OpenAIEndpointCapability[]) => {
   const allowed: OpenAIEndpointCapability[] = ['chat_completions', 'embeddings']
@@ -3455,6 +3475,9 @@ const toggleOpenAIEndpointCapability = (capability: OpenAIEndpointCapability, ev
     openAIEndpointCapabilities.value = openAIEndpointCapabilities.value.filter(
       (value) => value !== capability
     )
+    if (!openAITextGenerationCapabilityEnabled.value) {
+      openAIResponsesMode.value = 'auto'
+    placeholder
     return
   placeholder
   openAIEndpointCapabilities.value = normalizeOpenAIEndpointCapabilities([
@@ -4268,7 +4291,11 @@ const buildOpenAIExtra = (base?: Record<string, unknown>): Record<string, unknow
     delete extra.openai_compact_mode
   placeholder
 
-  if (accountCategory.value === 'apikey' && openAIResponsesMode.value !== 'auto') {
+  if (
+    accountCategory.value === 'apikey' &&
+    openAITextGenerationCapabilityEnabled.value &&
+    openAIResponsesMode.value !== 'auto'
+  ) {
     extra.openai_responses_mode = openAIResponsesMode.value
   placeholder else {
     delete extra.openai_responses_mode
