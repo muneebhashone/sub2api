@@ -106,26 +106,13 @@ placeholder
 placeholder
 placeholder
 
-func TestGetOpenAIRequestBodyMap_UsesContextCache(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-
-	cached := map[string]any{"model": "cached-model", "stream": trueplaceholder
-	CacheOpenAIParsedRequestBody(c, []byte(`{invalid-json`), cached)
-
-	got, err := getOpenAIRequestBodyMap(c, []byte(`{invalid-json`))
-placeholder
-	require.Equal(t, cached, got)
-placeholder
-
-func TestGetOpenAIRequestBodyMap_ParseErrorWithoutCache(t *testing.T) {
+func TestGetOpenAIRequestBodyMap_ParseError(t *testing.T) {
 	_, err := getOpenAIRequestBodyMap(nil, []byte(`{invalid-json`))
 placeholder
 	require.Contains(t, err.Error(), "parse request")
 placeholder
 
-func TestGetOpenAIRequestBodyMap_WriteBackContextCache(t *testing.T) {
+func TestGetOpenAIRequestBodyMap_DoesNotWriteContextCache(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -133,20 +120,7 @@ func TestGetOpenAIRequestBodyMap_WriteBackContextCache(t *testing.T) {
 	got, err := getOpenAIRequestBodyMap(c, []byte(`{"model":"gpt-5","stream":trueplaceholder`))
 placeholder
 	require.Equal(t, "gpt-5", got["model"])
-
-	require.Equal(t, got, CachedOpenAIParsedRequestBody(c))
-placeholder
-
-func TestGetOpenAIRequestBodyMap_IgnoresCacheForDifferentBody(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-
-	CacheOpenAIParsedRequestBody(c, []byte(`{"model":"cached-model"placeholder`), map[string]any{"model": "cached-model"placeholder)
-
-	got, err := getOpenAIRequestBodyMap(c, []byte(`{"model":"forward-model"placeholder`))
-placeholder
-	require.Equal(t, "forward-model", got["model"])
+	require.Empty(t, c.Keys)
 placeholder
 
 func TestSanitizeEmptyBase64InputImagesInOpenAIRequestBodyMap(t *testing.T) {
