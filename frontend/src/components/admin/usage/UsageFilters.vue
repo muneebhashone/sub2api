@@ -168,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, toRef, watch placeholder from 'vue'
+import { ref, onMounted, onUnmounted, toRef, watch, computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
 import Select, { type SelectOption placeholder from '@/components/common/Select.vue'
@@ -182,6 +182,7 @@ interface Props {
   startDate: string
   endDate: string
   showActions?: boolean
+  modelOptions?: string[]
 placeholder
 
 const props = withDefaults(defineProps<Props>(), {
@@ -222,7 +223,10 @@ const accountResults = ref<SimpleAccount[]>([])
 const showAccountDropdown = ref(false)
 let accountSearchTimeout: ReturnType<typeof setTimeout> | null = null
 
-const modelOptions = ref<SelectOption[]>([{ value: null, label: t('admin.usage.allModels') placeholder])
+const modelOptions = computed<SelectOption[]>(() => [
+  { value: null, label: t('admin.usage.allModels') placeholder,
+  ...(props.modelOptions ?? []).map((m) => ({ value: m, label: m placeholder)),
+])
 const groupOptions = ref<SelectOption[]>([{ value: null, label: t('admin.usage.allGroups') placeholder])
 
 const requestTypeOptions = ref<SelectOption[]>([
@@ -421,26 +425,9 @@ watch(
 
 onMounted(async () => {
   document.addEventListener('click', onDocumentClick)
-
   try {
-    const [gs, ms] = await Promise.all([
-      adminAPI.groups.list(1, 1000),
-      adminAPI.dashboard.getModelStats({ start_date: props.startDate, end_date: props.endDate placeholder)
-    ])
-
+    const gs = await adminAPI.groups.list(1, 1000)
     groupOptions.value.push(...gs.items.map((g: any) => ({ value: g.id, label: g.name placeholder)))
-
-    const uniqueModels = new Set<string>()
-    ms.models?.forEach((s: any) => {
-      if (s.model) {
-        uniqueModels.add(s.model)
-      placeholder
-    placeholder)
-    modelOptions.value.push(
-      ...Array.from(uniqueModels)
-        .sort()
-        .map((m) => ({ value: m, label: m placeholder))
-    )
   placeholder catch {
     // Ignore filter option loading errors (page still usable)
   placeholder

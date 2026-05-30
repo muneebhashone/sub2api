@@ -3,7 +3,7 @@ import { flushPromises, mount placeholder from '@vue/test-utils'
 
 import UsageView from '../UsageView.vue'
 
-const { list, getStats, getSnapshotV2, getById placeholder = vi.hoisted(() => {
+const { list, getStats, getSnapshotV2, getById, getModelStats placeholder = vi.hoisted(() => {
   vi.stubGlobal('localStorage', {
     getItem: vi.fn(() => null),
     setItem: vi.fn(),
@@ -15,6 +15,7 @@ const { list, getStats, getSnapshotV2, getById placeholder = vi.hoisted(() => {
     getStats: vi.fn(),
     getSnapshotV2: vi.fn(),
     getById: vi.fn(),
+    getModelStats: vi.fn(),
   placeholder
 placeholder)
 
@@ -40,6 +41,7 @@ vi.mock('@/api/admin', () => ({
     placeholder,
     dashboard: {
       getSnapshotV2,
+      getModelStats,
     placeholder,
     users: {
       getById,
@@ -116,6 +118,7 @@ describe('admin UsageView distribution metric toggles', () => {
     getStats.mockReset()
     getSnapshotV2.mockReset()
     getById.mockReset()
+    getModelStats.mockReset()
 
     list.mockResolvedValue({
       items: [],
@@ -137,10 +140,42 @@ describe('admin UsageView distribution metric toggles', () => {
       models: [],
       groups: [],
     placeholder)
+    getModelStats.mockResolvedValue({ models: [] placeholder)
   placeholder)
 
   afterEach(() => {
     vi.useRealTimers()
+  placeholder)
+
+  it('keeps previous model stats visible during refresh until new data arrives', async () => {
+    // 首次加载返回 A
+    getModelStats.mockResolvedValueOnce({ models: [{ model: 'A', total_tokens: 10 placeholder] placeholder)
+
+    const wrapper = mount(UsageView, {
+      global: { stubs: {
+        AppLayout: AppLayoutStub, UsageStatsCards: true, UsageFilters: UsageFiltersStub,
+        UsageTable: true, UsageExportProgress: true, UsageCleanupDialog: true,
+        UserBalanceHistoryModal: true, AuditLogModal: true, Pagination: true, Select: true,
+        DateRangePicker: true, Icon: true, TokenUsageTrend: true,
+        ModelDistributionChart: ModelDistributionChartStub, GroupDistributionChart: GroupDistributionChartStub,
+        EndpointDistributionChart: true,
+      placeholder placeholder,
+    placeholder)
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+    expect((wrapper.vm as any).requestedModelStats).toEqual([{ model: 'A', total_tokens: 10 placeholder])
+
+    // 刷新:让第二次 getModelStats 处于 pending,断言旧数据 A 仍在(不被清空成 [])
+    let resolveSecond: (v: any) => void = () => {placeholder
+    getModelStats.mockReturnValueOnce(new Promise((res) => { resolveSecond = res placeholder))
+    ;(wrapper.vm as any).refreshData()
+    await flushPromises()
+    expect((wrapper.vm as any).requestedModelStats).toEqual([{ model: 'A', total_tokens: 10 placeholder])
+
+    // 新数据到达后替换为 B
+    resolveSecond({ models: [{ model: 'B', total_tokens: 20 placeholder] placeholder)
+    await flushPromises()
+    expect((wrapper.vm as any).requestedModelStats).toEqual([{ model: 'B', total_tokens: 20 placeholder])
   placeholder)
 
   it('keeps model and group metric toggles independent without refetching chart data', async () => {

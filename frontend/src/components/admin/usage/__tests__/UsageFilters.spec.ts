@@ -50,6 +50,9 @@ placeholder)
 // Mock the admin API module — we control searchUsers return value per test
 const mockSearchUsers = vi.fn()
 const mockSearchApiKeys = vi.fn().mockResolvedValue([])
+const mockGroupsList = vi.fn().mockResolvedValue({ items: [] placeholder)
+const mockGetModelStats = vi.fn().mockResolvedValue({ models: [] placeholder)
+const mockAccountsList = vi.fn().mockResolvedValue({ items: [] placeholder)
 
 vi.mock('@/api/admin', () => ({
   adminAPI: {
@@ -57,15 +60,9 @@ vi.mock('@/api/admin', () => ({
       searchUsers: (...args: any[]) => mockSearchUsers(...args),
       searchApiKeys: (...args: any[]) => mockSearchApiKeys(...args),
     placeholder,
-    groups: {
-      list: vi.fn().mockResolvedValue({ items: [] placeholder),
-    placeholder,
-    dashboard: {
-      getModelStats: vi.fn().mockResolvedValue({ models: [] placeholder),
-    placeholder,
-    accounts: {
-      list: vi.fn().mockResolvedValue({ items: [] placeholder),
-    placeholder,
+    groups: { list: (...args: any[]) => mockGroupsList(...args) placeholder,
+    dashboard: { getModelStats: (...args: any[]) => mockGetModelStats(...args) placeholder,
+    accounts: { list: (...args: any[]) => mockAccountsList(...args) placeholder,
   placeholder,
 placeholder))
 
@@ -91,6 +88,7 @@ function mountFilters(filters = defaultFilters()) {
       startDate: '2026-05-01',
       endDate: '2026-05-28',
       showActions: false,
+      modelOptions: [],
     placeholder,
     global: {
       stubs: {
@@ -164,5 +162,34 @@ describe('UsageFilters — user search dropdown', () => {
     // Also confirm user_id was set by checking the emitted change came through
     // (the component uses toRef so modelValue is mutated in place and 'change' is emitted)
     expect(wrapper.props('modelValue').user_id).toBe(1)
+  placeholder)
+placeholder)
+
+describe('UsageFilters — model options come from prop (no dup request)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    mockGetModelStats.mockClear()
+    mockGroupsList.mockClear()
+  placeholder)
+  afterEach(() => { vi.useRealTimers() placeholder)
+
+  it('does not call dashboard.getModelStats on mount and renders model options from prop', async () => {
+    const wrapper = mount(UsageFilters, {
+      props: {
+        modelValue: defaultFilters(),
+        exporting: false,
+        startDate: '2026-05-01',
+        endDate: '2026-05-28',
+        showActions: false,
+        modelOptions: ['claude-3', 'gpt-4o'],
+      placeholder,
+      global: { stubs: { Select: true, Teleport: true placeholder placeholder,
+    placeholder)
+    await flushPromises()
+
+    expect(mockGetModelStats).not.toHaveBeenCalled()
+
+    const opts = (wrapper.vm as any).modelOptions as Array<{ value: string | null; label: string placeholder>
+    expect(opts.map((o) => o.value)).toEqual([null, 'claude-3', 'gpt-4o'])
   placeholder)
 placeholder)
