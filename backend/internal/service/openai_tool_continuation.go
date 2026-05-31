@@ -199,7 +199,7 @@ placeholder
 		placeholder
 			referenceIDs[idValue] = struct{placeholder{placeholder
 	placeholder
-		return !(result.HasFunctionCallOutput && result.HasToolCallContext)
+		return !result.HasFunctionCallOutput || !result.HasToolCallContext
 placeholder)
 	if !result.HasFunctionCallOutput || result.HasToolCallContext || len(callIDs) == 0 || len(referenceIDs) == 0 {
 		return result
