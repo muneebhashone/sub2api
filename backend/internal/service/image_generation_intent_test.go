@@ -84,6 +84,17 @@ placeholder
 	require.Equal(t, "2K", imageSize)
 placeholder
 
+func TestResolveOpenAIResponsesImageBillingConfigFromBodyIgnoresUnrelatedLargeInput(t *testing.T) {
+	cfg, err := resolveOpenAIResponsesImageBillingConfigDetailedFromBody(
+		[]byte(`{"model":"mapped-text-model","tools":[{"type":"image_generation","model":"gpt-image-2","size":"2048x1152"placeholder],"input":[{"type":"message","content":[{"type":"input_text","text":"hi","nonce":1e1000000placeholder]placeholder]placeholder`),
+		"requested-model",
+	)
+placeholder
+	require.Equal(t, "gpt-image-2", cfg.Model)
+	require.Equal(t, "2K", cfg.SizeTier)
+	require.Equal(t, "2048x1152", cfg.InputSize)
+placeholder
+
 func TestResolveOpenAIResponsesImageBillingConfigSupportsOfficialAndCustomSizes(t *testing.T) {
 	tests := []struct {
 		name     string
