@@ -721,6 +721,37 @@ placeholder
 	require.Equal(t, "client:openai-client-stable-123", usageRepo.lastLog.RequestID)
 placeholder
 
+func TestOpenAIGatewayServiceRecordUsage_WSModePrefersUpstreamRequestIDOverClientRequestID(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{placeholder
+	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: trueplaceholderplaceholder
+	userRepo := &openAIRecordUsageUserRepoStub{placeholder
+	subRepo := &openAIRecordUsageSubRepoStub{placeholder
+	svc := newOpenAIRecordUsageServiceWithBillingRepoForTest(usageRepo, billingRepo, userRepo, subRepo, nil)
+
+	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "openai-ws-connection-123")
+	err := svc.RecordUsage(ctx, &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:    "resp_openai_ws_turn_456",
+			OpenAIWSMode: true,
+			Usage: OpenAIUsage{
+				InputTokens:  8,
+				OutputTokens: 4,
+		placeholder,
+			Model:    "gpt-5.1",
+			Duration: time.Second,
+	placeholder,
+		APIKey:  &APIKey{ID: 10050placeholder,
+		User:    &User{ID: 20050placeholder,
+		Account: &Account{ID: 30050placeholder,
+placeholder)
+
+placeholder
+	require.NotNil(t, billingRepo.lastCmd)
+	require.Equal(t, "resp_openai_ws_turn_456", billingRepo.lastCmd.RequestID)
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, "resp_openai_ws_turn_456", usageRepo.lastLog.RequestID)
+placeholder
+
 func TestOpenAIGatewayServiceRecordUsage_GeneratesRequestIDWhenAllSourcesMissing(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{placeholder
 	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: trueplaceholderplaceholder
