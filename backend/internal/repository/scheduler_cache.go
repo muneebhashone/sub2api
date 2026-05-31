@@ -559,6 +559,7 @@ placeholder
 		"auto_pause_7d_threshold",
 		"auto_pause_5h_disabled",
 		"auto_pause_7d_disabled",
+		"model_rate_limits",
 placeholder
 	filtered := make(map[string]any)
 	for _, key := range keys {
