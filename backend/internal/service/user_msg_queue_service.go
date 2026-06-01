@@ -12,6 +12,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
+	"github.com/tidwall/gjson"
 )
 
 // UserMsgQueueCache 用户消息串行队列 Redis 缓存接口
@@ -62,43 +63,48 @@ placeholder
 // 2. 最后一条消息 role == "user"
 // 3. 最后一条消息 content（如果是数组）中不含 type:"tool_result" / "tool_use_result"
 func IsRealUserMessage(parsed *ParsedRequest) bool {
-	if parsed == nil || len(parsed.Messages) == 0 {
+	if parsed == nil {
+		return false
+placeholder
+	messagesRaw := parsed.MessagesRaw()
+	if len(messagesRaw) == 0 {
 		return false
 placeholder
 
-	lastMsg := parsed.Messages[len(parsed.Messages)-1]
-	msgMap, ok := lastMsg.(map[string]any)
-	if !ok {
+	messages := gjson.ParseBytes(messagesRaw)
+	if !messages.IsArray() {
+		return false
+placeholder
+	lastMsg := gjson.Result{placeholder
+	messages.ForEach(func(_, msg gjson.Result) bool {
+		lastMsg = msg
+		return true
+placeholder)
+	if !lastMsg.Exists() || !lastMsg.IsObject() {
+		return false
+placeholder
+	if lastMsg.Get("role").String() != "user" {
 		return false
 placeholder
 
-	role, _ := msgMap["role"].(string)
-	if role != "user" {
-		return false
+	content := lastMsg.Get("content")
+	if !content.Exists() {
+		return true
+placeholder
+	if !content.IsArray() {
+		return true
 placeholder
 
-	// 检查 content 是否包含 tool_result 类型
-	content, ok := msgMap["content"]
-	if !ok {
-		return true // 没有 content 字段，视为普通用户消息
-placeholder
-
-	contentArr, ok := content.([]any)
-	if !ok {
-		return true // content 不是数组（可能是 string），视为普通用户消息
-placeholder
-
-	for _, item := range contentArr {
-		itemMap, ok := item.(map[string]any)
-		if !ok {
-			continue
-	placeholder
-		itemType, _ := itemMap["type"].(string)
+	isReal := true
+	content.ForEach(func(_, item gjson.Result) bool {
+		itemType := item.Get("type").String()
 		if itemType == "tool_result" || itemType == "tool_use_result" {
+			isReal = false
 			return false
 	placeholder
-placeholder
-	return true
+		return true
+placeholder)
+	return isReal
 placeholder
 
 // TryAcquire 尝试立即获取串行锁

@@ -364,7 +364,7 @@ func TestBuildUpstreamRequestAnthropicAPIKeyPassthrough_StripsContextManagementW
 
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[{"type":"clear_thinking_20251015"placeholder]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildUpstreamRequestAnthropicAPIKeyPassthrough(
+	req, _, err := svc.buildUpstreamRequestAnthropicAPIKeyPassthrough(
 		context.Background(), c, newAnthropicAPIKeyPassthroughAccountForBetaTest(), body, "token",
 	)
 placeholder
@@ -381,7 +381,7 @@ func TestBuildUpstreamRequestAnthropicAPIKeyPassthrough_PreservesContextManageme
 
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[{"type":"clear_thinking_20251015"placeholder]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildUpstreamRequestAnthropicAPIKeyPassthrough(
+	req, _, err := svc.buildUpstreamRequestAnthropicAPIKeyPassthrough(
 		context.Background(), c, newAnthropicAPIKeyPassthroughAccountForBetaTest(), body, "token",
 	)
 placeholder
@@ -427,7 +427,7 @@ placeholder
 	// body 必须 strip。
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[{"type":"clear_thinking_20251015"placeholder]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildUpstreamRequest(
+	req, _, err := svc.buildUpstreamRequest(
 		context.Background(), c, account, body,
 		"oauth-tok", "oauth", "claude-haiku-4-5", false, true, // mimicClaudeCode=true
 	)
@@ -457,7 +457,7 @@ placeholder
 	// body 保留。
 	body := []byte(`{"model":"claude-sonnet-4-6","context_management":{"edits":[{"type":"clear_thinking_20251015"placeholder]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildUpstreamRequest(
+	req, _, err := svc.buildUpstreamRequest(
 		context.Background(), c, account, body,
 		"oauth-tok", "oauth", "claude-sonnet-4-6", false, true,
 	)
@@ -488,7 +488,7 @@ placeholder"access_token": "oauth-tok"placeholder,
 placeholder
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[{"type":"clear_thinking_20251015","keep":"all"placeholder]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildUpstreamRequest(
+	req, _, err := svc.buildUpstreamRequest(
 		context.Background(), c, account, body,
 		"oauth-tok", "oauth", "claude-haiku-4-5", false, false, // mimicClaudeCode=false（真 CC）
 	)
@@ -580,7 +580,7 @@ placeholder"access_token": "oauth-tok"placeholder,
 placeholder
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[{"type":"clear_thinking_20251015"placeholder]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildCountTokensRequest(
+	req, _, err := svc.buildCountTokensRequest(
 		context.Background(), c, account, body,
 		"oauth-tok", "oauth", "claude-haiku-4-5", true, // mimicClaudeCode=true
 	)
@@ -611,7 +611,7 @@ placeholder"api_key": "sk-ant-xxx"placeholder,
 placeholder
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildCountTokensRequest(
+	req, _, err := svc.buildCountTokensRequest(
 		context.Background(), c, account, body,
 		"sk-ant-xxx", "apikey", "claude-haiku-4-5", false,
 	)
@@ -655,7 +655,7 @@ placeholder"api_key": "sk-ant-xxx"placeholder,
 placeholder
 	body := []byte(`{"model":"claude-haiku-4-5","context_management":{"edits":[]placeholder,"messages":[]placeholder`)
 	svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
-	req, err := svc.buildUpstreamRequest(
+	req, _, err := svc.buildUpstreamRequest(
 		context.Background(), c, account, body,
 		"sk-ant-xxx", "apikey", "claude-haiku-4-5", false, false,
 	)

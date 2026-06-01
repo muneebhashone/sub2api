@@ -18,18 +18,12 @@ import (
 // claudeCodeValidator is a singleton validator for Claude Code client detection
 var claudeCodeValidator = service.NewClaudeCodeValidator()
 
-const claudeCodeParsedRequestContextKey = "claude_code_parsed_request"
-
 // SetClaudeCodeClientContext 检查请求是否来自 Claude Code 客户端，并设置到 context 中
 // 返回更新后的 context
 func SetClaudeCodeClientContext(c *gin.Context, body []byte, parsedReq *service.ParsedRequest) {
 	if c == nil || c.Request == nil {
 		return
 placeholder
-	if parsedReq != nil {
-		c.Set(claudeCodeParsedRequestContextKey, parsedReq)
-placeholder
-
 	ua := c.GetHeader("User-Agent")
 	// Fast path：非 Claude CLI UA 直接判定 false，避免热路径二次 JSON 反序列化。
 	if !claudeCodeValidator.ValidateUserAgent(ua) {
@@ -45,9 +39,6 @@ placeholder
 placeholder else {
 		// 仅在确认为 Claude CLI 且 messages 路径时再做 body 解析。
 		bodyMap := claudeCodeBodyMapFromParsedRequest(parsedReq)
-		if bodyMap == nil {
-			bodyMap = claudeCodeBodyMapFromContextCache(c)
-	placeholder
 		if bodyMap == nil && len(body) > 0 {
 			_ = json.Unmarshal(body, &bodyMap)
 	placeholder
@@ -74,33 +65,17 @@ placeholder
 	bodyMap := map[string]any{
 		"model": parsedReq.Model,
 placeholder
-	if parsedReq.System != nil || parsedReq.HasSystem {
-		bodyMap["system"] = parsedReq.System
+	if parsedReq.HasSystem {
+		if system, ok := parsedReq.SystemValue(); ok {
+			bodyMap["system"] = system
+	placeholder else {
+			bodyMap["system"] = nil
+	placeholder
 placeholder
 	if parsedReq.MetadataUserID != "" {
 		bodyMap["metadata"] = map[string]any{"user_id": parsedReq.MetadataUserIDplaceholder
 placeholder
 	return bodyMap
-placeholder
-
-func claudeCodeBodyMapFromContextCache(c *gin.Context) map[string]any {
-	if c == nil {
-		return nil
-placeholder
-	if cached, ok := c.Get(service.OpenAIParsedRequestBodyKey); ok {
-		if bodyMap, ok := cached.(map[string]any); ok {
-			return bodyMap
-	placeholder
-placeholder
-	if cached, ok := c.Get(claudeCodeParsedRequestContextKey); ok {
-		switch v := cached.(type) {
-		case *service.ParsedRequest:
-			return claudeCodeBodyMapFromParsedRequest(v)
-		case service.ParsedRequest:
-			return claudeCodeBodyMapFromParsedRequest(&v)
-	placeholder
-placeholder
-	return nil
 placeholder
 
 // 并发槽位等待相关常量

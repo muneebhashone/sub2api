@@ -171,6 +171,91 @@ placeholder
 	require.Equal(t, "resp_new_1", gjson.GetBytes(responseBody, "id").String())
 placeholder
 
+func TestOpenAIGatewayService_Forward_WSv2_UsesPatchedBodyAfterValidationDecode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	type receivedPayload struct {
+		MaxCompletionTokensExists bool
+placeholder
+	receivedCh := make(chan receivedPayload, 1)
+
+	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true placeholderplaceholder
+	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Errorf("upgrade websocket failed: %v", err)
+			return
+	placeholder
+		defer func() { _ = conn.Close() placeholder()
+
+		var request map[string]any
+		if err := conn.ReadJSON(&request); err != nil {
+			t.Errorf("read ws request failed: %v", err)
+			return
+	placeholder
+		requestJSON := requestToJSONString(request)
+		receivedCh <- receivedPayload{MaxCompletionTokensExists: gjson.Get(requestJSON, "max_completion_tokens").Exists()placeholder
+
+		if err := conn.WriteJSON(map[string]any{
+			"type": "response.completed",
+			"response": map[string]any{
+				"id":    "resp_patched_ws_1",
+				"model": "gpt-5.3-codex-spark",
+				"usage": map[string]any{"input_tokens": 1, "output_tokens": 1placeholder,
+		placeholder,
+	placeholder); err != nil {
+			t.Errorf("write response.completed failed: %v", err)
+			return
+	placeholder
+placeholder))
+	defer wsServer.Close()
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+	c.Request.Header.Set("User-Agent", "unit-test-agent/1.0")
+
+	cfg := &config.Config{placeholder
+	cfg.Security.URLAllowlist.Enabled = false
+	cfg.Security.URLAllowlist.AllowInsecureHTTP = true
+	cfg.Gateway.OpenAIWS.Enabled = true
+	cfg.Gateway.OpenAIWS.APIKeyEnabled = true
+	cfg.Gateway.OpenAIWS.ResponsesWebsocketsV2 = true
+	cfg.Gateway.OpenAIWS.DialTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.ReadTimeoutSeconds = 30
+	cfg.Gateway.OpenAIWS.WriteTimeoutSeconds = 10
+
+	svc := &OpenAIGatewayService{
+		cfg:              cfg,
+		openaiWSResolver: NewOpenAIWSProtocolResolver(cfg),
+		toolCorrector:    NewCodexToolCorrector(),
+placeholder
+
+	account := &Account{
+		ID:          10,
+		Name:        "openai-ws",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": wsServer.URL,
+	placeholder,
+		Extra: map[string]any{"responses_websockets_v2_enabled": trueplaceholder,
+placeholder
+
+	body := []byte(`{"model":"gpt-5.4","stream":false,"max_completion_tokens":12,"tools":[{"type":"image_generation"placeholder],"input":[{"type":"input_text","text":"hello"placeholder]placeholder`)
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.OpenAIWSMode)
+
+	received := <-receivedCh
+	require.False(t, received.MaxCompletionTokensExists)
+placeholder
+
 func TestOpenAIGatewayService_Forward_WSv2_ImageGenerationCountsOutputs(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
