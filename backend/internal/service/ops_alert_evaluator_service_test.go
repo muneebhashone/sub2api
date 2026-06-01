@@ -106,6 +106,48 @@ placeholder)
 placeholder)
 placeholder
 
+// TestComputeRuleMetric_AccountTempUnscheduledCount verifies the new
+// account_temp_unscheduled_count metric counts accounts currently in the
+// temp-unscheduled window and ignores those whose window has expired or
+// were never temp-unscheduled.
+func TestComputeRuleMetric_AccountTempUnscheduledCount(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	futureUntil := now.Add(5 * time.Minute)
+	pastUntil := now.Add(-1 * time.Minute)
+
+	availability := &OpsAccountAvailability{
+		Accounts: map[int64]*AccountAvailability{
+			// currently temp-unscheduled (window active)
+			1: {TempUnschedulableUntil: &futureUntilplaceholder,
+			2: {TempUnschedulableUntil: &futureUntilplaceholder,
+			// temp-unsched window already expired → should NOT count
+			3: {TempUnschedulableUntil: &pastUntilplaceholder,
+			// never temp-unscheduled
+			4: {HasError: trueplaceholder,
+			5: {IsRateLimited: trueplaceholder,
+	placeholder,
+placeholder
+
+	opsService := &OpsService{
+		getAccountAvailability: func(_ context.Context, _ string, _ *int64) (*OpsAccountAvailability, error) {
+			return availability, nil
+	placeholder,
+placeholder
+	svc := &OpsAlertEvaluatorService{
+		opsService: opsService,
+		opsRepo:    &stubOpsRepo{placeholder,
+placeholder
+
+	rule := &OpsAlertRule{MetricType: "account_temp_unscheduled_count"placeholder
+	val, ok := svc.computeRuleMetric(context.Background(), rule, nil,
+		now.Add(-5*time.Minute), now, "", nil)
+
+	require.True(t, ok)
+	require.InDelta(t, 2.0, val, 0.0001, "only 2 accounts have an active temp-unsched window")
+placeholder
+
 func TestComputeRuleMetricNewIndicators(t *testing.T) {
 	t.Parallel()
 
