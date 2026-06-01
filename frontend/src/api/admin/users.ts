@@ -117,8 +117,11 @@ placeholder
 export async function create(userData: {
   email: string
   password: string
+  username?: string
+  notes?: string
   balance?: number
   concurrency?: number
+  rpm_limit?: number
   allowed_groups?: number[] | null
 placeholder): Promise<AdminUser> {
   const { data placeholder = await apiClient.post<AdminUser>('/admin/users', userData)
