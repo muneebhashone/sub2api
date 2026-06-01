@@ -30,6 +30,7 @@ placeholder
 		BalanceNotifyExtraEmails:   NotifyEmailEntriesFromService(u.BalanceNotifyExtraEmails),
 		TotalRecharged:             u.TotalRecharged,
 		RPMLimit:                   u.RPMLimit,
+		DeletedAt:                  u.DeletedAt,
 placeholder
 placeholder
 

@@ -27,6 +27,7 @@ placeholder
 export interface SimpleUser {
   id: number
   email: string
+  deleted: boolean
 placeholder
 
 export interface SimpleApiKey {
@@ -120,6 +121,7 @@ export async function getStats(params: {
   start_date?: string
   end_date?: string
   timezone?: string
+  nocache?: number
 placeholder): Promise<AdminUsageStatsResponse> {
   const { data placeholder = await apiClient.get<AdminUsageStatsResponse>('/admin/usage/stats', {
     params

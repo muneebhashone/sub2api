@@ -3,7 +3,7 @@ import { flushPromises, mount placeholder from '@vue/test-utils'
 
 import UsageView from '../UsageView.vue'
 
-const { list, getStats, getSnapshotV2, getById placeholder = vi.hoisted(() => {
+const { list, getStats, getSnapshotV2, getById, getModelStats placeholder = vi.hoisted(() => {
   vi.stubGlobal('localStorage', {
     getItem: vi.fn(() => null),
     setItem: vi.fn(),
@@ -15,6 +15,7 @@ const { list, getStats, getSnapshotV2, getById placeholder = vi.hoisted(() => {
     getStats: vi.fn(),
     getSnapshotV2: vi.fn(),
     getById: vi.fn(),
+    getModelStats: vi.fn(),
   placeholder
 placeholder)
 
@@ -40,6 +41,7 @@ vi.mock('@/api/admin', () => ({
     placeholder,
     dashboard: {
       getSnapshotV2,
+      getModelStats,
     placeholder,
     users: {
       getById,
@@ -84,6 +86,10 @@ placeholder))
 
 const AppLayoutStub = { template: '<div><slot /></div>' placeholder
 const UsageFiltersStub = { template: '<div><slot name="after-reset" /></div>' placeholder
+const UsageTableStub = {
+  emits: ['userClick'],
+  template: '<div data-test="usage-table"><button class="user-click" @click="$emit(\'userClick\', 2)">user</button></div>',
+placeholder
 const ModelDistributionChartStub = {
   props: ['metric'],
   emits: ['update:metric'],
@@ -112,6 +118,7 @@ describe('admin UsageView distribution metric toggles', () => {
     getStats.mockReset()
     getSnapshotV2.mockReset()
     getById.mockReset()
+    getModelStats.mockReset()
 
     list.mockResolvedValue({
       items: [],
@@ -133,10 +140,42 @@ describe('admin UsageView distribution metric toggles', () => {
       models: [],
       groups: [],
     placeholder)
+    getModelStats.mockResolvedValue({ models: [] placeholder)
   placeholder)
 
   afterEach(() => {
     vi.useRealTimers()
+  placeholder)
+
+  it('keeps previous model stats visible during refresh until new data arrives', async () => {
+    // 首次加载返回 A
+    getModelStats.mockResolvedValueOnce({ models: [{ model: 'A', total_tokens: 10 placeholder] placeholder)
+
+    const wrapper = mount(UsageView, {
+      global: { stubs: {
+        AppLayout: AppLayoutStub, UsageStatsCards: true, UsageFilters: UsageFiltersStub,
+        UsageTable: true, UsageExportProgress: true, UsageCleanupDialog: true,
+        UserBalanceHistoryModal: true, AuditLogModal: true, Pagination: true, Select: true,
+        DateRangePicker: true, Icon: true, TokenUsageTrend: true,
+        ModelDistributionChart: ModelDistributionChartStub, GroupDistributionChart: GroupDistributionChartStub,
+        EndpointDistributionChart: true,
+      placeholder placeholder,
+    placeholder)
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+    expect((wrapper.vm as any).requestedModelStats).toEqual([{ model: 'A', total_tokens: 10 placeholder])
+
+    // 刷新:让第二次 getModelStats 处于 pending,断言旧数据 A 仍在(不被清空成 [])
+    let resolveSecond: (v: any) => void = () => {placeholder
+    getModelStats.mockReturnValueOnce(new Promise((res) => { resolveSecond = res placeholder))
+    ;(wrapper.vm as any).refreshData()
+    await flushPromises()
+    expect((wrapper.vm as any).requestedModelStats).toEqual([{ model: 'A', total_tokens: 10 placeholder])
+
+    // 新数据到达后替换为 B
+    resolveSecond({ models: [{ model: 'B', total_tokens: 20 placeholder] placeholder)
+    await flushPromises()
+    expect((wrapper.vm as any).requestedModelStats).toEqual([{ model: 'B', total_tokens: 20 placeholder])
   placeholder)
 
   it('keeps model and group metric toggles independent without refetching chart data', async () => {
@@ -192,5 +231,61 @@ describe('admin UsageView distribution metric toggles', () => {
     expect(modelChart.find('.metric').text()).toBe('actual_cost')
     expect(groupChart.find('.metric').text()).toBe('actual_cost')
     expect(getSnapshotV2).toHaveBeenCalledTimes(1)
+  placeholder)
+placeholder)
+
+describe('admin UsageView handleUserClick', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    list.mockReset()
+    getStats.mockReset()
+    getSnapshotV2.mockReset()
+    getById.mockReset()
+
+    list.mockResolvedValue({ items: [], total: 0, pages: 0 placeholder)
+    getStats.mockResolvedValue({
+      total_requests: 0, total_input_tokens: 0, total_output_tokens: 0,
+      total_cache_tokens: 0, total_tokens: 0, total_cost: 0, total_actual_cost: 0, average_duration_ms: 0,
+    placeholder)
+    getSnapshotV2.mockResolvedValue({ trend: [], models: [], groups: [] placeholder)
+  placeholder)
+
+  afterEach(() => {
+    vi.useRealTimers()
+  placeholder)
+
+  it('opens user via include_deleted when clicking a usage row user', async () => {
+    getById.mockResolvedValue({ id: 2, email: 'd@test.com', deleted_at: '2026-05-28T00:00:00Z' placeholder)
+
+    const wrapper = mount(UsageView, {
+      global: {
+        stubs: {
+          AppLayout: AppLayoutStub,
+          UsageStatsCards: true,
+          UsageFilters: UsageFiltersStub,
+          UsageTable: UsageTableStub,
+          UsageExportProgress: true,
+          UsageCleanupDialog: true,
+          UserBalanceHistoryModal: true,
+          AuditLogModal: true,
+          Pagination: true,
+          Select: true,
+          DateRangePicker: true,
+          Icon: true,
+          TokenUsageTrend: true,
+          ModelDistributionChart: true,
+          GroupDistributionChart: true,
+          EndpointDistributionChart: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+
+    await wrapper.find('[data-test="usage-table"] .user-click').trigger('click')
+    await flushPromises()
+
+    expect(getById).toHaveBeenCalledWith(2, true)
   placeholder)
 placeholder)

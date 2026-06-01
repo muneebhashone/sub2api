@@ -236,6 +236,10 @@ placeholder
 	return nil
 placeholder
 
+func (m *mockUserRepo) GetByIDIncludeDeleted(ctx context.Context, id int64) (*User, error) {
+	return m.GetByID(ctx, id)
+placeholder
+
 func (m *mockUserRepo) WithUserProfileIdentityTx(ctx context.Context, fn func(txCtx context.Context) error) error {
 	m.txCalls++
 	txState := &mockUserRepoTxState{

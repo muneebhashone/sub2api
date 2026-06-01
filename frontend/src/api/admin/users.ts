@@ -100,10 +100,12 @@ placeholder
 /**
  * Get user by ID
  * @param id - User ID
+ * @param includeDeleted - Whether to include soft-deleted users
  * @returns User details
  */
-export async function getById(id: number): Promise<AdminUser> {
-  const { data placeholder = await apiClient.get<AdminUser>(`/admin/users/${idplaceholder`)
+export async function getById(id: number, includeDeleted = false): Promise<AdminUser> {
+  const url = includeDeleted ? `/admin/users/${idplaceholder?include_deleted=true` : `/admin/users/${idplaceholder`
+  const { data placeholder = await apiClient.get<AdminUser>(url)
   return data
 placeholder
 
