@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
+	"github.com/imroc/req/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,6 +33,11 @@ placeholder
 func TestOpenAIOAuthService_RefreshAccountToken_NoRefreshTokenUsesExistingAccessToken(t *testing.T) {
 	client := &openaiOAuthClientRefreshStub{placeholder
 	svc := NewOpenAIOAuthService(nil, client)
+	var privacyClientCalls int32
+	svc.SetPrivacyClientFactory(func(proxyURL string) (*req.Client, error) {
+		atomic.AddInt32(&privacyClientCalls, 1)
+		return nil, errors.New("stop before request")
+placeholder)
 
 	expiresAt := time.Now().Add(30 * time.Minute).UTC().Format(time.RFC3339)
 	account := &Account{
@@ -51,6 +57,7 @@ placeholder
 	require.Equal(t, "existing-access-token", info.AccessToken)
 	require.Equal(t, "client-id-1", info.ClientID)
 	require.Zero(t, atomic.LoadInt32(&client.refreshCalls), "existing access token should be reused without calling refresh")
+	require.Positive(t, atomic.LoadInt32(&privacyClientCalls), "existing access token should still run enrichment")
 placeholder
 
 func TestOpenAITokenRefresher_NeedsRefresh_SkipsAccountWithoutRefreshToken(t *testing.T) {
