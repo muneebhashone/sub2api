@@ -355,6 +355,14 @@ placeholder
 	return detail, nil
 placeholder
 
+// LookupDeletedKeyAudit 按明文 key 反查已删除 key 的原所有者;未命中或未启用返回 (nil, nil)。
+func (s *OpsService) LookupDeletedKeyAudit(ctx context.Context, key string) (*DeletedKeyAuditResult, error) {
+	if s.opsRepo == nil {
+		return nil, nil
+placeholder
+	return s.opsRepo.LookupDeletedKeyAudit(ctx, key)
+placeholder
+
 func (s *OpsService) UpdateErrorResolution(ctx context.Context, errorID int64, resolved bool, resolvedByUserID *int64) error {
 	if err := s.RequireMonitoringEnabled(ctx); err != nil {
 		return err
