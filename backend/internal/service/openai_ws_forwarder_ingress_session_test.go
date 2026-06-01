@@ -2305,6 +2305,161 @@ placeholder
 	require.Equal(t, "world", gjson.Get(secondWrite, "input.1.text").String())
 placeholder
 
+func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_StoreDisabledPreflightPingFailReplaysFunctionCallOutputWithContext(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	prevPreflightPingIdle := openAIWSIngressPreflightPingIdle
+	openAIWSIngressPreflightPingIdle = 0
+	defer func() {
+		openAIWSIngressPreflightPingIdle = prevPreflightPingIdle
+placeholder()
+
+	cfg := &config.Config{placeholder
+	cfg.Security.URLAllowlist.Enabled = false
+	cfg.Security.URLAllowlist.AllowInsecureHTTP = true
+	cfg.Gateway.OpenAIWS.Enabled = true
+	cfg.Gateway.OpenAIWS.OAuthEnabled = true
+	cfg.Gateway.OpenAIWS.APIKeyEnabled = true
+	cfg.Gateway.OpenAIWS.ResponsesWebsocketsV2 = true
+	cfg.Gateway.OpenAIWS.MaxConnsPerAccount = 2
+	cfg.Gateway.OpenAIWS.MinIdlePerAccount = 0
+	cfg.Gateway.OpenAIWS.MaxIdlePerAccount = 2
+	cfg.Gateway.OpenAIWS.QueueLimitPerConn = 8
+	cfg.Gateway.OpenAIWS.DialTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.ReadTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.WriteTimeoutSeconds = 3
+
+	firstConn := &openAIWSPreflightFailConn{
+		events: [][]byte{
+			[]byte(`{"type":"response.completed","response":{"id":"resp_turn_ping_replay_ctx_1","model":"gpt-5.1","output":[{"type":"function_call","id":"fc_replay_1","call_id":"call_replay_1","name":"shell","arguments":"{placeholder"placeholder],"usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+	placeholder,
+placeholder
+	secondConn := &openAIWSCaptureConn{
+		events: [][]byte{
+			[]byte(`{"type":"response.completed","response":{"id":"resp_turn_ping_replay_ctx_2","model":"gpt-5.1","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+	placeholder,
+placeholder
+	dialer := &openAIWSQueueDialer{
+		conns: []openAIWSClientConn{firstConn, secondConnplaceholder,
+placeholder
+	pool := newOpenAIWSConnPool(cfg)
+	pool.setClientDialerForTest(dialer)
+
+	svc := &OpenAIGatewayService{
+		cfg:              cfg,
+		httpUpstream:     &httpUpstreamRecorder{placeholder,
+		cache:            &stubGatewayCache{placeholder,
+		openaiWSResolver: NewOpenAIWSProtocolResolver(cfg),
+		toolCorrector:    NewCodexToolCorrector(),
+		openaiWSPool:     pool,
+placeholder
+
+	account := &Account{
+		ID:          128,
+		Name:        "openai-ingress-preflight-replay-function-output-with-context",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"api_key": "sk-test",
+	placeholder,
+		Extra: map[string]any{
+			"responses_websockets_v2_enabled": true,
+	placeholder,
+placeholder
+
+	serverErrCh := make(chan error, 1)
+	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := coderws.Accept(w, r, &coderws.AcceptOptions{
+			CompressionMode: coderws.CompressionContextTakeover,
+	placeholder)
+		if err != nil {
+			serverErrCh <- err
+			return
+	placeholder
+		defer func() {
+			_ = conn.CloseNow()
+	placeholder()
+
+		rec := httptest.NewRecorder()
+		ginCtx, _ := gin.CreateTestContext(rec)
+		req := r.Clone(r.Context())
+		req.Header = req.Header.Clone()
+		req.Header.Set("User-Agent", "unit-test-agent/1.0")
+		ginCtx.Request = req
+
+		readCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		msgType, firstMessage, readErr := conn.Read(readCtx)
+		cancel()
+		if readErr != nil {
+			serverErrCh <- readErr
+			return
+	placeholder
+		if msgType != coderws.MessageText && msgType != coderws.MessageBinary {
+			serverErrCh <- errors.New("unsupported websocket client message type")
+			return
+	placeholder
+
+		serverErrCh <- svc.ProxyResponsesWebSocketFromClient(r.Context(), ginCtx, conn, account, "sk-test", firstMessage, nil)
+placeholder))
+	defer wsServer.Close()
+
+	dialCtx, cancelDial := context.WithTimeout(context.Background(), 3*time.Second)
+	clientConn, _, err := coderws.Dial(dialCtx, "ws"+strings.TrimPrefix(wsServer.URL, "http"), nil)
+	cancelDial()
+placeholder
+	defer func() {
+		_ = clientConn.CloseNow()
+placeholder()
+
+	writeMessage := func(payload string) {
+		writeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		require.NoError(t, clientConn.Write(writeCtx, coderws.MessageText, []byte(payload)))
+placeholder
+	readMessage := func() []byte {
+		readCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		msgType, message, readErr := clientConn.Read(readCtx)
+		require.NoError(t, readErr)
+		require.Equal(t, coderws.MessageText, msgType)
+		return message
+placeholder
+
+	writeMessage(`{"type":"response.create","model":"gpt-5.1","stream":false,"store":false,"input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"call tool"placeholder]placeholder]placeholder`)
+	firstTurn := readMessage()
+	require.Equal(t, "resp_turn_ping_replay_ctx_1", gjson.GetBytes(firstTurn, "response.id").String())
+
+	writeMessage(`{"type":"response.create","model":"gpt-5.1","stream":false,"store":false,"previous_response_id":"resp_turn_ping_replay_ctx_1","input":[{"type":"function_call_output","call_id":"call_replay_1","output":"ok"placeholder]placeholder`)
+	secondTurn := readMessage()
+	require.Equal(t, "resp_turn_ping_replay_ctx_2", gjson.GetBytes(secondTurn, "response.id").String())
+
+	require.NoError(t, clientConn.Close(coderws.StatusNormalClosure, "done"))
+	select {
+	case serverErr := <-serverErrCh:
+		require.NoError(t, serverErr)
+	case <-time.After(5 * time.Second):
+		t.Fatal("等待 ingress websocket function_call_output 自包含重放后结束超时")
+placeholder
+
+	require.Equal(t, 2, dialer.DialCount(), "带完整 tool 上下文的 function_call_output 应在 ping 失败后换新连接重放")
+	require.Equal(t, 1, firstConn.WriteCount())
+	require.GreaterOrEqual(t, firstConn.PingCount(), 1)
+	secondConn.mu.Lock()
+	secondWrites := append([]map[string]any(nil), secondConn.writes...)
+	secondConn.mu.Unlock()
+	require.Len(t, secondWrites, 1)
+	secondWrite := requestToJSONString(secondWrites[0])
+	require.False(t, gjson.Get(secondWrite, "previous_response_id").Exists())
+	require.Equal(t, 3, len(gjson.Get(secondWrite, "input").Array()))
+	require.Equal(t, "message", gjson.Get(secondWrite, "input.0.type").String())
+	require.Equal(t, "function_call", gjson.Get(secondWrite, "input.1.type").String())
+	require.Equal(t, "call_replay_1", gjson.Get(secondWrite, "input.1.call_id").String())
+	require.Equal(t, "function_call_output", gjson.Get(secondWrite, "input.2.type").String())
+	require.Equal(t, "call_replay_1", gjson.Get(secondWrite, "input.2.call_id").String())
+placeholder
+
 func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_StoreDisabledPreflightPingFailClosesWhenFunctionCallOutputNeedsPreviousResponseID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	prevPreflightPingIdle := openAIWSIngressPreflightPingIdle
