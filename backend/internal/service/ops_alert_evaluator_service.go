@@ -35,6 +35,7 @@ type OpsAlertEvaluatorService struct {
 	opsService   *OpsService
 	opsRepo      OpsRepository
 	emailService *EmailService
+	proxyRepo    ProxyRepository
 
 	redisClient *redis.Client
 	cfg         *config.Config
@@ -67,11 +68,13 @@ func NewOpsAlertEvaluatorService(
 	emailService *EmailService,
 	redisClient *redis.Client,
 	cfg *config.Config,
+	proxyRepo ProxyRepository,
 ) *OpsAlertEvaluatorService {
 	return &OpsAlertEvaluatorService{
 		opsService:   opsService,
 		opsRepo:      opsRepo,
 		emailService: emailService,
+		proxyRepo:    proxyRepo,
 		redisClient:  redisClient,
 		cfg:          cfg,
 		instanceID:   uuid.NewString(),
@@ -560,6 +563,24 @@ placeholder
 		return float64(countAccountsByCondition(availability.Accounts, func(acc *AccountAvailability) bool {
 			return acc.IsOverloaded
 	placeholder)), true
+	case "proxy_expired_count":
+		if s == nil || s.proxyRepo == nil {
+			return 0, false
+	placeholder
+		n, err := s.proxyRepo.CountExpired(ctx)
+		if err != nil {
+			return 0, false
+	placeholder
+		return float64(n), true
+	case "proxy_expiring_soon_count":
+		if s == nil || s.proxyRepo == nil {
+			return 0, false
+	placeholder
+		n, err := s.proxyRepo.CountExpiringSoon(ctx, time.Now())
+		if err != nil {
+			return 0, false
+	placeholder
+		return float64(n), true
 placeholder
 
 	overview, err := s.opsRepo.GetDashboardOverview(ctx, &OpsDashboardFilter{
