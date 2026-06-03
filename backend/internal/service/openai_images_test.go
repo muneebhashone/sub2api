@@ -656,6 +656,64 @@ placeholder
 	require.Equal(t, "draw a cat 3", gjson.Get(rec.Body.String(), "data.2.revised_prompt").String())
 placeholder
 
+func TestOpenAIGatewayServiceForwardImages_OAuthUpstreamHTTPErrorSurfacesRealError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-image-2","prompt":"draw a cat","response_format":"b64_json"placeholder`)
+
+	// The non-failover upstream error path is shared by /generations and /edits;
+	// use /generations here so the request parses without an uploaded image.
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = req
+	c.Set("api_key", &APIKey{ID: 42placeholder)
+
+	svc := &OpenAIGatewayService{placeholder
+	parsed, err := svc.ParseOpenAIImagesRequest(c, body)
+placeholder
+
+	svc.httpUpstream = &httpUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Header: http.Header{
+				"Content-Type": []string{"application/json"placeholder,
+				"X-Request-Id": []string{"req_img_badreq"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(
+				`{"error":{"message":"Invalid value for 'size': expected one of 1024x1024, 1536x1024.","type":"invalid_request_error","param":"size","code":"unknown_parameter"placeholderplaceholder`,
+			)),
+	placeholder,
+placeholder
+
+	account := &Account{
+		ID:       1,
+		Name:     "openai-oauth",
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"access_token": "token-123",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardImages(context.Background(), c, account, body, parsed, "")
+	require.Nil(t, result)
+
+	var upstreamErr *OpenAIImagesUpstreamError
+	require.ErrorAs(t, err, &upstreamErr)
+	require.Equal(t, http.StatusBadRequest, upstreamErr.StatusCode)
+	require.Equal(t, "invalid_request_error", upstreamErr.ErrorType)
+	require.Equal(t, "unknown_parameter", upstreamErr.Code)
+
+	// The client must receive the actual upstream status code and message instead
+	// of a generic 502 "Upstream request failed".
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, "invalid_request_error", gjson.Get(rec.Body.String(), "error.type").String())
+	require.Equal(t, "unknown_parameter", gjson.Get(rec.Body.String(), "error.code").String())
+	require.Equal(t, "size", gjson.Get(rec.Body.String(), "error.param").String())
+	require.Contains(t, gjson.Get(rec.Body.String(), "error.message").String(), "Invalid value for 'size'")
+placeholder
+
 func TestOpenAIGatewayServiceForwardImages_OAuthNonStreamModerationBlockedReturnsClientError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	body := []byte(`{"model":"gpt-image-2","prompt":"draw blocked image","response_format":"b64_json"placeholder`)
