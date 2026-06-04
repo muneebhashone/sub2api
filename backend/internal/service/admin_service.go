@@ -230,7 +230,7 @@ placeholder
 
 type UpdateGroupInput struct {
 	Name             string
-	Description      string
+	Description      *string
 	Platform         string
 	RateMultiplier   *float64 // 使用指针以支持设置为0
 	IsExclusive      *bool
@@ -1924,8 +1924,8 @@ placeholder
 	if input.Name != "" {
 		group.Name = input.Name
 placeholder
-	if input.Description != "" {
-		group.Description = input.Description
+	if input.Description != nil {
+		group.Description = *input.Description
 placeholder
 	if input.Platform != "" {
 		group.Platform = input.Platform
