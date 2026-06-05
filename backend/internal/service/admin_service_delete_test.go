@@ -515,6 +515,31 @@ placeholder
 	require.Equal(t, []int64{7placeholder, repo.deletedIDs)
 placeholder
 
+func TestAdminService_DeleteUser_DeletesOwnedAPIKeys(t *testing.T) {
+	repo := &userRepoStub{user: &User{ID: 7, Role: RoleUserplaceholderplaceholder
+	apiKeyRepo := &apiKeyRepoStub{
+		allowListByUserID: true,
+		listByUserIDKeys: []APIKey{
+			{ID: 11, UserID: 7, Key: "sk-user-1"placeholder,
+			{ID: 12, UserID: 7, Key: "sk-user-2"placeholder,
+	placeholder,
+placeholder
+	invalidator := &authCacheInvalidatorStub{placeholder
+	svc := &adminServiceImpl{
+		userRepo:             repo,
+		apiKeyRepo:           apiKeyRepo,
+		authCacheInvalidator: invalidator,
+placeholder
+
+	err := svc.DeleteUser(context.Background(), 7)
+placeholder
+	require.Equal(t, []int64{7placeholder, repo.deletedIDs)
+	require.Equal(t, []int64{7placeholder, apiKeyRepo.listByUserIDCalls)
+	require.Equal(t, []int64{11, 12placeholder, apiKeyRepo.deletedIDs)
+	require.ElementsMatch(t, []string{"sk-user-1", "sk-user-2"placeholder, invalidator.keys)
+	require.Equal(t, []int64{7placeholder, invalidator.userIDs)
+placeholder
+
 func TestAdminService_DeleteUser_NotFound(t *testing.T) {
 	repo := &userRepoStub{getErr: ErrUserNotFoundplaceholder
 	svc := &adminServiceImpl{userRepo: repoplaceholder
