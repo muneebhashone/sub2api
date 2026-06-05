@@ -1663,7 +1663,7 @@ placeholder()
 placeholder
 placeholder
 
-func TestForwardAsAnthropic_DoneSentinelWithoutTerminalReturnsError(t *testing.T) {
+func TestForwardAsAnthropic_MissingTerminalBeforeOutputReturnsFailoverAndOps(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	rec := httptest.NewRecorder()
@@ -1675,7 +1675,62 @@ func TestForwardAsAnthropic_DoneSentinelWithoutTerminalReturnsError(t *testing.T
 	upstreamBody := "data: [DONE]\n\n"
 	upstream := &httpUpstreamRecorder{resp: &http.Response{
 		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_missing_terminal"placeholderplaceholder,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "X-Request-Id": []string{"rid_missing_terminal"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.True(t, errors.As(err, &failoverErr), "missing terminal before output must use failover path")
+	require.Equal(t, http.StatusBadGateway, failoverErr.StatusCode)
+	require.Contains(t, string(failoverErr.ResponseBody), "OpenAI messages stream ended before a terminal event")
+	require.NotNil(t, result)
+	require.Zero(t, result.Usage.InputTokens)
+	require.Zero(t, result.Usage.OutputTokens)
+	require.False(t, c.Writer.Written(), "no client body/header should be committed before safe failover")
+	require.Empty(t, rec.Body.String())
+
+	events := openAICompatOpsEvents(t, c)
+	require.Len(t, events, 1)
+	require.Equal(t, "failover", events[0].Kind)
+	require.Equal(t, http.StatusBadGateway, events[0].UpstreamStatusCode)
+	require.Equal(t, int64(1), events[0].AccountID)
+	require.Equal(t, "rid_missing_terminal", events[0].UpstreamRequestID)
+	require.Contains(t, events[0].Message, "terminal event")
+placeholder
+
+func TestForwardAsAnthropic_MissingTerminalAfterOutputRecordsOpsWithoutFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_1","model":"gpt-5.4","status":"in_progress","output":[]placeholderplaceholder`,
+		"",
+		`data: {"type":"response.output_text.delta","delta":"partial"placeholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "X-Request-Id": []string{"rid_partial_missing_terminal"placeholderplaceholder,
 		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
 placeholderplaceholder
 
@@ -1695,9 +1750,123 @@ placeholder
 	result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
 placeholder
 	require.Contains(t, err.Error(), "missing terminal event")
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr), "partial output must not be replayed through failover")
 	require.NotNil(t, result)
-	require.Zero(t, result.Usage.InputTokens)
-	require.Zero(t, result.Usage.OutputTokens)
+	require.False(t, result.ClientDisconnect)
+	require.True(t, c.Writer.Written())
+	require.Contains(t, rec.Body.String(), "event: message_start")
+	require.Contains(t, rec.Body.String(), "partial")
+
+	events := openAICompatOpsEvents(t, c)
+	require.Len(t, events, 1)
+	require.Equal(t, "stream_missing_terminal", events[0].Kind)
+	require.Equal(t, http.StatusBadGateway, events[0].UpstreamStatusCode)
+	require.Equal(t, int64(1), events[0].AccountID)
+	require.Equal(t, "rid_partial_missing_terminal", events[0].UpstreamRequestID)
+	require.Contains(t, events[0].Message, "terminal event")
+placeholder
+
+func TestForwardAsAnthropic_MissingTerminalAfterClientDisconnectSkipsOpsAndFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Writer = &openAICompatFailingWriter{ResponseWriter: c.Writer, failAfter: 0placeholder
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_1","model":"gpt-5.4","status":"in_progress","output":[]placeholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "X-Request-Id": []string{"rid_client_disconnect_missing_terminal"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
+placeholder
+	require.Contains(t, err.Error(), "missing terminal event")
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	require.NotNil(t, result)
+	require.True(t, result.ClientDisconnect)
+	require.Empty(t, rec.Body.String())
+	_, ok := c.Get(OpsUpstreamErrorsKey)
+	require.False(t, ok, "client disconnect must not be attributed as an upstream error")
+placeholder
+
+func TestForwardAsAnthropic_CompleteStreamDoesNotRecordMissingTerminalOps(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_1","model":"gpt-5.4","status":"in_progress","output":[]placeholderplaceholder`,
+		"",
+		`data: {"type":"response.output_text.delta","delta":"ok"placeholder`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_1","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"placeholder]placeholder],"usage":{"input_tokens":9,"output_tokens":4,"total_tokens":13placeholderplaceholderplaceholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "X-Request-Id": []string{"rid_complete_terminal"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          1,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, account, body, "", "gpt-5.1")
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, 9, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Contains(t, rec.Body.String(), "event: message_stop")
+	_, ok := c.Get(OpsUpstreamErrorsKey)
+	require.False(t, ok)
+placeholder
+
+func openAICompatOpsEvents(t *testing.T, c *gin.Context) []*OpsUpstreamErrorEvent {
+placeholder
+	v, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok)
+	events, ok := v.([]*OpsUpstreamErrorEvent)
+	require.True(t, ok)
+	return events
 placeholder
 
 func TestForwardAsAnthropic_UpstreamRequestIgnoresClientCancel(t *testing.T) {
