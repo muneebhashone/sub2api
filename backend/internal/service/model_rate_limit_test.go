@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsModelRateLimited(t *testing.T) {
@@ -195,6 +196,36 @@ placeholder{
 			requestedModel: "claude-3-5-sonnet-20241022",
 			expected:       false,
 	placeholder,
+		{
+			name: "openai image generation family key blocks image model",
+			account: &Account{
+				Platform: PlatformOpenAI,
+				Extra: map[string]any{
+					modelRateLimitsKey: map[string]any{
+						openAIImageGenerationRateLimitKey: map[string]any{
+							"rate_limit_reset_at": future,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+			requestedModel: "gpt-image-2",
+			expected:       true,
+	placeholder,
+		{
+			name: "openai image generation family key does not block text model",
+			account: &Account{
+				Platform: PlatformOpenAI,
+				Extra: map[string]any{
+					modelRateLimitsKey: map[string]any{
+						openAIImageGenerationRateLimitKey: map[string]any{
+							"rate_limit_reset_at": future,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+			requestedModel: "gpt-5.4",
+			expected:       false,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -205,6 +236,23 @@ placeholder
 		placeholder
 	placeholder)
 placeholder
+placeholder
+
+func TestIsModelRateLimited_OpenAIImageGenerationIntentBlocksTextModelImageTool(t *testing.T) {
+	future := time.Now().Add(10 * time.Minute).Format(time.RFC3339)
+	account := &Account{
+		Platform: PlatformOpenAI,
+		Extra: map[string]any{
+			modelRateLimitsKey: map[string]any{
+				openAIImageGenerationRateLimitKey: map[string]any{
+					"rate_limit_reset_at": future,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	require.False(t, account.isModelRateLimitedWithContext(context.Background(), "gpt-5.4"))
+	require.True(t, account.isModelRateLimitedWithContext(WithOpenAIImageGenerationIntent(context.Background()), "gpt-5.4"))
 placeholder
 
 func TestIsModelRateLimited_Antigravity_ThinkingAffectsModelKey(t *testing.T) {

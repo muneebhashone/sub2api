@@ -135,6 +135,7 @@ placeholder
 placeholder
 
 	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, body)
+	requestCtx := service.WithOpenAIImageGenerationIntent(c.Request.Context())
 
 	maxAccountSwitches := h.maxAccountSwitches
 	switchCount := 0
@@ -145,7 +146,7 @@ placeholder
 	for {
 		reqLog.Debug("openai.images.account_selecting", zap.Int("excluded_account_count", len(failedAccountIDs)))
 		selection, scheduleDecision, err := h.gatewayService.SelectAccountWithSchedulerForImages(
-			c.Request.Context(),
+			requestCtx,
 			apiKey.GroupID,
 			sessionHash,
 			requestModel,
@@ -202,7 +203,7 @@ placeholder
 					accountReleaseFunc()
 			placeholder
 		placeholder()
-			return h.gatewayService.ForwardImages(c.Request.Context(), c, account, body, parsed, channelMapping.MappedModel)
+			return h.gatewayService.ForwardImages(requestCtx, c, account, body, parsed, channelMapping.MappedModel)
 	placeholder()
 		forwardDurationMs := time.Since(forwardStart).Milliseconds()
 		upstreamLatencyMs, _ := getContextInt64(c, service.OpsUpstreamLatencyMsKey)
@@ -248,7 +249,7 @@ placeholder
 								zap.Int("retry_count", sameAccountRetryCount[account.ID]),
 							)
 							select {
-							case <-c.Request.Context().Done():
+							case <-requestCtx.Done():
 								return
 							case <-time.After(sameAccountRetryDelay):
 						placeholder
