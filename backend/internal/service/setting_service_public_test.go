@@ -91,6 +91,19 @@ placeholder
 	require.True(t, settings.ForceEmailOnThirdPartySignup)
 placeholder
 
+func TestSettingService_GetPublicSettings_ExposesAllowUserViewErrorRequests(t *testing.T) {
+	repo := &settingPublicRepoStub{
+		values: map[string]string{
+			SettingKeyAllowUserViewErrorRequests: "true",
+	placeholder,
+placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+placeholder
+	require.True(t, settings.AllowUserViewErrorRequests)
+placeholder
+
 func TestSettingService_GetPublicSettings_ExposesWeChatOAuthModeCapabilities(t *testing.T) {
 	svc := NewSettingService(&settingPublicRepoStub{
 		values: map[string]string{
