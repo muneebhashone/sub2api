@@ -102,6 +102,45 @@ placeholder
 	require.NotNil(t, result.FirstTokenMs)
 placeholder
 
+func TestForwardResponses_DeepSeekReasoningOnlyStreamProducesVisibleText(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"deepseek-reasoner","input":"hello","stream":trueplaceholder`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_reasoning","object":"chat.completion.chunk","model":"deepseek-reasoner","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":""placeholder,"finish_reason":nullplaceholder]placeholder`,
+		"",
+		`data: {"id":"chatcmpl_reasoning","object":"chat.completion.chunk","model":"deepseek-reasoner","choices":[{"index":0,"delta":{"reasoning_content":"visible fallback"placeholder,"finish_reason":nullplaceholder]placeholder`,
+		"",
+		`data: {"id":"chatcmpl_reasoning","object":"chat.completion.chunk","model":"deepseek-reasoner","choices":[{"index":0,"delta":{"content":""placeholder,"finish_reason":"length"placeholder],"usage":{"prompt_tokens":4,"completion_tokens":3,"total_tokens":7placeholderplaceholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_deepseek_reasoning_responses_stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, forceChatResponsesFallbackAccount(), body)
+placeholder
+	require.NotNil(t, result)
+	require.True(t, result.Stream)
+	require.Contains(t, rec.Body.String(), "event: response.output_text.delta")
+	require.Contains(t, rec.Body.String(), `"delta":"visible fallback"`)
+	require.Contains(t, rec.Body.String(), `"status":"incomplete"`)
+	require.Contains(t, rec.Body.String(), "data: [DONE]")
+placeholder
+
 func TestForwardResponses_AutoSupportedAccountStillUsesResponsesEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
