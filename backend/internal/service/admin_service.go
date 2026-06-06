@@ -2570,6 +2570,7 @@ placeholder
 			return nil, err
 	placeholder
 		ComputeQuotaResetAt(account.Extra)
+		NormalizeFixedQuotaWindows(account.Extra)
 placeholder
 	if input.ExpiresAt != nil && *input.ExpiresAt > 0 {
 		expiresAt := time.Unix(*input.ExpiresAt, 0)
@@ -2678,6 +2679,7 @@ placeholder
 			return nil, err
 	placeholder
 		ComputeQuotaResetAt(account.Extra)
+		NormalizeFixedQuotaWindows(account.Extra)
 placeholder
 	if input.ProxyID != nil {
 		// 0 表示清除代理（前端发送 0 而不是 null 来表达清除意图）
