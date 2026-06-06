@@ -645,7 +645,7 @@ placeholder
 				RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
 		placeholder
 	placeholder
-		return s.handleErrorResponse(upstreamCtx, resp, c, account, forwardBody)
+		return s.handleOpenAIImagesErrorResponse(upstreamCtx, resp, c, account, upstreamModel)
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
