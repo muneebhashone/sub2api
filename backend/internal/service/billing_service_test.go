@@ -950,3 +950,62 @@ placeholder
 	require.Nil(t, pricing)
 	require.Contains(t, err.Error(), "pricing not found")
 placeholder
+
+func TestGetModelPricingWithChannel_NilImageOutputPriceZerosAndMarksExplicit(t *testing.T) {
+	svc := newTestBillingService()
+
+	chPricing := &ChannelModelPricing{
+		InputPrice:  testPtrFloat64(10e-6),
+		OutputPrice: testPtrFloat64(20e-6),
+		// ImageOutputPrice intentionally nil
+placeholder
+	pricing, err := svc.GetModelPricingWithChannel("claude-sonnet-4", chPricing)
+placeholder
+
+	require.Equal(t, 0.0, pricing.ImageOutputPricePerToken)
+	require.True(t, pricing.ImageOutputPriceExplicit)
+placeholder
+
+func TestComputeTokenBreakdown_ExplicitZeroImagePrice_NoFallback(t *testing.T) {
+	svc := newTestBillingService()
+
+	pricing := &ModelPricing{
+		InputPricePerToken:       3e-6,
+		OutputPricePerToken:      15e-6,
+		ImageOutputPricePerToken: 0,
+		ImageOutputPriceExplicit: true,
+placeholder
+	tokens := UsageTokens{
+		InputTokens:       100,
+		OutputTokens:      200,
+		ImageOutputTokens: 50,
+placeholder
+	bd := svc.computeTokenBreakdown(pricing, tokens, 1.0, "", false)
+
+	// ImageOutputTokens should NOT fall back to outputPrice
+	require.Equal(t, 0.0, bd.ImageOutputCost)
+	// textOutputTokens = 200 - 50 = 150
+	require.InDelta(t, 150*15e-6, bd.OutputCost, 1e-12)
+placeholder
+
+func TestComputeTokenBreakdown_NonExplicitZeroImagePrice_FallsBackToOutput(t *testing.T) {
+	svc := newTestBillingService()
+
+	pricing := &ModelPricing{
+		InputPricePerToken:       3e-6,
+		OutputPricePerToken:      15e-6,
+		ImageOutputPricePerToken: 0,
+		ImageOutputPriceExplicit: false,
+placeholder
+	tokens := UsageTokens{
+		InputTokens:       100,
+		OutputTokens:      200,
+		ImageOutputTokens: 50,
+placeholder
+	bd := svc.computeTokenBreakdown(pricing, tokens, 1.0, "", false)
+
+	// Should fall back to outputPrice since not explicit
+	require.InDelta(t, 50*15e-6, bd.ImageOutputCost, 1e-12)
+	// textOutputTokens = 200 - 50 = 150
+	require.InDelta(t, 150*15e-6, bd.OutputCost, 1e-12)
+placeholder
