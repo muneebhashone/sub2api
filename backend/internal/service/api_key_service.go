@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"html"
 	"strconv"
 	"strings"
 	"sync"
@@ -401,7 +402,7 @@ placeholder
 	apiKey := &APIKey{
 		UserID:      userID,
 		Key:         key,
-		Name:        req.Name,
+		Name:        html.EscapeString(req.Name),
 		GroupID:     req.GroupID,
 		Status:      StatusActive,
 		IPWhitelist: req.IPWhitelist,
@@ -540,7 +541,7 @@ placeholder
 
 	// 更新字段
 	if req.Name != nil {
-		apiKey.Name = *req.Name
+		apiKey.Name = html.EscapeString(*req.Name)
 placeholder
 
 	if req.GroupID != nil {
