@@ -37,6 +37,9 @@ func (m *sessionWindowMockRepo) UpdateSessionWindow(_ context.Context, id int64,
 	m.sessionWindowCalls = append(m.sessionWindowCalls, swCall{ID: id, Start: start, End: end, Status: statusplaceholder)
 	return nil
 placeholder
+func (m *sessionWindowMockRepo) UpdateSessionWindowEnd(_ context.Context, _ int64, _ time.Time) error {
+	return nil
+placeholder
 func (m *sessionWindowMockRepo) UpdateExtra(_ context.Context, id int64, updates map[string]any) error {
 	m.updateExtraCalls = append(m.updateExtraCalls, ueCall{ID: id, Updates: updatesplaceholder)
 	return nil
