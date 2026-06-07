@@ -107,7 +107,11 @@ placeholder
 func (r *apiKeyRepository) GetByKey(ctx context.Context, key string) (*service.APIKey, error) {
 	m, err := r.activeQuery().
 		Where(apikey.KeyEQ(key)).
-		WithUser().
+		WithUser(func(q *dbent.UserQuery) {
+			q.WithAllowedGroups(func(gq *dbent.GroupQuery) {
+				gq.Select(group.FieldID)
+		placeholder)
+	placeholder).
 		WithGroup().
 		Only(ctx)
 	if err != nil {
@@ -156,12 +160,16 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 				user.FieldLastActiveAt,
 				user.FieldRpmLimit,
 			)
+			q.WithAllowedGroups(func(gq *dbent.GroupQuery) {
+				gq.Select(group.FieldID)
+		placeholder)
 	placeholder).
 		WithGroup(func(q *dbent.GroupQuery) {
 			q.Select(
 				group.FieldID,
 				group.FieldName,
 				group.FieldPlatform,
+				group.FieldIsExclusive,
 				group.FieldStatus,
 				group.FieldSubscriptionType,
 				group.FieldRateMultiplier,
@@ -716,6 +724,14 @@ placeholder
 placeholder
 	if m.Edges.User != nil {
 		out.User = userEntityToService(m.Edges.User)
+		if allowed := m.Edges.User.Edges.AllowedGroups; len(allowed) > 0 {
+			out.User.AllowedGroups = make([]int64, 0, len(allowed))
+			for _, g := range allowed {
+				if g != nil {
+					out.User.AllowedGroups = append(out.User.AllowedGroups, g.ID)
+			placeholder
+		placeholder
+	placeholder
 placeholder
 	if m.Edges.Group != nil {
 		out.Group = groupEntityToService(m.Edges.Group)
