@@ -195,6 +195,10 @@ func (m *mockAccountRepoForPlatform) ResetQuotaUsed(ctx context.Context, id int6
 	return nil
 placeholder
 
+func (m *mockAccountRepoForPlatform) RevertProxyFallback(ctx context.Context, accountID int64) error {
+	return nil
+placeholder
+
 // Verify interface implementation
 var _ AccountRepository = (*mockAccountRepoForPlatform)(nil)
 

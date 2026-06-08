@@ -105,6 +105,7 @@ placeholder
 		{Name: "type", Type: field.TypeString, Size: 20placeholder,
 		{Name: "credentials", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "extra", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "proxy_fallback_origin_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "concurrency", Type: field.TypeInt, Default: 3placeholder,
 		{Name: "load_factor", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "priority", Type: field.TypeInt, Default: 50placeholder,
@@ -133,7 +134,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[28]placeholder,
+				Columns:    []*schema.Column{AccountsColumns[29]placeholder,
 				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -152,52 +153,52 @@ placeholder
 			{
 				Name:    "account_status",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[14]placeholder,
+				Columns: []*schema.Column{AccountsColumns[15]placeholder,
 		placeholder,
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[28]placeholder,
+				Columns: []*schema.Column{AccountsColumns[29]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[12]placeholder,
+				Columns: []*schema.Column{AccountsColumns[13]placeholder,
 		placeholder,
 			{
 				Name:    "account_last_used_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[16]placeholder,
+				Columns: []*schema.Column{AccountsColumns[17]placeholder,
 		placeholder,
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[19]placeholder,
+				Columns: []*schema.Column{AccountsColumns[20]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[20]placeholder,
+				Columns: []*schema.Column{AccountsColumns[21]placeholder,
 		placeholder,
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[21]placeholder,
+				Columns: []*schema.Column{AccountsColumns[22]placeholder,
 		placeholder,
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[22]placeholder,
+				Columns: []*schema.Column{AccountsColumns[23]placeholder,
 		placeholder,
 			{
 				Name:    "account_platform_priority",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[6], AccountsColumns[12]placeholder,
+				Columns: []*schema.Column{AccountsColumns[6], AccountsColumns[13]placeholder,
 		placeholder,
 			{
 				Name:    "account_priority_status",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[12], AccountsColumns[14]placeholder,
+				Columns: []*schema.Column{AccountsColumns[13], AccountsColumns[15]placeholder,
 		placeholder,
 			{
 				Name:    "account_deleted_at",
@@ -1104,12 +1105,24 @@ placeholder
 		{Name: "username", Type: field.TypeString, Nullable: true, Size: 100placeholder,
 		{Name: "password", Type: field.TypeString, Nullable: true, Size: 100placeholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
+		{Name: "expires_at", Type: field.TypeTime, Nullable: trueplaceholder,
+		{Name: "fallback_mode", Type: field.TypeString, Size: 20, Default: "none"placeholder,
+		{Name: "expiry_warn_days", Type: field.TypeInt, Default: 7placeholder,
+		{Name: "backup_proxy_id", Type: field.TypeInt64, Unique: true, Nullable: trueplaceholder,
 placeholder
 	// ProxiesTable holds the schema information for the "proxies" table.
 	ProxiesTable = &schema.Table{
 		Name:       "proxies",
 		Columns:    ProxiesColumns,
 		PrimaryKey: []*schema.Column{ProxiesColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "proxies_proxies_backup_proxy",
+				Columns:    []*schema.Column{ProxiesColumns[14]placeholder,
+				RefColumns: []*schema.Column{ProxiesColumns[0]placeholder,
+				OnDelete:   schema.SetNull,
+		placeholder,
+	placeholder,
 		Indexes: []*schema.Index{
 			{
 				Name:    "proxy_status",
@@ -1120,6 +1133,16 @@ placeholder
 				Name:    "proxy_deleted_at",
 				Unique:  false,
 				Columns: []*schema.Column{ProxiesColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "proxy_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{ProxiesColumns[11]placeholder,
+		placeholder,
+			{
+				Name:    "proxy_backup_proxy_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProxiesColumns[14]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -1871,6 +1894,7 @@ placeholder
 	PromoCodeUsagesTable.Annotation = &entsql.Annotation{
 		Table: "promo_code_usages",
 placeholder
+	ProxiesTable.ForeignKeys[0].RefTable = ProxiesTable
 	ProxiesTable.Annotation = &entsql.Annotation{
 		Table: "proxies",
 placeholder

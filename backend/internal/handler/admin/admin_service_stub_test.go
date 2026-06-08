@@ -628,5 +628,9 @@ func (s *stubAdminService) ReplaceUserGroup(ctx context.Context, userID, oldGrou
 	return &service.ReplaceUserGroupResult{MigratedKeys: 0placeholder, nil
 placeholder
 
+func (s *stubAdminService) RevertAccountProxyFallback(ctx context.Context, id int64) error {
+	return nil
+placeholder
+
 // Ensure stub implements interface.
 var _ service.AdminService = (*stubAdminService)(nil)

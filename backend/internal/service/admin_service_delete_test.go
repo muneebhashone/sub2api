@@ -325,6 +325,18 @@ placeholder
 func (s *proxyRepoStub) ListAccountSummariesByProxyID(ctx context.Context, proxyID int64) ([]ProxyAccountSummary, error) {
 	panic("unexpected ListAccountSummariesByProxyID call")
 placeholder
+func (s *proxyRepoStub) SweepExpiredProxies(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+placeholder
+func (s *proxyRepoStub) ListAllForFallback(_ context.Context) ([]Proxy, error) {
+	return nil, nil
+placeholder
+func (s *proxyRepoStub) CountExpired(_ context.Context) (int64, error) {
+	return 0, nil
+placeholder
+func (s *proxyRepoStub) CountExpiringSoon(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+placeholder
 
 type redeemRepoStub struct {
 	deleteErrByID map[int64]error

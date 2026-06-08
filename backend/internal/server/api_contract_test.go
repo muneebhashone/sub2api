@@ -1796,6 +1796,10 @@ func (s *stubAccountRepo) ListCRSAccountIDs(ctx context.Context) (map[string]int
 	return nil, errors.New("not implemented")
 placeholder
 
+func (s *stubAccountRepo) RevertProxyFallback(ctx context.Context, accountID int64) error {
+	return nil
+placeholder
+
 type stubProxyRepo struct{placeholder
 
 func (stubProxyRepo) Create(ctx context.Context, proxy *service.Proxy) error {
@@ -1848,6 +1852,22 @@ placeholder
 
 func (stubProxyRepo) ListAccountSummariesByProxyID(ctx context.Context, proxyID int64) ([]service.ProxyAccountSummary, error) {
 	return nil, errors.New("not implemented")
+placeholder
+
+func (stubProxyRepo) SweepExpiredProxies(ctx context.Context, now time.Time) (int64, error) {
+	return 0, nil
+placeholder
+
+func (stubProxyRepo) ListAllForFallback(ctx context.Context) ([]service.Proxy, error) {
+	return nil, nil
+placeholder
+
+func (stubProxyRepo) CountExpired(ctx context.Context) (int64, error) {
+	return 0, nil
+placeholder
+
+func (stubProxyRepo) CountExpiringSoon(ctx context.Context, now time.Time) (int64, error) {
+	return 0, nil
 placeholder
 
 type stubRedeemCodeRepo struct {
