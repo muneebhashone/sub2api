@@ -1605,6 +1605,9 @@ func (h *GatewayHandler) ensureForwardErrorResponse(c *gin.Context, streamStarte
 	if c == nil || c.Writer == nil {
 		return false
 placeholder
+	if service.IsResponseCommitted(c) {
+		return false
+placeholder
 	if c.Writer.Written() {
 		streamStarted = true
 placeholder
