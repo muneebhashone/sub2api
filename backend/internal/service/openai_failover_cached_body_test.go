@@ -15,6 +15,14 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type panicOnReadCloser struct{placeholder
+
+func (panicOnReadCloser) Read(_ []byte) (int, error) {
+	panic("response body should not be reread")
+placeholder
+
+func (panicOnReadCloser) Close() error { return nil placeholder
+
 func TestOpenAIGatewayService_Forward_FailoverReparsesCachedBodyForNextAccount(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -100,6 +108,26 @@ placeholder
 			require.Equal(t, tt.wantSecond, gjson.GetBytes(upstream.bodies[1], "model").String())
 	placeholder)
 placeholder
+placeholder
+
+func TestOpenAIGatewayService_HandleFailoverSideEffects_DoesNotRereadResponseBody(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	account := &Account{
+		ID:       88,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+	resp := &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Header:     http.Header{placeholder,
+		Body:       panicOnReadCloser{placeholder,
+placeholder
+
+	require.NotPanics(t, func() {
+		svc.handleFailoverSideEffects(context.Background(), resp, account, []byte(`{"error":{"type":"rate_limit_error","message":"rate limited"placeholderplaceholder`))
+placeholder)
+
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
 placeholder
 
 func TestGetOpenAIRequestBodyMap_IgnoresLegacyContextCache(t *testing.T) {
