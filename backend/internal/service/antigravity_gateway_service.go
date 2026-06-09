@@ -2447,6 +2447,7 @@ placeholder()
 			Detail:             upstreamDetail,
 	placeholder)
 		logger.LegacyPrintf("service.antigravity_gateway", "[antigravity-Forward] upstream error status=%d body=%s", resp.StatusCode, truncateForLog(unwrappedForOps, 500))
+		MarkResponseCommitted(c)
 		c.Data(resp.StatusCode, contentType, unwrappedForOps)
 		return nil, fmt.Errorf("antigravity upstream error: %d", resp.StatusCode)
 placeholder
@@ -3644,6 +3645,7 @@ placeholder
 placeholder
 
 func (s *AntigravityGatewayService) writeClaudeError(c *gin.Context, status int, errType, message string) error {
+	MarkResponseCommitted(c)
 	c.JSON(status, gin.H{
 		"type":  "error",
 		"error": gin.H{"type": errType, "message": messageplaceholder,
@@ -3735,6 +3737,7 @@ placeholder
 placeholder
 
 func (s *AntigravityGatewayService) writeGoogleError(c *gin.Context, status int, message string) error {
+	MarkResponseCommitted(c)
 	statusStr := "UNKNOWN"
 	switch status {
 	case 400:
