@@ -411,7 +411,7 @@ placeholder)
 		assert.Equal(t, int64(100), gjson.GetBytes(result, "max_tokens").Int())
 placeholder)
 
-	t.Run("filters explicit unsupported context-management beta and strips field", func(t *testing.T) {
+	t.Run("keeps supported context-management beta and retains field", func(t *testing.T) {
 		input := `{
 			"messages":[{"role":"user","content":"hi"placeholder],
 			"max_tokens":100,
@@ -426,8 +426,8 @@ placeholder)
 		)
 	placeholder
 
-		assert.False(t, gjson.GetBytes(result, "context_management").Exists())
-		assert.Equal(t, []string{"context-1m-2025-08-07"placeholder, bedrockAnthropicBetaNames(result))
+		assert.True(t, gjson.GetBytes(result, "context_management").Exists())
+		assert.Equal(t, []string{bedrockContextManagementBetaToken, "context-1m-2025-08-07"placeholder, bedrockAnthropicBetaNames(result))
 placeholder)
 placeholder
 
