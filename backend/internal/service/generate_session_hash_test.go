@@ -26,6 +26,14 @@ placeholder
 	return parsed
 placeholder
 
+func mustParseResponsesSessionHashRequest(t *testing.T, body string, ctx *SessionContext) *ParsedRequest {
+placeholder
+	parsed, err := ParseGatewayRequest(NewRequestBodyRef([]byte(body)), "responses")
+placeholder
+	parsed.SessionContext = ctx
+	return parsed
+placeholder
+
 func anthropicSessionBody(system any, messages []any, metadataUserID string) string {
 	body := map[string]any{placeholder
 	if system != nil {
@@ -215,6 +223,60 @@ func TestGenerateSessionHash_ContinuousConversation_SameRoundSameHash(t *testing
 	h1 := svc.GenerateSessionHash(mk())
 	h2 := svc.GenerateSessionHash(mk())
 	require.Equal(t, h1, h2, "same conversation state should produce identical hash on retry")
+placeholder
+
+func TestGenerateSessionHash_ResponsesDifferentInputProducesDifferentHash(t *testing.T) {
+	svc := &GatewayService{placeholder
+	ctx := &SessionContext{ClientIP: "1.2.3.4", UserAgent: "codex_cli_rs/0.1.0", APIKeyID: 1placeholder
+	first := mustParseResponsesSessionHashRequest(t, `{"input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"help me with Go"placeholder]placeholder]placeholder`, ctx)
+	second := mustParseResponsesSessionHashRequest(t, `{"input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"help me with Python"placeholder]placeholder]placeholder`, ctx)
+
+	h1 := svc.GenerateSessionHash(first)
+	h2 := svc.GenerateSessionHash(second)
+	require.NotEmpty(t, h1)
+	require.NotEmpty(t, h2)
+	require.NotEqual(t, h1, h2, "different Responses input should produce different hashes for the same client")
+placeholder
+
+func TestGenerateSessionHash_ResponsesGrowingInputKeepsStableHash(t *testing.T) {
+	svc := &GatewayService{placeholder
+	ctx := &SessionContext{ClientIP: "1.2.3.4", UserAgent: "codex_cli_rs/0.1.0", APIKeyID: 1placeholder
+	round1 := mustParseResponsesSessionHashRequest(t, `{"input":[{"type":"message","role":"developer","content":[{"type":"input_text","text":"Be concise."placeholder]placeholder,{"type":"message","role":"user","content":[{"type":"input_text","text":"help me with Go"placeholder]placeholder]placeholder`, ctx)
+	round2 := mustParseResponsesSessionHashRequest(t, `{"input":[{"type":"message","role":"developer","content":[{"type":"input_text","text":"Be concise."placeholder]placeholder,{"type":"message","role":"user","content":[{"type":"input_text","text":"help me with Go"placeholder]placeholder,{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Sure."placeholder]placeholder,{"type":"message","role":"user","content":[{"type":"input_text","text":"add tests"placeholder]placeholder]placeholder`, ctx)
+
+	h1 := svc.GenerateSessionHash(round1)
+	h2 := svc.GenerateSessionHash(round2)
+	require.NotEmpty(t, h1)
+	require.Equal(t, h1, h2, "Responses input growth should preserve the hash when the conversation prefix is stable")
+placeholder
+
+func TestGenerateSessionHash_MessagesPathIgnoresResponsesInput(t *testing.T) {
+	svc := &GatewayService{placeholder
+	ctx := &SessionContext{ClientIP: "1.2.3.4", UserAgent: "test", APIKeyID: 1placeholder
+	first := mustParseResponsesSessionHashRequest(t, `{"messages":[{"role":"user","content":"hello"placeholder],"input":"first"placeholder`, ctx)
+	second := mustParseResponsesSessionHashRequest(t, `{"messages":[{"role":"user","content":"hello"placeholder],"input":"second"placeholder`, ctx)
+
+	h1 := svc.GenerateSessionHash(first)
+	h2 := svc.GenerateSessionHash(second)
+	require.Equal(t, h1, h2, "existing messages fallback should remain authoritative when messages contain text")
+placeholder
+
+func TestGenerateSessionHash_ResponsesInputDoesNotOverrideHigherPrioritySources(t *testing.T) {
+	svc := &GatewayService{placeholder
+	ctx := &SessionContext{ClientIP: "1.2.3.4", UserAgent: "test", APIKeyID: 1placeholder
+
+	t.Run("metadata user id", func(t *testing.T) {
+		metadata := "user_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2_account__session_123e4567-e89b-12d3-a456-426614174000"
+		parsed := mustParseResponsesSessionHashRequest(t, `{"metadata":{"user_id":"`+metadata+`"placeholder,"input":"hello"placeholder`, ctx)
+		require.Equal(t, "123e4567-e89b-12d3-a456-426614174000", svc.GenerateSessionHash(parsed))
+placeholder)
+
+	t.Run("cache control", func(t *testing.T) {
+		body := `{"system":[{"type":"text","text":"stable cache anchor","cache_control":{"type":"ephemeral"placeholderplaceholder],"input":"hello"placeholder`
+		first := mustParseResponsesSessionHashRequest(t, body, ctx)
+		second := mustParseResponsesSessionHashRequest(t, body, &SessionContext{ClientIP: "9.8.7.6", UserAgent: "other", APIKeyID: 2placeholder)
+		require.Equal(t, svc.GenerateSessionHash(first), svc.GenerateSessionHash(second))
+placeholder)
 placeholder
 
 func TestGenerateSessionHash_MessageRollback(t *testing.T) {

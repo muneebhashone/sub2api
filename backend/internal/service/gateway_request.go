@@ -119,6 +119,7 @@ placeholder
 	parsed.MaxTokens = 0
 	parsed.systemRange = missingJSONRange()
 	parsed.messagesRange = missingJSONRange()
+	parsed.inputRange = missingJSONRange()
 placeholder
 
 func clearGatewayRequestRanges(parsed *ParsedRequest) {
@@ -128,6 +129,7 @@ placeholder
 	parsed.HasSystem = false
 	parsed.systemRange = missingJSONRange()
 	parsed.messagesRange = missingJSONRange()
+	parsed.inputRange = missingJSONRange()
 placeholder
 
 func setGatewayRequestRanges(parsed *ParsedRequest, protocol string, jsonStr string) {
@@ -149,6 +151,11 @@ placeholder
 	placeholder
 		if msgs := gjson.Get(jsonStr, "messages"); msgs.Exists() && msgs.IsArray() {
 			parsed.messagesRange = rangeFromResult(msgs)
+	placeholder
+		if protocol == "responses" {
+			if input := gjson.Get(jsonStr, "input"); input.Exists() {
+				parsed.inputRange = rangeFromResult(input)
+		placeholder
 	placeholder
 placeholder
 placeholder
@@ -235,6 +242,7 @@ type ParsedRequest struct {
 	protocol      string    // 当前 Body 的协议格式，用于 Body 替换后刷新 raw range
 	systemRange   jsonRange // system/systemInstruction.parts 的 raw JSON 范围，绑定 Body 当前内容
 	messagesRange jsonRange // messages/contents 的 raw JSON 范围，绑定 Body 当前内容
+	inputRange    jsonRange // Responses API input 的 raw JSON 范围，绑定 Body 当前内容
 
 	// GroupID 请求所属分组 ID（来自 API Key）
 	GroupID *int64
@@ -315,6 +323,10 @@ placeholder
 
 func (p *ParsedRequest) MessagesRaw() []byte {
 	return p.raw(p.messagesRange)
+placeholder
+
+func (p *ParsedRequest) InputRaw() []byte {
+	return p.raw(p.inputRange)
 placeholder
 
 func (p *ParsedRequest) DecodeSystem(dst any) error {
