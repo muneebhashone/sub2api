@@ -966,6 +966,22 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     placeholder
   placeholder
   const claudeModels = {
+    'claude-fable-5': {
+      name: 'Claude Fable 5',
+      limit: {
+        context: 1048576,
+        output: 128000
+      placeholder,
+      modalities: {
+        input: ['text', 'image', 'pdf'],
+        output: ['text']
+      placeholder,
+      options: {
+        thinking: {
+          type: 'adaptive'
+        placeholder
+      placeholder
+    placeholder,
     'claude-opus-4-6-thinking': {
       name: 'Claude 4.6 Opus (Thinking)',
       limit: {

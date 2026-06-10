@@ -175,6 +175,7 @@ func TestIsBedrockClaude45OrNewer(t *testing.T) {
 placeholder{
 		{"us.anthropic.claude-opus-4-6-v1", trueplaceholder,
 		{"us.anthropic.claude-opus-4-8-v1", trueplaceholder,
+		{"anthropic.claude-fable-5", trueplaceholder,
 		{"us.anthropic.claude-sonnet-4-6", trueplaceholder,
 		{"us.anthropic.claude-sonnet-4-5-20250929-v1:0", trueplaceholder,
 		{"us.anthropic.claude-opus-4-5-20251101-v1:0", trueplaceholder,
@@ -526,6 +527,20 @@ placeholder)
 		assert.Equal(t, "eu.anthropic.claude-opus-4-8-v1", modelID)
 placeholder)
 
+	t.Run("默认 Fable 5 映射使用官方 Bedrock 模型 ID", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformAnthropic,
+			Type:     AccountTypeBedrock,
+	placeholder
+				"aws_region": "eu-west-1",
+		placeholder,
+	placeholder
+
+		modelID, ok := ResolveBedrockModelID(account, "claude-fable-5")
+		require.True(t, ok)
+		assert.Equal(t, "anthropic.claude-fable-5", modelID)
+placeholder)
+
 	t.Run("force global rewrites anthropic regional model id", func(t *testing.T) {
 		account := &Account{
 			Platform: PlatformAnthropic,
@@ -750,6 +765,20 @@ placeholder
 placeholder
 
 func TestSanitizeBedrockThinking(t *testing.T) {
+	t.Run("Fable 5 将 enabled 转换为 adaptive 并移除预算", func(t *testing.T) {
+		input := `{"thinking":{"type":"enabled","budget_tokens":10000placeholder,"messages":[]placeholder`
+		result := sanitizeBedrockThinking([]byte(input), "anthropic.claude-fable-5")
+		assert.Equal(t, "adaptive", gjson.GetBytes(result, "thinking.type").String())
+		assert.False(t, gjson.GetBytes(result, "thinking.budget_tokens").Exists())
+placeholder)
+
+	t.Run("Fable 5 adaptive 移除预算", func(t *testing.T) {
+		input := `{"thinking":{"type":"adaptive","budget_tokens":10000placeholder,"messages":[]placeholder`
+		result := sanitizeBedrockThinking([]byte(input), "claude-fable-5")
+		assert.Equal(t, "adaptive", gjson.GetBytes(result, "thinking.type").String())
+		assert.False(t, gjson.GetBytes(result, "thinking.budget_tokens").Exists())
+placeholder)
+
 	t.Run("opus 4.7 converts enabled to adaptive", func(t *testing.T) {
 		input := `{"thinking":{"type":"enabled","budget_tokens":10000placeholder,"messages":[]placeholder`
 		result := sanitizeBedrockThinking([]byte(input), "us.anthropic.claude-opus-4-7-v1")
