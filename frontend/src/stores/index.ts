@@ -10,6 +10,7 @@ export { useSubscriptionStore placeholder from './subscriptions'
 export { useOnboardingStore placeholder from './onboarding'
 export { useAnnouncementStore placeholder from './announcements'
 export { usePaymentStore placeholder from './payment'
+export { useAdminComplianceStore placeholder from './adminCompliance'
 
 // Re-export types for convenience
 export type { User, LoginRequest, RegisterRequest, AuthResponse placeholder from '@/types'

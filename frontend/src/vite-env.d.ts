@@ -14,3 +14,8 @@ declare module '*.vue' {
   const component: DefineComponent<{placeholder, {placeholder, any>
   export default component
 placeholder
+
+declare module '*.md?raw' {
+  const content: string
+  export default content
+placeholder

@@ -277,6 +277,7 @@ placeholder
 	// Admin-only: list all available pages
 	adminPages := v1.Group("/pages")
 	adminPages.Use(adminAuth)
+	adminPages.Use(middleware2.AdminComplianceGuard(settingService))
 	{
 		adminPages.GET("", h.ListPages)
 placeholder

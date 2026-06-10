@@ -7,6 +7,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw placeholder from 'v
 import { useAuthStore placeholder from '@/stores/auth'
 import { useAppStore placeholder from '@/stores/app'
 import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
+import { useAdminComplianceStore placeholder from '@/stores/adminCompliance'
 import { useNavigationLoadingState placeholder from '@/composables/useNavigationLoading'
 import { useRoutePrefetch placeholder from '@/composables/useRoutePrefetch'
 import { getSetupStatus placeholder from '@/api/setup'
@@ -45,7 +46,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Login',
-      titleKey: 'common.login'
+      titleKey: 'home.login'
     placeholder
   placeholder,
   {
@@ -805,6 +806,20 @@ router.beforeEach(async (to, _from, next) => {
     // User is authenticated but not admin, redirect to user dashboard
     next('/dashboard')
     return
+  placeholder
+
+  if (requiresAdmin && authStore.isAdmin) {
+    const adminComplianceStore = useAdminComplianceStore()
+    if (!adminComplianceStore.initialized) {
+      try {
+        await adminComplianceStore.fetchStatus()
+      placeholder catch (error) {
+        const err = error as { status?: number; code?: string; metadata?: Record<string, string> placeholder
+        if (err.status === 423 && err.code === 'ADMIN_COMPLIANCE_ACK_REQUIRED') {
+          adminComplianceStore.requireAcknowledgement(err.metadata)
+        placeholder
+      placeholder
+    placeholder
   placeholder
 
 
