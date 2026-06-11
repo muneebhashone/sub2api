@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
+	"github.com/Wei-Shaw/sub2api/internal/plugin"
 	"github.com/Wei-Shaw/sub2api/internal/repository"
 	"github.com/Wei-Shaw/sub2api/internal/server"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -24,7 +25,10 @@ import (
 )
 
 type Application struct {
-	Server  *http.Server
+	Server *http.Server
+	// Runtime 是插件模块生命周期驱动器：main 在 HTTP server 启动前
+	// 调用 Build + Start，关闭时由 Cleanup 序列执行 Stop。
+	Runtime *plugin.Runtime
 	Cleanup func()
 placeholder
 
@@ -43,6 +47,9 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 		// Server layer ProviderSet
 		server.ProviderSet,
 
+		// Plugin kernel ProviderSet (Host + module Runtime)
+		plugin.ProviderSet,
+
 		// Privacy client factory for OpenAI training opt-out
 		providePrivacyClientFactory,
 
@@ -53,7 +60,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 		provideCleanup,
 
 		// Application struct
-		wire.Struct(new(Application), "Server", "Cleanup"),
+		wire.Struct(new(Application), "Server", "Runtime", "Cleanup"),
 	)
 	return nil, nil
 placeholder
@@ -100,6 +107,7 @@ func provideCleanup(
 	paymentOrderExpiry *service.PaymentOrderExpiryService,
 	channelMonitorRunner *service.ChannelMonitorRunner,
 	quotaFlusher *service.UserPlatformQuotaUsageFlusher,
+	moduleRuntime *plugin.Runtime,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -112,6 +120,14 @@ func provideCleanup(
 
 		// 应用层清理步骤可并行执行，基础设施资源（Redis/Ent）最后按顺序关闭。
 		parallelSteps := []cleanupStep{
+			// 插件模块 Stop 属于业务服务关闭组：模块停止时可能仍需写 DB/Redis，
+			// 必须先于基础设施（Redis/Ent）关闭执行。
+			{"PluginModuleRuntime", func() error {
+				if moduleRuntime == nil {
+					return nil
+			placeholder
+				return moduleRuntime.Stop(ctx)
+	placeholder
 			{"OpsScheduledReportService", func() error {
 				if opsScheduledReport != nil {
 					opsScheduledReport.Stop()

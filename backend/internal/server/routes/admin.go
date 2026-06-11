@@ -103,7 +103,15 @@ func RegisterAdminRoutes(
 
 		// 邀请返利（专属用户管理）
 		registerAffiliateRoutes(admin, h)
+
+		// 插件模块可观测
+		registerModuleRoutes(admin, h)
 placeholder
+placeholder
+
+// registerModuleRoutes 注册插件模块可观测的管理端路由（只读）
+func registerModuleRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	admin.GET("/modules", h.Admin.Module.List)
 placeholder
 
 func registerAdminComplianceRoutes(admin *gin.RouterGroup, h *handler.Handlers) {

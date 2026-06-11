@@ -18,6 +18,7 @@ import (
 	_ "github.com/Wei-Shaw/sub2api/ent/runtime"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
+	_ "github.com/Wei-Shaw/sub2api/internal/modules/standard" // 插件模块插装清单（唯一插装点）
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/setup"
@@ -153,6 +154,21 @@ placeholder
 		log.Fatalf("Failed to initialize application: %v", err)
 placeholder
 	defer app.Cleanup()
+
+	// 启动插件模块：Build（实例化 → Provision → Validate）+ Start（按稳定序）。
+	// 任一失败立即中止启动（fail-fast）。注意：log.Fatalf 经 os.Exit 退出，
+	// defer 的 app.Cleanup() 不会执行；而部分后台服务在 Wire 构造期已自启动并
+	// 持有 Redis leader 锁，必须先显式 Cleanup 再退出，避免锁滞留到 TTL 过期。
+	// ⚠ 不要把下面的 log.Fatalf 改成 return：那会让上面 defer 的 Cleanup 与
+	// 此处显式 Cleanup 双触发，而 Cleanup 各步骤并未统一保证幂等（审计 B-2）。
+	if err := app.Runtime.Build(); err != nil {
+		app.Cleanup()
+		log.Fatalf("Failed to build plugin modules: %v", err)
+placeholder
+	if err := app.Runtime.Start(context.Background()); err != nil {
+		app.Cleanup()
+		log.Fatalf("Failed to start plugin modules: %v", err)
+placeholder
 
 	// 启动服务器
 	go func() {

@@ -93,6 +93,15 @@ type Config struct {
 	Gemini                  GeminiConfig                  `mapstructure:"gemini"`
 	Update                  UpdateConfig                  `mapstructure:"update"`
 	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
+
+	// Modules 是插件模块配置子树（modules:）的原始内容。
+	// 顶层 key 为模块 ID 字面量（如 "job.hello"），value 为该模块的原始配置
+	// （含可选 enabled 键），语义解析由 internal/plugin 包负责。
+	//
+	// 注意：该字段不走 viper.Unmarshal（mapstructure:"-"），而是在 load() 中通过
+	// viper.Get 手工提取——Unmarshal 基于 AllSettings 重建嵌套结构，会把含点的
+	// 模块 ID key 错误拆分为多级嵌套。缺省（未配置）时为空 map，行为与现状完全等价。
+	Modules map[string]map[string]any `mapstructure:"-" yaml:"-"`
 placeholder
 
 type LogConfig struct {
@@ -1397,6 +1406,11 @@ placeholder
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config error: %w", err)
 placeholder
+	modules, err := normalizeModulesSubtree(viper.Get("modules"))
+	if err != nil {
+		return nil, fmt.Errorf("parse modules config error: %w", err)
+placeholder
+	cfg.Modules = modules
 	if cfg.Gateway.OpenAIScheduler.StickyEscapeTTFTMs == 0 {
 		cfg.Gateway.OpenAIScheduler.StickyEscapeTTFTMs = 15000
 placeholder
@@ -1528,6 +1542,33 @@ placeholder
 placeholder
 
 	return &cfg, nil
+placeholder
+
+// normalizeModulesSubtree 将 viper 读取的 modules: 原始子树规整为
+// map[模块ID]map[配置键]值。raw 为 nil（未配置）时返回空 map（零行为影响）；
+// 子树或某个模块项不是映射时返回错误。空模块项（如 "job.hello:" 后无内容）
+// 规整为空 map，表示"提及但无私有配置"。
+func normalizeModulesSubtree(raw any) (map[string]map[string]any, error) {
+	result := make(map[string]map[string]any)
+	if raw == nil {
+		return result, nil
+placeholder
+	top, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("modules: expected a mapping, got %T", raw)
+placeholder
+	for key, value := range top {
+		if value == nil {
+			result[key] = map[string]any{placeholder
+			continue
+	placeholder
+		entry, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("modules.%s: expected a mapping, got %T", key, value)
+	placeholder
+		result[key] = entry
+placeholder
+	return result, nil
 placeholder
 
 func setDefaults() {
