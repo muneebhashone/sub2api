@@ -41,6 +41,12 @@ placeholder
 
 // NewEasyPay creates a new EasyPay provider.
 // config keys: pid, pkey, apiBase, notifyUrl, returnUrl, cid, cidAlipay, cidWxpay
+func init() {
+	register(payment.TypeEasyPay, func(instanceID string, config map[string]string) (payment.Provider, error) {
+		return NewEasyPay(instanceID, config)
+placeholder)
+placeholder
+
 func NewEasyPay(instanceID string, config map[string]string) (*EasyPay, error) {
 	for _, k := range []string{"pid", "pkey", "apiBase", "notifyUrl", "returnUrl"placeholder {
 		if strings.TrimSpace(config[k]) == "" {

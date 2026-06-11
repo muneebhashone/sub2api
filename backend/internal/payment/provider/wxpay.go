@@ -82,6 +82,12 @@ placeholder
 
 const wxpayAPIv3KeyLength = 32
 
+func init() {
+	register(payment.TypeWxpay, func(instanceID string, config map[string]string) (payment.Provider, error) {
+		return NewWxpay(instanceID, config)
+placeholder)
+placeholder
+
 func NewWxpay(instanceID string, config map[string]string) (*Wxpay, error) {
 	// All fields are required. Platform-certificate mode is intentionally unsupported —
 	// WeChat has been migrating all merchants to the pubkey verifier since 2024-10,

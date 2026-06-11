@@ -55,6 +55,12 @@ placeholder
 
 var airwallexAccessTokens sync.Map
 
+func init() {
+	register(payment.TypeAirwallex, func(instanceID string, config map[string]string) (payment.Provider, error) {
+		return NewAirwallex(instanceID, config)
+placeholder)
+placeholder
+
 func NewAirwallex(instanceID string, config map[string]string) (*Airwallex, error) {
 	for _, k := range []string{"clientId", "apiKey", "webhookSecret", "apiBase"placeholder {
 		if strings.TrimSpace(config[k]) == "" {
