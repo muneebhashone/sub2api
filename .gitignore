@@ -133,6 +133,10 @@ docs/*
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/legal/
 !docs/legal/*.md
+!docs/plugin-architecture/
+!docs/plugin-architecture/*.md
+!backend/scripts/
+!backend/scripts/*.sh
 .serena/
 .codex/
 frontend/coverage/

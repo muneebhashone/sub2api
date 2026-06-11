@@ -1,0 +1,48 @@
+goos: linux
+goarch: amd64
+pkg: github.com/Wei-Shaw/sub2api/internal/service
+cpu: 13th Gen Intel(R) Core(TM) i5-13600KF
+BenchmarkGatewayService_ParseSSEUsage_MessageStart-20               	  403580	      2613 ns/op	    2224 B/op	      40 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageStart-20               	  467905	      2583 ns/op	    2224 B/op	      40 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageStart-20               	  462894	      2551 ns/op	    2224 B/op	      40 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageStart-20               	  443625	      2538 ns/op	    2224 B/op	      40 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageStart-20               	  473317	      2544 ns/op	    2224 B/op	      40 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageStart-20               	  465820	      2481 ns/op	    2224 B/op	      40 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart-20    	 1746464	       692.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart-20    	 1731408	       677.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart-20    	 1786676	       673.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart-20    	 1765081	       675.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart-20    	 1762540	       687.4 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart-20    	 1737454	       679.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageDelta-20               	  470481	      2281 ns/op	    1872 B/op	      37 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageDelta-20               	  512163	      2243 ns/op	    1872 B/op	      37 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageDelta-20               	  540775	      2273 ns/op	    1872 B/op	      37 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageDelta-20               	  509505	      2292 ns/op	    1872 B/op	      37 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageDelta-20               	  510970	      2300 ns/op	    1872 B/op	      37 allocs/op
+BenchmarkGatewayService_ParseSSEUsage_MessageDelta-20               	  509253	      2325 ns/op	    1872 B/op	      37 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta-20    	 1560142	       769.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta-20    	 1574744	       765.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta-20    	 1569315	       767.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta-20    	 1561520	       769.2 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta-20    	 1551661	       801.5 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta-20    	 1555836	       769.8 ns/op	       0 B/op	       0 allocs/op
+BenchmarkParseClaudeUsageFromResponseBody-20                        	 1430790	       850.6 ns/op	     320 B/op	       2 allocs/op
+BenchmarkParseClaudeUsageFromResponseBody-20                        	 1431716	       846.4 ns/op	     320 B/op	       2 allocs/op
+BenchmarkParseClaudeUsageFromResponseBody-20                        	 1427368	       842.8 ns/op	     320 B/op	       2 allocs/op
+BenchmarkParseClaudeUsageFromResponseBody-20                        	 1414472	       842.4 ns/op	     320 B/op	       2 allocs/op
+BenchmarkParseClaudeUsageFromResponseBody-20                        	 1410212	       838.6 ns/op	     320 B/op	       2 allocs/op
+BenchmarkParseClaudeUsageFromResponseBody-20                        	 1424356	       840.8 ns/op	     320 B/op	       2 allocs/op
+BenchmarkGatewayForward_AnthropicNonStreamPassthrough-20            	  120924	      9941 ns/op	   14667 B/op	      93 allocs/op
+BenchmarkGatewayForward_AnthropicNonStreamPassthrough-20            	  117312	     10316 ns/op	   14667 B/op	      93 allocs/op
+BenchmarkGatewayForward_AnthropicNonStreamPassthrough-20            	  113154	     10088 ns/op	   14666 B/op	      93 allocs/op
+BenchmarkGatewayForward_AnthropicNonStreamPassthrough-20            	  116223	     10061 ns/op	   14667 B/op	      93 allocs/op
+BenchmarkGatewayForward_AnthropicNonStreamPassthrough-20            	  119020	     10349 ns/op	   14667 B/op	      93 allocs/op
+BenchmarkGatewayForward_AnthropicNonStreamPassthrough-20            	  112460	     10227 ns/op	   14667 B/op	      93 allocs/op
+BenchmarkGatewayForward_AnthropicStreamPassthrough-20               	   39451	     29660 ns/op	   19156 B/op	     134 allocs/op
+BenchmarkGatewayForward_AnthropicStreamPassthrough-20               	   41238	     29418 ns/op	   19189 B/op	     134 allocs/op
+BenchmarkGatewayForward_AnthropicStreamPassthrough-20               	   40820	     29667 ns/op	   19218 B/op	     134 allocs/op
+BenchmarkGatewayForward_AnthropicStreamPassthrough-20               	   41295	     29620 ns/op	   19186 B/op	     134 allocs/op
+BenchmarkGatewayForward_AnthropicStreamPassthrough-20               	   40642	     29393 ns/op	   19171 B/op	     134 allocs/op
+BenchmarkGatewayForward_AnthropicStreamPassthrough-20               	   40014	     29780 ns/op	   19176 B/op	     134 allocs/op
+PASS
+ok  	github.com/Wei-Shaw/sub2api/internal/service	66.644s

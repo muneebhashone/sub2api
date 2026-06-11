@@ -28,6 +28,23 @@ jobs:
         working-directory: backend
         run: make test-integration
 
+  # 插件化改造回归安全网：特征化/不变量测试作为独立命名的合并门禁
+  # （这些测试也包含在 test-unit 中，独立 job 是为了回归信号清晰可辨）
+  # 详见 .claude/plugin-refactor/INVARIANTS.md
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+          check-latest: false
+          cache: true
+          cache-dependency-path: backend/go.sum
+      - name: Regression invariants (plugin-refactor safety net)
+        working-directory: backend
+        run: make test-invariants
+
   frontend:
     runs-on: ubuntu-latest
     steps:
