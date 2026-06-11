@@ -99,15 +99,24 @@ func (c *openAIImageOutputCounter) addDataArray(data gjson.Result) {
 		return
 placeholder
 	items := data.Array()
-	count := len(items)
-	if count > c.maxDataCount {
-		c.maxDataCount = count
-placeholder
+	imageCount := 0
 	sizes := make([]string, 0, len(items))
 	for _, item := range items {
+		if !item.IsObject() {
+			continue
+	placeholder
+		hasImageOutput := strings.TrimSpace(item.Get("url").String()) != "" ||
+			strings.TrimSpace(item.Get("b64_json").String()) != ""
+		if !hasImageOutput {
+			continue
+	placeholder
+		imageCount++
 		if size := strings.TrimSpace(item.Get("size").String()); size != "" {
 			sizes = append(sizes, size)
 	placeholder
+placeholder
+	if imageCount > c.maxDataCount {
+		c.maxDataCount = imageCount
 placeholder
 	if len(sizes) > 0 {
 		c.dataSizes = sizes
@@ -142,7 +151,7 @@ placeholder
 	if result == "" {
 		result = strings.TrimSpace(item.Get("url").String())
 placeholder
-	if result == "" && itemType != "image_generation.completed" {
+	if result == "" {
 		return
 placeholder
 	key := strings.TrimSpace(item.Get("id").String())
