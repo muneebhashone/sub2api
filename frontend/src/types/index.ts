@@ -361,6 +361,19 @@ export interface AnnouncementUserReadStatus {
   read_at?: string
 placeholder
 
+// ==================== Plugin Module Types ====================
+
+export type ModuleState = 'registered' | 'provisioned' | 'running' | 'stopped' | 'errored'
+
+export interface Module {
+  id: string
+  namespace: string
+  name: string
+  enabled: boolean
+  state: ModuleState
+  error: string
+placeholder
+
 // ==================== Proxy Node Types ====================
 
 export interface ProxyNode {

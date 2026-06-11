@@ -416,6 +416,7 @@ export default {
     channelMonitor: '渠道监控',
     channelStatus: '渠道状态',
     riskControl: '风控中心',
+    modules: '插件模块',
   placeholder,
 
   // Auth
@@ -4662,6 +4663,34 @@ export default {
       failedToDelete: '删除公告失败',
       failedToLoadReadStatus: '加载已读情况失败',
       deleteConfirm: '确定要删除该公告吗？此操作无法撤销。'
+    placeholder,
+
+    // Plugin Modules
+    modules: {
+      title: '插件模块',
+      description: '查看已注册插件模块及其运行状态',
+      columns: {
+        id: '模块 ID',
+        namespace: '命名空间',
+        name: '名称',
+        enabled: '启用',
+        state: '状态',
+        error: '错误信息'
+      placeholder,
+      enabledLabels: {
+        enabled: '已启用',
+        disabled: '未启用'
+      placeholder,
+      stateLabels: {
+        registered: '已注册',
+        provisioned: '已装配',
+        running: '运行中',
+        stopped: '已停止',
+        errored: '异常'
+      placeholder,
+      noModules: '暂无插件模块',
+      noModulesDescription: '当前构建中没有已注册的插件模块',
+      failedToLoad: '加载插件模块失败'
     placeholder,
 
     // Promo Codes

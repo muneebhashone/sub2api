@@ -643,6 +643,21 @@ const ChevronDownIcon = {
     )
 placeholder
 
+const CubeIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' placeholder,
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'
+        placeholder)
+      ]
+    )
+placeholder
+
 // Public-settings flags go through the registry in utils/featureFlags.ts,
 // which handles the opt-in vs opt-out fallback when settings haven't loaded
 // yet. Admin-only flags (not in public settings) stay inline below.
@@ -764,7 +779,8 @@ const adminNavItems = computed((): NavItem[] => {
         { path: '/admin/orders/plans', label: t('nav.paymentPlans'), icon: CreditCardIcon placeholder,
       ],
     placeholder,
-    { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon placeholder
+    { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon placeholder,
+    { path: '/admin/modules', label: t('nav.modules'), icon: CubeIcon, hideInSimpleMode: true placeholder
   ]
 
   const visible = applyFeatureFlags(baseItems)

@@ -11,6 +11,7 @@ export { useOnboardingStore placeholder from './onboarding'
 export { useAnnouncementStore placeholder from './announcements'
 export { usePaymentStore placeholder from './payment'
 export { useAdminComplianceStore placeholder from './adminCompliance'
+export { useModulesStore placeholder from './modules'
 
 // Re-export types for convenience
 export type { User, LoginRequest, RegisterRequest, AuthResponse placeholder from '@/types'
