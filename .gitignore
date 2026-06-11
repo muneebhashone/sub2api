@@ -136,7 +136,8 @@ docs/*
 !docs/plugin-architecture/
 !docs/plugin-architecture/*.md
 !backend/scripts/
-!backend/scripts/*.sh
+backend/scripts/*
+!backend/scripts/bench-baseline.sh
 .serena/
 .codex/
 frontend/coverage/
