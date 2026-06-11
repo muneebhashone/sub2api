@@ -1150,29 +1150,7 @@ placeholder
 placeholder
 
 func defaultModelIDsForPlatform(platform string) []string {
-	switch platform {
-	case service.PlatformOpenAI:
-		return openai.DefaultModelIDs()
-	case service.PlatformGemini:
-		ids := make([]string, 0, len(geminicli.DefaultModels))
-		for _, model := range geminicli.DefaultModels {
-			ids = append(ids, model.ID)
-	placeholder
-		return ids
-	case service.PlatformAntigravity:
-		models := antigravity.DefaultModels()
-		ids := make([]string, 0, len(models))
-		for _, model := range models {
-			ids = append(ids, model.ID)
-	placeholder
-		return ids
-	default:
-		ids := make([]string, 0, len(claude.DefaultModels))
-		for _, model := range claude.DefaultModels {
-			ids = append(ids, model.ID)
-	placeholder
-		return ids
-placeholder
+	return service.DefaultModelIDsForPlatform(platform)
 placeholder
 
 // AntigravityModels 返回 Antigravity 支持的全部模型
