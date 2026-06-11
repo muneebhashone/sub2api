@@ -150,6 +150,7 @@ var ProviderSet = wire.NewSet(
 	NewAnnouncementHandler,
 	NewChannelMonitorUserHandler,
 	ProvideGatewayHookChain,
+	ProvideGatewayPlatformRegistry,
 	NewGatewayHandler,
 	NewOpenAIGatewayHandler,
 	NewTotpHandler,

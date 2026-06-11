@@ -16,6 +16,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/gatewayhook"
+	"github.com/Wei-Shaw/sub2api/internal/gatewayplatform"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
@@ -42,6 +43,7 @@ type GatewayHandler struct {
 	gatewayService            *service.GatewayService
 	geminiCompatService       *service.GeminiMessagesCompatService
 	antigravityGatewayService *service.AntigravityGatewayService
+	platformRegistry          *gatewayplatform.Registry
 	userService               *service.UserService
 	billingCacheService       *service.BillingCacheService
 	usageService              *service.UsageService
@@ -62,6 +64,7 @@ func NewGatewayHandler(
 	gatewayService *service.GatewayService,
 	geminiCompatService *service.GeminiMessagesCompatService,
 	antigravityGatewayService *service.AntigravityGatewayService,
+	platformRegistry *gatewayplatform.Registry,
 	userService *service.UserService,
 	concurrencyService *service.ConcurrencyService,
 	billingCacheService *service.BillingCacheService,
@@ -97,6 +100,7 @@ placeholder
 		gatewayService:            gatewayService,
 		geminiCompatService:       geminiCompatService,
 		antigravityGatewayService: antigravityGatewayService,
+		platformRegistry:          platformRegistry,
 		userService:               userService,
 		billingCacheService:       billingCacheService,
 		usageService:              usageService,
@@ -442,16 +446,20 @@ placeholder
 			// 记录 Forward 前已写入字节数，Forward 后若增加则说明 SSE 内容已发，禁止 failover
 			writerSizeBeforeForward := c.Writer.Size()
 			if account.Platform == service.PlatformAntigravity {
-				result, err = h.antigravityGatewayService.ForwardGemini(
+				// gemini provider → AntigravityGatewayService.ForwardGemini：
+				// model/stream 经 Parsed 透传（与原 reqModel/reqStream 同源），
+				// action 由 adapter 硬编码 "generateContent"。
+				result, err = h.platformRegistry.Get(service.PlatformGemini).Forward(
 					requestCtx,
 					c,
 					account,
-					reqModel,
-					"generateContent",
-					reqStream,
-					body,
-					hasBoundSession,
-					service.WithForwardGeminiSession(derefGroupID(apiKey.GroupID), sessionKey),
+					&gatewayplatform.ForwardRequest{
+						Parsed:          parsedReq,
+						Body:            body,
+						IsStickySession: hasBoundSession,
+						SessionGroupID:  derefGroupID(apiKey.GroupID),
+						SessionKey:      sessionKey,
+				placeholder,
 				)
 		placeholder else {
 				result, err = h.geminiCompatService.Forward(requestCtx, c, account, body)
@@ -791,10 +799,17 @@ placeholder
 		placeholder
 			// 记录 Forward 前已写入字节数，Forward 后若增加则说明 SSE 内容已发，禁止 failover
 			writerSizeBeforeForward := c.Writer.Size()
+			// 平台 → Provider 的映射逻辑保留在调用点：antigravity 平台的
+			// APIKey 账号走 anthropic provider（Claude 协议直连上游）。
+			forwardReq := &gatewayplatform.ForwardRequest{
+				Parsed:          attemptParsedReq,
+				Body:            attemptBody,
+				IsStickySession: hasBoundSession,
+		placeholder
 			if account.Platform == service.PlatformAntigravity && account.Type != service.AccountTypeAPIKey {
-				result, err = h.antigravityGatewayService.Forward(requestCtx, c, account, attemptBody, hasBoundSession)
+				result, err = h.platformRegistry.Get(service.PlatformAntigravity).Forward(requestCtx, c, account, forwardReq)
 		placeholder else {
-				result, err = h.gatewayService.Forward(requestCtx, c, account, attemptParsedReq)
+				result, err = h.platformRegistry.Get(service.PlatformAnthropic).Forward(requestCtx, c, account, forwardReq)
 		placeholder
 
 			// 兜底释放串行锁（正常情况已通过回调提前释放）

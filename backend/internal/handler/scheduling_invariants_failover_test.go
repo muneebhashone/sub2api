@@ -346,6 +346,7 @@ placeholder
 		gwSvc,
 		nil, // geminiCompatService
 		nil, // antigravityGatewayService
+		ProvideGatewayPlatformRegistry(gwSvc, nil), // anthropic 账号经 anthropic provider → gwSvc.Forward
 		nil, // userService
 		concurrencySvc,
 		billingCacheSvc,
@@ -406,7 +407,7 @@ placeholder
 
 func TestSchedulingInvariant_FailoverSwitchLimit_DefaultValues(t *testing.T) {
 	t.Run("anthropic与gemini默认上限", func(t *testing.T) {
-		h := NewGatewayHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+		h := NewGatewayHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 		require.Equal(t, 10, h.maxAccountSwitches, "anthropic 默认换号上限必须为 10")
 		require.Equal(t, 3, h.maxAccountSwitchesGemini, "gemini 默认换号上限必须为 3")
 placeholder)
@@ -420,7 +421,7 @@ placeholder)
 		cfg := &config.Config{placeholder
 		cfg.Gateway.MaxAccountSwitches = 5
 		cfg.Gateway.MaxAccountSwitchesGemini = 2
-		h := NewGatewayHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, cfg, nil)
+		h := NewGatewayHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, cfg, nil)
 		require.Equal(t, 5, h.maxAccountSwitches)
 		require.Equal(t, 2, h.maxAccountSwitchesGemini)
 placeholder)
@@ -546,7 +547,7 @@ placeholder
 // （gemini 平台 Forward 的服务层内部 500 重试带秒级退避，完整 e2e 不可在
 // 单测时间预算内执行，故此处固化 handler 循环契约层语义。）
 func TestSchedulingInvariant_FailoverGemini_SwitchLimitLoopContract(t *testing.T) {
-	h := NewGatewayHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	h := NewGatewayHandler(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	require.Equal(t, 3, h.maxAccountSwitchesGemini)
 
 	mock := &mockTempUnscheduler{placeholder

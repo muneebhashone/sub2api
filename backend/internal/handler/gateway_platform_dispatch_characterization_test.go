@@ -282,6 +282,7 @@ placeholder
 		gwSvc,
 		nil, // geminiCompatService（:444 非 antigravity 分支误入会 panic → 用例显式失败）
 		agSvc,
+		ProvideGatewayPlatformRegistry(gwSvc, agSvc), // 与生产 Wire 装配同构的平台分发注册表
 		nil, // userService
 		concurrencySvc,
 		billingCacheSvc,
