@@ -134,9 +134,13 @@ func TestRegistryIsolation(t *testing.T) {
 placeholder
 
 func TestPackageLevelFunctionsDelegateToDefaultRegistry(t *testing.T) {
-	// 使用唯一 ID，避免与同进程其他测试冲突（包级默认注册表是进程级状态）。
+	// 使用唯一 ID，避免与同进程其他测试冲突（包级默认注册表是进程级状态，
+	// 无法清理）。注册仅做一次：`go test -count>1` 同进程重跑时探针已存在，
+	// 直接复用——否则会撞重复注册 panic（终审第二路审计发现的测试幂等性问题）。
 	const id = ModuleID("test_default_registry.probe")
-	RegisterModule(newStubModule(id))
+	if _, registered := GetModule(id); !registered {
+		RegisterModule(newStubModule(id))
+placeholder
 
 	info, ok := GetModule(id)
 	require.True(t, ok)
