@@ -113,6 +113,91 @@ placeholder
 	assert.Equal(t, "ping", resp.Tools[0].Name)
 placeholder
 
+func TestChatCompletionsToResponses_ToolStrict(t *testing.T) {
+	strictTrue := true
+	strictFalse := false
+	tests := []struct {
+		name   string
+		strict *bool
+		want   bool
+placeholder{
+		{name: "defaults omitted strict to false", want: falseplaceholder,
+		{name: "preserves explicit true", strict: &strictTrue, want: trueplaceholder,
+		{name: "preserves explicit false", strict: &strictFalse, want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &ChatCompletionsRequest{
+				Model:    "gpt-4o",
+				Messages: []ChatMessage{{Role: "user", Content: json.RawMessage(`"Hi"`)placeholderplaceholder,
+				Tools: []ChatTool{{
+					Type: "function",
+					Function: &ChatFunction{
+						Name:   "lookup",
+						Strict: tt.strict,
+				placeholder,
+		placeholder
+		placeholder
+
+			resp, err := ChatCompletionsToResponses(req)
+		placeholder
+			require.Len(t, resp.Tools, 1)
+			require.NotNil(t, resp.Tools[0].Strict)
+			assert.Equal(t, tt.want, *resp.Tools[0].Strict)
+
+			payload, err := json.Marshal(resp)
+		placeholder
+
+			var serialized struct {
+				Tools []map[string]json.RawMessage `json:"tools"`
+		placeholder
+			require.NoError(t, json.Unmarshal(payload, &serialized))
+			require.Len(t, serialized.Tools, 1)
+			strictJSON, ok := serialized.Tools[0]["strict"]
+			require.True(t, ok, "strict must be present in the Responses payload")
+			assert.JSONEq(t, string(mustMarshalJSON(t, tt.want)), string(strictJSON))
+	placeholder)
+placeholder
+placeholder
+
+func TestChatCompletionsToResponses_LegacyFunctionDefaultsStrictFalse(t *testing.T) {
+	req := &ChatCompletionsRequest{
+		Model:    "gpt-4o",
+		Messages: []ChatMessage{{Role: "user", Content: json.RawMessage(`"Hi"`)placeholderplaceholder,
+		Functions: []ChatFunction{{
+			Name: "lookup",
+placeholder
+placeholder
+
+	resp, err := ChatCompletionsToResponses(req)
+placeholder
+	require.Len(t, resp.Tools, 1)
+	require.NotNil(t, resp.Tools[0].Strict)
+	assert.False(t, *resp.Tools[0].Strict)
+
+	payload, err := json.Marshal(resp)
+placeholder
+	assert.Contains(t, string(payload), `"strict":false`)
+placeholder
+
+func TestResponsesTool_StrictFalseIsSerialized(t *testing.T) {
+	strict := false
+	payload, err := json.Marshal(ResponsesTool{
+		Type:   "function",
+		Strict: &strict,
+placeholder)
+placeholder
+	assert.JSONEq(t, `{"type":"function","strict":falseplaceholder`, string(payload))
+placeholder
+
+func mustMarshalJSON(t *testing.T, value any) []byte {
+placeholder
+	data, err := json.Marshal(value)
+placeholder
+	return data
+placeholder
+
 func TestChatCompletionsToResponses_MaxTokens(t *testing.T) {
 	t.Run("max_tokens", func(t *testing.T) {
 		maxTokens := 100
