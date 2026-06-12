@@ -1344,3 +1344,171 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestDefaultEffortForThinkingEnabled(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+		want  *string // nil = expect no fallback
+placeholder{
+		// passback-required 上游中不支持 effort 档位的国产模型→补默认 high
+		{name: "glm-5.1", model: "glm-5.1", want: strPtr("high")placeholder,
+		{name: "glm-4.7", model: "glm-4.7", want: strPtr("high")placeholder,
+		{name: "kimi-k2.6", model: "kimi-k2.6", want: strPtr("high")placeholder,
+		{name: "kimi-k2-thinking", model: "kimi-k2-thinking", want: strPtr("high")placeholder,
+		{name: "moonshot-v1-8k", model: "moonshot-v1-8k", want: strPtr("high")placeholder,
+		{name: "minimax-m3 (lowercase)", model: "minimax-m3", want: strPtr("high")placeholder,
+		{name: "MiniMax-M3 (mixed case)", model: "MiniMax-M3", want: strPtr("high")placeholder,
+		{name: "qwen3-thinking variant", model: "qwen3-235b-a22b-thinking-2507", want: strPtr("high")placeholder,
+
+		// DeepSeek 有原生 effort 支持→不注入默认，让客户端意图透传
+		{name: "deepseek-v4-pro excluded", model: "deepseek-v4-pro", want: nilplaceholder,
+		{name: "deepseek-v4-flash excluded", model: "deepseek-v4-flash", want: nilplaceholder,
+		{name: "deepseek-chat excluded", model: "deepseek-chat", want: nilplaceholder,
+
+		// 非 passback-required 模型一律返回 nil
+		{name: "claude opus 4.6 (anthropic-strict)", model: "claude-opus-4.6-20260201", want: nilplaceholder,
+		{name: "gpt-5.5 (unknown)", model: "gpt-5.5", want: nilplaceholder,
+		{name: "gemini-3.1-pro (unknown)", model: "gemini-3.1-pro", want: nilplaceholder,
+		{name: "empty", model: "", want: nilplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DefaultEffortForThinkingEnabled(tt.model)
+			if tt.want == nil {
+				require.Nil(t, got)
+				return
+		placeholder
+			require.NotNil(t, got)
+			require.Equal(t, *tt.want, *got)
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIBodyHasThinkingEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+placeholder{
+		{name: "enabled", body: `{"thinking":{"type":"enabled"placeholderplaceholder`, want: trueplaceholder,
+		{name: "adaptive", body: `{"thinking":{"type":"adaptive"placeholderplaceholder`, want: trueplaceholder,
+		{name: "ENABLED (uppercase)", body: `{"thinking":{"type":"ENABLED"placeholderplaceholder`, want: trueplaceholder,
+		{name: "disabled", body: `{"thinking":{"type":"disabled"placeholderplaceholder`, want: falseplaceholder,
+		{name: "empty body", body: ``, want: falseplaceholder,
+		{name: "no thinking field", body: `{"model":"gpt-5"placeholder`, want: falseplaceholder,
+		{name: "thinking object but no type", body: `{"thinking":{"budget_tokens":placeholderplaceholder`, want: falseplaceholder,
+		{name: "invalid json", body: `{not json`, want: falseplaceholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, OpenAIBodyHasThinkingEnabled([]byte(tt.body)))
+	placeholder)
+placeholder
+placeholder
+
+func TestApplyThinkingEnabledFallback(t *testing.T) {
+	tests := []struct {
+		name        string
+		effort      *string
+		body        string
+		model       string
+		want        *string
+		wantPassThr bool // 为 true 时 want 是传入 effort 原指针
+placeholder{
+		// effort 非 nil → 原值透传，不覆盖
+		{
+			name:        "existing effort never overridden (kimi + thinking)",
+			effort:      strPtr("medium"),
+			body:        `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:       "kimi-k2.6",
+			wantPassThr: true,
+	placeholder,
+		{
+			name:        "existing low effort kept for deepseek",
+			effort:      strPtr("low"),
+			body:        `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:       "deepseek-v4-pro",
+			wantPassThr: true,
+	placeholder,
+
+		// effort=nil + thinking enabled + passback-required 模型 → 填 high
+		{
+			name:   "glm-5.1 + thinking enabled -> high",
+			effort: nil,
+			body:   `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:  "glm-5.1",
+			want:   strPtr("high"),
+	placeholder,
+		{
+			name:   "kimi-k2.6 + adaptive -> high",
+			effort: nil,
+			body:   `{"thinking":{"type":"adaptive"placeholderplaceholder`,
+			model:  "kimi-k2.6",
+			want:   strPtr("high"),
+	placeholder,
+		{
+			name:   "MiniMax-M3 + enabled -> high",
+			effort: nil,
+			body:   `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:  "MiniMax-M3",
+			want:   strPtr("high"),
+	placeholder,
+
+		// effort=nil + thinking disabled → nil
+		{
+			name:   "glm + thinking disabled -> nil",
+			effort: nil,
+			body:   `{"thinking":{"type":"disabled"placeholderplaceholder`,
+			model:  "glm-5.1",
+			want:   nil,
+	placeholder,
+		{
+			name:   "glm + no thinking field -> nil",
+			effort: nil,
+			body:   `{"model":"glm-5.1"placeholder`,
+			model:  "glm-5.1",
+			want:   nil,
+	placeholder,
+
+		// effort=nil + thinking enabled + non-passback → nil
+		{
+			name:   "deepseek + thinking enabled -> nil (deepseek excluded)",
+			effort: nil,
+			body:   `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:  "deepseek-v4-pro",
+			want:   nil,
+	placeholder,
+		{
+			name:   "claude + thinking enabled -> nil (strict not passback)",
+			effort: nil,
+			body:   `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:  "claude-opus-4.6",
+			want:   nil,
+	placeholder,
+		{
+			name:   "gpt-5 + thinking enabled -> nil (unknown)",
+			effort: nil,
+			body:   `{"thinking":{"type":"enabled"placeholderplaceholder`,
+			model:  "gpt-5.5",
+			want:   nil,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ApplyThinkingEnabledFallback(tt.effort, []byte(tt.body), tt.model)
+			if tt.wantPassThr {
+				require.Same(t, tt.effort, got, "non-nil effort must be returned unchanged (same pointer)")
+				return
+		placeholder
+			if tt.want == nil {
+				require.Nil(t, got)
+				return
+		placeholder
+			require.NotNil(t, got)
+			require.Equal(t, *tt.want, *got)
+	placeholder)
+placeholder
+placeholder
