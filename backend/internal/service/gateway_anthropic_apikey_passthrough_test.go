@@ -839,6 +839,70 @@ placeholder
 placeholder
 placeholder
 
+func TestGatewayService_AnthropicOAuth_SystemPromptInjectionCanBeDisabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	resetGatewayForwardingSettingsCacheForTest(t)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	body := []byte(`{"model":"claude-3-5-sonnet-latest","system":"Original system prompt","messages":[{"role":"user","content":[{"type":"text","text":"hello"placeholder]placeholder]placeholder`)
+	parsed, err := ParseGatewayRequest(NewRequestBodyRef(body), PlatformAnthropic)
+placeholder
+
+	upstream := &anthropicHTTPUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type": []string{"application/json"placeholder,
+				"x-request-id": []string{"rid-oauth-no-system-injection"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(`{"id":"msg_1","type":"message","role":"assistant","model":"claude-3-5-sonnet-20241022","content":[{"type":"text","text":"ok"placeholder],"usage":{"input_tokens":12,"output_tokens":7placeholderplaceholder`)),
+	placeholder,
+placeholder
+
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
+	placeholder,
+placeholder
+	settingService := NewSettingService(&gatewayTTLSettingRepo{data: map[string]string{
+		SettingKeyEnableClaudeOAuthSystemPromptInjection: "false",
+placeholderplaceholder, cfg)
+	svc := &GatewayService{
+		cfg:                  cfg,
+		responseHeaderFilter: compileResponseHeaderFilter(cfg),
+		httpUpstream:         upstream,
+		rateLimitService:     &RateLimitService{placeholder,
+		deferredService:      &DeferredService{placeholder,
+		settingService:       settingService,
+placeholder
+
+	account := &Account{
+		ID:          302,
+		Name:        "anthropic-oauth-no-system-injection",
+		Platform:    PlatformAnthropic,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token": "oauth-token",
+	placeholder,
+		Status:      StatusActive,
+		Schedulable: true,
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, parsed)
+placeholder
+	require.NotNil(t, result)
+
+	system := gjson.GetBytes(upstream.lastBody, "system")
+	require.True(t, system.Exists())
+	require.Equal(t, "Original system prompt", system.String())
+	require.NotContains(t, string(upstream.lastBody), "x-anthropic-billing-header:")
+	require.NotContains(t, string(upstream.lastBody), "[System Instructions]")
+placeholder
+
 func TestGatewayService_AnthropicAPIKeyPassthrough_StreamingStillCollectsUsageAfterClientDisconnect(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
