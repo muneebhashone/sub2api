@@ -105,6 +105,11 @@ func IntervalSeconds(v int) predicate.ChannelMonitor {
 	return predicate.ChannelMonitor(sql.FieldEQ(FieldIntervalSeconds, v))
 placeholder
 
+// JitterSeconds applies equality check predicate on the "jitter_seconds" field. It's identical to JitterSecondsEQ.
+func JitterSeconds(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEQ(FieldJitterSeconds, v))
+placeholder
+
 // LastCheckedAt applies equality check predicate on the "last_checked_at" field. It's identical to LastCheckedAtEQ.
 func LastCheckedAt(v time.Time) predicate.ChannelMonitor {
 	return predicate.ChannelMonitor(sql.FieldEQ(FieldLastCheckedAt, v))
@@ -673,6 +678,46 @@ placeholder
 // IntervalSecondsLTE applies the LTE predicate on the "interval_seconds" field.
 func IntervalSecondsLTE(v int) predicate.ChannelMonitor {
 	return predicate.ChannelMonitor(sql.FieldLTE(FieldIntervalSeconds, v))
+placeholder
+
+// JitterSecondsEQ applies the EQ predicate on the "jitter_seconds" field.
+func JitterSecondsEQ(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEQ(FieldJitterSeconds, v))
+placeholder
+
+// JitterSecondsNEQ applies the NEQ predicate on the "jitter_seconds" field.
+func JitterSecondsNEQ(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNEQ(FieldJitterSeconds, v))
+placeholder
+
+// JitterSecondsIn applies the In predicate on the "jitter_seconds" field.
+func JitterSecondsIn(vs ...int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldIn(FieldJitterSeconds, vs...))
+placeholder
+
+// JitterSecondsNotIn applies the NotIn predicate on the "jitter_seconds" field.
+func JitterSecondsNotIn(vs ...int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNotIn(FieldJitterSeconds, vs...))
+placeholder
+
+// JitterSecondsGT applies the GT predicate on the "jitter_seconds" field.
+func JitterSecondsGT(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldGT(FieldJitterSeconds, v))
+placeholder
+
+// JitterSecondsGTE applies the GTE predicate on the "jitter_seconds" field.
+func JitterSecondsGTE(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldGTE(FieldJitterSeconds, v))
+placeholder
+
+// JitterSecondsLT applies the LT predicate on the "jitter_seconds" field.
+func JitterSecondsLT(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldLT(FieldJitterSeconds, v))
+placeholder
+
+// JitterSecondsLTE applies the LTE predicate on the "jitter_seconds" field.
+func JitterSecondsLTE(v int) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldLTE(FieldJitterSeconds, v))
 placeholder
 
 // LastCheckedAtEQ applies the EQ predicate on the "last_checked_at" field.
