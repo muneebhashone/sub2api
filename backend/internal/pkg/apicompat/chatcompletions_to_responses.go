@@ -419,7 +419,7 @@ func convertChatToolsToResponses(tools []ChatTool, functions []ChatFunction) []R
 			Name:        t.Function.Name,
 			Description: t.Function.Description,
 			Parameters:  t.Function.Parameters,
-			Strict:      t.Function.Strict,
+			Strict:      defaultStrictFalse(t.Function.Strict),
 	placeholder
 		out = append(out, rt)
 placeholder
@@ -431,12 +431,20 @@ placeholder
 			Name:        f.Name,
 			Description: f.Description,
 			Parameters:  f.Parameters,
-			Strict:      f.Strict,
+			Strict:      defaultStrictFalse(f.Strict),
 	placeholder
 		out = append(out, rt)
 placeholder
 
 	return out
+placeholder
+
+func defaultStrictFalse(src *bool) *bool {
+	if src == nil {
+		value := false
+		return &value
+placeholder
+	return src
 placeholder
 
 // convertChatFunctionCallToToolChoice maps the legacy function_call field to a
