@@ -13,22 +13,37 @@ func TestParseAuthorizationInput(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		raw       string
-		wantCode  string
-		wantState string
+		name              string
+		raw               string
+		wantCode          string
+		wantState         string
+		wantRequiresState bool
 placeholder{
 		{
-			name:      "full callback url",
-			raw:       "http://127.0.0.1:56121/callback?code=abc123&state=state456",
-			wantCode:  "abc123",
-			wantState: "state456",
+			name:              "full callback url",
+			raw:               "http://127.0.0.1:56121/callback?code=abc123&state=state456",
+			wantCode:          "abc123",
+			wantState:         "state456",
+			wantRequiresState: true,
 	placeholder,
 		{
-			name:      "query string",
-			raw:       "?code=abc123&state=state456",
-			wantCode:  "abc123",
-			wantState: "state456",
+			name:              "query string",
+			raw:               "?code=abc123&state=state456",
+			wantCode:          "abc123",
+			wantState:         "state456",
+			wantRequiresState: true,
+	placeholder,
+		{
+			name:              "full callback url missing state",
+			raw:               "http://127.0.0.1:56121/callback?code=abc123",
+			wantCode:          "abc123",
+			wantRequiresState: true,
+	placeholder,
+		{
+			name:              "query string missing state",
+			raw:               "code=abc123",
+			wantCode:          "abc123",
+			wantRequiresState: true,
 	placeholder,
 		{
 			name:     "bare code",
@@ -43,6 +58,7 @@ placeholder
 			got := ParseAuthorizationInput(tt.raw)
 			require.Equal(t, tt.wantCode, got.Code)
 			require.Equal(t, tt.wantState, got.State)
+			require.Equal(t, tt.wantRequiresState, got.RequiresState)
 	placeholder)
 placeholder
 placeholder

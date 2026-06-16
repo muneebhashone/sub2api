@@ -12,9 +12,11 @@ import (
 
 type grokOAuthClientStub struct {
 	refreshResponse *xai.TokenResponse
+	exchangeCalls   int
 placeholder
 
 func (s *grokOAuthClientStub) ExchangeCode(context.Context, string, string, string, string, string) (*xai.TokenResponse, error) {
+	s.exchangeCalls++
 	return &xai.TokenResponse{placeholder, nil
 placeholder
 
@@ -37,4 +39,30 @@ placeholder
 	require.Equal(t, "new-access-token", info.AccessToken)
 	require.Equal(t, "original-refresh-token", info.RefreshToken)
 	require.Equal(t, "client-id", info.ClientID)
+placeholder
+
+func TestGrokOAuthServiceExchangeCodeRequiresStateForCallbackURLAndConsumesSession(t *testing.T) {
+	client := &grokOAuthClientStub{placeholder
+	svc := NewGrokOAuthService(nil, client)
+	defer svc.Stop()
+
+	auth, err := svc.GenerateAuthURL(context.Background(), nil, "")
+placeholder
+
+	_, err = svc.ExchangeCode(context.Background(), &GrokExchangeCodeInput{
+		SessionID: auth.SessionID,
+		Code:      "http://127.0.0.1:56121/callback?code=code-without-state",
+placeholder)
+placeholder
+	require.Contains(t, err.Error(), "GROK_OAUTH_STATE_REQUIRED")
+	require.Zero(t, client.exchangeCalls)
+
+	_, err = svc.ExchangeCode(context.Background(), &GrokExchangeCodeInput{
+		SessionID: auth.SessionID,
+		Code:      "code-with-state",
+		State:     auth.State,
+placeholder)
+placeholder
+	require.Contains(t, err.Error(), "GROK_OAUTH_SESSION_NOT_FOUND")
+	require.Zero(t, client.exchangeCalls)
 placeholder

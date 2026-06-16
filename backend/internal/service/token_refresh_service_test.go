@@ -538,6 +538,8 @@ placeholder{
 		{name: "unauthorized_client", err: errors.New("unauthorized_client"), expected: trueplaceholder,
 		{name: "access_denied", err: errors.New("access_denied"), expected: trueplaceholder,
 		{name: "no_refresh_token", err: errors.New("no refresh token available"), expected: trueplaceholder,
+		{name: "grok_entitlement_denied", err: errors.New("GROK_OAUTH_ENTITLEMENT_DENIED: subscription required"), expected: trueplaceholder,
+		{name: "invalid_scope", err: errors.New("invalid_scope: requested scope is not allowed"), expected: trueplaceholder,
 		{name: "invalid_grant_with_desc", err: errors.New("Error: invalid_grant - token revoked"), expected: trueplaceholder,
 		{name: "case_insensitive", err: errors.New("INVALID_GRANT"), expected: trueplaceholder,
 placeholder
