@@ -93,6 +93,9 @@ placeholder
 func (m *sessionWindowMockRepo) ListActive(context.Context) ([]Account, error) {
 	panic("unexpected")
 placeholder
+func (m *sessionWindowMockRepo) ListOAuthRefreshCandidates(context.Context) ([]Account, error) {
+	panic("unexpected")
+placeholder
 func (m *sessionWindowMockRepo) ListByPlatform(context.Context, string) ([]Account, error) {
 	panic("unexpected")
 placeholder
