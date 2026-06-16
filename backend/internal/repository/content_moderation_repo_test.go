@@ -29,12 +29,30 @@ placeholder
 	repo := NewContentModerationRepository(db)
 	since := time.Now().Add(-time.Hour)
 	mock.ExpectQuery(regexp.QuoteMeta("AND action <> 'hash_block'")).
-		WithArgs(int64(1001), since).
+		WithArgs(int64(1001), since, false).
 		WillReturnRows(sqlmock.NewRows([]string{"count"placeholder).AddRow(2))
 
-	count, err := repo.CountFlaggedByUserSince(context.Background(), 1001, since)
+	count, err := repo.CountFlaggedByUserSince(context.Background(), 1001, since, false)
 
 placeholder
 	require.Equal(t, 2, count)
+	require.NoError(t, mock.ExpectationsWereMet())
+placeholder
+
+func TestContentModerationRepositoryCountFlaggedByUserSince_ExcludesCyberPolicyWhenRequested(t *testing.T) {
+	db, mock, err := sqlmock.New()
+placeholder
+	defer func() { _ = db.Close() placeholder()
+
+	repo := NewContentModerationRepository(db)
+	since := time.Now().Add(-time.Hour)
+	mock.ExpectQuery(regexp.QuoteMeta("AND ($3::bool IS FALSE OR action <> 'cyber_policy')")).
+		WithArgs(int64(1001), since, true).
+		WillReturnRows(sqlmock.NewRows([]string{"count"placeholder).AddRow(3))
+
+	count, err := repo.CountFlaggedByUserSince(context.Background(), 1001, since, true)
+
+placeholder
+	require.Equal(t, 3, count)
 	require.NoError(t, mock.ExpectationsWereMet())
 placeholder

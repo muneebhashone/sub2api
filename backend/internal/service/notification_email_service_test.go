@@ -140,6 +140,7 @@ placeholder{
 		{NotificationEmailEventAccountQuotaAlert, "account_name"placeholder,
 		{NotificationEmailEventContentModerationViolation, "moderation_category"placeholder,
 		{NotificationEmailEventContentModerationDisabled, "violation_count"placeholder,
+		{NotificationEmailEventCyberPolicyNotice, "upstream_message"placeholder,
 		{NotificationEmailEventOpsAlert, "rule_name"placeholder,
 		{NotificationEmailEventOpsScheduledReport, "report_html"placeholder,
 placeholder
