@@ -1,0 +1,300 @@
+package service
+
+import (
+	"context"
+	"crypto/subtle"
+	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"time"
+
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
+)
+
+const grokDefaultAccessTokenTTL = 6 * time.Hour
+
+type GrokOAuthService struct {
+	sessionStore *xai.SessionStore
+	proxyRepo    ProxyRepository
+	oauthClient  GrokOAuthClient
+placeholder
+
+func NewGrokOAuthService(proxyRepo ProxyRepository, oauthClient GrokOAuthClient) *GrokOAuthService {
+	return &GrokOAuthService{
+		sessionStore: xai.NewSessionStore(),
+		proxyRepo:    proxyRepo,
+		oauthClient:  oauthClient,
+placeholder
+placeholder
+
+type GrokAuthURLResult struct {
+	AuthURL   string `json:"auth_url"`
+	SessionID string `json:"session_id"`
+	State     string `json:"state"`
+placeholder
+
+func (s *GrokOAuthService) GenerateAuthURL(ctx context.Context, proxyID *int64, redirectURI string) (*GrokAuthURLResult, error) {
+	state, err := xai.GenerateState()
+	if err != nil {
+		return nil, infraerrors.Newf(http.StatusInternalServerError, "GROK_OAUTH_STATE_FAILED", "failed to generate state: %v", err)
+placeholder
+	nonce, err := xai.GenerateNonce()
+	if err != nil {
+		return nil, infraerrors.Newf(http.StatusInternalServerError, "GROK_OAUTH_NONCE_FAILED", "failed to generate nonce: %v", err)
+placeholder
+	codeVerifier, err := xai.GenerateCodeVerifier()
+	if err != nil {
+		return nil, infraerrors.Newf(http.StatusInternalServerError, "GROK_OAUTH_VERIFIER_FAILED", "failed to generate code verifier: %v", err)
+placeholder
+	sessionID, err := xai.GenerateSessionID()
+	if err != nil {
+		return nil, infraerrors.Newf(http.StatusInternalServerError, "GROK_OAUTH_SESSION_FAILED", "failed to generate session ID: %v", err)
+placeholder
+
+	proxyURL, err := s.proxyURL(ctx, proxyID)
+	if err != nil {
+		return nil, err
+placeholder
+	redirectURI = xai.EffectiveRedirectURI(redirectURI)
+	codeChallenge := xai.GenerateCodeChallenge(codeVerifier)
+
+	s.sessionStore.Set(sessionID, &xai.OAuthSession{
+		State:         state,
+		CodeVerifier:  codeVerifier,
+		CodeChallenge: codeChallenge,
+		ClientID:      xai.EffectiveClientID(),
+		Scope:         xai.EffectiveScope(),
+		ProxyURL:      proxyURL,
+		RedirectURI:   redirectURI,
+		CreatedAt:     time.Now(),
+placeholder)
+
+	return &GrokAuthURLResult{
+		AuthURL:   xai.BuildAuthorizationURL(state, codeChallenge, redirectURI, nonce),
+		SessionID: sessionID,
+		State:     state,
+placeholder, nil
+placeholder
+
+type GrokExchangeCodeInput struct {
+	SessionID   string
+	Code        string
+	State       string
+	RedirectURI string
+	ProxyID     *int64
+placeholder
+
+type GrokTokenInfo struct {
+	AccessToken       string `json:"access_token"`
+	RefreshToken      string `json:"refresh_token,omitempty"`
+	IDToken           string `json:"id_token,omitempty"`
+	TokenType         string `json:"token_type,omitempty"`
+	ExpiresIn         int64  `json:"expires_in"`
+	ExpiresAt         int64  `json:"expires_at"`
+	ClientID          string `json:"client_id,omitempty"`
+	Scope             string `json:"scope,omitempty"`
+	Email             string `json:"email,omitempty"`
+	SubscriptionTier  string `json:"subscription_tier,omitempty"`
+	EntitlementStatus string `json:"entitlement_status,omitempty"`
+placeholder
+
+func (s *GrokOAuthService) ExchangeCode(ctx context.Context, input *GrokExchangeCodeInput) (*GrokTokenInfo, error) {
+	if input == nil {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_INVALID_INPUT", "input is required")
+placeholder
+	session, ok := s.sessionStore.Get(input.SessionID)
+	if !ok {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_SESSION_NOT_FOUND", "session not found or expired")
+placeholder
+
+	parsed := xai.ParseAuthorizationInput(input.Code)
+	code := strings.TrimSpace(parsed.Code)
+	if code == "" {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_CODE_REQUIRED", "authorization code is required")
+placeholder
+	state := strings.TrimSpace(input.State)
+	if state == "" {
+		state = strings.TrimSpace(parsed.State)
+placeholder
+	if state != "" && subtle.ConstantTimeCompare([]byte(state), []byte(session.State)) != 1 {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_INVALID_STATE", "invalid oauth state")
+placeholder
+
+	proxyURL := session.ProxyURL
+	if input.ProxyID != nil {
+		var err error
+		proxyURL, err = s.proxyURL(ctx, input.ProxyID)
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
+	redirectURI := session.RedirectURI
+	if strings.TrimSpace(input.RedirectURI) != "" {
+		redirectURI = input.RedirectURI
+placeholder
+
+	tokenResp, err := s.oauthClient.ExchangeCode(ctx, code, session.CodeVerifier, session.CodeChallenge, redirectURI, proxyURL, session.ClientID)
+	if err != nil {
+		return nil, err
+placeholder
+	s.sessionStore.Delete(input.SessionID)
+	return s.tokenInfoFromResponse(tokenResp, session.ClientID, nil), nil
+placeholder
+
+func (s *GrokOAuthService) RefreshToken(ctx context.Context, refreshToken, proxyURL, clientID string) (*GrokTokenInfo, error) {
+	refreshToken = strings.TrimSpace(refreshToken)
+	if refreshToken == "" {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_NO_REFRESH_TOKEN", "refresh_token is required")
+placeholder
+	tokenResp, err := s.oauthClient.RefreshToken(ctx, refreshToken, proxyURL, clientID)
+	if err != nil {
+		return nil, err
+placeholder
+	return s.tokenInfoFromResponse(tokenResp, clientID, nil), nil
+placeholder
+
+func (s *GrokOAuthService) ValidateRefreshToken(ctx context.Context, refreshToken string, proxyID *int64) (*GrokTokenInfo, error) {
+	proxyURL, err := s.proxyURL(ctx, proxyID)
+	if err != nil {
+		return nil, err
+placeholder
+	return s.RefreshToken(ctx, refreshToken, proxyURL, xai.EffectiveClientID())
+placeholder
+
+func (s *GrokOAuthService) RefreshAccountToken(ctx context.Context, account *Account) (*GrokTokenInfo, error) {
+	if account == nil || account.Platform != PlatformGrok {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_INVALID_ACCOUNT", "account is not a Grok account")
+placeholder
+	if account.Type != AccountTypeOAuth {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_INVALID_ACCOUNT_TYPE", "account is not an OAuth account")
+placeholder
+
+	proxyURL, err := s.proxyURL(ctx, account.ProxyID)
+	if err != nil {
+		return nil, err
+placeholder
+	refreshToken := account.GetCredential("refresh_token")
+	if strings.TrimSpace(refreshToken) == "" {
+		return nil, infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_NO_REFRESH_TOKEN", "no refresh token available")
+placeholder
+
+	clientID := account.GetCredential("client_id")
+	tokenInfo, err := s.RefreshToken(ctx, refreshToken, proxyURL, clientID)
+	if err != nil {
+		return nil, err
+placeholder
+	tokenInfo.SubscriptionTier = account.GetCredential("subscription_tier")
+	tokenInfo.EntitlementStatus = account.GetCredential("entitlement_status")
+	return tokenInfo, nil
+placeholder
+
+func (s *GrokOAuthService) BuildAccountCredentials(tokenInfo *GrokTokenInfo) map[string]any {
+	if tokenInfo == nil {
+		return nil
+placeholder
+	expiresAt := time.Unix(tokenInfo.ExpiresAt, 0).UTC().Format(time.RFC3339)
+	creds := map[string]any{
+		"access_token": tokenInfo.AccessToken,
+		"expires_at":   expiresAt,
+placeholder
+	if tokenInfo.RefreshToken != "" {
+		creds["refresh_token"] = tokenInfo.RefreshToken
+placeholder
+	if tokenInfo.TokenType != "" {
+		creds["token_type"] = tokenInfo.TokenType
+placeholder
+	if tokenInfo.IDToken != "" {
+		creds["id_token"] = tokenInfo.IDToken
+placeholder
+	if tokenInfo.ClientID != "" {
+		creds["client_id"] = tokenInfo.ClientID
+placeholder
+	if tokenInfo.Scope != "" {
+		creds["scope"] = tokenInfo.Scope
+placeholder
+	if tokenInfo.Email != "" {
+		creds["email"] = tokenInfo.Email
+placeholder
+	if tokenInfo.SubscriptionTier != "" {
+		creds["subscription_tier"] = tokenInfo.SubscriptionTier
+placeholder
+	if tokenInfo.EntitlementStatus != "" {
+		creds["entitlement_status"] = tokenInfo.EntitlementStatus
+placeholder
+	creds["base_url"] = xai.DefaultBaseURL
+	return creds
+placeholder
+
+func (s *GrokOAuthService) Stop() {
+	s.sessionStore.Stop()
+placeholder
+
+func (s *GrokOAuthService) tokenInfoFromResponse(tokenResp *xai.TokenResponse, clientID string, existing map[string]any) *GrokTokenInfo {
+	now := time.Now()
+	expiresIn := tokenResp.ExpiresIn
+	if expiresIn <= 0 {
+		expiresIn = int64(grokDefaultAccessTokenTTL.Seconds())
+placeholder
+	info := &GrokTokenInfo{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		IDToken:      tokenResp.IDToken,
+		TokenType:    tokenResp.TokenType,
+		ExpiresIn:    expiresIn,
+		ExpiresAt:    now.Add(time.Duration(expiresIn) * time.Second).Unix(),
+		ClientID:     strings.TrimSpace(clientID),
+		Scope:        tokenResp.Scope,
+placeholder
+	if info.ClientID == "" {
+		info.ClientID = xai.EffectiveClientID()
+placeholder
+	if info.TokenType == "" {
+		info.TokenType = "Bearer"
+placeholder
+	if email := parseJWTEmailClaim(tokenResp.IDToken); email != "" {
+		info.Email = email
+placeholder
+	if info.Email == "" && existing != nil {
+		if email, _ := existing["email"].(string); email != "" {
+			info.Email = email
+	placeholder
+placeholder
+	return info
+placeholder
+
+func (s *GrokOAuthService) proxyURL(ctx context.Context, proxyID *int64) (string, error) {
+	if proxyID == nil {
+		return "", nil
+placeholder
+	if s.proxyRepo == nil {
+		return "", infraerrors.New(http.StatusBadRequest, "GROK_OAUTH_PROXY_NOT_AVAILABLE", "proxy repository is not available")
+placeholder
+	proxy, err := s.proxyRepo.GetByID(ctx, *proxyID)
+	if err != nil {
+		return "", infraerrors.Newf(http.StatusBadRequest, "GROK_OAUTH_PROXY_NOT_FOUND", "proxy not found: %v", err)
+placeholder
+	if proxy == nil {
+		return "", nil
+placeholder
+	return proxy.URL(), nil
+placeholder
+
+func parseJWTEmailClaim(token string) string {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return ""
+placeholder
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return ""
+placeholder
+	var claims struct {
+		Email string `json:"email"`
+placeholder
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return ""
+placeholder
+	return strings.TrimSpace(claims.Email)
+placeholder
