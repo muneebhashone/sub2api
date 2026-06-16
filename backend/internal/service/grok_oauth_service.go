@@ -152,7 +152,11 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	return s.tokenInfoFromResponse(tokenResp, clientID, nil), nil
+	tokenInfo := s.tokenInfoFromResponse(tokenResp, clientID, nil)
+	if tokenInfo.RefreshToken == "" {
+		tokenInfo.RefreshToken = refreshToken
+placeholder
+	return tokenInfo, nil
 placeholder
 
 func (s *GrokOAuthService) ValidateRefreshToken(ctx context.Context, refreshToken string, proxyID *int64) (*GrokTokenInfo, error) {
