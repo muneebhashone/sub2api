@@ -135,7 +135,7 @@ placeholder
 		redirectURI = input.RedirectURI
 placeholder
 
-	tokenResp, err := s.oauthClient.ExchangeCode(ctx, code, session.CodeVerifier, session.CodeChallenge, redirectURI, proxyURL, session.ClientID)
+	tokenResp, err := s.oauthClient.ExchangeCode(ctx, code, session.CodeVerifier, redirectURI, proxyURL, session.ClientID)
 	if err != nil {
 		return nil, err
 placeholder
