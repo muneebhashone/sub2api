@@ -437,6 +437,7 @@ placeholder
 		{Name: "group_name", Type: field.TypeString, Nullable: true, Size: 100, Default: ""placeholder,
 		{Name: "enabled", Type: field.TypeBool, Default: trueplaceholder,
 		{Name: "interval_seconds", Type: field.TypeIntplaceholder,
+		{Name: "jitter_seconds", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "last_checked_at", Type: field.TypeTime, Nullable: trueplaceholder,
 		{Name: "created_by", Type: field.TypeInt64placeholder,
 		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
@@ -452,7 +453,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "channel_monitors_channel_monitor_request_templates_request_template",
-				Columns:    []*schema.Column{ChannelMonitorsColumns[18]placeholder,
+				Columns:    []*schema.Column{ChannelMonitorsColumns[19]placeholder,
 				RefColumns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -461,7 +462,7 @@ placeholder
 			{
 				Name:    "channelmonitor_enabled_last_checked_at",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[11], ChannelMonitorsColumns[13]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[11], ChannelMonitorsColumns[14]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitor_provider",
@@ -481,7 +482,7 @@ placeholder
 			{
 				Name:    "channelmonitor_template_id",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[18]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[19]placeholder,
 		placeholder,
 	placeholder,
 placeholder
