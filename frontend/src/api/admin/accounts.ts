@@ -705,6 +705,76 @@ export async function setPrivacy(id: number): Promise<Account> {
   return data
 placeholder
 
+/**
+ * OpenAI / Codex rate-limit reset feature: query and reset upstream usage.
+ */
+export interface OpenAIRateLimitWindow {
+  used_percent: number
+  limit_window_seconds: number
+  reset_after_seconds: number
+  reset_at: number
+placeholder
+
+export interface OpenAIRateLimit {
+  allowed: boolean
+  limit_reached: boolean
+  primary_window?: OpenAIRateLimitWindow | null
+  secondary_window?: OpenAIRateLimitWindow | null
+placeholder
+
+export interface OpenAIAdditionalRateLimit {
+  limit_name: string
+  metered_feature: string
+  rate_limit?: OpenAIRateLimit | null
+placeholder
+
+export interface OpenAIRateLimitResetCredits {
+  available_count: number
+placeholder
+
+export interface OpenAIQuotaUsage {
+  user_id?: string
+  account_id?: string
+  email?: string
+  plan_type?: string
+  rate_limit?: OpenAIRateLimit | null
+  additional_rate_limits?: OpenAIAdditionalRateLimit[]
+  rate_limit_reset_credits?: OpenAIRateLimitResetCredits | null
+  fetched_at: number
+placeholder
+
+export interface OpenAIQuotaResetCredit {
+  id?: string
+  reset_type?: string
+  status?: string
+  granted_at?: string
+  expires_at?: string
+  redeem_started_at?: string
+  redeemed_at?: string
+placeholder
+
+export interface OpenAIQuotaResetResult {
+  code: string
+  credit?: OpenAIQuotaResetCredit | null
+  windows_reset: number
+placeholder
+
+/**
+ * Query OpenAI/Codex rate-limit usage for an OAuth account.
+ */
+export async function queryOpenAIQuota(id: number): Promise<OpenAIQuotaUsage> {
+  const { data placeholder = await apiClient.get<OpenAIQuotaUsage>(`/admin/openai/accounts/${idplaceholder/quota`)
+  return data
+placeholder
+
+/**
+ * Consume one rate-limit-reset credit for an OpenAI/Codex OAuth account.
+ */
+export async function resetOpenAIQuota(id: number): Promise<OpenAIQuotaResetResult> {
+  const { data placeholder = await apiClient.post<OpenAIQuotaResetResult>(`/admin/openai/accounts/${idplaceholder/reset-quota`)
+  return data
+placeholder
+
 export const accountsAPI = {
   list,
   listWithEtag,
@@ -746,7 +816,9 @@ export const accountsAPI = {
   batchClearError,
   batchRefresh,
   setPrivacy,
-  revertProxyFallback
+  revertProxyFallback,
+  queryOpenAIQuota,
+  resetOpenAIQuota
 placeholder
 
 export default accountsAPI
