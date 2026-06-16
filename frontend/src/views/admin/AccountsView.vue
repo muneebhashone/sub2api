@@ -210,6 +210,9 @@
           <template #cell-select="{ row placeholder">
             <input type="checkbox" :checked="isSelected(row.id)" @change="toggleSel(row.id)" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
           </template>
+          <template #cell-id="{ value placeholder">
+            <span class="font-mono text-xs text-gray-500 dark:text-gray-400">#{{ value placeholderplaceholder</span>
+          </template>
           <template #cell-name="{ row, value placeholder">
             <div class="flex flex-col">
               <span class="font-medium text-gray-900 dark:text-white">{{ value placeholderplaceholder</span>
@@ -526,6 +529,7 @@ type AccountSortState = {
   sort_order: AccountSortOrder
 placeholder
 const ACCOUNT_SORTABLE_KEYS = new Set([
+  'id',
   'name',
   'status',
   'schedulable',
@@ -1136,6 +1140,7 @@ const allColumns = computed(() => {
   const c = [
     { key: 'select', label: '', sortable: false placeholder,
     { key: 'name', label: t('admin.accounts.columns.name'), sortable: true placeholder,
+    { key: 'id', label: t('admin.accounts.columns.id'), sortable: true placeholder,
     { key: 'platform_type', label: t('admin.accounts.columns.platformType'), sortable: false placeholder,
     { key: 'capacity', label: t('admin.accounts.columns.capacity'), sortable: false placeholder,
     { key: 'status', label: t('admin.accounts.columns.status'), sortable: true placeholder,
