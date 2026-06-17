@@ -1258,6 +1258,9 @@ placeholder
 placeholder
 
 func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapability) bool {
+	if capability == "" {
+		return true
+placeholder
 	if !a.IsOpenAI() {
 		return false
 placeholder
