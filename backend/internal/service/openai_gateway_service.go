@@ -26,6 +26,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/Wei-Shaw/sub2api/internal/util/responseheaders"
 	"github.com/Wei-Shaw/sub2api/internal/util/urlvalidator"
 	"github.com/cespare/xxhash/v2"
@@ -1376,6 +1377,17 @@ placeholder
 			return false
 	placeholder
 placeholder
+	if account.IsGrok() {
+		if paused, reason := shouldAutoPauseGrokAccountByQuota(account); paused {
+			slog.Debug("grok_account_auto_paused_by_quota",
+				"account_id", account.ID,
+				"window", reason.window,
+				"threshold", reason.threshold,
+				"utilization", reason.utilization,
+			)
+			return false
+	placeholder
+placeholder
 	if requestedModel != "" && !account.IsModelSupported(requestedModel) {
 		return false
 placeholder
@@ -1392,6 +1404,55 @@ type openAIQuotaAutoPauseDecision struct {
 	window      string
 	threshold   float64
 	utilization float64
+placeholder
+
+func shouldAutoPauseGrokAccountByQuota(account *Account) (bool, openAIQuotaAutoPauseDecision) {
+	if account == nil || !account.IsGrok() || account.Type != AccountTypeOAuth {
+		return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+	snapshot, err := grokQuotaSnapshotFromExtra(account.Extra)
+	if err != nil || snapshot == nil {
+		return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+	now := time.Now()
+	if grokQuotaSnapshotStaleForPause(snapshot, now) {
+		return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+	if snapshot.RetryAfterSeconds != nil && *snapshot.RetryAfterSeconds > 0 {
+		return true, openAIQuotaAutoPauseDecision{window: "retry_after", threshold: 1, utilization: 1placeholder
+placeholder
+	if paused, decision := shouldAutoPauseGrokQuotaWindow("requests", snapshot.Requests, now); paused {
+		return true, decision
+placeholder
+	if paused, decision := shouldAutoPauseGrokQuotaWindow("tokens", snapshot.Tokens, now); paused {
+		return true, decision
+placeholder
+	return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+
+func shouldAutoPauseGrokQuotaWindow(name string, window *xai.QuotaWindow, now time.Time) (bool, openAIQuotaAutoPauseDecision) {
+	if window == nil || window.Limit == nil || window.Remaining == nil || *window.Limit <= 0 {
+		return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+	if window.ResetUnix != nil && *window.ResetUnix > 0 && !now.Before(time.Unix(*window.ResetUnix, 0)) {
+		return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+	utilization := float64(*window.Limit-*window.Remaining) / float64(*window.Limit)
+	if *window.Remaining <= 0 || utilization >= 1 {
+		return true, openAIQuotaAutoPauseDecision{window: name, threshold: 1, utilization: utilizationplaceholder
+placeholder
+	return false, openAIQuotaAutoPauseDecision{placeholder
+placeholder
+
+func grokQuotaSnapshotStaleForPause(snapshot *xai.QuotaSnapshot, now time.Time) bool {
+	if snapshot == nil || strings.TrimSpace(snapshot.UpdatedAt) == "" {
+		return false
+placeholder
+	updatedAt, err := parseTime(snapshot.UpdatedAt)
+	if err != nil {
+		return false
+placeholder
+	return now.Sub(updatedAt) >= openAICodexAutoPauseStaleAfter
 placeholder
 
 func shouldAutoPauseOpenAIAccountByQuota(ctx context.Context, account *Account) (bool, openAIQuotaAutoPauseDecision) {

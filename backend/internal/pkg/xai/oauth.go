@@ -260,6 +260,14 @@ func BuildResponsesURL(baseURL string) string {
 	return EffectiveBaseURL(baseURL) + "/responses"
 placeholder
 
+func BuildChatCompletionsURL(baseURL string) (string, error) {
+	validatedBaseURL, err := ValidatedBaseURL(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid base url: %w", err)
+placeholder
+	return validatedBaseURL + "/chat/completions", nil
+placeholder
+
 // TokenResponse represents xAI OAuth token responses.
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
