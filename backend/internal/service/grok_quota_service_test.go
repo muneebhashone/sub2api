@@ -156,6 +156,14 @@ placeholder{
 			want: true,
 	placeholder,
 		{
+			name: "retry after expired",
+			snapshot: xai.QuotaSnapshot{
+				RetryAfterSeconds: &retryAfter,
+				UpdatedAt:         time.Now().Add(-time.Duration(retryAfter+1) * time.Second).UTC().Format(time.RFC3339),
+		placeholder,
+			want: false,
+	placeholder,
+		{
 			name: "stale snapshot ignored",
 			snapshot: xai.QuotaSnapshot{
 				Requests:  &xai.QuotaWindow{Limit: &limit, Remaining: &zero, ResetUnix: &resetFutureplaceholder,
