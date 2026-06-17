@@ -134,3 +134,139 @@ placeholder
 	require.NotNil(t, repo.updates[51][grokQuotaSnapshotExtraKey])
 	require.Equal(t, http.StatusOK, recorder.Code)
 placeholder
+
+func TestForwardGrokResponsesStreamingUsesXAIResponsesAndSnapshots(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok","input":"hi","stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("OpenAI-Beta", "responses=experimental")
+
+	account := &Account{
+		ID:          52,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token": "access-token",
+			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"base_url":     xai.DefaultCLIBaseURL,
+	placeholder,
+placeholder
+	repo := &grokQuotaAccountRepo{
+		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{52: accountplaceholder,
+	placeholder,
+placeholder
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.output_text.delta","sequence_number":0,"delta":"ok"placeholder`,
+		"",
+		`data: {"type":"response.completed","sequence_number":1,"response":{"id":"resp_grok","model":"grok-4.3","usage":{"input_tokens":5,"output_tokens":3,"input_tokens_details":{"cached_tokens":2placeholderplaceholderplaceholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":                   []string{"text/event-stream"placeholder,
+			"Xai-Request-Id":                 []string{"xai-stream-req"placeholder,
+			"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
+			"X-Ratelimit-Remaining-Requests": []string{"8"placeholder,
+			"X-Ratelimit-Limit-Tokens":       []string{"1000"placeholder,
+			"X-Ratelimit-Remaining-Tokens":   []string{"990"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		httpUpstream:      upstream,
+		grokTokenProvider: NewGrokTokenProvider(repo, nil, nil),
+		accountRepo:       repo,
+placeholder
+
+	result, err := svc.forwardGrokResponses(context.Background(), c, account, body, "grok", true, time.Now())
+placeholder
+	require.Equal(t, xai.DefaultCLIBaseURL+"/responses", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer access-token", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "responses=experimental", upstream.lastReq.Header.Get("OpenAI-Beta"))
+	require.Equal(t, "grok-4.3", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.True(t, gjson.GetBytes(upstream.lastBody, "stream").Bool())
+	require.True(t, result.Stream)
+	require.Equal(t, "resp_grok", result.ResponseID)
+	require.Equal(t, "xai-stream-req", result.RequestID)
+	require.Equal(t, 5, result.Usage.InputTokens)
+	require.Equal(t, 3, result.Usage.OutputTokens)
+	require.Equal(t, 2, result.Usage.CacheReadInputTokens)
+	require.Contains(t, recorder.Header().Get("Content-Type"), "text/event-stream")
+	require.Contains(t, recorder.Body.String(), "response.output_text.delta")
+	require.NotNil(t, repo.updates[52][grokQuotaSnapshotExtraKey])
+placeholder
+
+func TestForwardAsChatCompletionsForGrokStreamingUsesRawXAIChatCompletions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok","messages":[{"role":"user","content":"hi"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          53,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token": "access-token",
+			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"base_url":     xai.DefaultCLIBaseURL,
+	placeholder,
+placeholder
+	repo := &grokQuotaAccountRepo{
+		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{53: accountplaceholder,
+	placeholder,
+placeholder
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_grok","object":"chat.completion.chunk","model":"grok-4.3","choices":[{"index":0,"delta":{"content":"ok"placeholderplaceholder]placeholder`,
+		"",
+		`data: {"id":"chatcmpl_grok","object":"chat.completion.chunk","model":"grok-4.3","choices":[],"usage":{"prompt_tokens":6,"completion_tokens":4,"total_tokens":10,"prompt_tokens_details":{"cached_tokens":1placeholderplaceholderplaceholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":                   []string{"text/event-stream"placeholder,
+			"X-Request-Id":                   []string{"chat-stream-req"placeholder,
+			"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
+			"X-Ratelimit-Remaining-Requests": []string{"7"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:               rawChatCompletionsTestConfig(),
+		httpUpstream:      upstream,
+		grokTokenProvider: NewGrokTokenProvider(repo, nil, nil),
+		accountRepo:       repo,
+placeholder
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "")
+placeholder
+	require.Equal(t, xai.DefaultCLIBaseURL+"/chat/completions", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer access-token", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "text/event-stream", upstream.lastReq.Header.Get("Accept"))
+	require.Equal(t, "sub2api-grok/1.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "grok-4.3", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.True(t, gjson.GetBytes(upstream.lastBody, "stream_options.include_usage").Bool())
+	require.True(t, result.Stream)
+	require.Equal(t, 6, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Equal(t, 1, result.Usage.CacheReadInputTokens)
+	require.Contains(t, recorder.Body.String(), "data: [DONE]")
+	require.NotNil(t, repo.updates[53][grokQuotaSnapshotExtraKey])
+placeholder
