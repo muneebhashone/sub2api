@@ -70,12 +70,20 @@ export async function setLocale(locale: string): Promise<void> {
   document.documentElement.setAttribute('lang', locale)
 
   // 同步更新浏览器页签标题，使其跟随语言切换
-  const { resolveDocumentTitle placeholder = await import('@/router/title')
+  const { resolveRouteDocumentTitle placeholder = await import('@/router/title')
   const { default: router placeholder = await import('@/router')
   const { useAppStore placeholder = await import('@/stores/app')
+  const { useAuthStore placeholder = await import('@/stores/auth')
+  const { useAdminSettingsStore placeholder = await import('@/stores/adminSettings')
   const route = router.currentRoute.value
   const appStore = useAppStore()
-  document.title = resolveDocumentTitle(route.meta.title, appStore.siteName, route.meta.titleKey as string)
+  const authStore = useAuthStore()
+  const adminSettingsStore = useAdminSettingsStore()
+  const customMenuItems = [
+    ...(appStore.cachedPublicSettings?.custom_menu_items ?? []),
+    ...(authStore.isAdmin ? adminSettingsStore.customMenuItems : []),
+  ]
+  document.title = resolveRouteDocumentTitle(route, appStore.siteName, customMenuItems)
 placeholder
 
 export function getLocale(): LocaleCode {
