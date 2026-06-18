@@ -20,6 +20,8 @@ type tokenRefreshAccountRepo struct {
 	setErrorCalls          int
 	clearTempCalls         int
 	setTempUnschedCalls    int
+	lastErrorMessage       string
+	lastTempUnschedReason  string
 	lastAccount            *Account
 	updateErr              error
 placeholder
@@ -51,6 +53,7 @@ placeholder
 
 func (r *tokenRefreshAccountRepo) SetError(ctx context.Context, id int64, errorMsg string) error {
 	r.setErrorCalls++
+	r.lastErrorMessage = errorMsg
 	return nil
 placeholder
 
@@ -61,6 +64,7 @@ placeholder
 
 func (r *tokenRefreshAccountRepo) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
 	r.setTempUnschedCalls++
+	r.lastTempUnschedReason = reason
 	return nil
 placeholder
 
@@ -76,9 +80,13 @@ placeholder
 
 type tempUnschedCacheStub struct {
 	deleteCalls int
+	setCalls    int
+	lastState   *TempUnschedState
 placeholder
 
 func (s *tempUnschedCacheStub) SetTempUnsched(ctx context.Context, accountID int64, state *TempUnschedState) error {
+	s.setCalls++
+	s.lastState = state
 	return nil
 placeholder
 

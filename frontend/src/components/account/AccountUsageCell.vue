@@ -383,10 +383,13 @@
           {{ t('admin.accounts.usageWindow.grokRetryAfter', { time: grokRetryAfterLabel placeholder) placeholderplaceholder
         </div>
         <div v-if="grokQuotaUnknown" class="text-[10px] text-gray-500 dark:text-gray-400">
-          {{ t('admin.accounts.usageWindow.grokUnknown') placeholderplaceholder
+          {{ grokQuotaUnknownLabel placeholderplaceholder
         </div>
         <div v-else-if="usageInfo.error" class="truncate text-xs text-amber-600 dark:text-amber-400 max-w-[200px]" :title="usageInfo.error">
           {{ usageErrorLabel placeholderplaceholder
+        </div>
+        <div v-if="grokQuotaStatusLine" class="text-[10px] text-gray-500 dark:text-gray-400">
+          {{ grokQuotaStatusLine placeholderplaceholder
         </div>
         <GrokQuotaProbeCell :account="account" />
       </div>
@@ -584,7 +587,7 @@ import { adminAPI placeholder from '@/api/admin'
 import type { Account, AccountUsageInfo, GeminiCredentials, WindowStats placeholder from '@/types'
 import { buildOpenAIUsageRefreshKey placeholder from '@/utils/accountUsageRefresh'
 import { enqueueUsageRequest placeholder from '@/utils/usageLoadQueue'
-import { formatCompactNumber placeholder from '@/utils/format'
+import { formatCompactNumber, formatRelativeTime placeholder from '@/utils/format'
 import UsageProgressBar from './UsageProgressBar.vue'
 import AccountQuotaInfo from './AccountQuotaInfo.vue'
 import OpenAIQuotaResetCell from './OpenAIQuotaResetCell.vue'
@@ -1030,6 +1033,34 @@ const grokQuotaUnknown = computed(() => {
   if (props.account.platform !== 'grok') return false
   if (grokRequestQuotaBar.value || grokTokenQuotaBar.value) return false
   return usageInfo.value?.grok_quota_snapshot_state !== 'observed'
+placeholder)
+const grokQuotaUnknownLabel = computed(() => {
+  return usageInfo.value?.grok_quota_snapshot_state === 'no_headers'
+    ? t('admin.accounts.usageWindow.grokNoHeaders')
+    : t('admin.accounts.usageWindow.grokUnknown')
+placeholder)
+const grokQuotaStatusLine = computed(() => {
+  if (props.account.platform !== 'grok') return null
+  const parts: string[] = []
+  const status = usageInfo.value?.grok_last_status_code
+  if (status) {
+    parts.push(t('admin.accounts.usageWindow.grokLastStatus', { status placeholder))
+  placeholder
+  if (usageInfo.value?.grok_last_quota_probe_at) {
+    parts.push(
+      t('admin.accounts.usageWindow.grokLastProbe', {
+        time: formatRelativeTime(usageInfo.value.grok_last_quota_probe_at)
+      placeholder)
+    )
+  placeholder
+  if (usageInfo.value?.grok_last_headers_seen_at) {
+    parts.push(
+      t('admin.accounts.usageWindow.grokLastHeadersSeen', {
+        time: formatRelativeTime(usageInfo.value.grok_last_headers_seen_at)
+      placeholder)
+    )
+  placeholder
+  return parts.length > 0 ? parts.join(' | ') : null
 placeholder)
 const grokLocalUsage = computed(() => usageInfo.value?.grok_local_usage || props.todayStats || null)
 const grokEntitlementLabel = computed(() => {
