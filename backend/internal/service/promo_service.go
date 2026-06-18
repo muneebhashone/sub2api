@@ -236,6 +236,9 @@ placeholder
 		promoCode.Status = *input.Status
 placeholder
 	if input.ExpiresAt != nil {
+		if input.ExpiresAt.IsZero() {
+			input.ExpiresAt = nil
+	placeholder
 		promoCode.ExpiresAt = input.ExpiresAt
 placeholder
 	if input.Notes != nil {
