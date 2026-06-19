@@ -40,6 +40,9 @@ placeholder
 	if err := s.VerifyOAuthEmailCode(ctx, normalizedEmail, verifyCode); err != nil {
 		return nil, err
 placeholder
+	if err := s.validateRegistrationEmailPolicy(ctx, normalizedEmail); err != nil {
+		return nil, err
+placeholder
 
 	currentUser, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -105,6 +108,9 @@ placeholder
 placeholder
 	if isReservedEmail(normalizedEmail) {
 		return ErrEmailReserved
+placeholder
+	if err := s.validateRegistrationEmailPolicy(ctx, normalizedEmail); err != nil {
+		return err
 placeholder
 	if s.emailService == nil {
 		return ErrServiceUnavailable
