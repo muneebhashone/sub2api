@@ -1,13 +1,9 @@
 package service
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 )
 
 func TestSyncBillingHeaderVersion(t *testing.T) {
@@ -68,98 +64,4 @@ placeholder
 		placeholder
 	placeholder)
 placeholder
-placeholder
-
-func TestSignBillingHeaderCCH(t *testing.T) {
-	t.Run("replaces placeholder with hash", func(t *testing.T) {
-		body := []byte(`{"system":[{"type":"text","text":"x-anthropic-billing-header: cc_version=2.1.63.a43; cc_entrypoint=cli; cch=00000;"placeholder],"messages":[{"role":"user","content":[{"type":"text","text":"hello"placeholder]placeholder]placeholder`)
-		result := signBillingHeaderCCH(body)
-
-		// Should not have the placeholder anymore
-		assert.NotContains(t, string(result), "cch=00000")
-
-		// Should have a 5 hex-char cch value
-		billingText := gjson.GetBytes(result, "system.0.text").String()
-		require.Contains(t, billingText, "cch=")
-		assert.Regexp(t, `cch=[0-9a-f]{5placeholder;`, billingText)
-placeholder)
-
-	t.Run("no placeholder - body unchanged", func(t *testing.T) {
-		body := []byte(`{"system":[{"type":"text","text":"x-anthropic-billing-header: cc_version=2.1.63; cc_entrypoint=cli; cch=abcde;"placeholder],"messages":[]placeholder`)
-		result := signBillingHeaderCCH(body)
-		assert.Equal(t, string(body), string(result))
-placeholder)
-
-	t.Run("no billing header - body unchanged", func(t *testing.T) {
-		body := []byte(`{"system":[{"type":"text","text":"You are Claude Code."placeholder],"messages":[]placeholder`)
-		result := signBillingHeaderCCH(body)
-		assert.Equal(t, string(body), string(result))
-placeholder)
-
-	t.Run("cch=00000 in user content is not touched", func(t *testing.T) {
-		body := []byte(`{"system":[{"type":"text","text":"x-anthropic-billing-header: cc_version=2.1.63; cc_entrypoint=cli; cch=00000;"placeholder],"messages":[{"role":"user","content":[{"type":"text","text":"keep literal cch=00000 in this message"placeholder]placeholder]placeholder`)
-		result := signBillingHeaderCCH(body)
-
-		// Billing header should be signed
-		billingText := gjson.GetBytes(result, "system.0.text").String()
-		assert.NotContains(t, billingText, "cch=00000")
-
-		// User message should keep its literal cch=00000
-		userText := gjson.GetBytes(result, "messages.0.content.0.text").String()
-		assert.Contains(t, userText, "cch=00000")
-placeholder)
-
-	t.Run("signing is deterministic", func(t *testing.T) {
-		body := []byte(`{"system":[{"type":"text","text":"x-anthropic-billing-header: cc_version=2.1.63; cc_entrypoint=cli; cch=00000;"placeholder],"messages":[{"role":"user","content":"hi"placeholder]placeholder`)
-		r1 := signBillingHeaderCCH(body)
-		body2 := []byte(`{"system":[{"type":"text","text":"x-anthropic-billing-header: cc_version=2.1.63; cc_entrypoint=cli; cch=00000;"placeholder],"messages":[{"role":"user","content":"hi"placeholder]placeholder`)
-		r2 := signBillingHeaderCCH(body2)
-		assert.Equal(t, string(r1), string(r2))
-placeholder)
-
-	t.Run("matches reference algorithm", func(t *testing.T) {
-		// Verify: signBillingHeaderCCH(body) produces cch = xxHash64(body_with_placeholder, seed) & 0xFFFFF
-		body := []byte(`{"system":[{"type":"text","text":"x-anthropic-billing-header: cc_version=2.1.63.a43; cc_entrypoint=cli; cch=00000;"placeholder],"messages":[{"role":"user","content":[{"type":"text","text":"hello"placeholder]placeholder]placeholder`)
-		expectedCCH := fmt.Sprintf("%05x", xxHash64Seeded(body, cchSeed)&0xFFFFF)
-
-		result := signBillingHeaderCCH(body)
-		billingText := gjson.GetBytes(result, "system.0.text").String()
-		assert.Contains(t, billingText, "cch="+expectedCCH+";")
-placeholder)
-placeholder
-
-func TestXXHash64Seeded(t *testing.T) {
-	t.Run("matches cespare/xxhash for seed 0", func(t *testing.T) {
-		inputs := []string{"", "a", "hello world", "The quick brown fox jumps over the lazy dog"placeholder
-		for _, s := range inputs {
-			data := []byte(s)
-			expected := xxhash.Sum64(data)
-			got := xxHash64Seeded(data, 0)
-			assert.Equal(t, expected, got, "mismatch for input %q", s)
-	placeholder
-placeholder)
-
-	t.Run("large input matches cespare", func(t *testing.T) {
-		data := make([]byte, 256)
-		for i := range data {
-			data[i] = byte(i)
-	placeholder
-		expected := xxhash.Sum64(data)
-		got := xxHash64Seeded(data, 0)
-		assert.Equal(t, expected, got)
-placeholder)
-
-	t.Run("deterministic with custom seed", func(t *testing.T) {
-		data := []byte("hello world")
-		h1 := xxHash64Seeded(data, cchSeed)
-		h2 := xxHash64Seeded(data, cchSeed)
-		assert.Equal(t, h1, h2)
-placeholder)
-
-	t.Run("different seeds produce different results", func(t *testing.T) {
-		data := []byte("test data for hashing")
-		h1 := xxHash64Seeded(data, 0)
-		h2 := xxHash64Seeded(data, cchSeed)
-		assert.NotEqual(t, h1, h2)
-placeholder)
 placeholder
