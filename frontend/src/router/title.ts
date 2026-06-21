@@ -1,4 +1,6 @@
 import { i18n placeholder from '@/i18n'
+import type { RouteLocationNormalizedLoaded placeholder from 'vue-router'
+import type { CustomMenuItem placeholder from '@/types'
 
 /**
  * 统一生成页面标题，避免多处写入 document.title 产生覆盖冲突。
@@ -19,4 +21,18 @@ export function resolveDocumentTitle(routeTitle: unknown, siteName?: string, tit
   placeholder
 
   return normalizedSiteName
+placeholder
+
+export function resolveRouteDocumentTitle(
+  route: Pick<RouteLocationNormalizedLoaded, 'name' | 'params' | 'meta'>,
+  siteName: string | undefined,
+  customMenuItems: CustomMenuItem[] = [],
+): string {
+  const id = typeof route.params.id === 'string' ? route.params.id : ''
+  const menuItem = route.name === 'CustomPage' && id
+    ? customMenuItems.find((item) => item.id === id)
+    : undefined
+  const menuTitle = menuItem?.label.trim()
+
+  return resolveDocumentTitle(menuTitle || route.meta.title, siteName, menuTitle ? undefined : route.meta.titleKey as string)
 placeholder
