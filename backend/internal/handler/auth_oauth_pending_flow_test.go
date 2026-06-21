@@ -1374,6 +1374,58 @@ placeholder
 	require.Equal(t, "owner@example.com", storedSession.ResolvedEmail)
 placeholder
 
+func TestCreateOIDCOAuthAccountRejectsEmailOutsideRegistrationSuffixWhitelist(t *testing.T) {
+	handler, client := newOAuthPendingFlowTestHandlerWithDependencies(t, oauthPendingFlowTestHandlerOptions{
+		emailVerifyEnabled: true,
+		emailCache: &oauthPendingFlowEmailCacheStub{
+			verificationCodes: map[string]*service.VerificationCodeData{
+				"foo@gmail.com": {
+					Code:      "135790",
+					CreatedAt: time.Now().UTC(),
+					ExpiresAt: time.Now().UTC().Add(15 * time.Minute),
+			placeholder,
+		placeholder,
+	placeholder,
+		settingValues: map[string]string{
+			service.SettingKeyRegistrationEmailSuffixWhitelist: `["@qq.com"]`,
+	placeholder,
+placeholder)
+	ctx := context.Background()
+
+	session, err := client.PendingAuthSession.Create().
+		SetSessionToken("suffix-whitelist-session-token").
+		SetIntent("login").
+		SetProviderType("oidc").
+		SetProviderKey("https://issuer.example").
+		SetProviderSubject("oidc-suffix-whitelist-123").
+		SetBrowserSessionKey("suffix-whitelist-browser-session-key").
+		SetUpstreamIdentityClaims(map[string]any{
+			"username": "oidc_user",
+	placeholder).
+		SetExpiresAt(time.Now().UTC().Add(10 * time.Minute)).
+		Save(ctx)
+placeholder
+
+	body := bytes.NewBufferString(`{"email":"foo@gmail.com","verify_code":"135790","password":"secret-123"placeholder`)
+	recorder := httptest.NewRecorder()
+	ginCtx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/oauth/oidc/create-account", body)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: oauthPendingSessionCookieName, Value: encodeCookieValue(session.SessionToken)placeholder)
+	req.AddCookie(&http.Cookie{Name: oauthPendingBrowserCookieName, Value: encodeCookieValue("suffix-whitelist-browser-session-key")placeholder)
+	ginCtx.Request = req
+
+	handler.CreateOIDCOAuthAccount(ginCtx)
+
+	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	payload := decodeJSONBody(t, recorder)
+	require.Equal(t, "EMAIL_SUFFIX_NOT_ALLOWED", payload["reason"])
+
+	count, err := client.User.Query().Where(dbuser.EmailEQ("foo@gmail.com")).Count(ctx)
+placeholder
+	require.Zero(t, count)
+placeholder
+
 func TestSendPendingOAuthVerifyCodeExistingEmailReturnsBindLoginState(t *testing.T) {
 	handler, client := newOAuthPendingFlowTestHandlerWithEmailVerification(t, false, "owner@example.com", "135790")
 	ctx := context.Background()
