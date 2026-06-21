@@ -1512,3 +1512,96 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestNormalizeGLMOpenAIReasoningEffort(t *testing.T) {
+	tests := []struct {
+		name          string
+		model         string
+		input         string
+		wantApplied   bool
+		wantPath      string
+		wantValue     string
+		wantUnchanged bool
+placeholder{
+		{
+			name:        "flat xhigh maps to max",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"xhigh","messages":[]placeholder`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "max",
+	placeholder,
+		{
+			name:        "flat x-high maps to max",
+			model:       "GLM-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"x-high","messages":[]placeholder`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "max",
+	placeholder,
+		{
+			name:        "flat ultracode maps to max",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"ultracode","messages":[]placeholder`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "max",
+	placeholder,
+		{
+			name:        "flat medium maps to high",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning_effort":"medium","messages":[]placeholder`,
+			wantApplied: true,
+			wantPath:    "reasoning_effort",
+			wantValue:   "high",
+	placeholder,
+		{
+			name:        "nested high case-normalizes",
+			model:       "glm-5.2",
+			input:       `{"model":"glm-5.2","reasoning":{"effort":"HIGH"placeholder,"messages":[]placeholder`,
+			wantApplied: true,
+			wantPath:    "reasoning.effort",
+			wantValue:   "high",
+	placeholder,
+		{
+			name:          "native max unchanged",
+			model:         "glm-5.2",
+			input:         `{"model":"glm-5.2","reasoning_effort":"max","messages":[]placeholder`,
+			wantApplied:   false,
+			wantUnchanged: true,
+	placeholder,
+		{
+			name:          "non glm unchanged",
+			model:         "deepseek-v4-pro",
+			input:         `{"model":"deepseek-v4-pro","reasoning_effort":"xhigh","messages":[]placeholder`,
+			wantApplied:   false,
+			wantUnchanged: true,
+	placeholder,
+		{
+			name:          "missing effort unchanged",
+			model:         "glm-5.2",
+			input:         `{"model":"glm-5.2","messages":[]placeholder`,
+			wantApplied:   false,
+			wantUnchanged: true,
+	placeholder,
+		{
+			name:          "unknown effort unchanged",
+			model:         "glm-5.2",
+			input:         `{"model":"glm-5.2","reasoning_effort":"banana","messages":[]placeholder`,
+			wantApplied:   false,
+			wantUnchanged: true,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, applied := NormalizeGLMOpenAIReasoningEffort([]byte(tt.input), tt.model)
+			require.Equal(t, tt.wantApplied, applied)
+			if tt.wantUnchanged {
+				require.Equal(t, tt.input, string(got))
+				return
+		placeholder
+			require.Equal(t, tt.wantValue, gjson.GetBytes(got, tt.wantPath).String())
+	placeholder)
+placeholder
+placeholder
