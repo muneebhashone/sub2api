@@ -2407,8 +2407,8 @@ export default {
       deleteError: 'Failed to delete channel',
       nameRequired: 'Please enter a channel name',
       duplicateModels: 'Model "{0placeholder" appears in multiple pricing entries',
-      modelConflict: "Model patterns '{model1placeholder' and '{model2placeholder' conflict: overlapping match range",
-      mappingConflict: "Mapping source patterns '{model1placeholder' and '{model2placeholder' conflict: overlapping match range",
+      modelConflict: "Model patterns '{model1placeholder' and '{model2placeholder' conflict: overlapping match range. Model names are matched case-insensitively, so an existing entry already covers all case variants — no need to add the variant separately.",
+      mappingConflict: "Mapping source patterns '{model1placeholder' and '{model2placeholder' conflict: overlapping match range. Source patterns are matched case-insensitively, so an existing entry already covers all case variants.",
       deleteConfirm: 'Are you sure you want to delete channel "{nameplaceholder"? This cannot be undone.',
       columns: {
         name: 'Name',
