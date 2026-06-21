@@ -11,6 +11,10 @@ function paramsFromDeeplink(deeplink: string): URLSearchParams {
 placeholder
 
 describe('ccswitchImport utils', () => {
+  it('defaults OpenAI CC Switch imports to the current Codex model', () => {
+    expect(OPENAI_CC_SWITCH_CODEX_MODEL).toBe('gpt-5.5')
+  placeholder)
+
   const baseInput = {
     baseUrl: 'https://api.example.com',
     providerName: 'Sub2API',
