@@ -67,7 +67,7 @@ placeholder
 			return nil, err
 	placeholder
 placeholder
-	payAmountStr, payAmount, err := calculateCreateOrderPayAmount(limitAmount, feeRate, methodCurrency)
+	payAmountStr, payAmount, err := calculateCreateOrderPayAmountForOrder(req.OrderType, limitAmount, feeRate, cfg.BalanceRechargeMultiplier, methodCurrency)
 	if err != nil {
 		return nil, err
 placeholder
@@ -83,7 +83,7 @@ placeholder
 		selectedCurrency = paymentProviderConfigCurrency(sel.ProviderKey, sel.Config)
 placeholder
 	if selectedCurrency != methodCurrency {
-		payAmountStr, payAmount, err = calculateCreateOrderPayAmount(limitAmount, feeRate, selectedCurrency)
+		payAmountStr, payAmount, err = calculateCreateOrderPayAmountForOrder(req.OrderType, limitAmount, feeRate, cfg.BalanceRechargeMultiplier, selectedCurrency)
 		if err != nil {
 			return nil, err
 	placeholder
@@ -610,6 +610,19 @@ placeholder
 			WithMetadata(map[string]string{"currency": currencyplaceholder)
 placeholder
 	return payAmountStr, payAmount, nil
+placeholder
+
+func calculateCreateOrderPayAmountForOrder(orderType string, limitAmount, feeRate, multiplier float64, currency string) (string, float64, error) {
+	paymentAmount := calculateCreateOrderPaymentAmount(orderType, limitAmount, multiplier, currency)
+	return calculateCreateOrderPayAmount(paymentAmount, feeRate, currency)
+placeholder
+
+func calculateCreateOrderPaymentAmount(orderType string, limitAmount, multiplier float64, currency string) float64 {
+	normalizedCurrency, err := payment.NormalizePaymentCurrency(currency)
+	if err != nil || normalizedCurrency != payment.DefaultPaymentCurrency || orderType != payment.OrderTypeSubscription {
+		return limitAmount
+placeholder
+	return calculateGatewayPaymentAmount(limitAmount, multiplier, normalizedCurrency)
 placeholder
 
 func validateCreateOrderAmountCurrency(amount float64, currency string) error {
