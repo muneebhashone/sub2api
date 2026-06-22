@@ -1271,6 +1271,7 @@ placeholder
 					newCredentials[k] = v
 			placeholder
 		placeholder
+			newCredentials = NormalizeOpenAIPersonalAccessTokenCredentials(account, tokenInfo, newCredentials)
 	placeholder
 	case PlatformGemini:
 		if s.geminiOAuthService == nil {

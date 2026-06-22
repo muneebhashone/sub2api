@@ -637,9 +637,7 @@ placeholder
 			req.Header.Set("User-Agent", strings.TrimSpace(fp.UserAgent))
 	placeholder
 placeholder
-	if chatgptAccountID := account.GetChatGPTAccountID(); chatgptAccountID != "" {
-		req.Header.Set("chatgpt-account-id", chatgptAccountID)
-placeholder
+	setOpenAIChatGPTAccountHeaders(req.Header, account)
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
