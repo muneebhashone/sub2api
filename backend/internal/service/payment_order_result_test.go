@@ -138,6 +138,34 @@ placeholder
 placeholder
 placeholder
 
+func TestComputeValidityDaysSupportsSingularAndPluralUnits(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		days int
+		unit string
+		want int
+placeholder{
+		{name: "days", days: 1, unit: "days", want: 1placeholder,
+		{name: "week", days: 1, unit: "week", want: 7placeholder,
+		{name: "weeks", days: 2, unit: "weeks", want: 14placeholder,
+		{name: "month", days: 1, unit: "month", want: 30placeholder,
+		{name: "months", days: 1, unit: "months", want: 30placeholder,
+placeholder
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := psComputeValidityDays(tt.days, tt.unit); got != tt.want {
+				t.Fatalf("psComputeValidityDays(%d, %q) = %d, want %d", tt.days, tt.unit, got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanProductName(t *testing.T) {
 	t.Parallel()
 
