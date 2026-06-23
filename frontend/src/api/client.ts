@@ -6,13 +6,13 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse placeholder from 'axios'
 import type { ApiResponse placeholder from '@/types'
 import { getLocale placeholder from '@/i18n'
+import { getAPIBaseURL placeholder from './url'
+export { buildApiUrl, buildGatewayUrl placeholder from './url'
 
 // ==================== Axios Instance Configuration ====================
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getAPIBaseURL(),
   withCredentials: true,
   timeout: 30000,
   headers: {
@@ -203,7 +203,7 @@ apiClient.interceptors.response.use(
           try {
             // Call refresh endpoint directly to avoid circular dependency
             const refreshResponse = await axios.post(
-              `${API_BASE_URLplaceholder/auth/refresh`,
+              `${getAPIBaseURL()placeholder/auth/refresh`,
               { refresh_token: refreshToken placeholder,
               { headers: { 'Content-Type': 'application/json' placeholder placeholder
             )

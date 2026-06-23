@@ -124,6 +124,7 @@ import { useAuthStore placeholder from '@/stores/auth'
 import { useAdminSettingsStore placeholder from '@/stores/adminSettings'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { buildApiUrl placeholder from '@/api/client'
 import { buildEmbeddedUrl, detectTheme placeholder from '@/utils/embedded-url'
 import { marked placeholder from 'marked'
 import DOMPurify from 'dompurify'
@@ -217,7 +218,7 @@ function buildPageImageUrl(slug: string, src: string): string {
     .filter((part) => part && part !== '.')
     .map((part) => encodeURIComponent(part))
     .join('/')
-  return `/api/v1/pages/${encodeURIComponent(slug)placeholder/images/${encodedPathplaceholder${suffixplaceholder`
+  return buildApiUrl(`/pages/${encodeURIComponent(slug)placeholder/images/${encodedPathplaceholder${suffixplaceholder`)
 placeholder
 
 async function fetchAndRenderMarkdown(slug: string) {
@@ -225,7 +226,7 @@ async function fetchAndRenderMarkdown(slug: string) {
   tocItems.value = []
   activeHeadingId.value = ''
   try {
-    const resp = await fetch(`/api/v1/pages/${encodeURIComponent(slug)placeholder`, {
+    const resp = await fetch(buildApiUrl(`/pages/${encodeURIComponent(slug)placeholder`), {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.tokenplaceholder` placeholder : {placeholder,
     placeholder)
     if (!resp.ok) {
