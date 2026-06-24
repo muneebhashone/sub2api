@@ -172,7 +172,12 @@ placeholder
 		if err := json.Unmarshal(responsesBody, &reqBody); err != nil {
 			return nil, fmt.Errorf("unmarshal for codex transform: %w", err)
 	placeholder
-		codexResult := applyCodexOAuthTransform(reqBody, false, false)
+		codexResult := applyCodexOAuthTransformWithOptions(reqBody, codexOAuthTransformOptions{
+			SkipDefaultInstructions: !isResponsesShape,
+	placeholder)
+		if !isResponsesShape {
+			ensureCodexOAuthInstructionsField(reqBody)
+	placeholder
 		if codexResult.NormalizedModel != "" {
 			upstreamModel = codexResult.NormalizedModel
 	placeholder
