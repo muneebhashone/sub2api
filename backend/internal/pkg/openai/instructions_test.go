@@ -24,10 +24,14 @@ placeholder{
 		{"gpt-5.3-codex-spark", "You are Codex, based on GPT-5"placeholder,
 		{"gpt-5.1-codex-max", "You are Codex, based on GPT-5"placeholder,
 		{"gpt-5.2-codex", "You are Codex, based on GPT-5"placeholder,
+		{"gpt-5.5", "You are Codex, a coding agent based on GPT-5"placeholder,
 		{"gpt-5.2", "You are GPT-5.2 running in the Codex CLI"placeholder,
 		{"gpt-5.1", "You are GPT-5.1 running in the Codex CLI"placeholder,
-		{"gpt-5", "You are GPT-5.1 running in the Codex CLI"placeholder,
-		{"", "You are Codex, based on GPT-5"placeholder, // 回退
+		{"gpt-5", "You are Codex, a coding agent based on GPT-5"placeholder,   // 回退到最新（GPT-5.5）
+		{"gpt-5.4", "You are Codex, a coding agent based on GPT-5"placeholder, // 未单独维护 → 最新
+		{"gpt-5.3", "You are Codex, a coding agent based on GPT-5"placeholder, // 未单独维护 → 最新
+		{"some-unknown-model", "You are Codex, a coding agent based on GPT-5"placeholder,
+		{"", "You are Codex, a coding agent based on GPT-5"placeholder, // 回退到最新
 placeholder
 	for _, c := range cases {
 		got := strings.TrimSpace(CodexBaseInstructionsForModel(c.model))
