@@ -477,6 +477,47 @@ placeholder {
 placeholder
 placeholder
 
+func TestOpenAIGatewayService_Forward_StripsImageGenerationToolForSparkAPIKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	upstream := &httpUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+			Body:       io.NopCloser(strings.NewReader(`{"usage":{"input_tokens":1,"output_tokens":2placeholderplaceholder`)),
+	placeholder,
+placeholder
+	cfg := &config.Config{placeholder
+	cfg.Security.URLAllowlist.Enabled = false
+	svc := &OpenAIGatewayService{cfg: cfg, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          11,
+		Name:        "openai-apikey",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": "https://example.com",
+	placeholder,
+		Extra: map[string]any{"use_responses_api": trueplaceholder,
+placeholder
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+	// Allow image generation so the tool is normalized (not gated out), reproducing
+	// the leak the strip must override.
+	c.Set("api_key", &APIKey{Group: &Group{AllowImageGeneration: trueplaceholderplaceholder)
+	SetOpenAIClientTransport(c, OpenAIClientTransportHTTP)
+
+	body := []byte(`{"model":"gpt-5.3-codex-spark","stream":false,"input":"hi","tools":[{"type":"function","name":"shell"placeholder,{"type":"image_generation","output_format":"png"placeholder]placeholder`)
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.NotNil(t, upstream.lastReq)
+	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
+	require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="function")`).Exists())
+placeholder
+
 func TestOpenAIRequestBodyMayContainEmptyBase64InputImageSeesEscapedJSON(t *testing.T) {
 	body := []byte(`{"input":[{"type":"message","content":[{"type":"input_image","image_` + "\\u0075" + `rl":"data:image/png;base64` + "\\u002c" + `   "placeholder]placeholder]placeholder`)
 

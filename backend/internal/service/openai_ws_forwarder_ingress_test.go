@@ -142,6 +142,33 @@ placeholder)
 placeholder)
 placeholder
 
+func TestStripCodexSparkImageGenerationToolFromRawPayload(t *testing.T) {
+	t.Run("strips_image_generation_for_spark", func(t *testing.T) {
+		payload := []byte(`{"type":"response.create","model":"gpt-5.3-codex-spark","tools":[{"type":"function","name":"shell"placeholder,{"type":"image_generation","output_format":"png"placeholder]placeholder`)
+		updated, changed, err := stripCodexSparkImageGenerationToolFromRawPayload(payload, "gpt-5.3-codex-spark")
+	placeholder
+		require.True(t, changed)
+		require.False(t, gjson.GetBytes(updated, `tools.#(type=="image_generation")`).Exists())
+		require.True(t, gjson.GetBytes(updated, `tools.#(type=="function")`).Exists())
+placeholder)
+
+	t.Run("keeps_image_generation_for_non_spark", func(t *testing.T) {
+		payload := []byte(`{"type":"response.create","model":"gpt-5.3-codex","tools":[{"type":"image_generation","output_format":"png"placeholder]placeholder`)
+		updated, changed, err := stripCodexSparkImageGenerationToolFromRawPayload(payload, "gpt-5.3-codex")
+	placeholder
+		require.False(t, changed)
+		require.Equal(t, string(payload), string(updated))
+placeholder)
+
+	t.Run("noop_when_no_image_tool", func(t *testing.T) {
+		payload := []byte(`{"type":"response.create","model":"gpt-5.3-codex-spark","tools":[{"type":"function","name":"shell"placeholder]placeholder`)
+		updated, changed, err := stripCodexSparkImageGenerationToolFromRawPayload(payload, "gpt-5.3-codex-spark")
+	placeholder
+		require.False(t, changed)
+		require.Equal(t, string(payload), string(updated))
+placeholder)
+placeholder
+
 func TestAlignStoreDisabledPreviousResponseID(t *testing.T) {
 	t.Parallel()
 
