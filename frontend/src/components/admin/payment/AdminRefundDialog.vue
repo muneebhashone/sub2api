@@ -35,15 +35,15 @@
         </div>
         <div class="mt-1 flex justify-between text-sm">
           <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.creditedAmount') placeholderplaceholder</span>
-          <span class="font-medium text-gray-900 dark:text-white">{{ order?.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order?.amount?.toFixed(2) placeholderplaceholder</span>
+          <span class="font-medium text-gray-900 dark:text-white">{{ creditedAmountSymbol placeholderplaceholder{{ order?.amount?.toFixed(2) placeholderplaceholder</span>
         </div>
         <div class="mt-1 flex justify-between text-sm">
           <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
-          <span class="font-medium text-gray-900 dark:text-white">¥{{ order?.pay_amount?.toFixed(2) placeholderplaceholder</span>
+          <span class="font-medium text-gray-900 dark:text-white">{{ paymentAmountSymbol placeholderplaceholder{{ order?.pay_amount?.toFixed(2) placeholderplaceholder</span>
         </div>
         <div v-if="actuallyRefunded > 0" class="mt-1 flex justify-between text-sm">
           <span class="text-gray-500 dark:text-gray-400">{{ t('payment.admin.alreadyRefunded') placeholderplaceholder</span>
-          <span class="font-medium text-red-600 dark:text-red-400">{{ order?.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ actuallyRefunded.toFixed(2) placeholderplaceholder</span>
+          <span class="font-medium text-red-600 dark:text-red-400">{{ creditedAmountSymbol placeholderplaceholder{{ actuallyRefunded.toFixed(2) placeholderplaceholder</span>
         </div>
       </div>
 
@@ -66,11 +66,11 @@
         <div v-if="form.deduct_balance && userBalance != null" class="mt-3 grid grid-cols-2 gap-3">
           <div class="rounded-lg bg-gray-50 p-3 text-sm dark:bg-dark-700">
             <div class="text-gray-500 dark:text-gray-400">{{ t('payment.admin.userBalance') placeholderplaceholder</div>
-            <div class="mt-1 font-semibold text-gray-900 dark:text-white">${{ userBalance.toFixed(2) placeholderplaceholder</div>
+            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ creditedAmountSymbol placeholderplaceholder{{ userBalance.toFixed(2) placeholderplaceholder</div>
           </div>
           <div class="rounded-lg bg-gray-50 p-3 text-sm dark:bg-dark-700">
             <div class="text-gray-500 dark:text-gray-400">{{ t('payment.admin.orderAmount') placeholderplaceholder</div>
-            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ order?.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ order?.amount?.toFixed(2) placeholderplaceholder</div>
+            <div class="mt-1 font-semibold text-gray-900 dark:text-white">{{ creditedAmountSymbol placeholderplaceholder{{ order?.amount?.toFixed(2) placeholderplaceholder</div>
           </div>
         </div>
 
@@ -95,7 +95,7 @@
       <div>
         <label class="input-label">{{ t('payment.admin.refundAmount') placeholderplaceholder</label>
         <div class="relative">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{{ order?.order_type === 'balance' ? '$' : '¥' placeholderplaceholder</span>
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{{ creditedAmountSymbol placeholderplaceholder</span>
           <input
             v-model.number="form.amount"
             type="number"
@@ -107,7 +107,7 @@
           />
         </div>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {{ t('payment.admin.maxRefundable') placeholderplaceholder: {{ order?.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ maxRefundable.toFixed(2) placeholderplaceholder
+          {{ t('payment.admin.maxRefundable') placeholderplaceholder: {{ creditedAmountSymbol placeholderplaceholder{{ maxRefundable.toFixed(2) placeholderplaceholder
         </p>
       </div>
 
@@ -169,6 +169,7 @@ import { useI18n placeholder from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import type { PaymentOrder placeholder from '@/types/payment'
 import { formatOrderDateTime placeholder from '@/components/payment/orderUtils'
+import { currencySymbol placeholder from '@/components/payment/currency'
 
 const { t placeholder = useI18n()
 
@@ -185,6 +186,10 @@ const emit = defineEmits<{
   (e: 'confirm', data: { amount: number; reason: string; deduct_balance: boolean; force: boolean placeholder): void
   (e: 'cancel'): void
 placeholder>()
+
+const creditedAmountSymbol = currencySymbol('USD')
+
+const paymentAmountSymbol = computed(() => currencySymbol(props.order?.currency))
 
 const form = reactive({
   amount: 0,
