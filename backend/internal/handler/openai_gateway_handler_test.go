@@ -1341,6 +1341,7 @@ placeholder
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	cache := &concurrencyCacheMock{
@@ -1521,6 +1522,7 @@ placeholder
 		billingCacheSvc,
 		nil,
 		&service.DeferredService{placeholder,
+		nil,
 		nil,
 		nil,
 		channelSvc,

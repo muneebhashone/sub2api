@@ -1,0 +1,195 @@
+//go:build unit
+
+package xai
+
+import (
+	"net/url"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestParseAuthorizationInput(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		raw               string
+		wantCode          string
+		wantState         string
+		wantRequiresState bool
+placeholder{
+		{
+			name:              "full callback url",
+			raw:               "http://127.0.0.1:56121/callback?code=abc123&state=state456",
+			wantCode:          "abc123",
+			wantState:         "state456",
+			wantRequiresState: true,
+	placeholder,
+		{
+			name:              "query string",
+			raw:               "?code=abc123&state=state456",
+			wantCode:          "abc123",
+			wantState:         "state456",
+			wantRequiresState: true,
+	placeholder,
+		{
+			name:              "full callback url missing state",
+			raw:               "http://127.0.0.1:56121/callback?code=abc123",
+			wantCode:          "abc123",
+			wantRequiresState: true,
+	placeholder,
+		{
+			name:              "query string missing state",
+			raw:               "code=abc123",
+			wantCode:          "abc123",
+			wantRequiresState: true,
+	placeholder,
+		{
+			name:     "bare code",
+			raw:      "abc123",
+			wantCode: "abc123",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := ParseAuthorizationInput(tt.raw)
+			require.Equal(t, tt.wantCode, got.Code)
+			require.Equal(t, tt.wantState, got.State)
+			require.Equal(t, tt.wantRequiresState, got.RequiresState)
+	placeholder)
+placeholder
+placeholder
+
+func TestBuildAuthorizationURLIncludesHermesCompatibleParameters(t *testing.T) {
+	t.Setenv(EnvAuthorizeURL, "https://auth.example.test/oauth2/authorize")
+	t.Setenv(EnvClientID, "client-id")
+	t.Setenv(EnvScope, "openid profile offline_access api:access")
+	t.Setenv(EnvAllowUnsafeURLOverrides, "true")
+
+	authURL, err := BuildAuthorizationURL("state", "challenge", "http://127.0.0.1:56121/callback", "nonce")
+placeholder
+	parsed, err := url.Parse(authURL)
+placeholder
+
+	values := parsed.Query()
+	require.Equal(t, "https", parsed.Scheme)
+	require.Equal(t, "auth.example.test", parsed.Host)
+	require.Equal(t, "/oauth2/authorize", parsed.Path)
+	require.Equal(t, "code", values.Get("response_type"))
+	require.Equal(t, "client-id", values.Get("client_id"))
+	require.Equal(t, "http://127.0.0.1:56121/callback", values.Get("redirect_uri"))
+	require.Equal(t, "openid profile offline_access api:access", values.Get("scope"))
+	require.Equal(t, "state", values.Get("state"))
+	require.Equal(t, "nonce", values.Get("nonce"))
+	require.Equal(t, "challenge", values.Get("code_challenge"))
+	require.Equal(t, "S256", values.Get("code_challenge_method"))
+	require.Equal(t, "generic", values.Get("plan"))
+	require.Equal(t, "sub2api", values.Get("referrer"))
+placeholder
+
+func TestValidateXAIURLsAllowOfficialOAuthAndGatewayHosts(t *testing.T) {
+	authorizeURL, err := ValidateOAuthEndpointURL(DefaultAuthorizeURL)
+placeholder
+	require.Equal(t, DefaultAuthorizeURL, authorizeURL)
+
+	tokenURL, err := ValidateOAuthEndpointURL(DefaultTokenURL)
+placeholder
+	require.Equal(t, DefaultTokenURL, tokenURL)
+
+	baseURL, err := ValidateBaseURL(DefaultBaseURL)
+placeholder
+	require.Equal(t, DefaultBaseURL, baseURL)
+
+	cliBaseURL, err := ValidateBaseURL(DefaultCLIBaseURL)
+placeholder
+	require.Equal(t, DefaultCLIBaseURL, cliBaseURL)
+
+	baseURLNoPath, err := ValidateBaseURL("https://api.x.ai")
+placeholder
+	require.Equal(t, DefaultBaseURL, baseURLNoPath)
+
+	chatURL, err := BuildChatCompletionsURL(DefaultCLIBaseURL + "/")
+placeholder
+	require.Equal(t, DefaultCLIBaseURL+"/chat/completions", chatURL)
+placeholder
+
+func TestValidateXAIURLsRejectArbitraryHostsByDefault(t *testing.T) {
+	_, err := ValidateOAuthEndpointURL("https://auth.example.test/oauth2/token")
+placeholder
+
+	_, err = ValidateBaseURL("https://xai.test/v1")
+placeholder
+
+	_, err = ValidateBaseURL("http://127.0.0.1:8080/v1")
+placeholder
+
+	_, err = ValidateBaseURL("https://api.x.ai/custom")
+placeholder
+placeholder
+
+func TestValidateXAIURLsAllowUnsafeDevOverride(t *testing.T) {
+	t.Setenv(EnvAllowUnsafeURLOverrides, "true")
+
+	tokenURL, err := ValidateOAuthEndpointURL("http://127.0.0.1:8080/oauth2/token")
+placeholder
+	require.Equal(t, "http://127.0.0.1:8080/oauth2/token", tokenURL)
+
+	baseURL, err := ValidateBaseURL("http://127.0.0.1:8080/v1/")
+placeholder
+	require.Equal(t, "http://127.0.0.1:8080/v1", baseURL)
+placeholder
+
+func TestRuntimeSanityReportsSafeDefaults(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvAuthorizeURL, "")
+	t.Setenv(EnvTokenURL, "")
+	t.Setenv(EnvRedirectURI, "")
+	t.Setenv(EnvAllowUnsafeURLOverrides, "")
+	t.Setenv(EnvUnsafeAllowHighConcurrency, "")
+
+	report := RuntimeSanity()
+	require.True(t, report.BaseURL.Valid)
+	require.Equal(t, DefaultBaseURL, report.BaseURL.Value)
+	require.True(t, report.BaseURL.IsDefault)
+	require.True(t, report.OAuthAuthorizeURL.Valid)
+	require.True(t, report.OAuthTokenURL.Valid)
+	require.True(t, report.OAuthRedirectURI.Valid)
+	require.False(t, report.UnsafeURLOverrides)
+	require.False(t, report.UnsafeHighConcurrency)
+	require.Equal(t, "responses_only", report.PublicGatewayScope)
+	require.Contains(t, report.ProxyPolicy, "account_proxy_optional")
+placeholder
+
+func TestRuntimeSanityReportsInvalidOverridesWithoutSecrets(t *testing.T) {
+	t.Setenv(EnvBaseURL, "http://127.0.0.1:8080/v1?access_token=secret")
+	t.Setenv(EnvAuthorizeURL, "https://auth.example.test/oauth2/authorize")
+	t.Setenv(EnvTokenURL, "https://auth.example.test/oauth2/token")
+	t.Setenv(EnvRedirectURI, "not a url")
+	t.Setenv(EnvClientID, "client-secret-like-value")
+	t.Setenv(EnvAllowUnsafeURLOverrides, "")
+
+	report := RuntimeSanity()
+	require.False(t, report.BaseURL.Valid)
+	require.False(t, report.BaseURL.IsDefault)
+	require.Contains(t, report.BaseURL.Error, "invalid url")
+	require.NotContains(t, report.BaseURL.Value, "secret")
+	require.False(t, report.OAuthAuthorizeURL.Valid)
+	require.False(t, report.OAuthTokenURL.Valid)
+	require.False(t, report.OAuthRedirectURI.Valid)
+	require.NotContains(t, report.ProxyPolicy, "client-secret-like-value")
+placeholder
+
+func TestDefaultModelMappingIncludesGrokAliases(t *testing.T) {
+	t.Parallel()
+
+	mapping := DefaultModelMapping()
+	require.Equal(t, "grok-4.3", mapping["grok"])
+	require.Equal(t, "grok-4.3", mapping["grok-latest"])
+	require.Equal(t, "grok-build-0.1", mapping["grok-build"])
+	require.Equal(t, "grok-4.20-0309-reasoning", mapping["grok-4.20-reasoning"])
+	require.Equal(t, "grok-4.20-0309-non-reasoning", mapping["grok-4.20-non-reasoning"])
+	require.Equal(t, "grok-4.20-multi-agent-0309", mapping["grok-4.20-multi-agent-0309"])
+placeholder

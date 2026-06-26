@@ -19,6 +19,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 )
@@ -193,6 +194,17 @@ type UsageInfo struct {
 	// Antigravity 多模型配额
 	AntigravityQuota map[string]*AntigravityModelQuota `json:"antigravity_quota,omitempty"`
 
+	// Grok / xAI 被动额度快照
+	GrokRequestQuota       *xai.QuotaWindow `json:"grok_request_quota,omitempty"`
+	GrokTokenQuota         *xai.QuotaWindow `json:"grok_token_quota,omitempty"`
+	GrokRetryAfterSeconds  *int             `json:"grok_retry_after_seconds,omitempty"`
+	GrokEntitlementStatus  string           `json:"grok_entitlement_status,omitempty"`
+	GrokQuotaSnapshotState string           `json:"grok_quota_snapshot_state,omitempty"`
+	GrokLastQuotaProbeAt   string           `json:"grok_last_quota_probe_at,omitempty"`
+	GrokLastHeadersSeenAt  string           `json:"grok_last_headers_seen_at,omitempty"`
+	GrokLastStatusCode     int              `json:"grok_last_status_code,omitempty"`
+	GrokLocalUsage         *WindowStats     `json:"grok_local_usage,omitempty"`
+
 	// Antigravity 账号级信息
 	SubscriptionTier    string `json:"subscription_tier,omitempty"`     // 归一化订阅等级: FREE/PRO/ULTRA/UNKNOWN
 	SubscriptionTierRaw string `json:"subscription_tier_raw,omitempty"` // 上游原始订阅等级名称
@@ -263,6 +275,7 @@ type AccountUsageService struct {
 	usageFetcher            ClaudeUsageFetcher
 	geminiQuotaService      *GeminiQuotaService
 	antigravityQuotaFetcher *AntigravityQuotaFetcher
+	grokQuotaFetcher        *GrokQuotaFetcher
 	cache                   *UsageCache
 	identityCache           IdentityCache
 	tlsFPProfileService     *TLSFingerprintProfileService
@@ -275,6 +288,7 @@ func NewAccountUsageService(
 	usageFetcher ClaudeUsageFetcher,
 	geminiQuotaService *GeminiQuotaService,
 	antigravityQuotaFetcher *AntigravityQuotaFetcher,
+	grokQuotaFetcher *GrokQuotaFetcher,
 	cache *UsageCache,
 	identityCache IdentityCache,
 	tlsFPProfileService *TLSFingerprintProfileService,
@@ -285,6 +299,7 @@ func NewAccountUsageService(
 		usageFetcher:            usageFetcher,
 		geminiQuotaService:      geminiQuotaService,
 		antigravityQuotaFetcher: antigravityQuotaFetcher,
+		grokQuotaFetcher:        grokQuotaFetcher,
 		cache:                   cache,
 		identityCache:           identityCache,
 		tlsFPProfileService:     tlsFPProfileService,
@@ -322,6 +337,14 @@ placeholder
 	// Antigravity 平台：使用 AntigravityQuotaFetcher 获取额度
 	if account.Platform == PlatformAntigravity {
 		usage, err := s.getAntigravityUsage(ctx, account)
+		if err == nil {
+			s.tryClearRecoverableAccountError(ctx, account)
+	placeholder
+		return usage, err
+placeholder
+
+	if account.Platform == PlatformGrok {
+		usage, err := s.getGrokUsage(ctx, account)
 		if err == nil {
 			s.tryClearRecoverableAccountError(ctx, account)
 	placeholder
@@ -834,6 +857,30 @@ placeholder
 		now := time.Now()
 		return &UsageInfo{UpdatedAt: &nowplaceholder, nil
 placeholder
+	return usage, nil
+placeholder
+
+func (s *AccountUsageService) getGrokUsage(ctx context.Context, account *Account) (*UsageInfo, error) {
+	if s.grokQuotaFetcher == nil {
+		now := time.Now()
+		return &UsageInfo{UpdatedAt: &nowplaceholder, nil
+placeholder
+	usage := s.grokQuotaFetcher.BuildUsageInfo(account)
+	if usage.GrokQuotaSnapshotState == "" {
+		if usage.ErrorCode == "quota_unknown" {
+			usage.GrokQuotaSnapshotState = "unknown_until_first_response"
+	placeholder else {
+			usage.GrokQuotaSnapshotState = "observed"
+	placeholder
+placeholder
+
+	if s.usageLogRepo != nil && account != nil {
+		if stats, err := s.usageLogRepo.GetAccountTodayStats(ctx, account.ID); err == nil && stats != nil {
+			usage.GrokLocalUsage = windowStatsFromAccountStats(stats)
+	placeholder
+placeholder
+
+	enrichUsageWithAccountError(usage, account)
 	return usage, nil
 placeholder
 

@@ -199,6 +199,68 @@ placeholder
 placeholder
 placeholder
 
+func TestGrokTokenCacheKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		account  *Account
+		expected string
+placeholder{
+		{
+			name: "basic_account",
+			account: &Account{
+				ID: 350,
+		placeholder,
+			expected: "grok:account:350",
+	placeholder,
+		{
+			name: "account_with_email_uses_account_id",
+			account: &Account{
+				ID: 351,
+		placeholder
+					"email": "same-user@example.com",
+			placeholder,
+		placeholder,
+			expected: "grok:account:351",
+	placeholder,
+		{
+			name: "account_id_zero",
+			account: &Account{
+				ID: 0,
+		placeholder,
+			expected: "grok:account:0",
+	placeholder,
+		{
+			name:     "nil_account",
+			account:  nil,
+			expected: "grok:account:0",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GrokTokenCacheKey(tt.account)
+			require.Equal(t, tt.expected, result)
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokTokenCacheKeySeparatesAccountsWithSameEmail(t *testing.T) {
+	first := &Account{
+		ID: 351,
+placeholder
+			"email": "same-user@example.com",
+	placeholder,
+placeholder
+	second := &Account{
+		ID: 352,
+placeholder
+			"email": "same-user@example.com",
+	placeholder,
+placeholder
+
+	require.NotEqual(t, GrokTokenCacheKey(first), GrokTokenCacheKey(second))
+placeholder
+
 func TestClaudeTokenCacheKey(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -27,8 +27,12 @@ func isOpenAIOAuthAccount(account *Account) bool {
 	return account != nil && account.Platform == PlatformOpenAI && account.Type == AccountTypeOAuth
 placeholder
 
+func isGrokOAuthAccount(account *Account) bool {
+	return account != nil && account.Platform == PlatformGrok && account.Type == AccountTypeOAuth
+placeholder
+
 func isOpenAIAccount(account *Account) bool {
-	return account != nil && account.Platform == PlatformOpenAI
+	return account != nil && (account.Platform == PlatformOpenAI || account.Platform == PlatformGrok)
 placeholder
 
 func (s *OpenAIGatewayService) handleOpenAIAccountUpstreamError(ctx context.Context, account *Account, statusCode int, headers http.Header, responseBody []byte, requestedModel ...string) bool {
@@ -171,6 +175,9 @@ placeholder
 func (s *OpenAIGatewayService) ShouldStopOpenAIOAuth429Failover(account *Account, statusCode int, failedSwitches int) bool {
 	if statusCode != http.StatusTooManyRequests || failedSwitches < openAIOAuth429StormMaxAccountSwitches {
 		return false
+placeholder
+	if isGrokOAuthAccount(account) {
+		return true
 placeholder
 	if !isOpenAIOAuthAccount(account) {
 		return false

@@ -188,7 +188,7 @@ placeholder
 			if err != nil {
 				return nil, err
 		placeholder
-			if g.RequireOAuthOnly && (g.Platform == PlatformOpenAI || g.Platform == PlatformAntigravity || g.Platform == PlatformAnthropic || g.Platform == PlatformGemini) {
+			if g.RequireOAuthOnly && (g.Platform == PlatformOpenAI || g.Platform == PlatformAntigravity || g.Platform == PlatformAnthropic || g.Platform == PlatformGemini || g.Platform == PlatformGrok) {
 				return nil, fmt.Errorf("分组 [%s] 仅允许 OAuth 账号，apikey 类型账号无法加入", g.Name)
 		placeholder
 	placeholder
@@ -304,7 +304,7 @@ placeholder
 			if err != nil {
 				return nil, err
 		placeholder
-			if g.RequireOAuthOnly && (g.Platform == PlatformOpenAI || g.Platform == PlatformAntigravity || g.Platform == PlatformAnthropic || g.Platform == PlatformGemini) {
+			if g.RequireOAuthOnly && (g.Platform == PlatformOpenAI || g.Platform == PlatformAntigravity || g.Platform == PlatformAnthropic || g.Platform == PlatformGemini || g.Platform == PlatformGrok) {
 				return nil, fmt.Errorf("分组 [%s] 仅允许 OAuth 账号，apikey 类型账号无法加入", g.Name)
 		placeholder
 	placeholder
@@ -426,6 +426,9 @@ placeholder
 		return nil
 	case PlatformGemini:
 		// TODO: 测试Gemini API凭证
+		return nil
+	case PlatformGrok:
+		// Grok OAuth credentials are validated via token exchange/refresh and request-path probes.
 		return nil
 	default:
 		return fmt.Errorf("unsupported platform: %s", account.Platform)

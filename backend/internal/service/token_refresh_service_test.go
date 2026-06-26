@@ -20,6 +20,8 @@ type tokenRefreshAccountRepo struct {
 	setErrorCalls          int
 	clearTempCalls         int
 	setTempUnschedCalls    int
+	lastErrorMessage       string
+	lastTempUnschedReason  string
 	lastAccount            *Account
 	updateErr              error
 placeholder
@@ -51,6 +53,7 @@ placeholder
 
 func (r *tokenRefreshAccountRepo) SetError(ctx context.Context, id int64, errorMsg string) error {
 	r.setErrorCalls++
+	r.lastErrorMessage = errorMsg
 	return nil
 placeholder
 
@@ -61,6 +64,7 @@ placeholder
 
 func (r *tokenRefreshAccountRepo) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
 	r.setTempUnschedCalls++
+	r.lastTempUnschedReason = reason
 	return nil
 placeholder
 
@@ -76,9 +80,13 @@ placeholder
 
 type tempUnschedCacheStub struct {
 	deleteCalls int
+	setCalls    int
+	lastState   *TempUnschedState
 placeholder
 
 func (s *tempUnschedCacheStub) SetTempUnsched(ctx context.Context, accountID int64, state *TempUnschedState) error {
+	s.setCalls++
+	s.lastState = state
 	return nil
 placeholder
 
@@ -538,6 +546,8 @@ placeholder{
 		{name: "unauthorized_client", err: errors.New("unauthorized_client"), expected: trueplaceholder,
 		{name: "access_denied", err: errors.New("access_denied"), expected: trueplaceholder,
 		{name: "no_refresh_token", err: errors.New("no refresh token available"), expected: trueplaceholder,
+		{name: "grok_entitlement_denied", err: errors.New("GROK_OAUTH_ENTITLEMENT_DENIED: subscription required"), expected: trueplaceholder,
+		{name: "invalid_scope", err: errors.New("invalid_scope: requested scope is not allowed"), expected: trueplaceholder,
 		{name: "invalid_grant_with_desc", err: errors.New("Error: invalid_grant - token revoked"), expected: trueplaceholder,
 		{name: "case_insensitive", err: errors.New("INVALID_GRANT"), expected: trueplaceholder,
 placeholder

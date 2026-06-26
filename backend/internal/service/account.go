@@ -14,6 +14,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 )
 
 type Account struct {
@@ -188,6 +189,18 @@ placeholder
 
 func (a *Account) IsGemini() bool {
 	return a.Platform == PlatformGemini
+placeholder
+
+func (a *Account) IsGrok() bool {
+	return a.Platform == PlatformGrok
+placeholder
+
+func (a *Account) IsGrokOAuth() bool {
+	return a.IsGrok() && a.Type == AccountTypeOAuth
+placeholder
+
+func (a *Account) IsOpenAICompatible() bool {
+	return a != nil && (a.Platform == PlatformOpenAI || a.Platform == PlatformGrok)
 placeholder
 
 func (a *Account) GeminiOAuthType() string {
@@ -508,6 +521,9 @@ func (a *Account) resolveModelMapping(rawMapping map[string]any) map[string]stri
 		if a.Platform == domain.PlatformAntigravity {
 			return domain.DefaultAntigravityModelMapping
 	placeholder
+		if a.Platform == domain.PlatformGrok {
+			return xai.DefaultModelMapping()
+	placeholder
 		// Bedrock 默认映射由 forwardBedrock 统一处理（需配合 region prefix 调整）
 		return nil
 placeholder
@@ -515,6 +531,9 @@ placeholder
 		// Antigravity 平台使用默认映射
 		if a.Platform == domain.PlatformAntigravity {
 			return domain.DefaultAntigravityModelMapping
+	placeholder
+		if a.Platform == domain.PlatformGrok {
+			return xai.DefaultModelMapping()
 	placeholder
 		return nil
 placeholder
@@ -539,6 +558,9 @@ placeholder
 	// Antigravity 平台使用默认映射
 	if a.Platform == domain.PlatformAntigravity {
 		return domain.DefaultAntigravityModelMapping
+placeholder
+	if a.Platform == domain.PlatformGrok {
+		return xai.DefaultModelMapping()
 placeholder
 	return nil
 placeholder
@@ -1114,6 +1136,31 @@ placeholder
 	return a.GetCredential("refresh_token")
 placeholder
 
+func (a *Account) GetGrokBaseURL() string {
+	if !a.IsGrok() {
+		return ""
+placeholder
+	baseURL := a.GetCredential("base_url")
+	if baseURL != "" {
+		return baseURL
+placeholder
+	return xai.DefaultBaseURL
+placeholder
+
+func (a *Account) GetGrokAccessToken() string {
+	if !a.IsGrok() {
+		return ""
+placeholder
+	return a.GetCredential("access_token")
+placeholder
+
+func (a *Account) GetGrokRefreshToken() string {
+	if !a.IsGrokOAuth() {
+		return ""
+placeholder
+	return a.GetCredential("refresh_token")
+placeholder
+
 func (a *Account) GetOpenAIIDToken() string {
 	if !a.IsOpenAIOAuth() {
 		return ""
@@ -1191,8 +1238,11 @@ placeholder
 	if capability == "" {
 		return true
 placeholder
-	if !a.IsOpenAI() {
+	if !a.IsOpenAICompatible() {
 		return false
+placeholder
+	if a.IsGrok() {
+		return capability == OpenAIEndpointCapabilityChatCompletions
 placeholder
 	switch capability {
 	case OpenAIEndpointCapabilityChatCompletions:
@@ -1259,6 +1309,9 @@ placeholder
 placeholder
 
 func (a *Account) SupportsOpenAIImageCapability(capability OpenAIImagesCapability) bool {
+	if capability == "" {
+		return true
+placeholder
 	if !a.IsOpenAI() {
 		return false
 placeholder
