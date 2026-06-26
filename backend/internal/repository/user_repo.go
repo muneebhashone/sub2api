@@ -757,6 +757,17 @@ placeholder
 func (r *userRepository) DeductBalance(ctx context.Context, id int64, amount float64) error {
 	client := clientFromContext(ctx, r.client)
 	n, err := client.User.Update().
+		Where(dbuser.IDEQ(id), dbuser.BalanceGTE(amount)).
+		AddBalance(-amount).
+		Save(ctx)
+	if err != nil {
+		return err
+placeholder
+	if n > 0 {
+		return nil
+placeholder
+
+	n, err = client.User.Update().
 		Where(dbuser.IDEQ(id)).
 		AddBalance(-amount).
 		Save(ctx)

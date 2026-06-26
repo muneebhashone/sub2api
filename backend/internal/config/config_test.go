@@ -1158,6 +1158,11 @@ placeholder{
 			wantErr: "billing.circuit_breaker.half_open_requests",
 	placeholder,
 		{
+			name:    "billing minimum balance reserve",
+			mutate:  func(c *Config) { c.Billing.MinimumBalanceReserve = -0.01 placeholder,
+			wantErr: "billing.minimum_balance_reserve",
+	placeholder,
+		{
 			name:    "database max open conns",
 			mutate:  func(c *Config) { c.Database.MaxOpenConns = 0 placeholder,
 			wantErr: "database.max_open_conns",
