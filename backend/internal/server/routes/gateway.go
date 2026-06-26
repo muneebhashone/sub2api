@@ -73,8 +73,13 @@ placeholder
 		placeholder
 			h.Gateway.Messages(c)
 	placeholder)
-		// /v1/messages/count_tokens: OpenAI groups get 404
+		// /v1/messages/count_tokens: OpenAI uses Anthropic-compat bridge; other
+		// OpenAI-compatible platforms keep the prior unsupported response.
 		gateway.POST("/messages/count_tokens", func(c *gin.Context) {
+			if isOpenAIGatewayPlatform(c) {
+				h.OpenAIGateway.CountTokens(c)
+				return
+		placeholder
 			if isOpenAIResponsesCompatibleGatewayPlatform(c) {
 				service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
 				c.JSON(http.StatusNotFound, gin.H{

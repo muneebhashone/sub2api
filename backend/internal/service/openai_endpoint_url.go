@@ -18,6 +18,10 @@ placeholder
 	return normalized + endpoint
 placeholder
 
+func buildOpenAIResponsesInputTokensURL(base string) string {
+	return buildOpenAIEndpointURL(base, "/v1/responses/input_tokens")
+placeholder
+
 func openAIBaseURLHasVersionSuffix(raw string) bool {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
