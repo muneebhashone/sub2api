@@ -1368,6 +1368,55 @@ placeholder
 	require.Empty(t, rec.Body.String())
 placeholder
 
+func TestOpenAIStreamingResponseFailedAfterOutputSanitizesVerboseResponseForClient(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	longInstructions := strings.Repeat("You are GPT-5.1 running in the Codex CLI. ", 20)
+	failedPayload := fmt.Sprintf(
+		`{"type":"response.failed","response":{"id":"resp_failed","object":"response","created_at":1782446336,"status":"failed","instructions":%q,"output":[{"type":"message","content":[{"type":"output_text","text":"large"placeholder]placeholder],"usage":{"input_tokens":123,"output_tokens":0placeholder,"error":{"code":"context_length_exceeded","message":"Your input exceeds the context window of this model. Please adjust your input and try again."placeholderplaceholderplaceholder`,
+		longInstructions,
+	)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_failed"placeholderplaceholder`,
+			"",
+			"event: response.output_text.delta",
+			`data: {"type":"response.output_text.delta","delta":"partial"placeholder`,
+			"",
+			"event: response.failed",
+			"data: " + failedPayload,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-failed-after-output"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "model", "model")
+placeholder
+
+	body := rec.Body.String()
+	require.Contains(t, body, "event: response.failed")
+	require.Contains(t, body, "context_length_exceeded")
+	require.Contains(t, body, "Your input exceeds the context window")
+	require.NotContains(t, body, "You are GPT-5.1 running in the Codex CLI")
+	require.NotContains(t, body, `"instructions"`)
+	require.NotContains(t, body, `"output"`)
+	require.NotContains(t, body, `"usage"`)
+placeholder
+
 func TestOpenAIStreamingPreambleOnlyMissingTerminalReturnsFailover(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := &config.Config{
@@ -1705,6 +1754,53 @@ placeholder
 	require.Contains(t, string(failoverErr.ResponseBody), "upstream processing failed")
 	require.False(t, c.Writer.Written())
 	require.Empty(t, rec.Body.String())
+placeholder
+
+func TestOpenAIStreamingPassthroughResponseFailedAfterOutputSanitizesVerboseResponseForClient(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	longInstructions := strings.Repeat("You are GPT-5.1 running in the Codex CLI. ", 20)
+	failedPayload := fmt.Sprintf(
+		`{"type":"response.failed","response":{"id":"resp_pass_failed","object":"response","created_at":1782446336,"status":"failed","instructions":%q,"output":[{"type":"message","content":[{"type":"output_text","text":"large"placeholder]placeholder],"usage":{"input_tokens":123,"output_tokens":0placeholder,"error":{"code":"context_length_exceeded","message":"Your input exceeds the context window of this model. Please adjust your input and try again."placeholderplaceholderplaceholder`,
+		longInstructions,
+	)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_pass_failed"placeholderplaceholder`,
+			"",
+			"event: response.output_text.delta",
+			`data: {"type":"response.output_text.delta","delta":"partial"placeholder`,
+			"",
+			"event: response.failed",
+			"data: " + failedPayload,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-pass-failed-after-output"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "", "")
+placeholder
+
+	body := rec.Body.String()
+	require.Contains(t, body, "event: response.failed")
+	require.Contains(t, body, "context_length_exceeded")
+	require.Contains(t, body, "Your input exceeds the context window")
+	require.NotContains(t, body, "You are GPT-5.1 running in the Codex CLI")
+	require.NotContains(t, body, `"instructions"`)
+	require.NotContains(t, body, `"output"`)
+	require.NotContains(t, body, `"usage"`)
 placeholder
 
 func TestOpenAIStreamingPassthroughResponseDoneWithoutDoneMarkerStillSucceeds(t *testing.T) {
