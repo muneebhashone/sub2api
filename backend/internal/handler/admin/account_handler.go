@@ -849,6 +849,7 @@ placeholder
 				newCredentials[k] = v
 		placeholder
 	placeholder
+		newCredentials = service.NormalizeOpenAIPersonalAccessTokenCredentials(account, tokenInfo, newCredentials)
 placeholder else if account.Platform == service.PlatformGemini {
 		tokenInfo, err := h.geminiOAuthService.RefreshAccountToken(ctx, account)
 		if err != nil {

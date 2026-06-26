@@ -96,6 +96,9 @@ placeholder
 // NeedsRefresh 检查token是否需要刷新
 // expires_at 缺失且处于限流状态时需要刷新，防止限流期间 token 静默过期
 func (r *OpenAITokenRefresher) NeedsRefresh(account *Account, refreshWindow time.Duration) bool {
+	if account.IsOpenAIPersonalAccessToken() {
+		return false
+placeholder
 	if strings.TrimSpace(account.GetOpenAIRefreshToken()) == "" {
 		return false
 placeholder
@@ -118,6 +121,7 @@ placeholder
 	// 使用服务提供的方法构建新凭证，并保留原有字段
 	newCredentials := r.openaiOAuthService.BuildAccountCredentials(tokenInfo)
 	newCredentials = MergeCredentials(account.Credentials, newCredentials)
+	newCredentials = NormalizeOpenAIPersonalAccessTokenCredentials(account, tokenInfo, newCredentials)
 
 	return newCredentials, nil
 placeholder
