@@ -185,6 +185,21 @@ func (s *queuedHTTPUpstreamStub) DoWithTLS(req *http.Request, proxyURL string, a
 	return s.Do(req, proxyURL, accountID, concurrency)
 placeholder
 
+type recordingInternal500CounterCache struct {
+	incrementCalls []int64
+	resetCalls     []int64
+placeholder
+
+func (c *recordingInternal500CounterCache) IncrementInternal500Count(_ context.Context, accountID int64) (int64, error) {
+	c.incrementCalls = append(c.incrementCalls, accountID)
+	return int64(len(c.incrementCalls)), nil
+placeholder
+
+func (c *recordingInternal500CounterCache) ResetInternal500Count(_ context.Context, accountID int64) error {
+	c.resetCalls = append(c.resetCalls, accountID)
+	return nil
+placeholder
+
 type antigravitySettingRepoStub struct{placeholder
 
 func (s *antigravitySettingRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
@@ -213,6 +228,157 @@ placeholder
 
 func (s *antigravitySettingRepoStub) Delete(ctx context.Context, key string) error {
 	panic("unexpected Delete call")
+placeholder
+
+func TestResolveAntigravityProjectID(t *testing.T) {
+	tests := []struct {
+		name    string
+		account *Account
+		want    string
+		wantErr bool
+placeholder{
+		{
+			name: "uses onboard project_id first",
+			account: &Account{Credentials: map[string]any{
+				"project_id": " onboard-project ",
+				antigravityProjectIDFallbackCredentialKey: " configured-project ",
+	placeholder
+			want: "onboard-project",
+	placeholder,
+		{
+			name: "uses configured credentials fallback",
+			account: &Account{Credentials: map[string]any{
+				antigravityProjectIDFallbackCredentialKey: " configured-project ",
+	placeholder
+			want: "configured-project",
+	placeholder,
+		{
+			name: "uses configured extra fallback",
+			account: &Account{Extra: map[string]any{
+				antigravityProjectIDFallbackCredentialKey: " extra-project ",
+	placeholder
+			want: "extra-project",
+	placeholder,
+		{
+			name:    "missing project",
+			account: &Account{Credentials: map[string]any{placeholderplaceholder,
+			wantErr: true,
+	placeholder,
+placeholder
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := resolveAntigravityProjectID(tc.account)
+			if tc.wantErr {
+				require.ErrorIs(t, err, errAntigravityProjectIDRequired)
+				require.Empty(t, got)
+				return
+		placeholder
+		placeholder
+			require.Equal(t, tc.want, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestAntigravityGatewayService_ForwardGemini_UsesConfiguredProjectFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+	c.Request = httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-2.5-flash:streamGenerateContent", bytes.NewReader(body))
+
+	upstreamBody := []byte("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":1,\"candidatesTokenCount\":1placeholderplaceholderplaceholder\n\n")
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{
+			{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+				Body:       io.NopCloser(bytes.NewReader(upstreamBody)),
+		placeholder,
+	placeholder,
+placeholder
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   upstream,
+placeholder
+
+	account := &Account{
+		ID:          101,
+		Name:        "acc-configured-project",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			antigravityProjectIDFallbackCredentialKey: "configured-project",
+			"model_mapping": map[string]any{
+				"gemini-2.5-flash": "gemini-2.5-flash",
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "streamGenerateContent", true, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Len(t, upstream.requestBodies, 1)
+
+	var wrapped map[string]any
+	require.NoError(t, json.Unmarshal(upstream.requestBodies[0], &wrapped))
+	require.Equal(t, "configured-project", wrapped["project"])
+placeholder
+
+func TestAntigravityGatewayService_ForwardGemini_MissingProjectReturnsLocalError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+
+	body, err := json.Marshal(map[string]any{
+		"contents": []map[string]any{
+			{"role": "user", "parts": []map[string]any{{"text": "hello"placeholderplaceholderplaceholder,
+	placeholder,
+placeholder)
+placeholder
+	c.Request = httptest.NewRequest(http.MethodPost, "/antigravity/v1beta/models/gemini-2.5-flash:streamGenerateContent", bytes.NewReader(body))
+
+	upstream := &queuedHTTPUpstreamStub{placeholder
+	internal500Cache := &recordingInternal500CounterCache{placeholder
+	svc := &AntigravityGatewayService{
+		tokenProvider:    &AntigravityTokenProvider{placeholder,
+		httpUpstream:     upstream,
+		internal500Cache: internal500Cache,
+placeholder
+
+	account := &Account{
+		ID:          102,
+		Name:        "acc-missing-project",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "token",
+			"model_mapping": map[string]any{
+				"gemini-2.5-flash": "gemini-2.5-flash",
+		placeholder,
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "streamGenerateContent", true, body, false)
+	require.Nil(t, result)
+	require.ErrorIs(t, err, errAntigravityProjectIDRequired)
+	require.Equal(t, http.StatusBadRequest, writer.Code)
+	require.Empty(t, upstream.requestBodies)
+	require.Empty(t, internal500Cache.incrementCalls)
+	require.Contains(t, writer.Body.String(), "project_id")
+	require.NotContains(t, writer.Body.String(), `"project":""`)
 placeholder
 
 func TestAntigravityGatewayService_Forward_PromptTooLong(t *testing.T) {
@@ -255,6 +421,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 	placeholder,
 placeholder
 
@@ -313,6 +480,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 	placeholder,
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -369,6 +537,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 	placeholder,
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -423,6 +592,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 	placeholder,
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -478,6 +648,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 	placeholder,
 		Extra: map[string]any{
 			modelRateLimitsKey: map[string]any{
@@ -623,6 +794,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 			"model_mapping": map[string]any{
 				"claude-sonnet-4-5": mappedModel,
 		placeholder,
@@ -676,6 +848,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 			"model_mapping": map[string]any{
 				"gemini-2.5-flash": mappedModel,
 		placeholder,
@@ -747,6 +920,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 			"model_mapping": map[string]any{
 				originalModel: mappedModel,
 		placeholder,
@@ -805,6 +979,7 @@ placeholder
 		Concurrency: 1,
 placeholder
 			"access_token": "token",
+	placeholder
 			"model_mapping": map[string]any{
 				originalModel: mappedModel,
 		placeholder,
