@@ -864,7 +864,8 @@ placeholder
 
 func (s *AccountUsageService) getGrokUsage(ctx context.Context, account *Account) (*UsageInfo, error) {
 	if s.grokQuotaFetcher == nil {
-		s.grokQuotaFetcher = NewGrokQuotaFetcher()
+		now := time.Now()
+		return &UsageInfo{UpdatedAt: &nowplaceholder, nil
 placeholder
 	usage := s.grokQuotaFetcher.BuildUsageInfo(account)
 	if usage.GrokQuotaSnapshotState == "" {

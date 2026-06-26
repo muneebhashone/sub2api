@@ -118,7 +118,7 @@ placeholder
 placeholderplaceholder
 	svc := &OpenAIGatewayService{
 		httpUpstream:      upstream,
-		grokTokenProvider: NewGrokTokenProvider(repo, nil, nil),
+		grokTokenProvider: NewGrokTokenProvider(repo, nil),
 		accountRepo:       repo,
 placeholder
 
@@ -182,7 +182,7 @@ placeholder, "\n")
 placeholderplaceholder
 	svc := &OpenAIGatewayService{
 		httpUpstream:      upstream,
-		grokTokenProvider: NewGrokTokenProvider(repo, nil, nil),
+		grokTokenProvider: NewGrokTokenProvider(repo, nil),
 		accountRepo:       repo,
 placeholder
 
@@ -251,7 +251,7 @@ placeholderplaceholder
 	svc := &OpenAIGatewayService{
 		cfg:               rawChatCompletionsTestConfig(),
 		httpUpstream:      upstream,
-		grokTokenProvider: NewGrokTokenProvider(repo, nil, nil),
+		grokTokenProvider: NewGrokTokenProvider(repo, nil),
 		accountRepo:       repo,
 placeholder
 

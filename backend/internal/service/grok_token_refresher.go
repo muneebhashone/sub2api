@@ -10,10 +10,10 @@ import (
 const grokTokenRefreshSkew = time.Hour
 
 type GrokTokenRefresher struct {
-	grokOAuthService *GrokOAuthService
+	grokOAuthService GrokOAuthTokenService
 placeholder
 
-func NewGrokTokenRefresher(grokOAuthService *GrokOAuthService) *GrokTokenRefresher {
+func NewGrokTokenRefresher(grokOAuthService GrokOAuthTokenService) *GrokTokenRefresher {
 	return &GrokTokenRefresher{grokOAuthService: grokOAuthServiceplaceholder
 placeholder
 
