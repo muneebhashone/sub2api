@@ -14,12 +14,12 @@
     </template>
     <template #cell-pay_amount="{ value, row placeholder">
       <div class="text-sm">
-        <span class="font-medium text-gray-900 dark:text-white">¥{{ value.toFixed(2) placeholderplaceholder</span>
+        <span class="font-medium text-gray-900 dark:text-white">{{ paymentAmountSymbol(row) placeholderplaceholder{{ value.toFixed(2) placeholderplaceholder</span>
         <span v-if="row.fee_rate > 0" class="ml-1 text-xs text-gray-400" :title="t('payment.orders.fee') + ': ' + row.fee_rate + '%'">
           ({{ t('payment.orders.fee') placeholderplaceholder {{ row.fee_rate placeholderplaceholder%)
         </span>
         <div v-if="row.amount !== row.pay_amount" class="text-xs text-gray-500">
-          {{ t('payment.orders.creditedAmount') placeholderplaceholder: {{ row.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ row.amount.toFixed(2) placeholderplaceholder
+          {{ t('payment.orders.creditedAmount') placeholderplaceholder: {{ creditedAmountSymbol placeholderplaceholder{{ row.amount.toFixed(2) placeholderplaceholder
         </div>
       </div>
     </template>
@@ -45,6 +45,7 @@ import type { PaymentOrder placeholder from '@/types/payment'
 import type { Column placeholder from '@/components/common/types'
 import DataTable from '@/components/common/DataTable.vue'
 import OrderStatusBadge from '@/components/payment/OrderStatusBadge.vue'
+import { currencySymbol placeholder from '@/components/payment/currency'
 
 const { t placeholder = useI18n()
 
@@ -55,6 +56,12 @@ const props = defineProps<{
 placeholder>()
 
 function formatDate(dateStr: string) { return new Date(dateStr).toLocaleString() placeholder
+
+const creditedAmountSymbol = currencySymbol('USD')
+
+function paymentAmountSymbol(order: PaymentOrder): string {
+  return currencySymbol(order.currency)
+placeholder
 
 const columns = computed((): Column[] => {
   const cols: Column[] = [

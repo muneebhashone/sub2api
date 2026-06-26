@@ -22,11 +22,11 @@
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</span>
-                <span class="font-medium text-gray-900 dark:text-white">{{ paidOrder.order_type === 'balance' ? '$' + paidOrder.amount.toFixed(2) : formatGatewayAmount(paidOrder.amount) placeholderplaceholder</span>
+                <span class="font-medium text-gray-900 dark:text-white">{{ creditedAmountSymbol placeholderplaceholder{{ paidOrder.amount.toFixed(2) placeholderplaceholder</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
-                <span class="font-medium text-gray-900 dark:text-white">{{ formatGatewayAmount(paidOrder.pay_amount) placeholderplaceholder</span>
+                <span class="font-medium text-gray-900 dark:text-white">{{ formatGatewayAmount(paidOrder.pay_amount, paidOrder.currency) placeholderplaceholder</span>
               </div>
             </div>
           </div>
@@ -129,7 +129,7 @@ import { useAppStore placeholder from '@/stores'
 import { paymentAPI placeholder from '@/api/payment'
 import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { getPaymentPopupFeatures placeholder from '@/components/payment/providerConfig'
-import { formatPaymentAmount, normalizePaymentCurrency placeholder from '@/components/payment/currency'
+import { currencySymbol, formatPaymentAmount, normalizePaymentCurrency placeholder from '@/components/payment/currency'
 import type { PaymentOrder placeholder from '@/types/payment'
 import Icon from '@/components/icons/Icon.vue'
 import QRCode from 'qrcode'
@@ -161,6 +161,7 @@ const remainingSeconds = ref(0)
 const cancelling = ref(false)
 const paidOrder = ref<PaymentOrder | null>(null)
 const paymentCurrency = computed(() => normalizePaymentCurrency(props.currency))
+const creditedAmountSymbol = currencySymbol('USD')
 const localeCode = computed(() => {
   const raw = i18n.locale as unknown
   if (typeof raw === 'string') return raw
@@ -214,8 +215,8 @@ const countdownDisplay = computed(() => {
   return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0')
 placeholder)
 
-function formatGatewayAmount(value: number): string {
-  return formatPaymentAmount(value, paymentCurrency.value, localeCode.value)
+function formatGatewayAmount(value: number, currency?: string | null): string {
+  return formatPaymentAmount(value, currency || paymentCurrency.value, localeCode.value)
 placeholder
 
 function isSuccessStatus(status: string | null | undefined): boolean {

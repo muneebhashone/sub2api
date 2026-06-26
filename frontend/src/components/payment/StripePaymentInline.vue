@@ -23,11 +23,11 @@
               </div>
               <div v-if="amount > 0" class="flex justify-between">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</span>
-                <span class="font-medium text-gray-900 dark:text-white">{{ orderType === 'balance' ? '$' : '¥' placeholderplaceholder{{ amount.toFixed(2) placeholderplaceholder</span>
+                <span class="font-medium text-gray-900 dark:text-white">{{ creditedAmountSymbol placeholderplaceholder{{ amount.toFixed(2) placeholderplaceholder</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
-                <span class="font-medium text-gray-900 dark:text-white">¥{{ payAmount.toFixed(2) placeholderplaceholder</span>
+                <span class="font-medium text-gray-900 dark:text-white">{{ paymentAmountSymbol placeholderplaceholder{{ payAmount.toFixed(2) placeholderplaceholder</span>
               </div>
             </div>
           </div>
@@ -40,7 +40,7 @@
       <div class="card overflow-hidden">
         <div class="bg-gradient-to-br from-[#635bff] to-[#4f46e5] px-6 py-5 text-center">
           <p class="text-sm font-medium text-indigo-200">{{ t('payment.actualPay') placeholderplaceholder</p>
-          <p class="mt-1 text-3xl font-bold text-white">¥{{ payAmount.toFixed(2) placeholderplaceholder</p>
+          <p class="mt-1 text-3xl font-bold text-white">{{ paymentAmountSymbol placeholderplaceholder{{ payAmount.toFixed(2) placeholderplaceholder</p>
         </div>
       </div>
       <!-- Stripe Payment Element -->
@@ -64,13 +64,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick placeholder from 'vue'
+import { computed, ref, onMounted, nextTick placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useRouter placeholder from 'vue-router'
 import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { paymentAPI placeholder from '@/api/payment'
 import { useAppStore placeholder from '@/stores'
 import { getPaymentPopupFeatures placeholder from '@/components/payment/providerConfig'
+import { currencySymbol placeholder from '@/components/payment/currency'
 import type { Stripe, StripeElements placeholder from '@stripe/stripe-js'
 import Icon from '@/components/icons/Icon.vue'
 
@@ -84,6 +85,7 @@ const props = defineProps<{
   orderType?: 'balance' | 'subscription'
   publishableKey: string
   payAmount: number
+  currency?: string
 placeholder>()
 
 const emit = defineEmits<{ success: []; done: []; back: []; redirect: [orderId: number, payUrl: string] placeholder>()
@@ -101,6 +103,8 @@ const cancelling = ref(false)
 const success = ref(false)
 const ready = ref(false)
 const selectedType = ref('')
+const creditedAmountSymbol = currencySymbol('USD')
+const paymentAmountSymbol = computed(() => currencySymbol(props.currency))
 
 let stripeInstance: Stripe | null = null
 let elementsInstance: StripeElements | null = null

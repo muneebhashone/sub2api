@@ -45,11 +45,11 @@
           </div>
           <div class="flex justify-between">
             <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.amount') placeholderplaceholder</span>
-            <span class="font-medium text-gray-900 dark:text-white">{{ paidOrder.order_type === 'balance' ? '$' : '¥' placeholderplaceholder{{ paidOrder.amount.toFixed(2) placeholderplaceholder</span>
+            <span class="font-medium text-gray-900 dark:text-white">{{ creditedAmountSymbol placeholderplaceholder{{ paidOrder.amount.toFixed(2) placeholderplaceholder</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-500 dark:text-gray-400">{{ t('payment.orders.payAmount') placeholderplaceholder</span>
-            <span class="font-medium text-gray-900 dark:text-white">¥{{ paidOrder.pay_amount.toFixed(2) placeholderplaceholder</span>
+            <span class="font-medium text-gray-900 dark:text-white">{{ paymentAmountSymbol(paidOrder) placeholderplaceholder{{ paidOrder.pay_amount.toFixed(2) placeholderplaceholder</span>
           </div>
         </div>
       </div>
@@ -81,6 +81,7 @@ import { paymentAPI placeholder from '@/api/payment'
 import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { getPaymentPopupFeatures placeholder from '@/components/payment/providerConfig'
 import type { PaymentOrder placeholder from '@/types/payment'
+import { currencySymbol placeholder from '@/components/payment/currency'
 import QRCode from 'qrcode'
 import alipayIcon from '@/assets/icons/alipay.svg'
 import wxpayIcon from '@/assets/icons/wxpay.svg'
@@ -111,6 +112,7 @@ const expired = ref(false)
 const cancelling = ref(false)
 const success = ref(false)
 const paidOrder = ref<PaymentOrder | null>(null)
+const creditedAmountSymbol = currencySymbol('USD')
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let countdownTimer: ReturnType<typeof setInterval> | null = null
@@ -136,6 +138,10 @@ const scanHint = computed(() => {
   if (isWxpay.value) return t('payment.qr.scanWxpayHint')
   return ''
 placeholder)
+
+function paymentAmountSymbol(order: PaymentOrder): string {
+  return currencySymbol(order.currency)
+placeholder
 
 const countdownDisplay = computed(() => {
   const m = Math.floor(remainingSeconds.value / 60)
