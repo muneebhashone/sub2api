@@ -524,25 +524,58 @@ func convertResponsesToAnthropicTools(tools []ResponsesTool) []AnthropicTool {
 				Description: t.Description,
 				InputSchema: normalizeAnthropicInputSchema(t.Parameters),
 		placeholder)
+		case "custom":
+			out = append(out, AnthropicTool{
+				Name:        t.Name,
+				Description: t.Description,
+				InputSchema: normalizeAnthropicInputSchema(t.Parameters),
+		placeholder)
 		default:
 			// Pass through unknown tool types
 			out = append(out, AnthropicTool{
 				Type:        t.Type,
 				Name:        t.Name,
 				Description: t.Description,
-				InputSchema: t.Parameters,
+				InputSchema: normalizeAnthropicInputSchema(t.Parameters),
 		placeholder)
 	placeholder
 placeholder
 	return out
 placeholder
 
-// normalizeAnthropicInputSchema ensures the input_schema has a "type" field.
+// normalizeAnthropicInputSchema ensures input_schema is a valid object schema.
 func normalizeAnthropicInputSchema(schema json.RawMessage) json.RawMessage {
-	if len(schema) == 0 || string(schema) == "null" {
+	const emptyObjectSchema = `{"type":"object","properties":{placeholderplaceholder`
+
+	trimmed := strings.TrimSpace(string(schema))
+	if trimmed == "" || trimmed == "null" {
+		return json.RawMessage(emptyObjectSchema)
+placeholder
+
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(schema, &m); err != nil {
 		return json.RawMessage(`{"type":"object","properties":{placeholderplaceholder`)
 placeholder
-	return schema
+
+	typeRaw, ok := m["type"]
+	if !ok || strings.TrimSpace(string(typeRaw)) == "" || string(typeRaw) == "null" {
+		m["type"] = json.RawMessage(`"object"`)
+placeholder else {
+		var typ string
+		if err := json.Unmarshal(typeRaw, &typ); err != nil || typ != "object" {
+			return json.RawMessage(emptyObjectSchema)
+	placeholder
+placeholder
+
+	if _, ok := m["properties"]; !ok {
+		m["properties"] = json.RawMessage(`{placeholder`)
+placeholder
+
+	out, err := json.Marshal(m)
+	if err != nil {
+		return json.RawMessage(emptyObjectSchema)
+placeholder
+	return out
 placeholder
 
 // convertResponsesToAnthropicToolChoice maps Responses tool_choice to Anthropic format.
