@@ -104,9 +104,9 @@
                 <!-- Price -->
                 <div class="flex items-baseline gap-2">
                   <span v-if="selectedPlan.original_price" class="text-sm text-gray-400 line-through dark:text-gray-500">
-                    {{ formatSelectedPaymentAmount(selectedPlan.original_price) placeholderplaceholder
+                    {{ formatSelectedSubscriptionPaymentAmount(selectedPlan.original_price) placeholderplaceholder
                   </span>
-                  <span :class="['text-3xl font-bold', planTextClass]">{{ formatSelectedPaymentAmount(selectedPlan.price) placeholderplaceholder</span>
+                  <span :class="['text-3xl font-bold', planTextClass]">{{ formatSelectedSubscriptionPaymentAmount(selectedPlan.price) placeholderplaceholder</span>
                   <span class="text-sm text-gray-500 dark:text-gray-400">/ {{ planValiditySuffix placeholderplaceholder</span>
                 </div>
                 <!-- Description -->
@@ -150,7 +150,7 @@
                 <div class="space-y-2 text-sm">
                   <div class="flex justify-between">
                     <span class="text-gray-500 dark:text-gray-400">{{ t('payment.amountLabel') placeholderplaceholder</span>
-                    <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(selectedPlan.price) placeholderplaceholder</span>
+                    <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(subPaymentAmount) placeholderplaceholder</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-gray-500 dark:text-gray-400">{{ t('payment.fee') placeholderplaceholder ({{ feeRate placeholderplaceholder%)</span>
@@ -167,7 +167,7 @@
                   <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                   {{ t('common.processing') placeholderplaceholder
                 </span>
-                <span v-else>{{ t('payment.createOrder') placeholderplaceholder {{ formatSelectedPaymentAmount(feeRate > 0 ? subTotalAmount : selectedPlan.price) placeholderplaceholder</span>
+                <span v-else>{{ t('payment.createOrder') placeholderplaceholder {{ formatSelectedPaymentAmount(subTotalAmount) placeholderplaceholder</span>
               </button>
               <button class="btn btn-secondary w-full" @click="selectedPlan = null">{{ t('common.cancel') placeholderplaceholder</button>
             </template>
@@ -275,7 +275,7 @@ import { platformAccentBarClass, platformBadgeLightClass, platformBadgeClass, pl
 import SubscriptionPlanCard from '@/components/payment/SubscriptionPlanCard.vue'
 import PaymentStatusPanel from '@/components/payment/PaymentStatusPanel.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { formatPaymentAmount, normalizePaymentCurrency placeholder from '@/components/payment/currency'
+import { DEFAULT_PAYMENT_CURRENCY, formatPaymentAmount, normalizePaymentCurrency placeholder from '@/components/payment/currency'
 import type { PaymentMethodOption placeholder from '@/components/payment/PaymentMethodSelector.vue'
 import { buildPaymentErrorToastMessage, describePaymentScenarioError placeholder from './paymentUx'
 import { hasWechatResumeQuery, parseWechatResumeRoute, stripWechatResumeQuery placeholder from './paymentWechatResume'
@@ -493,7 +493,7 @@ const enabledMethods = computed(() => Object.keys(visibleMethods.value))
 const validAmount = computed(() => amount.value ?? 0)
 const balanceRechargeMultiplier = computed(() => {
   const multiplier = checkout.value.balance_recharge_multiplier
-  return multiplier > 0 ? multiplier : 1
+  return Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1
 placeholder)
 const creditedAmount = computed(() => Math.round((validAmount.value * balanceRechargeMultiplier.value) * 100) / 100)
 
@@ -540,8 +540,49 @@ const localeCode = computed(() => {
   return undefined
 placeholder)
 
-function formatSelectedPaymentAmount(value: number): string {
-  return formatPaymentAmount(value, selectedCurrency.value, localeCode.value)
+interface PaymentAmountFormatOptions {
+  subscription?: boolean
+placeholder
+
+function currencyFractionDigits(currency: string): number {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+    placeholder).resolvedOptions().maximumFractionDigits ?? 2
+  placeholder catch {
+    return 2
+  placeholder
+placeholder
+
+function roundPaymentAmount(value: number, currency: string): number {
+  if (!Number.isFinite(value)) return 0
+  const factor = 10 ** currencyFractionDigits(currency)
+  return Math.round(value * factor) / factor
+placeholder
+
+function ceilPaymentAmount(value: number, currency: string): number {
+  if (!Number.isFinite(value)) return 0
+  const factor = 10 ** currencyFractionDigits(currency)
+  return Math.ceil(value * factor) / factor
+placeholder
+
+function subscriptionPaymentAmountForCurrency(value: number, currency: string): number {
+  if (currency !== DEFAULT_PAYMENT_CURRENCY) return value
+  return roundPaymentAmount(value / balanceRechargeMultiplier.value, currency)
+placeholder
+
+function subscriptionPaymentAmount(value: number): number {
+  return subscriptionPaymentAmountForCurrency(value, selectedCurrency.value)
+placeholder
+
+function formatSelectedPaymentAmount(value: number, options: PaymentAmountFormatOptions = {placeholder): string {
+  const amount = options.subscription ? subscriptionPaymentAmount(value) : value
+  return formatPaymentAmount(amount, selectedCurrency.value, localeCode.value)
+placeholder
+
+function formatSelectedSubscriptionPaymentAmount(value: number): string {
+  return formatSelectedPaymentAmount(value, { subscription: true placeholder)
 placeholder
 
 const methodOptions = computed<PaymentMethodOption[]>(() =>
@@ -588,34 +629,45 @@ const canSubmit = computed(() =>
     && selectedLimit.value?.available !== false
 )
 
-// Subscription-specific: method options based on plan price
+const subPaymentAmount = computed(() => {
+  const price = selectedPlan.value?.price ?? 0
+  return subscriptionPaymentAmount(price)
+placeholder)
+
+const subFeeAmount = computed(() => {
+  if (feeRate.value <= 0 || subPaymentAmount.value <= 0) return 0
+  return ceilPaymentAmount((subPaymentAmount.value * feeRate.value) / 100, selectedCurrency.value)
+placeholder)
+
+const subTotalAmount = computed(() => {
+  if (feeRate.value <= 0 || subPaymentAmount.value <= 0) return subPaymentAmount.value
+  return roundPaymentAmount(subPaymentAmount.value + subFeeAmount.value, selectedCurrency.value)
+placeholder)
+
+function subscriptionTotalAmountForCurrency(value: number, currency: string): number {
+  const paymentAmount = subscriptionPaymentAmountForCurrency(value, currency)
+  if (feeRate.value <= 0 || paymentAmount <= 0) return paymentAmount
+  const fee = ceilPaymentAmount((paymentAmount * feeRate.value) / 100, currency)
+  return roundPaymentAmount(paymentAmount + fee, currency)
+placeholder
+
+// Subscription-specific: method options based on gateway pay amount
 const subMethodOptions = computed<PaymentMethodOption[]>(() => {
-  const planPrice = selectedPlan.value?.price ?? 0
+  const price = selectedPlan.value?.price ?? 0
   return enabledMethods.value.map((type) => {
     const ml = visibleMethods.value[type]
+    const currency = normalizePaymentCurrency(ml?.currency)
     return {
       type,
       fee_rate: ml?.fee_rate ?? 0,
-      available: ml?.available !== false && amountFitsMethod(planPrice, type),
+      available: ml?.available !== false && amountFitsMethod(subscriptionTotalAmountForCurrency(price, currency), type),
     placeholder
   placeholder)
 placeholder)
 
-const subFeeAmount = computed(() => {
-  const price = selectedPlan.value?.price ?? 0
-  if (feeRate.value <= 0 || price <= 0) return 0
-  return Math.ceil(((price * feeRate.value) / 100) * 100) / 100
-placeholder)
-
-const subTotalAmount = computed(() => {
-  const price = selectedPlan.value?.price ?? 0
-  if (feeRate.value <= 0 || price <= 0) return price
-  return Math.round((price + subFeeAmount.value) * 100) / 100
-placeholder)
-
 const canSubmitSubscription = computed(() =>
   selectedPlan.value !== null
-    && amountFitsMethod(selectedPlan.value.price, selectedMethod.value)
+    && amountFitsMethod(subTotalAmount.value, selectedMethod.value)
     && selectedLimit.value?.available !== false
 )
 
