@@ -100,6 +100,9 @@ placeholder
 	if filter.UserID != nil {
 		payload["user_id"] = *filter.UserID
 placeholder
+	if filter.APIKeyID != nil {
+		payload["api_key_id"] = *filter.APIKeyID
+placeholder
 	if filter.AccountID != nil {
 		payload["account_id"] = *filter.AccountID
 placeholder
