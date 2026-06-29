@@ -756,6 +756,20 @@ placeholder
 	return true
 placeholder
 
+func ensureOpenAIResponsesImageGenerationToolChoiceAuto(reqBody map[string]any) bool {
+	if len(reqBody) == 0 || !hasOpenAIImageGenerationTool(reqBody) {
+		return false
+placeholder
+	if isCodexSparkModel(firstNonEmptyString(reqBody["model"])) {
+		return false
+placeholder
+	if _, ok := reqBody["tool_choice"]; ok {
+		return false
+placeholder
+	reqBody["tool_choice"] = "auto"
+	return true
+placeholder
+
 func applyCodexImageGenerationBridgeInstructions(reqBody map[string]any) bool {
 	if len(reqBody) == 0 || !hasOpenAIImageGenerationTool(reqBody) {
 		return false
