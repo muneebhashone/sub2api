@@ -40,7 +40,10 @@ placeholder
 	return s.cfg.Gateway.OpenAIWS.HTTPBridgeThresholdBytes
 placeholder
 
-func (s *OpenAIGatewayService) shouldBridgeOpenAIWSHTTP(payloadBytes int, previousResponseID string) bool {
+func (s *OpenAIGatewayService) shouldBridgeOpenAIWSHTTP(account *Account, payloadBytes int, previousResponseID string) bool {
+	if account != nil && account.Platform == PlatformGrok {
+		return true
+placeholder
 	if !s.openAIWSHTTPBridgeEnabled() {
 		return false
 placeholder
@@ -174,7 +177,26 @@ placeholder
 placeholder
 
 	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
-	upstreamReq, err := s.buildUpstreamRequestOpenAIPassthrough(upstreamCtx, c, account, body, token)
+	var upstreamReq *http.Request
+	if account.Platform == PlatformGrok {
+		upstreamModel := strings.TrimSpace(gjson.GetBytes(body, "model").String())
+		if originalModel != "" {
+			if mappedModel := normalizeOpenAIModelForUpstream(account, account.GetMappedModel(originalModel)); mappedModel != "" {
+				upstreamModel = mappedModel
+		placeholder
+	placeholder
+		if upstreamModel == "" {
+			upstreamModel = "grok-4.3"
+	placeholder
+		body, err = patchGrokResponsesBody(body, upstreamModel)
+		if err != nil {
+			releaseUpstreamCtx()
+			return nil, err
+	placeholder
+		upstreamReq, err = buildGrokResponsesRequest(upstreamCtx, c, account, body, token)
+placeholder else {
+		upstreamReq, err = s.buildUpstreamRequestOpenAIPassthrough(upstreamCtx, c, account, body, token)
+placeholder
 	releaseUpstreamCtx()
 	if err != nil {
 		return nil, err
