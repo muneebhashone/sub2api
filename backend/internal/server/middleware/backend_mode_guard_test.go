@@ -259,6 +259,12 @@ placeholder{
 			wantStatus: http.StatusOK,
 	placeholder,
 		{
+			name:       "enabled_allows_github_complete_registration",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/github/complete-registration",
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
 			name:       "enabled_blocks_google_oauth_start",
 			enabled:    "true",
 			path:       "/api/v1/auth/oauth/google/start",
@@ -268,6 +274,12 @@ placeholder{
 			name:       "enabled_allows_google_oauth_callback",
 			enabled:    "true",
 			path:       "/api/v1/auth/oauth/google/callback",
+			wantStatus: http.StatusOK,
+	placeholder,
+		{
+			name:       "enabled_allows_google_complete_registration",
+			enabled:    "true",
+			path:       "/api/v1/auth/oauth/google/complete-registration",
 			wantStatus: http.StatusOK,
 	placeholder,
 		{

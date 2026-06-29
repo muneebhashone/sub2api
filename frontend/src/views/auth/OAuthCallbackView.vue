@@ -152,6 +152,7 @@ import { useRoute, useRouter placeholder from 'vue-router'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { useAppStore, useAuthStore placeholder from '@/stores'
 import { apiClient placeholder from '@/api/client'
+import { buildApiUrl placeholder from '@/api/url'
 import {
   exchangePendingOAuthCompletion,
   persistOAuthTokenContext,
@@ -256,8 +257,6 @@ placeholder
 
 function redirectProviderCallbackToBackend(provider: 'github' | 'google'): void {
   if (typeof window === 'undefined') return
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
-  const normalized = apiBase.replace(/\/$/, '')
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(route.query)) {
     if (Array.isArray(value)) {
@@ -269,7 +268,7 @@ function redirectProviderCallbackToBackend(provider: 'github' | 'google'): void 
     placeholder
   placeholder
   const suffix = params.toString() ? `?${params.toString()placeholder` : ''
-  window.location.href = `${normalizedplaceholder/auth/oauth/${providerplaceholder/callback${suffixplaceholder`
+  window.location.href = buildApiUrl(`/auth/oauth/${providerplaceholder/callback${suffixplaceholder`)
 placeholder
 
 async function finalizeTokenResponse(tokenResponse: OAuthTokenResponse, redirect: string) {
