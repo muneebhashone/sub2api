@@ -39,6 +39,71 @@ placeholder
 	require.Equal(t, "high", gjson.GetBytes(patched, "reasoning.effort").String())
 placeholder
 
+func TestPatchGrokResponsesBodyDropsNestedUnsupportedFields(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok",
+		"input": "hello",
+		"external_web_access": true,
+		"tools": [
+			{"type": "function", "name": "kept_fn", "external_web_access": true, "parameters": {"type": "object", "properties": {"q": {"type": "string", "external_web_access": trueplaceholderplaceholderplaceholderplaceholder
+		],
+		"metadata": {"external_web_access": falseplaceholder
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.3")
+placeholder
+	require.True(t, json.Valid(patched))
+	require.False(t, strings.Contains(string(patched), "external_web_access"))
+	require.Equal(t, "kept_fn", gjson.GetBytes(patched, "tools.0.name").String())
+placeholder
+
+func TestPatchGrokResponsesBodyDropsUnsupportedNamespaceTools(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok",
+		"input": "hello",
+		"tools": [
+			{"type": "namespace", "namespace": "functions", "tools": [{"type": "function", "name": "inner"placeholder]placeholder,
+			{"type": "function", "name": "kept_fn", "parameters": {"type": "object"placeholderplaceholder,
+			{"type": "shell", "name": "kept_shell"placeholder
+		],
+		"tool_choice": {"type": "function", "name": "kept_fn"placeholder
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.3")
+placeholder
+	require.True(t, json.Valid(patched))
+	require.Equal(t, "grok-4.3", gjson.GetBytes(patched, "model").String())
+	require.Len(t, gjson.GetBytes(patched, "tools").Array(), 2)
+	require.False(t, gjson.GetBytes(patched, `tools.#(type=="namespace")`).Exists())
+	require.True(t, gjson.GetBytes(patched, `tools.#(type=="function")`).Exists())
+	require.True(t, gjson.GetBytes(patched, `tools.#(type=="shell")`).Exists())
+	require.Equal(t, "kept_fn", gjson.GetBytes(patched, "tool_choice.name").String())
+placeholder
+
+func TestPatchGrokResponsesBodyDropsToolChoiceWhenNoSupportedToolsRemain(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok",
+		"input": "hello",
+		"tools": [
+			{"type": "namespace", "namespace": "functions"placeholder,
+			{"type": "image_generation", "model": "gpt-image-2"placeholder
+		],
+		"tool_choice": {"type": "namespace", "namespace": "functions"placeholder
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.3")
+placeholder
+	require.True(t, json.Valid(patched))
+	require.False(t, gjson.GetBytes(patched, "tools").Exists())
+	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
+placeholder
+
 func TestBuildGrokResponsesRequestUsesAccountBaseURLAndBearerToken(t *testing.T) {
 	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
 
