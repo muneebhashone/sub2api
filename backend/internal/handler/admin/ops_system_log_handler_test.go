@@ -72,6 +72,19 @@ func TestOpsSystemLogHandler_ListInvalidAccountID(t *testing.T) {
 placeholder
 placeholder
 
+func TestOpsSystemLogHandler_ListInvalidAPIKeyID(t *testing.T) {
+	svc := service.NewOpsService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	h := NewOpsHandler(svc)
+	r := newOpsSystemLogTestRouter(h, false)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/logs?api_key_id=abc", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d, want 400", w.Code)
+placeholder
+placeholder
+
 func TestOpsSystemLogHandler_ListMonitoringDisabled(t *testing.T) {
 	svc := service.NewOpsService(nil, nil, &config.Config{
 		Ops: config.OpsConfig{Enabled: falseplaceholder,
@@ -175,6 +188,34 @@ func TestOpsSystemLogHandler_CleanupServiceUnavailable(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status=%d, want 503", w.Code)
+placeholder
+placeholder
+
+func TestOpsSystemLogHandler_CleanupAcceptsAPIKeyID(t *testing.T) {
+	svc := service.NewOpsService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	h := NewOpsHandler(svc)
+	r := newOpsSystemLogTestRouter(h, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/logs/cleanup", bytes.NewBufferString(`{"api_key_id":placeholder`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status=%d, want 503", w.Code)
+placeholder
+placeholder
+
+func TestOpsSystemLogHandler_CleanupInvalidAPIKeyID(t *testing.T) {
+	svc := service.NewOpsService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	h := NewOpsHandler(svc)
+	r := newOpsSystemLogTestRouter(h, true)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/logs/cleanup", bytes.NewBufferString(`{"api_key_id":0placeholder`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d, want 400", w.Code)
 placeholder
 placeholder
 
