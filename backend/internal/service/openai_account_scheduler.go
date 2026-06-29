@@ -29,6 +29,12 @@ const (
 	openAIAdvancedSchedulerSettingDBTimeout = 2 * time.Second
 )
 
+const (
+	openAIQuotaHeadroomNeutralFactor      = 0.5
+	openAIQuotaHeadroomSecondaryLowRemain = 0.10
+	openAIQuotaHeadroomSnapshotStaleAfter = 8 * time.Hour
+)
+
 type cachedOpenAIAdvancedSchedulerSetting struct {
 	enabled   bool
 	expiresAt int64
@@ -799,13 +805,18 @@ placeholder
 			placeholder
 		placeholder
 	placeholder
+		quotaHeadroomFactor := 0.0
+		if weights.QuotaHeadroom > 0 {
+			quotaHeadroomFactor = openAIQuotaHeadroomFactor(item.account, now)
+	placeholder
 
 		item.score = weights.Priority*priorityFactor +
 			weights.Load*loadFactor +
 			weights.Queue*queueFactor +
 			weights.ErrorRate*errorFactor +
 			weights.TTFT*ttftFactor +
-			weights.Reset*resetFactor
+			weights.Reset*resetFactor +
+			weights.QuotaHeadroom*quotaHeadroomFactor
 placeholder
 	plan.candidates = candidates
 
@@ -1460,21 +1471,23 @@ placeholder
 func (s *OpenAIGatewayService) openAIWSSchedulerWeights() GatewayOpenAIWSSchedulerScoreWeightsView {
 	if s != nil && s.cfg != nil {
 		return GatewayOpenAIWSSchedulerScoreWeightsView{
-			Priority:  s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Priority,
-			Load:      s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Load,
-			Queue:     s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Queue,
-			ErrorRate: s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.ErrorRate,
-			TTFT:      s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.TTFT,
-			Reset:     s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Reset,
+			Priority:      s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Priority,
+			Load:          s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Load,
+			Queue:         s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Queue,
+			ErrorRate:     s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.ErrorRate,
+			TTFT:          s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.TTFT,
+			Reset:         s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.Reset,
+			QuotaHeadroom: s.cfg.Gateway.OpenAIWS.SchedulerScoreWeights.QuotaHeadroom,
 	placeholder
 placeholder
 	return GatewayOpenAIWSSchedulerScoreWeightsView{
-		Priority:  1.0,
-		Load:      1.0,
-		Queue:     0.7,
-		ErrorRate: 0.8,
-		TTFT:      0.5,
-		Reset:     0.0,
+		Priority:      1.0,
+		Load:          1.0,
+		Queue:         0.7,
+		ErrorRate:     0.8,
+		TTFT:          0.5,
+		Reset:         0.0,
+		QuotaHeadroom: 0.0,
 placeholder
 placeholder
 
@@ -1485,7 +1498,49 @@ type GatewayOpenAIWSSchedulerScoreWeightsView struct {
 	ErrorRate float64
 	TTFT      float64
 	// Reset 倾向「会话窗口最早重置」的账号；0 表示关闭（默认）。
-	Reset float64
+	Reset         float64
+	QuotaHeadroom float64
+placeholder
+
+func openAIQuotaHeadroomFactor(account *Account, now time.Time) float64 {
+	if account == nil || len(account.Extra) == 0 || openAIQuotaHeadroomSnapshotStale(account.Extra, now) {
+		return openAIQuotaHeadroomNeutralFactor
+placeholder
+	primaryUsedPercent, ok := resolveAccountExtraNumber(account.Extra, "codex_primary_used_percent", "codex_7d_used_percent")
+	if !ok || openAIQuotaWindowResetAny(account.Extra, now, "primary", "7d") {
+		return openAIQuotaHeadroomNeutralFactor
+placeholder
+
+	factor := 1 - clamp01(primaryUsedPercent/100)
+	if secondaryUsedPercent, ok := resolveAccountExtraNumber(account.Extra, "codex_secondary_used_percent", "codex_5h_used_percent"); ok &&
+		!openAIQuotaWindowResetAny(account.Extra, now, "secondary", "5h") {
+		secondaryRemaining := 1 - clamp01(secondaryUsedPercent/100)
+		if secondaryRemaining < openAIQuotaHeadroomSecondaryLowRemain {
+			factor *= openAIQuotaHeadroomNeutralFactor
+	placeholder
+placeholder
+	return factor
+placeholder
+
+func openAIQuotaHeadroomSnapshotStale(extra map[string]any, now time.Time) bool {
+	updatedRaw, ok := extra["codex_usage_updated_at"]
+	if !ok {
+		return true
+placeholder
+	updatedAt, err := parseTime(fmt.Sprint(updatedRaw))
+	if err != nil {
+		return true
+placeholder
+	return now.Sub(updatedAt) >= openAIQuotaHeadroomSnapshotStaleAfter
+placeholder
+
+func openAIQuotaWindowResetAny(extra map[string]any, now time.Time, windows ...string) bool {
+	for _, window := range windows {
+		if openAIQuotaWindowReset(extra, window, now) {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func clamp01(value float64) float64 {
