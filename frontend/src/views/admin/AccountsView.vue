@@ -1604,12 +1604,39 @@ const handleResetQuota = async (a: Account) => {
     console.error('Failed to reset quota:', error)
   placeholder
 placeholder
+
+const privacyResultMessageKey = (account: Account): { type: 'success' | 'error'; key: string placeholder => {
+  const mode = typeof account.extra?.privacy_mode === 'string' ? account.extra.privacy_mode : ''
+  if (account.platform === 'openai') {
+    switch (mode) {
+      case 'training_off':
+        return { type: 'success', key: 'admin.accounts.privacyTrainingOff' placeholder
+      case 'training_set_cf_blocked':
+        return { type: 'error', key: 'admin.accounts.privacyCfBlocked' placeholder
+      default:
+        return { type: 'error', key: 'admin.accounts.privacyFailed' placeholder
+    placeholder
+  placeholder
+  if (account.platform === 'antigravity') {
+    if (mode === 'privacy_set') {
+      return { type: 'success', key: 'admin.accounts.privacyAntigravitySet' placeholder
+    placeholder
+    return { type: 'error', key: 'admin.accounts.privacyAntigravityFailed' placeholder
+  placeholder
+  return { type: 'error', key: 'admin.accounts.privacyFailed' placeholder
+placeholder
+
 const handleSetPrivacy = async (a: Account) => {
   try {
     const updated = await adminAPI.accounts.setPrivacy(a.id)
     patchAccountInList(updated)
     enterAutoRefreshSilentWindow()
-    appStore.showSuccess(t('common.success'))
+    const result = privacyResultMessageKey(updated)
+    if (result.type === 'success') {
+      appStore.showSuccess(t(result.key))
+    placeholder else {
+      appStore.showError(t(result.key))
+    placeholder
   placeholder catch (error: any) {
     console.error('Failed to set privacy:', error)
     appStore.showError(error?.response?.data?.message || t('admin.accounts.privacyFailed'))
