@@ -8441,13 +8441,15 @@ placeholder;
 const currentOrigin =
   typeof window !== "undefined" ? window.location.origin : "";
 
+function buildApiCallbackUrl(path: string): string {
+  const base = (form.api_base_url || currentOrigin).replace(/\/+$/, "");
+  const apiRoot = base.endsWith("/api/v1") ? base : `${baseplaceholder/api/v1`;
+  return `${apiRootplaceholder${path.startsWith("/") ? path : `/${pathplaceholder`placeholder`;
+placeholder
+
 // LinuxDo OAuth redirect URL suggestion
 const linuxdoRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocolplaceholder//${window.location.hostplaceholder`;
-  return `${originplaceholder/api/v1/auth/oauth/linuxdo/callback`;
+  return buildApiCallbackUrl("/auth/oauth/linuxdo/callback");
 placeholder);
 
 async function setAndCopyLinuxdoRedirectUrl() {
@@ -8464,19 +8466,11 @@ placeholder
 type EmailOAuthProvider = "github" | "google";
 
 const githubOAuthRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocolplaceholder//${window.location.hostplaceholder`;
-  return `${originplaceholder/api/v1/auth/oauth/github/callback`;
+  return buildApiCallbackUrl("/auth/oauth/github/callback");
 placeholder);
 
 const googleOAuthRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocolplaceholder//${window.location.hostplaceholder`;
-  return `${originplaceholder/api/v1/auth/oauth/google/callback`;
+  return buildApiCallbackUrl("/auth/oauth/google/callback");
 placeholder);
 
 async function setAndCopyEmailOAuthRedirectUrl(provider: EmailOAuthProvider) {
@@ -8498,11 +8492,7 @@ async function setAndCopyEmailOAuthRedirectUrl(provider: EmailOAuthProvider) {
 placeholder
 
 const wechatRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocolplaceholder//${window.location.hostplaceholder`;
-  return `${originplaceholder/api/v1/auth/oauth/wechat/callback`;
+  return buildApiCallbackUrl("/auth/oauth/wechat/callback");
 placeholder);
 
 function syncWeChatConnectMode(preferredMode?: WeChatConnectMode) {
@@ -8567,11 +8557,7 @@ async function setAndCopyWeChatRedirectUrl() {
 placeholder
 
 const oidcRedirectUrlSuggestion = computed(() => {
-  if (typeof window === "undefined") return "";
-  const origin =
-    window.location.origin ||
-    `${window.location.protocolplaceholder//${window.location.hostplaceholder`;
-  return `${originplaceholder/api/v1/auth/oauth/oidc/callback`;
+  return buildApiCallbackUrl("/auth/oauth/oidc/callback");
 placeholder);
 
 async function setAndCopyOIDCRedirectUrl() {
