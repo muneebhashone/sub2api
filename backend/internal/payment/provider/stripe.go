@@ -248,6 +248,50 @@ placeholder
 placeholder, nil
 placeholder
 
+// QueryRefund retrieves a Stripe refund by refund ID when available, otherwise
+// falls back to the latest refund for the PaymentIntent.
+func (s *Stripe) QueryRefund(ctx context.Context, req payment.RefundQueryRequest) (*payment.RefundResponse, error) {
+	s.ensureInit()
+
+	var r *stripe.Refund
+	var err error
+	if refundID := strings.TrimSpace(req.RefundID); refundID != "" {
+		r, err = s.sc.V1Refunds.Retrieve(ctx, refundID, nil)
+		if err != nil {
+			return nil, fmt.Errorf("stripe query refund: %w", err)
+	placeholder
+placeholder else {
+		tradeNo := strings.TrimSpace(req.TradeNo)
+		if tradeNo == "" {
+			return nil, fmt.Errorf("stripe query refund: missing payment intent id")
+	placeholder
+		params := &stripe.RefundListParams{PaymentIntent: stripe.String(tradeNo)placeholder
+		params.Limit = stripe.Int64(1)
+		list := s.sc.V1Refunds.List(ctx, params)
+		if list.Err() != nil {
+			return nil, fmt.Errorf("stripe query refund: %w", list.Err())
+	placeholder
+		refunds := list.Data()
+		if len(refunds) == 0 {
+			return nil, fmt.Errorf("stripe query refund: no refund found")
+	placeholder
+		r = refunds[0]
+placeholder
+
+	return &payment.RefundResponse{RefundID: r.ID, Status: stripeRefundProviderStatus(r.Status)placeholder, nil
+placeholder
+
+func stripeRefundProviderStatus(status stripe.RefundStatus) string {
+	switch status {
+	case stripe.RefundStatusSucceeded:
+		return payment.ProviderStatusSuccess
+	case stripe.RefundStatusFailed, stripe.RefundStatusCanceled:
+		return payment.ProviderStatusFailed
+	default:
+		return payment.ProviderStatusPending
+placeholder
+placeholder
+
 func stripeIntentCurrency(raw stripe.Currency, fallback string) string {
 	currency, err := payment.NormalizePaymentCurrency(string(raw))
 	if err != nil || currency == payment.DefaultPaymentCurrency && strings.TrimSpace(string(raw)) == "" {
