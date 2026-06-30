@@ -126,8 +126,8 @@ placeholder
  */
 export function validateIntervals(
   intervals: IntervalFormEntry[],
-  mode: BillingMode = 'token',
-  t?: TranslateFn,
+  mode: BillingMode,
+  t: TranslateFn,
 ): string | null {
   if (!intervals || intervals.length === 0) return null
 
@@ -145,26 +145,24 @@ export function validateIntervals(
 placeholder
 
 function intervalValidationMessage(
-  t: TranslateFn | undefined,
+  t: TranslateFn,
   key: string,
   params: Record<string, unknown>,
-  fallback: string,
 ): string {
-  return t ? t(`admin.channels.intervalValidation.${keyplaceholder`, params) : fallback
+  return t(`admin.channels.intervalValidation.${keyplaceholder`, params)
 placeholder
 
-function intervalPriceLabel(t: TranslateFn | undefined, key: string, fallback: string): string {
-  return t ? t(`admin.channels.intervalValidation.price.${keyplaceholder`) : fallback
+function intervalPriceLabel(t: TranslateFn, key: string): string {
+  return t(`admin.channels.intervalValidation.price.${keyplaceholder`)
 placeholder
 
-function validateSingleInterval(iv: IntervalFormEntry, idx: number, t?: TranslateFn): string | null {
+function validateSingleInterval(iv: IntervalFormEntry, idx: number, t: TranslateFn): string | null {
   const index = idx + 1
   if (iv.min_tokens < 0) {
     return intervalValidationMessage(
       t,
       'negativeMin',
       { index, value: iv.min_tokens placeholder,
-      `Interval #${indexplaceholder: minimum token count (${iv.min_tokensplaceholder) cannot be negative`,
     )
   placeholder
   if (iv.max_tokens != null) {
@@ -173,7 +171,6 @@ function validateSingleInterval(iv: IntervalFormEntry, idx: number, t?: Translat
         t,
         'maxPositive',
         { index, value: iv.max_tokens placeholder,
-        `Interval #${indexplaceholder: maximum token count (${iv.max_tokensplaceholder) must be greater than 0`,
       )
     placeholder
     if (iv.max_tokens <= iv.min_tokens) {
@@ -181,37 +178,35 @@ function validateSingleInterval(iv: IntervalFormEntry, idx: number, t?: Translat
         t,
         'maxGreaterThanMin',
         { index, max: iv.max_tokens, min: iv.min_tokens placeholder,
-        `Interval #${indexplaceholder: maximum token count (${iv.max_tokensplaceholder) must be greater than minimum token count (${iv.min_tokensplaceholder)`,
       )
     placeholder
   placeholder
   return validateIntervalPrices(iv, idx, t)
 placeholder
 
-function validateIntervalPrices(iv: IntervalFormEntry, idx: number, t?: TranslateFn): string | null {
+function validateIntervalPrices(iv: IntervalFormEntry, idx: number, t: TranslateFn): string | null {
   const index = idx + 1
-  const prices: [string, string, number | string | null][] = [
-    ['inputPrice', 'input price', iv.input_price],
-    ['outputPrice', 'output price', iv.output_price],
-    ['cacheWritePrice', 'cache write price', iv.cache_write_price],
-    ['cacheReadPrice', 'cache read price', iv.cache_read_price],
-    ['perRequestPrice', 'per-request price', iv.per_request_price],
+  const prices: [string, number | string | null][] = [
+    ['inputPrice', iv.input_price],
+    ['outputPrice', iv.output_price],
+    ['cacheWritePrice', iv.cache_write_price],
+    ['cacheReadPrice', iv.cache_read_price],
+    ['perRequestPrice', iv.per_request_price],
   ]
-  for (const [key, fallbackName, val] of prices) {
+  for (const [key, val] of prices) {
     if (val != null && val !== '' && Number(val) < 0) {
-      const field = intervalPriceLabel(t, key, fallbackName)
+      const field = intervalPriceLabel(t, key)
       return intervalValidationMessage(
         t,
         'negativePrice',
         { index, field placeholder,
-        `Interval #${indexplaceholder: ${fieldplaceholder cannot be negative`,
       )
     placeholder
   placeholder
   return null
 placeholder
 
-function checkIntervalOverlap(sorted: IntervalFormEntry[], t?: TranslateFn): string | null {
+function checkIntervalOverlap(sorted: IntervalFormEntry[], t: TranslateFn): string | null {
   for (let i = 0; i < sorted.length; i++) {
     // 无上限区间必须是最后一个
     if (sorted[i].max_tokens == null && i < sorted.length - 1) {
@@ -219,7 +214,6 @@ function checkIntervalOverlap(sorted: IntervalFormEntry[], t?: TranslateFn): str
         t,
         'unboundedLast',
         { index: i + 1 placeholder,
-        `Interval #${i + 1placeholder: an unbounded interval (empty maximum token count) must be last`,
       )
     placeholder
     if (i === 0) continue
@@ -231,7 +225,6 @@ function checkIntervalOverlap(sorted: IntervalFormEntry[], t?: TranslateFn): str
         t,
         'overlap',
         { previousIndex: i, currentIndex: i + 1, previousMax: prevMax, currentMin: sorted[i].min_tokens placeholder,
-        `Intervals #${iplaceholder and #${i + 1placeholder overlap: previous upper bound (${prevMaxplaceholder) is greater than current lower bound (${sorted[i].min_tokensplaceholder)`,
       )
     placeholder
   placeholder
