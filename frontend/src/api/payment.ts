@@ -16,6 +16,14 @@ import type {
 placeholder from '@/types/payment'
 import type { BasePaginationResponse placeholder from '@/types'
 
+export interface PublicOrderVerifyResult {
+  out_trade_no: string
+  status: string
+  paid: boolean
+  created_at: string
+  expires_at: string
+placeholder
+
 export const paymentAPI = {
   /** Get payment configuration (enabled types, limits, etc.) */
   getConfig() {
@@ -69,12 +77,12 @@ export const paymentAPI = {
 
   /** Legacy-compatible public order lookup by out_trade_no */
   verifyOrderPublic(outTradeNo: string) {
-    return apiClient.post<PaymentOrder>('/payment/public/orders/verify', { out_trade_no: outTradeNo placeholder)
+    return apiClient.post<PublicOrderVerifyResult>('/payment/public/orders/verify', { out_trade_no: outTradeNo placeholder)
   placeholder,
 
   /** Resolve an order from a signed resume token without auth */
   resolveOrderPublicByResumeToken(resumeToken: string) {
-    return apiClient.post<PaymentOrder>('/payment/public/orders/resolve', { resume_token: resumeToken placeholder)
+    return apiClient.post<PublicOrderVerifyResult>('/payment/public/orders/resolve', { resume_token: resumeToken placeholder)
   placeholder,
 
   /** Request a refund for a completed order */

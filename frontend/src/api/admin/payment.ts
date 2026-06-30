@@ -49,6 +49,14 @@ export interface UpdatePaymentConfigRequest {
   help_text?: string
 placeholder
 
+export interface RefundResult {
+  success: boolean
+  warning?: string
+  require_force?: boolean
+  balance_deducted?: number
+  subscription_days_deducted?: number
+placeholder
+
 export const adminPaymentAPI = {
   // ==================== Config ====================
 
@@ -105,7 +113,12 @@ export const adminPaymentAPI = {
 
   /** Process a refund */
   refundOrder(id: number, data: { amount: number; reason: string; deduct_balance?: boolean; force?: boolean placeholder) {
-    return apiClient.post(`/admin/payment/orders/${idplaceholder/refund`, data)
+    return apiClient.post<RefundResult>(`/admin/payment/orders/${idplaceholder/refund`, data)
+  placeholder,
+
+  /** Query and finalize a pending refund */
+  queryRefund(id: number) {
+    return apiClient.post<RefundResult>(`/admin/payment/orders/${idplaceholder/refund/query`)
   placeholder,
 
   // ==================== Channels ====================

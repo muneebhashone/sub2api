@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -471,24 +470,66 @@ placeholder
 placeholder
 	rs := refunddomestic.RefundsApiService{Client: cplaceholder
 	cur := wxpayCurrency
+	outRefundNo := wxpayRefundID(req.OrderID, req.Amount)
 	res, _, err := rs.Create(ctx, refunddomestic.CreateRequest{
 		OutTradeNo:  core.String(req.OrderID),
-		OutRefundNo: core.String(fmt.Sprintf("%s-refund-%d", req.OrderID, time.Now().UnixNano())),
+		OutRefundNo: core.String(outRefundNo),
 		Reason:      core.String(req.Reason),
 		Amount:      &refunddomestic.AmountReq{Refund: core.Int64(rf), Total: core.Int64(tf), Currency: &curplaceholder,
 placeholder)
 	if err != nil {
 		return nil, fmt.Errorf("wxpay refund: %w", err)
 placeholder
-	rid := wxSV(res.RefundId)
-	if rid == "" {
-		rid = fmt.Sprintf("%s-refund", req.OrderID)
-placeholder
 	st := payment.ProviderStatusPending
 	if res.Status != nil && *res.Status == refunddomestic.STATUS_SUCCESS {
 		st = payment.ProviderStatusSuccess
 placeholder
-	return &payment.RefundResponse{RefundID: rid, Status: stplaceholder, nil
+	return &payment.RefundResponse{RefundID: outRefundNo, Status: stplaceholder, nil
+placeholder
+
+func (w *Wxpay) QueryRefund(ctx context.Context, req payment.RefundQueryRequest) (*payment.RefundResponse, error) {
+	c, err := w.ensureClient()
+	if err != nil {
+		return nil, err
+placeholder
+	outRefundNo := strings.TrimSpace(req.RefundID)
+	if outRefundNo == "" {
+		outRefundNo = wxpayRefundID(req.OrderID, req.Amount)
+placeholder
+	if outRefundNo == "" {
+		return nil, fmt.Errorf("wxpay query refund: missing refund id")
+placeholder
+	rs := refunddomestic.RefundsApiService{Client: cplaceholder
+	res, _, err := rs.QueryByOutRefundNo(ctx, refunddomestic.QueryByOutRefundNoRequest{
+		OutRefundNo: core.String(outRefundNo),
+placeholder)
+	if err != nil {
+		return nil, fmt.Errorf("wxpay query refund: %w", err)
+placeholder
+	status := payment.ProviderStatusPending
+	if res != nil && res.Status != nil {
+		switch *res.Status {
+		case refunddomestic.STATUS_SUCCESS:
+			status = payment.ProviderStatusSuccess
+		case refunddomestic.STATUS_CLOSED, refunddomestic.STATUS_ABNORMAL:
+			status = payment.ProviderStatusFailed
+		default:
+			status = payment.ProviderStatusPending
+	placeholder
+placeholder
+	return &payment.RefundResponse{RefundID: outRefundNo, Status: statusplaceholder, nil
+placeholder
+
+func wxpayRefundID(orderID, amount string) string {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return ""
+placeholder
+	amount = strings.NewReplacer(".", "", "-", "").Replace(strings.TrimSpace(amount))
+	if amount == "" {
+		return orderID + "-refund"
+placeholder
+	return orderID + "-refund-" + amount
 placeholder
 
 func (w *Wxpay) queryOrderTotalFen(ctx context.Context, c *core.Client, orderID string) (int64, error) {
