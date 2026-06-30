@@ -1,10 +1,11 @@
-import { describe, expect, it, vi placeholder from 'vitest'
+import { beforeEach, describe, expect, it, vi placeholder from 'vitest'
 import { defineComponent placeholder from 'vue'
 import { mount placeholder from '@vue/test-utils'
 
-const { updateAccountMock, checkMixedChannelRiskMock placeholder = vi.hoisted(() => ({
+const { updateAccountMock, checkMixedChannelRiskMock, authIsSimpleMode placeholder = vi.hoisted(() => ({
   updateAccountMock: vi.fn(),
-  checkMixedChannelRiskMock: vi.fn()
+  checkMixedChannelRiskMock: vi.fn(),
+  authIsSimpleMode: { value: true placeholder
 placeholder))
 
 vi.mock('@/stores/app', () => ({
@@ -17,7 +18,9 @@ placeholder))
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
-    isSimpleMode: true
+    get isSimpleMode() {
+      return authIsSimpleMode.value
+    placeholder
   placeholder)
 placeholder))
 
@@ -115,6 +118,28 @@ const SelectStub = defineComponent({
   `
 placeholder)
 
+const GroupSelectorStub = defineComponent({
+  name: 'GroupSelector',
+  props: {
+    modelValue: {
+      type: Array,
+      default: () => []
+    placeholder
+  placeholder,
+  emits: ['update:modelValue'],
+  template: `
+    <div data-testid="group-selector">
+      <button
+        type="button"
+        data-testid="set-shadow-group"
+        @click="$emit('update:modelValue', [7])"
+      >
+        group
+      </button>
+    </div>
+  `
+placeholder)
+
 function buildAccount() {
   return {
     id: 1,
@@ -138,6 +163,30 @@ function buildAccount() {
     group_ids: [],
     expires_at: null,
     auto_pause_on_expired: false
+  placeholder as any
+placeholder
+
+function buildOpenAISparkShadowAccount() {
+  const account = buildAccount()
+  return {
+    ...account,
+    id: 4,
+    name: 'OpenAI Spark Shadow',
+    type: 'oauth',
+    parent_account_id: 1,
+    credentials: {
+      access_token: 'parent-access-token',
+      refresh_token: 'parent-refresh-token',
+      api_key: 'sk-parent',
+      base_url: 'https://api.openai.com',
+      model_mapping: {
+        'gpt-5.3-codex-spark': 'gpt-5.3-codex-spark'
+      placeholder,
+      compact_model_mapping: {
+        'gpt-5.3-codex-spark': 'gpt-5.3-codex-spark-compact'
+      placeholder
+    placeholder,
+    group_ids: []
   placeholder as any
 placeholder
 
@@ -206,7 +255,7 @@ function mountModal(account = buildAccount()) {
         Select: SelectStub,
         Icon: true,
         ProxySelector: true,
-        GroupSelector: true,
+        GroupSelector: GroupSelectorStub,
         ModelWhitelistSelector: ModelWhitelistSelectorStub
       placeholder
     placeholder
@@ -214,6 +263,10 @@ function mountModal(account = buildAccount()) {
 placeholder
 
 describe('EditAccountModal', () => {
+  beforeEach(() => {
+    authIsSimpleMode.value = true
+  placeholder)
+
   it('reopening the same account rehydrates the OpenAI whitelist from props', async () => {
     const account = buildAccount()
     updateAccountMock.mockReset()
@@ -290,6 +343,32 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.openai_compact_mode).toBe('force_on')
     expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.compact_model_mapping).toEqual({
       'gpt-5.4': 'gpt-5.4-openai-compact'
+    placeholder)
+  placeholder)
+
+  it('only submits model mapping credentials when saving an OpenAI spark shadow account', async () => {
+    authIsSimpleMode.value = false
+    const account = buildOpenAISparkShadowAccount()
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('[data-testid="set-shadow-group"]').trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    const payload = updateAccountMock.mock.calls[0]?.[1]
+    expect(payload?.group_ids).toEqual([7])
+    expect(payload?.credentials).toEqual({
+      model_mapping: {
+        'gpt-5.3-codex-spark': 'gpt-5.3-codex-spark'
+      placeholder,
+      compact_model_mapping: {
+        'gpt-5.3-codex-spark': 'gpt-5.3-codex-spark-compact'
+      placeholder
     placeholder)
   placeholder)
 

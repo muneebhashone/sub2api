@@ -45,7 +45,7 @@ placeholder
 	if r.account == nil || r.account.ID != id {
 		r.account = &Account{ID: idplaceholder
 placeholder
-	r.account.Credentials = cloneCredentials(credentials)
+	r.account.Credentials = shallowCopyMap(credentials)
 	return nil
 placeholder
 

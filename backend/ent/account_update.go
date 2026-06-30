@@ -530,6 +530,40 @@ func (_u *AccountUpdate) ClearSessionWindowStatus() *AccountUpdate {
 	return _u
 placeholder
 
+// SetParentAccountID sets the "parent_account_id" field.
+func (_u *AccountUpdate) SetParentAccountID(v int64) *AccountUpdate {
+	_u.mutation.SetParentAccountID(v)
+	return _u
+placeholder
+
+// SetNillableParentAccountID sets the "parent_account_id" field if the given value is not nil.
+func (_u *AccountUpdate) SetNillableParentAccountID(v *int64) *AccountUpdate {
+	if v != nil {
+		_u.SetParentAccountID(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearParentAccountID clears the value of the "parent_account_id" field.
+func (_u *AccountUpdate) ClearParentAccountID() *AccountUpdate {
+	_u.mutation.ClearParentAccountID()
+	return _u
+placeholder
+
+// SetQuotaDimension sets the "quota_dimension" field.
+func (_u *AccountUpdate) SetQuotaDimension(v account.QuotaDimension) *AccountUpdate {
+	_u.mutation.SetQuotaDimension(v)
+	return _u
+placeholder
+
+// SetNillableQuotaDimension sets the "quota_dimension" field if the given value is not nil.
+func (_u *AccountUpdate) SetNillableQuotaDimension(v *account.QuotaDimension) *AccountUpdate {
+	if v != nil {
+		_u.SetQuotaDimension(*v)
+placeholder
+	return _u
+placeholder
+
 // AddGroupIDs adds the "groups" edge to the Group entity by IDs.
 func (_u *AccountUpdate) AddGroupIDs(ids ...int64) *AccountUpdate {
 	_u.mutation.AddGroupIDs(ids...)
@@ -548,6 +582,40 @@ placeholder
 // SetProxy sets the "proxy" edge to the Proxy entity.
 func (_u *AccountUpdate) SetProxy(v *Proxy) *AccountUpdate {
 	return _u.SetProxyID(v.ID)
+placeholder
+
+// SetParentID sets the "parent" edge to the Account entity by ID.
+func (_u *AccountUpdate) SetParentID(id int64) *AccountUpdate {
+	_u.mutation.SetParentID(id)
+	return _u
+placeholder
+
+// SetNillableParentID sets the "parent" edge to the Account entity by ID if the given value is not nil.
+func (_u *AccountUpdate) SetNillableParentID(id *int64) *AccountUpdate {
+	if id != nil {
+		_u = _u.SetParentID(*id)
+placeholder
+	return _u
+placeholder
+
+// SetParent sets the "parent" edge to the Account entity.
+func (_u *AccountUpdate) SetParent(v *Account) *AccountUpdate {
+	return _u.SetParentID(v.ID)
+placeholder
+
+// AddChildIDs adds the "children" edge to the Account entity by IDs.
+func (_u *AccountUpdate) AddChildIDs(ids ...int64) *AccountUpdate {
+	_u.mutation.AddChildIDs(ids...)
+	return _u
+placeholder
+
+// AddChildren adds the "children" edges to the Account entity.
+func (_u *AccountUpdate) AddChildren(v ...*Account) *AccountUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.AddChildIDs(ids...)
 placeholder
 
 // AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by IDs.
@@ -595,6 +663,33 @@ placeholder
 func (_u *AccountUpdate) ClearProxy() *AccountUpdate {
 	_u.mutation.ClearProxy()
 	return _u
+placeholder
+
+// ClearParent clears the "parent" edge to the Account entity.
+func (_u *AccountUpdate) ClearParent() *AccountUpdate {
+	_u.mutation.ClearParent()
+	return _u
+placeholder
+
+// ClearChildren clears all "children" edges to the Account entity.
+func (_u *AccountUpdate) ClearChildren() *AccountUpdate {
+	_u.mutation.ClearChildren()
+	return _u
+placeholder
+
+// RemoveChildIDs removes the "children" edge to Account entities by IDs.
+func (_u *AccountUpdate) RemoveChildIDs(ids ...int64) *AccountUpdate {
+	_u.mutation.RemoveChildIDs(ids...)
+	return _u
+placeholder
+
+// RemoveChildren removes "children" edges to Account entities.
+func (_u *AccountUpdate) RemoveChildren(v ...*Account) *AccountUpdate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.RemoveChildIDs(ids...)
 placeholder
 
 // ClearUsageLogs clears all "usage_logs" edges to the UsageLog entity.
@@ -685,6 +780,11 @@ placeholder
 	if v, ok := _u.mutation.SessionWindowStatus(); ok {
 		if err := account.SessionWindowStatusValidator(v); err != nil {
 			return &ValidationError{Name: "session_window_status", err: fmt.Errorf(`ent: validator failed for field "Account.session_window_status": %w`, err)placeholder
+	placeholder
+placeholder
+	if v, ok := _u.mutation.QuotaDimension(); ok {
+		if err := account.QuotaDimensionValidator(v); err != nil {
+			return &ValidationError{Name: "quota_dimension", err: fmt.Errorf(`ent: validator failed for field "Account.quota_dimension": %w`, err)placeholder
 	placeholder
 placeholder
 	return nil
@@ -843,6 +943,9 @@ placeholder
 	if _u.mutation.SessionWindowStatusCleared() {
 		_spec.ClearField(account.FieldSessionWindowStatus, field.TypeString)
 placeholder
+	if value, ok := _u.mutation.QuotaDimension(); ok {
+		_spec.SetField(account.FieldQuotaDimension, field.TypeEnum, value)
+placeholder
 	if _u.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -922,6 +1025,80 @@ placeholder
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.ParentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   account.ParentTable,
+			Columns: []string{account.ParentColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   account.ParentTable,
+			Columns: []string{account.ParentColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.ChildrenTable,
+			Columns: []string{account.ChildrenColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.RemovedChildrenIDs(); len(nodes) > 0 && !_u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.ChildrenTable,
+			Columns: []string{account.ChildrenColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.ChildrenTable,
+			Columns: []string{account.ChildrenColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
 		placeholder,
 	placeholder
 		for _, k := range nodes {
@@ -1493,6 +1670,40 @@ func (_u *AccountUpdateOne) ClearSessionWindowStatus() *AccountUpdateOne {
 	return _u
 placeholder
 
+// SetParentAccountID sets the "parent_account_id" field.
+func (_u *AccountUpdateOne) SetParentAccountID(v int64) *AccountUpdateOne {
+	_u.mutation.SetParentAccountID(v)
+	return _u
+placeholder
+
+// SetNillableParentAccountID sets the "parent_account_id" field if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableParentAccountID(v *int64) *AccountUpdateOne {
+	if v != nil {
+		_u.SetParentAccountID(*v)
+placeholder
+	return _u
+placeholder
+
+// ClearParentAccountID clears the value of the "parent_account_id" field.
+func (_u *AccountUpdateOne) ClearParentAccountID() *AccountUpdateOne {
+	_u.mutation.ClearParentAccountID()
+	return _u
+placeholder
+
+// SetQuotaDimension sets the "quota_dimension" field.
+func (_u *AccountUpdateOne) SetQuotaDimension(v account.QuotaDimension) *AccountUpdateOne {
+	_u.mutation.SetQuotaDimension(v)
+	return _u
+placeholder
+
+// SetNillableQuotaDimension sets the "quota_dimension" field if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableQuotaDimension(v *account.QuotaDimension) *AccountUpdateOne {
+	if v != nil {
+		_u.SetQuotaDimension(*v)
+placeholder
+	return _u
+placeholder
+
 // AddGroupIDs adds the "groups" edge to the Group entity by IDs.
 func (_u *AccountUpdateOne) AddGroupIDs(ids ...int64) *AccountUpdateOne {
 	_u.mutation.AddGroupIDs(ids...)
@@ -1511,6 +1722,40 @@ placeholder
 // SetProxy sets the "proxy" edge to the Proxy entity.
 func (_u *AccountUpdateOne) SetProxy(v *Proxy) *AccountUpdateOne {
 	return _u.SetProxyID(v.ID)
+placeholder
+
+// SetParentID sets the "parent" edge to the Account entity by ID.
+func (_u *AccountUpdateOne) SetParentID(id int64) *AccountUpdateOne {
+	_u.mutation.SetParentID(id)
+	return _u
+placeholder
+
+// SetNillableParentID sets the "parent" edge to the Account entity by ID if the given value is not nil.
+func (_u *AccountUpdateOne) SetNillableParentID(id *int64) *AccountUpdateOne {
+	if id != nil {
+		_u = _u.SetParentID(*id)
+placeholder
+	return _u
+placeholder
+
+// SetParent sets the "parent" edge to the Account entity.
+func (_u *AccountUpdateOne) SetParent(v *Account) *AccountUpdateOne {
+	return _u.SetParentID(v.ID)
+placeholder
+
+// AddChildIDs adds the "children" edge to the Account entity by IDs.
+func (_u *AccountUpdateOne) AddChildIDs(ids ...int64) *AccountUpdateOne {
+	_u.mutation.AddChildIDs(ids...)
+	return _u
+placeholder
+
+// AddChildren adds the "children" edges to the Account entity.
+func (_u *AccountUpdateOne) AddChildren(v ...*Account) *AccountUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.AddChildIDs(ids...)
 placeholder
 
 // AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by IDs.
@@ -1558,6 +1803,33 @@ placeholder
 func (_u *AccountUpdateOne) ClearProxy() *AccountUpdateOne {
 	_u.mutation.ClearProxy()
 	return _u
+placeholder
+
+// ClearParent clears the "parent" edge to the Account entity.
+func (_u *AccountUpdateOne) ClearParent() *AccountUpdateOne {
+	_u.mutation.ClearParent()
+	return _u
+placeholder
+
+// ClearChildren clears all "children" edges to the Account entity.
+func (_u *AccountUpdateOne) ClearChildren() *AccountUpdateOne {
+	_u.mutation.ClearChildren()
+	return _u
+placeholder
+
+// RemoveChildIDs removes the "children" edge to Account entities by IDs.
+func (_u *AccountUpdateOne) RemoveChildIDs(ids ...int64) *AccountUpdateOne {
+	_u.mutation.RemoveChildIDs(ids...)
+	return _u
+placeholder
+
+// RemoveChildren removes "children" edges to Account entities.
+func (_u *AccountUpdateOne) RemoveChildren(v ...*Account) *AccountUpdateOne {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+placeholder
+	return _u.RemoveChildIDs(ids...)
 placeholder
 
 // ClearUsageLogs clears all "usage_logs" edges to the UsageLog entity.
@@ -1661,6 +1933,11 @@ placeholder
 	if v, ok := _u.mutation.SessionWindowStatus(); ok {
 		if err := account.SessionWindowStatusValidator(v); err != nil {
 			return &ValidationError{Name: "session_window_status", err: fmt.Errorf(`ent: validator failed for field "Account.session_window_status": %w`, err)placeholder
+	placeholder
+placeholder
+	if v, ok := _u.mutation.QuotaDimension(); ok {
+		if err := account.QuotaDimensionValidator(v); err != nil {
+			return &ValidationError{Name: "quota_dimension", err: fmt.Errorf(`ent: validator failed for field "Account.quota_dimension": %w`, err)placeholder
 	placeholder
 placeholder
 	return nil
@@ -1836,6 +2113,9 @@ placeholder
 	if _u.mutation.SessionWindowStatusCleared() {
 		_spec.ClearField(account.FieldSessionWindowStatus, field.TypeString)
 placeholder
+	if value, ok := _u.mutation.QuotaDimension(); ok {
+		_spec.SetField(account.FieldQuotaDimension, field.TypeEnum, value)
+placeholder
 	if _u.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
@@ -1915,6 +2195,80 @@ placeholder
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(proxy.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.ParentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   account.ParentTable,
+			Columns: []string{account.ParentColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   account.ParentTable,
+			Columns: []string{account.ParentColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+placeholder
+	if _u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.ChildrenTable,
+			Columns: []string{account.ChildrenColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.RemovedChildrenIDs(); len(nodes) > 0 && !_u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.ChildrenTable,
+			Columns: []string{account.ChildrenColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
+		placeholder,
+	placeholder
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+	placeholder
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+placeholder
+	if nodes := _u.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.ChildrenTable,
+			Columns: []string{account.ChildrenColumnplaceholder,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeInt64),
 		placeholder,
 	placeholder
 		for _, k := range nodes {
