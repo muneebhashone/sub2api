@@ -31,7 +31,7 @@
           <span class="font-bold">{{ userRateMultiplier placeholderplaceholderx</span>
         </template>
         <template v-else>
-          {{ rateMultiplier placeholderplaceholderx 倍率
+          {{ rateMultiplier placeholderplaceholderx {{ t('admin.groups.rateLabel') placeholderplaceholder
         </template>
       </span>
       <!-- Checkmark -->
@@ -51,8 +51,11 @@
 
 <script setup lang="ts">
 import { computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import GroupBadge from './GroupBadge.vue'
 import type { SubscriptionType, GroupPlatform placeholder from '@/types'
+
+const { t placeholder = useI18n()
 
 interface Props {
   name: string

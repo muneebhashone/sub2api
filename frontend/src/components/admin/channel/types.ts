@@ -143,14 +143,14 @@ placeholder
 
 function validateSingleInterval(iv: IntervalFormEntry, idx: number): string | null {
   if (iv.min_tokens < 0) {
-    return `区间 #${idx + 1placeholder: 最小 token 数 (${iv.min_tokensplaceholder) 不能为负数`
+    return `Interval #${idx + 1placeholder: minimum token count (${iv.min_tokensplaceholder) cannot be negative`
   placeholder
   if (iv.max_tokens != null) {
     if (iv.max_tokens <= 0) {
-      return `区间 #${idx + 1placeholder: 最大 token 数 (${iv.max_tokensplaceholder) 必须大于 0`
+      return `Interval #${idx + 1placeholder: maximum token count (${iv.max_tokensplaceholder) must be greater than 0`
     placeholder
     if (iv.max_tokens <= iv.min_tokens) {
-      return `区间 #${idx + 1placeholder: 最大 token 数 (${iv.max_tokensplaceholder) 必须大于最小 token 数 (${iv.min_tokensplaceholder)`
+      return `Interval #${idx + 1placeholder: maximum token count (${iv.max_tokensplaceholder) must be greater than minimum token count (${iv.min_tokensplaceholder)`
     placeholder
   placeholder
   return validateIntervalPrices(iv, idx)
@@ -158,15 +158,15 @@ placeholder
 
 function validateIntervalPrices(iv: IntervalFormEntry, idx: number): string | null {
   const prices: [string, number | string | null][] = [
-    ['输入价格', iv.input_price],
-    ['输出价格', iv.output_price],
-    ['缓存写入价格', iv.cache_write_price],
-    ['缓存读取价格', iv.cache_read_price],
-    ['单次价格', iv.per_request_price],
+    ['input price', iv.input_price],
+    ['output price', iv.output_price],
+    ['cache write price', iv.cache_write_price],
+    ['cache read price', iv.cache_read_price],
+    ['per-request price', iv.per_request_price],
   ]
   for (const [name, val] of prices) {
     if (val != null && val !== '' && Number(val) < 0) {
-      return `区间 #${idx + 1placeholder: ${nameplaceholder不能为负数`
+      return `Interval #${idx + 1placeholder: ${nameplaceholder cannot be negative`
     placeholder
   placeholder
   return null
@@ -176,14 +176,14 @@ function checkIntervalOverlap(sorted: IntervalFormEntry[]): string | null {
   for (let i = 0; i < sorted.length; i++) {
     // 无上限区间必须是最后一个
     if (sorted[i].max_tokens == null && i < sorted.length - 1) {
-      return `区间 #${i + 1placeholder: 无上限区间（最大 token 数为空）只能是最后一个`
+      return `Interval #${i + 1placeholder: an unbounded interval (empty maximum token count) must be last`
     placeholder
     if (i === 0) continue
     const prev = sorted[i - 1]
     // (min, max] 语义：前一个区间上界 > 当前区间下界则重叠
     if (prev.max_tokens == null || prev.max_tokens > sorted[i].min_tokens) {
       const prevMax = prev.max_tokens == null ? '∞' : String(prev.max_tokens)
-      return `区间 #${iplaceholder 和 #${i + 1placeholder 重叠：前一个区间上界 (${prevMaxplaceholder) 大于当前区间下界 (${sorted[i].min_tokensplaceholder)`
+      return `Intervals #${iplaceholder and #${i + 1placeholder overlap: previous upper bound (${prevMaxplaceholder) is greater than current lower bound (${sorted[i].min_tokensplaceholder)`
     placeholder
   placeholder
   return null
