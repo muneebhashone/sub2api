@@ -10,6 +10,7 @@ import (
 
 var codexModelMap = map[string]string{
 	"gpt-5.5":                    "gpt-5.5",
+	"gpt-5.5-pro":                "gpt-5.5-pro",
 	"codex-auto-review":          "codex-auto-review",
 	"gpt-5.4":                    "gpt-5.4",
 	"gpt-5.4-mini":               "gpt-5.4-mini",
@@ -61,6 +62,7 @@ placeholder{
 	{prefix: "gpt-5.3-codex", target: "gpt-5.3-codex"placeholder,
 	{prefix: "gpt-5.4-mini", target: "gpt-5.4-mini"placeholder,
 	{prefix: "gpt-5.4-nano", target: "gpt-5.4-nano"placeholder,
+	{prefix: "gpt-5.5-pro", target: "gpt-5.5-pro"placeholder,
 	{prefix: "gpt-5.5", target: "gpt-5.5"placeholder,
 	{prefix: "gpt-5.4", target: "gpt-5.4"placeholder,
 	{prefix: "gpt-5.2", target: "gpt-5.2"placeholder,
