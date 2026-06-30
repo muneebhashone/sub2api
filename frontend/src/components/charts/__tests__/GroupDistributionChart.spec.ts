@@ -10,6 +10,7 @@ const messages: Record<string, string> = {
   'admin.dashboard.requests': 'Requests',
   'admin.dashboard.tokens': 'Tokens',
   'admin.dashboard.actual': 'Actual',
+  'admin.dashboard.accountCost': 'Account Cost',
   'admin.dashboard.standard': 'Standard',
   'admin.dashboard.metricTokens': 'By Tokens',
   'admin.dashboard.metricActualCost': 'By Actual Cost',
@@ -110,5 +111,23 @@ describe('GroupDistributionChart', () => {
       dataset: { data: [0.9, 0.1] placeholder,
     placeholder)
     expect(label).toBe('group-b: $0.900 (90.0%)')
+  placeholder)
+
+  it('can hide account cost for user usage stats without account_cost', () => {
+    const wrapper = mount(GroupDistributionChart, {
+      props: {
+        groupStats,
+        showAccountCost: false,
+      placeholder,
+      global: {
+        stubs: {
+          LoadingSpinner: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.text()).not.toContain('Account Cost')
+    expect(wrapper.findAll('thead th')).toHaveLength(5)
+    expect(wrapper.findAll('tbody tr')[0].findAll('td')).toHaveLength(5)
   placeholder)
 placeholder)
