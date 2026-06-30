@@ -4,32 +4,32 @@
     <!-- Token mode: context range + prices ($/MTok) -->
     <template v-if="mode === 'token'">
       <div class="w-20">
-        <label class="text-xs text-gray-400">Min</label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.minTokens') placeholderplaceholder</label>
         <input :value="interval.min_tokens" @input="emitField('min_tokens', toInt(($event.target as HTMLInputElement).value))"
           type="number" min="0" class="input mt-0.5 text-xs" />
       </div>
       <div class="w-20">
-        <label class="text-xs text-gray-400">Max <span class="text-gray-300">(inclusive)</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.maxTokens') placeholderplaceholder <span class="text-gray-300">{{ t('admin.channels.form.inclusive') placeholderplaceholder</span></label>
         <input :value="interval.max_tokens ?? ''" @input="emitField('max_tokens', toIntOrNull(($event.target as HTMLInputElement).value))"
           type="number" min="0" class="input mt-0.5 text-xs" :placeholder="'∞'" />
       </div>
       <div class="flex-1">
-        <label class="text-xs text-gray-400">{{ t('admin.channels.form.inputPrice', 'Input') placeholderplaceholder <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$/M</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.inputPrice') placeholderplaceholder <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$/M</span></label>
         <input :value="interval.input_price" @input="emitField('input_price', ($event.target as HTMLInputElement).value)"
           type="number" step="any" min="0" class="input mt-0.5 text-xs" />
       </div>
       <div class="flex-1">
-        <label class="text-xs text-gray-400">{{ t('admin.channels.form.outputPrice', 'Output') placeholderplaceholder <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$/M</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.outputPrice') placeholderplaceholder <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$/M</span></label>
         <input :value="interval.output_price" @input="emitField('output_price', ($event.target as HTMLInputElement).value)"
           type="number" step="any" min="0" class="input mt-0.5 text-xs" />
       </div>
       <div class="flex-1">
-        <label class="text-xs text-gray-400">{{ t('admin.channels.form.cacheWritePrice', 'Cache W') placeholderplaceholder <span class="text-gray-300">$/M</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.cacheWritePriceShort') placeholderplaceholder <span class="text-gray-300">$/M</span></label>
         <input :value="interval.cache_write_price" @input="emitField('cache_write_price', ($event.target as HTMLInputElement).value)"
           type="number" step="any" min="0" class="input mt-0.5 text-xs" />
       </div>
       <div class="flex-1">
-        <label class="text-xs text-gray-400">{{ t('admin.channels.form.cacheReadPrice', 'Cache R') placeholderplaceholder <span class="text-gray-300">$/M</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.cacheReadPriceShort') placeholderplaceholder <span class="text-gray-300">$/M</span></label>
         <input :value="interval.cache_read_price" @input="emitField('cache_read_price', ($event.target as HTMLInputElement).value)"
           type="number" step="any" min="0" class="input mt-0.5 text-xs" />
       </div>
@@ -39,23 +39,23 @@
     <template v-else>
       <div class="w-24">
         <label class="text-xs text-gray-400">
-          {{ mode === 'image' ? t('admin.channels.form.resolution', 'Resolution') : t('admin.channels.form.tierLabel', 'Tier') placeholderplaceholder
+          {{ mode === 'image' ? t('admin.channels.form.resolution') : t('admin.channels.form.tierLabel') placeholderplaceholder
         </label>
         <input :value="interval.tier_label" @input="emitField('tier_label', ($event.target as HTMLInputElement).value)"
           type="text" class="input mt-0.5 text-xs" :placeholder="mode === 'image' ? '1K / 2K / 4K' : ''" />
       </div>
       <div class="w-20">
-        <label class="text-xs text-gray-400">Min</label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.minTokens') placeholderplaceholder</label>
         <input :value="interval.min_tokens" @input="emitField('min_tokens', toInt(($event.target as HTMLInputElement).value))"
           type="number" min="0" class="input mt-0.5 text-xs" />
       </div>
       <div class="w-20">
-        <label class="text-xs text-gray-400">Max <span class="text-gray-300">(inclusive)</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.maxTokens') placeholderplaceholder <span class="text-gray-300">{{ t('admin.channels.form.inclusive') placeholderplaceholder</span></label>
         <input :value="interval.max_tokens ?? ''" @input="emitField('max_tokens', toIntOrNull(($event.target as HTMLInputElement).value))"
           type="number" min="0" class="input mt-0.5 text-xs" :placeholder="'∞'" />
       </div>
       <div class="flex-1">
-        <label class="text-xs text-gray-400">{{ t('admin.channels.form.perRequestPrice', 'Price per Request') placeholderplaceholder <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$</span></label>
+        <label class="text-xs text-gray-400">{{ t('admin.channels.form.perRequestPrice') placeholderplaceholder <span v-if="isEmpty" class="text-red-500">*</span> <span class="text-gray-300">$</span></label>
         <input :value="interval.per_request_price" @input="emitField('per_request_price', ($event.target as HTMLInputElement).value)"
           type="number" step="any" min="0" class="input mt-0.5 text-xs" />
       </div>
