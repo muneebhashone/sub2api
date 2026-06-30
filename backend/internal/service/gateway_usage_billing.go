@@ -100,10 +100,19 @@ placeholder
 // 后扣运行在 worker 池的 background ctx 上没有 ForcePlatform，因此后扣平台由 handler
 // 预先算定、经 RecordUsageInput.QuotaPlatform 传入，不要在后扣链路用 worker ctx 调用本函数。
 func QuotaPlatform(ctx context.Context, apiKey *APIKey) string {
-	if fp, ok := ctx.Value(ctxkey.ForcePlatform).(string); ok && fp != "" {
-		return fp
+	if ctx != nil {
+		if fp, ok := ctx.Value(ctxkey.ForcePlatform).(string); ok && fp != "" {
+			return fp
+	placeholder
 placeholder
-	return PlatformFromAPIKey(apiKey)
+	if platform, ok := ResolvedTargetPlatformFromContext(ctx); ok {
+		return platform
+placeholder
+	platform := PlatformFromAPIKey(apiKey)
+	if platform == PlatformComposite {
+		return ""
+placeholder
+	return platform
 placeholder
 
 func (p *postUsageBillingParams) shouldDeductAPIKeyQuota() bool {
@@ -733,6 +742,9 @@ placeholder
 	quotaPlatform := input.QuotaPlatform
 	if quotaPlatform == "" {
 		quotaPlatform = PlatformFromAPIKey(apiKey)
+		if quotaPlatform == PlatformComposite && account != nil {
+			quotaPlatform = account.Platform
+	placeholder
 placeholder
 	requestID := usageLog.RequestID
 	_, billingErr := applyUsageBilling(ctx, requestID, usageLog, &postUsageBillingParams{

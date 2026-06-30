@@ -75,6 +75,7 @@ placeholder
 		return
 placeholder
 	reqModel := modelResult.String()
+	ensureCompositeTargetPlatform(c, apiKey, reqModel)
 	reqStream, ok := parseOpenAICompatibleStream(body)
 	if !ok {
 		h.chatCompletionsErrorResponse(c, http.StatusBadRequest, "invalid_request_error", invalidStreamFieldTypeMessage)
@@ -147,10 +148,7 @@ placeholder
 		APIKeyID:  apiKey.ID,
 placeholder
 	sessionHash := h.gatewayService.GenerateSessionHash(parsedReq)
-	groupPlatform := ""
-	if apiKey.Group != nil {
-		groupPlatform = apiKey.Group.Platform
-placeholder
+	groupPlatform := effectiveAPIKeyPlatform(c, apiKey)
 	selectionSessionHash := sessionHash
 	if groupPlatform == service.PlatformGemini && selectionSessionHash != "" {
 		selectionSessionHash = "gemini:" + selectionSessionHash

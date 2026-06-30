@@ -75,6 +75,7 @@ placeholder
 		return
 placeholder
 	reqModel := modelResult.String()
+	ensureCompositeTargetPlatform(c, apiKey, reqModel)
 	reqStream, ok := parseOpenAICompatibleStream(body)
 	if !ok {
 		h.responsesErrorResponse(c, http.StatusBadRequest, "invalid_request_error", invalidStreamFieldTypeMessage)
@@ -85,7 +86,7 @@ placeholder
 	setOpsRequestContext(c, reqModel, reqStream)
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(reqStream, false)))
 	requestCtx := c.Request.Context()
-	if service.IsImageGenerationIntentForPlatform("/v1/responses", reqModel, body, openAICompatibleRequestPlatform(apiKey)) {
+	if service.IsImageGenerationIntentForPlatform("/v1/responses", reqModel, body, openAICompatibleRequestPlatform(c.Request.Context(), apiKey)) {
 		requestCtx = service.WithOpenAIImageGenerationIntent(requestCtx)
 placeholder
 
@@ -163,7 +164,7 @@ placeholder
 		selection, err := h.gatewayService.SelectAccountWithLoadAwareness(requestCtx, apiKey.GroupID, sessionHash, reqModel, fs.FailedAccountIDs, "", int64(0))
 		if err != nil {
 			if len(fs.FailedAccountIDs) == 0 {
-				cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, reqModel, reqModel, service.PlatformAnthropic)
+				cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, reqModel, reqModel, effectiveAPIKeyPlatform(c, apiKey))
 				if !cls.ModelNotFound {
 					markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
 			placeholder
