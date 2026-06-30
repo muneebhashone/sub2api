@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	coderws "github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -39,12 +41,13 @@ func TestOpenAIWSHTTPBridgeDecisionKeepsSmallFramesOnWS(t *testing.T) {
 	placeholder,
 placeholder
 
-	require.False(t, svc.shouldBridgeOpenAIWSHTTP(99, ""))
-	require.True(t, svc.shouldBridgeOpenAIWSHTTP(100, ""))
-	require.False(t, svc.shouldBridgeOpenAIWSHTTP(1000, "resp_existing"))
+	require.False(t, svc.shouldBridgeOpenAIWSHTTP(nil, 99, ""))
+	require.True(t, svc.shouldBridgeOpenAIWSHTTP(nil, 100, ""))
+	require.False(t, svc.shouldBridgeOpenAIWSHTTP(nil, 1000, "resp_existing"))
 
 	svc.cfg.Gateway.OpenAIWS.HTTPBridgeEnabled = false
-	require.False(t, svc.shouldBridgeOpenAIWSHTTP(1000, ""))
+	require.False(t, svc.shouldBridgeOpenAIWSHTTP(nil, 1000, ""))
+	require.True(t, svc.shouldBridgeOpenAIWSHTTP(&Account{Platform: PlatformGrokplaceholder, 1, "resp_existing"))
 placeholder
 
 func TestOpenAIWSHTTPBridgeRelaysSSEFramesAsWebSocketMessages(t *testing.T) {
@@ -171,6 +174,119 @@ placeholder
 	require.False(t, gjson.GetBytes(upstream.lastBody, "type").Exists())
 	require.False(t, gjson.GetBytes(upstream.lastBody, "generate").Exists())
 	require.True(t, gjson.GetBytes(upstream.lastBody, "stream").Bool())
+placeholder
+
+func TestProxyResponsesWebSocketFromClientForGrokUsesXAIHTTPBridge(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	sseBody := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_grok_ws","model":"grok-4.3"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.output_text.delta","response":{"id":"resp_grok_ws"placeholder,"delta":"ok"placeholder`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_grok_ws","model":"grok-4.3","usage":{"input_tokens":4,"output_tokens":2placeholderplaceholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":   []string{"text/event-stream"placeholder,
+			"Xai-Request-Id": []string{"xai-ws-req"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(sseBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg: &config.Config{
+			Gateway: config.GatewayConfig{
+				MaxLineSize: defaultMaxLineSize,
+		placeholder,
+	placeholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID:          71,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+		Status:      StatusActive,
+placeholder
+			"base_url": xai.DefaultCLIBaseURL,
+	placeholder,
+placeholder
+
+	errCh := make(chan error, 1)
+	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := coderws.Accept(w, r, &coderws.AcceptOptions{CompressionMode: coderws.CompressionContextTakeoverplaceholder)
+		if err != nil {
+			errCh <- err
+			return
+	placeholder
+		defer func() { _ = conn.CloseNow() placeholder()
+
+		readCtx, cancelRead := context.WithTimeout(r.Context(), 3*time.Second)
+		msgType, firstMessage, err := conn.Read(readCtx)
+		cancelRead()
+		if err != nil {
+			errCh <- err
+			return
+	placeholder
+		if msgType != coderws.MessageText {
+			errCh <- errors.New("first message was not text")
+			return
+	placeholder
+
+		rec := httptest.NewRecorder()
+		ginCtx, _ := gin.CreateTestContext(rec)
+		req := r.Clone(r.Context())
+		req.Header = req.Header.Clone()
+		ginCtx.Request = req
+
+		errCh <- svc.ProxyResponsesWebSocketFromClient(r.Context(), ginCtx, conn, account, "access-token", firstMessage, nil)
+placeholder))
+	defer wsServer.Close()
+
+	dialCtx, cancelDial := context.WithTimeout(context.Background(), 3*time.Second)
+	clientConn, _, err := coderws.Dial(dialCtx, "ws"+strings.TrimPrefix(wsServer.URL, "http"), nil)
+	cancelDial()
+placeholder
+
+	writeCtx, cancelWrite := context.WithTimeout(context.Background(), 3*time.Second)
+	err = clientConn.Write(writeCtx, coderws.MessageText, []byte(`{"type":"response.create","generate":true,"model":"grok","stream":true,"input":"hi","prompt_cache_retention":"24h"placeholder`))
+	cancelWrite()
+placeholder
+
+	readEvent := func() []byte {
+		readCtx, cancelRead := context.WithTimeout(context.Background(), 3*time.Second)
+		msgType, event, readErr := clientConn.Read(readCtx)
+		cancelRead()
+		require.NoError(t, readErr)
+		require.Equal(t, coderws.MessageText, msgType)
+		return event
+placeholder
+
+	created := readEvent()
+	delta := readEvent()
+	completed := readEvent()
+	require.Equal(t, "response.created", gjson.GetBytes(created, "type").String())
+	require.Equal(t, "response.output_text.delta", gjson.GetBytes(delta, "type").String())
+	require.Equal(t, "response.completed", gjson.GetBytes(completed, "type").String())
+
+	_ = clientConn.Close(coderws.StatusNormalClosure, "done")
+	select {
+	case proxyErr := <-errCh:
+		require.NoError(t, proxyErr)
+	case <-time.After(3 * time.Second):
+		require.Fail(t, "proxy did not finish after client close")
+placeholder
+
+	require.Equal(t, xai.DefaultCLIBaseURL+"/responses", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer access-token", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "sub2api-grok/1.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "grok-4.3", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "type").Exists())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "generate").Exists())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "prompt_cache_retention").Exists())
 placeholder
 
 func TestOpenAIWSHTTPBridgeAcceptsFirstFrameAboveLegacy16MiB(t *testing.T) {
