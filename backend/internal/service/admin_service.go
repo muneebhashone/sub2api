@@ -209,11 +209,16 @@ type CreateGroupInput struct {
 	AllowImageGeneration bool
 	ImageRateIndependent bool
 	ImageRateMultiplier  *float64
-	ImagePrice1K         *float64
-	ImagePrice2K         *float64
-	ImagePrice4K         *float64
-	ClaudeCodeOnly       bool   // 仅允许 Claude Code 客户端
-	FallbackGroupID      *int64 // 降级分组 ID
+	// 高峰时段倍率配置（PeakRateMultiplier 为 nil 时按 1.0 处理）
+	PeakRateEnabled    bool
+	PeakStart          string
+	PeakEnd            string
+	PeakRateMultiplier *float64
+	ImagePrice1K       *float64
+	ImagePrice2K       *float64
+	ImagePrice4K       *float64
+	ClaudeCodeOnly     bool   // 仅允许 Claude Code 客户端
+	FallbackGroupID    *int64 // 降级分组 ID
 	// 无效请求兜底分组 ID（仅 anthropic 平台使用）
 	FallbackGroupIDOnInvalidRequest *int64
 	// 模型路由配置（仅 anthropic 平台使用）
@@ -250,11 +255,16 @@ type UpdateGroupInput struct {
 	AllowImageGeneration *bool
 	ImageRateIndependent *bool
 	ImageRateMultiplier  *float64
-	ImagePrice1K         *float64
-	ImagePrice2K         *float64
-	ImagePrice4K         *float64
-	ClaudeCodeOnly       *bool  // 仅允许 Claude Code 客户端
-	FallbackGroupID      *int64 // 降级分组 ID
+	// 高峰时段倍率配置（nil 表示不修改）
+	PeakRateEnabled    *bool
+	PeakStart          *string
+	PeakEnd            *string
+	PeakRateMultiplier *float64
+	ImagePrice1K       *float64
+	ImagePrice2K       *float64
+	ImagePrice4K       *float64
+	ClaudeCodeOnly     *bool  // 仅允许 Claude Code 客户端
+	FallbackGroupID    *int64 // 降级分组 ID
 	// 无效请求兜底分组 ID（仅 anthropic 平台使用）
 	FallbackGroupIDOnInvalidRequest *int64
 	// 模型路由配置（仅 anthropic 平台使用）
@@ -1824,6 +1834,14 @@ placeholder
 		imageRateMultiplier = *input.ImageRateMultiplier
 placeholder
 
+	peakRateMultiplier := 1.0
+	if input.PeakRateMultiplier != nil {
+		peakRateMultiplier = *input.PeakRateMultiplier
+placeholder
+	if err := ValidatePeakRateConfig(subscriptionType, input.PeakRateEnabled, input.PeakStart, input.PeakEnd, peakRateMultiplier); err != nil {
+		return nil, err
+placeholder
+
 	// 校验降级分组
 	if input.FallbackGroupID != nil {
 		if err := s.validateFallbackGroup(ctx, 0, *input.FallbackGroupID); err != nil {
@@ -1893,6 +1911,10 @@ placeholder
 		AllowImageGeneration:            input.AllowImageGeneration,
 		ImageRateIndependent:            input.ImageRateIndependent,
 		ImageRateMultiplier:             imageRateMultiplier,
+		PeakRateEnabled:                 input.PeakRateEnabled,
+		PeakStart:                       input.PeakStart,
+		PeakEnd:                         input.PeakEnd,
+		PeakRateMultiplier:              peakRateMultiplier,
 		ImagePrice1K:                    imagePrice1K,
 		ImagePrice2K:                    imagePrice2K,
 		ImagePrice4K:                    imagePrice4K,
@@ -2081,6 +2103,23 @@ placeholder
 			return nil, errors.New("image_rate_multiplier must be >= 0")
 	placeholder
 		group.ImageRateMultiplier = *input.ImageRateMultiplier
+placeholder
+	if input.PeakRateEnabled != nil {
+		group.PeakRateEnabled = *input.PeakRateEnabled
+placeholder
+	if input.PeakStart != nil {
+		group.PeakStart = *input.PeakStart
+placeholder
+	if input.PeakEnd != nil {
+		group.PeakEnd = *input.PeakEnd
+placeholder
+	if input.PeakRateMultiplier != nil {
+		group.PeakRateMultiplier = *input.PeakRateMultiplier
+placeholder
+	// 收敛校验：Update 可能只传部分 peak 字段，需对合并后的最终配置统一校验，
+	// 防止单独修改 start/end 导致最终 start>=end 等非法配置入库。
+	if err := ValidatePeakRateConfig(group.SubscriptionType, group.PeakRateEnabled, group.PeakStart, group.PeakEnd, group.PeakRateMultiplier); err != nil {
+		return nil, err
 placeholder
 	if input.ImagePrice1K != nil {
 		group.ImagePrice1K = normalizePrice(input.ImagePrice1K)

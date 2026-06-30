@@ -85,6 +85,26 @@ func RateMultiplier(v float64) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldRateMultiplier, v))
 placeholder
 
+// PeakRateEnabled applies equality check predicate on the "peak_rate_enabled" field. It's identical to PeakRateEnabledEQ.
+func PeakRateEnabled(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakRateEnabled, v))
+placeholder
+
+// PeakStart applies equality check predicate on the "peak_start" field. It's identical to PeakStartEQ.
+func PeakStart(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakStart, v))
+placeholder
+
+// PeakEnd applies equality check predicate on the "peak_end" field. It's identical to PeakEndEQ.
+func PeakEnd(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakEnd, v))
+placeholder
+
+// PeakRateMultiplier applies equality check predicate on the "peak_rate_multiplier" field. It's identical to PeakRateMultiplierEQ.
+func PeakRateMultiplier(v float64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakRateMultiplier, v))
+placeholder
+
 // IsExclusive applies equality check predicate on the "is_exclusive" field. It's identical to IsExclusiveEQ.
 func IsExclusive(v bool) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldIsExclusive, v))
@@ -518,6 +538,186 @@ placeholder
 // RateMultiplierLTE applies the LTE predicate on the "rate_multiplier" field.
 func RateMultiplierLTE(v float64) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldRateMultiplier, v))
+placeholder
+
+// PeakRateEnabledEQ applies the EQ predicate on the "peak_rate_enabled" field.
+func PeakRateEnabledEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakRateEnabled, v))
+placeholder
+
+// PeakRateEnabledNEQ applies the NEQ predicate on the "peak_rate_enabled" field.
+func PeakRateEnabledNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPeakRateEnabled, v))
+placeholder
+
+// PeakStartEQ applies the EQ predicate on the "peak_start" field.
+func PeakStartEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakStart, v))
+placeholder
+
+// PeakStartNEQ applies the NEQ predicate on the "peak_start" field.
+func PeakStartNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPeakStart, v))
+placeholder
+
+// PeakStartIn applies the In predicate on the "peak_start" field.
+func PeakStartIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldPeakStart, vs...))
+placeholder
+
+// PeakStartNotIn applies the NotIn predicate on the "peak_start" field.
+func PeakStartNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldPeakStart, vs...))
+placeholder
+
+// PeakStartGT applies the GT predicate on the "peak_start" field.
+func PeakStartGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldPeakStart, v))
+placeholder
+
+// PeakStartGTE applies the GTE predicate on the "peak_start" field.
+func PeakStartGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldPeakStart, v))
+placeholder
+
+// PeakStartLT applies the LT predicate on the "peak_start" field.
+func PeakStartLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldPeakStart, v))
+placeholder
+
+// PeakStartLTE applies the LTE predicate on the "peak_start" field.
+func PeakStartLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldPeakStart, v))
+placeholder
+
+// PeakStartContains applies the Contains predicate on the "peak_start" field.
+func PeakStartContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldPeakStart, v))
+placeholder
+
+// PeakStartHasPrefix applies the HasPrefix predicate on the "peak_start" field.
+func PeakStartHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldPeakStart, v))
+placeholder
+
+// PeakStartHasSuffix applies the HasSuffix predicate on the "peak_start" field.
+func PeakStartHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldPeakStart, v))
+placeholder
+
+// PeakStartEqualFold applies the EqualFold predicate on the "peak_start" field.
+func PeakStartEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldPeakStart, v))
+placeholder
+
+// PeakStartContainsFold applies the ContainsFold predicate on the "peak_start" field.
+func PeakStartContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldPeakStart, v))
+placeholder
+
+// PeakEndEQ applies the EQ predicate on the "peak_end" field.
+func PeakEndEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakEnd, v))
+placeholder
+
+// PeakEndNEQ applies the NEQ predicate on the "peak_end" field.
+func PeakEndNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPeakEnd, v))
+placeholder
+
+// PeakEndIn applies the In predicate on the "peak_end" field.
+func PeakEndIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldPeakEnd, vs...))
+placeholder
+
+// PeakEndNotIn applies the NotIn predicate on the "peak_end" field.
+func PeakEndNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldPeakEnd, vs...))
+placeholder
+
+// PeakEndGT applies the GT predicate on the "peak_end" field.
+func PeakEndGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldPeakEnd, v))
+placeholder
+
+// PeakEndGTE applies the GTE predicate on the "peak_end" field.
+func PeakEndGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldPeakEnd, v))
+placeholder
+
+// PeakEndLT applies the LT predicate on the "peak_end" field.
+func PeakEndLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldPeakEnd, v))
+placeholder
+
+// PeakEndLTE applies the LTE predicate on the "peak_end" field.
+func PeakEndLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldPeakEnd, v))
+placeholder
+
+// PeakEndContains applies the Contains predicate on the "peak_end" field.
+func PeakEndContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldPeakEnd, v))
+placeholder
+
+// PeakEndHasPrefix applies the HasPrefix predicate on the "peak_end" field.
+func PeakEndHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldPeakEnd, v))
+placeholder
+
+// PeakEndHasSuffix applies the HasSuffix predicate on the "peak_end" field.
+func PeakEndHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldPeakEnd, v))
+placeholder
+
+// PeakEndEqualFold applies the EqualFold predicate on the "peak_end" field.
+func PeakEndEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldPeakEnd, v))
+placeholder
+
+// PeakEndContainsFold applies the ContainsFold predicate on the "peak_end" field.
+func PeakEndContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldPeakEnd, v))
+placeholder
+
+// PeakRateMultiplierEQ applies the EQ predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierEQ(v float64) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldPeakRateMultiplier, v))
+placeholder
+
+// PeakRateMultiplierNEQ applies the NEQ predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierNEQ(v float64) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldPeakRateMultiplier, v))
+placeholder
+
+// PeakRateMultiplierIn applies the In predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierIn(vs ...float64) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldPeakRateMultiplier, vs...))
+placeholder
+
+// PeakRateMultiplierNotIn applies the NotIn predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierNotIn(vs ...float64) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldPeakRateMultiplier, vs...))
+placeholder
+
+// PeakRateMultiplierGT applies the GT predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierGT(v float64) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldPeakRateMultiplier, v))
+placeholder
+
+// PeakRateMultiplierGTE applies the GTE predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierGTE(v float64) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldPeakRateMultiplier, v))
+placeholder
+
+// PeakRateMultiplierLT applies the LT predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierLT(v float64) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldPeakRateMultiplier, v))
+placeholder
+
+// PeakRateMultiplierLTE applies the LTE predicate on the "peak_rate_multiplier" field.
+func PeakRateMultiplierLTE(v float64) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldPeakRateMultiplier, v))
 placeholder
 
 // IsExclusiveEQ applies the EQ predicate on the "is_exclusive" field.

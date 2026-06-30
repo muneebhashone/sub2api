@@ -1,0 +1,238 @@
+package service
+
+import (
+	"context"
+	"math"
+	"testing"
+	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
+)
+
+func init() {
+	// 测试固定全局时区为 UTC，确保判定可复现。
+	_ = timezone.Init("UTC")
+placeholder
+
+func newPeakGroup(enabled bool, start, end string, mult float64) *Group {
+	return &Group{
+		SubscriptionType:   "subscription",
+		PeakRateEnabled:    enabled,
+		PeakStart:          start,
+		PeakEnd:            end,
+		PeakRateMultiplier: mult,
+placeholder
+placeholder
+
+func at(hour, min int) time.Time {
+	return time.Date(2026, 6, 29, hour, min, 0, 0, time.UTC)
+placeholder
+
+func TestPeakMultiplierAt_DisabledOrUnconfigured(t *testing.T) {
+	cases := []struct {
+		name string
+		g    *Group
+placeholder{
+		{"disabled", newPeakGroup(false, "14:00", "18:00", 3.0)placeholder,
+		{"empty start", newPeakGroup(true, "", "18:00", 3.0)placeholder,
+		{"empty end", newPeakGroup(true, "14:00", "", 3.0)placeholder,
+		{"invalid start>=end", newPeakGroup(true, "18:00", "14:00", 3.0)placeholder,
+		{"equal start==end", newPeakGroup(true, "14:00", "14:00", 3.0)placeholder,
+		{"malformed start", newPeakGroup(true, "99:99", "18:00", 3.0)placeholder,
+placeholder
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.g.PeakMultiplierAt(at(15, 0)); got != 1.0 {
+				t.Fatalf("expect 1.0, got %v", got)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestPeakMultiplierAt_NilReceiver(t *testing.T) {
+	var g *Group
+	if got := g.PeakMultiplierAt(at(15, 0)); got != 1.0 {
+		t.Fatalf("expect 1.0, got %v", got)
+placeholder
+placeholder
+
+func TestPeakMultiplierAt_Boundaries(t *testing.T) {
+	g := newPeakGroup(true, "14:00", "18:00", 3.0)
+	cases := []struct {
+		t    time.Time
+		want float64
+placeholder{
+		{at(13, 59), 1.0placeholder,
+		{at(14, 0), 3.0placeholder,
+		{at(15, 30), 3.0placeholder,
+		{at(17, 59), 3.0placeholder,
+		{at(18, 0), 1.0placeholder,
+		{at(23, 0), 1.0placeholder,
+placeholder
+	for _, c := range cases {
+		t.Run(c.t.Format("15:04"), func(t *testing.T) {
+			if got := g.PeakMultiplierAt(c.t); got != c.want {
+				t.Fatalf("at %s: expect %v, got %v", c.t.Format("15:04"), c.want, got)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestPeakMultiplierAt_RespectsTimezoneLocation(t *testing.T) {
+	// 全局时区为 UTC。北京 15:00 = UTC 07:00，不在 [14:00,18:00)。
+	nonUTC := time.Date(2026, 6, 29, 15, 0, 0, 0, mustLoad("Asia/Shanghai"))
+	g := newPeakGroup(true, "14:00", "18:00", 3.0)
+	if got := g.PeakMultiplierAt(nonUTC); got != 1.0 {
+		t.Fatalf("expect 1.0 (converted to UTC 07:00), got %v", got)
+placeholder
+placeholder
+
+func mustLoad(name string) *time.Location {
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		panic(err)
+placeholder
+	return loc
+placeholder
+
+func TestValidatePeakRateConfig(t *testing.T) {
+	cases := []struct {
+		name    string
+		subType string
+		enabled bool
+		start   string
+		end     string
+		mult    float64
+		wantErr bool
+placeholder{
+		{"disabled passes through", "subscription", false, "", "", 0, falseplaceholder,
+		{"subscription enabled valid", "subscription", true, "14:00", "18:00", 3.0, falseplaceholder,
+		{"standard enabled rejected", "standard", true, "14:00", "18:00", 3.0, trueplaceholder,
+		{"empty type treated as standard", "", true, "14:00", "18:00", 3.0, trueplaceholder,
+		{"standard disabled passes", "standard", false, "", "", 0, falseplaceholder,
+		{"enabled empty start", "subscription", true, "", "18:00", 1.0, trueplaceholder,
+		{"enabled empty end", "subscription", true, "14:00", "", 1.0, trueplaceholder,
+		{"enabled malformed start", "subscription", true, "99:99", "18:00", 1.0, trueplaceholder,
+		{"enabled malformed end", "subscription", true, "14:00", "25:00", 1.0, trueplaceholder,
+		{"enabled equal start==end", "subscription", true, "14:00", "14:00", 1.0, trueplaceholder,
+		{"enabled cross-day rejected", "subscription", true, "22:00", "02:00", 1.0, trueplaceholder,
+		{"enabled negative multiplier", "subscription", true, "14:00", "18:00", -0.5, trueplaceholder,
+		{"enabled zero multiplier allowed", "subscription", true, "14:00", "18:00", 0, falseplaceholder,
+placeholder
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := ValidatePeakRateConfig(c.subType, c.enabled, c.start, c.end, c.mult)
+			if c.wantErr && err == nil {
+				t.Fatalf("expect error, got nil")
+		placeholder
+			if !c.wantErr && err != nil {
+				t.Fatalf("expect no error, got %v", err)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestPeakMultiplierAt_StandardTypeDegradesToOne(t *testing.T) {
+	g := newPeakGroup(true, "14:00", "18:00", 3.0)
+	g.SubscriptionType = "standard"
+	if got := g.PeakMultiplierAt(at(15, 30)); got != 1.0 {
+		t.Fatalf("standard group must degrade to 1.0, got %v", got)
+placeholder
+
+	sub := newPeakGroup(true, "14:00", "18:00", 3.0)
+	sub.SubscriptionType = "subscription"
+	if got := sub.PeakMultiplierAt(at(15, 30)); got != 3.0 {
+		t.Fatalf("subscription group peak multiplier: got %v, want 3.0", got)
+placeholder
+placeholder
+
+// TestPeakMultiplier_GatewayBillingSequence 调用 gateway_service.recordUsageCore 与
+// openai_gateway_service.RecordUsage 共用的 computePeakAwareMultipliers，验证计费叠加顺序：
+// 图片倍率基于基础倍率算出且不受高峰影响，高峰因子只乘入文本倍率。
+// 若有人调换叠加顺序或把高峰并入 imageMultiplier，此测试会失败。
+func TestPeakMultiplier_GatewayBillingSequence(t *testing.T) {
+	const baseMultiplier = 0.8
+	apiKey := &APIKey{Group: newPeakGroup(true, "14:00", "18:00", 3.0)placeholder
+	approxEq := func(a, b float64) bool { return math.Abs(a-b) < 1e-9 placeholder
+
+	t.Run("peak hour amplifies text only", func(t *testing.T) {
+		now := at(15, 30) // 处于 [14:00, 18:00)
+		textMultiplier, imageMultiplier := computePeakAwareMultipliers(apiKey, baseMultiplier, now)
+		if !approxEq(imageMultiplier, baseMultiplier) {
+			t.Fatalf("image multiplier must not be affected by peak: got %v, want %v", imageMultiplier, baseMultiplier)
+	placeholder
+		if want := baseMultiplier * 3.0; !approxEq(textMultiplier, want) {
+			t.Fatalf("text multiplier should include peak factor: got %v, want %v", textMultiplier, want)
+	placeholder
+placeholder)
+
+	t.Run("off-peak leaves both multipliers at base", func(t *testing.T) {
+		now := at(20, 0)
+		textMultiplier, imageMultiplier := computePeakAwareMultipliers(apiKey, baseMultiplier, now)
+		if !approxEq(imageMultiplier, baseMultiplier) {
+			t.Fatalf("image multiplier: got %v, want %v", imageMultiplier, baseMultiplier)
+	placeholder
+		if !approxEq(textMultiplier, baseMultiplier) {
+			t.Fatalf("text multiplier should equal base off-peak: got %v, want %v", textMultiplier, baseMultiplier)
+	placeholder
+placeholder)
+
+	t.Run("image independent mode decoupled from peak", func(t *testing.T) {
+		indGroup := newPeakGroup(true, "14:00", "18:00", 3.0)
+		indGroup.ImageRateIndependent = true
+		indGroup.ImageRateMultiplier = 0.5
+		indKey := &APIKey{Group: indGroupplaceholder
+		now := at(15, 30)
+		textMultiplier, imageMultiplier := computePeakAwareMultipliers(indKey, baseMultiplier, now)
+		if !approxEq(imageMultiplier, 0.5) {
+			t.Fatalf("independent image multiplier: got %v, want 0.5", imageMultiplier)
+	placeholder
+		if want := baseMultiplier * 3.0; !approxEq(textMultiplier, want) {
+			t.Fatalf("text multiplier should include peak factor: got %v, want %v", textMultiplier, want)
+	placeholder
+placeholder)
+
+	t.Run("nil api key degrades to base multipliers", func(t *testing.T) {
+		now := at(15, 30)
+		textMultiplier, imageMultiplier := computePeakAwareMultipliers(nil, baseMultiplier, now)
+		if !approxEq(textMultiplier, baseMultiplier) {
+			t.Fatalf("nil group text multiplier: got %v, want %v", textMultiplier, baseMultiplier)
+	placeholder
+		if !approxEq(imageMultiplier, baseMultiplier) {
+			t.Fatalf("nil group image multiplier: got %v, want %v", imageMultiplier, baseMultiplier)
+	placeholder
+placeholder)
+placeholder
+
+// TestPeakMultiplier_SnapshotRoundTrip 防回归：认证缓存快照（APIKeyAuthGroupSnapshot）
+// 必须携带高峰倍率 4 字段，否则扣费路径拿到的 apiKey.Group 会缺字段、PeakMultiplierAt 恒降级为 1.0。
+// 调用真实链路 snapshotFromAPIKey → snapshotToAPIKey，验证 peak 配置经快照往返后仍生效。
+func TestPeakMultiplier_SnapshotRoundTrip(t *testing.T) {
+	apiKey := &APIKey{
+		User:  &User{ID: 1, Status: StatusActive, Role: RoleUserplaceholder,
+		Group: newPeakGroup(true, "14:00", "18:00", 3.0),
+placeholder
+	svc := &APIKeyService{placeholder
+
+	snapshot := svc.snapshotFromAPIKey(context.Background(), apiKey)
+	if snapshot == nil || snapshot.Group == nil {
+		t.Fatalf("snapshot or snapshot.Group must not be nil")
+placeholder
+	restored := svc.snapshotToAPIKey("k", snapshot)
+	if restored.Group == nil {
+		t.Fatalf("restored.Group must not be nil")
+placeholder
+
+	if !restored.Group.PeakRateEnabled ||
+		restored.Group.PeakStart != "14:00" ||
+		restored.Group.PeakEnd != "18:00" ||
+		restored.Group.PeakRateMultiplier != 3.0 {
+		t.Fatalf("peak fields lost in snapshot round-trip: %+v", restored.Group)
+placeholder
+	if got := restored.Group.PeakMultiplierAt(at(15, 30)); got != 3.0 {
+		t.Fatalf("peak hour multiplier after round-trip: got %v, want 3.0", got)
+placeholder
+	if got := restored.Group.PeakMultiplierAt(at(20, 0)); got != 1.0 {
+		t.Fatalf("off-peak multiplier after round-trip: got %v, want 1.0", got)
+placeholder
+placeholder
