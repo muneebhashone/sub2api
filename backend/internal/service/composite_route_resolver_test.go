@@ -176,7 +176,7 @@ func TestCompositeRouteResolverExplicitRoutesCoverBucketTwoProviders(t *testing.
 				PublicModel:    "all/grok",
 				MatchType:      CompositeRouteMatchExact,
 				TargetPlatform: PlatformGrok,
-				UpstreamModel:  "grok-4",
+				UpstreamModel:  "grok-4.3",
 				Endpoint:       CompositeRouteEndpointResponses,
 				Priority:       100,
 				Enabled:        true,
@@ -193,7 +193,7 @@ placeholder{
 		{"all/gpt-5", CompositeRouteEndpointResponses, PlatformOpenAI, "gpt-5"placeholder,
 		{"all/claude-sonnet", CompositeRouteEndpointMessages, PlatformAnthropic, "claude-sonnet-4-6"placeholder,
 		{"all/gemini-pro", CompositeRouteEndpointGemini, PlatformGemini, "gemini-2.5-pro"placeholder,
-		{"all/grok", CompositeRouteEndpointResponses, PlatformGrok, "grok-4"placeholder,
+		{"all/grok", CompositeRouteEndpointResponses, PlatformGrok, "grok-4.3"placeholder,
 placeholder
 
 	for _, tt := range tests {
