@@ -29,7 +29,7 @@ placeholder
 placeholder
 
 	// Should match the old-path result exactly
-	expected, err := svc.calculateCostInternal("claude-sonnet-4", tokens, 1.0, "", nil)
+	expected, err := svc.calculateCostInternal("claude-sonnet-4", tokens, 1.0, 0, false, "", nil)
 placeholder
 	require.InDelta(t, expected.TotalCost, cost.TotalCost, 1e-10)
 	require.InDelta(t, expected.ActualCost, cost.ActualCost, 1e-10)
@@ -58,6 +58,28 @@ placeholder
 	require.InDelta(t, expectedTotal, cost.TotalCost, 1e-10)
 	require.InDelta(t, expectedTotal*1.5, cost.ActualCost, 1e-10)
 	require.Equal(t, string(BillingModeToken), cost.BillingMode)
+placeholder
+
+func TestCalculateCostUnified_TokenModeAppliesRateMultiplierToImageTokens(t *testing.T) {
+	bs := newTestBillingService()
+	resolver := NewModelPricingResolver(nil, bs)
+
+	tokens := UsageTokens{InputTokens: 1000, OutputTokens: 600, ImageOutputTokens: 100placeholder
+	cost, err := bs.CalculateCostUnified(CostInput{
+		Ctx:            context.Background(),
+		Model:          "claude-sonnet-4",
+		Tokens:         tokens,
+		RateMultiplier: 3.0,
+		Resolver:       resolver,
+placeholder)
+placeholder
+
+	textInput := 1000 * 3e-6
+	textOutput := 500 * 15e-6
+	imageOutput := 100 * 15e-6
+	require.InDelta(t, textInput+textOutput+imageOutput, cost.TotalCost, 1e-10)
+	require.InDelta(t, (textInput+textOutput+imageOutput)*3.0, cost.ActualCost, 1e-10)
+	require.InDelta(t, imageOutput, cost.ImageOutputCost, 1e-10)
 placeholder
 
 func TestCalculateCostUnified_PerRequestMode(t *testing.T) {

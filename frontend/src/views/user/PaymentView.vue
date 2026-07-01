@@ -121,6 +121,12 @@
                       <span :class="['text-lg font-bold', planTextClass]">×{{ selectedPlan.rate_multiplier ?? 1 placeholderplaceholder</span>
                     </div>
                   </div>
+                  <div v-if="planHasPeakRate(selectedPlan)">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.planCard.peakRate') placeholderplaceholder</span>
+                    <div class="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                      {{ planPeakRateLabel(selectedPlan) placeholderplaceholder
+                    </div>
+                  </div>
                   <div v-if="selectedPlan.daily_limit_usd != null">
                     <span class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.planCard.dailyLimit') placeholderplaceholder</span>
                     <div class="text-lg font-semibold text-gray-800 dark:text-gray-200">${{ selectedPlan.daily_limit_usd placeholderplaceholder</div>
@@ -194,6 +200,7 @@
                       </div>
                       <div class="flex flex-wrap gap-x-3 text-[11px] text-gray-400 dark:text-gray-500">
                         <span>{{ t('payment.planCard.rate') placeholderplaceholder: ×{{ sub.group?.rate_multiplier ?? 1 placeholderplaceholder</span>
+                        <span v-if="subscriptionHasPeakRate(sub)">{{ t('payment.planCard.peakRate') placeholderplaceholder: {{ subscriptionPeakRateLabel(sub) placeholderplaceholder</span>
                         <span v-if="sub.group?.daily_limit_usd == null && sub.group?.weekly_limit_usd == null && sub.group?.monthly_limit_usd == null">{{ t('payment.planCard.quota') placeholderplaceholder: {{ t('payment.planCard.unlimited') placeholderplaceholder</span>
                         <span v-if="sub.expires_at">{{ t('userSubscriptions.daysRemaining', { days: getDaysRemaining(sub.expires_at) placeholder) placeholderplaceholder</span>
                         <span v-else>{{ t('userSubscriptions.noExpiration') placeholderplaceholder</span>
@@ -295,6 +302,16 @@ const activeSubscriptions = computed(() => subscriptionStore.activeSubscriptions
 function getDaysRemaining(expiresAt: string): number {
   const diff = new Date(expiresAt).getTime() - Date.now()
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+placeholder
+
+function subscriptionHasPeakRate(sub: { group?: { peak_rate_enabled?: boolean; peak_start?: string; peak_end?: string placeholder | null placeholder): boolean {
+  const group = sub.group
+  return Boolean(group?.peak_rate_enabled && group.peak_start && group.peak_end)
+placeholder
+
+function subscriptionPeakRateLabel(sub: { group?: { peak_start?: string; peak_end?: string; peak_rate_multiplier?: number placeholder | null placeholder): string {
+  const group = sub.group
+  return `${group?.peak_startplaceholder-${group?.peak_endplaceholder ×${group?.peak_rate_multiplier ?? 1placeholder`
 placeholder
 
 const loading = ref(true)
@@ -694,6 +711,14 @@ const planValiditySuffix = computed(() => {
   if (u === 'year') return t('payment.perYear')
   return `${selectedPlan.value.validity_daysplaceholder${t('payment.days')placeholder`
 placeholder)
+
+function planHasPeakRate(plan: SubscriptionPlan): boolean {
+  return Boolean(plan.peak_rate_enabled && plan.peak_start && plan.peak_end)
+placeholder
+
+function planPeakRateLabel(plan: SubscriptionPlan): string {
+  return `${plan.peak_startplaceholder-${plan.peak_endplaceholder ×${plan.peak_rate_multiplier ?? 1placeholder`
+placeholder
 
 function selectPlan(plan: SubscriptionPlan) {
   selectedPlan.value = plan

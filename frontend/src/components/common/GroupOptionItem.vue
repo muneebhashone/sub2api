@@ -24,16 +24,25 @@
 
     <!-- Right: rate pill + checkmark (vertically centered to first row) -->
     <div class="flex shrink-0 items-center gap-2 pt-0.5">
-      <!-- Rate pill (platform color) -->
-      <span v-if="rateMultiplier !== undefined" :class="['inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', ratePillClass]">
-        <template v-if="hasCustomRate">
-          <span class="mr-1 line-through opacity-50">{{ rateMultiplier placeholderplaceholderx</span>
-          <span class="font-bold">{{ userRateMultiplier placeholderplaceholderx</span>
-        </template>
-        <template v-else>
-          {{ rateMultiplier placeholderplaceholderx {{ t('admin.groups.rateLabel') placeholderplaceholder
-        </template>
-      </span>
+      <div class="flex shrink-0 flex-col items-end gap-1">
+        <!-- Rate pill (platform color) -->
+        <span v-if="rateMultiplier !== undefined" :class="['inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', ratePillClass]">
+          <template v-if="hasCustomRate">
+            <span class="mr-1 line-through opacity-50">{{ rateMultiplier placeholderplaceholderx</span>
+            <span class="font-bold">{{ userRateMultiplier placeholderplaceholderx</span>
+          </template>
+          <template v-else>
+            {{ rateMultiplier placeholderplaceholderx {{ t('admin.groups.rateLabel') placeholderplaceholder
+          </template>
+        </span>
+        <span
+          v-if="hasPeakRate"
+          class="inline-flex items-center whitespace-nowrap rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+          :title="peakRateTitle"
+        >
+          {{ peakRateText placeholderplaceholder
+        </span>
+      </div>
       <!-- Checkmark -->
       <svg
         v-if="showCheckmark && selected"
@@ -63,6 +72,10 @@ interface Props {
   subscriptionType?: SubscriptionType
   rateMultiplier?: number
   userRateMultiplier?: number | null
+  peakRateEnabled?: boolean
+  peakStart?: string
+  peakEnd?: string
+  peakRateMultiplier?: number
   description?: string | null
   selected?: boolean
   showCheckmark?: boolean
@@ -72,7 +85,8 @@ const props = withDefaults(defineProps<Props>(), {
   subscriptionType: 'standard',
   selected: false,
   showCheckmark: true,
-  userRateMultiplier: null
+  userRateMultiplier: null,
+  peakRateEnabled: false
 placeholder)
 
 // Whether user has a custom rate different from default
@@ -83,6 +97,18 @@ const hasCustomRate = computed(() => {
     props.rateMultiplier !== undefined &&
     props.userRateMultiplier !== props.rateMultiplier
   )
+placeholder)
+
+const hasPeakRate = computed(() => {
+  return Boolean(props.peakRateEnabled && props.peakStart && props.peakEnd)
+placeholder)
+
+const peakRateText = computed(() => {
+  return `${props.peakStartplaceholder-${props.peakEndplaceholder ×${props.peakRateMultiplier ?? 1placeholder`
+placeholder)
+
+const peakRateTitle = computed(() => {
+  return `高峰倍率：${peakRateText.valueplaceholder`
 placeholder)
 
 // Rate pill color matches platform badge color
