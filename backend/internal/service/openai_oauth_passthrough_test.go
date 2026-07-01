@@ -36,18 +36,18 @@ type httpUpstreamRecorder struct {
 	err       error
 placeholder
 
-type errReadCloser struct {
+type passthroughErrReadCloser struct {
 	err error
 placeholder
 
-func (r errReadCloser) Read(_ []byte) (int, error) {
+func (r passthroughErrReadCloser) Read(_ []byte) (int, error) {
 	if r.err != nil {
 		return 0, r.err
 placeholder
 	return 0, io.ErrUnexpectedEOF
 placeholder
 
-func (r errReadCloser) Close() error {
+func (r passthroughErrReadCloser) Close() error {
 	return nil
 placeholder
 
@@ -463,7 +463,7 @@ placeholder
 
 	require.False(t, gjson.GetBytes(upstream.lastBody, "store").Exists())
 	require.False(t, gjson.GetBytes(upstream.lastBody, "stream").Exists())
-	require.Equal(t, defaultOpenAICompactModel, gjson.GetBytes(upstream.lastBody, "model").String())
+	require.Equal(t, "gpt-5.4", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.Equal(t, "compact me", gjson.GetBytes(upstream.lastBody, "input.0.text").String())
 	require.Equal(t, "local-test-instructions", strings.TrimSpace(gjson.GetBytes(upstream.lastBody, "instructions").String()))
 	require.Equal(t, "application/json", upstream.lastReq.Header.Get("Accept"))
@@ -1000,7 +1000,7 @@ placeholder{
 			resp: &http.Response{
 				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "x-request-id": []string{"rid-compact"placeholderplaceholder,
-				Body:       errReadCloser{err: io.ErrUnexpectedEOFplaceholder,
+				Body:       passthroughErrReadCloser{err: io.ErrUnexpectedEOFplaceholder,
 		placeholder,
 	placeholder,
 placeholder
