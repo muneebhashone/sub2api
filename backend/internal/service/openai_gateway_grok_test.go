@@ -146,6 +146,25 @@ placeholder
 	require.Contains(t, err.Error(), "invalid base url")
 placeholder
 
+func TestGrokMediaGenerationGateCoversImagesAndVideo(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint GrokMediaEndpoint
+		want     bool
+placeholder{
+		{name: "image generation", endpoint: GrokMediaEndpointImagesGenerations, want: trueplaceholder,
+		{name: "image edit", endpoint: GrokMediaEndpointImagesEdits, want: trueplaceholder,
+		{name: "video generation", endpoint: GrokMediaEndpointVideosGenerations, want: trueplaceholder,
+		{name: "video status", endpoint: GrokMediaEndpointVideoStatus, want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, tt.endpoint.IsGenerationRequest())
+	placeholder)
+placeholder
+placeholder
+
 func TestExtractGrokMediaModelSupportsJSONAndMultipart(t *testing.T) {
 	require.Equal(t, "grok-imagine", ExtractGrokMediaModel("application/json", []byte(`{"model":"grok-imagine"placeholder`)))
 
