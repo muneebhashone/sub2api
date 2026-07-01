@@ -95,6 +95,15 @@ placeholder{
 			expectedModel:      "gpt-5.5",
 	placeholder,
 		{
+			name: "preserves gpt-5.5-pro instead of group default",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:     "gpt-5.5-pro",
+			defaultMappedModel: "gpt-5.5",
+			expectedModel:      "gpt-5.5-pro",
+	placeholder,
+		{
 			name: "preserves compact-spelled gpt5.5 instead of group default",
 			account: &Account{
 		placeholderplaceholder,
@@ -262,6 +271,12 @@ placeholder{
 			want:    "gpt-5.4",
 	placeholder,
 		{
+			name:    "oauth preserves GPT-5.5 Pro model",
+			account: &Account{Type: AccountTypeOAuthplaceholder,
+			model:   "openai/gpt-5.5-pro",
+			want:    "gpt-5.5-pro",
+	placeholder,
+		{
 			name:    "oauth preserves codex auto review model",
 			account: &Account{Type: AccountTypeOAuthplaceholder,
 			model:   "codex-auto-review",
@@ -300,6 +315,20 @@ placeholder
 	for i := range expected {
 		if candidates[i] != expected[i] {
 			t.Fatalf("usageBillingModelCandidates(codex-auto-review) = %#v, want %#v", candidates, expected)
+	placeholder
+placeholder
+placeholder
+
+func TestUsageBillingModelCandidatesPreserveGPT55ProModel(t *testing.T) {
+	candidates := usageBillingModelCandidates("openai/gpt-5.5-pro")
+
+	expected := []string{"openai/gpt-5.5-pro", "gpt-5.5-pro"placeholder
+	if len(candidates) != len(expected) {
+		t.Fatalf("usageBillingModelCandidates(openai/gpt-5.5-pro) = %#v, want %#v", candidates, expected)
+placeholder
+	for i := range expected {
+		if candidates[i] != expected[i] {
+			t.Fatalf("usageBillingModelCandidates(openai/gpt-5.5-pro) = %#v, want %#v", candidates, expected)
 	placeholder
 placeholder
 placeholder

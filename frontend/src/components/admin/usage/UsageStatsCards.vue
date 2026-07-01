@@ -68,9 +68,14 @@
           ${{ (stats?.total_actual_cost || 0).toFixed(4) placeholderplaceholder
         </p>
         <p class="text-xs text-gray-400">
-          <span class="text-orange-500">{{ t('usage.accountCost') placeholderplaceholder ${{ (stats?.total_account_cost || 0).toFixed(4) placeholderplaceholder</span>
-          <span> · </span>
-          <span>{{ t('usage.standardCost') placeholderplaceholder ${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
+          <template v-if="showAccountCost && totalAccountCost != null">
+            <span class="text-orange-500">{{ t('usage.accountCost') placeholderplaceholder ${{ totalAccountCost.toFixed(4) placeholderplaceholder</span>
+            <span> · </span>
+          </template>
+          <span>
+            {{ t('usage.standardCost') placeholderplaceholder
+            <span :class="{ 'line-through': strikeStandardCost placeholder">${{ (stats?.total_cost || 0).toFixed(4) placeholderplaceholder</span>
+          </span>
         </p>
       </div>
     </div>
@@ -84,13 +89,29 @@
 </template>
 
 <script setup lang="ts">
+import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import type { AdminUsageStatsResponse placeholder from '@/api/admin/usage'
+import type { UsageStatsResponse placeholder from '@/types'
 import Icon from '@/components/icons/Icon.vue'
 
-defineProps<{ stats: AdminUsageStatsResponse | null placeholder>()
+const props = withDefaults(defineProps<{
+  stats: (AdminUsageStatsResponse | UsageStatsResponse) | null
+  showAccountCost?: boolean
+  strikeStandardCost?: boolean
+placeholder>(), {
+  showAccountCost: true,
+  strikeStandardCost: false,
+placeholder)
 
 const { t placeholder = useI18n()
+
+const totalAccountCost = computed(() => {
+  const stats = props.stats as (AdminUsageStatsResponse & { total_account_cost?: number placeholder) | null
+  return stats?.total_account_cost ?? null
+placeholder)
+const showAccountCost = computed(() => props.showAccountCost)
+const strikeStandardCost = computed(() => props.strikeStandardCost)
 
 const formatDuration = (ms: number) =>
   ms < 1000 ? `${ms.toFixed(0)placeholderms` : `${(ms / 1000).toFixed(2)placeholders`

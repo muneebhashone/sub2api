@@ -889,7 +889,7 @@ placeholder
 
           <template v-if="props.autoRefreshEnabled && props.autoRefreshCountdown !== undefined">
             <span>·</span>
-            <span>剩余 {{ props.autoRefreshCountdown placeholderplaceholders</span>
+            <span>{{ t('admin.ops.autoRefreshRemaining', { seconds: props.autoRefreshCountdown placeholder) placeholderplaceholder</span>
           </template>
         </div>
       </div>
