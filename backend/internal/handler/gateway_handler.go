@@ -550,7 +550,7 @@ placeholder
 					RequestPayloadHash: requestPayloadHash,
 					ForceCacheBilling:  forceCacheBilling,
 					APIKeyService:      h.apiKeyService,
-					ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
+					ChannelUsageFields: clientRequestedUsageFields(c, channelMapping, reqModel, result.UpstreamModel),
 			placeholder); err != nil {
 					logger.L().With(
 						zap.String("component", "handler.gateway.messages"),
@@ -985,7 +985,7 @@ placeholder
 					RequestPayloadHash: requestPayloadHash,
 					ForceCacheBilling:  forceCacheBilling,
 					APIKeyService:      h.apiKeyService,
-					ChannelUsageFields: channelMapping.ToUsageFields(reqModel, result.UpstreamModel),
+					ChannelUsageFields: clientRequestedUsageFields(c, channelMapping, reqModel, result.UpstreamModel),
 			placeholder); err != nil {
 					logger.L().With(
 						zap.String("component", "handler.gateway.messages"),
@@ -1085,7 +1085,7 @@ func (h *GatewayHandler) compositeAvailableModels(ctx context.Context, groupID *
 placeholder
 	seen := make(map[string]struct{placeholder)
 	models := make([]string, 0)
-	for _, platform := range []string{service.PlatformAnthropic, service.PlatformGemini, service.PlatformOpenAI, service.PlatformGrokplaceholder {
+	for _, platform := range []string{service.PlatformAnthropic, service.PlatformGemini, service.PlatformOpenAI, service.PlatformAntigravity, service.PlatformGrokplaceholder {
 		for _, model := range h.gatewayService.GetAvailableModels(ctx, groupID, platform) {
 			model = strings.TrimSpace(model)
 			if model == "" {
@@ -1304,7 +1304,7 @@ func defaultModelIDsForPlatform(platform string) []string {
 	case service.PlatformComposite:
 		ids := make([]string, 0)
 		seen := make(map[string]struct{placeholder)
-		for _, concretePlatform := range []string{service.PlatformAnthropic, service.PlatformGemini, service.PlatformOpenAI, service.PlatformGrokplaceholder {
+		for _, concretePlatform := range []string{service.PlatformAnthropic, service.PlatformGemini, service.PlatformOpenAI, service.PlatformAntigravity, service.PlatformGrokplaceholder {
 			for _, id := range defaultModelIDsForPlatform(concretePlatform) {
 				if _, ok := seen[id]; ok {
 					continue

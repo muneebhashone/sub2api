@@ -61,6 +61,14 @@ func newGatewayModelsHandlerForTest(repo service.AccountRepository) *GatewayHand
 placeholder
 placeholder
 
+func TestDefaultModelIDsForCompositeIncludesAntigravityDefaults(t *testing.T) {
+	antigravityIDs := defaultModelIDsForPlatform(service.PlatformAntigravity)
+	require.NotEmpty(t, antigravityIDs)
+
+	compositeIDs := defaultModelIDsForPlatform(service.PlatformComposite)
+	require.Contains(t, compositeIDs, antigravityIDs[0])
+placeholder
+
 func TestGatewayModels_GeminiGroupFallsBackToGeminiModels(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -304,6 +312,15 @@ func TestGatewayModels_CompositeCustomModelsListFiltersAcrossConcretePlatforms(t
 						placeholder,
 					placeholder,
 				placeholder,
+					{
+						ID:       3,
+						Platform: service.PlatformAntigravity,
+				placeholder
+							"model_mapping": map[string]any{
+								"ag-custom-model": "ag-custom-model",
+						placeholder,
+					placeholder,
+				placeholder,
 			placeholder,
 		placeholder,
 	placeholder,
@@ -318,7 +335,7 @@ func TestGatewayModels_CompositeCustomModelsListFiltersAcrossConcretePlatforms(t
 			Platform: service.PlatformComposite,
 			ModelsListConfig: service.GroupModelsListConfig{
 				Enabled: true,
-				Models:  []string{"gemini-2.5-flash", "missing-model", "gpt-5.5"placeholder,
+				Models:  []string{"gemini-2.5-flash", "missing-model", "ag-custom-model", "gpt-5.5"placeholder,
 		placeholder,
 	placeholder,
 placeholder)
@@ -329,7 +346,7 @@ placeholder)
 
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Equal(t, []string{"gemini-2.5-flash", "gpt-5.5"placeholder, modelIDsForTest(got.Data))
+	require.Equal(t, []string{"gemini-2.5-flash", "ag-custom-model", "gpt-5.5"placeholder, modelIDsForTest(got.Data))
 placeholder
 
 func TestGatewayModels_CustomModelsListKeepsConcreteModelAllowedByWildcardMapping(t *testing.T) {
