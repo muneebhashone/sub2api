@@ -28,6 +28,8 @@ placeholder{
 		{"/v1/responses", EndpointResponsesplaceholder,
 		{"/v1/images/generations", EndpointImagesGenerationsplaceholder,
 		{"/v1/images/edits", EndpointImagesEditsplaceholder,
+		{"/v1/videos/generations", EndpointVideosGenerationsplaceholder,
+		{"/v1/videos/req_123", EndpointVideosplaceholder,
 		{"/v1beta/models", EndpointGeminiModelsplaceholder,
 
 		// Prefixed paths (antigravity, openai).
@@ -81,6 +83,8 @@ placeholder{
 		{"openai embeddings", EndpointEmbeddings, "/v1/embeddings", service.PlatformOpenAI, EndpointEmbeddingsplaceholder,
 		{"openai image generations", EndpointImagesGenerations, "/v1/images/generations", service.PlatformOpenAI, EndpointImagesGenerationsplaceholder,
 		{"openai image edits", EndpointImagesEdits, "/openai/v1/images/edits", service.PlatformOpenAI, EndpointImagesEditsplaceholder,
+		{"grok video generations", EndpointVideosGenerations, "/v1/videos/generations", service.PlatformGrok, EndpointVideosGenerationsplaceholder,
+		{"grok video status", EndpointVideos, "/videos/req_123", service.PlatformGrok, EndpointVideosplaceholder,
 
 		// Antigravity — uses inbound to pick Claude vs Gemini upstream.
 		{"antigravity claude", EndpointMessages, "/antigravity/v1/messages", service.PlatformAntigravity, EndpointMessagesplaceholder,
