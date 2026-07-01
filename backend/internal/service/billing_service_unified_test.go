@@ -29,7 +29,7 @@ placeholder
 placeholder
 
 	// Should match the old-path result exactly
-	expected, err := svc.calculateCostInternal("claude-sonnet-4", tokens, 1.0, 0, false, "", nil)
+	expected, err := svc.calculateCostInternal("claude-sonnet-4", tokens, 1.0, "", nil)
 placeholder
 	require.InDelta(t, expected.TotalCost, cost.TotalCost, 1e-10)
 	require.InDelta(t, expected.ActualCost, cost.ActualCost, 1e-10)
