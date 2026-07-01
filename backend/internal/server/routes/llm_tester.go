@@ -177,7 +177,7 @@ placeholder
 		response.Error(c, http.StatusBadGateway, fmt.Sprintf("upstream request failed: %s", err.Error()))
 		return
 placeholder
-	defer upstreamResp.Body.Close()
+	defer func() { _ = upstreamResp.Body.Close() placeholder()
 
 	payload, err := readLLMTesterResponseBody(upstreamResp.Body)
 	if err != nil {
