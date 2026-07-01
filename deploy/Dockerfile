@@ -41,7 +41,7 @@ RUN pnpm run build
 FROM ${GOLANG_IMAGEplaceholder AS backend-builder
 
 # Build arguments for version info (set by CI)
-ARG VERSION=docker
+ARG VERSION=
 ARG COMMIT=docker
 ARG DATE
 ARG GOPROXY
@@ -66,9 +66,13 @@ COPY backend/ ./
 COPY --from=frontend-builder /app/backend/internal/web/dist ./internal/web/dist
 
 # Build the binary (BuildType=release for CI builds, embed frontend)
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# Version precedence: build arg VERSION > exact git tag > cmd/server/VERSION
+RUN VERSION_VALUE="${VERSIONplaceholder" && \
+    if [ -z "${VERSION_VALUEplaceholder" ]; then VERSION_VALUE="$(./scripts/resolve-version.sh)"; fi && \
+    DATE_VALUE="${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)placeholder" && \
+    CGO_ENABLED=0 GOOS=linux go build \
     -tags embed \
-    -ldflags="-s -w -X main.Commit=${COMMITplaceholder -X main.Date=${DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)placeholder -X main.BuildType=release" \
+    -ldflags="-s -w -X main.Version=${VERSION_VALUEplaceholder -X main.Commit=${COMMITplaceholder -X main.Date=${DATE_VALUEplaceholder -X main.BuildType=release" \
     -o /app/sub2api \
     ./cmd/server
 
