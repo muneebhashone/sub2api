@@ -75,6 +75,21 @@ placeholder
 	return userSubscriptionEntityToService(m), nil
 placeholder
 
+func (r *userSubscriptionRepository) GetByIDIncludeDeleted(ctx context.Context, id int64) (*service.UserSubscription, error) {
+	client := clientFromContext(ctx, r.client)
+	queryCtx := mixins.SkipSoftDelete(ctx)
+	m, err := client.UserSubscription.Query().
+		Where(usersubscription.IDEQ(id)).
+		WithUser().
+		WithGroup().
+		WithAssignedByUser().
+		Only(queryCtx)
+	if err != nil {
+		return nil, translatePersistenceError(err, service.ErrSubscriptionNotFound, nil)
+placeholder
+	return userSubscriptionEntityToServicePreserveStatus(m), nil
+placeholder
+
 func (r *userSubscriptionRepository) GetByUserIDAndGroupID(ctx context.Context, userID, groupID int64) (*service.UserSubscription, error) {
 	client := clientFromContext(ctx, r.client)
 	m, err := client.UserSubscription.Query().
@@ -139,6 +154,20 @@ func (r *userSubscriptionRepository) Delete(ctx context.Context, id int64) error
 	client := clientFromContext(ctx, r.client)
 	_, err := client.UserSubscription.Delete().Where(usersubscription.IDEQ(id)).Exec(ctx)
 	return err
+placeholder
+
+func (r *userSubscriptionRepository) Restore(ctx context.Context, subscriptionID int64, restoredStatus string) (*service.UserSubscription, error) {
+	client := clientFromContext(ctx, r.client)
+	queryCtx := mixins.SkipSoftDelete(ctx)
+	_, err := client.UserSubscription.UpdateOneID(subscriptionID).
+		SetStatus(restoredStatus).
+		ClearDeletedAt().
+		SetUpdatedAt(time.Now()).
+		Save(queryCtx)
+	if err != nil {
+		return nil, translatePersistenceError(err, service.ErrSubscriptionNotFound, service.ErrSubscriptionRestoreConflict)
+placeholder
+	return r.GetByID(ctx, subscriptionID)
 placeholder
 
 func (r *userSubscriptionRepository) ListByUserID(ctx context.Context, userID int64) ([]service.UserSubscription, error) {
@@ -297,6 +326,10 @@ func (r *userSubscriptionRepository) ExistsByUserIDAndGroupID(ctx context.Contex
 	return client.UserSubscription.Query().
 		Where(usersubscription.UserIDEQ(userID), usersubscription.GroupIDEQ(groupID)).
 		Exist(ctx)
+placeholder
+
+func (r *userSubscriptionRepository) ExistsActiveByUserIDAndGroupID(ctx context.Context, userID, groupID int64) (bool, error) {
+	return r.ExistsByUserIDAndGroupID(ctx, userID, groupID)
 placeholder
 
 func (r *userSubscriptionRepository) ExtendExpiry(ctx context.Context, subscriptionID int64, newExpiresAt time.Time) error {
@@ -520,11 +553,19 @@ placeholder
 placeholder
 
 func userSubscriptionEntityToService(m *dbent.UserSubscription) *service.UserSubscription {
+	return userSubscriptionEntityToServiceWithStatusMapping(m, true)
+placeholder
+
+func userSubscriptionEntityToServicePreserveStatus(m *dbent.UserSubscription) *service.UserSubscription {
+	return userSubscriptionEntityToServiceWithStatusMapping(m, false)
+placeholder
+
+func userSubscriptionEntityToServiceWithStatusMapping(m *dbent.UserSubscription, mapDeletedToRevoked bool) *service.UserSubscription {
 	if m == nil {
 		return nil
 placeholder
 	status := m.Status
-	if m.DeletedAt != nil {
+	if mapDeletedToRevoked && m.DeletedAt != nil {
 		status = service.SubscriptionStatusRevoked
 placeholder
 	out := &service.UserSubscription{

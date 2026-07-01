@@ -74,3 +74,99 @@ placeholder
 	require.ErrorIs(t, err, ErrSubscriptionNotFound)
 	require.Equal(t, 2, repo.getActiveCalls, "撤销后应回源确认订阅已不存在，不能命中旧 L1")
 placeholder
+
+type restoreUserSubRepoStub struct {
+	userSubRepoNoop
+
+	sub            *UserSubscription
+	existsActive   bool
+	restoreCalls   int
+	restoredStatus string
+placeholder
+
+func (r *restoreUserSubRepoStub) GetByIDIncludeDeleted(_ context.Context, id int64) (*UserSubscription, error) {
+	if r.sub == nil || r.sub.ID != id {
+		return nil, ErrSubscriptionNotFound
+placeholder
+	cp := *r.sub
+	return &cp, nil
+placeholder
+
+func (r *restoreUserSubRepoStub) ExistsActiveByUserIDAndGroupID(context.Context, int64, int64) (bool, error) {
+	return r.existsActive, nil
+placeholder
+
+func (r *restoreUserSubRepoStub) Restore(_ context.Context, id int64, restoredStatus string) (*UserSubscription, error) {
+	if r.sub == nil || r.sub.ID != id {
+		return nil, ErrSubscriptionNotFound
+placeholder
+	r.restoreCalls++
+	r.restoredStatus = restoredStatus
+	cp := *r.sub
+	cp.Status = restoredStatus
+	cp.DeletedAt = nil
+	r.sub = &cp
+	return &cp, nil
+placeholder
+
+func TestRestoreSubscription_ExpiredActiveRestoresAsExpired(t *testing.T) {
+	deletedAt := time.Now().Add(-time.Hour)
+	repo := &restoreUserSubRepoStub{
+		sub: &UserSubscription{
+			ID:        1,
+			UserID:    10,
+			GroupID:   20,
+			Status:    SubscriptionStatusActive,
+			ExpiresAt: time.Now().Add(-time.Minute),
+			DeletedAt: &deletedAt,
+	placeholder,
+placeholder
+	svc := NewSubscriptionService(groupRepoNoop{placeholder, repo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
+
+	restored, err := svc.RestoreSubscription(context.Background(), 1)
+placeholder
+	require.Equal(t, 1, repo.restoreCalls)
+	require.Equal(t, SubscriptionStatusExpired, repo.restoredStatus)
+	require.Equal(t, SubscriptionStatusExpired, restored.Status)
+	require.Nil(t, restored.DeletedAt)
+placeholder
+
+func TestRestoreSubscription_NotRevokedReturnsConflict(t *testing.T) {
+	repo := &restoreUserSubRepoStub{
+		sub: &UserSubscription{
+			ID:        1,
+			UserID:    10,
+			GroupID:   20,
+			Status:    SubscriptionStatusActive,
+			ExpiresAt: time.Now().Add(time.Hour),
+	placeholder,
+placeholder
+	svc := NewSubscriptionService(groupRepoNoop{placeholder, repo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
+
+	_, err := svc.RestoreSubscription(context.Background(), 1)
+	require.ErrorIs(t, err, ErrSubscriptionNotRevoked)
+	require.Zero(t, repo.restoreCalls)
+placeholder
+
+func TestRestoreSubscription_LiveSubscriptionConflict(t *testing.T) {
+	deletedAt := time.Now().Add(-time.Hour)
+	repo := &restoreUserSubRepoStub{
+		existsActive: true,
+		sub: &UserSubscription{
+			ID:        1,
+			UserID:    10,
+			GroupID:   20,
+			Status:    SubscriptionStatusExpired,
+			ExpiresAt: time.Now().Add(-time.Hour),
+			DeletedAt: &deletedAt,
+	placeholder,
+placeholder
+	svc := NewSubscriptionService(groupRepoNoop{placeholder, repo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
+
+	_, err := svc.RestoreSubscription(context.Background(), 1)
+	require.ErrorIs(t, err, ErrSubscriptionRestoreConflict)
+	require.Zero(t, repo.restoreCalls)
+placeholder

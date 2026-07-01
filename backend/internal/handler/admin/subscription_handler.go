@@ -268,6 +268,24 @@ placeholder
 	response.Success(c, gin.H{"message": "Subscription revoked successfully"placeholder)
 placeholder
 
+// Restore handles restoring a revoked subscription.
+// POST /api/v1/admin/subscriptions/:id/restore
+func (h *SubscriptionHandler) Restore(c *gin.Context) {
+	subscriptionID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid subscription ID")
+		return
+placeholder
+
+	subscription, err := h.subscriptionService.RestoreSubscription(c.Request.Context(), subscriptionID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(subscription))
+placeholder
+
 // ListByGroup handles listing subscriptions for a specific group
 // GET /api/v1/admin/groups/:id/subscriptions
 func (h *SubscriptionHandler) ListByGroup(c *gin.Context) {
