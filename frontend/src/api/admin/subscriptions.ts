@@ -117,7 +117,7 @@ placeholder
  * @returns Success confirmation
  */
 export async function revoke(id: number): Promise<{ message: string placeholder> {
-  const { data placeholder = await apiClient.delete<{ message: string placeholder>(`/admin/subscriptions/${idplaceholder`)
+  const { data placeholder = await apiClient.post<{ message: string placeholder>(`/admin/subscriptions/${idplaceholder/revoke`)
   return data
 placeholder
 
