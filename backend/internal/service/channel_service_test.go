@@ -1970,6 +1970,8 @@ placeholder{
 		{"gemini matches gemini", PlatformGemini, PlatformGemini, trueplaceholder,
 		{"gemini does NOT match antigravity", PlatformGemini, PlatformAntigravity, falseplaceholder,
 		{"gemini does NOT match anthropic", PlatformGemini, PlatformAnthropic, falseplaceholder,
+		{"composite matches openai pricing", PlatformComposite, PlatformOpenAI, trueplaceholder,
+		{"composite matches gemini pricing", PlatformComposite, PlatformGemini, trueplaceholder,
 		{"empty string matches nothing", "", PlatformAnthropic, falseplaceholder,
 		{"empty string matches empty", "", "", trueplaceholder,
 placeholder
@@ -1995,6 +1997,7 @@ placeholder{
 		{"anthropic returns itself", PlatformAnthropic, []string{PlatformAnthropicplaceholderplaceholder,
 		{"gemini returns itself", PlatformGemini, []string{PlatformGeminiplaceholderplaceholder,
 		{"openai returns itself", PlatformOpenAI, []string{PlatformOpenAIplaceholderplaceholder,
+		{"composite returns concrete platforms", PlatformComposite, []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrokplaceholderplaceholder,
 placeholder
 
 	for _, tt := range tests {
@@ -2003,6 +2006,43 @@ placeholder
 			require.Equal(t, tt.want, result)
 	placeholder)
 placeholder
+placeholder
+
+func TestCompositeChannelLookupUsesResolvedTargetPlatform(t *testing.T) {
+	channel := Channel{
+		ID:       1,
+		Status:   StatusActive,
+		GroupIDs: []int64{99placeholder,
+		ModelPricing: []ChannelModelPricing{
+			{Platform: PlatformOpenAI, Models: []string{"gpt-*"placeholderplaceholder,
+			{Platform: PlatformAnthropic, Models: []string{"claude-*"placeholderplaceholder,
+	placeholder,
+		ModelMapping: map[string]map[string]string{
+			PlatformOpenAI: {
+				"gpt-5": "gpt-5-mini",
+		placeholder,
+			PlatformAnthropic: {
+				"claude-*": "claude-sonnet-4-5",
+		placeholder,
+	placeholder,
+placeholder
+	cache := populateChannelCache([]Channel{channelplaceholder, map[int64]string{99: PlatformCompositeplaceholder)
+	svc := &ChannelService{placeholder
+	svc.cache.Store(cache)
+
+	openAICtx := WithResolvedTargetPlatform(context.Background(), PlatformOpenAI)
+	require.NotNil(t, svc.GetChannelModelPricing(openAICtx, 99, "gpt-5"))
+	require.Nil(t, svc.GetChannelModelPricing(openAICtx, 99, "claude-sonnet-4-5"))
+	openAIResult := svc.ResolveChannelMapping(openAICtx, 99, "gpt-5")
+	require.True(t, openAIResult.Mapped)
+	require.Equal(t, "gpt-5-mini", openAIResult.MappedModel)
+
+	anthropicCtx := WithResolvedTargetPlatform(context.Background(), PlatformAnthropic)
+	require.NotNil(t, svc.GetChannelModelPricing(anthropicCtx, 99, "claude-sonnet-4-5"))
+	require.Nil(t, svc.GetChannelModelPricing(anthropicCtx, 99, "gpt-5"))
+	anthropicResult := svc.ResolveChannelMapping(anthropicCtx, 99, "claude-3-5-sonnet")
+	require.True(t, anthropicResult.Mapped)
+	require.Equal(t, "claude-sonnet-4-5", anthropicResult.MappedModel)
 placeholder
 
 // ===========================================================================

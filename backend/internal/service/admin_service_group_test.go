@@ -17,10 +17,17 @@ placeholder
 
 // groupRepoStubForAdmin 用于测试 AdminService 的 GroupRepository Stub
 type groupRepoStubForAdmin struct {
-	created *Group // 记录 Create 调用的参数
-	updated *Group // 记录 Update 调用的参数
-	getByID *Group // GetByID 返回值
-	getErr  error  // GetByID 返回的错误
+	created  *Group // 记录 Create 调用的参数
+	updated  *Group // 记录 Update 调用的参数
+	getByID  *Group // GetByID 返回值
+	getErr   error  // GetByID 返回的错误
+	createID int64
+
+	getByIDByID map[int64]*Group
+
+	deleteAccountGroupsByGroupIDFn func(groupID int64) (int64, error)
+	bindAccountsToGroupFn          func(groupID int64, accountIDs []int64) error
+	getAccountIDsByGroupIDsFn      func(groupIDs []int64) ([]int64, error)
 
 	listWithFiltersCalls       int
 	listWithFiltersParams      pagination.PaginationParams
@@ -34,6 +41,9 @@ type groupRepoStubForAdmin struct {
 placeholder
 
 func (s *groupRepoStubForAdmin) Create(_ context.Context, g *Group) error {
+	if s.createID > 0 {
+		g.ID = s.createID
+placeholder
 	s.created = g
 	return nil
 placeholder
@@ -43,16 +53,28 @@ func (s *groupRepoStubForAdmin) Update(_ context.Context, g *Group) error {
 	return nil
 placeholder
 
-func (s *groupRepoStubForAdmin) GetByID(_ context.Context, _ int64) (*Group, error) {
+func (s *groupRepoStubForAdmin) GetByID(_ context.Context, id int64) (*Group, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
+placeholder
+	if s.getByIDByID != nil {
+		if group, ok := s.getByIDByID[id]; ok {
+			return group, nil
+	placeholder
+		return nil, ErrGroupNotFound
 placeholder
 	return s.getByID, nil
 placeholder
 
-func (s *groupRepoStubForAdmin) GetByIDLite(_ context.Context, _ int64) (*Group, error) {
+func (s *groupRepoStubForAdmin) GetByIDLite(_ context.Context, id int64) (*Group, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
+placeholder
+	if s.getByIDByID != nil {
+		if group, ok := s.getByIDByID[id]; ok {
+			return group, nil
+	placeholder
+		return nil, ErrGroupNotFound
 placeholder
 	return s.getByID, nil
 placeholder
@@ -109,15 +131,24 @@ func (s *groupRepoStubForAdmin) GetAccountCount(_ context.Context, _ int64) (int
 	panic("unexpected GetAccountCount call")
 placeholder
 
-func (s *groupRepoStubForAdmin) DeleteAccountGroupsByGroupID(_ context.Context, _ int64) (int64, error) {
+func (s *groupRepoStubForAdmin) DeleteAccountGroupsByGroupID(_ context.Context, groupID int64) (int64, error) {
+	if s.deleteAccountGroupsByGroupIDFn != nil {
+		return s.deleteAccountGroupsByGroupIDFn(groupID)
+placeholder
 	panic("unexpected DeleteAccountGroupsByGroupID call")
 placeholder
 
-func (s *groupRepoStubForAdmin) BindAccountsToGroup(_ context.Context, _ int64, _ []int64) error {
+func (s *groupRepoStubForAdmin) BindAccountsToGroup(_ context.Context, groupID int64, accountIDs []int64) error {
+	if s.bindAccountsToGroupFn != nil {
+		return s.bindAccountsToGroupFn(groupID, accountIDs)
+placeholder
 	panic("unexpected BindAccountsToGroup call")
 placeholder
 
-func (s *groupRepoStubForAdmin) GetAccountIDsByGroupIDs(_ context.Context, _ []int64) ([]int64, error) {
+func (s *groupRepoStubForAdmin) GetAccountIDsByGroupIDs(_ context.Context, groupIDs []int64) ([]int64, error) {
+	if s.getAccountIDsByGroupIDsFn != nil {
+		return s.getAccountIDsByGroupIDsFn(groupIDs)
+placeholder
 	panic("unexpected GetAccountIDsByGroupIDs call")
 placeholder
 
