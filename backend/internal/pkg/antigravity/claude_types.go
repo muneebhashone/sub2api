@@ -254,4 +254,3 @@ func IsGeminiReasoningModel(modelID string) bool {
 placeholder
 	return false
 placeholder
-
