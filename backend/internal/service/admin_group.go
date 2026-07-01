@@ -100,6 +100,134 @@ placeholder
 	return candidates, nil
 placeholder
 
+func (s *adminServiceImpl) ListCompositeRoutes(ctx context.Context, groupID int64) ([]CompositeModelRoute, error) {
+	if err := s.requireCompositeGroup(ctx, groupID); err != nil {
+		return nil, err
+placeholder
+	if s.compositeRouteRepo == nil {
+		return nil, fmt.Errorf("composite route repository is not configured")
+placeholder
+	return s.compositeRouteRepo.ListByGroup(ctx, groupID, true)
+placeholder
+
+func (s *adminServiceImpl) CreateCompositeRoute(ctx context.Context, groupID int64, input CompositeRouteInput) (*CompositeModelRoute, error) {
+	if err := s.requireCompositeGroup(ctx, groupID); err != nil {
+		return nil, err
+placeholder
+	if s.compositeRouteRepo == nil {
+		return nil, fmt.Errorf("composite route repository is not configured")
+placeholder
+	route, err := compositeRouteFromInput(groupID, input)
+	if err != nil {
+		return nil, err
+placeholder
+	if err := s.compositeRouteRepo.Create(ctx, route); err != nil {
+		return nil, err
+placeholder
+	return route, nil
+placeholder
+
+func (s *adminServiceImpl) UpdateCompositeRoute(ctx context.Context, groupID, routeID int64, input CompositeRouteInput) (*CompositeModelRoute, error) {
+	if err := s.requireCompositeGroup(ctx, groupID); err != nil {
+		return nil, err
+placeholder
+	if s.compositeRouteRepo == nil {
+		return nil, fmt.Errorf("composite route repository is not configured")
+placeholder
+	if ok, err := s.compositeRouteBelongsToGroup(ctx, groupID, routeID); err != nil {
+		return nil, err
+placeholder else if !ok {
+		return nil, ErrCompositeRouteNotFound
+placeholder
+	route, err := compositeRouteFromInput(groupID, input)
+	if err != nil {
+		return nil, err
+placeholder
+	route.ID = routeID
+	if err := s.compositeRouteRepo.Update(ctx, route); err != nil {
+		return nil, err
+placeholder
+	return route, nil
+placeholder
+
+func (s *adminServiceImpl) DeleteCompositeRoute(ctx context.Context, groupID, routeID int64) error {
+	if err := s.requireCompositeGroup(ctx, groupID); err != nil {
+		return err
+placeholder
+	if s.compositeRouteRepo == nil {
+		return fmt.Errorf("composite route repository is not configured")
+placeholder
+	if ok, err := s.compositeRouteBelongsToGroup(ctx, groupID, routeID); err != nil {
+		return err
+placeholder else if !ok {
+		return ErrCompositeRouteNotFound
+placeholder
+	return s.compositeRouteRepo.Delete(ctx, routeID)
+placeholder
+
+func (s *adminServiceImpl) PreviewCompositeRoute(ctx context.Context, groupID int64, input CompositeRoutePreviewRequest) (*CompositeRouteDecision, error) {
+	if err := s.requireCompositeGroup(ctx, groupID); err != nil {
+		return nil, err
+placeholder
+	resolver := s.compositeResolver
+	if resolver == nil {
+		resolver = NewCompositeRouteResolver(s.compositeRouteRepo)
+placeholder
+	decision, err := resolver.Resolve(ctx, groupID, input.Model, input.Endpoint)
+	if err != nil {
+		return nil, err
+placeholder
+	return &decision, nil
+placeholder
+
+func (s *adminServiceImpl) requireCompositeGroup(ctx context.Context, groupID int64) error {
+	group, err := s.groupRepo.GetByIDLite(ctx, groupID)
+	if err != nil {
+		return err
+placeholder
+	if group.Platform != PlatformComposite {
+		return fmt.Errorf("group %d is not a composite group", groupID)
+placeholder
+	return nil
+placeholder
+
+func (s *adminServiceImpl) compositeRouteBelongsToGroup(ctx context.Context, groupID, routeID int64) (bool, error) {
+	routes, err := s.compositeRouteRepo.ListByGroup(ctx, groupID, true)
+	if err != nil {
+		return false, err
+placeholder
+	for i := range routes {
+		if routes[i].ID == routeID {
+			return true, nil
+	placeholder
+placeholder
+	return false, nil
+placeholder
+
+func compositeRouteFromInput(groupID int64, input CompositeRouteInput) (*CompositeModelRoute, error) {
+	input = normalizeCompositeRouteInput(input)
+	if input.PublicModel == "" {
+		return nil, fmt.Errorf("public_model is required")
+placeholder
+	if !isConcreteRequestPlatform(input.TargetPlatform) {
+		return nil, fmt.Errorf("target_platform must be a concrete provider")
+placeholder
+	if input.Priority == 0 {
+		input.Priority = 100
+placeholder
+	return &CompositeModelRoute{
+		GroupID:        groupID,
+		PublicModel:    input.PublicModel,
+		MatchType:      input.MatchType,
+		TargetPlatform: input.TargetPlatform,
+		UpstreamModel:  input.UpstreamModel,
+		Endpoint:       input.Endpoint,
+		Priority:       input.Priority,
+		Enabled:        input.Enabled,
+		Notes:          input.Notes,
+placeholder, nil
+placeholder
+
 func defaultModelsListCandidateIDs(platform string) []string {
 	switch platform {
 	case PlatformOpenAI:

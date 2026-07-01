@@ -1160,7 +1160,7 @@ placeholder
 placeholder
 
 	fallbackPlatform := guessPlatformFromPath(c.Request.URL.Path)
-	platform := resolveOpsPlatform(apiKey, fallbackPlatform)
+	platform := resolveOpsPlatform(c.Request.Context(), apiKey, fallbackPlatform)
 
 	requestID := c.Writer.Header().Get("X-Request-Id")
 	if requestID == "" {

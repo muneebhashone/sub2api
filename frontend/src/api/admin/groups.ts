@@ -7,6 +7,10 @@ import { apiClient placeholder from '../client'
 import type {
   AdminGroup,
   GroupPlatform,
+  CompositeModelRoute,
+  CompositeModelRouteInput,
+  CompositeRoutePreviewRequest,
+  CompositeRouteDecision,
   CreateGroupRequest,
   UpdateGroupRequest,
   PaginatedResponse
@@ -263,6 +267,55 @@ export async function getGroupApiKeys(
   return data
 placeholder
 
+export async function listCompositeRoutes(id: number): Promise<CompositeModelRoute[]> {
+  const { data placeholder = await apiClient.get<CompositeModelRoute[]>(`/admin/groups/${idplaceholder/composite-routes`)
+  return data
+placeholder
+
+export async function createCompositeRoute(
+  id: number,
+  route: CompositeModelRouteInput
+): Promise<CompositeModelRoute> {
+  const { data placeholder = await apiClient.post<CompositeModelRoute>(
+    `/admin/groups/${idplaceholder/composite-routes`,
+    route
+  )
+  return data
+placeholder
+
+export async function updateCompositeRoute(
+  id: number,
+  routeId: number,
+  route: CompositeModelRouteInput
+): Promise<CompositeModelRoute> {
+  const { data placeholder = await apiClient.put<CompositeModelRoute>(
+    `/admin/groups/${idplaceholder/composite-routes/${routeIdplaceholder`,
+    route
+  )
+  return data
+placeholder
+
+export async function deleteCompositeRoute(
+  id: number,
+  routeId: number
+): Promise<{ message: string placeholder> {
+  const { data placeholder = await apiClient.delete<{ message: string placeholder>(
+    `/admin/groups/${idplaceholder/composite-routes/${routeIdplaceholder`
+  )
+  return data
+placeholder
+
+export async function previewCompositeRoute(
+  id: number,
+  request: CompositeRoutePreviewRequest
+): Promise<CompositeRouteDecision> {
+  const { data placeholder = await apiClient.post<CompositeRouteDecision>(
+    `/admin/groups/${idplaceholder/composite-routes/preview`,
+    request
+  )
+  return data
+placeholder
+
 /**
  * Rate multiplier entry for a user in a group
  */
@@ -423,6 +476,11 @@ export const groupsAPI = {
   toggleStatus,
   getStats,
   getGroupApiKeys,
+  listCompositeRoutes,
+  createCompositeRoute,
+  updateCompositeRoute,
+  deleteCompositeRoute,
+  previewCompositeRoute,
   getGroupRateMultipliers,
   clearGroupRateMultipliers,
   batchSetGroupRateMultipliers,

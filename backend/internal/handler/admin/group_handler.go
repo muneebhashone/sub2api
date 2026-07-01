@@ -198,6 +198,22 @@ type UpdateGroupRequest struct {
 	CopyAccountsFromGroupIDs []int64 `json:"copy_accounts_from_group_ids"`
 placeholder
 
+type CompositeRouteRequest struct {
+	PublicModel    string `json:"public_model" binding:"required"`
+	MatchType      string `json:"match_type" binding:"omitempty,oneof=exact prefix"`
+	TargetPlatform string `json:"target_platform" binding:"required,oneof=anthropic openai gemini antigravity grok"`
+	UpstreamModel  string `json:"upstream_model"`
+	Endpoint       string `json:"endpoint" binding:"omitempty,oneof=any messages count_tokens responses chat_completions embeddings images gemini"`
+	Priority       int    `json:"priority"`
+	Enabled        *bool  `json:"enabled"`
+	Notes          string `json:"notes"`
+placeholder
+
+type CompositeRoutePreviewRequest struct {
+	Model    string `json:"model" binding:"required"`
+	Endpoint string `json:"endpoint" binding:"omitempty,oneof=any messages count_tokens responses chat_completions embeddings images gemini"`
+placeholder
+
 // List handles listing all groups with pagination
 // GET /api/v1/admin/groups
 func (h *GroupHandler) List(c *gin.Context) {
@@ -231,6 +247,133 @@ placeholder
 		outGroups = append(outGroups, *dto.GroupFromServiceAdmin(&groups[i]))
 placeholder
 	response.Paginated(c, outGroups, total, page, pageSize)
+placeholder
+
+// ListCompositeRoutes handles listing composite model routes for one group.
+// GET /api/v1/admin/groups/:id/composite-routes
+func (h *GroupHandler) ListCompositeRoutes(c *gin.Context) {
+	groupID, ok := parsePositiveIDParam(c, "id")
+	if !ok {
+		return
+placeholder
+	routes, err := h.adminService.ListCompositeRoutes(c.Request.Context(), groupID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, routes)
+placeholder
+
+// CreateCompositeRoute handles creating one composite model route.
+// POST /api/v1/admin/groups/:id/composite-routes
+func (h *GroupHandler) CreateCompositeRoute(c *gin.Context) {
+	groupID, ok := parsePositiveIDParam(c, "id")
+	if !ok {
+		return
+placeholder
+	var req CompositeRouteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+placeholder
+	route, err := h.adminService.CreateCompositeRoute(c.Request.Context(), groupID, compositeRouteRequestToInput(req, true))
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Created(c, route)
+placeholder
+
+// UpdateCompositeRoute handles replacing one composite model route.
+// PUT /api/v1/admin/groups/:id/composite-routes/:route_id
+func (h *GroupHandler) UpdateCompositeRoute(c *gin.Context) {
+	groupID, ok := parsePositiveIDParam(c, "id")
+	if !ok {
+		return
+placeholder
+	routeID, ok := parsePositiveIDParam(c, "route_id")
+	if !ok {
+		return
+placeholder
+	var req CompositeRouteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+placeholder
+	route, err := h.adminService.UpdateCompositeRoute(c.Request.Context(), groupID, routeID, compositeRouteRequestToInput(req, true))
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, route)
+placeholder
+
+// DeleteCompositeRoute handles deleting one composite model route.
+// DELETE /api/v1/admin/groups/:id/composite-routes/:route_id
+func (h *GroupHandler) DeleteCompositeRoute(c *gin.Context) {
+	groupID, ok := parsePositiveIDParam(c, "id")
+	if !ok {
+		return
+placeholder
+	routeID, ok := parsePositiveIDParam(c, "route_id")
+	if !ok {
+		return
+placeholder
+	if err := h.adminService.DeleteCompositeRoute(c.Request.Context(), groupID, routeID); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, gin.H{"message": "Composite route deleted"placeholder)
+placeholder
+
+// PreviewCompositeRoute resolves a model without mutating routes.
+// POST /api/v1/admin/groups/:id/composite-routes/preview
+func (h *GroupHandler) PreviewCompositeRoute(c *gin.Context) {
+	groupID, ok := parsePositiveIDParam(c, "id")
+	if !ok {
+		return
+placeholder
+	var req CompositeRoutePreviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+placeholder
+	decision, err := h.adminService.PreviewCompositeRoute(c.Request.Context(), groupID, service.CompositeRoutePreviewRequest{
+		Model:    req.Model,
+		Endpoint: req.Endpoint,
+placeholder)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, decision)
+placeholder
+
+func compositeRouteRequestToInput(req CompositeRouteRequest, defaultEnabled bool) service.CompositeRouteInput {
+	enabled := defaultEnabled
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+placeholder
+	return service.CompositeRouteInput{
+		PublicModel:    req.PublicModel,
+		MatchType:      req.MatchType,
+		TargetPlatform: req.TargetPlatform,
+		UpstreamModel:  req.UpstreamModel,
+		Endpoint:       req.Endpoint,
+		Priority:       req.Priority,
+		Enabled:        enabled,
+		Notes:          req.Notes,
+placeholder
+placeholder
+
+func parsePositiveIDParam(c *gin.Context, name string) (int64, bool) {
+	raw := c.Param(name)
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid "+name)
+		return 0, false
+placeholder
+	return id, true
 placeholder
 
 // GetAll handles getting all active groups without pagination.

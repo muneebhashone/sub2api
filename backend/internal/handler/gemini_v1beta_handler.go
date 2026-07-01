@@ -98,6 +98,9 @@ placeholder
 		googleError(c, http.StatusBadRequest, "Missing model in URL")
 		return
 placeholder
+	if resolvedModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context()); ok && strings.TrimSpace(resolvedModel) != "" {
+		modelName = strings.TrimSpace(resolvedModel)
+placeholder
 
 	// 强制 antigravity 模式：返回 antigravity 模型信息
 	if forcePlatform == service.PlatformAntigravity {
@@ -165,6 +168,9 @@ placeholder
 	if err != nil {
 		googleError(c, http.StatusNotFound, err.Error())
 		return
+placeholder
+	if resolvedModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context()); ok && strings.TrimSpace(resolvedModel) != "" {
+		modelName = strings.TrimSpace(resolvedModel)
 placeholder
 
 	stream := action == "streamGenerateContent"
