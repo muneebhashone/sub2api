@@ -177,16 +177,6 @@ placeholder
 	return decision, decision.Matched, nil
 placeholder
 
-func resolveCompositeTargetPlatform(ctx context.Context, group *Group, requestedModel string) (string, bool) {
-	if platform, ok := ResolvedTargetPlatformFromContext(ctx); ok {
-		return platform, true
-placeholder
-	if group == nil || group.Platform != PlatformComposite {
-		return "", false
-placeholder
-	return DetectModelPlatform(requestedModel)
-placeholder
-
 func isConcreteRequestPlatform(platform string) bool {
 	switch platform {
 	case PlatformAnthropic, PlatformOpenAI, PlatformGemini, PlatformAntigravity, PlatformGrok:

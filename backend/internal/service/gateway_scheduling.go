@@ -42,10 +42,13 @@ placeholder else if groupID != nil {
 		if err != nil {
 			return nil, err
 	placeholder
+		if group == nil {
+			return nil, ErrGroupNotFound
+	placeholder
 		groupID = resolvedGroupID
 		ctx = s.withGroupContext(ctx, group)
 		platform = group.Platform
-		if group != nil && group.Platform == PlatformComposite {
+		if group.Platform == PlatformComposite {
 			decision, ok, err := s.resolveCompositeRouteDecision(ctx, group, requestedModel, CompositeRouteEndpointAny)
 			if err != nil {
 				return nil, err
