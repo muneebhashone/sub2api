@@ -7,8 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"strings"
 	"testing"
 	"time"
@@ -142,6 +144,279 @@ placeholder
 	_, err := buildGrokResponsesRequest(context.Background(), nil, account, []byte(`{"model":"grok-4.3"placeholder`), "access-token")
 placeholder
 	require.Contains(t, err.Error(), "invalid base url")
+placeholder
+
+func TestExtractGrokMediaModelSupportsJSONAndMultipart(t *testing.T) {
+	require.Equal(t, "grok-imagine", ExtractGrokMediaModel("application/json", []byte(`{"model":"grok-imagine"placeholder`)))
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	require.NoError(t, writer.WriteField("prompt", "draw a cat"))
+	require.NoError(t, writer.WriteField("model", "grok-imagine-edit"))
+	require.NoError(t, writer.Close())
+
+	require.Equal(t, "grok-imagine-edit", ExtractGrokMediaModel(writer.FormDataContentType(), buf.Bytes()))
+placeholder
+
+func TestParseGrokMediaRequestBuildsMultipartModerationBody(t *testing.T) {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	require.NoError(t, writer.WriteField("prompt", "edit this private image"))
+	require.NoError(t, writer.WriteField("model", "grok-imagine-edit"))
+	partHeader := textproto.MIMEHeader{placeholder
+	partHeader.Set("Content-Disposition", `form-data; name="image"; filename="input.png"`)
+	partHeader.Set("Content-Type", "image/png")
+	part, err := writer.CreatePart(partHeader)
+placeholder
+	_, err = part.Write([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0aplaceholder)
+placeholder
+	require.NoError(t, writer.Close())
+
+	info := ParseGrokMediaRequest(writer.FormDataContentType(), buf.Bytes())
+	require.Equal(t, "grok-imagine-edit", info.Model)
+	require.Equal(t, "edit this private image", info.Prompt)
+
+	moderationBody := info.ModerationBody()
+	require.NotEmpty(t, moderationBody)
+	require.Equal(t, "edit this private image", gjson.GetBytes(moderationBody, "prompt").String())
+	require.True(t, strings.HasPrefix(gjson.GetBytes(moderationBody, "images.0.image_url").String(), "data:image/"))
+placeholder
+
+func TestForwardGrokMediaImagesGenerationPassthrough(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok-imagine","prompt":"draw a cat"placeholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          61,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "api-key",
+			"base_url": "https://xai.test/v1",
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":   []string{"application/json"placeholder,
+			"Xai-Request-Id": []string{"xai-image-req"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(`{"data":[]placeholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointImagesGenerations, "", body, "application/json")
+placeholder
+	require.Equal(t, "https://xai.test/v1/images/generations", upstream.lastReq.URL.String())
+	require.Equal(t, http.MethodPost, upstream.lastReq.Method)
+	require.Equal(t, "Bearer api-key", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "application/json", upstream.lastReq.Header.Get("Content-Type"))
+	require.JSONEq(t, string(body), string(upstream.lastBody))
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.JSONEq(t, `{"data":[]placeholder`, recorder.Body.String())
+	require.Equal(t, "xai-image-req", result.RequestID)
+	require.Equal(t, "grok-imagine", result.Model)
+	require.Equal(t, "grok-imagine", result.BillingModel)
+	require.Equal(t, 1, result.ImageCount)
+	require.Equal(t, ImageBillingSize2K, result.ImageSize)
+placeholder
+
+func TestForwardGrokMediaImagesEditMultipartConvertsToJSON(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	gin.SetMode(gin.TestMode)
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	require.NoError(t, writer.WriteField("model", "grok-imagine-edit"))
+	require.NoError(t, writer.WriteField("prompt", "edit this private image"))
+	partHeader := textproto.MIMEHeader{placeholder
+	partHeader.Set("Content-Disposition", `form-data; name="image"; filename="input.png"`)
+	partHeader.Set("Content-Type", "image/png")
+	part, err := writer.CreatePart(partHeader)
+placeholder
+	_, err = part.Write([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0aplaceholder)
+placeholder
+	require.NoError(t, writer.Close())
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/edits", bytes.NewReader(buf.Bytes()))
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	account := &Account{
+		ID:          62,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "api-key",
+			"base_url": "https://xai.test/v1",
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(`{"data":[]placeholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	_, err = svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointImagesEdits, "", buf.Bytes(), writer.FormDataContentType())
+placeholder
+	require.Equal(t, "https://xai.test/v1/images/edits", upstream.lastReq.URL.String())
+	require.Equal(t, "application/json", upstream.lastReq.Header.Get("Content-Type"))
+	require.True(t, json.Valid(upstream.lastBody))
+	require.Equal(t, "grok-imagine-edit", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.Equal(t, "edit this private image", gjson.GetBytes(upstream.lastBody, "prompt").String())
+	require.True(t, strings.HasPrefix(gjson.GetBytes(upstream.lastBody, "image.image_url").String(), "data:image/png;base64,"))
+placeholder
+
+func TestForwardGrokMediaVideoGenerationReturnsUsageAndResponseID(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok-imagine-video-1.5","prompt":"waves"placeholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          63,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "api-key",
+			"base_url": "https://xai.test/v1",
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":   []string{"application/json"placeholder,
+			"Xai-Request-Id": []string{"xai-video-generate-req"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(`{"request_id":"video-request-123","usage":{"prompt_tokens":3,"completion_tokens":4placeholderplaceholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointVideosGenerations, "", body, "application/json")
+placeholder
+	require.Equal(t, "https://xai.test/v1/videos/generations", upstream.lastReq.URL.String())
+	require.Equal(t, "video-request-123", result.ResponseID)
+	require.Equal(t, "grok-imagine-video-1.5", result.BillingModel)
+	require.Equal(t, 3, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Equal(t, 1, result.ImageCount)
+placeholder
+
+func TestForwardGrokMediaVideoStatusUsesGETWithoutBody(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/videos/request-123", nil)
+
+	account := &Account{
+		ID:          62,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "api-key",
+			"base_url": "https://xai.test/v1",
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":   []string{"application/json"placeholder,
+			"Xai-Request-Id": []string{"xai-video-req"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(`{"id":"request-123","status":"completed"placeholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointVideoStatus, "request-123", nil, "")
+placeholder
+	require.Equal(t, "https://xai.test/v1/videos/request-123", upstream.lastReq.URL.String())
+	require.Equal(t, http.MethodGet, upstream.lastReq.Method)
+	require.Equal(t, "Bearer api-key", upstream.lastReq.Header.Get("Authorization"))
+	require.Empty(t, upstream.lastReq.Header.Get("Content-Type"))
+	require.Empty(t, upstream.lastBody)
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.JSONEq(t, `{"id":"request-123","status":"completed"placeholder`, recorder.Body.String())
+	require.Equal(t, "xai-video-req", result.RequestID)
+placeholder
+
+func TestBindGrokMediaVideoRequestAccountUsesRequestIDStickyHash(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(7)
+	cache := &stubGatewayCache{placeholder
+	svc := &OpenAIGatewayService{cache: cacheplaceholder
+
+	hash := GrokMediaVideoRequestSessionHash("video-request-123")
+	require.NotEmpty(t, hash)
+	require.NoError(t, svc.BindGrokMediaVideoRequestAccount(ctx, &groupID, "video-request-123", 63))
+
+	accountID, err := svc.getStickySessionAccountID(ctx, &groupID, hash)
+placeholder
+	require.Equal(t, int64(63), accountID)
+placeholder
+
+func TestForwardGrokMediaErrorHonorsCustomErrorCodes(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok-imagine","prompt":"draw a cat"placeholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          64,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":                    "api-key",
+			"base_url":                   "https://xai.test/v1",
+			"custom_error_codes_enabled": true,
+			"custom_error_codes":         []any{float64(http.StatusTooManyRequests)placeholder,
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Header: http.Header{
+			"Content-Type":   []string{"application/json"placeholder,
+			"Xai-Request-Id": []string{"xai-error-req"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(`{"error":{"message":"do not expose this upstream detail"placeholderplaceholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointImagesGenerations, "", body, "application/json")
+placeholder
+	require.Nil(t, result)
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	require.Contains(t, recorder.Body.String(), "Upstream gateway error")
+	require.NotContains(t, recorder.Body.String(), "do not expose")
 placeholder
 
 func TestForwardAsChatCompletionsForGrokUsesXAIChatCompletionsAndSnapshots(t *testing.T) {
