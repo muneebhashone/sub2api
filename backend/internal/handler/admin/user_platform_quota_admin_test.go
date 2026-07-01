@@ -98,7 +98,10 @@ func TestUpdateUserPlatformQuotas_Success(t *testing.T) {
 
 	body := `{"quotas":[
 		{"platform":"anthropic","daily_limit_usd":10.0,"weekly_limit_usd":null,"monthly_limit_usd":100.0placeholder,
-		{"platform":"openai","daily_limit_usd":null,"weekly_limit_usd":null,"monthly_limit_usd":nullplaceholder
+		{"platform":"openai","daily_limit_usd":80.0,"weekly_limit_usd":300.0,"monthly_limit_usd":nullplaceholder,
+		{"platform":"gemini","daily_limit_usd":null,"weekly_limit_usd":null,"monthly_limit_usd":nullplaceholder,
+		{"platform":"antigravity","daily_limit_usd":null,"weekly_limit_usd":null,"monthly_limit_usd":nullplaceholder,
+		{"platform":"grok","daily_limit_usd":null,"weekly_limit_usd":null,"monthly_limit_usd":nullplaceholder
 	]placeholder`
 	c, w := putReq(t, body)
 	h.UpdateUserPlatformQuotas(c)
@@ -109,10 +112,10 @@ placeholder
 	if len(repo.upsertCalls) != 1 {
 		t.Fatalf("UpsertForUser should be called once, got %d", len(repo.upsertCalls))
 placeholder
-	if repo.upsertCalls[0].userID != 42 || len(repo.upsertCalls[0].records) != 2 {
+	if repo.upsertCalls[0].userID != 42 || len(repo.upsertCalls[0].records) != len(service.AllowedQuotaPlatforms) {
 		t.Errorf("unexpected upsert call: %+v", repo.upsertCalls[0])
 placeholder
-	// 缓存失效：请求中 2 个 platform + 软删除的 3 个 platform（gemini, antigravity, grok）= 5 次
+	// 缓存失效：按全部允许平台统一失效。
 	if len(cache.deleteCalls) != 5 {
 		t.Errorf("expected 5 cache delete calls, got %d: %+v", len(cache.deleteCalls), cache.deleteCalls)
 placeholder
@@ -154,7 +157,7 @@ placeholder
 func TestUpdateUserPlatformQuotas_RejectsTooManyEntries(t *testing.T) {
 	h := buildTestHandler(&upsertCapturingQuotaRepo{placeholder, &billingCacheStub{placeholder)
 	body := `{"quotas":[
-		{"platform":"anthropic"placeholder,{"platform":"openai"placeholder,{"platform":"gemini"placeholder,{"platform":"antigravity"placeholder,{"platform":"anthropic"placeholder
+		{"platform":"anthropic"placeholder,{"platform":"openai"placeholder,{"platform":"gemini"placeholder,{"platform":"antigravity"placeholder,{"platform":"grok"placeholder,{"platform":"anthropic"placeholder
 	]placeholder`
 	c, w := putReq(t, body)
 	h.UpdateUserPlatformQuotas(c)

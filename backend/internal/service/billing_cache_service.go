@@ -96,6 +96,11 @@ type apiKeyRateLimitLoader interface {
 	GetRateLimitData(ctx context.Context, keyID int64) (*APIKeyRateLimitData, error)
 placeholder
 
+type subscriptionCacheInvalidationPubSub interface {
+	PublishSubscriptionCacheInvalidation(ctx context.Context, cacheKey string) error
+	SubscribeSubscriptionCacheInvalidation(ctx context.Context, handler func(cacheKey string)) error
+placeholder
+
 // BillingCacheService 计费缓存服务
 // 负责余额和订阅数据的缓存管理，提供高性能的计费资格检查
 type BillingCacheService struct {
@@ -523,6 +528,28 @@ placeholder
 		return err
 placeholder
 	return nil
+placeholder
+
+func (s *BillingCacheService) PublishSubscriptionCacheInvalidation(ctx context.Context, cacheKey string) error {
+	if s.cache == nil {
+		return nil
+placeholder
+	pubsub, ok := s.cache.(subscriptionCacheInvalidationPubSub)
+	if !ok {
+		return nil
+placeholder
+	return pubsub.PublishSubscriptionCacheInvalidation(ctx, cacheKey)
+placeholder
+
+func (s *BillingCacheService) SubscribeSubscriptionCacheInvalidation(ctx context.Context, handler func(cacheKey string)) error {
+	if s.cache == nil {
+		return nil
+placeholder
+	pubsub, ok := s.cache.(subscriptionCacheInvalidationPubSub)
+	if !ok {
+		return nil
+placeholder
+	return pubsub.SubscribeSubscriptionCacheInvalidation(ctx, handler)
 placeholder
 
 // InvalidateAPIKeyRateLimit invalidates the Redis rate-limit usage cache for an API key.

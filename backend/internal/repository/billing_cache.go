@@ -18,6 +18,7 @@ const (
 	billingBalanceKeyPrefix   = "billing:balance:"
 	billingSubKeyPrefix       = "billing:sub:"
 	billingRateLimitKeyPrefix = "apikey:rate:"
+	subCacheInvalidateChannel = "subscription:cache:invalidate"
 	billingCacheTTL           = 5 * time.Minute
 	billingCacheJitter        = 30 * time.Second
 	rateLimitCacheTTL         = 7 * 24 * time.Hour // 7 days matches the longest window
@@ -254,6 +255,45 @@ placeholder
 func (c *billingCache) InvalidateSubscriptionCache(ctx context.Context, userID, groupID int64) error {
 	key := billingSubKey(userID, groupID)
 	return c.rdb.Del(ctx, key).Err()
+placeholder
+
+func (c *billingCache) PublishSubscriptionCacheInvalidation(ctx context.Context, cacheKey string) error {
+	return c.rdb.Publish(ctx, subCacheInvalidateChannel, cacheKey).Err()
+placeholder
+
+func (c *billingCache) SubscribeSubscriptionCacheInvalidation(ctx context.Context, handler func(cacheKey string)) error {
+	pubsub := c.rdb.Subscribe(ctx, subCacheInvalidateChannel)
+
+	_, err := pubsub.Receive(ctx)
+	if err != nil {
+		_ = pubsub.Close()
+		return fmt.Errorf("subscribe to subscription cache invalidation: %w", err)
+placeholder
+
+	go func() {
+		defer func() {
+			if err := pubsub.Close(); err != nil {
+				log.Printf("Warning: failed to close subscription cache invalidation pubsub: %v", err)
+		placeholder
+	placeholder()
+
+		ch := pubsub.Channel()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+			placeholder
+				if msg != nil {
+					handler(msg.Payload)
+			placeholder
+		placeholder
+	placeholder
+placeholder()
+
+	return nil
 placeholder
 
 func (c *billingCache) GetAPIKeyRateLimit(ctx context.Context, keyID int64) (*service.APIKeyRateLimitCacheData, error) {
