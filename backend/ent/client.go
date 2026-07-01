@@ -820,6 +820,38 @@ placeholder
 	return query
 placeholder
 
+// QueryParent queries the parent edge of a Account.
+func (c *AccountClient) QueryParent(_m *Account) *AccountQuery {
+	query := (&AccountClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, id),
+			sqlgraph.To(account.Table, account.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, account.ParentTable, account.ParentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
+// QueryChildren queries the children edge of a Account.
+func (c *AccountClient) QueryChildren(_m *Account) *AccountQuery {
+	query := (&AccountClient{config: c.configplaceholder).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, id),
+			sqlgraph.To(account.Table, account.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.ChildrenTable, account.ChildrenColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+placeholder
+	return query
+placeholder
+
 // QueryUsageLogs queries the usage_logs edge of a Account.
 func (c *AccountClient) QueryUsageLogs(_m *Account) *UsageLogQuery {
 	query := (&UsageLogClient{config: c.configplaceholder).Query()

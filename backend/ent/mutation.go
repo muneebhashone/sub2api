@@ -2310,12 +2310,18 @@ type AccountMutation struct {
 	session_window_start        *time.Time
 	session_window_end          *time.Time
 	session_window_status       *string
+	quota_dimension             *account.QuotaDimension
 	clearedFields               map[string]struct{placeholder
 	groups                      map[int64]struct{placeholder
 	removedgroups               map[int64]struct{placeholder
 	clearedgroups               bool
 	proxy                       *int64
 	clearedproxy                bool
+	parent                      *int64
+	clearedparent               bool
+	children                    map[int64]struct{placeholder
+	removedchildren             map[int64]struct{placeholder
+	clearedchildren             bool
 	usage_logs                  map[int64]struct{placeholder
 	removedusage_logs           map[int64]struct{placeholder
 	clearedusage_logs           bool
@@ -3776,6 +3782,91 @@ func (m *AccountMutation) ResetSessionWindowStatus() {
 	delete(m.clearedFields, account.FieldSessionWindowStatus)
 placeholder
 
+// SetParentAccountID sets the "parent_account_id" field.
+func (m *AccountMutation) SetParentAccountID(i int64) {
+	m.parent = &i
+placeholder
+
+// ParentAccountID returns the value of the "parent_account_id" field in the mutation.
+func (m *AccountMutation) ParentAccountID() (r int64, exists bool) {
+	v := m.parent
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldParentAccountID returns the old "parent_account_id" field's value of the Account entity.
+// If the Account object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountMutation) OldParentAccountID(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParentAccountID is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParentAccountID requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParentAccountID: %w", err)
+placeholder
+	return oldValue.ParentAccountID, nil
+placeholder
+
+// ClearParentAccountID clears the value of the "parent_account_id" field.
+func (m *AccountMutation) ClearParentAccountID() {
+	m.parent = nil
+	m.clearedFields[account.FieldParentAccountID] = struct{placeholder{placeholder
+placeholder
+
+// ParentAccountIDCleared returns if the "parent_account_id" field was cleared in this mutation.
+func (m *AccountMutation) ParentAccountIDCleared() bool {
+	_, ok := m.clearedFields[account.FieldParentAccountID]
+	return ok
+placeholder
+
+// ResetParentAccountID resets all changes to the "parent_account_id" field.
+func (m *AccountMutation) ResetParentAccountID() {
+	m.parent = nil
+	delete(m.clearedFields, account.FieldParentAccountID)
+placeholder
+
+// SetQuotaDimension sets the "quota_dimension" field.
+func (m *AccountMutation) SetQuotaDimension(ad account.QuotaDimension) {
+	m.quota_dimension = &ad
+placeholder
+
+// QuotaDimension returns the value of the "quota_dimension" field in the mutation.
+func (m *AccountMutation) QuotaDimension() (r account.QuotaDimension, exists bool) {
+	v := m.quota_dimension
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldQuotaDimension returns the old "quota_dimension" field's value of the Account entity.
+// If the Account object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccountMutation) OldQuotaDimension(ctx context.Context) (v account.QuotaDimension, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaDimension is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaDimension requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaDimension: %w", err)
+placeholder
+	return oldValue.QuotaDimension, nil
+placeholder
+
+// ResetQuotaDimension resets all changes to the "quota_dimension" field.
+func (m *AccountMutation) ResetQuotaDimension() {
+	m.quota_dimension = nil
+placeholder
+
 // AddGroupIDs adds the "groups" edge to the Group entity by ids.
 func (m *AccountMutation) AddGroupIDs(ids ...int64) {
 	if m.groups == nil {
@@ -3855,6 +3946,100 @@ placeholder
 func (m *AccountMutation) ResetProxy() {
 	m.proxy = nil
 	m.clearedproxy = false
+placeholder
+
+// SetParentID sets the "parent" edge to the Account entity by id.
+func (m *AccountMutation) SetParentID(id int64) {
+	m.parent = &id
+placeholder
+
+// ClearParent clears the "parent" edge to the Account entity.
+func (m *AccountMutation) ClearParent() {
+	m.clearedparent = true
+	m.clearedFields[account.FieldParentAccountID] = struct{placeholder{placeholder
+placeholder
+
+// ParentCleared reports if the "parent" edge to the Account entity was cleared.
+func (m *AccountMutation) ParentCleared() bool {
+	return m.ParentAccountIDCleared() || m.clearedparent
+placeholder
+
+// ParentID returns the "parent" edge ID in the mutation.
+func (m *AccountMutation) ParentID() (id int64, exists bool) {
+	if m.parent != nil {
+		return *m.parent, true
+placeholder
+	return
+placeholder
+
+// ParentIDs returns the "parent" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ParentID instead. It exists only for internal usage by the builders.
+func (m *AccountMutation) ParentIDs() (ids []int64) {
+	if id := m.parent; id != nil {
+		ids = append(ids, *id)
+placeholder
+	return
+placeholder
+
+// ResetParent resets all changes to the "parent" edge.
+func (m *AccountMutation) ResetParent() {
+	m.parent = nil
+	m.clearedparent = false
+placeholder
+
+// AddChildIDs adds the "children" edge to the Account entity by ids.
+func (m *AccountMutation) AddChildIDs(ids ...int64) {
+	if m.children == nil {
+		m.children = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		m.children[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// ClearChildren clears the "children" edge to the Account entity.
+func (m *AccountMutation) ClearChildren() {
+	m.clearedchildren = true
+placeholder
+
+// ChildrenCleared reports if the "children" edge to the Account entity was cleared.
+func (m *AccountMutation) ChildrenCleared() bool {
+	return m.clearedchildren
+placeholder
+
+// RemoveChildIDs removes the "children" edge to the Account entity by IDs.
+func (m *AccountMutation) RemoveChildIDs(ids ...int64) {
+	if m.removedchildren == nil {
+		m.removedchildren = make(map[int64]struct{placeholder)
+placeholder
+	for i := range ids {
+		delete(m.children, ids[i])
+		m.removedchildren[ids[i]] = struct{placeholder{placeholder
+placeholder
+placeholder
+
+// RemovedChildren returns the removed IDs of the "children" edge to the Account entity.
+func (m *AccountMutation) RemovedChildrenIDs() (ids []int64) {
+	for id := range m.removedchildren {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ChildrenIDs returns the "children" edge IDs in the mutation.
+func (m *AccountMutation) ChildrenIDs() (ids []int64) {
+	for id := range m.children {
+		ids = append(ids, id)
+placeholder
+	return
+placeholder
+
+// ResetChildren resets all changes to the "children" edge.
+func (m *AccountMutation) ResetChildren() {
+	m.children = nil
+	m.clearedchildren = false
+	m.removedchildren = nil
 placeholder
 
 // AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
@@ -3945,7 +4130,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AccountMutation) Fields() []string {
-	fields := make([]string, 0, 29)
+	fields := make([]string, 0, 31)
 	if m.created_at != nil {
 		fields = append(fields, account.FieldCreatedAt)
 placeholder
@@ -4033,6 +4218,12 @@ placeholder
 	if m.session_window_status != nil {
 		fields = append(fields, account.FieldSessionWindowStatus)
 placeholder
+	if m.parent != nil {
+		fields = append(fields, account.FieldParentAccountID)
+placeholder
+	if m.quota_dimension != nil {
+		fields = append(fields, account.FieldQuotaDimension)
+placeholder
 	return fields
 placeholder
 
@@ -4099,6 +4290,10 @@ func (m *AccountMutation) Field(name string) (ent.Value, bool) {
 		return m.SessionWindowEnd()
 	case account.FieldSessionWindowStatus:
 		return m.SessionWindowStatus()
+	case account.FieldParentAccountID:
+		return m.ParentAccountID()
+	case account.FieldQuotaDimension:
+		return m.QuotaDimension()
 placeholder
 	return nil, false
 placeholder
@@ -4166,6 +4361,10 @@ func (m *AccountMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldSessionWindowEnd(ctx)
 	case account.FieldSessionWindowStatus:
 		return m.OldSessionWindowStatus(ctx)
+	case account.FieldParentAccountID:
+		return m.OldParentAccountID(ctx)
+	case account.FieldQuotaDimension:
+		return m.OldQuotaDimension(ctx)
 placeholder
 	return nil, fmt.Errorf("unknown Account field %s", name)
 placeholder
@@ -4378,6 +4577,20 @@ func (m *AccountMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetSessionWindowStatus(v)
 		return nil
+	case account.FieldParentAccountID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetParentAccountID(v)
+		return nil
+	case account.FieldQuotaDimension:
+		v, ok := value.(account.QuotaDimension)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetQuotaDimension(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown Account field %s", name)
 placeholder
@@ -4519,6 +4732,9 @@ placeholder
 	if m.FieldCleared(account.FieldSessionWindowStatus) {
 		fields = append(fields, account.FieldSessionWindowStatus)
 placeholder
+	if m.FieldCleared(account.FieldParentAccountID) {
+		fields = append(fields, account.FieldParentAccountID)
+placeholder
 	return fields
 placeholder
 
@@ -4580,6 +4796,9 @@ func (m *AccountMutation) ClearField(name string) error {
 		return nil
 	case account.FieldSessionWindowStatus:
 		m.ClearSessionWindowStatus()
+		return nil
+	case account.FieldParentAccountID:
+		m.ClearParentAccountID()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Account nullable field %s", name)
@@ -4676,18 +4895,30 @@ func (m *AccountMutation) ResetField(name string) error {
 	case account.FieldSessionWindowStatus:
 		m.ResetSessionWindowStatus()
 		return nil
+	case account.FieldParentAccountID:
+		m.ResetParentAccountID()
+		return nil
+	case account.FieldQuotaDimension:
+		m.ResetQuotaDimension()
+		return nil
 placeholder
 	return fmt.Errorf("unknown Account field %s", name)
 placeholder
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AccountMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.groups != nil {
 		edges = append(edges, account.EdgeGroups)
 placeholder
 	if m.proxy != nil {
 		edges = append(edges, account.EdgeProxy)
+placeholder
+	if m.parent != nil {
+		edges = append(edges, account.EdgeParent)
+placeholder
+	if m.children != nil {
+		edges = append(edges, account.EdgeChildren)
 placeholder
 	if m.usage_logs != nil {
 		edges = append(edges, account.EdgeUsageLogs)
@@ -4709,6 +4940,16 @@ func (m *AccountMutation) AddedIDs(name string) []ent.Value {
 		if id := m.proxy; id != nil {
 			return []ent.Value{*idplaceholder
 	placeholder
+	case account.EdgeParent:
+		if id := m.parent; id != nil {
+			return []ent.Value{*idplaceholder
+	placeholder
+	case account.EdgeChildren:
+		ids := make([]ent.Value, 0, len(m.children))
+		for id := range m.children {
+			ids = append(ids, id)
+	placeholder
+		return ids
 	case account.EdgeUsageLogs:
 		ids := make([]ent.Value, 0, len(m.usage_logs))
 		for id := range m.usage_logs {
@@ -4721,9 +4962,12 @@ placeholder
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AccountMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.removedgroups != nil {
 		edges = append(edges, account.EdgeGroups)
+placeholder
+	if m.removedchildren != nil {
+		edges = append(edges, account.EdgeChildren)
 placeholder
 	if m.removedusage_logs != nil {
 		edges = append(edges, account.EdgeUsageLogs)
@@ -4741,6 +4985,12 @@ func (m *AccountMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 	placeholder
 		return ids
+	case account.EdgeChildren:
+		ids := make([]ent.Value, 0, len(m.removedchildren))
+		for id := range m.removedchildren {
+			ids = append(ids, id)
+	placeholder
+		return ids
 	case account.EdgeUsageLogs:
 		ids := make([]ent.Value, 0, len(m.removedusage_logs))
 		for id := range m.removedusage_logs {
@@ -4753,12 +5003,18 @@ placeholder
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AccountMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.clearedgroups {
 		edges = append(edges, account.EdgeGroups)
 placeholder
 	if m.clearedproxy {
 		edges = append(edges, account.EdgeProxy)
+placeholder
+	if m.clearedparent {
+		edges = append(edges, account.EdgeParent)
+placeholder
+	if m.clearedchildren {
+		edges = append(edges, account.EdgeChildren)
 placeholder
 	if m.clearedusage_logs {
 		edges = append(edges, account.EdgeUsageLogs)
@@ -4774,6 +5030,10 @@ func (m *AccountMutation) EdgeCleared(name string) bool {
 		return m.clearedgroups
 	case account.EdgeProxy:
 		return m.clearedproxy
+	case account.EdgeParent:
+		return m.clearedparent
+	case account.EdgeChildren:
+		return m.clearedchildren
 	case account.EdgeUsageLogs:
 		return m.clearedusage_logs
 placeholder
@@ -4786,6 +5046,9 @@ func (m *AccountMutation) ClearEdge(name string) error {
 	switch name {
 	case account.EdgeProxy:
 		m.ClearProxy()
+		return nil
+	case account.EdgeParent:
+		m.ClearParent()
 		return nil
 placeholder
 	return fmt.Errorf("unknown Account unique edge %s", name)
@@ -4800,6 +5063,12 @@ func (m *AccountMutation) ResetEdge(name string) error {
 		return nil
 	case account.EdgeProxy:
 		m.ResetProxy()
+		return nil
+	case account.EdgeParent:
+		m.ResetParent()
+		return nil
+	case account.EdgeChildren:
+		m.ResetChildren()
 		return nil
 	case account.EdgeUsageLogs:
 		m.ResetUsageLogs()
