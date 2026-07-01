@@ -30,6 +30,8 @@ type AccountQuery struct {
 	predicates        []predicate.Account
 	withGroups        *GroupQuery
 	withProxy         *ProxyQuery
+	withParent        *AccountQuery
+	withChildren      *AccountQuery
 	withUsageLogs     *UsageLogQuery
 	withAccountGroups *AccountGroupQuery
 	modifiers         []func(*sql.Selector)
@@ -106,6 +108,50 @@ func (_q *AccountQuery) QueryProxy() *ProxyQuery {
 			sqlgraph.From(account.Table, account.FieldID, selector),
 			sqlgraph.To(proxy.Table, proxy.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, account.ProxyTable, account.ProxyColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+placeholder
+	return query
+placeholder
+
+// QueryParent chains the current query on the "parent" edge.
+func (_q *AccountQuery) QueryParent() *AccountQuery {
+	query := (&AccountClient{config: _q.configplaceholder).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+	placeholder
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+	placeholder
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, selector),
+			sqlgraph.To(account.Table, account.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, account.ParentTable, account.ParentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+placeholder
+	return query
+placeholder
+
+// QueryChildren chains the current query on the "children" edge.
+func (_q *AccountQuery) QueryChildren() *AccountQuery {
+	query := (&AccountClient{config: _q.configplaceholder).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+	placeholder
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+	placeholder
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, selector),
+			sqlgraph.To(account.Table, account.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.ChildrenTable, account.ChildrenColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -351,6 +397,8 @@ placeholder
 		predicates:        append([]predicate.Account{placeholder, _q.predicates...),
 		withGroups:        _q.withGroups.Clone(),
 		withProxy:         _q.withProxy.Clone(),
+		withParent:        _q.withParent.Clone(),
+		withChildren:      _q.withChildren.Clone(),
 		withUsageLogs:     _q.withUsageLogs.Clone(),
 		withAccountGroups: _q.withAccountGroups.Clone(),
 		// clone intermediate query.
@@ -378,6 +426,28 @@ func (_q *AccountQuery) WithProxy(opts ...func(*ProxyQuery)) *AccountQuery {
 		opt(query)
 placeholder
 	_q.withProxy = query
+	return _q
+placeholder
+
+// WithParent tells the query-builder to eager-load the nodes that are connected to
+// the "parent" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AccountQuery) WithParent(opts ...func(*AccountQuery)) *AccountQuery {
+	query := (&AccountClient{config: _q.configplaceholder).Query()
+	for _, opt := range opts {
+		opt(query)
+placeholder
+	_q.withParent = query
+	return _q
+placeholder
+
+// WithChildren tells the query-builder to eager-load the nodes that are connected to
+// the "children" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AccountQuery) WithChildren(opts ...func(*AccountQuery)) *AccountQuery {
+	query := (&AccountClient{config: _q.configplaceholder).Query()
+	for _, opt := range opts {
+		opt(query)
+placeholder
+	_q.withChildren = query
 	return _q
 placeholder
 
@@ -481,9 +551,11 @@ func (_q *AccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Acco
 	var (
 		nodes       = []*Account{placeholder
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [6]bool{
 			_q.withGroups != nil,
 			_q.withProxy != nil,
+			_q.withParent != nil,
+			_q.withChildren != nil,
 			_q.withUsageLogs != nil,
 			_q.withAccountGroups != nil,
 	placeholder
@@ -519,6 +591,19 @@ placeholder
 	if query := _q.withProxy; query != nil {
 		if err := _q.loadProxy(ctx, query, nodes, nil,
 			func(n *Account, e *Proxy) { n.Edges.Proxy = e placeholder); err != nil {
+			return nil, err
+	placeholder
+placeholder
+	if query := _q.withParent; query != nil {
+		if err := _q.loadParent(ctx, query, nodes, nil,
+			func(n *Account, e *Account) { n.Edges.Parent = e placeholder); err != nil {
+			return nil, err
+	placeholder
+placeholder
+	if query := _q.withChildren; query != nil {
+		if err := _q.loadChildren(ctx, query, nodes,
+			func(n *Account) { n.Edges.Children = []*Account{placeholder placeholder,
+			func(n *Account, e *Account) { n.Edges.Children = append(n.Edges.Children, e) placeholder); err != nil {
 			return nil, err
 	placeholder
 placeholder
@@ -632,6 +717,71 @@ placeholder
 placeholder
 	return nil
 placeholder
+func (_q *AccountQuery) loadParent(ctx context.Context, query *AccountQuery, nodes []*Account, init func(*Account), assign func(*Account, *Account)) error {
+	ids := make([]int64, 0, len(nodes))
+	nodeids := make(map[int64][]*Account)
+	for i := range nodes {
+		if nodes[i].ParentAccountID == nil {
+			continue
+	placeholder
+		fk := *nodes[i].ParentAccountID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+	placeholder
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+placeholder
+	if len(ids) == 0 {
+		return nil
+placeholder
+	query.Where(account.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+placeholder
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "parent_account_id" returned %v`, n.ID)
+	placeholder
+		for i := range nodes {
+			assign(nodes[i], n)
+	placeholder
+placeholder
+	return nil
+placeholder
+func (_q *AccountQuery) loadChildren(ctx context.Context, query *AccountQuery, nodes []*Account, init func(*Account), assign func(*Account, *Account)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int64]*Account)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+	placeholder
+placeholder
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(account.FieldParentAccountID)
+placeholder
+	query.Where(predicate.Account(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(account.ChildrenColumn), fks...))
+placeholder))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+placeholder
+	for _, n := range neighbors {
+		fk := n.ParentAccountID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "parent_account_id" is nil for node %v`, n.ID)
+	placeholder
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "parent_account_id" returned %v for node %v`, *fk, n.ID)
+	placeholder
+		assign(node, n)
+placeholder
+	return nil
+placeholder
 func (_q *AccountQuery) loadUsageLogs(ctx context.Context, query *UsageLogQuery, nodes []*Account, init func(*Account), assign func(*Account, *UsageLog)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int64]*Account)
@@ -723,6 +873,9 @@ placeholder
 	placeholder
 		if _q.withProxy != nil {
 			_spec.Node.AddColumnOnce(account.FieldProxyID)
+	placeholder
+		if _q.withParent != nil {
+			_spec.Node.AddColumnOnce(account.FieldParentAccountID)
 	placeholder
 placeholder
 	if ps := _q.predicates; len(ps) > 0 {

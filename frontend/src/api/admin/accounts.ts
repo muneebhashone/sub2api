@@ -781,6 +781,18 @@ export async function resetOpenAIQuota(id: number): Promise<OpenAIQuotaResetResu
   return data
 placeholder
 
+export interface SparkShadowCreatePayload {
+  name?: string
+  priority?: number
+  concurrency?: number
+  group_ids?: number[]
+placeholder
+
+export async function createSparkShadow(parentId: number, payload: SparkShadowCreatePayload): Promise<Account> {
+  const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${parentIdplaceholder/shadow`, payload)
+  return data
+placeholder
+
 export const accountsAPI = {
   list,
   listWithEtag,
@@ -825,7 +837,8 @@ export const accountsAPI = {
   setPrivacy,
   revertProxyFallback,
   queryOpenAIQuota,
-  resetOpenAIQuota
+  resetOpenAIQuota,
+  createSparkShadow
 placeholder
 
 export default accountsAPI
