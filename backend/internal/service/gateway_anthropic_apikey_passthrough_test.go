@@ -261,6 +261,56 @@ placeholder
 	require.Empty(t, rec.Header().Get("Set-Cookie"))
 placeholder
 
+func TestGatewayService_AnthropicAPIKeyPassthrough_BearerAuthScheme(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	c.Request.Header.Set("Authorization", "Bearer inbound-token")
+	c.Request.Header.Set("X-Api-Key", "inbound-api-key")
+	c.Request.Header.Set("Cookie", "secret=1")
+
+	svc := &GatewayService{
+		cfg: &config.Config{
+			Security: config.SecurityConfig{
+				URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholder,
+		placeholder,
+	placeholder,
+placeholder
+	account := &Account{
+		Platform: PlatformAnthropic,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key":  "ollama-key",
+			"base_url": "https://ollama.com",
+	placeholder,
+		Extra: map[string]any{
+			"anthropic_passthrough":        true,
+			"anthropic_apikey_auth_scheme": AnthropicAPIKeyAuthSchemeAuthorizationBearer,
+	placeholder,
+placeholder
+
+	msgReq, wireBody, err := svc.buildUpstreamRequestAnthropicAPIKeyPassthrough(
+		context.Background(), c, account, []byte(`{"model":"gpt-oss:20b","messages":[]placeholder`), "ollama-key",
+	)
+placeholder
+	require.Equal(t, "https://ollama.com/v1/messages?beta=true", msgReq.URL.String())
+	require.JSONEq(t, `{"model":"gpt-oss:20b","messages":[]placeholder`, string(wireBody))
+	require.Equal(t, "Bearer ollama-key", getHeaderRaw(msgReq.Header, "authorization"))
+	require.Empty(t, getHeaderRaw(msgReq.Header, "x-api-key"))
+	require.Empty(t, getHeaderRaw(msgReq.Header, "cookie"))
+
+	countReq, err := svc.buildCountTokensRequestAnthropicAPIKeyPassthrough(
+		context.Background(), c, account, []byte(`{"model":"gpt-oss:20b","messages":[]placeholder`), "ollama-key",
+	)
+placeholder
+	require.Equal(t, "https://ollama.com/v1/messages/count_tokens?beta=true", countReq.URL.String())
+	require.Equal(t, "Bearer ollama-key", getHeaderRaw(countReq.Header, "authorization"))
+	require.Empty(t, getHeaderRaw(countReq.Header, "x-api-key"))
+	require.Empty(t, getHeaderRaw(countReq.Header, "cookie"))
+placeholder
+
 // TestGatewayService_AnthropicAPIKeyPassthrough_ModelMappingEdgeCases 覆盖透传模式下模型映射的各种边界情况
 func TestGatewayService_AnthropicAPIKeyPassthrough_ModelMappingEdgeCases(t *testing.T) {
 	gin.SetMode(gin.TestMode)
