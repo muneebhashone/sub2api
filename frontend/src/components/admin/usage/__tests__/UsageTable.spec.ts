@@ -1,3 +1,11 @@
+const ipGeoMocks = vi.hoisted(() => ({
+  getEntry: vi.fn(() => ({ status: 'idle' as const placeholder)),
+  fetchOne: vi.fn(),
+  fetchBatch: vi.fn(),
+placeholder))
+
+vi.mock('@/utils/ipGeoLookup', () => ipGeoMocks)
+
 import { describe, expect, it, vi, beforeEach placeholder from 'vitest'
 import { mount placeholder from '@vue/test-utils'
 import { nextTick placeholder from 'vue'
@@ -320,6 +328,104 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('Per-image price')
     expect(text).toContain('not recorded')
     expect(text).not.toContain('(2K)')
+  placeholder)
+placeholder)
+
+describe('admin UsageTable IP geolocation batch toolbar', () => {
+  const DataTableStubWithIp = {
+    props: ['data'],
+    template: `
+      <div>
+        <div v-for="row in data" :key="row.request_id">
+          <slot name="cell-ip_address" :row="row" />
+        </div>
+      </div>
+    `,
+  placeholder
+
+  beforeEach(() => {
+    ipGeoMocks.getEntry.mockReset()
+    ipGeoMocks.fetchOne.mockReset()
+    ipGeoMocks.fetchBatch.mockReset()
+    ipGeoMocks.getEntry.mockReturnValue({ status: 'idle' placeholder)
+  placeholder)
+
+  it('does not render the batch toolbar when the ip_address column is not visible', () => {
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [{ request_id: 'r1', ip_address: '8.8.8.8' placeholder],
+        loading: false,
+        columns: [],
+      placeholder,
+      global: { stubs: { DataTable: DataTableStubWithIp, EmptyState: true, Teleport: true placeholder placeholder,
+    placeholder)
+    expect(wrapper.text()).not.toContain('usage.ipGeo.batchFetch')
+  placeholder)
+
+  it('renders the batch toolbar with a pending count when the ip_address column is visible', () => {
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [
+          { request_id: 'r1', ip_address: '8.8.8.8' placeholder,
+          { request_id: 'r2', ip_address: '8.8.8.8' placeholder,
+          { request_id: 'r3', ip_address: '1.1.1.1' placeholder,
+        ],
+        loading: false,
+        columns: [{ key: 'ip_address', label: 'IP' placeholder],
+      placeholder,
+      global: { stubs: { DataTable: DataTableStubWithIp, EmptyState: true, Teleport: true placeholder placeholder,
+    placeholder)
+    expect(wrapper.text()).toContain('usage.ipGeo.pending')
+    const button = wrapper.find('button')
+    expect(button.exists()).toBe(true)
+    expect((button.element as HTMLButtonElement).disabled).toBe(false)
+  placeholder)
+
+  it('fetches deduplicated IPs from the current page when the batch button is clicked', async () => {
+    ipGeoMocks.fetchBatch.mockResolvedValue(true)
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [
+          { request_id: 'r1', ip_address: '8.8.8.8' placeholder,
+          { request_id: 'r2', ip_address: '8.8.8.8' placeholder,
+          { request_id: 'r3', ip_address: '1.1.1.1' placeholder,
+        ],
+        loading: false,
+        columns: [{ key: 'ip_address', label: 'IP' placeholder],
+      placeholder,
+      global: { stubs: { DataTable: DataTableStubWithIp, EmptyState: true, Teleport: true placeholder placeholder,
+    placeholder)
+    await wrapper.find('button').trigger('click')
+    expect(ipGeoMocks.fetchBatch).toHaveBeenCalledWith(['8.8.8.8', '1.1.1.1'])
+    expect(wrapper.emitted('ipGeoBatchFailed')).toBeUndefined()
+  placeholder)
+
+  it('emits ipGeoBatchFailed when the batch request reports a network-level failure', async () => {
+    ipGeoMocks.fetchBatch.mockResolvedValue(false)
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [{ request_id: 'r1', ip_address: '8.8.8.8' placeholder],
+        loading: false,
+        columns: [{ key: 'ip_address', label: 'IP' placeholder],
+      placeholder,
+      global: { stubs: { DataTable: DataTableStubWithIp, EmptyState: true, Teleport: true placeholder placeholder,
+    placeholder)
+    await wrapper.find('button').trigger('click')
+    expect(wrapper.emitted('ipGeoBatchFailed')).toHaveLength(1)
+  placeholder)
+
+  it('renders IpGeoCell content for ip_address cells', () => {
+    ipGeoMocks.getEntry.mockReturnValue({ status: 'success', label: 'CN · Guangdong · Shenzhen', detail: {placeholder placeholder)
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [{ request_id: 'r1', ip_address: '121.35.47.43' placeholder],
+        loading: false,
+        columns: [{ key: 'ip_address', label: 'IP' placeholder],
+      placeholder,
+      global: { stubs: { DataTable: DataTableStubWithIp, EmptyState: true, Teleport: true placeholder placeholder,
+    placeholder)
+    expect(wrapper.text()).toContain('121.35.47.43')
+    expect(wrapper.text()).toContain('CN · Guangdong · Shenzhen')
   placeholder)
 placeholder)
 
