@@ -17,6 +17,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/util/responseheaders"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 type GrokMediaEndpoint string
@@ -296,6 +297,10 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	body, contentType, err = normalizeGrokMediaForwardBody(endpoint, body, contentType)
+	if err != nil {
+		return nil, err
+placeholder
 
 	var bodyReader io.Reader
 	if endpoint.RequiresRequestBody() {
@@ -422,6 +427,33 @@ placeholder
 		return nil, "", err
 placeholder
 	return out, "application/json", nil
+placeholder
+
+func normalizeGrokMediaForwardBody(endpoint GrokMediaEndpoint, body []byte, contentType string) ([]byte, string, error) {
+	if !endpoint.RequiresRequestBody() || !gjson.ValidBytes(body) {
+		return body, contentType, nil
+placeholder
+	model := strings.TrimSpace(gjson.GetBytes(body, "model").String())
+	upstreamModel := normalizeGrokMediaModelForEndpoint(endpoint, model)
+	if upstreamModel == "" || upstreamModel == model {
+		return body, contentType, nil
+placeholder
+	out, err := sjson.SetBytes(body, "model", upstreamModel)
+	if err != nil {
+		return nil, "", fmt.Errorf("rewrite grok media model: %w", err)
+placeholder
+	return out, contentType, nil
+placeholder
+
+func normalizeGrokMediaModelForEndpoint(endpoint GrokMediaEndpoint, model string) string {
+	model = strings.TrimSpace(model)
+	switch endpoint {
+	case GrokMediaEndpointImagesGenerations, GrokMediaEndpointImagesEdits:
+		if model == "grok-imagine" {
+			return "grok-imagine-image-quality"
+	placeholder
+placeholder
+	return model
 placeholder
 
 type grokMediaUsageMetadata struct {
