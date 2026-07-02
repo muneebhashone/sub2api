@@ -143,14 +143,19 @@ placeholder
 	// 5. 构建内部请求
 	innerRequest := GeminiRequest{
 		Contents: contents,
+		// 总是生成 sessionId，基于用户消息内容
+		SessionID: generateStableSessionID(contents),
+placeholder
+
+	// 针对 Gemini Reasoning 模型（如 gemini-3.1-pro-high等）过滤强制空 ToolConfig
+	isReasoning := IsGeminiReasoningModel(targetModel)
+	if !isReasoning || len(tools) > 0 {
 		// 总是设置 toolConfig，与官方客户端一致
-		ToolConfig: &GeminiToolConfig{
+		innerRequest.ToolConfig = &GeminiToolConfig{
 			FunctionCallingConfig: &GeminiFunctionCallingConfig{
 				Mode: "VALIDATED",
 		placeholder,
-	placeholder,
-		// 总是生成 sessionId，基于用户消息内容
-		SessionID: generateStableSessionID(contents),
+	placeholder
 placeholder
 
 	if systemInstruction != nil {
@@ -610,7 +615,11 @@ func buildGenerationConfig(req *ClaudeRequest) *GeminiGenerationConfig {
 	maxLimit := maxOutputTokensLimit(req.Model)
 	config := &GeminiGenerationConfig{
 		MaxOutputTokens: defaultMaxOutputTokens, // 默认最大输出
-		StopSequences:   DefaultStopSequences,
+placeholder
+
+	isReasoning := IsGeminiReasoningModel(req.Model)
+	if !isReasoning {
+		config.StopSequences = DefaultStopSequences
 placeholder
 
 	// 如果请求中指定了 MaxTokens，使用请求值
@@ -656,14 +665,16 @@ placeholder
 placeholder
 
 	// 其他参数
-	if req.Temperature != nil {
-		config.Temperature = req.Temperature
-placeholder
-	if req.TopP != nil {
-		config.TopP = req.TopP
-placeholder
-	if req.TopK != nil {
-		config.TopK = req.TopK
+	if !isReasoning {
+		if req.Temperature != nil {
+			config.Temperature = req.Temperature
+	placeholder
+		if req.TopP != nil {
+			config.TopP = req.TopP
+	placeholder
+		if req.TopK != nil {
+			config.TopK = req.TopK
+	placeholder
 placeholder
 
 	return config
