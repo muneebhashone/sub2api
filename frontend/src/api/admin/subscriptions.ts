@@ -24,7 +24,7 @@ export async function list(
   page: number = 1,
   pageSize: number = 20,
   filters?: {
-    status?: 'active' | 'expired' | 'revoked'
+    status?: 'active' | 'expired' | 'revoked' | 'suspended'
     user_id?: number
     group_id?: number
     platform?: string
@@ -122,6 +122,16 @@ export async function revoke(id: number): Promise<{ message: string placeholder>
 placeholder
 
 /**
+ * Restore revoked subscription
+ * @param id - Subscription ID
+ * @returns Restored subscription
+ */
+export async function restore(id: number): Promise<UserSubscription> {
+  const { data placeholder = await apiClient.post<UserSubscription>(`/admin/subscriptions/${idplaceholder/restore`)
+  return data
+placeholder
+
+/**
  * Reset daily, weekly, and/or monthly usage quota for a subscription
  * @param id - Subscription ID
  * @param options - Which windows to reset
@@ -188,6 +198,7 @@ export const subscriptionsAPI = {
   bulkAssign,
   extend,
   revoke,
+  restore,
   resetQuota,
   listByGroup,
   listByUser
