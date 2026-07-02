@@ -93,9 +93,10 @@ type ChatGPTAccountInfo struct {
 	SubscriptionExpiresAt string // entitlement.expires_at (RFC3339)
 placeholder
 
-const chatGPTAccountsCheckURL = "https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27"
-
-var chatGPTSubscriptionsURL = "https://chatgpt.com/backend-api/subscriptions"
+var (
+	chatGPTAccountsCheckURL = "https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27"
+	chatGPTSubscriptionsURL = "https://chatgpt.com/backend-api/subscriptions"
+)
 
 // fetchChatGPTAccountInfo calls ChatGPT backend-api to get account info (plan_type, etc.).
 // Used as fallback when id_token doesn't contain these fields (e.g., Mobile RT).
@@ -147,7 +148,9 @@ placeholder
 	if orgID != "" {
 		if acctRaw, ok := accounts[orgID]; ok {
 			if acct, ok := acctRaw.(map[string]any); ok {
-				fillAccountInfo(info, acct)
+				if isUsableChatGPTAccountCandidate(acct, time.Now()) {
+					fillAccountInfo(info, acct)
+			placeholder
 		placeholder
 	placeholder
 placeholder
@@ -162,6 +165,9 @@ placeholder
 		for _, acctRaw := range accounts {
 			acct, ok := acctRaw.(map[string]any)
 			if !ok {
+				continue
+		placeholder
+			if !isUsableChatGPTAccountCandidate(acct, time.Now()) {
 				continue
 		placeholder
 			planType := extractPlanType(acct)
@@ -276,6 +282,46 @@ placeholder
 	placeholder
 placeholder
 	return ""
+placeholder
+
+func isUsableChatGPTAccountCandidate(acct map[string]any, now time.Time) bool {
+	if acct == nil || hasChatGPTAccountDeactivatedMarker(acct) {
+		return false
+placeholder
+	if account, ok := acct["account"].(map[string]any); ok && hasChatGPTAccountDeactivatedMarker(account) {
+		return false
+placeholder
+
+	expiresAt := extractEntitlementExpiresAt(acct)
+	if expiresAt == "" {
+		return true
+placeholder
+	expiry, err := time.Parse(time.RFC3339, expiresAt)
+	if err != nil {
+		return true
+placeholder
+	return expiry.After(now)
+placeholder
+
+func hasChatGPTAccountDeactivatedMarker(obj map[string]any) bool {
+	for _, key := range []string{"deactivated", "is_deactivated", "disabled", "is_disabled"placeholder {
+		if value, ok := obj[key].(bool); ok && value {
+			return true
+	placeholder
+placeholder
+	for _, key := range []string{"deactivated_at", "disabled_at", "deleted_at"placeholder {
+		if value, ok := obj[key].(string); ok && strings.TrimSpace(value) != "" {
+			return true
+	placeholder
+placeholder
+	for _, key := range []string{"status", "state"placeholder {
+		value, _ := obj[key].(string)
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "deactivated", "disabled", "deleted", "inactive", "suspended":
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 // extractEntitlementExpiresAt 从 entitlement 中提取 expires_at。

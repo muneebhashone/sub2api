@@ -40,3 +40,88 @@ placeholder, "access-token", "", "acc_123")
 
 	require.Equal(t, wantExpiresAt, got)
 placeholder
+
+func TestFetchChatGPTAccountInfo_SkipsExpiredWorkspaceCandidate(t *testing.T) {
+	expiredAt := time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/backend-api/accounts/check/v4-2023-04-27", r.URL.Path)
+		require.Equal(t, "Bearer access-token", r.Header.Get("Authorization"))
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"accounts": map[string]any{
+				"org-expired-workspace": map[string]any{
+					"account": map[string]any{
+						"plan_type":  "self_serve_business_usage_based",
+						"is_default": true,
+				placeholder,
+					"entitlement": map[string]any{
+						"expires_at": expiredAt,
+				placeholder,
+			placeholder,
+				"personal-account": map[string]any{
+					"account": map[string]any{
+						"plan_type": "free",
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder)
+placeholder))
+	defer server.Close()
+
+	oldURL := chatGPTAccountsCheckURL
+	chatGPTAccountsCheckURL = server.URL + "/backend-api/accounts/check/v4-2023-04-27"
+	t.Cleanup(func() { chatGPTAccountsCheckURL = oldURL placeholder)
+
+	got := fetchChatGPTAccountInfo(context.Background(), func(proxyURL string) (*req.Client, error) {
+		return req.C().SetTimeout(5 * time.Second), nil
+placeholder, "access-token", "", "org-expired-workspace")
+
+	require.NotNil(t, got)
+	require.Equal(t, "free", got.PlanType)
+	require.Empty(t, got.SubscriptionExpiresAt)
+placeholder
+
+func TestFetchChatGPTAccountInfo_SkipsDeactivatedWorkspaceCandidate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/backend-api/accounts/check/v4-2023-04-27", r.URL.Path)
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"accounts": map[string]any{
+				"org-deactivated-workspace": map[string]any{
+					"account": map[string]any{
+						"plan_type":      "self_serve_business_usage_based",
+						"is_default":     true,
+						"is_deactivated": true,
+				placeholder,
+			placeholder,
+				"personal-account": map[string]any{
+					"account": map[string]any{
+						"plan_type": "pro",
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder)
+placeholder))
+	defer server.Close()
+
+	oldURL := chatGPTAccountsCheckURL
+	chatGPTAccountsCheckURL = server.URL + "/backend-api/accounts/check/v4-2023-04-27"
+	t.Cleanup(func() { chatGPTAccountsCheckURL = oldURL placeholder)
+
+	got := fetchChatGPTAccountInfo(context.Background(), func(proxyURL string) (*req.Client, error) {
+		return req.C().SetTimeout(5 * time.Second), nil
+placeholder, "access-token", "", "org-deactivated-workspace")
+
+	require.NotNil(t, got)
+	require.Equal(t, "pro", got.PlanType)
+placeholder
+
+func TestShouldApplyChatGPTAccountInfoPlanType(t *testing.T) {
+	require.False(t, shouldApplyChatGPTAccountInfoPlanType("pro", "self_serve_business_usage_based"))
+	require.False(t, shouldApplyChatGPTAccountInfoPlanType("free", "team"))
+	require.False(t, shouldApplyChatGPTAccountInfoPlanType("", ""))
+	require.True(t, shouldApplyChatGPTAccountInfoPlanType("", "pro"))
+placeholder

@@ -270,7 +270,11 @@ placeholder
 	placeholder
 placeholder
 	if info := fetchChatGPTAccountInfo(ctx, s.privacyClientFactory, tokenInfo.AccessToken, proxyURL, orgID); info != nil {
-		if info.PlanType != "" {
+		// chatgpt_plan_type from the ID token is the canonical personal-plan value.
+		// accounts/check is a multi-account/workspace endpoint; inactive team or
+		// business workspaces can otherwise overwrite Pro/Free with internal
+		// workspace billing plan names such as self_serve_business_usage_based.
+		if shouldApplyChatGPTAccountInfoPlanType(tokenInfo.PlanType, info.PlanType) {
 			tokenInfo.PlanType = info.PlanType
 	placeholder
 		if info.SubscriptionExpiresAt != "" {
@@ -288,6 +292,10 @@ placeholder
 
 	// 尝试设置隐私（关闭训练数据共享），best-effort
 	tokenInfo.PrivacyMode = disableOpenAITraining(ctx, s.privacyClientFactory, tokenInfo.AccessToken, proxyURL)
+placeholder
+
+func shouldApplyChatGPTAccountInfoPlanType(current, candidate string) bool {
+	return strings.TrimSpace(candidate) != "" && strings.TrimSpace(current) == ""
 placeholder
 
 func resolveChatGPTSubscriptionAccountID(tokenInfo *OpenAITokenInfo, orgID string) string {
