@@ -1,5 +1,6 @@
 import { mount placeholder from "@vue/test-utils";
 import { describe, expect, it placeholder from "vitest";
+import { createPinia placeholder from "pinia";
 import { createI18n placeholder from "vue-i18n";
 import SubscriptionPlanCard from "../SubscriptionPlanCard.vue";
 
@@ -42,7 +43,7 @@ const mountPlanCard = (groupPlatform: string) =>
         is_active: true,
       placeholder,
     placeholder,
-    global: { plugins: [i18n] placeholder,
+    global: { plugins: [i18n, createPinia()] placeholder,
   placeholder);
 
 describe("SubscriptionPlanCard", () => {

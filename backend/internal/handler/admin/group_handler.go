@@ -71,13 +71,6 @@ placeholder
 	return &zero
 placeholder
 
-func derefFloat64Default(p *float64, def float64) float64 {
-	if p != nil {
-		return *p
-placeholder
-	return def
-placeholder
-
 // NewGroupHandler creates a new admin group handler
 func NewGroupHandler(adminService service.AdminService, dashboardService *service.DashboardService, groupCapacityService *service.GroupCapacityService) *GroupHandler {
 	return &GroupHandler{
@@ -292,7 +285,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		return
 placeholder
 
-	if err := service.ValidatePeakRateConfig(req.SubscriptionType, req.PeakRateEnabled, req.PeakStart, req.PeakEnd, derefFloat64Default(req.PeakRateMultiplier, 1.0)); err != nil {
+	if err := service.ValidatePeakRateConfig(req.SubscriptionType, req.PeakRateEnabled, req.PeakStart, req.PeakEnd, float64ValueOrDefault(req.PeakRateMultiplier, 1.0)); err != nil {
 		response.BadRequest(c, err.Error())
 		return
 placeholder

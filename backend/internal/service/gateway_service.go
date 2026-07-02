@@ -9681,7 +9681,7 @@ placeholder else if opts.LongContextThreshold > 0 {
 		// 长上下文双倍计费（如 Gemini 200K 阈值）
 		cost, err = s.billingService.CalculateCostWithLongContext(billingModel, tokens, multiplier, opts.LongContextThreshold, opts.LongContextMultiplier)
 placeholder else {
-		cost, err = s.billingService.CalculateCostWithServiceTier(billingModel, tokens, multiplier, "")
+		cost, err = s.billingService.CalculateCost(billingModel, tokens, multiplier)
 placeholder
 	if err != nil {
 		logger.LegacyPrintf("service.gateway", "Calculate cost failed: %v", err)

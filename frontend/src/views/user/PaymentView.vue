@@ -262,6 +262,7 @@ import { useAppStore placeholder from '@/stores'
 import { paymentAPI placeholder from '@/api/payment'
 import { extractApiErrorMessage, extractI18nErrorMessage placeholder from '@/utils/apiError'
 import { isMobileDevice placeholder from '@/utils/device'
+import { hasPeakRate, formatPeakRateWindow, serverTimezoneLabel, type PeakRateFields placeholder from '@/utils/peak-rate'
 import type { SubscriptionPlan, CheckoutInfoResponse, CreateOrderResult, OrderType placeholder from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AmountInput from '@/components/payment/AmountInput.vue'
@@ -304,14 +305,12 @@ function getDaysRemaining(expiresAt: string): number {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 placeholder
 
-function subscriptionHasPeakRate(sub: { group?: { peak_rate_enabled?: boolean; peak_start?: string; peak_end?: string placeholder | null placeholder): boolean {
-  const group = sub.group
-  return Boolean(group?.peak_rate_enabled && group.peak_start && group.peak_end)
+function subscriptionHasPeakRate(sub: { group?: PeakRateFields | null placeholder): boolean {
+  return hasPeakRate(sub.group)
 placeholder
 
-function subscriptionPeakRateLabel(sub: { group?: { peak_start?: string; peak_end?: string; peak_rate_multiplier?: number placeholder | null placeholder): string {
-  const group = sub.group
-  return `${group?.peak_startplaceholder-${group?.peak_endplaceholder ×${group?.peak_rate_multiplier ?? 1placeholder`
+function subscriptionPeakRateLabel(sub: { group?: PeakRateFields | null placeholder): string {
+  return formatPeakRateWindow(sub.group, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
 placeholder
 
 const loading = ref(true)
@@ -713,11 +712,11 @@ const planValiditySuffix = computed(() => {
 placeholder)
 
 function planHasPeakRate(plan: SubscriptionPlan): boolean {
-  return Boolean(plan.peak_rate_enabled && plan.peak_start && plan.peak_end)
+  return hasPeakRate(plan)
 placeholder
 
 function planPeakRateLabel(plan: SubscriptionPlan): string {
-  return `${plan.peak_startplaceholder-${plan.peak_endplaceholder ×${plan.peak_rate_multiplier ?? 1placeholder`
+  return formatPeakRateWindow(plan, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
 placeholder
 
 function selectPlan(plan: SubscriptionPlan) {

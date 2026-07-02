@@ -103,6 +103,8 @@ import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import type { SubscriptionPlan placeholder from '@/types/payment'
 import type { UserSubscription placeholder from '@/types'
+import { useAppStore placeholder from '@/stores/app'
+import { hasPeakRate as groupHasPeakRate, formatPeakRateWindow, serverTimezoneLabel placeholder from '@/utils/peak-rate'
 import {
   platformAccentBarClass,
   platformBadgeLightClass,
@@ -144,12 +146,12 @@ const rateDisplay = computed(() => {
   return `×${Number(rate.toPrecision(10))placeholder`
 placeholder)
 
-const hasPeakRate = computed(() => {
-  return Boolean(props.plan.peak_rate_enabled && props.plan.peak_start && props.plan.peak_end)
-placeholder)
+const appStore = useAppStore()
+
+const hasPeakRate = computed(() => groupHasPeakRate(props.plan))
 
 const peakRateDisplay = computed(() => {
-  return `${props.plan.peak_startplaceholder-${props.plan.peak_endplaceholder ×${props.plan.peak_rate_multiplier ?? 1placeholder`
+  return formatPeakRateWindow(props.plan, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
 placeholder)
 
 const MODEL_SCOPE_LABELS: Record<string, string> = {
