@@ -197,11 +197,6 @@ placeholder
 		reqBody["state"] = codeState
 placeholder
 
-	// Setup token requires longer expiration (1 year)
-	if isSetupToken {
-		reqBody["expires_in"] = 31536000 // 365 * 24 * 60 * 60 seconds
-placeholder
-
 	logger.LegacyPrintf("repository.claude_oauth", "[OAuth] Step 3: Exchanging code for token at %s", s.tokenURL)
 	reqBodyJSON, _ := json.Marshal(logredact.RedactMap(reqBody))
 	logger.LegacyPrintf("repository.claude_oauth", "[OAuth] Step 3 Request Body: %s", string(reqBodyJSON))
