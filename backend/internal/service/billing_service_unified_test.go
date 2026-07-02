@@ -60,6 +60,28 @@ placeholder
 	require.Equal(t, string(BillingModeToken), cost.BillingMode)
 placeholder
 
+func TestCalculateCostUnified_TokenModeAppliesRateMultiplierToImageTokens(t *testing.T) {
+	bs := newTestBillingService()
+	resolver := NewModelPricingResolver(nil, bs)
+
+	tokens := UsageTokens{InputTokens: 1000, OutputTokens: 600, ImageOutputTokens: 100placeholder
+	cost, err := bs.CalculateCostUnified(CostInput{
+		Ctx:            context.Background(),
+		Model:          "claude-sonnet-4",
+		Tokens:         tokens,
+		RateMultiplier: 3.0,
+		Resolver:       resolver,
+placeholder)
+placeholder
+
+	textInput := 1000 * 3e-6
+	textOutput := 500 * 15e-6
+	imageOutput := 100 * 15e-6
+	require.InDelta(t, textInput+textOutput+imageOutput, cost.TotalCost, 1e-10)
+	require.InDelta(t, (textInput+textOutput+imageOutput)*3.0, cost.ActualCost, 1e-10)
+	require.InDelta(t, imageOutput, cost.ImageOutputCost, 1e-10)
+placeholder
+
 func TestCalculateCostUnified_PerRequestMode(t *testing.T) {
 	// Set up a ChannelService with a per-request pricing channel
 	cs := newTestChannelServiceWithCache(t, &channelCache{
