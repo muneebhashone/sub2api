@@ -435,6 +435,175 @@ placeholder
 		placeholder,
 	placeholder,
 placeholder
+	// BatchImageEventsColumns holds the columns for the "batch_image_events" table.
+	BatchImageEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "job_id", Type: field.TypeString, Size: 64placeholder,
+		{Name: "event_type", Type: field.TypeString, Size: 64placeholder,
+		{Name: "payload", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "event_hash", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// BatchImageEventsTable holds the schema information for the "batch_image_events" table.
+	BatchImageEventsTable = &schema.Table{
+		Name:       "batch_image_events",
+		Columns:    BatchImageEventsColumns,
+		PrimaryKey: []*schema.Column{BatchImageEventsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "batchimageevent_job_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageEventsColumns[1], BatchImageEventsColumns[5]placeholder,
+		placeholder,
+			{
+				Name:    "batchimageevent_event_type",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageEventsColumns[2]placeholder,
+		placeholder,
+			{
+				Name:    "batchimageevent_job_id_event_hash",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageEventsColumns[1], BatchImageEventsColumns[4]placeholder,
+				Annotation: &entsql.IndexAnnotation{
+					Where: "event_hash IS NOT NULL AND event_hash <> ''",
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// BatchImageItemsColumns holds the columns for the "batch_image_items" table.
+	BatchImageItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "job_id", Type: field.TypeString, Size: 64placeholder,
+		{Name: "custom_id", Type: field.TypeString, Size: 255placeholder,
+		{Name: "status", Type: field.TypeString, Size: 32placeholder,
+		{Name: "request_hash", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "prompt_preview", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "provider_source_object", Type: field.TypeString, Nullable: true, Size: placeholder,
+		{Name: "source_line_number", Type: field.TypeInt, Nullable: trueplaceholder,
+		{Name: "source_byte_offset", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "source_byte_length", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "mime_type", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "file_extension", Type: field.TypeString, Nullable: true, Size: 32placeholder,
+		{Name: "image_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "error_code", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "billed_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "indexed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// BatchImageItemsTable holds the schema information for the "batch_image_items" table.
+	BatchImageItemsTable = &schema.Table{
+		Name:       "batch_image_items",
+		Columns:    BatchImageItemsColumns,
+		PrimaryKey: []*schema.Column{BatchImageItemsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "batchimageitem_job_id_custom_id",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageItemsColumns[1], BatchImageItemsColumns[2]placeholder,
+		placeholder,
+			{
+				Name:    "batchimageitem_job_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageItemsColumns[1], BatchImageItemsColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "batchimageitem_provider_source_object",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageItemsColumns[6]placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	// BatchImageJobsColumns holds the columns for the "batch_image_jobs" table.
+	BatchImageJobsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "batch_id", Type: field.TypeString, Size: 64placeholder,
+		{Name: "user_id", Type: field.TypeInt64placeholder,
+		{Name: "api_key_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "account_id", Type: field.TypeInt64, Nullable: trueplaceholder,
+		{Name: "provider", Type: field.TypeString, Size: 32placeholder,
+		{Name: "model", Type: field.TypeString, Size: 128placeholder,
+		{Name: "status", Type: field.TypeString, Size: 32, Default: "created"placeholder,
+		{Name: "provider_job_name", Type: field.TypeString, Nullable: true, Size: 512placeholder,
+		{Name: "provider_input_ref", Type: field.TypeString, Nullable: true, Size: placeholder,
+		{Name: "provider_output_ref", Type: field.TypeString, Nullable: true, Size: placeholder,
+		{Name: "gcs_input_uri", Type: field.TypeString, Nullable: true, Size: placeholder,
+		{Name: "gcs_output_uri", Type: field.TypeString, Nullable: true, Size: placeholder,
+		{Name: "item_count", Type: field.TypeIntplaceholder,
+		{Name: "success_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "fail_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "cancelled_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "estimated_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "hold_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "actual_cost", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"placeholderplaceholder,
+		{Name: "currency", Type: field.TypeString, Size: 16, Default: "USD"placeholder,
+		{Name: "hold_id", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "idempotency_key", Type: field.TypeString, Nullable: true, Size: 255placeholder,
+		{Name: "request_hash", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "manifest_hash", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "retry_count", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "version", Type: field.TypeInt, Default: 0placeholder,
+		{Name: "output_expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "input_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "output_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "last_error_code", Type: field.TypeString, Nullable: true, Size: 128placeholder,
+		{Name: "last_error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "submitted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "started_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "settled_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+placeholder
+	// BatchImageJobsTable holds the schema information for the "batch_image_jobs" table.
+	BatchImageJobsTable = &schema.Table{
+		Name:       "batch_image_jobs",
+		Columns:    BatchImageJobsColumns,
+		PrimaryKey: []*schema.Column{BatchImageJobsColumns[0]placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "batchimagejob_batch_id",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageJobsColumns[1]placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[2], BatchImageJobsColumns[32]placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_status",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[7]placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_provider_status",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[5], BatchImageJobsColumns[7]placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_idempotency_key",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[22]placeholder,
+				Annotation: &entsql.IndexAnnotation{
+					Where: "idempotency_key IS NOT NULL AND idempotency_key <> ''",
+			placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_manifest_hash",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageJobsColumns[24]placeholder,
+				Annotation: &entsql.IndexAnnotation{
+					Where: "manifest_hash IS NOT NULL AND manifest_hash <> ''",
+			placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_output_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[27]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// ChannelMonitorsColumns holds the columns for the "channel_monitors" table.
 	ChannelMonitorsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -1799,6 +1968,9 @@ placeholder
 		AnnouncementReadsTable,
 		AuthIdentitiesTable,
 		AuthIdentityChannelsTable,
+		BatchImageEventsTable,
+		BatchImageItemsTable,
+		BatchImageJobsTable,
 		ChannelMonitorsTable,
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
@@ -1861,6 +2033,15 @@ placeholder
 	AuthIdentityChannelsTable.ForeignKeys[0].RefTable = AuthIdentitiesTable
 	AuthIdentityChannelsTable.Annotation = &entsql.Annotation{
 		Table: "auth_identity_channels",
+placeholder
+	BatchImageEventsTable.Annotation = &entsql.Annotation{
+		Table: "batch_image_events",
+placeholder
+	BatchImageItemsTable.Annotation = &entsql.Annotation{
+		Table: "batch_image_items",
+placeholder
+	BatchImageJobsTable.Annotation = &entsql.Annotation{
+		Table: "batch_image_jobs",
 placeholder
 	ChannelMonitorsTable.ForeignKeys[0].RefTable = ChannelMonitorRequestTemplatesTable
 	ChannelMonitorsTable.Annotation = &entsql.Annotation{

@@ -1,0 +1,617 @@
+package service
+
+import (
+	"archive/zip"
+	"bufio"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+	"unicode"
+
+	"github.com/Wei-Shaw/sub2api/internal/config"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+)
+
+const (
+	defaultBatchImageZipMaxItems          = 1000
+	defaultBatchImageDownloadDuration     = 10 * time.Minute
+	defaultBatchImageDownloadConcurrency  = 2
+	batchImageDownloadScannerMaxLineBytes = 16 * 1024 * 1024
+)
+
+type BatchImageDownloadLimiter interface {
+	Acquire(ctx context.Context, userID string, kind string) (BatchImageDownloadPermit, error)
+placeholder
+
+type BatchImageDownloadPermit interface {
+	Release(ctx context.Context) error
+placeholder
+
+type BatchImageContentStream struct {
+	Reader        io.ReadCloser
+	ContentType   string
+	Filename      string
+	ContentLength *int64
+placeholder
+
+type BatchImageZipOptions struct {
+	Status          string
+	MaxItems        int
+	IncludeManifest bool
+placeholder
+
+type BatchImageZipResult struct {
+	FileCount  int
+	ErrorCount int
+placeholder
+
+type BatchImageLineImages struct {
+	CustomID     string
+	Images       []BatchImageInlineImage
+	ErrorCode    string
+	ErrorMessage string
+placeholder
+
+type BatchImageInlineImage struct {
+	MimeType   string
+	Extension  string
+	Base64Data string
+placeholder
+
+type BatchImageDownloadService struct {
+	Repo             BatchImageRepository
+	ProviderRegistry *BatchImageProviderRegistry
+	AccountResolver  BatchImageAccountResolver
+	Limiter          BatchImageDownloadLimiter
+	Config           *config.Config
+placeholder
+
+func NewBatchImageDownloadService(repo BatchImageRepository, accountRepo AccountRepository, limiter BatchImageDownloadLimiter, cfg *config.Config) *BatchImageDownloadService {
+	return &BatchImageDownloadService{
+		Repo:             repo,
+		ProviderRegistry: NewDefaultBatchImageProviderRegistry(),
+		AccountResolver:  &BatchImageAccountRepositoryResolver{Repo: accountRepoplaceholder,
+		Limiter:          limiter,
+		Config:           cfg,
+placeholder
+placeholder
+
+func (s *BatchImageDownloadService) OpenItemContent(ctx context.Context, owner BatchImageOwner, batchID string, customID string, imageIndex int) (*BatchImageContentStream, error) {
+	if imageIndex < 0 {
+		return nil, ErrBatchImageItemImageIndexOutOfRange
+placeholder
+	job, err := s.getCompletedJob(ctx, owner, batchID)
+	if err != nil {
+		return nil, err
+placeholder
+	item, err := s.Repo.GetBatchImageItemForDownload(ctx, job.BatchID, customID)
+	if err != nil {
+		return nil, err
+placeholder
+	if item.Status != BatchImageItemStatusSuccess {
+		return nil, ErrBatchImageItemFailed
+placeholder
+	if imageIndex >= item.ImageCount {
+		return nil, ErrBatchImageItemImageIndexOutOfRange
+placeholder
+
+	permit, err := s.acquirePermit(ctx, owner.UserID, "item")
+	if err != nil {
+		return nil, err
+placeholder
+	releasePermit := true
+	defer func() {
+		if releasePermit && permit != nil {
+			_ = permit.Release(ctx)
+	placeholder
+placeholder()
+
+	provider, account, err := s.providerAndAccount(ctx, job)
+	if err != nil {
+		return nil, err
+placeholder
+	r, _, err := provider.OpenResult(ctx, job, account)
+	if err != nil {
+		return nil, ErrBatchImageResultMissing.WithCause(err)
+placeholder
+	defer r.Close()
+
+	line, err := findBatchImageLineImages(r, item.CustomID)
+	if err != nil {
+		return nil, err
+placeholder
+	if imageIndex >= len(line.Images) {
+		return nil, ErrBatchImageItemImageIndexOutOfRange
+placeholder
+	image := line.Images[imageIndex]
+	if strings.TrimSpace(image.Base64Data) == "" {
+		return nil, ErrBatchImageResultMissing
+placeholder
+	contentType := strings.TrimSpace(image.MimeType)
+	if contentType == "" {
+		contentType = "application/octet-stream"
+placeholder
+	extension := strings.TrimSpace(image.Extension)
+	if extension == "" {
+		extension = batchImageFileExtension(contentType)
+placeholder
+	if extension == "" {
+		extension = "bin"
+placeholder
+
+	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(image.Base64Data))
+	releasePermit = false
+	return &BatchImageContentStream{
+		Reader:      &batchImagePermitReadCloser{Reader: reader, permit: permitplaceholder,
+		ContentType: contentType,
+		Filename:    BatchImageSafeDownloadFilename(item.CustomID, extension),
+placeholder, nil
+placeholder
+
+func (s *BatchImageDownloadService) StreamZip(ctx context.Context, owner BatchImageOwner, batchID string, opts BatchImageZipOptions, w io.Writer) (*BatchImageZipResult, error) {
+	job, err := s.getCompletedJob(ctx, owner, batchID)
+	if err != nil {
+		return nil, err
+placeholder
+	maxItems := opts.MaxItems
+	if maxItems <= 0 {
+		maxItems = s.maxZipItems()
+placeholder
+	if job.SuccessCount > maxItems {
+		return nil, ErrBatchImageZipTooManyItems
+placeholder
+	successItems, err := s.Repo.ListBatchImageItemsForDownload(ctx, job.BatchID, BatchImageItemStatusSuccess, maxItems+1)
+	if err != nil {
+		return nil, err
+placeholder
+	if len(successItems) > maxItems {
+		return nil, ErrBatchImageZipTooManyItems
+placeholder
+	failedItems, err := s.Repo.ListBatchImageItemsForDownload(ctx, job.BatchID, BatchImageItemStatusFailed, maxItems)
+	if err != nil {
+		return nil, err
+placeholder
+
+	permit, err := s.acquirePermit(ctx, owner.UserID, "zip")
+	if err != nil {
+		return nil, err
+placeholder
+	if permit != nil {
+		defer permit.Release(ctx)
+placeholder
+
+	provider, account, err := s.providerAndAccount(ctx, job)
+	if err != nil {
+		return nil, err
+placeholder
+	r, _, err := provider.OpenResult(ctx, job, account)
+	if err != nil {
+		return nil, ErrBatchImageResultMissing.WithCause(err)
+placeholder
+	defer r.Close()
+
+	streamCtx := ctx
+	cancel := func() {placeholder
+	if d := s.maxDownloadDuration(); d > 0 {
+		streamCtx, cancel = context.WithTimeout(ctx, d)
+placeholder
+	defer cancel()
+
+	zipWriter := zip.NewWriter(w)
+	result, manifestFiles, zipErrors, err := s.writeZipImages(streamCtx, zipWriter, r, successItems)
+	if err != nil {
+		_ = zipWriter.Close()
+		return result, ErrBatchImageDownloadFailed.WithCause(err)
+placeholder
+	zipErrors = append(zipErrors, batchImageZipErrorsFromItems(failedItems)...)
+	if err := writeBatchImageZipJSON(zipWriter, "manifest.json", batchImageZipManifest{
+		BatchID:      job.BatchID,
+		Model:        job.Model,
+		ItemCount:    job.ItemCount,
+		SuccessCount: job.SuccessCount,
+		FailCount:    job.FailCount,
+		Files:        manifestFiles,
+placeholder); err != nil {
+		_ = zipWriter.Close()
+		return result, ErrBatchImageDownloadFailed.WithCause(err)
+placeholder
+	if err := writeBatchImageZipJSON(zipWriter, "errors.json", zipErrors); err != nil {
+		_ = zipWriter.Close()
+		return result, ErrBatchImageDownloadFailed.WithCause(err)
+placeholder
+	result.ErrorCount = len(zipErrors)
+	if err := zipWriter.Close(); err != nil {
+		return result, ErrBatchImageDownloadFailed.WithCause(err)
+placeholder
+	return result, nil
+placeholder
+
+func (s *BatchImageDownloadService) writeZipImages(ctx context.Context, zipWriter *zip.Writer, resultReader io.Reader, successItems []*BatchImageItem) (*BatchImageZipResult, []batchImageZipManifestFile, []batchImageZipError, error) {
+	successByID := make(map[string]*BatchImageItem, len(successItems))
+	missing := make(map[string]struct{placeholder, len(successItems))
+	for _, item := range successItems {
+		if item == nil {
+			continue
+	placeholder
+		successByID[item.CustomID] = item
+		missing[item.CustomID] = struct{placeholder{placeholder
+placeholder
+	scanner := bufio.NewScanner(resultReader)
+	scanner.Buffer(make([]byte, 0, 64*1024), batchImageDownloadScannerMaxLineBytes)
+
+	result := &BatchImageZipResult{placeholder
+	var manifestFiles []batchImageZipManifestFile
+	var zipErrors []batchImageZipError
+	for scanner.Scan() {
+		if err := ctx.Err(); err != nil {
+			return result, manifestFiles, zipErrors, err
+	placeholder
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+	placeholder
+		images, err := ExtractBatchImagePartsFromResultLine([]byte(line))
+		if err != nil {
+			return result, manifestFiles, zipErrors, err
+	placeholder
+		item := successByID[images.CustomID]
+		if item == nil {
+			continue
+	placeholder
+		delete(missing, images.CustomID)
+		if len(images.Images) == 0 {
+			zipErrors = append(zipErrors, batchImageZipError{CustomID: images.CustomID, Code: "EMPTY_IMAGE_OUTPUT", Message: "provider response contained no image output"placeholder)
+			continue
+	placeholder
+		for idx, image := range images.Images {
+			extension := image.Extension
+			if extension == "" {
+				extension = "bin"
+		placeholder
+			filename := batchImageZipImageFilename(item.CustomID, idx, extension)
+			entry, err := zipWriter.CreateHeader(&zip.FileHeader{Name: filename, Method: zip.Deflateplaceholder)
+			if err != nil {
+				return result, manifestFiles, zipErrors, err
+		placeholder
+			decoder := base64.NewDecoder(base64.StdEncoding, strings.NewReader(image.Base64Data))
+			if _, err := io.Copy(entry, decoder); err != nil {
+				zipErrors = append(zipErrors, batchImageZipError{CustomID: item.CustomID, Code: "IMAGE_DECODE_FAILED", Message: "image data could not be decoded"placeholder)
+				continue
+		placeholder
+			result.FileCount++
+			manifestFiles = append(manifestFiles, batchImageZipManifestFile{
+				CustomID:   item.CustomID,
+				Filename:   filename,
+				MimeType:   image.MimeType,
+				ImageIndex: idx,
+		placeholder)
+	placeholder
+placeholder
+	if err := scanner.Err(); err != nil {
+		return result, manifestFiles, zipErrors, err
+placeholder
+	missingIDs := make([]string, 0, len(missing))
+	for customID := range missing {
+		missingIDs = append(missingIDs, customID)
+placeholder
+	sort.Strings(missingIDs)
+	for _, customID := range missingIDs {
+		zipErrors = append(zipErrors, batchImageZipError{CustomID: customID, Code: "RESULT_MISSING", Message: "provider result was not found for item"placeholder)
+placeholder
+	return result, manifestFiles, zipErrors, nil
+placeholder
+
+func (s *BatchImageDownloadService) getCompletedJob(ctx context.Context, owner BatchImageOwner, batchID string) (*BatchImageJob, error) {
+	if s == nil || s.Repo == nil {
+		return nil, ErrBatchImageDownloadFailed
+placeholder
+	job, err := s.Repo.GetBatchImageJobForDownload(ctx, owner.UserID, owner.APIKeyID, batchID)
+	if err != nil {
+		return nil, err
+placeholder
+	switch job.Status {
+	case BatchImageJobStatusCompleted:
+		return job, nil
+	case BatchImageJobStatusOutputDeleted:
+		return nil, ErrBatchImageOutputDeleted
+	default:
+		return nil, ErrBatchImageNotReady
+placeholder
+placeholder
+
+func (s *BatchImageDownloadService) providerAndAccount(ctx context.Context, job *BatchImageJob) (BatchImageProvider, *Account, error) {
+	if s == nil || s.ProviderRegistry == nil || s.AccountResolver == nil || job == nil {
+		return nil, nil, ErrBatchImageDownloadFailed
+placeholder
+	provider, ok := s.ProviderRegistry.Get(job.Provider)
+	if !ok || provider == nil {
+		return nil, nil, ErrBatchImageUnsupportedProvider
+placeholder
+	if job.AccountID == nil || *job.AccountID <= 0 {
+		return nil, nil, ErrBatchImageMissingAccountID
+placeholder
+	account, err := s.AccountResolver.ResolveBatchImageAccount(ctx, *job.AccountID)
+	if err != nil {
+		return nil, nil, ErrBatchImageDownloadFailed
+placeholder
+	if !provider.SupportsAccount(account) {
+		return nil, nil, ErrBatchImageProviderUnsupportedAccount
+placeholder
+	return provider, account, nil
+placeholder
+
+func (s *BatchImageDownloadService) acquirePermit(ctx context.Context, userID int64, kind string) (BatchImageDownloadPermit, error) {
+	if s == nil || s.Limiter == nil {
+		return nil, nil
+placeholder
+	permit, err := s.Limiter.Acquire(ctx, fmt.Sprintf("%d", userID), kind)
+	if err != nil {
+		if infraerrors.Code(err) == http.StatusTooManyRequests {
+			return nil, ErrBatchImageDownloadLimited
+	placeholder
+		return nil, ErrBatchImageDownloadLimited.WithCause(err)
+placeholder
+	return permit, nil
+placeholder
+
+func (s *BatchImageDownloadService) maxZipItems() int {
+	if s != nil && s.Config != nil && s.Config.BatchImage.MaxDownloadItemsZip > 0 {
+		return s.Config.BatchImage.MaxDownloadItemsZip
+placeholder
+	return defaultBatchImageZipMaxItems
+placeholder
+
+func (s *BatchImageDownloadService) maxDownloadDuration() time.Duration {
+	if s != nil && s.Config != nil && s.Config.BatchImage.MaxDownloadDurationSeconds > 0 {
+		return time.Duration(s.Config.BatchImage.MaxDownloadDurationSeconds) * time.Second
+placeholder
+	return defaultBatchImageDownloadDuration
+placeholder
+
+func ExtractBatchImagePartsFromResultLine(line []byte) (*BatchImageLineImages, error) {
+	var obj map[string]any
+	if err := json.Unmarshal(line, &obj); err != nil {
+		return nil, ErrBatchImageIndexParseFailed.WithCause(err)
+placeholder
+	customID := batchImageFirstNonEmptyString(
+		batchImageMapString(obj, "key"),
+		batchImageMapString(obj, "custom_id"),
+		batchImageMapString(obj, "customId"),
+		batchImageNestedString(obj, "request", "key"),
+	)
+	if customID == "" {
+		return nil, ErrBatchImageIndexParseFailed.WithCause(fmt.Errorf("missing custom id"))
+placeholder
+	out := &BatchImageLineImages{CustomID: customIDplaceholder
+	out.Images = append(out.Images, extractBatchImageInlineImages(batchImageNestedAny(obj, "response", "candidates"))...)
+	out.Images = append(out.Images, extractBatchImageInlineImages(obj["candidates"])...)
+	if len(out.Images) > 0 {
+		return out, nil
+placeholder
+	if code, message, ok := batchImageFailureFromProviderFields(obj); ok {
+		out.ErrorCode = code
+		out.ErrorMessage = truncateBatchImageMessage(message, batchImageMaxErrorMessageLength)
+		return out, nil
+placeholder
+	if _, hasResponse := obj["response"]; hasResponse || batchImageHasCandidates(obj) {
+		out.ErrorCode = "EMPTY_IMAGE_OUTPUT"
+		out.ErrorMessage = "provider response contained no image output"
+		return out, nil
+placeholder
+	out.ErrorCode = "PROVIDER_ITEM_FAILED"
+	out.ErrorMessage = "provider result line contained no image output"
+	return out, nil
+placeholder
+
+func extractBatchImageInlineImages(raw any) []BatchImageInlineImage {
+	candidates, ok := raw.([]any)
+	if !ok {
+		return nil
+placeholder
+	var images []BatchImageInlineImage
+	for _, candidateRaw := range candidates {
+		candidate, ok := candidateRaw.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		parts, ok := batchImageNestedAny(candidate, "content", "parts").([]any)
+		if !ok {
+			continue
+	placeholder
+		for _, partRaw := range parts {
+			part, ok := partRaw.(map[string]any)
+			if !ok {
+				continue
+		placeholder
+			inline, ok := firstMap(part["inlineData"], part["inline_data"])
+			if !ok {
+				continue
+		placeholder
+			data := strings.TrimSpace(batchImageMapString(inline, "data"))
+			mime := strings.TrimSpace(batchImageFirstNonEmptyString(batchImageMapString(inline, "mimeType"), batchImageMapString(inline, "mime_type")))
+			if data == "" || !strings.HasPrefix(strings.ToLower(mime), "image/") {
+				continue
+		placeholder
+			images = append(images, BatchImageInlineImage{
+				MimeType:   mime,
+				Extension:  batchImageFileExtension(mime),
+				Base64Data: data,
+		placeholder)
+	placeholder
+placeholder
+	return images
+placeholder
+
+func findBatchImageLineImages(r io.Reader, customID string) (*BatchImageLineImages, error) {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), batchImageDownloadScannerMaxLineBytes)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+	placeholder
+		parsed, err := ExtractBatchImagePartsFromResultLine([]byte(line))
+		if err != nil {
+			return nil, err
+	placeholder
+		if parsed.CustomID != customID {
+			continue
+	placeholder
+		if len(parsed.Images) == 0 {
+			if parsed.ErrorCode != "" {
+				return nil, ErrBatchImageItemFailed
+		placeholder
+			return nil, ErrBatchImageResultMissing
+	placeholder
+		return parsed, nil
+placeholder
+	if err := scanner.Err(); err != nil {
+		return nil, ErrBatchImageDownloadFailed.WithCause(err)
+placeholder
+	return nil, ErrBatchImageResultMissing
+placeholder
+
+func BatchImageSafeDownloadFilename(customID, extension string) string {
+	base := sanitizeBatchImageFilenameBase(customID)
+	extension = sanitizeBatchImageFilenameExtension(extension)
+	if extension == "" {
+		extension = "bin"
+placeholder
+	return base + "." + extension
+placeholder
+
+func BatchImageContentDispositionAttachment(filename string) string {
+	filename = strings.ReplaceAll(filename, "\\", "_")
+	filename = strings.ReplaceAll(filename, `"`, "_")
+	filename = sanitizeBatchImageFilenameBase(strings.TrimSuffix(filename, filepath.Ext(filename))) + filepath.Ext(filename)
+	return `attachment; filename="` + filename + `"`
+placeholder
+
+func sanitizeBatchImageFilenameBase(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "image"
+placeholder
+	var b strings.Builder
+	for _, r := range value {
+		switch {
+		case r == '/' || r == '\\' || r == ':' || r == 0:
+			b.WriteByte('_')
+		case unicode.IsControl(r):
+			b.WriteByte('_')
+		case unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' || r == '.':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+	placeholder
+placeholder
+	out := strings.Trim(b.String(), ". ")
+	for strings.Contains(out, "..") {
+		out = strings.ReplaceAll(out, "..", "_")
+placeholder
+	out = strings.Trim(out, ". ")
+	if out == "" {
+		out = "image"
+placeholder
+	if len(out) > 120 {
+		out = strings.TrimRight(out[:120], ". ")
+placeholder
+	if out == "" {
+		out = "image"
+placeholder
+	return out
+placeholder
+
+func sanitizeBatchImageFilenameExtension(extension string) string {
+	extension = strings.TrimPrefix(strings.TrimSpace(strings.ToLower(extension)), ".")
+	var b strings.Builder
+	for _, r := range extension {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+	placeholder
+placeholder
+	out := b.String()
+	if len(out) > 12 {
+		out = out[:12]
+placeholder
+	return out
+placeholder
+
+func batchImageZipImageFilename(customID string, imageIndex int, extension string) string {
+	base := sanitizeBatchImageFilenameBase(customID)
+	if imageIndex > 0 {
+		base = fmt.Sprintf("%s_%d", base, imageIndex+1)
+placeholder
+	return "images/" + BatchImageSafeDownloadFilename(base, extension)
+placeholder
+
+func writeBatchImageZipJSON(zipWriter *zip.Writer, name string, value any) error {
+	entry, err := zipWriter.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflateplaceholder)
+	if err != nil {
+		return err
+placeholder
+	encoder := json.NewEncoder(entry)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(value)
+placeholder
+
+type batchImageZipManifest struct {
+	BatchID      string                      `json:"batch_id"`
+	Model        string                      `json:"model"`
+	ItemCount    int                         `json:"item_count"`
+	SuccessCount int                         `json:"success_count"`
+	FailCount    int                         `json:"fail_count"`
+	Files        []batchImageZipManifestFile `json:"files"`
+placeholder
+
+type batchImageZipManifestFile struct {
+	CustomID   string `json:"custom_id"`
+	Filename   string `json:"filename"`
+	MimeType   string `json:"mime_type"`
+	ImageIndex int    `json:"image_index"`
+placeholder
+
+type batchImageZipError struct {
+	CustomID string `json:"custom_id"`
+	Code     string `json:"code"`
+	Message  string `json:"message"`
+placeholder
+
+func batchImageZipErrorsFromItems(items []*BatchImageItem) []batchImageZipError {
+	out := make([]batchImageZipError, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+	placeholder
+		out = append(out, batchImageZipError{
+			CustomID: item.CustomID,
+			Code:     batchImageDerefString(item.ErrorCode),
+			Message:  sanitizeBatchImagePublicMessage(batchImageDerefString(item.ErrorMessage)),
+	placeholder)
+placeholder
+	return out
+placeholder
+
+type batchImagePermitReadCloser struct {
+	io.Reader
+	permit BatchImageDownloadPermit
+	once   sync.Once
+	err    error
+placeholder
+
+func (r *batchImagePermitReadCloser) Close() error {
+	r.once.Do(func() {
+		if r.permit != nil {
+			r.err = r.permit.Release(context.Background())
+	placeholder
+placeholder)
+	return r.err
+placeholder

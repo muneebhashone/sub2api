@@ -270,6 +270,14 @@ placeholder
 placeholder
 placeholder
 
+func TestLoadDefaultBatchImageQueueDisabled(t *testing.T) {
+	resetViperWithJWTSecret(t)
+
+	cfg, err := Load()
+placeholder
+	require.False(t, cfg.BatchImage.QueueEnabled)
+placeholder
+
 func TestLoadIdempotencyConfigFromEnv(t *testing.T) {
 	resetViperWithJWTSecret(t)
 	t.Setenv("IDEMPOTENCY_OBSERVE_ONLY", "false")
