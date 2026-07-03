@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -47,6 +49,9 @@ placeholder
 
 	platform, group, account, collectedAt, err := h.opsService.GetConcurrencyStats(c.Request.Context(), platformFilter, groupID)
 	if err != nil {
+		if isOpsRealtimeRequestCanceled(c, err) {
+			return
+	placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
@@ -86,6 +91,9 @@ placeholder
 
 	users, collectedAt, err := h.opsService.GetUserConcurrencyStats(c.Request.Context())
 	if err != nil {
+		if isOpsRealtimeRequestCanceled(c, err) {
+			return
+	placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
@@ -140,6 +148,9 @@ placeholder
 
 	platformStats, groupStats, accountStats, collectedAt, err := h.opsService.GetAccountAvailabilityStats(c.Request.Context(), platform, groupID)
 	if err != nil {
+		if isOpsRealtimeRequestCanceled(c, err) {
+			return
+	placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
@@ -154,6 +165,19 @@ placeholder
 		payload["timestamp"] = collectedAt.UTC()
 placeholder
 	response.Success(c, payload)
+placeholder
+
+func isOpsRealtimeRequestCanceled(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+placeholder
+	if errors.Is(err, context.Canceled) {
+		return true
+placeholder
+	if c != nil && c.Request != nil && errors.Is(c.Request.Context().Err(), context.Canceled) {
+		return true
+placeholder
+	return strings.Contains(err.Error(), "canceling statement due to user request")
 placeholder
 
 func parseOpsRealtimeWindow(v string) (time.Duration, string, bool) {
@@ -236,6 +260,9 @@ placeholder
 
 	summary, err := h.opsService.GetRealtimeTrafficSummary(c.Request.Context(), filter)
 	if err != nil {
+		if isOpsRealtimeRequestCanceled(c, err) {
+			return
+	placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
