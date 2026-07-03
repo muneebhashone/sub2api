@@ -541,6 +541,7 @@ placeholder{
 		{name: "invalid_grant", err: errors.New("invalid_grant"), expected: trueplaceholder,
 		{name: "invalid_client", err: errors.New("invalid_client"), expected: trueplaceholder,
 		{name: "invalid_refresh_token", err: errors.New(`OPENAI_OAUTH_TOKEN_REFRESH_FAILED: token refresh failed: status 401, body: {"error":{"code":"invalid_refresh_token"placeholderplaceholder`), expected: trueplaceholder,
+		{name: "token_expired", err: errors.New(`OPENAI_OAUTH_TOKEN_REFRESH_FAILED: token refresh failed: status 401, body: {"error":{"code":"token_expired"placeholderplaceholder`), expected: trueplaceholder,
 		{name: "refresh_token_reused", err: errors.New(`OPENAI_OAUTH_TOKEN_REFRESH_FAILED: token refresh failed: status 401, body: {"error":{"code":"refresh_token_reused"placeholderplaceholder`), expected: trueplaceholder,
 		{name: "app_session_terminated", err: errors.New(`OPENAI_OAUTH_TOKEN_REFRESH_FAILED: token refresh failed: status 401, body: {"error": {"code": "app_session_terminated"placeholderplaceholder`), expected: trueplaceholder,
 		{name: "unauthorized_client", err: errors.New("unauthorized_client"), expected: trueplaceholder,
