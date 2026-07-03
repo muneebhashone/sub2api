@@ -18,6 +18,7 @@ type tokenRefreshCandidateRepo struct {
 	updatedCredentialIDs  []int64
 	setErrorCalls         int
 	setTempUnschedCalls   int
+	clearTempCalls        int
 	lastTempUnschedReason string
 	listActiveCalls       int
 placeholder
@@ -60,6 +61,11 @@ placeholder
 func (r *tokenRefreshCandidateRepo) SetTempUnschedulable(_ context.Context, _ int64, _ time.Time, reason string) error {
 	r.setTempUnschedCalls++
 	r.lastTempUnschedReason = reason
+	return nil
+placeholder
+
+func (r *tokenRefreshCandidateRepo) ClearTempUnschedulable(context.Context, int64) error {
+	r.clearTempCalls++
 	return nil
 placeholder
 
@@ -128,6 +134,16 @@ func TestTokenRefreshService_ProcessRefreshUsesOAuthRefreshCandidates(t *testing
 				Status:      StatusActive,
 		placeholder"refresh_token": "refresh-token"placeholder,
 		placeholder,
+			{
+				ID:                      6,
+				Platform:                PlatformAntigravity,
+				Type:                    AccountTypeOAuth,
+				Status:                  StatusActive,
+				Credentials:             map[string]any{"refresh_token": "refresh-token"placeholder,
+				Extra:                   map[string]any{"privacy_mode": AntigravityPrivacySetplaceholder,
+				TempUnschedulableUntil:  &future,
+				TempUnschedulableReason: "OAuth 401: unauthorized",
+		placeholder,
 	placeholder,
 placeholder
 	svc := &TokenRefreshService{
@@ -140,7 +156,8 @@ placeholder
 	svc.processRefresh()
 
 	require.Zero(t, repo.listActiveCalls, "TokenRefreshService should not use the broad active-account query")
-	require.Equal(t, []int64{1placeholder, repo.updatedCredentialIDs)
+	require.Equal(t, []int64{1, 6placeholder, repo.updatedCredentialIDs)
+	require.Equal(t, 1, repo.clearTempCalls, "successful refresh should clear the OAuth 401 temp-unschedulable state")
 placeholder
 
 func TestTokenRefreshService_RefreshFailureDoesNotCallPrivacy(t *testing.T) {
