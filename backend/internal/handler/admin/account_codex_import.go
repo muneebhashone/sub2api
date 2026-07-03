@@ -106,7 +106,7 @@ type codexJWTOpenAIClaims struct {
 placeholder
 
 type codexAccountIndex struct {
-	accountsByKey map[string]service.Account
+	accountsByKey map[string][]service.Account
 placeholder
 
 func (h *AccountHandler) ImportCodexSession(c *gin.Context) {
@@ -178,7 +178,7 @@ placeholder
 placeholder
 	skipMixedChannelCheck := req.ConfirmMixedChannelRisk != nil && *req.ConfirmMixedChannelRisk
 
-	seenIdentity := map[string]int{placeholder
+	seenIdentity := map[string]codexSeenIdentity{placeholder
 	for _, entry := range entries {
 		item, err := normalizeCodexImportEntry(entry)
 		if err != nil {
@@ -225,7 +225,7 @@ placeholder
 		placeholder)
 	placeholder
 
-		if duplicateIndex, ok := firstSeenCodexIdentity(seenIdentity, item.IdentityKeys); ok {
+		if duplicateIndex, ok := firstSeenCodexIdentity(seenIdentity, item.IdentityKeys, item.UserID); ok {
 			message := fmt.Sprintf("与第 %d 条导入项重复，已跳过", duplicateIndex)
 			result.Skipped++
 			result.Items = append(result.Items, CodexSessionImportItem{
@@ -241,9 +241,18 @@ placeholder
 		placeholder)
 			continue
 	placeholder
-		markCodexIdentitySeen(seenIdentity, item.IdentityKeys, entry.Index)
+		markCodexIdentitySeen(seenIdentity, item.IdentityKeys, entry.Index, item.UserID)
 
-		if existing := index.Find(item.IdentityKeys); existing != nil && updateExisting {
+		existing, matchedKey := index.Find(item.IdentityKeys, item.UserID)
+		if existing != nil && updateExisting {
+			if strings.HasPrefix(matchedKey, "account:") && item.UserID != "" &&
+				codexCredentialString(existing.Credentials, "chatgpt_user_id") == "" {
+				result.Warnings = append(result.Warnings, CodexSessionImportMessage{
+					Index:   entry.Index,
+					Name:    accountName,
+					Message: "已有账号未记录 chatgpt_user_id，已按共享的 chatgpt_account_id 匹配并回填，请确认两者属于同一用户",
+			placeholder)
+		placeholder
 			mergedCredentials := mergeCodexImportCredentials(existing.Credentials, credentials, item)
 			mergedExtra := mergeCodexImportMap(existing.Extra, extra)
 			updateInput := &service.UpdateAccountInput{
@@ -806,13 +815,13 @@ placeholder
 	return out
 placeholder
 
+// buildCodexIdentityKeys 按身份强度排序生成匹配键：chatgpt_account_id 在同一
+// ChatGPT 团队内是共享的，因此 account: 键排在最后，且命中时还需通过
+// codexIdentityConflicts 的跨用户校验才生效。
 func buildCodexIdentityKeys(accountID, userID, email, accessToken string) []string {
-	keys := make([]string, 0, 4)
+	keys := make([]string, 0, 3)
 	accountID = strings.TrimSpace(accountID)
 	userID = strings.TrimSpace(userID)
-	if accountID != "" {
-		keys = append(keys, "account:"+accountID)
-placeholder
 	if userID != "" {
 		keys = append(keys, "user:"+userID)
 placeholder
@@ -824,11 +833,14 @@ placeholder
 	if accessToken = strings.TrimSpace(accessToken); accessToken != "" {
 		keys = append(keys, "access:"+codexTokenFingerprint(accessToken))
 placeholder
+	if accountID != "" {
+		keys = append(keys, "account:"+accountID)
+placeholder
 	return keys
 placeholder
 
 func buildCodexAccountIndex(accounts []service.Account) *codexAccountIndex {
-	index := &codexAccountIndex{accountsByKey: map[string]service.Account{placeholderplaceholder
+	index := &codexAccountIndex{accountsByKey: map[string][]service.Account{placeholderplaceholder
 	for _, account := range accounts {
 		index.Add(account)
 placeholder
@@ -840,7 +852,7 @@ func (i *codexAccountIndex) Add(account service.Account) {
 		return
 placeholder
 	if i.accountsByKey == nil {
-		i.accountsByKey = map[string]service.Account{placeholder
+		i.accountsByKey = map[string][]service.Account{placeholder
 placeholder
 	keys := buildCodexIdentityKeys(
 		codexCredentialString(account.Credentials, "chatgpt_account_id"),
@@ -849,34 +861,73 @@ placeholder
 		codexCredentialString(account.Credentials, "access_token"),
 	)
 	for _, key := range keys {
-		i.accountsByKey[key] = account
+		i.accountsByKey[key] = upsertCodexAccount(i.accountsByKey[key], account)
 placeholder
 placeholder
 
-func (i *codexAccountIndex) Find(keys []string) *service.Account {
+// upsertCodexAccount 保留同一键下的全部候选账号（共享的 account: 键可对应
+// 团队内多个账号），同一账号重复 Add 时原位替换为最新状态。
+func upsertCodexAccount(accounts []service.Account, account service.Account) []service.Account {
+	for idx := range accounts {
+		if accounts[idx].ID == account.ID {
+			accounts[idx] = account
+			return accounts
+	placeholder
+placeholder
+	return append(accounts, account)
+placeholder
+
+// Find 返回第一个通过跨用户校验的候选账号及其命中的匹配键。
+func (i *codexAccountIndex) Find(keys []string, userID string) (*service.Account, string) {
 	if i == nil {
-		return nil
+		return nil, ""
 placeholder
 	for _, key := range keys {
-		if account, ok := i.accountsByKey[key]; ok {
-			return &account
+		for _, account := range i.accountsByKey[key] {
+			if codexIdentityConflicts(key, userID, codexCredentialString(account.Credentials, "chatgpt_user_id")) {
+				continue
+		placeholder
+			return &account, key
 	placeholder
 placeholder
-	return nil
+	return nil, ""
 placeholder
 
-func firstSeenCodexIdentity(seen map[string]int, keys []string) (int, bool) {
+// codexIdentityConflicts 判断 account: 键的命中是否把同一 ChatGPT 团队的两个
+// 不同成员误连到一起：双方都携带 user id 且不相等时视为冲突。任一侧缺少
+// user id 时保留匹配，使早期未记录 chatgpt_user_id 的存量账号仍能被更新
+// （并借助凭据合并回填 user id），而不是产生重复账号。
+func codexIdentityConflicts(key, userID, storedUserID string) bool {
+	if !strings.HasPrefix(key, "account:") {
+		return false
+placeholder
+	userID = strings.TrimSpace(userID)
+	storedUserID = strings.TrimSpace(storedUserID)
+	return userID != "" && storedUserID != "" && userID != storedUserID
+placeholder
+
+type codexSeenIdentity struct {
+	index  int
+	userID string
+placeholder
+
+func firstSeenCodexIdentity(seen map[string]codexSeenIdentity, keys []string, userID string) (int, bool) {
 	for _, key := range keys {
-		if index, ok := seen[key]; ok {
-			return index, true
+		entry, ok := seen[key]
+		if !ok {
+			continue
 	placeholder
+		if codexIdentityConflicts(key, userID, entry.userID) {
+			continue
+	placeholder
+		return entry.index, true
 placeholder
 	return 0, false
 placeholder
 
-func markCodexIdentitySeen(seen map[string]int, keys []string, index int) {
+func markCodexIdentitySeen(seen map[string]codexSeenIdentity, keys []string, index int, userID string) {
 	for _, key := range keys {
-		seen[key] = index
+		seen[key] = codexSeenIdentity{index: index, userID: userIDplaceholder
 placeholder
 placeholder
 

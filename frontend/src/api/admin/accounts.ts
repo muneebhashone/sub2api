@@ -609,7 +609,9 @@ placeholder): Promise<AdminDataImportResult> {
 placeholder
 
 export async function importCodexSession(payload: CodexSessionImportRequest): Promise<CodexSessionImportResult> {
-  const { data placeholder = await apiClient.post<CodexSessionImportResult>('/admin/accounts/import/codex-session', payload)
+  const { data placeholder = await apiClient.post<CodexSessionImportResult>('/admin/accounts/import/codex-session', payload, {
+    timeout: 120000 // 120s timeout for large session imports
+  placeholder)
   return data
 placeholder
 
