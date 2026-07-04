@@ -2097,6 +2097,10 @@ func (m *mockConcurrencyCache) CleanupExpiredAccountSlots(ctx context.Context, a
 	return nil
 placeholder
 
+func (m *mockConcurrencyCache) CleanupExpiredAccountSlotKeys(ctx context.Context) error {
+	return nil
+placeholder
+
 func (m *mockConcurrencyCache) CleanupStaleProcessSlots(ctx context.Context, activeRequestPrefix string) error {
 	return nil
 placeholder

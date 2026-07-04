@@ -137,6 +137,7 @@ placeholder
 	return result, nil
 placeholder
 func (f *fakeConcurrencyCache) CleanupExpiredAccountSlots(context.Context, int64) error { return nil placeholder
+func (f *fakeConcurrencyCache) CleanupExpiredAccountSlotKeys(context.Context) error     { return nil placeholder
 func (f *fakeConcurrencyCache) CleanupStaleProcessSlots(context.Context, string) error  { return nil placeholder
 
 func newTestGatewayHandler(t *testing.T, group *service.Group, accounts []*service.Account) (*GatewayHandler, func()) {
