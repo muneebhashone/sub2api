@@ -1306,6 +1306,66 @@ placeholder
 	require.True(t, usageRepo.lastLog.ActualCost > 0, "cost must not be zero")
 placeholder
 
+func TestOpenAIGatewayServiceRecordUsage_ResponsesMappedBillingModelHonorsBillingModelSource(t *testing.T) {
+	usage := OpenAIUsage{InputTokens: 20, OutputTokens: 10placeholder
+	tokens := UsageTokens{InputTokens: 20, OutputTokens: 10placeholder
+
+	tests := []struct {
+		name               string
+		billingModelSource string
+		wantBillingModel   string
+placeholder{
+		{
+			name:               "upstream uses mapped billing model",
+			billingModelSource: BillingModelSourceUpstream,
+			wantBillingModel:   "gpt-5.5",
+	placeholder,
+		{
+			name:               "requested overrides mapped billing model",
+			billingModelSource: BillingModelSourceRequested,
+			wantBillingModel:   "gpt-5.4",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+			userRepo := &openAIRecordUsageUserRepoStub{placeholder
+			subRepo := &openAIRecordUsageSubRepoStub{placeholder
+			svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, subRepo, nil)
+
+			expectedCost, err := svc.billingService.CalculateCost(tt.wantBillingModel, tokens, 1.1)
+		placeholder
+
+			err = svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+				Result: &OpenAIForwardResult{
+					RequestID:     "resp_mapped_billing_model_source",
+					Model:         "gpt-5.4",
+					BillingModel:  "gpt-5.5",
+					UpstreamModel: "gpt-5.5",
+					Usage:         usage,
+					Duration:      time.Second,
+			placeholder,
+				APIKey:  &APIKey{ID: 10placeholder,
+				User:    &User{ID: 20placeholder,
+				Account: &Account{ID: 30placeholder,
+				ChannelUsageFields: ChannelUsageFields{
+					OriginalModel:      "gpt-5.4",
+					ChannelMappedModel: "gpt-5.4",
+					BillingModelSource: tt.billingModelSource,
+			placeholder,
+		placeholder)
+
+		placeholder
+			require.NotNil(t, usageRepo.lastLog)
+			require.Equal(t, "gpt-5.4", usageRepo.lastLog.Model)
+			require.InDelta(t, expectedCost.ActualCost, usageRepo.lastLog.ActualCost, 1e-12)
+			require.InDelta(t, expectedCost.ActualCost, userRepo.lastAmount, 1e-12)
+			require.True(t, usageRepo.lastLog.ActualCost > 0, "cost must not be zero")
+	placeholder)
+placeholder
+placeholder
+
 func TestOpenAIGatewayServiceRecordUsage_BillsCompactOpenAIModelAlias(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
