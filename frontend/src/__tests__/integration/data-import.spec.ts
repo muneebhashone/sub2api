@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach placeholder from 'vitest'
-import { mount placeholder from '@vue/test-utils'
+import { flushPromises, mount placeholder from '@vue/test-utils'
 import ImportDataModal from '@/components/admin/account/ImportDataModal.vue'
 
 const showError = vi.fn()
@@ -70,5 +70,56 @@ describe('ImportDataModal', () => {
     await Promise.resolve()
 
     expect(showError).toHaveBeenCalledWith('admin.accounts.dataImportParseFailed')
+  placeholder)
+
+  it('merges multiple selected JSON files before importing', async () => {
+    const { adminAPI placeholder = await import('@/api/admin')
+    vi.mocked(adminAPI.accounts.importData).mockResolvedValue({
+      proxy_created: 0,
+      proxy_reused: 0,
+      proxy_failed: 0,
+      account_created: 2,
+      account_failed: 0
+    placeholder)
+
+    const wrapper = mount(ImportDataModal, {
+      props: { show: true placeholder,
+      global: {
+        stubs: {
+          BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' placeholder
+        placeholder
+      placeholder
+    placeholder)
+
+    const input = wrapper.find('input[type="file"]')
+    const first = new File([
+      JSON.stringify({ exported_at: '2026-07-05T00:00:00Z', proxies: [], accounts: [{ name: 'a' placeholder] placeholder)
+    ], 'first.json', { type: 'application/json' placeholder)
+    const second = new File([
+      JSON.stringify({ exported_at: '2026-07-05T00:00:01Z', proxies: [{ proxy_key: 'p' placeholder], accounts: [{ name: 'b' placeholder] placeholder)
+    ], 'second.json', { type: 'application/json' placeholder)
+    Object.defineProperty(first, 'text', {
+      value: () => Promise.resolve(JSON.stringify({ exported_at: '2026-07-05T00:00:00Z', proxies: [], accounts: [{ name: 'a' placeholder] placeholder))
+    placeholder)
+    Object.defineProperty(second, 'text', {
+      value: () => Promise.resolve(JSON.stringify({ exported_at: '2026-07-05T00:00:01Z', proxies: [{ proxy_key: 'p' placeholder], accounts: [{ name: 'b' placeholder] placeholder))
+    placeholder)
+
+    Object.defineProperty(input.element, 'files', {
+      value: [first, second]
+    placeholder)
+
+    await input.trigger('change')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(adminAPI.accounts.importData).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        proxies: [{ proxy_key: 'p' placeholder],
+        accounts: [{ name: 'a' placeholder, { name: 'b' placeholder]
+      placeholder),
+      skip_default_group_bind: true
+    placeholder)
+    expect(showSuccess).toHaveBeenCalledWith('admin.accounts.dataImportSuccess')
   placeholder)
 placeholder)
