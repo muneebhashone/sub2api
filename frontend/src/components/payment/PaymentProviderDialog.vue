@@ -168,6 +168,49 @@
           </div>
         </div>
 
+        <div v-if="form.provider_key === 'easypay'" class="mt-4 space-y-3 rounded-lg border border-gray-100 p-3 dark:border-dark-700">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h5 class="text-sm font-medium text-gray-900 dark:text-white">
+                {{ t('admin.settings.payment.easypayCustomMethods') placeholderplaceholder
+              </h5>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.payment.easypayCustomMethodsHint') placeholderplaceholder
+              </p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" @click="addEasyPayCustomMethod">
+              {{ t('admin.settings.payment.addCustomMethod') placeholderplaceholder
+            </button>
+          </div>
+          <div v-if="easyPayCustomMethods.length" class="space-y-2">
+            <div
+              v-for="(method, index) in easyPayCustomMethods"
+              :key="index"
+              class="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2"
+            >
+              <div>
+                <label class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.settings.payment.customMethodType') placeholderplaceholder</label>
+                <input v-model="method.type" type="text" class="input mt-0.5" placeholder="ldc" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.settings.payment.customMethodUpstreamType') placeholderplaceholder</label>
+                <input v-model="method.upstreamType" type="text" class="input mt-0.5" placeholder="epay" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 dark:text-gray-400">{{ t('admin.settings.payment.customMethodDisplayName') placeholderplaceholder</label>
+                <input v-model="method.displayName" type="text" class="input mt-0.5" placeholder="LDC" />
+              </div>
+              <button
+                type="button"
+                class="rounded-lg border border-red-200 px-2.5 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-800/60 dark:text-red-300 dark:hover:bg-red-900/20"
+                @click="removeEasyPayCustomMethod(index)"
+              >
+                {{ t('common.delete') placeholderplaceholder
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Callback URLs (each = editable URL + fixed path) -->
         <div v-if="callbackPaths" class="mt-4 space-y-3">
           <div v-if="callbackPaths.notifyUrl">
@@ -270,7 +313,7 @@ import Select from '@/components/common/Select.vue'
 import type { SelectOption placeholder from '@/components/common/Select.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 import type { ProviderInstance placeholder from '@/types/payment'
-import type { TypeOption placeholder from './providerConfig'
+import type { EasyPayCustomMethod, TypeOption placeholder from './providerConfig'
 import {
   PROVIDER_CONFIG_FIELDS,
   PROVIDER_SUPPORTED_TYPES,
@@ -282,6 +325,8 @@ import {
   STRIPE_SDK_API_VERSION,
   getAvailableTypes,
   extractBaseUrl,
+  parseEasyPayCustomMethods,
+  serializeEasyPayCustomMethods,
 placeholder from './providerConfig'
 
 /** Default payment_mode per provider key — "" means "no preference, use
@@ -365,6 +410,7 @@ const notifyBaseUrl = ref('')
 const returnBaseUrl = ref('')
 const limitsExpanded = ref(false)
 const visibleFields = reactive<Record<string, boolean>>({placeholder)
+const easyPayCustomMethods = reactive<EasyPayCustomMethod[]>([])
 
 // --- Computed ---
 const defaultBaseUrl = typeof window !== 'undefined' ? window.location.origin : ''
@@ -404,6 +450,16 @@ placeholder)
 
 const availableTypes = computed(() => {
   const base = getAvailableTypes(form.provider_key, props.allPaymentTypes, props.redirectLabel)
+  if (form.provider_key === 'easypay') {
+    for (const method of normalizedEasyPayCustomMethods()) {
+      if (!base.some(opt => opt.value === method.type)) {
+        base.push({
+          value: method.type,
+          label: method.displayName || method.type,
+        placeholder)
+      placeholder
+    placeholder
+  placeholder
   // Resolve i18n labels for types not in allPaymentTypes (e.g. card, link inside stripe)
   return base.map(opt =>
     opt.label === opt.value
@@ -510,6 +566,28 @@ function toggleType(type: string) {
   placeholder
 placeholder
 
+function normalizedEasyPayCustomMethods(): EasyPayCustomMethod[] {
+  return easyPayCustomMethods
+    .map(method => ({
+      type: normalizeEasyPayCustomMethodCode(method.type),
+      upstreamType: normalizeEasyPayCustomMethodCode(method.upstreamType),
+      displayName: method.displayName.trim(),
+    placeholder))
+    .filter(method => method.type || method.upstreamType || method.displayName)
+placeholder
+
+function normalizeEasyPayCustomMethodCode(value: string): string {
+  return value.trim().toLowerCase()
+placeholder
+
+function addEasyPayCustomMethod() {
+  easyPayCustomMethods.push({ type: '', upstreamType: '', displayName: '' placeholder)
+placeholder
+
+function removeEasyPayCustomMethod(index: number) {
+  easyPayCustomMethods.splice(index, 1)
+placeholder
+
 function onKeyChange() {
   form.supported_types = [...(PROVIDER_SUPPORTED_TYPES[form.provider_key] || [])]
   form.payment_mode = defaultPaymentMode(form.provider_key)
@@ -524,6 +602,7 @@ function clearConfig() {
   notifyBaseUrl.value = ''
   returnBaseUrl.value = ''
   limitsExpanded.value = false
+  easyPayCustomMethods.splice(0, easyPayCustomMethods.length)
 placeholder
 
 function applyDefaults() {
@@ -581,6 +660,14 @@ function handleSave() {
     emitValidationError(t('admin.settings.payment.validationNameRequired'))
     return
   placeholder
+  if (form.provider_key === 'easypay') {
+    const validationError = validateEasyPayCustomMethods()
+    if (validationError) {
+      emitValidationError(validationError)
+      return
+    placeholder
+    syncEasyPayCustomMethods()
+  placeholder
   // Validate required config fields — all non-optional fields must be filled.
   // In edit mode, sensitive fields may be left blank to preserve the stored
   // value (backend merges blanks by preserving the existing secret).
@@ -610,6 +697,9 @@ function handleSave() {
     placeholder
     filteredConfig[k] = v
   placeholder
+  if (form.provider_key === 'easypay') {
+    filteredConfig.customMethods = serializeEasyPayCustomMethods(normalizedEasyPayCustomMethods())
+  placeholder
 
   // Inject computed callback URLs (each URL = independent base + fixed path)
   // If base URL is empty, auto-fill with current domain
@@ -634,6 +724,56 @@ function handleSave() {
     config: filteredConfig,
     limits: serializeLimits(),
   placeholder)
+placeholder
+
+function syncEasyPayCustomMethods(): string[] {
+  if (form.provider_key !== 'easypay') return []
+  const baseTypes = new Set(PROVIDER_SUPPORTED_TYPES.easypay || [])
+  const customTypes: string[] = []
+  const seen = new Set<string>()
+  for (const method of normalizedEasyPayCustomMethods()) {
+    if (!method.type || !method.upstreamType) continue
+    if (seen.has(method.type)) continue
+    seen.add(method.type)
+    customTypes.push(method.type)
+  placeholder
+  form.supported_types = form.supported_types
+    .map(type => normalizeEasyPayCustomMethodCode(type))
+    .filter(type => baseTypes.has(type) || customTypes.includes(type))
+  for (const customType of customTypes) {
+    if (!form.supported_types.includes(customType)) {
+      form.supported_types.push(customType)
+    placeholder
+  placeholder
+  return customTypes
+placeholder
+
+function validateEasyPayCustomMethods(): string | null {
+  const seen = new Set<string>()
+  for (const method of normalizedEasyPayCustomMethods()) {
+    const hasAnyValue = Boolean(method.type || method.upstreamType || method.displayName)
+    if (!hasAnyValue) continue
+    if (!method.type || !method.upstreamType) {
+      return t('admin.settings.payment.validationEasyPayCustomMethodRequired')
+    placeholder
+    if (!/^[a-z0-9_-]+$/.test(method.type)) {
+      return t('admin.settings.payment.validationEasyPayCustomMethodTypeInvalid')
+    placeholder
+    if (!/^[a-z0-9_-]+$/.test(method.upstreamType)) {
+      return t('admin.settings.payment.validationEasyPayCustomMethodUpstreamTypeInvalid')
+    placeholder
+    if ((PROVIDER_SUPPORTED_TYPES.easypay || []).includes(method.type)) {
+      return t('admin.settings.payment.validationEasyPayCustomMethodReserved')
+    placeholder
+    if (method.type.startsWith('alipay') || method.type.startsWith('wxpay')) {
+      return t('admin.settings.payment.validationEasyPayCustomMethodPrefixReserved')
+    placeholder
+    if (seen.has(method.type)) {
+      return t('admin.settings.payment.validationEasyPayCustomMethodDuplicate')
+    placeholder
+    seen.add(method.type)
+  placeholder
+  return null
 placeholder
 
 function emitValidationError(msg: string) {
@@ -677,6 +817,10 @@ function loadProvider(provider: ProviderInstance) {
     for (const [k, v] of Object.entries(provider.config)) {
       // Skip notifyUrl/returnUrl — they are derived from callbackBaseUrl
       if (k === 'notifyUrl' || k === 'returnUrl') continue
+      if (k === 'customMethods' && provider.provider_key === 'easypay') {
+        easyPayCustomMethods.push(...parseEasyPayCustomMethods(v))
+        continue
+      placeholder
       config[k] = v
     placeholder
     // Extract base URLs from existing callback URLs

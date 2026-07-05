@@ -114,6 +114,74 @@ placeholder
 placeholder
 placeholder
 
+func TestValidateEasyPayCustomMethods(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		config         map[string]string
+		supportedTypes string
+		wantErr        string
+placeholder{
+		{
+			name:           "valid custom methods",
+			config:         map[string]string{"customMethods": `[{"type":"ldc","upstreamType":"epay","displayName":"LDC"placeholder]`placeholder,
+			supportedTypes: "alipay,wxpay,ldc",
+	placeholder,
+		{
+			name:           "malformed custom methods json",
+			config:         map[string]string{"customMethods": `not-json`placeholder,
+			supportedTypes: "alipay,wxpay,ldc",
+			wantErr:        "customMethods must be a JSON array",
+	placeholder,
+		{
+			name:           "missing upstream type",
+			config:         map[string]string{"customMethods": `[{"type":"ldc","displayName":"LDC"placeholder]`placeholder,
+			supportedTypes: "alipay,wxpay,ldc",
+			wantErr:        "customMethods upstreamType is required",
+	placeholder,
+		{
+			name:           "duplicate custom type",
+			config:         map[string]string{"customMethods": `[{"type":"ldc","upstreamType":"epay"placeholder,{"type":"ldc","upstreamType":"epay2"placeholder]`placeholder,
+			supportedTypes: "alipay,wxpay,ldc",
+			wantErr:        "duplicate customMethods type",
+	placeholder,
+		{
+			name:           "custom type uses alipay prefix",
+			config:         map[string]string{"customMethods": `[{"type":"alipay_hk","upstreamType":"hkpay"placeholder]`placeholder,
+			supportedTypes: "alipay,wxpay,alipay_hk",
+			wantErr:        "customMethods type cannot start with alipay or wxpay",
+	placeholder,
+		{
+			name:           "custom type uses wxpay prefix",
+			config:         map[string]string{"customMethods": `[{"type":"wxpay_usdt","upstreamType":"usdt"placeholder]`placeholder,
+			supportedTypes: "alipay,wxpay,wxpay_usdt",
+			wantErr:        "customMethods type cannot start with alipay or wxpay",
+	placeholder,
+		{
+			name:           "supported custom type missing mapping",
+			config:         map[string]string{"customMethods": `[{"type":"ldc","upstreamType":"epay"placeholder]`placeholder,
+			supportedTypes: "alipay,wxpay,ldc,usdt_trc20",
+			wantErr:        "supported EasyPay custom type usdt_trc20 has no customMethods mapping",
+	placeholder,
+placeholder
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := validateEasyPayCustomMethods(tc.config, tc.supportedTypes)
+			if tc.wantErr == "" {
+			placeholder
+				return
+		placeholder
+		placeholder
+			require.Contains(t, err.Error(), tc.wantErr)
+	placeholder)
+placeholder
+placeholder
+
 func TestIsSensitiveProviderConfigField(t *testing.T) {
 	t.Parallel()
 
