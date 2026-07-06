@@ -287,8 +287,9 @@ func TestBatchImageRepository_SetBatchImageJobSettlementFailed(t *testing.T) {
 placeholder)
 placeholder
 
-	err = repo.SetBatchImageJobSettlementFailed(ctx, batchID, "SETTLEMENT_BILLING_FAILED", "temporary")
+	retryCount, err := repo.SetBatchImageJobSettlementFailed(ctx, batchID, "SETTLEMENT_BILLING_FAILED", "temporary")
 placeholder
+	require.Equal(t, 1, retryCount)
 
 	job, err := repo.GetBatchImageJobByBatchID(ctx, batchID)
 placeholder
