@@ -872,6 +872,9 @@ placeholder
 	if !group.AllowBatchImageGeneration {
 		return ErrBatchImageGroupDisabled
 placeholder
+	if group.Platform != PlatformGemini {
+		return ErrBatchImageGroupDisabled
+placeholder
 	return nil
 placeholder
 
