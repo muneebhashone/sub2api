@@ -76,6 +76,9 @@ placeholder
 func (c StubConcurrencyCache) CleanupExpiredAccountSlots(_ context.Context, _ int64) error {
 	return nil
 placeholder
+func (c StubConcurrencyCache) CleanupExpiredAccountSlotKeys(_ context.Context) error {
+	return nil
+placeholder
 func (c StubConcurrencyCache) CleanupStaleProcessSlots(_ context.Context, _ string) error {
 	return nil
 placeholder

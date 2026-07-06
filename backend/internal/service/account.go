@@ -580,6 +580,7 @@ placeholder
 				"gemini-3.1-pro-high",
 				"gemini-3.1-pro-low",
 		placeholder)
+			applyAntigravityGemini31ProAliases(result)
 	placeholder
 		return result
 placeholder
@@ -644,6 +645,61 @@ func ensureAntigravityDefaultPassthroughs(mapping map[string]string, models []st
 	for _, model := range models {
 		ensureAntigravityDefaultPassthrough(mapping, model)
 placeholder
+placeholder
+
+func applyAntigravityGemini31ProAliases(mapping map[string]string) {
+	target := strings.TrimSpace(mapping[domain.AntigravityGemini31ProAgentModel])
+	if target == "" {
+		return
+placeholder
+
+	aliases := []struct {
+		model         string
+		legacyTargets map[string]struct{placeholder
+placeholder{
+		{
+			model: "gemini-3.1-pro",
+			legacyTargets: map[string]struct{placeholder{
+				"gemini-3.1-pro": {placeholder,
+		placeholder,
+	placeholder,
+		{
+			model: "gemini-3.1-pro-high",
+			legacyTargets: map[string]struct{placeholder{
+				"gemini-3.1-pro-high": {placeholder,
+		placeholder,
+	placeholder,
+		{
+			model: "gemini-3.1-pro-preview",
+			legacyTargets: map[string]struct{placeholder{
+				"gemini-3.1-pro-preview": {placeholder,
+				"gemini-3.1-pro-high":    {placeholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	for _, alias := range aliases {
+		current, exists := mapping[alias.model]
+		if exists {
+			if _, legacy := alias.legacyTargets[current]; legacy {
+				mapping[alias.model] = target
+		placeholder
+			continue
+	placeholder
+		if mappingHasWildcardForModel(mapping, alias.model) {
+			continue
+	placeholder
+		mapping[alias.model] = target
+placeholder
+placeholder
+
+func mappingHasWildcardForModel(mapping map[string]string, model string) bool {
+	for pattern := range mapping {
+		if matchWildcard(pattern, model) {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func normalizeRequestedModelForLookup(platform, requestedModel string) string {
@@ -1124,6 +1180,18 @@ placeholder
 
 func (a *Account) IsOpenAIOAuth() bool {
 	return a.IsOpenAI() && a.Type == AccountTypeOAuth
+placeholder
+
+func (a *Account) IsOpenAIChatGPTSubscription() bool {
+	if !a.IsOpenAIOAuth() {
+		return false
+placeholder
+	switch strings.ToLower(strings.TrimSpace(a.GetCredential("plan_type"))) {
+	case "", "free", "abnormal":
+		return false
+	default:
+		return true
+placeholder
 placeholder
 
 func (a *Account) IsOpenAIPersonalAccessToken() bool {
