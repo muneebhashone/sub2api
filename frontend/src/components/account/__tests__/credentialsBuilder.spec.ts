@@ -128,6 +128,9 @@ describe('validateHeaderOverrideRows', () => {
     expect(validateHeaderOverrideRows([{ name: 'X-Api-Key', value: '' placeholder])).toBe('blockedName')
     expect(validateHeaderOverrideRows([{ name: 'host', value: '' placeholder])).toBe('blockedName')
     expect(validateHeaderOverrideRows([{ name: 'Content-Length', value: '' placeholder])).toBe('blockedName')
+    expect(validateHeaderOverrideRows([{ name: 'Content-Type', value: '' placeholder])).toBe('blockedName')
+    expect(validateHeaderOverrideRows([{ name: 'Cookie', value: '' placeholder])).toBe('blockedName')
+    expect(validateHeaderOverrideRows([{ name: 'x-goog-api-key', value: '' placeholder])).toBe('blockedName')
   placeholder)
 
   it('rejects duplicate names case-insensitively', () => {
@@ -249,6 +252,14 @@ describe('validateHeaderOverrideRows value/entry limits', () => {
     )
   placeholder)
 
+  it('measures value length in UTF-8 bytes to match backend', () => {
+    // 3000 个 CJK 字符 = 3000 UTF-16 code units，但 9000 UTF-8 字节 > 8192
+    expect(validateHeaderOverrideRows([{ name: 'x-app', value: '测'.repeat(3000) placeholder])).toBe(
+      'invalidValue'
+    )
+    expect(validateHeaderOverrideRows([{ name: 'x-app', value: '测'.repeat(2000) placeholder])).toBeNull()
+  placeholder)
+
   it('rejects too many entries', () => {
     const rows = Array.from({ length: 65 placeholder, (_, i) => ({ name: `x-h-${iplaceholder`, value: 'v' placeholder))
     expect(validateHeaderOverrideRows(rows)).toBe('tooManyEntries')
@@ -260,6 +271,12 @@ describe('validateHeaderOverrideRows session isolation headers', () => {
     expect(validateHeaderOverrideRows([{ name: 'session_id', value: '' placeholder])).toBe('blockedName')
     expect(validateHeaderOverrideRows([{ name: 'Conversation_ID', value: '' placeholder])).toBe('blockedName')
     expect(validateHeaderOverrideRows([{ name: 'x-codex-turn-state', value: '' placeholder])).toBe(
+      'blockedName'
+    )
+    expect(validateHeaderOverrideRows([{ name: 'X-Claude-Code-Session-Id', value: '' placeholder])).toBe(
+      'blockedName'
+    )
+    expect(validateHeaderOverrideRows([{ name: 'x-client-request-id', value: '' placeholder])).toBe(
       'blockedName'
     )
   placeholder)
