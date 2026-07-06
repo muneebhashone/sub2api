@@ -195,6 +195,7 @@ import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore pl
 import VersionBadge from '@/components/common/VersionBadge.vue'
 import { sanitizeSvg placeholder from '@/utils/sanitize'
 import { FeatureFlags, makeSidebarFlag placeholder from '@/utils/featureFlags'
+import { useBatchImageAccess placeholder from '@/composables/useBatchImageAccess'
 
 interface NavItem {
   path: string
@@ -240,6 +241,7 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const onboardingStore = useOnboardingStore()
 const adminSettingsStore = useAdminSettingsStore()
+const { canUseBatchImage, refreshBatchImageAccess placeholder = useBatchImageAccess()
 
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
@@ -683,6 +685,7 @@ const flagAffiliate = makeSidebarFlag(FeatureFlags.affiliate)
 const flagRiskControl = makeSidebarFlag(FeatureFlags.riskControl)
 const flagOpsMonitoring = () => adminSettingsStore.opsMonitoringEnabled
 const flagAdminPayment = () => adminSettingsStore.paymentEnabled
+const flagBatchImageAccess = () => canUseBatchImage.value
 
 // buildSelfNavItems 构造用户自己的导航项（用户端主菜单和管理员的"我的账户"子菜单共享这组声明）。
 // withDashboard=true 时包含仪表盘（用户端），false 时不含（管理员的个人区已经有独立仪表盘入口）。
@@ -696,7 +699,7 @@ function buildSelfNavItems(withDashboard: boolean): NavItem[] {
   placeholder
   items.push(
     { path: '/keys', label: t('nav.apiKeys'), icon: KeyIcon placeholder,
-    { path: '/batch-image', label: t('nav.batchImage'), icon: BatchImageIcon, hideInSimpleMode: true placeholder,
+    { path: '/batch-image', label: t('nav.batchImage'), icon: BatchImageIcon, hideInSimpleMode: true, featureFlag: flagBatchImageAccess placeholder,
     { path: '/usage', label: t('nav.usage'), icon: ChartIcon, hideInSimpleMode: true placeholder,
     { path: '/available-channels', label: t('nav.availableChannels'), icon: ChannelIcon, hideInSimpleMode: true, featureFlag: flagAvailableChannels placeholder,
     { path: '/monitor', label: t('nav.channelStatus'), icon: SignalIcon, featureFlag: flagChannelMonitor placeholder,
@@ -917,6 +920,7 @@ watch(
 )
 
 onMounted(() => {
+  void refreshBatchImageAccess()
   if (isAdmin.value) {
     adminSettingsStore.fetch()
   placeholder
