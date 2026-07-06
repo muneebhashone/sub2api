@@ -1182,6 +1182,18 @@ func (a *Account) IsOpenAIOAuth() bool {
 	return a.IsOpenAI() && a.Type == AccountTypeOAuth
 placeholder
 
+func (a *Account) IsOpenAIChatGPTSubscription() bool {
+	if !a.IsOpenAIOAuth() {
+		return false
+placeholder
+	switch strings.ToLower(strings.TrimSpace(a.GetCredential("plan_type"))) {
+	case "", "free", "abnormal":
+		return false
+	default:
+		return true
+placeholder
+placeholder
+
 func (a *Account) IsOpenAIPersonalAccessToken() bool {
 	if !a.IsOpenAIOAuth() {
 		return false
