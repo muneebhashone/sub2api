@@ -177,6 +177,22 @@ placeholder {
 placeholder
 placeholder
 
+func TestGatewayRoutesCompositeVideoStatusUsesGrokHandler(t *testing.T) {
+	router := newGatewayRoutesTestRouter(service.PlatformComposite)
+
+	for _, path := range []string{
+		"/v1/videos/request-123",
+		"/videos/request-123",
+placeholder {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+		require.NotEqual(t, http.StatusNotFound, w.Code, "path=%s should hit Grok video status handler", path)
+		require.NotContains(t, w.Body.String(), "not supported for this platform")
+placeholder
+placeholder
+
 func TestGatewayRoutesNonGrokVideosAreRejectedAtPlatformGate(t *testing.T) {
 	router := newGatewayRoutesTestRouter(service.PlatformOpenAI)
 
