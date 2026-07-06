@@ -326,6 +326,88 @@ describe('PaymentView subscription confirmation amounts', () => {
   placeholder)
 placeholder)
 
+describe('PaymentView payment recovery', () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+    routeState.path = '/purchase'
+    routeState.query = {placeholder
+    routerReplace.mockReset().mockResolvedValue(undefined)
+    routerPush.mockReset().mockResolvedValue(undefined)
+    routerResolve.mockClear()
+    createOrder.mockReset()
+    refreshUser.mockReset()
+    fetchActiveSubscriptions.mockReset().mockResolvedValue(undefined)
+    showError.mockReset()
+    showInfo.mockReset()
+    showWarning.mockReset()
+    bridgeInvoke.mockReset()
+    window.localStorage.clear()
+    ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke placeholder placeholder).WeixinJSBridge = undefined
+  placeholder)
+
+  it('restores a custom EasyPay method as the selected payment method', async () => {
+    getCheckoutInfo.mockResolvedValue(checkoutInfoFixture({
+      methods: {
+        wxpay: checkoutInfoFixture().data.methods.wxpay,
+        ldc: {
+          daily_limit: 0,
+          daily_used: 0,
+          daily_remaining: 0,
+          single_min: 0,
+          single_max: 0,
+          fee_rate: 0,
+          available: true,
+          display_name: 'LDC Pay',
+        placeholder,
+      placeholder,
+    placeholder))
+    window.localStorage.setItem(PAYMENT_RECOVERY_STORAGE_KEY, JSON.stringify({
+      orderId: 888,
+      amount: 66,
+      qrCode: 'ldc-qr',
+      expiresAt: '2099-01-01T00:10:00.000Z',
+      paymentType: 'ldc',
+      payUrl: 'https://pay.example.com/ldc',
+      outTradeNo: 'sub2_ldc_888',
+      clientSecret: '',
+      intentId: '',
+      currency: '',
+      countryCode: '',
+      paymentEnv: '',
+      payAmount: 66,
+      orderType: 'balance',
+      paymentMode: 'popup',
+      resumeToken: '',
+      createdAt: Date.now(),
+    placeholder))
+
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: {
+            template: '<div><slot /></div>',
+          placeholder,
+          PaymentStatusPanel: {
+            template: '<button data-test="payment-done" @click="$emit(\'done\')" />',
+          placeholder,
+          PaymentMethodSelector: {
+            props: ['selected'],
+            template: '<div data-test="method-selector">{{ selected placeholderplaceholder</div>',
+          placeholder,
+          Teleport: true,
+          Transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+    await flushPromises()
+    await flushPromises()
+    await wrapper.find('[data-test="payment-done"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="method-selector"]').text()).toBe('ldc')
+  placeholder)
+placeholder)
+
 describe('PaymentView WeChat JSAPI flow', () => {
   beforeEach(() => {
     routeState.path = '/purchase'

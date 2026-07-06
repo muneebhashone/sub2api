@@ -226,7 +226,7 @@ placeholder
 var easyPayCustomMethodCodePattern = regexp.MustCompile(`^[a-z0-9_-]+$`)
 
 type easyPayCustomMethodConfig struct {
-	Type        string `json:"type"`
+	Type         string `json:"type"`
 	UpstreamType string `json:"upstreamType"`
 	DisplayName  string `json:"displayName"`
 placeholder
@@ -245,8 +245,8 @@ placeholder
 
 	customTypes := make(map[string]struct{placeholder, len(methods))
 	for _, method := range methods {
-		method.Type = strings.TrimSpace(strings.ToLower(method.Type))
-		method.UpstreamType = strings.TrimSpace(strings.ToLower(method.UpstreamType))
+		method.Type = strings.TrimSpace(method.Type)
+		method.UpstreamType = strings.TrimSpace(method.UpstreamType)
 		if method.Type == "" || method.UpstreamType == "" {
 			return infraerrors.BadRequest("VALIDATION_ERROR", "customMethods upstreamType is required")
 	placeholder
@@ -266,9 +266,12 @@ placeholder
 placeholder
 
 	for _, supportedType := range splitTypes(supportedTypes) {
-		supportedType = strings.TrimSpace(strings.ToLower(supportedType))
+		supportedType = strings.TrimSpace(supportedType)
 		if supportedType == "" || supportedType == payment.TypeAlipay || supportedType == payment.TypeWxpay {
 			continue
+	placeholder
+		if !easyPayCustomMethodCodePattern.MatchString(supportedType) {
+			return infraerrors.BadRequest("VALIDATION_ERROR", fmt.Sprintf("supported EasyPay custom type %s may only contain lowercase letters, digits, underscores, and hyphens", supportedType))
 	placeholder
 		if _, exists := customTypes[supportedType]; !exists {
 			return infraerrors.BadRequest("VALIDATION_ERROR", fmt.Sprintf("supported EasyPay custom type %s has no customMethods mapping", supportedType))
