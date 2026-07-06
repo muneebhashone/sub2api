@@ -90,6 +90,11 @@ func Balance(v float64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldBalance, v))
 placeholder
 
+// FrozenBalance applies equality check predicate on the "frozen_balance" field. It's identical to FrozenBalanceEQ.
+func FrozenBalance(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldFrozenBalance, v))
+placeholder
+
 // Concurrency applies equality check predicate on the "concurrency" field. It's identical to ConcurrencyEQ.
 func Concurrency(v int) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldConcurrency, v))
@@ -533,6 +538,46 @@ placeholder
 // BalanceLTE applies the LTE predicate on the "balance" field.
 func BalanceLTE(v float64) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldBalance, v))
+placeholder
+
+// FrozenBalanceEQ applies the EQ predicate on the "frozen_balance" field.
+func FrozenBalanceEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldFrozenBalance, v))
+placeholder
+
+// FrozenBalanceNEQ applies the NEQ predicate on the "frozen_balance" field.
+func FrozenBalanceNEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldFrozenBalance, v))
+placeholder
+
+// FrozenBalanceIn applies the In predicate on the "frozen_balance" field.
+func FrozenBalanceIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldFrozenBalance, vs...))
+placeholder
+
+// FrozenBalanceNotIn applies the NotIn predicate on the "frozen_balance" field.
+func FrozenBalanceNotIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldFrozenBalance, vs...))
+placeholder
+
+// FrozenBalanceGT applies the GT predicate on the "frozen_balance" field.
+func FrozenBalanceGT(v float64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldFrozenBalance, v))
+placeholder
+
+// FrozenBalanceGTE applies the GTE predicate on the "frozen_balance" field.
+func FrozenBalanceGTE(v float64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldFrozenBalance, v))
+placeholder
+
+// FrozenBalanceLT applies the LT predicate on the "frozen_balance" field.
+func FrozenBalanceLT(v float64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldFrozenBalance, v))
+placeholder
+
+// FrozenBalanceLTE applies the LTE predicate on the "frozen_balance" field.
+func FrozenBalanceLTE(v float64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldFrozenBalance, v))
 placeholder
 
 // ConcurrencyEQ applies the EQ predicate on the "concurrency" field.

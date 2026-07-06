@@ -230,7 +230,8 @@ placeholder)
 	placeholder
 		got, err := newTestBatchImageProcessor(repo, provider).Process(ctx, "imgbatch_flow")
 	placeholder
-		require.True(t, got.Terminal)
+		require.False(t, got.Terminal)
+		require.Equal(t, time.Millisecond, got.RequeueAfter)
 		require.Equal(t, BatchImageJobStatusSettling, repo.jobs["imgbatch_flow"].Status)
 		require.Equal(t, "files/output", batchImageDerefString(repo.jobs["imgbatch_flow"].ProviderOutputRef))
 		require.Equal(t, []string{BatchImageJobStatusIndexing, BatchImageJobStatusSettlingplaceholder, repo.transitions["imgbatch_flow"])
@@ -251,11 +252,22 @@ placeholder)
 	t.Run("cancelled provider marks job cancelled", func(t *testing.T) {
 		repo := newFakeBatchImageRepository()
 		repo.jobs["imgbatch_flow"] = newJob(BatchImageJobStatusRunning)
+		apiKeyID := int64(22)
+		holdAmount := 0.5
+		repo.jobs["imgbatch_flow"].UserID = 11
+		repo.jobs["imgbatch_flow"].APIKeyID = &apiKeyID
+		repo.jobs["imgbatch_flow"].EstimatedCost = holdAmount
+		repo.jobs["imgbatch_flow"].HoldAmount = &holdAmount
 		provider := &fakeProcessorProvider{status: &BatchProviderStatus{InternalState: BatchProviderStateCancelled, RawState: "CANCELLED"placeholderplaceholder
-		got, err := newTestBatchImageProcessor(repo, provider).Process(ctx, "imgbatch_flow")
+		processor := newTestBatchImageProcessor(repo, provider)
+		billing := &fakeBatchImageBillingRepo{placeholder
+		processor.BillingRepo = billing
+		got, err := processor.Process(ctx, "imgbatch_flow")
 	placeholder
 		require.True(t, got.Terminal)
 		require.Equal(t, BatchImageJobStatusCancelled, repo.jobs["imgbatch_flow"].Status)
+		require.Len(t, billing.releases, 1)
+		require.Equal(t, BatchImageReleaseRequestID("imgbatch_flow"), billing.releases[0].RequestID)
 placeholder)
 placeholder
 
@@ -342,19 +354,31 @@ placeholder
 
 func (r *fakeBatchImageRepository) CreateBatchImageJob(_ context.Context, params CreateBatchImageJobParams) (*BatchImageJob, error) {
 	job := &BatchImageJob{
-		BatchID:         params.BatchID,
-		UserID:          params.UserID,
-		APIKeyID:        params.APIKeyID,
-		AccountID:       params.AccountID,
-		Status:          params.Status,
-		Provider:        params.Provider,
-		Model:           params.Model,
-		ProviderJobName: params.ProviderJobName,
-		ItemCount:       params.ItemCount,
-		EstimatedCost:   params.EstimatedCost,
-		IdempotencyKey:  params.IdempotencyKey,
-		RequestHash:     params.RequestHash,
-		CreatedAt:       time.Now(),
+		BatchID:                 params.BatchID,
+		UserID:                  params.UserID,
+		APIKeyID:                params.APIKeyID,
+		AccountID:               params.AccountID,
+		Status:                  params.Status,
+		Provider:                params.Provider,
+		Model:                   params.Model,
+		TaskName:                params.TaskName,
+		ProviderJobName:         params.ProviderJobName,
+		ItemCount:               params.ItemCount,
+		EstimatedCost:           params.EstimatedCost,
+		HoldAmount:              params.HoldAmount,
+		HoldID:                  params.HoldID,
+		BaseUnitPrice:           params.BaseUnitPrice,
+		GroupRateMultiplier:     params.GroupRateMultiplier,
+		AccountRateMultiplier:   params.AccountRateMultiplier,
+		BatchDiscountMultiplier: params.BatchDiscountMultiplier,
+		HoldMultiplier:          params.HoldMultiplier,
+		BillableUnitPrice:       params.BillableUnitPrice,
+		HoldUnitPrice:           params.HoldUnitPrice,
+		PricingSnapshotVersion:  params.PricingSnapshotVersion,
+		Currency:                params.Currency,
+		IdempotencyKey:          params.IdempotencyKey,
+		RequestHash:             params.RequestHash,
+		CreatedAt:               time.Now(),
 placeholder
 	r.jobs[job.BatchID] = job
 	return job, nil
@@ -383,6 +407,53 @@ func (r *fakeBatchImageRepository) GetBatchImageJobByBatchIDForOwner(_ context.C
 		return nil, ErrBatchImageJobNotFound
 placeholder
 	return job, nil
+placeholder
+
+func (r *fakeBatchImageRepository) ListBatchImageJobsForOwner(_ context.Context, userID, apiKeyID int64, filter BatchImageJobFilter) ([]*BatchImageJob, error) {
+	limit := filter.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 20
+placeholder
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+placeholder
+	var jobs []*BatchImageJob
+	for _, job := range r.jobs {
+		if job.UserID != userID || job.APIKeyID == nil || *job.APIKeyID != apiKeyID {
+			continue
+	placeholder
+		if filter.Status != "" && job.Status != filter.Status {
+			continue
+	placeholder
+		if filter.TaskNameLike != "" && !strings.Contains(strings.ToLower(job.TaskName), strings.ToLower(filter.TaskNameLike)) {
+			continue
+	placeholder
+		if filter.ExcludeDeleted && job.UserDeletedAt != nil {
+			continue
+	placeholder
+		if filter.Downloaded != nil {
+			downloaded := job.DownloadedAt != nil
+			if downloaded != *filter.Downloaded {
+				continue
+		placeholder
+	placeholder
+		if filter.CreatedAfter != nil && job.CreatedAt.Before(*filter.CreatedAfter) {
+			continue
+	placeholder
+		if filter.CreatedBefore != nil && !job.CreatedAt.Before(*filter.CreatedBefore) {
+			continue
+	placeholder
+		if offset > 0 {
+			offset--
+			continue
+	placeholder
+		jobs = append(jobs, job)
+		if len(jobs) >= limit {
+			break
+	placeholder
+placeholder
+	return jobs, nil
 placeholder
 
 func (r *fakeBatchImageRepository) GetBatchImageJobByID(_ context.Context, id int64) (*BatchImageJob, error) {
@@ -657,6 +728,33 @@ placeholder
 	return jobs, nil
 placeholder
 
+func (r *fakeBatchImageRepository) ListStaleUnsubmittedBatchImageJobs(_ context.Context, cutoff time.Time, limit int) ([]*BatchImageJob, error) {
+	if limit <= 0 {
+		limit = 100
+placeholder
+	jobs := make([]*BatchImageJob, 0, limit)
+	for _, job := range r.jobs {
+		if len(jobs) >= limit {
+			break
+	placeholder
+		if job.Status != BatchImageJobStatusCreated && job.Status != BatchImageJobStatusUploading {
+			continue
+	placeholder
+		if batchImageDerefString(job.ProviderJobName) != "" {
+			continue
+	placeholder
+		holdAmount := job.EstimatedCost
+		if job.HoldAmount != nil {
+			holdAmount = *job.HoldAmount
+	placeholder
+		if holdAmount <= 0 || job.UpdatedAt.After(cutoff) {
+			continue
+	placeholder
+		jobs = append(jobs, job)
+placeholder
+	return jobs, nil
+placeholder
+
 func (r *fakeBatchImageRepository) MarkBatchImageInputDeleted(_ context.Context, batchID string, deletedAt time.Time) error {
 	job, ok := r.jobs[batchID]
 	if !ok {
@@ -681,6 +779,33 @@ placeholder
 		job.Status = BatchImageJobStatusOutputDeleted
 placeholder
 	r.events[batchID] = append(r.events[batchID], "output_cleanup_completed")
+	return nil
+placeholder
+
+func (r *fakeBatchImageRepository) MarkBatchImageDownloaded(_ context.Context, batchID string, downloadedAt time.Time) error {
+	job, ok := r.jobs[batchID]
+	if !ok {
+		return ErrBatchImageJobNotFound
+placeholder
+	if job.DownloadedAt == nil {
+		job.DownloadedAt = &downloadedAt
+placeholder
+	r.events[batchID] = append(r.events[batchID], "download_completed")
+	return nil
+placeholder
+
+func (r *fakeBatchImageRepository) MarkBatchImageJobUserDeleted(_ context.Context, userID, apiKeyID int64, batchID string, deletedAt time.Time) error {
+	job, ok := r.jobs[batchID]
+	if !ok || job.UserID != userID || job.APIKeyID == nil || *job.APIKeyID != apiKeyID {
+		return ErrBatchImageJobNotFound
+placeholder
+	if !isBatchImageProcessorDoneStatus(job.Status) {
+		return ErrBatchImageRecordDeleteNotReady
+placeholder
+	if job.UserDeletedAt == nil {
+		job.UserDeletedAt = &deletedAt
+placeholder
+	r.events[batchID] = append(r.events[batchID], "user_record_deleted")
 	return nil
 placeholder
 

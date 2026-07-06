@@ -77,7 +77,7 @@ placeholder
 func NewBatchImageDownloadService(repo BatchImageRepository, accountRepo AccountRepository, limiter BatchImageDownloadLimiter, cfg *config.Config) *BatchImageDownloadService {
 	return &BatchImageDownloadService{
 		Repo:             repo,
-		ProviderRegistry: NewDefaultBatchImageProviderRegistry(),
+		ProviderRegistry: NewBatchImageProviderRegistryFromConfig(cfg),
 		AccountResolver:  &BatchImageAccountRepositoryResolver{Repo: accountRepoplaceholder,
 		Limiter:          limiter,
 		Config:           cfg,

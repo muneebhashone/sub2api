@@ -209,9 +209,12 @@ type CreateGroupInput struct {
 	WeeklyLimitUSD   *float64 // 周限额 (USD)
 	MonthlyLimitUSD  *float64 // 月限额 (USD)
 	// 图片生成计费配置（仅 antigravity 平台使用）
-	AllowImageGeneration bool
-	ImageRateIndependent bool
-	ImageRateMultiplier  *float64
+	AllowImageGeneration         bool
+	AllowBatchImageGeneration    bool
+	ImageRateIndependent         bool
+	ImageRateMultiplier          *float64
+	BatchImageDiscountMultiplier *float64
+	BatchImageHoldMultiplier     *float64
 	// 高峰时段倍率配置（PeakRateMultiplier 为 nil 时按 1.0 处理）
 	PeakRateEnabled    bool
 	PeakStart          string
@@ -255,9 +258,12 @@ type UpdateGroupInput struct {
 	WeeklyLimitUSD   *float64 // 周限额 (USD)
 	MonthlyLimitUSD  *float64 // 月限额 (USD)
 	// 图片生成计费配置（仅 antigravity 平台使用）
-	AllowImageGeneration *bool
-	ImageRateIndependent *bool
-	ImageRateMultiplier  *float64
+	AllowImageGeneration         *bool
+	AllowBatchImageGeneration    *bool
+	ImageRateIndependent         *bool
+	ImageRateMultiplier          *float64
+	BatchImageDiscountMultiplier *float64
+	BatchImageHoldMultiplier     *float64
 	// 高峰时段倍率配置（nil 表示不修改）
 	PeakRateEnabled    *bool
 	PeakStart          *string
@@ -1851,6 +1857,20 @@ placeholder
 	placeholder
 		imageRateMultiplier = *input.ImageRateMultiplier
 placeholder
+	batchImageDiscountMultiplier := defaultBatchImageDiscountMultiplier
+	if input.BatchImageDiscountMultiplier != nil {
+		if *input.BatchImageDiscountMultiplier < 0 {
+			return nil, errors.New("batch_image_discount_multiplier must be >= 0")
+	placeholder
+		batchImageDiscountMultiplier = *input.BatchImageDiscountMultiplier
+placeholder
+	batchImageHoldMultiplier := defaultBatchImageHoldMultiplier
+	if input.BatchImageHoldMultiplier != nil {
+		if *input.BatchImageHoldMultiplier < 0 {
+			return nil, errors.New("batch_image_hold_multiplier must be >= 0")
+	placeholder
+		batchImageHoldMultiplier = *input.BatchImageHoldMultiplier
+placeholder
 
 	peakRateMultiplier := 1.0
 	if input.PeakRateMultiplier != nil {
@@ -1886,6 +1906,7 @@ placeholder
 placeholder
 
 	allowImageGeneration := input.AllowImageGeneration || defaultAllowImageGenerationForPlatform(platform)
+	allowBatchImageGeneration := input.AllowBatchImageGeneration && allowImageGeneration
 
 	// 如果指定了复制账号的源分组，先获取账号 ID 列表
 	var accountIDsToCopy []int64
@@ -1931,8 +1952,11 @@ placeholder
 		WeeklyLimitUSD:                  weeklyLimit,
 		MonthlyLimitUSD:                 monthlyLimit,
 		AllowImageGeneration:            allowImageGeneration,
+		AllowBatchImageGeneration:       allowBatchImageGeneration,
 		ImageRateIndependent:            input.ImageRateIndependent,
 		ImageRateMultiplier:             imageRateMultiplier,
+		BatchImageDiscountMultiplier:    batchImageDiscountMultiplier,
+		BatchImageHoldMultiplier:        batchImageHoldMultiplier,
 		PeakRateEnabled:                 peakRateEnabled,
 		PeakStart:                       peakStart,
 		PeakEnd:                         peakEnd,
@@ -2117,6 +2141,12 @@ placeholder
 	if input.AllowImageGeneration != nil {
 		group.AllowImageGeneration = *input.AllowImageGeneration
 placeholder
+	if input.AllowBatchImageGeneration != nil {
+		group.AllowBatchImageGeneration = *input.AllowBatchImageGeneration
+placeholder
+	if !group.AllowImageGeneration {
+		group.AllowBatchImageGeneration = false
+placeholder
 	if input.ImageRateIndependent != nil {
 		group.ImageRateIndependent = *input.ImageRateIndependent
 placeholder
@@ -2125,6 +2155,18 @@ placeholder
 			return nil, errors.New("image_rate_multiplier must be >= 0")
 	placeholder
 		group.ImageRateMultiplier = *input.ImageRateMultiplier
+placeholder
+	if input.BatchImageDiscountMultiplier != nil {
+		if *input.BatchImageDiscountMultiplier < 0 {
+			return nil, errors.New("batch_image_discount_multiplier must be >= 0")
+	placeholder
+		group.BatchImageDiscountMultiplier = *input.BatchImageDiscountMultiplier
+placeholder
+	if input.BatchImageHoldMultiplier != nil {
+		if *input.BatchImageHoldMultiplier < 0 {
+			return nil, errors.New("batch_image_hold_multiplier must be >= 0")
+	placeholder
+		group.BatchImageHoldMultiplier = *input.BatchImageHoldMultiplier
 placeholder
 	if input.PeakRateEnabled != nil {
 		group.PeakRateEnabled = *input.PeakRateEnabled

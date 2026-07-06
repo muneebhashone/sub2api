@@ -523,6 +523,7 @@ placeholder
 		{Name: "account_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "provider", Type: field.TypeString, Size: 32placeholder,
 		{Name: "model", Type: field.TypeString, Size: 128placeholder,
+		{Name: "task_name", Type: field.TypeString, Size: 255, Default: ""placeholder,
 		{Name: "status", Type: field.TypeString, Size: 32, Default: "created"placeholder,
 		{Name: "provider_job_name", Type: field.TypeString, Nullable: true, Size: 512placeholder,
 		{Name: "provider_input_ref", Type: field.TypeString, Nullable: true, Size: placeholder,
@@ -546,6 +547,8 @@ placeholder
 		{Name: "output_expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "input_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "output_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "downloaded_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "user_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "last_error_code", Type: field.TypeString, Nullable: true, Size: 128placeholder,
 		{Name: "last_error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
@@ -569,22 +572,22 @@ placeholder
 			{
 				Name:    "batchimagejob_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[2], BatchImageJobsColumns[32]placeholder,
+				Columns: []*schema.Column{BatchImageJobsColumns[2], BatchImageJobsColumns[35]placeholder,
 		placeholder,
 			{
 				Name:    "batchimagejob_status",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[7]placeholder,
+				Columns: []*schema.Column{BatchImageJobsColumns[8]placeholder,
 		placeholder,
 			{
 				Name:    "batchimagejob_provider_status",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[5], BatchImageJobsColumns[7]placeholder,
+				Columns: []*schema.Column{BatchImageJobsColumns[5], BatchImageJobsColumns[8]placeholder,
 		placeholder,
 			{
 				Name:    "batchimagejob_idempotency_key",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[22]placeholder,
+				Columns: []*schema.Column{BatchImageJobsColumns[23]placeholder,
 				Annotation: &entsql.IndexAnnotation{
 					Where: "idempotency_key IS NOT NULL AND idempotency_key <> ''",
 			placeholder,
@@ -592,7 +595,7 @@ placeholder
 			{
 				Name:    "batchimagejob_manifest_hash",
 				Unique:  true,
-				Columns: []*schema.Column{BatchImageJobsColumns[24]placeholder,
+				Columns: []*schema.Column{BatchImageJobsColumns[25]placeholder,
 				Annotation: &entsql.IndexAnnotation{
 					Where: "manifest_hash IS NOT NULL AND manifest_hash <> ''",
 			placeholder,
@@ -600,7 +603,17 @@ placeholder
 			{
 				Name:    "batchimagejob_output_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[27]placeholder,
+				Columns: []*schema.Column{BatchImageJobsColumns[28]placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_downloaded_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[31]placeholder,
+		placeholder,
+			{
+				Name:    "batchimagejob_user_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[32]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -839,11 +852,14 @@ placeholder
 		{Name: "monthly_limit_usd", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "default_validity_days", Type: field.TypeInt, Default: 30placeholder,
 		{Name: "allow_image_generation", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "allow_batch_image_generation", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "image_rate_independent", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "image_rate_multiplier", Type: field.TypeFloat64, Default: 1, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 		{Name: "image_price_1k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "image_price_2k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "image_price_4k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "batch_image_discount_multiplier", Type: field.TypeFloat64, Default: 0.5, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
+		{Name: "batch_image_hold_multiplier", Type: field.TypeFloat64, Default: 0.6, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "fallback_group_id_on_invalid_request", Type: field.TypeInt64, Nullable: trueplaceholder,
@@ -894,7 +910,7 @@ placeholder
 			{
 				Name:    "group_sort_order",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[32]placeholder,
+				Columns: []*schema.Column{GroupsColumns[35]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -1669,6 +1685,7 @@ placeholder
 		{Name: "password_hash", Type: field.TypeString, Size: 255placeholder,
 		{Name: "role", Type: field.TypeString, Size: 20, Default: "user"placeholder,
 		{Name: "balance", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "frozen_balance", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "concurrency", Type: field.TypeInt, Default: 5placeholder,
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"placeholder,
 		{Name: "username", Type: field.TypeString, Size: 100, Default: ""placeholder,
@@ -1695,7 +1712,7 @@ placeholder
 			{
 				Name:    "user_status",
 				Unique:  false,
-				Columns: []*schema.Column{UsersColumns[9]placeholder,
+				Columns: []*schema.Column{UsersColumns[10]placeholder,
 		placeholder,
 			{
 				Name:    "user_deleted_at",

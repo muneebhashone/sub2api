@@ -626,7 +626,7 @@ placeholder
 			return vertexProviderError("VERTEX_INVALID_RESPONSE", "Vertex API request failed", nil)
 	placeholder
 placeholder
-	return vertexProviderError("VERTEX_INVALID_RESPONSE", "Vertex API request failed", nil)
+	return vertexProviderError("VERTEX_INVALID_RESPONSE", "Vertex API request failed", err)
 placeholder
 
 type vertexCombinedJSONLReadCloser struct {

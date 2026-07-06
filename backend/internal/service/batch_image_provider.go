@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
@@ -40,6 +41,13 @@ func NewDefaultBatchImageProviderRegistry() *BatchImageProviderRegistry {
 	return NewBatchImageProviderRegistry(
 		NewGeminiAPIBatchImageProvider(nil),
 		NewVertexBatchImageProvider(VertexBatchImageProviderOptions{placeholder, nil, nil, nil),
+	)
+placeholder
+
+func NewBatchImageProviderRegistryFromConfig(cfg *config.Config) *BatchImageProviderRegistry {
+	return NewBatchImageProviderRegistry(
+		NewGeminiAPIBatchImageProvider(nil),
+		NewVertexBatchImageProviderFromConfig(cfg, nil, nil, nil),
 	)
 placeholder
 

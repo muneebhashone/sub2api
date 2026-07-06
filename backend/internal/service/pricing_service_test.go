@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,6 +36,57 @@ placeholder
 	require.InDelta(t, 3e-5, pricing.OutputCostPerTokenPriority, 1e-12)
 	require.InDelta(t, 5e-7, pricing.CacheReadInputTokenCostPriority, 1e-12)
 	require.True(t, pricing.SupportsServiceTier)
+placeholder
+
+func TestParsePricingData_KeepsImageOnlyPricing(t *testing.T) {
+	svc := &PricingService{placeholder
+	body := []byte(`{
+		"image-only-model": {
+			"output_cost_per_image": 0.034,
+			"litellm_provider": "vertex_ai-language-models",
+			"mode": "image_generation"
+	placeholder
+placeholder`)
+
+	data, err := svc.parsePricingData(body)
+placeholder
+	pricing := data["image-only-model"]
+	require.NotNil(t, pricing)
+	require.InDelta(t, 0.034, pricing.OutputCostPerImage, 1e-12)
+	require.Equal(t, "image_generation", pricing.Mode)
+placeholder
+
+func TestPricingService_MergesFallbackOnlyModels(t *testing.T) {
+	dir := t.TempDir()
+	fallbackFile := filepath.Join(dir, "fallback.json")
+	require.NoError(t, os.WriteFile(fallbackFile, []byte(`{
+		"remote-model": {
+			"input_cost_per_token": 0.000001,
+			"litellm_provider": "test",
+			"mode": "chat"
+	placeholder,
+		"gemini-3.1-flash-lite-image": {
+			"output_cost_per_image": 0.034,
+			"litellm_provider": "vertex_ai-language-models",
+			"mode": "image_generation"
+	placeholder
+placeholder`), 0644))
+
+	svc := &PricingService{cfg: &config.Config{placeholderplaceholder
+	svc.cfg.Pricing.FallbackFile = fallbackFile
+	remoteData, err := svc.parsePricingData([]byte(`{
+		"remote-model": {
+			"input_cost_per_token": 0.000002,
+			"litellm_provider": "test",
+			"mode": "chat"
+	placeholder
+placeholder`))
+placeholder
+
+	merged := svc.mergeFallbackPricingData(remoteData)
+	require.InDelta(t, 0.000002, merged["remote-model"].InputCostPerToken, 1e-12)
+	require.NotNil(t, merged["gemini-3.1-flash-lite-image"])
+	require.InDelta(t, 0.034, merged["gemini-3.1-flash-lite-image"].OutputCostPerImage, 1e-12)
 placeholder
 
 func TestGetModelPricing_Gpt53CodexSparkUsesGpt51CodexPricing(t *testing.T) {

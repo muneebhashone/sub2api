@@ -84,6 +84,11 @@ func Model(v string) predicate.BatchImageJob {
 	return predicate.BatchImageJob(sql.FieldEQ(FieldModel, v))
 placeholder
 
+// TaskName applies equality check predicate on the "task_name" field. It's identical to TaskNameEQ.
+func TaskName(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEQ(FieldTaskName, v))
+placeholder
+
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.BatchImageJob {
 	return predicate.BatchImageJob(sql.FieldEQ(FieldStatus, v))
@@ -197,6 +202,16 @@ placeholder
 // OutputDeletedAt applies equality check predicate on the "output_deleted_at" field. It's identical to OutputDeletedAtEQ.
 func OutputDeletedAt(v time.Time) predicate.BatchImageJob {
 	return predicate.BatchImageJob(sql.FieldEQ(FieldOutputDeletedAt, v))
+placeholder
+
+// DownloadedAt applies equality check predicate on the "downloaded_at" field. It's identical to DownloadedAtEQ.
+func DownloadedAt(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEQ(FieldDownloadedAt, v))
+placeholder
+
+// UserDeletedAt applies equality check predicate on the "user_deleted_at" field. It's identical to UserDeletedAtEQ.
+func UserDeletedAt(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEQ(FieldUserDeletedAt, v))
 placeholder
 
 // LastErrorCode applies equality check predicate on the "last_error_code" field. It's identical to LastErrorCodeEQ.
@@ -572,6 +587,71 @@ placeholder
 // ModelContainsFold applies the ContainsFold predicate on the "model" field.
 func ModelContainsFold(v string) predicate.BatchImageJob {
 	return predicate.BatchImageJob(sql.FieldContainsFold(FieldModel, v))
+placeholder
+
+// TaskNameEQ applies the EQ predicate on the "task_name" field.
+func TaskNameEQ(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEQ(FieldTaskName, v))
+placeholder
+
+// TaskNameNEQ applies the NEQ predicate on the "task_name" field.
+func TaskNameNEQ(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNEQ(FieldTaskName, v))
+placeholder
+
+// TaskNameIn applies the In predicate on the "task_name" field.
+func TaskNameIn(vs ...string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldIn(FieldTaskName, vs...))
+placeholder
+
+// TaskNameNotIn applies the NotIn predicate on the "task_name" field.
+func TaskNameNotIn(vs ...string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNotIn(FieldTaskName, vs...))
+placeholder
+
+// TaskNameGT applies the GT predicate on the "task_name" field.
+func TaskNameGT(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldGT(FieldTaskName, v))
+placeholder
+
+// TaskNameGTE applies the GTE predicate on the "task_name" field.
+func TaskNameGTE(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldGTE(FieldTaskName, v))
+placeholder
+
+// TaskNameLT applies the LT predicate on the "task_name" field.
+func TaskNameLT(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldLT(FieldTaskName, v))
+placeholder
+
+// TaskNameLTE applies the LTE predicate on the "task_name" field.
+func TaskNameLTE(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldLTE(FieldTaskName, v))
+placeholder
+
+// TaskNameContains applies the Contains predicate on the "task_name" field.
+func TaskNameContains(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldContains(FieldTaskName, v))
+placeholder
+
+// TaskNameHasPrefix applies the HasPrefix predicate on the "task_name" field.
+func TaskNameHasPrefix(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldHasPrefix(FieldTaskName, v))
+placeholder
+
+// TaskNameHasSuffix applies the HasSuffix predicate on the "task_name" field.
+func TaskNameHasSuffix(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldHasSuffix(FieldTaskName, v))
+placeholder
+
+// TaskNameEqualFold applies the EqualFold predicate on the "task_name" field.
+func TaskNameEqualFold(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEqualFold(FieldTaskName, v))
+placeholder
+
+// TaskNameContainsFold applies the ContainsFold predicate on the "task_name" field.
+func TaskNameContainsFold(v string) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldContainsFold(FieldTaskName, v))
 placeholder
 
 // StatusEQ applies the EQ predicate on the "status" field.
@@ -1907,6 +1987,106 @@ placeholder
 // OutputDeletedAtNotNil applies the NotNil predicate on the "output_deleted_at" field.
 func OutputDeletedAtNotNil() predicate.BatchImageJob {
 	return predicate.BatchImageJob(sql.FieldNotNull(FieldOutputDeletedAt))
+placeholder
+
+// DownloadedAtEQ applies the EQ predicate on the "downloaded_at" field.
+func DownloadedAtEQ(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEQ(FieldDownloadedAt, v))
+placeholder
+
+// DownloadedAtNEQ applies the NEQ predicate on the "downloaded_at" field.
+func DownloadedAtNEQ(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNEQ(FieldDownloadedAt, v))
+placeholder
+
+// DownloadedAtIn applies the In predicate on the "downloaded_at" field.
+func DownloadedAtIn(vs ...time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldIn(FieldDownloadedAt, vs...))
+placeholder
+
+// DownloadedAtNotIn applies the NotIn predicate on the "downloaded_at" field.
+func DownloadedAtNotIn(vs ...time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNotIn(FieldDownloadedAt, vs...))
+placeholder
+
+// DownloadedAtGT applies the GT predicate on the "downloaded_at" field.
+func DownloadedAtGT(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldGT(FieldDownloadedAt, v))
+placeholder
+
+// DownloadedAtGTE applies the GTE predicate on the "downloaded_at" field.
+func DownloadedAtGTE(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldGTE(FieldDownloadedAt, v))
+placeholder
+
+// DownloadedAtLT applies the LT predicate on the "downloaded_at" field.
+func DownloadedAtLT(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldLT(FieldDownloadedAt, v))
+placeholder
+
+// DownloadedAtLTE applies the LTE predicate on the "downloaded_at" field.
+func DownloadedAtLTE(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldLTE(FieldDownloadedAt, v))
+placeholder
+
+// DownloadedAtIsNil applies the IsNil predicate on the "downloaded_at" field.
+func DownloadedAtIsNil() predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldIsNull(FieldDownloadedAt))
+placeholder
+
+// DownloadedAtNotNil applies the NotNil predicate on the "downloaded_at" field.
+func DownloadedAtNotNil() predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNotNull(FieldDownloadedAt))
+placeholder
+
+// UserDeletedAtEQ applies the EQ predicate on the "user_deleted_at" field.
+func UserDeletedAtEQ(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldEQ(FieldUserDeletedAt, v))
+placeholder
+
+// UserDeletedAtNEQ applies the NEQ predicate on the "user_deleted_at" field.
+func UserDeletedAtNEQ(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNEQ(FieldUserDeletedAt, v))
+placeholder
+
+// UserDeletedAtIn applies the In predicate on the "user_deleted_at" field.
+func UserDeletedAtIn(vs ...time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldIn(FieldUserDeletedAt, vs...))
+placeholder
+
+// UserDeletedAtNotIn applies the NotIn predicate on the "user_deleted_at" field.
+func UserDeletedAtNotIn(vs ...time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNotIn(FieldUserDeletedAt, vs...))
+placeholder
+
+// UserDeletedAtGT applies the GT predicate on the "user_deleted_at" field.
+func UserDeletedAtGT(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldGT(FieldUserDeletedAt, v))
+placeholder
+
+// UserDeletedAtGTE applies the GTE predicate on the "user_deleted_at" field.
+func UserDeletedAtGTE(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldGTE(FieldUserDeletedAt, v))
+placeholder
+
+// UserDeletedAtLT applies the LT predicate on the "user_deleted_at" field.
+func UserDeletedAtLT(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldLT(FieldUserDeletedAt, v))
+placeholder
+
+// UserDeletedAtLTE applies the LTE predicate on the "user_deleted_at" field.
+func UserDeletedAtLTE(v time.Time) predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldLTE(FieldUserDeletedAt, v))
+placeholder
+
+// UserDeletedAtIsNil applies the IsNil predicate on the "user_deleted_at" field.
+func UserDeletedAtIsNil() predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldIsNull(FieldUserDeletedAt))
+placeholder
+
+// UserDeletedAtNotNil applies the NotNil predicate on the "user_deleted_at" field.
+func UserDeletedAtNotNil() predicate.BatchImageJob {
+	return predicate.BatchImageJob(sql.FieldNotNull(FieldUserDeletedAt))
 placeholder
 
 // LastErrorCodeEQ applies the EQ predicate on the "last_error_code" field.
