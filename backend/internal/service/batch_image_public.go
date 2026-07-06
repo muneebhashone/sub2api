@@ -17,13 +17,18 @@ import (
 )
 
 const (
-	defaultBatchImageMaxItems           = 500
+	defaultBatchImageMaxItems           = 200
+	defaultBatchImageMaxOutputImages    = 200
+	defaultBatchImageMaxOutputCount     = 4
 	defaultBatchImageMaxPromptChars     = 8000
 	defaultBatchImageResponseMime       = "image/png"
 	defaultBatchImageImageSize          = "1K"
 	defaultBatchImageDiscountMultiplier = 0.5
 	defaultBatchImageHoldMultiplier     = 0.6
 	maxBatchImagePublicErrorChars       = 500
+	maxBatchImageReferenceImageBytes    = 10 * 1024 * 1024
+	defaultBatchImageMaxReferenceImages = 1000
+	defaultBatchImageMaxReferenceBytes  = 128 * 1024 * 1024
 )
 
 type BatchImageAccountSelectionRepository interface {
@@ -53,8 +58,18 @@ type BatchImageSubmitRequest struct {
 placeholder
 
 type BatchImageSubmitItem struct {
-	CustomID string `json:"custom_id"`
-	Prompt   string `json:"prompt"`
+	CustomID        string                     `json:"custom_id"`
+	Prompt          string                     `json:"prompt"`
+	OutputCount     int                        `json:"output_count,omitempty"`
+	ReferenceImages []BatchImageReferenceInput `json:"reference_images,omitempty"`
+placeholder
+
+type BatchImageReferenceInput struct {
+	ID       string `json:"id,omitempty"`
+	Type     string `json:"type,omitempty"`
+	MimeType string `json:"mime_type"`
+	Data     []byte `json:"data,omitempty"`
+	FileURI  string `json:"file_uri,omitempty"`
 placeholder
 
 type BatchImageOwner struct {
@@ -293,7 +308,21 @@ placeholder
 		Items:            make([]BatchImageInputItem, 0, len(normalized.Items)),
 placeholder
 	for _, item := range normalized.Items {
-		input.Items = append(input.Items, BatchImageInputItem{CustomID: item.CustomID, Prompt: item.Promptplaceholder)
+		refs := make([]BatchImageReference, 0, len(item.ReferenceImages))
+		for _, ref := range item.ReferenceImages {
+			refs = append(refs, BatchImageReference{
+				ID:       ref.ID,
+				Type:     ref.Type,
+				MimeType: ref.MimeType,
+				Data:     ref.Data,
+				FileURI:  ref.FileURI,
+		placeholder)
+	placeholder
+		input.Items = append(input.Items, BatchImageInputItem{
+			CustomID:        item.CustomID,
+			Prompt:          item.Prompt,
+			ReferenceImages: refs,
+	placeholder)
 placeholder
 
 	providerJob, err := provider.Submit(ctx, job, account, input)
@@ -662,10 +691,25 @@ placeholder
 	req.Metadata = sanitizeBatchImageMetadata(req.Metadata)
 
 	seen := make(map[string]struct{placeholder, len(req.Items))
+	totalReferenceImages := 0
+	totalInlineReferenceBytes := 0
+	totalOutputImages := 0
+	expandedItems := make([]BatchImageSubmitItem, 0, len(req.Items))
 	for i := range req.Items {
 		req.Items[i].CustomID = strings.TrimSpace(req.Items[i].CustomID)
 		if req.Items[i].CustomID == "" {
 			req.Items[i].CustomID = fmt.Sprintf("item_%06d", i+1)
+	placeholder
+		outputCount := req.Items[i].OutputCount
+		if outputCount == 0 {
+			outputCount = 1
+	placeholder
+		if outputCount < 1 || outputCount > s.maxOutputImagesPerItem() {
+			return req, ErrBatchImageInvalidItems
+	placeholder
+		totalOutputImages += outputCount
+		if totalOutputImages > s.maxOutputImagesPerJob() {
+			return req, ErrBatchImageTooManyOutputImages
 	placeholder
 		req.Items[i].Prompt = strings.TrimSpace(req.Items[i].Prompt)
 		if req.Items[i].Prompt == "" {
@@ -674,12 +718,101 @@ placeholder
 		if len(req.Items[i].Prompt) > s.maxPromptChars() {
 			return req, ErrBatchImagePromptTooLong
 	placeholder
-		if _, ok := seen[req.Items[i].CustomID]; ok {
-			return req, ErrBatchImageDuplicateCustomIDInRequest
+		referenceCount, inlineReferenceBytes, err := normalizeBatchImageReferenceInputs(req.Model, &req.Items[i])
+		if err != nil {
+			return req, err
 	placeholder
-		seen[req.Items[i].CustomID] = struct{placeholder{placeholder
+		totalReferenceImages += referenceCount * outputCount
+		if totalReferenceImages > s.maxReferenceImagesPerJob() {
+			return req, ErrBatchImageTooManyReferenceImages
+	placeholder
+		totalInlineReferenceBytes += inlineReferenceBytes * outputCount
+		if totalInlineReferenceBytes > s.maxReferenceInlineBytesPerJob() {
+			return req, ErrBatchImageReferenceImagesTooLarge
+	placeholder
+		for repeatIndex := 1; repeatIndex <= outputCount; repeatIndex++ {
+			expanded := req.Items[i]
+			expanded.OutputCount = 0
+			if outputCount > 1 {
+				expanded.CustomID = fmt.Sprintf("%s_%0*d", req.Items[i].CustomID, batchImageRepeatSuffixWidth(outputCount), repeatIndex)
+		placeholder
+			if _, ok := seen[expanded.CustomID]; ok {
+				return req, ErrBatchImageDuplicateCustomIDInRequest
+		placeholder
+			seen[expanded.CustomID] = struct{placeholder{placeholder
+			expandedItems = append(expandedItems, expanded)
+	placeholder
 placeholder
+	req.Items = expandedItems
 	return req, nil
+placeholder
+
+func normalizeBatchImageReferenceInputs(model string, item *BatchImageSubmitItem) (int, int, error) {
+	if item == nil || len(item.ReferenceImages) == 0 {
+		return 0, 0, nil
+placeholder
+	maxRefs := maxBatchImageReferenceImagesForModel(model)
+	if maxRefs <= 0 || len(item.ReferenceImages) > maxRefs {
+		return 0, 0, ErrBatchImageTooManyReferenceImages
+placeholder
+	out := make([]BatchImageReferenceInput, 0, len(item.ReferenceImages))
+	inlineBytes := 0
+	for _, ref := range item.ReferenceImages {
+		ref.ID = truncateBatchImageMessage(strings.TrimSpace(ref.ID), 80)
+		ref.Type = truncateBatchImageMessage(strings.TrimSpace(ref.Type), 40)
+		ref.MimeType = normalizeBatchImageReferenceMimeType(ref.MimeType)
+		ref.FileURI = strings.TrimSpace(ref.FileURI)
+		if ref.MimeType == "" {
+			return 0, 0, ErrBatchImageInvalidReferenceImage
+	placeholder
+		if len(ref.Data) == 0 && ref.FileURI == "" {
+			return 0, 0, ErrBatchImageInvalidReferenceImage
+	placeholder
+		if len(ref.Data) > 0 && ref.FileURI != "" {
+			return 0, 0, ErrBatchImageInvalidReferenceImage
+	placeholder
+		if len(ref.Data) > maxBatchImageReferenceImageBytes {
+			return 0, 0, ErrBatchImageInvalidReferenceImage
+	placeholder
+		if ref.FileURI != "" && !strings.HasPrefix(ref.FileURI, "gs://") {
+			return 0, 0, ErrBatchImageInvalidReferenceImage
+	placeholder
+		inlineBytes += len(ref.Data)
+		out = append(out, ref)
+placeholder
+	item.ReferenceImages = out
+	return len(out), inlineBytes, nil
+placeholder
+
+func normalizeBatchImageReferenceMimeType(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "image/jpeg", "image/jpg":
+		return "image/jpeg"
+	case "image/png":
+		return "image/png"
+	case "image/webp":
+		return "image/webp"
+	default:
+		return ""
+placeholder
+placeholder
+
+func batchImageRepeatSuffixWidth(count int) int {
+	if count < 10 {
+		return 2
+placeholder
+	return len(strconv.Itoa(count))
+placeholder
+
+func maxBatchImageReferenceImagesForModel(model string) int {
+	model = strings.ToLower(strings.TrimSpace(model))
+	if strings.Contains(model, "pro-image") {
+		return 14
+placeholder
+	if strings.Contains(model, "flash-image") {
+		return 3
+placeholder
+	return 0
 placeholder
 
 func (s *BatchImagePublicService) selectProviderAndAccount(ctx context.Context, owner BatchImageOwner, requestedProvider, model string) (BatchImageProvider, *Account, error) {
@@ -840,11 +973,39 @@ placeholder
 	return defaultBatchImageMaxItems
 placeholder
 
+func (s *BatchImagePublicService) maxOutputImagesPerJob() int {
+	if s != nil && s.Config != nil && s.Config.BatchImage.MaxOutputImagesPerJob > 0 {
+		return s.Config.BatchImage.MaxOutputImagesPerJob
+placeholder
+	return defaultBatchImageMaxOutputImages
+placeholder
+
+func (s *BatchImagePublicService) maxOutputImagesPerItem() int {
+	if s != nil && s.Config != nil && s.Config.BatchImage.MaxOutputImagesPerItem > 0 {
+		return s.Config.BatchImage.MaxOutputImagesPerItem
+placeholder
+	return defaultBatchImageMaxOutputCount
+placeholder
+
 func (s *BatchImagePublicService) maxPromptChars() int {
 	if s != nil && s.Config != nil && s.Config.BatchImage.MaxPromptCharsPerItem > 0 {
 		return s.Config.BatchImage.MaxPromptCharsPerItem
 placeholder
 	return defaultBatchImageMaxPromptChars
+placeholder
+
+func (s *BatchImagePublicService) maxReferenceImagesPerJob() int {
+	if s != nil && s.Config != nil && s.Config.BatchImage.MaxReferenceImagesPerJob > 0 {
+		return s.Config.BatchImage.MaxReferenceImagesPerJob
+placeholder
+	return defaultBatchImageMaxReferenceImages
+placeholder
+
+func (s *BatchImagePublicService) maxReferenceInlineBytesPerJob() int {
+	if s != nil && s.Config != nil && s.Config.BatchImage.MaxReferenceInlineBytesPerJob > 0 {
+		return s.Config.BatchImage.MaxReferenceInlineBytesPerJob
+placeholder
+	return defaultBatchImageMaxReferenceBytes
 placeholder
 
 func (s *BatchImagePublicService) defaultResponseMimeType() string {

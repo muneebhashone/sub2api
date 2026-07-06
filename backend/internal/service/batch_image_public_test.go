@@ -178,6 +178,28 @@ placeholder)
 		require.Equal(t, "item_000002", gemini.submits[0].Items[1].CustomID)
 placeholder)
 
+	t.Run("expands output count into separate billable items", func(t *testing.T) {
+		svc, repo, _, gemini, _ := newTestBatchImagePublicService(true)
+		req := validBatchImageSubmitRequest()
+		req.Items = []BatchImageSubmitItem{
+			{CustomID: "cover", Prompt: "hero", OutputCount: 3, ReferenceImages: []BatchImageReferenceInput{{MimeType: "image/png", Data: []byte("ref")placeholderplaceholderplaceholder,
+	placeholder
+
+		got, err := svc.Submit(ctx, testBatchImageOwner(), req, "")
+	placeholder
+		require.Equal(t, 3, got.ItemCount)
+		require.InDelta(t, 0.375, got.EstimatedCost, 1e-12)
+		require.Len(t, gemini.submits, 1)
+		require.Len(t, gemini.submits[0].Items, 3)
+		require.Equal(t, []string{"cover_01", "cover_02", "cover_03"placeholder, []string{
+			gemini.submits[0].Items[0].CustomID,
+			gemini.submits[0].Items[1].CustomID,
+			gemini.submits[0].Items[2].CustomID,
+	placeholder)
+		require.Len(t, gemini.submits[0].Items[0].ReferenceImages, 1)
+		require.Len(t, repo.items[got.ID], 3)
+placeholder)
+
 	t.Run("validates request fields", func(t *testing.T) {
 		tests := []struct {
 			name   string
@@ -191,6 +213,24 @@ placeholder)
 			{name: "prompt_too_long", mutate: func(r *BatchImageSubmitRequest) { r.Items[0].Prompt = strings.Repeat("x", 9) placeholder, want: ErrBatchImagePromptTooLongplaceholder,
 			{name: "unsupported_provider", mutate: func(r *BatchImageSubmitRequest) { r.Provider = "other" placeholder, want: ErrBatchImageUnsupportedProviderplaceholder,
 			{name: "vertex_rejects_2k", mutate: func(r *BatchImageSubmitRequest) { r.Provider = BatchImageProviderVertex; r.ImageSize = "2K" placeholder, want: ErrBatchImageInvalidItemsplaceholder,
+			{name: "too_many_outputs_per_item", mutate: func(r *BatchImageSubmitRequest) {
+				r.Items[0].OutputCount = 5
+		placeholder, want: ErrBatchImageInvalidItemsplaceholder,
+			{name: "too_many_reference_images_for_flash", mutate: func(r *BatchImageSubmitRequest) {
+				r.Model = "gemini-2.5-flash-image"
+				r.Items[0].ReferenceImages = []BatchImageReferenceInput{
+					{MimeType: "image/png", Data: []byte("1")placeholder,
+					{MimeType: "image/png", Data: []byte("2")placeholder,
+					{MimeType: "image/png", Data: []byte("3")placeholder,
+					{MimeType: "image/png", Data: []byte("4")placeholder,
+			placeholder
+		placeholder, want: ErrBatchImageTooManyReferenceImagesplaceholder,
+			{name: "bad_reference_mime", mutate: func(r *BatchImageSubmitRequest) {
+				r.Items[0].ReferenceImages = []BatchImageReferenceInput{{MimeType: "application/octet-stream", Data: []byte("x")placeholderplaceholder
+		placeholder, want: ErrBatchImageInvalidReferenceImageplaceholder,
+			{name: "reference_requires_data_or_file_uri", mutate: func(r *BatchImageSubmitRequest) {
+				r.Items[0].ReferenceImages = []BatchImageReferenceInput{{MimeType: "image/png"placeholderplaceholder
+		placeholder, want: ErrBatchImageInvalidReferenceImageplaceholder,
 	placeholder
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -211,6 +251,48 @@ placeholder)
 
 		_, err := svc.Submit(ctx, testBatchImageOwner(), req, "")
 		require.ErrorIs(t, err, ErrBatchImageInvalidItems)
+placeholder)
+
+	t.Run("rejects too many output images", func(t *testing.T) {
+		svc, _, _, _, _ := newTestBatchImagePublicService(true)
+		svc.Config.BatchImage.MaxOutputImagesPerJob = 3
+		req := validBatchImageSubmitRequest()
+		req.Items[0].OutputCount = 2
+		req.Items[1].OutputCount = 2
+
+		_, err := svc.Submit(ctx, testBatchImageOwner(), req, "")
+		require.ErrorIs(t, err, ErrBatchImageTooManyOutputImages)
+placeholder)
+
+	t.Run("rejects too many reference images across request", func(t *testing.T) {
+		svc, _, _, _, _ := newTestBatchImagePublicService(true)
+		svc.Config.BatchImage.MaxReferenceImagesPerJob = 3
+		req := validBatchImageSubmitRequest()
+		req.Model = "gemini-2.5-flash-image"
+		req.Items[0].ReferenceImages = []BatchImageReferenceInput{
+			{MimeType: "image/png", Data: []byte("1")placeholder,
+			{MimeType: "image/png", Data: []byte("2")placeholder,
+	placeholder
+		req.Items[1].ReferenceImages = []BatchImageReferenceInput{
+			{MimeType: "image/png", Data: []byte("3")placeholder,
+			{MimeType: "image/png", Data: []byte("4")placeholder,
+	placeholder
+
+		_, err := svc.Submit(ctx, testBatchImageOwner(), req, "")
+		require.ErrorIs(t, err, ErrBatchImageTooManyReferenceImages)
+placeholder)
+
+	t.Run("rejects too much inline reference image data across request", func(t *testing.T) {
+		svc, _, _, _, _ := newTestBatchImagePublicService(true)
+		svc.Config.BatchImage.MaxReferenceImagesPerJob = 10
+		svc.Config.BatchImage.MaxReferenceInlineBytesPerJob = 4
+		req := validBatchImageSubmitRequest()
+		req.Model = "gemini-2.5-flash-image"
+		req.Items[0].ReferenceImages = []BatchImageReferenceInput{{MimeType: "image/png", Data: []byte("123")placeholderplaceholder
+		req.Items[1].ReferenceImages = []BatchImageReferenceInput{{MimeType: "image/png", Data: []byte("456")placeholderplaceholder
+
+		_, err := svc.Submit(ctx, testBatchImageOwner(), req, "")
+		require.ErrorIs(t, err, ErrBatchImageReferenceImagesTooLarge)
 placeholder)
 
 	t.Run("selects requested provider", func(t *testing.T) {
