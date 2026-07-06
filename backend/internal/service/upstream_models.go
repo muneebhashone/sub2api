@@ -387,14 +387,7 @@ placeholder
 placeholder
 
 func buildOpenAIModelsURL(base string) string {
-	normalized := strings.TrimRight(strings.TrimSpace(base), "/")
-	if strings.HasSuffix(normalized, "/v1/models") {
-		return normalized
-placeholder
-	if strings.HasSuffix(normalized, "/v1") {
-		return normalized + "/models"
-placeholder
-	return normalized + "/v1/models"
+	return buildOpenAIEndpointURL(base, "/v1/models")
 placeholder
 
 func buildGeminiModelsURL(base string) string {
