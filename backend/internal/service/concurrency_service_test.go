@@ -16,25 +16,33 @@ import (
 
 // stubConcurrencyCacheForTest 用于并发服务单元测试的缓存桩
 type stubConcurrencyCacheForTest struct {
-	acquireResult  bool
-	acquireErr     error
-	releaseErr     error
-	concurrency    int
-	concurrencyErr error
-	waitAllowed    bool
-	waitErr        error
-	waitCount      int
-	waitCountErr   error
-	loadBatch      map[int64]*AccountLoadInfo
-	loadBatchErr   error
-	usersLoadBatch map[int64]*UserLoadInfo
-	usersLoadErr   error
-	cleanupErr     error
+	acquireResult        bool
+	acquireErr           error
+	releaseErr           error
+	concurrency          int
+	concurrencyErr       error
+	waitAllowed          bool
+	waitErr              error
+	waitCount            int
+	waitCountErr         error
+	loadBatch            map[int64]*AccountLoadInfo
+	loadBatchErr         error
+	usersLoadBatch       map[int64]*UserLoadInfo
+	usersLoadErr         error
+	cleanupErr           error
+	apiKeyTrackErr       error
+	apiKeyReleaseErr     error
+	apiKeyConcurrency    map[int64]int
+	apiKeyConcurrencyErr error
 
 	// 记录调用
-	releasedAccountIDs []int64
-	releasedRequestIDs []string
-	loadBatchCalls     atomic.Int64
+	releasedAccountIDs       []int64
+	releasedRequestIDs       []string
+	loadBatchCalls           atomic.Int64
+	trackedAPIKeyIDs         []int64
+	trackedAPIKeyRequestIDs  []string
+	releasedAPIKeyIDs        []int64
+	releasedAPIKeyRequestIDs []string
 placeholder
 
 var _ ConcurrencyCache = (*stubConcurrencyCacheForTest)(nil)
@@ -77,6 +85,26 @@ func (c *stubConcurrencyCacheForTest) ReleaseUserSlot(_ context.Context, _ int64
 placeholder
 func (c *stubConcurrencyCacheForTest) GetUserConcurrency(_ context.Context, _ int64) (int, error) {
 	return c.concurrency, c.concurrencyErr
+placeholder
+func (c *stubConcurrencyCacheForTest) TrackAPIKeySlot(_ context.Context, apiKeyID int64, requestID string) error {
+	c.trackedAPIKeyIDs = append(c.trackedAPIKeyIDs, apiKeyID)
+	c.trackedAPIKeyRequestIDs = append(c.trackedAPIKeyRequestIDs, requestID)
+	return c.apiKeyTrackErr
+placeholder
+func (c *stubConcurrencyCacheForTest) ReleaseAPIKeySlot(_ context.Context, apiKeyID int64, requestID string) error {
+	c.releasedAPIKeyIDs = append(c.releasedAPIKeyIDs, apiKeyID)
+	c.releasedAPIKeyRequestIDs = append(c.releasedAPIKeyRequestIDs, requestID)
+	return c.apiKeyReleaseErr
+placeholder
+func (c *stubConcurrencyCacheForTest) GetAPIKeyConcurrencyBatch(_ context.Context, apiKeyIDs []int64) (map[int64]int, error) {
+	if c.apiKeyConcurrencyErr != nil {
+		return nil, c.apiKeyConcurrencyErr
+placeholder
+	result := make(map[int64]int, len(apiKeyIDs))
+	for _, apiKeyID := range apiKeyIDs {
+		result[apiKeyID] = c.apiKeyConcurrency[apiKeyID]
+placeholder
+	return result, nil
 placeholder
 func (c *stubConcurrencyCacheForTest) IncrementWaitCount(_ context.Context, _ int64, _ int) (bool, error) {
 	return c.waitAllowed, c.waitErr
@@ -199,6 +227,62 @@ func TestAcquireUserSlot_UnlimitedConcurrency(t *testing.T) {
 	result, err := svc.AcquireUserSlot(context.Background(), 1, 0)
 placeholder
 	require.True(t, result.Acquired)
+placeholder
+
+func TestTrackAPIKeySlot_ReleaseDecrements(t *testing.T) {
+	cache := &stubConcurrencyCacheForTest{placeholder
+	svc := NewConcurrencyService(cache)
+
+	release := svc.TrackAPIKeySlot(context.Background(), 88)
+	require.NotNil(t, release)
+	require.Equal(t, []int64{88placeholder, cache.trackedAPIKeyIDs)
+	require.Len(t, cache.trackedAPIKeyRequestIDs, 1)
+	require.NotEmpty(t, cache.trackedAPIKeyRequestIDs[0])
+
+	release()
+
+	require.Equal(t, []int64{88placeholder, cache.releasedAPIKeyIDs)
+	require.Equal(t, cache.trackedAPIKeyRequestIDs, cache.releasedAPIKeyRequestIDs)
+placeholder
+
+func TestTrackAPIKeySlot_FailOpen(t *testing.T) {
+	cache := &stubConcurrencyCacheForTest{apiKeyTrackErr: errors.New("redis down")placeholder
+	svc := NewConcurrencyService(cache)
+
+	release := svc.TrackAPIKeySlot(context.Background(), 88)
+	require.NotNil(t, release)
+	require.Equal(t, []int64{88placeholder, cache.trackedAPIKeyIDs)
+
+	require.NotPanics(t, release)
+	require.Empty(t, cache.releasedAPIKeyIDs)
+placeholder
+
+func TestGetAPIKeyConcurrencyBatch_Fallbacks(t *testing.T) {
+	t.Run("nil cache returns zeroes", func(t *testing.T) {
+		svc := &ConcurrencyService{cache: nilplaceholder
+
+		counts, err := svc.GetAPIKeyConcurrencyBatch(context.Background(), []int64{1, 2placeholder)
+	placeholder
+		require.Equal(t, map[int64]int{1: 0, 2: 0placeholder, counts)
+placeholder)
+
+	t.Run("redis error returns zeroes", func(t *testing.T) {
+		cache := &stubConcurrencyCacheForTest{apiKeyConcurrencyErr: errors.New("redis down")placeholder
+		svc := NewConcurrencyService(cache)
+
+		counts, err := svc.GetAPIKeyConcurrencyBatch(context.Background(), []int64{1, 2placeholder)
+	placeholder
+		require.Equal(t, map[int64]int{1: 0, 2: 0placeholder, counts)
+placeholder)
+
+	t.Run("success returns counts", func(t *testing.T) {
+		cache := &stubConcurrencyCacheForTest{apiKeyConcurrency: map[int64]int{1: 3, 2: 0placeholderplaceholder
+		svc := NewConcurrencyService(cache)
+
+		counts, err := svc.GetAPIKeyConcurrencyBatch(context.Background(), []int64{1, 2placeholder)
+	placeholder
+		require.Equal(t, map[int64]int{1: 3, 2: 0placeholder, counts)
+placeholder)
 placeholder
 
 func TestGenerateRequestID_UsesStablePrefixAndMonotonicCounter(t *testing.T) {

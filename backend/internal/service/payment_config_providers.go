@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -185,6 +186,11 @@ func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req C
 	if err := validateProviderRequest(req.ProviderKey, req.Name, typesStr); err != nil {
 		return nil, err
 placeholder
+	if req.ProviderKey == payment.TypeEasyPay {
+		if err := validateEasyPayCustomMethods(req.Config, typesStr); err != nil {
+			return nil, err
+	placeholder
+placeholder
 	if err := s.validateVisibleMethodEnablementConflicts(ctx, 0, req.ProviderKey, typesStr, req.Enabled); err != nil {
 		return nil, err
 placeholder
@@ -215,6 +221,67 @@ placeholder
 placeholder
 	// supported_types can be empty (provider accepts no payment types until configured)
 	return nil
+placeholder
+
+var easyPayCustomMethodCodePattern = regexp.MustCompile(`^[a-z0-9_-]+$`)
+
+type easyPayCustomMethodConfig struct {
+	Type         string `json:"type"`
+	UpstreamType string `json:"upstreamType"`
+	DisplayName  string `json:"displayName"`
+placeholder
+
+func validateEasyPayCustomMethods(config map[string]string, supportedTypes string) error {
+	if config == nil {
+		config = map[string]string{placeholder
+placeholder
+	raw := strings.TrimSpace(config["customMethods"])
+	methods := make([]easyPayCustomMethodConfig, 0)
+	if raw != "" {
+		if err := json.Unmarshal([]byte(raw), &methods); err != nil {
+			return infraerrors.BadRequest("VALIDATION_ERROR", "customMethods must be a JSON array")
+	placeholder
+placeholder
+
+	customTypes := make(map[string]struct{placeholder, len(methods))
+	for _, method := range methods {
+		method.Type = strings.TrimSpace(method.Type)
+		method.UpstreamType = strings.TrimSpace(method.UpstreamType)
+		if method.Type == "" || method.UpstreamType == "" {
+			return infraerrors.BadRequest("VALIDATION_ERROR", "customMethods upstreamType is required")
+	placeholder
+		if !easyPayCustomMethodCodePattern.MatchString(method.Type) {
+			return infraerrors.BadRequest("VALIDATION_ERROR", "customMethods type may only contain lowercase letters, digits, underscores, and hyphens")
+	placeholder
+		if !easyPayCustomMethodCodePattern.MatchString(method.UpstreamType) {
+			return infraerrors.BadRequest("VALIDATION_ERROR", "customMethods upstreamType may only contain lowercase letters, digits, underscores, and hyphens")
+	placeholder
+		if easyPayCustomMethodTypeConflictsWithBuiltin(method.Type) {
+			return infraerrors.BadRequest("VALIDATION_ERROR", "customMethods type cannot start with alipay or wxpay")
+	placeholder
+		if _, exists := customTypes[method.Type]; exists {
+			return infraerrors.BadRequest("VALIDATION_ERROR", "duplicate customMethods type")
+	placeholder
+		customTypes[method.Type] = struct{placeholder{placeholder
+placeholder
+
+	for _, supportedType := range splitTypes(supportedTypes) {
+		supportedType = strings.TrimSpace(supportedType)
+		if supportedType == "" || supportedType == payment.TypeAlipay || supportedType == payment.TypeWxpay {
+			continue
+	placeholder
+		if !easyPayCustomMethodCodePattern.MatchString(supportedType) {
+			return infraerrors.BadRequest("VALIDATION_ERROR", fmt.Sprintf("supported EasyPay custom type %s may only contain lowercase letters, digits, underscores, and hyphens", supportedType))
+	placeholder
+		if _, exists := customTypes[supportedType]; !exists {
+			return infraerrors.BadRequest("VALIDATION_ERROR", fmt.Sprintf("supported EasyPay custom type %s has no customMethods mapping", supportedType))
+	placeholder
+placeholder
+	return nil
+placeholder
+
+func easyPayCustomMethodTypeConflictsWithBuiltin(methodType string) bool {
+	return strings.HasPrefix(methodType, payment.TypeAlipay) || strings.HasPrefix(methodType, payment.TypeWxpay)
 placeholder
 
 // UpdateProviderInstance updates a provider instance by ID (patch semantics).
@@ -279,6 +346,18 @@ placeholder
 				WithMetadata(map[string]string{"count": strconv.Itoa(count)placeholder)
 	placeholder
 placeholder
+	configToValidate := mergedConfig
+	if configToValidate == nil {
+		configToValidate, err = s.decryptConfig(current.Config)
+		if err != nil {
+			return nil, fmt.Errorf("decrypt existing config: %w", err)
+	placeholder
+placeholder
+	if current.ProviderKey == payment.TypeEasyPay {
+		if err := validateEasyPayCustomMethods(configToValidate, nextSupportedTypes); err != nil {
+			return nil, err
+	placeholder
+placeholder
 	// Validate merged config when the instance will end up enabled.
 	// This surfaces provider-level errors (e.g. wxpay missing certSerial) at save time,
 	// so admins see them in the dialog instead of only when an order is created.
@@ -287,13 +366,6 @@ placeholder
 		finalEnabled = *req.Enabled
 placeholder
 	if finalEnabled {
-		configToValidate := mergedConfig
-		if configToValidate == nil {
-			configToValidate, err = s.decryptConfig(current.Config)
-			if err != nil {
-				return nil, fmt.Errorf("decrypt existing config: %w", err)
-		placeholder
-	placeholder
 		if err := s.validateProviderConfig(current.ProviderKey, configToValidate); err != nil {
 			return nil, err
 	placeholder
