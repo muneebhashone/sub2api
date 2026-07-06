@@ -1244,6 +1244,34 @@ placeholder
 	return cloneStringSlice(models)
 placeholder
 
+// GetSchedulablePlatforms returns the concrete platforms that currently have
+// schedulable accounts in the target group.
+func (s *GatewayService) GetSchedulablePlatforms(ctx context.Context, groupID *int64) map[string]struct{placeholder {
+	platforms := make(map[string]struct{placeholder)
+	if s == nil || s.accountRepo == nil {
+		return platforms
+placeholder
+
+	var accounts []Account
+	var err error
+	if groupID != nil {
+		accounts, err = s.accountRepo.ListSchedulableByGroupID(ctx, *groupID)
+placeholder else {
+		accounts, err = s.accountRepo.ListSchedulable(ctx)
+placeholder
+	if err != nil {
+		return platforms
+placeholder
+
+	for _, acc := range accounts {
+		platform := strings.TrimSpace(acc.Platform)
+		if platform != "" {
+			platforms[platform] = struct{placeholder{placeholder
+	placeholder
+placeholder
+	return platforms
+placeholder
+
 func (s *GatewayService) InvalidateAvailableModelsCache(groupID *int64, platform string) {
 	if s == nil || s.modelsListCache == nil {
 		return
