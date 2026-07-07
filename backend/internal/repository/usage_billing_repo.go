@@ -63,23 +63,27 @@ placeholder
 placeholder
 
 func (r *usageBillingRepository) claimUsageBillingKey(ctx context.Context, tx *sql.Tx, cmd *service.UsageBillingCommand) (bool, error) {
+	return r.claimUsageBillingRequest(ctx, tx, cmd.RequestID, cmd.APIKeyID, cmd.RequestFingerprint)
+placeholder
+
+func (r *usageBillingRepository) claimUsageBillingRequest(ctx context.Context, tx *sql.Tx, requestID string, apiKeyID int64, requestFingerprint string) (bool, error) {
 	var id int64
 	err := tx.QueryRowContext(ctx, `
 		INSERT INTO usage_billing_dedup (request_id, api_key_id, request_fingerprint)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (request_id, api_key_id) DO NOTHING
 		RETURNING id
-	`, cmd.RequestID, cmd.APIKeyID, cmd.RequestFingerprint).Scan(&id)
+	`, requestID, apiKeyID, requestFingerprint).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		var existingFingerprint string
 		if err := tx.QueryRowContext(ctx, `
 			SELECT request_fingerprint
 			FROM usage_billing_dedup
 			WHERE request_id = $1 AND api_key_id = $2
-		`, cmd.RequestID, cmd.APIKeyID).Scan(&existingFingerprint); err != nil {
+		`, requestID, apiKeyID).Scan(&existingFingerprint); err != nil {
 			return false, err
 	placeholder
-		if strings.TrimSpace(existingFingerprint) != strings.TrimSpace(cmd.RequestFingerprint) {
+		if strings.TrimSpace(existingFingerprint) != strings.TrimSpace(requestFingerprint) {
 			return false, service.ErrUsageBillingRequestConflict
 	placeholder
 		return false, nil
@@ -92,9 +96,9 @@ placeholder
 		SELECT request_fingerprint
 		FROM usage_billing_dedup_archive
 		WHERE request_id = $1 AND api_key_id = $2
-	`, cmd.RequestID, cmd.APIKeyID).Scan(&archivedFingerprint)
+	`, requestID, apiKeyID).Scan(&archivedFingerprint)
 	if err == nil {
-		if strings.TrimSpace(archivedFingerprint) != strings.TrimSpace(cmd.RequestFingerprint) {
+		if strings.TrimSpace(archivedFingerprint) != strings.TrimSpace(requestFingerprint) {
 			return false, service.ErrUsageBillingRequestConflict
 	placeholder
 		return false, nil
@@ -103,6 +107,68 @@ placeholder
 		return false, err
 placeholder
 	return true, nil
+placeholder
+
+func (r *usageBillingRepository) ReserveBatchImageBalance(ctx context.Context, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {
+	return r.applyBatchImageBalanceHold(ctx, cmd, reserveUsageBillingBatchImageBalance)
+placeholder
+
+func (r *usageBillingRepository) CaptureBatchImageBalance(ctx context.Context, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {
+	return r.applyBatchImageBalanceHold(ctx, cmd, captureUsageBillingBatchImageBalance)
+placeholder
+
+func (r *usageBillingRepository) ReleaseBatchImageBalance(ctx context.Context, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {
+	return r.applyBatchImageBalanceHold(ctx, cmd, releaseUsageBillingBatchImageBalance)
+placeholder
+
+func (r *usageBillingRepository) applyBatchImageBalanceHold(
+	ctx context.Context,
+	cmd *service.BatchImageBalanceHoldCommand,
+	apply func(context.Context, *sql.Tx, *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error),
+) (_ *service.BatchImageBalanceHoldResult, err error) {
+	if cmd == nil {
+		return &service.BatchImageBalanceHoldResult{placeholder, nil
+placeholder
+	if r == nil || r.db == nil {
+		return nil, errors.New("usage billing repository db is nil")
+placeholder
+	cmd.Normalize()
+	if cmd.RequestID == "" {
+		return nil, service.ErrUsageBillingRequestIDRequired
+placeholder
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+placeholder
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback()
+	placeholder
+placeholder()
+
+	applied, err := r.claimUsageBillingRequest(ctx, tx, cmd.RequestID, cmd.APIKeyID, cmd.RequestFingerprint)
+	if err != nil {
+		return nil, err
+placeholder
+	if !applied {
+		return &service.BatchImageBalanceHoldResult{Applied: falseplaceholder, nil
+placeholder
+
+	result, err := apply(ctx, tx, cmd)
+	if err != nil {
+		return nil, err
+placeholder
+	if result == nil {
+		result = &service.BatchImageBalanceHoldResult{placeholder
+placeholder
+	result.Applied = true
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+placeholder
+	tx = nil
+	return result, nil
 placeholder
 
 func (r *usageBillingRepository) applyUsageBillingEffects(ctx context.Context, tx *sql.Tx, cmd *service.UsageBillingCommand, result *service.UsageBillingApplyResult) error {
@@ -204,6 +270,108 @@ placeholder
 		return 0, false, err
 placeholder
 	return newBalance, false, nil
+placeholder
+
+func reserveUsageBillingBatchImageBalance(ctx context.Context, tx *sql.Tx, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {
+	if cmd.HoldAmount <= 0 {
+		return &service.BatchImageBalanceHoldResult{placeholder, nil
+placeholder
+	var balance, frozen float64
+	err := tx.QueryRowContext(ctx, `
+		UPDATE users
+		SET balance = balance - $1,
+			frozen_balance = COALESCE(frozen_balance, 0) + $1,
+			updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL AND balance >= $1
+		RETURNING balance, frozen_balance
+	`, cmd.HoldAmount, cmd.UserID).Scan(&balance, &frozen)
+	if err == nil {
+		return &service.BatchImageBalanceHoldResult{NewBalance: &balance, FrozenBalance: &frozenplaceholder, nil
+placeholder
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+placeholder
+	if exists, existsErr := userExistsForBilling(ctx, tx, cmd.UserID); existsErr != nil {
+		return nil, existsErr
+placeholder else if !exists {
+		return nil, service.ErrUserNotFound
+placeholder
+	return nil, service.ErrBatchImageInsufficientBalance
+placeholder
+
+func captureUsageBillingBatchImageBalance(ctx context.Context, tx *sql.Tx, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {
+	if cmd.HoldAmount <= 0 && cmd.ActualAmount <= 0 {
+		return &service.BatchImageBalanceHoldResult{placeholder, nil
+placeholder
+	if cmd.ActualAmount-cmd.HoldAmount > 0.00000001 {
+		return nil, service.ErrBatchImageSettlementCostExceedsHold
+placeholder
+	var balance, frozen float64
+	err := tx.QueryRowContext(ctx, `
+		UPDATE users
+		SET balance = balance
+				+ CASE WHEN $1 > $2 THEN $1 - $2 ELSE 0 END
+				- CASE WHEN $2 > $1 THEN $2 - $1 ELSE 0 END,
+			frozen_balance = COALESCE(frozen_balance, 0) - $1,
+			updated_at = NOW()
+		WHERE id = $3 AND deleted_at IS NULL AND COALESCE(frozen_balance, 0) >= $1
+		RETURNING balance, frozen_balance
+	`, cmd.HoldAmount, cmd.ActualAmount, cmd.UserID).Scan(&balance, &frozen)
+	if err == nil {
+		return &service.BatchImageBalanceHoldResult{NewBalance: &balance, FrozenBalance: &frozenplaceholder, nil
+placeholder
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+placeholder
+	if exists, existsErr := userExistsForBilling(ctx, tx, cmd.UserID); existsErr != nil {
+		return nil, existsErr
+placeholder else if !exists {
+		return nil, service.ErrUserNotFound
+placeholder
+	return nil, errors.New("batch image frozen balance is insufficient")
+placeholder
+
+func releaseUsageBillingBatchImageBalance(ctx context.Context, tx *sql.Tx, cmd *service.BatchImageBalanceHoldCommand) (*service.BatchImageBalanceHoldResult, error) {
+	if cmd.HoldAmount <= 0 {
+		return &service.BatchImageBalanceHoldResult{placeholder, nil
+placeholder
+	var balance, frozen float64
+	err := tx.QueryRowContext(ctx, `
+		UPDATE users
+		SET balance = balance + $1,
+			frozen_balance = COALESCE(frozen_balance, 0) - $1,
+			updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL AND COALESCE(frozen_balance, 0) >= $1
+		RETURNING balance, frozen_balance
+	`, cmd.HoldAmount, cmd.UserID).Scan(&balance, &frozen)
+	if err == nil {
+		return &service.BatchImageBalanceHoldResult{NewBalance: &balance, FrozenBalance: &frozenplaceholder, nil
+placeholder
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+placeholder
+	if exists, existsErr := userExistsForBilling(ctx, tx, cmd.UserID); existsErr != nil {
+		return nil, existsErr
+placeholder else if !exists {
+		return nil, service.ErrUserNotFound
+placeholder
+	return nil, errors.New("batch image frozen balance is insufficient")
+placeholder
+
+func userExistsForBilling(ctx context.Context, tx *sql.Tx, userID int64) (bool, error) {
+	var exists int
+	err := tx.QueryRowContext(ctx, `
+		SELECT 1
+		FROM users
+		WHERE id = $1 AND deleted_at IS NULL
+	`, userID).Scan(&exists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+placeholder
+	if err != nil {
+		return false, err
+placeholder
+	return true, nil
 placeholder
 
 func incrementUsageBillingAPIKeyQuota(ctx context.Context, tx *sql.Tx, apiKeyID int64, amount float64) (bool, error) {
