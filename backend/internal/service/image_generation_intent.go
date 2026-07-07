@@ -39,6 +39,9 @@ placeholder
 	if openAIJSONToolsContainImageGeneration(gjson.GetBytes(body, "tools")) {
 		return true
 placeholder
+	if openAIJSONInputContainsImageGenTool(gjson.GetBytes(body, "input")) {
+		return true
+placeholder
 	return openAIJSONToolChoiceSelectsImageGeneration(gjson.GetBytes(body, "tool_choice"))
 placeholder
 
@@ -94,7 +97,48 @@ placeholder
 			found = true
 			return false
 	placeholder
+		if isImageGenNamespaceTool(item) {
+			found = true
+			return false
+	placeholder
 		return true
+placeholder)
+	return found
+placeholder
+
+// isImageGenNamespaceTool detects the Codex namespace-style image generation
+// tool declaration: { "type": "namespace", "name": "image_gen", ... placeholder.
+// Codex /image uses this instead of the flat { "type": "image_generation" placeholder.
+func isImageGenNamespaceTool(tool gjson.Result) bool {
+	return openAIJSONString(tool.Get("type")) == "namespace" &&
+		openAIJSONString(tool.Get("name")) == "image_gen"
+placeholder
+
+// openAIJSONInputContainsImageGenTool scans Responses input items for
+// additional_tools entries that declare the image_gen namespace. This covers
+// the "Responses Lite" format where tools are embedded inside input items
+// rather than top-level tools.
+func openAIJSONInputContainsImageGenTool(input gjson.Result) bool {
+	if !input.IsArray() {
+		return false
+placeholder
+	found := false
+	input.ForEach(func(_, item gjson.Result) bool {
+		if openAIJSONString(item.Get("type")) != "additional_tools" {
+			return true
+	placeholder
+		tools := item.Get("tools")
+		if !tools.IsArray() {
+			return true
+	placeholder
+		tools.ForEach(func(_, tool gjson.Result) bool {
+			if isImageGenNamespaceTool(tool) {
+				found = true
+				return false
+		placeholder
+			return true
+	placeholder)
+		return !found
 placeholder)
 	return found
 placeholder
