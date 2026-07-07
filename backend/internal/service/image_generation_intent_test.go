@@ -55,11 +55,84 @@ placeholder{
 			body:     []byte(`{"model":"gpt-5.4","input":"write code"placeholder`),
 			want:     false,
 	placeholder,
+		{
+			name:     "namespace image_gen tool in top-level tools",
+			endpoint: "/v1/responses",
+			model:    "gpt-5.5",
+			body:     []byte(`{"model":"gpt-5.5","tools":[{"type":"namespace","name":"image_gen","tools":[{"type":"function","name":"imagegen"placeholder]placeholder]placeholder`),
+			want:     true,
+	placeholder,
+		{
+			name:     "namespace image_gen in input additional_tools (Responses Lite)",
+			endpoint: "/v1/responses",
+			model:    "gpt-5.5",
+			body:     []byte(`{"model":"gpt-5.5","input":[{"type":"additional_tools","role":"developer","tools":[{"type":"namespace","name":"image_gen","tools":[{"type":"function","name":"imagegen"placeholder]placeholder]placeholder]placeholder`),
+			want:     true,
+	placeholder,
+		{
+			name:     "non-image namespace tool is not flagged",
+			endpoint: "/v1/responses",
+			model:    "gpt-5.5",
+			body:     []byte(`{"model":"gpt-5.5","tools":[{"type":"namespace","name":"code_tools","tools":[{"type":"function","name":"run"placeholder]placeholder]placeholder`),
+			want:     false,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, IsImageGenerationIntent(tt.endpoint, tt.model, tt.body))
+	placeholder)
+placeholder
+placeholder
+
+func TestIsImageGenerationIntentMap_NamespaceImageGen(t *testing.T) {
+	tests := []struct {
+		name    string
+		reqBody map[string]any
+		want    bool
+placeholder{
+		{
+			name: "top-level namespace image_gen",
+			reqBody: map[string]any{
+				"model": "gpt-5.5",
+				"tools": []any{
+					map[string]any{"type": "namespace", "name": "image_gen", "tools": []any{
+						map[string]any{"type": "function", "name": "imagegen"placeholder,
+			placeholder
+			placeholder,
+		placeholder,
+			want: true,
+	placeholder,
+		{
+			name: "additional_tools in input",
+			reqBody: map[string]any{
+				"model": "gpt-5.5",
+				"input": []any{
+					map[string]any{
+						"type": "additional_tools",
+						"tools": []any{
+							map[string]any{"type": "namespace", "name": "image_gen"placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+			want: true,
+	placeholder,
+		{
+			name: "non-image namespace not flagged",
+			reqBody: map[string]any{
+				"model": "gpt-5.5",
+				"tools": []any{
+					map[string]any{"type": "namespace", "name": "code_tools"placeholder,
+			placeholder,
+		placeholder,
+			want: false,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, IsImageGenerationIntentMap("/v1/responses", "gpt-5.5", tt.reqBody))
 	placeholder)
 placeholder
 placeholder
