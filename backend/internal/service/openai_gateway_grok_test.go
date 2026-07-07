@@ -365,7 +365,7 @@ placeholderplaceholder
 	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointVideosGenerations, "", body, "application/json")
 placeholder
 	require.Equal(t, "https://xai.test/v1/videos/generations", upstream.lastReq.URL.String())
-	require.JSONEq(t, `{"model":"grok-imagine-video","prompt":"waves"placeholder`, string(upstream.lastBody))
+	require.JSONEq(t, `{"model":"grok-imagine-video","prompt":"waves","resolution":"720p"placeholder`, string(upstream.lastBody))
 	require.Equal(t, "video-request-123", result.ResponseID)
 	require.Equal(t, "grok-imagine-video", result.BillingModel)
 	require.Equal(t, 3, result.Usage.InputTokens)
