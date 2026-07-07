@@ -67,6 +67,27 @@ placeholder
 	require.NotContains(t, string(updated), `"service_tier"`)
 placeholder
 
+func TestWSResponseCreate_ForcePriorityRewritesKnownTier(t *testing.T) {
+	settings := &OpenAIFastPolicySettings{
+		Rules: []OpenAIFastPolicyRule{{
+			ServiceTier: OpenAIFastTierAny,
+			Action:      OpenAIFastPolicyActionForcePriority,
+			Scope:       BetaPolicyScopeAll,
+placeholder
+placeholder
+	svc := newOpenAIGatewayServiceWithSettings(t, settings)
+	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+
+	for _, tier := range []string{"flex", "auto", "default", "scale", "fast", "priority"placeholder {
+		frame := []byte(`{"type":"response.create","model":"gpt-5.5","service_tier":"` + tier + `"placeholder`)
+		updated, blocked, err := svc.applyOpenAIFastPolicyToWSResponseCreate(context.Background(), account, "gpt-5.5", frame)
+	placeholder
+		require.Nil(t, blocked)
+		require.Equal(t, OpenAIFastTierPriority, gjson.GetBytes(updated, "service_tier").String(),
+			"tier %q should be forced to priority", tier)
+placeholder
+placeholder
+
 func TestWSResponseCreate_FlexPassThrough(t *testing.T) {
 	svc := newOpenAIGatewayServiceWithSettings(t, DefaultOpenAIFastPolicySettings())
 	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder

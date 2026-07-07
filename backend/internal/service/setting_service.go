@@ -5336,6 +5336,7 @@ placeholder
 
 	validActions := map[string]bool{
 		BetaPolicyActionPass: true, BetaPolicyActionFilter: true, BetaPolicyActionBlock: true,
+		OpenAIFastPolicyActionForcePriority: true,
 placeholder
 	validScopes := map[string]bool{
 		BetaPolicyScopeAll: true, BetaPolicyScopeOAuth: true, BetaPolicyScopeAPIKey: true, BetaPolicyScopeBedrock: true,
