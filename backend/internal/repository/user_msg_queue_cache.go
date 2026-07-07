@@ -217,8 +217,8 @@ placeholder
 placeholder
 
 // redisScriptInt64At 兼容 go-redis 对 Lua 数组元素的不同返回类型。
-func redisScriptInt64At(result interface{placeholder, index int) (int64, error) {
-	values, ok := result.([]interface{placeholder)
+func redisScriptInt64At(result any, index int) (int64, error) {
+	values, ok := result.([]any)
 	if !ok {
 		return 0, fmt.Errorf("expected redis script array, got %T", result)
 placeholder
