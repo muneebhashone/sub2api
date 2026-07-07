@@ -787,7 +787,7 @@
           </div>
         </div>
 
-        <!-- 图片生成计费配置 -->
+        <!-- 图片/视频生成计费配置 -->
         <div
           v-if="supportsImagePricingPlatform(createForm.platform)"
           class="border-t pt-4"
@@ -795,10 +795,10 @@
           <label
             class="block mb-2 font-medium text-gray-700 dark:text-gray-300"
           >
-            {{ t("admin.groups.imagePricing.title") placeholderplaceholder
+            {{ t(imagePricingI18nKey(createForm.platform, "title")) placeholderplaceholder
           </label>
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {{ t("admin.groups.imagePricing.description") placeholderplaceholder
+            {{ t(imagePricingI18nKey(createForm.platform, "description")) placeholderplaceholder
           </p>
           <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -807,7 +807,7 @@
                 type="checkbox"
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              {{ t("admin.groups.imagePricing.allowImageGeneration") placeholderplaceholder
+              {{ t(imagePricingI18nKey(createForm.platform, "allowImageGeneration")) placeholderplaceholder
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
@@ -815,7 +815,7 @@
                 type="checkbox"
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              {{ t("admin.groups.imagePricing.independentMultiplier") placeholderplaceholder
+              {{ t(imagePricingI18nKey(createForm.platform, "independentMultiplier")) placeholderplaceholder
             </label>
           </div>
           <div
@@ -823,7 +823,7 @@
             class="mb-4"
           >
             <label class="input-label">{{
-              t("admin.groups.imagePricing.imageMultiplier")
+              t(imagePricingI18nKey(createForm.platform, "imageMultiplier"))
             placeholderplaceholder</label>
             <input
               v-model.number="createForm.image_rate_multiplier"
@@ -870,11 +870,11 @@
             </div>
           </div>
           <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-            {{ t("admin.groups.imagePricing.modeHint") placeholderplaceholder
+            {{ t(imagePricingI18nKey(createForm.platform, "modeHint")) placeholderplaceholder
           </p>
           <div class="mt-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
             <div class="mb-1 font-medium">
-              {{ t("admin.groups.imagePricing.finalPricePreview") placeholderplaceholder
+              {{ t(imagePricingI18nKey(createForm.platform, "finalPricePreview")) placeholderplaceholder
             </div>
             <div class="grid grid-cols-3 gap-2">
               <div
@@ -2174,7 +2174,7 @@
           </div>
         </div>
 
-        <!-- 图片生成计费配置 -->
+        <!-- 图片/视频生成计费配置 -->
         <div
           v-if="supportsImagePricingPlatform(editForm.platform)"
           class="border-t pt-4"
@@ -2182,10 +2182,10 @@
           <label
             class="block mb-2 font-medium text-gray-700 dark:text-gray-300"
           >
-            {{ t("admin.groups.imagePricing.title") placeholderplaceholder
+            {{ t(imagePricingI18nKey(editForm.platform, "title")) placeholderplaceholder
           </label>
           <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            {{ t("admin.groups.imagePricing.description") placeholderplaceholder
+            {{ t(imagePricingI18nKey(editForm.platform, "description")) placeholderplaceholder
           </p>
           <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -2194,7 +2194,7 @@
                 type="checkbox"
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              {{ t("admin.groups.imagePricing.allowImageGeneration") placeholderplaceholder
+              {{ t(imagePricingI18nKey(editForm.platform, "allowImageGeneration")) placeholderplaceholder
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
@@ -2202,7 +2202,7 @@
                 type="checkbox"
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              {{ t("admin.groups.imagePricing.independentMultiplier") placeholderplaceholder
+              {{ t(imagePricingI18nKey(editForm.platform, "independentMultiplier")) placeholderplaceholder
             </label>
           </div>
           <div
@@ -2210,7 +2210,7 @@
             class="mb-4"
           >
             <label class="input-label">{{
-              t("admin.groups.imagePricing.imageMultiplier")
+              t(imagePricingI18nKey(editForm.platform, "imageMultiplier"))
             placeholderplaceholder</label>
             <input
               v-model.number="editForm.image_rate_multiplier"
@@ -2257,11 +2257,11 @@
             </div>
           </div>
           <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-            {{ t("admin.groups.imagePricing.modeHint") placeholderplaceholder
+            {{ t(imagePricingI18nKey(editForm.platform, "modeHint")) placeholderplaceholder
           </p>
           <div class="mt-2 rounded-lg bg-gray-50 p-3 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
             <div class="mb-1 font-medium">
-              {{ t("admin.groups.imagePricing.finalPricePreview") placeholderplaceholder
+              {{ t(imagePricingI18nKey(editForm.platform, "finalPricePreview")) placeholderplaceholder
             </div>
             <div class="grid grid-cols-3 gap-2">
               <div
@@ -3312,7 +3312,10 @@ import {
 placeholder from "./groupsModelsList";
 import { createModelsListCandidatesTracker placeholder from "./groupsModelsListCandidates";
 import { normalizeSupportedModelScopesForPlatform placeholder from "./groupsSupportedModelScopes";
-import { supportsImagePricingPlatform placeholder from "./groupsImagePricing";
+import {
+  imagePricingI18nKey,
+  supportsImagePricingPlatform,
+placeholder from "./groupsImagePricing";
 
 const { t placeholder = useI18n();
 const appStore = useAppStore();
