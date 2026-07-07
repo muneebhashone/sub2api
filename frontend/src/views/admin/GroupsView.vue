@@ -789,11 +789,7 @@
 
         <!-- 图片生成计费配置 -->
         <div
-          v-if="
-            createForm.platform === 'antigravity' ||
-            createForm.platform === 'gemini' ||
-            createForm.platform === 'openai'
-          "
+          v-if="supportsImagePricingPlatform(createForm.platform)"
           class="border-t pt-4"
         >
           <label
@@ -2180,11 +2176,7 @@
 
         <!-- 图片生成计费配置 -->
         <div
-          v-if="
-            editForm.platform === 'antigravity' ||
-            editForm.platform === 'gemini' ||
-            editForm.platform === 'openai'
-          "
+          v-if="supportsImagePricingPlatform(editForm.platform)"
           class="border-t pt-4"
         >
           <label
@@ -3320,6 +3312,7 @@ import {
 placeholder from "./groupsModelsList";
 import { createModelsListCandidatesTracker placeholder from "./groupsModelsListCandidates";
 import { normalizeSupportedModelScopesForPlatform placeholder from "./groupsSupportedModelScopes";
+import { supportsImagePricingPlatform placeholder from "./groupsImagePricing";
 
 const { t placeholder = useI18n();
 const appStore = useAppStore();
