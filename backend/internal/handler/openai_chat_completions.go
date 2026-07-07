@@ -64,6 +64,7 @@ placeholder
 placeholder
 
 	if !gjson.ValidBytes(body) {
+		logRequestBodyParseFailure(reqLog, body, nil)
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
 		return
 placeholder
@@ -144,6 +145,7 @@ placeholder
 			failedAccountIDs,
 			service.OpenAIUpstreamTransportAny,
 			service.OpenAIEndpointCapabilityChatCompletions,
+			false,
 			false,
 			requestPlatform,
 		)

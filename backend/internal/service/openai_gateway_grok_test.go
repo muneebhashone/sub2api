@@ -651,6 +651,76 @@ placeholder
 	require.NotNil(t, repo.updates[53][grokQuotaSnapshotExtraKey])
 placeholder
 
+func TestForwardAsChatCompletionsForGrokComposerBridgesImageInput(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok-composer-2.5-fast","messages":[{"role":"system","content":"You are concise."placeholder,{"role":"user","content":[{"type":"text","text":"What is shown?"placeholder,{"type":"image_url","image_url":{"url":"data:image/png;base64,QUJD"placeholderplaceholder]placeholder],"stream":falseplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          55,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token": "access-token",
+			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"base_url":     xai.DefaultCLIBaseURL,
+	placeholder,
+placeholder
+	repo := &grokQuotaAccountRepo{
+		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{55: accountplaceholder,
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{responses: []*http.Response{
+		{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "xai-request-id": []string{"vision-req"placeholderplaceholder,
+			Body:       io.NopCloser(strings.NewReader(`{"id":"resp_vision","object":"response","model":"grok-build-0.1","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"A small diagram with ABC letters."placeholder]placeholder],"usage":{"input_tokens":11,"output_tokens":7,"total_tokens":18placeholderplaceholder`)),
+	placeholder,
+		{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Content-Type":                   []string{"application/json"placeholder,
+				"X-Request-Id":                   []string{"composer-req"placeholder,
+				"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
+				"X-Ratelimit-Remaining-Requests": []string{"9"placeholder,
+				"X-Ratelimit-Limit-Tokens":       []string{"1000"placeholder,
+				"X-Ratelimit-Remaining-Tokens":   []string{"980"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(`{"id":"chatcmpl_composer","object":"chat.completion","model":"grok-composer-2.5-fast","choices":[{"index":0,"message":{"role":"assistant","content":"It shows ABC."placeholder,"finish_reason":"stop"placeholder],"usage":{"prompt_tokens":3,"completion_tokens":5,"total_tokens":8placeholderplaceholder`)),
+	placeholder,
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:               rawChatCompletionsTestConfig(),
+		httpUpstream:      upstream,
+		grokTokenProvider: NewGrokTokenProvider(repo, nil),
+		accountRepo:       repo,
+placeholder
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "")
+placeholder
+	require.NotNil(t, result)
+	require.Len(t, upstream.requests, 2)
+	require.Equal(t, xai.DefaultCLIBaseURL+"/responses", upstream.requests[0].URL.String())
+	require.Equal(t, "grok-build-0.1", gjson.GetBytes(upstream.bodies[0], "model").String())
+	require.Equal(t, "input_image", gjson.GetBytes(upstream.bodies[0], "input.0.content.1.type").String())
+	require.Equal(t, xai.DefaultCLIBaseURL+"/chat/completions", upstream.requests[1].URL.String())
+	require.Equal(t, "grok-composer-2.5-fast", gjson.GetBytes(upstream.bodies[1], "model").String())
+	require.False(t, strings.Contains(string(upstream.bodies[1]), "image_url"))
+	require.Contains(t, gjson.GetBytes(upstream.bodies[1], "messages.1.content").String(), "Image 1 description")
+	require.Contains(t, gjson.GetBytes(upstream.bodies[1], "messages.1.content").String(), "A small diagram with ABC letters.")
+	require.Equal(t, 14, result.Usage.InputTokens)
+	require.Equal(t, 12, result.Usage.OutputTokens)
+	require.Equal(t, "It shows ABC.", gjson.Get(recorder.Body.String(), "choices.0.message.content").String())
+	require.NotNil(t, repo.updates[55][grokQuotaSnapshotExtraKey])
+placeholder
+
 func TestForwardAsAnthropicForGrokUsesXAIResponses(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

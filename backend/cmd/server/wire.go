@@ -85,6 +85,8 @@ func provideCleanup(
 	subscriptionExpiry *service.SubscriptionExpiryService,
 	usageCleanup *service.UsageCleanupService,
 	idempotencyCleanup *service.IdempotencyCleanupService,
+	batchImageCleanup *service.BatchImageCleanupService,
+	batchImageWorker *service.BatchImageWorkerRuntime,
 	pricing *service.PricingService,
 	emailQueue *service.EmailQueueService,
 	billingCache *service.BillingCacheService,
@@ -164,6 +166,18 @@ func provideCleanup(
 			{"IdempotencyCleanupService", func() error {
 				if idempotencyCleanup != nil {
 					idempotencyCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"BatchImageCleanupService", func() error {
+				if batchImageCleanup != nil {
+					batchImageCleanup.Stop()
+			placeholder
+				return nil
+	placeholder
+			{"BatchImageWorkerRuntime", func() error {
+				if batchImageWorker != nil {
+					batchImageWorker.Stop()
 			placeholder
 				return nil
 	placeholder

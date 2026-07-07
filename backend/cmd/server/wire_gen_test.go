@@ -65,6 +65,8 @@ func TestProvideCleanup_WithMinimalDependencies_NoPanic(t *testing.T) {
 		subscriptionExpirySvc,
 		&service.UsageCleanupService{placeholder,
 		idempotencyCleanupSvc,
+		&service.BatchImageCleanupService{placeholder,
+		nil, // batchImageWorker
 		pricingSvc,
 		emailQueueSvc,
 		billingCacheSvc,

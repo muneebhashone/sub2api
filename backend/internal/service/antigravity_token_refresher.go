@@ -12,6 +12,10 @@ const (
 	// antigravityRefreshWindow Antigravity token 提前刷新窗口：15分钟
 	// Google OAuth token 有效期55分钟，提前15分钟刷新
 	antigravityRefreshWindow = 15 * time.Minute
+
+	antigravityForceTokenRefreshExtraKey       = "antigravity_force_token_refresh"
+	antigravityForceTokenRefreshReasonExtraKey = "antigravity_force_token_refresh_reason"
+	antigravityForceTokenRefreshAtExtraKey     = "antigravity_force_token_refresh_at"
 )
 
 // AntigravityTokenRefresher 实现 TokenRefresher 接口
@@ -41,6 +45,9 @@ func (r *AntigravityTokenRefresher) NeedsRefresh(account *Account, _ time.Durati
 	if !r.CanRefresh(account) {
 		return false
 placeholder
+	if accountNeedsAntigravityForceTokenRefresh(account) {
+		return true
+placeholder
 	expiresAt := account.GetCredentialAsTime("expires_at")
 	if expiresAt == nil {
 		return false
@@ -52,6 +59,29 @@ placeholder
 			account.ID, expiresAt.Format("2006-01-02 15:04:05"), timeUntilExpiry, antigravityRefreshWindow)
 placeholder
 	return needsRefresh
+placeholder
+
+func accountNeedsAntigravityForceTokenRefresh(account *Account) bool {
+	return account != nil &&
+		account.Platform == PlatformAntigravity &&
+		account.Type == AccountTypeOAuth &&
+		account.getExtraBool(antigravityForceTokenRefreshExtraKey)
+placeholder
+
+func antigravityForceTokenRefreshExtra(reason string) map[string]any {
+	return map[string]any{
+		antigravityForceTokenRefreshExtraKey:       true,
+		antigravityForceTokenRefreshReasonExtraKey: reason,
+		antigravityForceTokenRefreshAtExtraKey:     time.Now().UTC().Format(time.RFC3339),
+placeholder
+placeholder
+
+func clearAntigravityForceTokenRefreshExtra() map[string]any {
+	return map[string]any{
+		antigravityForceTokenRefreshExtraKey:       false,
+		antigravityForceTokenRefreshReasonExtraKey: "",
+		antigravityForceTokenRefreshAtExtraKey:     "",
+placeholder
 placeholder
 
 // Refresh 执行 token 刷新

@@ -59,6 +59,18 @@ describe('getVisibleMethods', () => {
     expect(visible.alipay.single_min).toBe(2)
     expect(visible.wxpay.fee_rate).toBe(1.2)
   placeholder)
+
+  it('keeps custom EasyPay methods as visible methods', () => {
+    const visible = getVisibleMethods({
+      ldc: methodLimit({ single_min: 3 placeholder),
+      usdt_trc20: methodLimit({ fee_rate: 1 placeholder),
+    placeholder)
+
+    expect(visible).toEqual({
+      ldc: methodLimit({ single_min: 3 placeholder),
+      usdt_trc20: methodLimit({ fee_rate: 1 placeholder),
+    placeholder)
+  placeholder)
 placeholder)
 
 describe('decidePaymentLaunch', () => {

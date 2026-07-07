@@ -295,6 +295,9 @@ placeholder else {
 		setAnthropicAPIKeyAuthHeader(req.Header, account, authToken)
 placeholder
 
+	// 账号级请求头覆写：测试请求与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
+
 	// Get proxy URL
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -600,8 +603,18 @@ placeholder
 	if isOAuth {
 		req.Host = "chatgpt.com"
 		req.Header.Set("accept", "text/event-stream")
+		req.Header.Set("OpenAI-Beta", "responses=experimental")
+		req.Header.Set("Originator", "codex_cli_rs")
+		if customUA := strings.TrimSpace(credentialAccount.GetOpenAIUserAgent()); customUA != "" {
+			req.Header.Set("User-Agent", customUA)
+	placeholder else {
+			req.Header.Set("User-Agent", codexCLIUserAgent)
+	placeholder
 		setOpenAIChatGPTAccountHeaders(req.Header, credentialAccount)
 placeholder
+
+	// 账号级请求头覆写：测试请求与真实转发保持一致的最终头
+	credentialAccount.ApplyHeaderOverrides(req.Header)
 
 	// Get proxy URL
 	proxyURL := ""
@@ -756,6 +769,9 @@ placeholder
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+authToken)
 
+	// 账号级请求头覆写：测试请求与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
+
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
@@ -847,6 +863,9 @@ placeholder
 		req.Host = "chatgpt.com"
 		setOpenAIChatGPTAccountHeaders(req.Header, account)
 placeholder
+
+	// 账号级请求头覆写：测试请求与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -1598,6 +1617,9 @@ placeholder
 	req = req.WithContext(WithHTTPUpstreamProfile(req.Context(), HTTPUpstreamProfileOpenAI))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+authToken)
+
+	// 账号级请求头覆写：测试请求与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {

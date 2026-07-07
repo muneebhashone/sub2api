@@ -636,6 +636,54 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         xhigh: {placeholder
       placeholder
     placeholder,
+    'gpt-5.6-sol': {
+      name: 'GPT-5.6 Sol',
+      limit: {
+        context: 1050000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.6-terra': {
+      name: 'GPT-5.6 Terra',
+      limit: {
+        context: 1050000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
+    'gpt-5.6-luna': {
+      name: 'GPT-5.6 Luna',
+      limit: {
+        context: 1050000,
+        output: 128000
+      placeholder,
+      options: {
+        store: false
+      placeholder,
+      variants: {
+        low: {placeholder,
+        medium: {placeholder,
+        high: {placeholder,
+        xhigh: {placeholder
+      placeholder
+    placeholder,
     'gpt-5.5': {
       name: 'GPT-5.5',
       limit: {

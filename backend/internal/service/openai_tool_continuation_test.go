@@ -184,3 +184,109 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestAnalyzeToolCallOutputContextCoverageBytes(t *testing.T) {
+	cases := []struct {
+		name         string
+		body         map[string]any
+		hasOutput    bool
+		coversAllIDs bool
+placeholder{
+		{
+			name:         "no_input",
+			body:         map[string]any{"model": "gpt-5.1"placeholder,
+			hasOutput:    false,
+			coversAllIDs: false,
+	placeholder,
+		{
+			name: "no_tool_output",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "message", "content": "hi"placeholder,
+	placeholder
+			hasOutput:    false,
+			coversAllIDs: false,
+	placeholder,
+		{
+			name: "all_outputs_covered_by_context",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "function_call", "call_id": "call_a"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_a"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: true,
+	placeholder,
+		{
+			name: "all_outputs_covered_by_item_reference",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "function_call_output", "call_id": "call_a"placeholder,
+				map[string]any{"type": "item_reference", "id": "call_a"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: true,
+	placeholder,
+		{
+			// 关键回归用例：input 内存在某一个上下文项，但另一个输出的 call_id
+			// 只能由上游会话链（previous_response_id）解析——不可剥离。
+			name: "partial_coverage_not_movable",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "function_call", "call_id": "call_a"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_a"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_b"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: false,
+	placeholder,
+		{
+			name: "unrelated_context_does_not_cover",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "function_call", "call_id": "call_x"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_b"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: false,
+	placeholder,
+		{
+			name: "output_missing_call_id_not_movable",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "function_call", "call_id": "call_a"placeholder,
+				map[string]any{"type": "function_call_output"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_a"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: false,
+	placeholder,
+		{
+			name: "mixed_context_and_reference_cover_all",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "function_call", "call_id": "call_a"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_a"placeholder,
+				map[string]any{"type": "function_call_output", "call_id": "call_b"placeholder,
+				map[string]any{"type": "item_reference", "id": "call_b"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: true,
+	placeholder,
+		{
+			name: "all_codex_output_types_covered",
+			body: map[string]any{"input": []any{
+				map[string]any{"type": "tool_search_output", "call_id": "call_s"placeholder,
+				map[string]any{"type": "tool_search_call", "call_id": "call_s"placeholder,
+				map[string]any{"type": "mcp_tool_call_output", "call_id": "call_m"placeholder,
+				map[string]any{"type": "mcp_tool_call", "call_id": "call_m"placeholder,
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: true,
+	placeholder,
+placeholder
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			bodyBytes, err := json.Marshal(tt.body)
+		placeholder
+
+			coverage := AnalyzeToolCallOutputContextCoverageBytes(bodyBytes)
+			require.Equal(t, tt.hasOutput, coverage.HasFunctionCallOutput, "HasFunctionCallOutput")
+			require.Equal(t, tt.coversAllIDs, coverage.ContextCoversAllCallIDs, "ContextCoversAllCallIDs")
+	placeholder)
+placeholder
+placeholder

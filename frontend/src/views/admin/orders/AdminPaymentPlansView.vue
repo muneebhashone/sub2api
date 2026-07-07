@@ -67,7 +67,7 @@
     </div>
 
     <!-- Plan Edit Dialog -->
-    <PlanEditDialog :show="showPlanDialog" :plan="editingPlan" :groups="groups" @close="showPlanDialog = false" @saved="loadPlans" />
+    <PlanEditDialog :show="showPlanDialog" :plan="editingPlan" :groups="groups" :payment-config="paymentConfig" @close="showPlanDialog = false" @saved="loadPlans" />
 
     <ConfirmDialog :show="showDeletePlanDialog" :title="t('payment.admin.deletePlan')" :message="t('payment.admin.deletePlanConfirm')" :confirm-text="t('common.delete')" danger @confirm="handleDeletePlan" @cancel="showDeletePlanDialog = false" />
   </AppLayout>
@@ -78,6 +78,7 @@ import { ref, computed, onMounted placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { adminPaymentAPI placeholder from '@/api/admin/payment'
+import type { AdminPaymentConfig placeholder from '@/api/admin/payment'
 import { extractI18nErrorMessage placeholder from '@/utils/apiError'
 import adminAPI from '@/api/admin'
 import type { SubscriptionPlan placeholder from '@/types/payment'
@@ -97,11 +98,19 @@ const appStore = useAppStore()
 // ==================== Groups ====================
 
 const groups = ref<AdminGroup[]>([])
+const paymentConfig = ref<AdminPaymentConfig | null>(null)
 
 async function loadGroups() {
   try {
     groups.value = await adminAPI.groups.getAll()
   placeholder catch { /* ignore */ placeholder
+placeholder
+
+async function loadPaymentConfig() {
+  try {
+    const res = await adminPaymentAPI.getConfig()
+    paymentConfig.value = res.data
+  placeholder catch { /* preview only */ placeholder
 placeholder
 
 function getGroup(id: number): AdminGroup | undefined {
@@ -181,6 +190,7 @@ placeholder
 
 onMounted(() => {
   loadGroups()
+  loadPaymentConfig()
   loadPlans()
 placeholder)
 </script>

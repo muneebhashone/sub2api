@@ -116,6 +116,14 @@ func (s *RateLimitService) SetAccountRuntimeBlocker(blocker AccountRuntimeBlocke
 	s.runtimeBlocker = blocker
 placeholder
 
+func (s *RateLimitService) IsOpenAIAdvancedSchedulerStickyWeightedEnabled(ctx context.Context) bool {
+	if s == nil || s.settingService == nil {
+		return false
+placeholder
+	gateway := &OpenAIGatewayService{rateLimitService: splaceholder
+	return gateway.isOpenAIAdvancedSchedulerStickyWeightedEnabled(ctx)
+placeholder
+
 func (s *RateLimitService) notifyAccountSchedulingBlocked(account *Account, until time.Time, reason string) {
 	if s == nil || s.runtimeBlocker == nil || account == nil {
 		return
@@ -291,6 +299,20 @@ placeholder
 			msg := "Authentication failed (401): invalid or expired credentials"
 			if upstreamMsg != "" {
 				msg = "OAuth 401: " + upstreamMsg
+		placeholder
+			if authAccount.Platform == PlatformAntigravity {
+				extraUpdates := antigravityForceTokenRefreshExtra("401_invalid")
+				if err := s.accountRepo.UpdateExtra(ctx, authAccount.ID, extraUpdates); err != nil {
+					slog.Warn("antigravity_401_force_refresh_mark_failed", "account_id", authAccount.ID, "error", err)
+			placeholder else {
+					if authAccount.Extra == nil {
+						authAccount.Extra = make(map[string]any, len(extraUpdates))
+				placeholder
+					for k, v := range extraUpdates {
+						authAccount.Extra[k] = v
+				placeholder
+					slog.Info("antigravity_401_force_refresh_marked", "account_id", authAccount.ID)
+			placeholder
 		placeholder
 			cooldownMinutes := s.cfg.RateLimit.OAuth401CooldownMinutes
 			if cooldownMinutes <= 0 {

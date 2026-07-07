@@ -139,10 +139,10 @@ services:
       # =======================================================================
       # Enable URL allowlist validation (false to skip allowlist checks)
       - SECURITY_URL_ALLOWLIST_ENABLED=${SECURITY_URL_ALLOWLIST_ENABLED:-falseplaceholder
-      # Allow insecure HTTP URLs when allowlist is disabled (default: false, requires https)
-      - SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP=${SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP:-falseplaceholder
-      # Allow private IP addresses for upstream/pricing/CRS (for internal deployments)
-      - SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS=${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-falseplaceholder
+      # Allow insecure HTTP URLs when allowlist is disabled (default: true; set to false to require https)
+      - SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP=${SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP:-trueplaceholder
+      # Allow private IP addresses for upstream/pricing/CRS (default: true; set to false to block private hosts)
+      - SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS=${SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS:-trueplaceholder
       # Upstream hosts whitelist (comma-separated, only used when enabled=true)
       - SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS=${SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS:-placeholder
 

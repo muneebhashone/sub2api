@@ -116,6 +116,20 @@ placeholder
 	return _c
 placeholder
 
+// SetFrozenBalance sets the "frozen_balance" field.
+func (_c *UserCreate) SetFrozenBalance(v float64) *UserCreate {
+	_c.mutation.SetFrozenBalance(v)
+	return _c
+placeholder
+
+// SetNillableFrozenBalance sets the "frozen_balance" field if the given value is not nil.
+func (_c *UserCreate) SetNillableFrozenBalance(v *float64) *UserCreate {
+	if v != nil {
+		_c.SetFrozenBalance(*v)
+placeholder
+	return _c
+placeholder
+
 // SetConcurrency sets the "concurrency" field.
 func (_c *UserCreate) SetConcurrency(v int) *UserCreate {
 	_c.mutation.SetConcurrency(v)
@@ -594,6 +608,10 @@ placeholder
 		v := user.DefaultBalance
 		_c.mutation.SetBalance(v)
 placeholder
+	if _, ok := _c.mutation.FrozenBalance(); !ok {
+		v := user.DefaultFrozenBalance
+		_c.mutation.SetFrozenBalance(v)
+placeholder
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		v := user.DefaultConcurrency
 		_c.mutation.SetConcurrency(v)
@@ -675,6 +693,9 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.Balance(); !ok {
 		return &ValidationError{Name: "balance", err: errors.New(`ent: missing required field "User.balance"`)placeholder
+placeholder
+	if _, ok := _c.mutation.FrozenBalance(); !ok {
+		return &ValidationError{Name: "frozen_balance", err: errors.New(`ent: missing required field "User.frozen_balance"`)placeholder
 placeholder
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		return &ValidationError{Name: "concurrency", err: errors.New(`ent: missing required field "User.concurrency"`)placeholder
@@ -778,6 +799,10 @@ placeholder
 	if value, ok := _c.mutation.Balance(); ok {
 		_spec.SetField(user.FieldBalance, field.TypeFloat64, value)
 		_node.Balance = value
+placeholder
+	if value, ok := _c.mutation.FrozenBalance(); ok {
+		_spec.SetField(user.FieldFrozenBalance, field.TypeFloat64, value)
+		_node.FrozenBalance = value
 placeholder
 	if value, ok := _c.mutation.Concurrency(); ok {
 		_spec.SetField(user.FieldConcurrency, field.TypeInt, value)
@@ -1191,6 +1216,24 @@ func (u *UserUpsert) AddBalance(v float64) *UserUpsert {
 	return u
 placeholder
 
+// SetFrozenBalance sets the "frozen_balance" field.
+func (u *UserUpsert) SetFrozenBalance(v float64) *UserUpsert {
+	u.Set(user.FieldFrozenBalance, v)
+	return u
+placeholder
+
+// UpdateFrozenBalance sets the "frozen_balance" field to the value that was provided on create.
+func (u *UserUpsert) UpdateFrozenBalance() *UserUpsert {
+	u.SetExcluded(user.FieldFrozenBalance)
+	return u
+placeholder
+
+// AddFrozenBalance adds v to the "frozen_balance" field.
+func (u *UserUpsert) AddFrozenBalance(v float64) *UserUpsert {
+	u.Add(user.FieldFrozenBalance, v)
+	return u
+placeholder
+
 // SetConcurrency sets the "concurrency" field.
 func (u *UserUpsert) SetConcurrency(v int) *UserUpsert {
 	u.Set(user.FieldConcurrency, v)
@@ -1577,6 +1620,27 @@ placeholder
 func (u *UserUpsertOne) UpdateBalance() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+placeholder)
+placeholder
+
+// SetFrozenBalance sets the "frozen_balance" field.
+func (u *UserUpsertOne) SetFrozenBalance(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetFrozenBalance(v)
+placeholder)
+placeholder
+
+// AddFrozenBalance adds v to the "frozen_balance" field.
+func (u *UserUpsertOne) AddFrozenBalance(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddFrozenBalance(v)
+placeholder)
+placeholder
+
+// UpdateFrozenBalance sets the "frozen_balance" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateFrozenBalance() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateFrozenBalance()
 placeholder)
 placeholder
 
@@ -2173,6 +2237,27 @@ placeholder
 func (u *UserUpsertBulk) UpdateBalance() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+placeholder)
+placeholder
+
+// SetFrozenBalance sets the "frozen_balance" field.
+func (u *UserUpsertBulk) SetFrozenBalance(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetFrozenBalance(v)
+placeholder)
+placeholder
+
+// AddFrozenBalance adds v to the "frozen_balance" field.
+func (u *UserUpsertBulk) AddFrozenBalance(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddFrozenBalance(v)
+placeholder)
+placeholder
+
+// UpdateFrozenBalance sets the "frozen_balance" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateFrozenBalance() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateFrozenBalance()
 placeholder)
 placeholder
 

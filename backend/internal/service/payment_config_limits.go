@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
@@ -31,6 +32,7 @@ placeholder
 			continue
 	placeholder
 		ml := pcAggregateMethodLimits(pt, insts)
+		ml.DisplayName = s.pcAggregateMethodDisplayName(pt, insts)
 		ml.Currency = currency
 		resp.Methods[ml.PaymentType] = ml
 placeholder
@@ -93,6 +95,7 @@ placeholder
 			continue
 	placeholder
 		ml := pcAggregateMethodLimits(pt, matching)
+		ml.DisplayName = s.pcAggregateMethodDisplayName(pt, matching)
 		ml.Currency = currency
 		result = append(result, ml)
 placeholder
@@ -161,6 +164,53 @@ placeholder
 	placeholder
 placeholder
 	return paymentProviderConfigCurrency(inst.ProviderKey, cfg)
+placeholder
+
+type easyPayCustomMethodDisplayConfig struct {
+	Type        string `json:"type"`
+	DisplayName string `json:"displayName"`
+placeholder
+
+func (s *PaymentConfigService) pcAggregateMethodDisplayName(pt string, instances []*dbent.PaymentProviderInstance) string {
+	pt = strings.TrimSpace(pt)
+	if pt == "" {
+		return ""
+placeholder
+	for _, inst := range instances {
+		displayName := s.pcInstanceEasyPayCustomMethodDisplayName(inst, pt)
+		if displayName != "" {
+			return displayName
+	placeholder
+placeholder
+	return ""
+placeholder
+
+func (s *PaymentConfigService) pcInstanceEasyPayCustomMethodDisplayName(inst *dbent.PaymentProviderInstance, pt string) string {
+	if inst == nil || inst.ProviderKey != payment.TypeEasyPay {
+		return ""
+placeholder
+	cfg := map[string]string{placeholder
+	if s != nil {
+		decrypted, err := s.decryptConfig(inst.Config)
+		if err == nil && decrypted != nil {
+			cfg = decrypted
+	placeholder
+placeholder
+	raw := strings.TrimSpace(cfg["customMethods"])
+	if raw == "" {
+		return ""
+placeholder
+
+	var methods []easyPayCustomMethodDisplayConfig
+	if err := json.Unmarshal([]byte(raw), &methods); err != nil {
+		return ""
+placeholder
+	for _, method := range methods {
+		if strings.TrimSpace(method.Type) == pt {
+			return strings.TrimSpace(method.DisplayName)
+	placeholder
+placeholder
+	return ""
 placeholder
 
 // pcGroupByPaymentType groups instances by user-facing payment type.
