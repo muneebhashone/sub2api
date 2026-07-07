@@ -12,6 +12,7 @@ placeholder
 var defaultModels = []Model{
 	{ID: "grok-4.3", Object: "model", OwnedBy: "xai", DisplayName: "Grok 4.3"placeholder,
 	{ID: "grok-build-0.1", Object: "model", OwnedBy: "xai", DisplayName: "Grok Build 0.1"placeholder,
+	{ID: "grok-composer-2.5-fast", Object: "model", OwnedBy: "xai", DisplayName: "Grok Composer 2.5 Fast"placeholder,
 	{ID: "grok-4.20-0309-reasoning", Object: "model", OwnedBy: "xai", DisplayName: "Grok 4.20 Reasoning"placeholder,
 	{ID: "grok-4.20-0309-non-reasoning", Object: "model", OwnedBy: "xai", DisplayName: "Grok 4.20 Non Reasoning"placeholder,
 	{ID: "grok-4.20-multi-agent-0309", Object: "model", OwnedBy: "xai", DisplayName: "Grok 4.20 Multi Agent"placeholder,
@@ -46,6 +47,7 @@ placeholder
 	mapping["grok"] = "grok-4.3"
 	mapping["grok-latest"] = "grok-4.3"
 	mapping["grok-build"] = "grok-build-0.1"
+	mapping["grok-composer"] = "grok-composer-2.5-fast"
 	mapping["grok-4.20-reasoning"] = "grok-4.20-0309-reasoning"
 	mapping["grok-4.20-non-reasoning"] = "grok-4.20-0309-non-reasoning"
 	return mapping

@@ -105,6 +105,33 @@ placeholder
 		return nil, policyErr
 placeholder
 	upstreamBody = updatedBody
+
+	// Grok Composer does not accept image_url parts directly, but Grok Build
+	// can describe the images first. Bridge only this exact failure mode.
+	token, tokenKind, err := s.GetAccessToken(ctx, account)
+	if err != nil {
+		return nil, err
+placeholder
+	if strings.TrimSpace(token) == "" {
+		return nil, fmt.Errorf("account %d missing %s credential", account.ID, tokenKind)
+placeholder
+
+	var bridgeUsage OpenAIUsage
+	if account.Platform == PlatformGrok {
+		bridgedBody, usage, bridged, bridgeErr := s.bridgeGrokComposerImageInputs(ctx, c, account, upstreamBody, token)
+		if bridgeErr != nil {
+			var failoverErr *UpstreamFailoverError
+			if !errors.As(bridgeErr, &failoverErr) && c != nil && c.Writer != nil && !c.Writer.Written() {
+				writeChatCompletionsError(c, http.StatusBadGateway, "upstream_error", bridgeErr.Error())
+		placeholder
+			return nil, bridgeErr
+	placeholder
+		if bridged {
+			upstreamBody = bridgedBody
+			addOpenAIUsage(&bridgeUsage, usage)
+	placeholder
+placeholder
+
 	if clientStream {
 		var usageErr error
 		upstreamBody, usageErr = ensureOpenAIChatStreamUsage(upstreamBody)
@@ -122,14 +149,6 @@ placeholder
 	)
 
 	// 5. Build upstream request
-	token, tokenKind, err := s.GetAccessToken(ctx, account)
-	if err != nil {
-		return nil, err
-placeholder
-	if strings.TrimSpace(token) == "" {
-		return nil, fmt.Errorf("account %d missing %s credential", account.ID, tokenKind)
-placeholder
-
 	targetURL, err := s.rawChatCompletionsURL(account)
 	if err != nil {
 		return nil, err
@@ -245,10 +264,17 @@ placeholder
 placeholder
 
 	// 8. Forward response
+	var result *OpenAIForwardResult
+	var forwardErr error
 	if clientStream {
-		return s.streamRawChatCompletions(c, resp, account, originalModel, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime, len(body))
+		result, forwardErr = s.streamRawChatCompletions(c, resp, account, originalModel, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime, len(body))
+placeholder else {
+		result, forwardErr = s.bufferRawChatCompletions(c, resp, originalModel, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime)
 placeholder
-	return s.bufferRawChatCompletions(c, resp, originalModel, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime)
+	if result != nil {
+		addOpenAIUsage(&result.Usage, bridgeUsage)
+placeholder
+	return result, forwardErr
 placeholder
 
 func (s *OpenAIGatewayService) rawChatCompletionsURL(account *Account) (string, error) {
