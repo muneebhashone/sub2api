@@ -2617,7 +2617,7 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 		c.JSON(http.StatusForbidden, gin.H{
 			"error": gin.H{
 				"type":    "forbidden_error",
-				"message": "This account only allows Codex official clients",
+				"message": CodexClientRestrictionMessage(restrictionResult),
 		placeholder,
 	placeholder)
 		return nil, errors.New("codex_cli_only restriction: only codex official clients are allowed")
@@ -2738,8 +2738,25 @@ placeholder
 	if apiKey != nil {
 		imageGenerationAllowed = GroupAllowsImageGeneration(apiKey.Group)
 placeholder
-	codexImageGenerationBridgeEnabled := isCodexCLI && imageGenerationAllowed && s.isCodexImageGenerationBridgeEnabled(ctx, account, apiKey)
-	imageIntent := IsImageGenerationIntent(openAIResponsesEndpoint, reqModel, body)
+	codexImageGenerationExplicitToolPolicy := codexImageGenerationExplicitToolPolicyAllow
+	if isCodexCLI {
+		codexImageGenerationExplicitToolPolicy = account.CodexImageGenerationExplicitToolPolicy()
+placeholder
+	codexImageGenerationBridgeEnabled := isCodexCLI && imageGenerationAllowed && codexImageGenerationExplicitToolPolicy != codexImageGenerationExplicitToolPolicyStrip && s.isCodexImageGenerationBridgeEnabled(ctx, account, apiKey)
+	var imageIntent bool
+	if isCodexCLI && codexImageGenerationExplicitToolPolicy == codexImageGenerationExplicitToolPolicyStrip {
+		decoded, decodeErr := ensureReqBody()
+		if decodeErr != nil {
+			return nil, decodeErr
+	placeholder
+		if stripOpenAIImageGenerationTools(decoded) {
+			markDecodedModified()
+			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Stripped /responses image_generation tool for Codex client by account policy")
+	placeholder
+		imageIntent = IsImageGenerationIntentMap(openAIResponsesEndpoint, reqModel, decoded)
+placeholder else {
+		imageIntent = IsImageGenerationIntent(openAIResponsesEndpoint, reqModel, body)
+placeholder
 	if imageIntent && !imageGenerationAllowed {
 		MarkOpsClientBusinessLimited(c, OpsClientBusinessLimitedReasonLocalFeatureGate)
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"type": "permission_error", "message": ImageGenerationPermissionMessage()placeholderplaceholder)
@@ -3216,6 +3233,9 @@ placeholder
 				wsAttempts,
 			)
 			wsResult.UpstreamModel = upstreamModel
+			if wsResult.BillingModel == "" {
+				wsResult.BillingModel = billingModel
+		placeholder
 			if wsResult.ImageCount > 0 {
 				wsResult.ImageSize = imageSizeTier
 				wsResult.ImageInputSize = imageInputSize
@@ -3363,6 +3383,7 @@ placeholder
 			ResponseID:      responseID,
 			Usage:           *usage,
 			Model:           originalModel,
+			BillingModel:    billingModel,
 			UpstreamModel:   upstreamModel,
 			ServiceTier:     serviceTier,
 			ReasoningEffort: reasoningEffort,
@@ -3761,6 +3782,9 @@ placeholder
 	if req.Header.Get("content-type") == "" {
 		req.Header.Set("content-type", "application/json")
 placeholder
+
+	// 账号级请求头覆写（仅 openai api_key 账号启用时生效；OAuth 路径 no-op）
+	account.ApplyHeaderOverrides(req.Header)
 
 	return req, nil
 placeholder
@@ -4546,6 +4570,9 @@ placeholder
 	if req.Header.Get("content-type") == "" {
 		req.Header.Set("content-type", "application/json")
 placeholder
+
+	// 账号级请求头覆写（仅 openai api_key 账号启用时生效；OAuth 路径 no-op）
+	account.ApplyHeaderOverrides(req.Header)
 
 	return req, nil
 placeholder

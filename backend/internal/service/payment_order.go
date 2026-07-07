@@ -16,6 +16,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/payment/provider"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 // --- Order Creation ---
@@ -67,8 +68,7 @@ placeholder
 			return nil, err
 	placeholder
 placeholder
-	// 订阅套餐 price 是直付价，余额充值倍率只影响余额充值到账，不参与订阅 pay_amount 计算。
-	payAmountStr, payAmount, err := calculateCreateOrderPayAmount(limitAmount, feeRate, methodCurrency)
+	payAmountStr, payAmount, err := calculateCreateOrderPayAmountForOrderType(limitAmount, feeRate, methodCurrency, req.OrderType, cfg.SubscriptionUSDToCNYRate)
 	if err != nil {
 		return nil, err
 placeholder
@@ -84,7 +84,7 @@ placeholder
 		selectedCurrency = paymentProviderConfigCurrency(sel.ProviderKey, sel.Config)
 placeholder
 	if selectedCurrency != methodCurrency {
-		payAmountStr, payAmount, err = calculateCreateOrderPayAmount(limitAmount, feeRate, selectedCurrency)
+		payAmountStr, payAmount, err = calculateCreateOrderPayAmountForOrderType(limitAmount, feeRate, selectedCurrency, req.OrderType, cfg.SubscriptionUSDToCNYRate)
 		if err != nil {
 			return nil, err
 	placeholder
@@ -453,6 +453,7 @@ placeholder, sel, outTradeNo, payAmountStr, subject)
 	placeholder
 		return nil, classifyCreatePaymentError(req, sel.ProviderKey, err)
 placeholder
+	sanitizeCreatePaymentResponseDetails(pr)
 	_, err = s.entClient.PaymentOrder.UpdateOneID(order.ID).
 		SetNillablePaymentTradeNo(psNilIfEmpty(pr.TradeNo)).
 		SetNillablePayURL(psNilIfEmpty(pr.PayURL)).
@@ -478,6 +479,22 @@ placeholder
 	resp := buildCreateOrderResponse(order, req, payAmount, sel, pr, resultType)
 	resp.ResumeToken = resumeToken
 	return resp, nil
+placeholder
+
+func sanitizeCreatePaymentResponseDetails(pr *payment.CreatePaymentResponse) {
+	if pr == nil {
+		return
+placeholder
+	pr.TradeNo = removePostgresTextNUL(pr.TradeNo)
+	pr.PayURL = removePostgresTextNUL(pr.PayURL)
+	pr.QRCode = removePostgresTextNUL(pr.QRCode)
+placeholder
+
+func removePostgresTextNUL(value string) string {
+	if !strings.ContainsRune(value, 0) {
+		return value
+placeholder
+	return strings.ReplaceAll(value, "\x00", "")
 placeholder
 
 func buildProviderCreatePaymentRequest(req CreateOrderRequest, sel *payment.InstanceSelection, orderID, amount, subject string) payment.CreatePaymentRequest {
@@ -611,6 +628,28 @@ placeholder
 			WithMetadata(map[string]string{"currency": currencyplaceholder)
 placeholder
 	return payAmountStr, payAmount, nil
+placeholder
+
+func calculateCreateOrderPayAmountForOrderType(limitAmount, feeRate float64, currency, orderType string, usdToCnyRate float64) (string, float64, error) {
+	paymentAmount := limitAmount
+	if orderType == payment.OrderTypeSubscription {
+		paymentAmount = calculateSubscriptionGatewayBaseAmount(limitAmount, usdToCnyRate, currency)
+placeholder
+	return calculateCreateOrderPayAmount(paymentAmount, feeRate, currency)
+placeholder
+
+// calculateSubscriptionGatewayBaseAmount 计算订阅订单的网关扣款基数。
+// 换算是显式 opt-in：仅当管理员配置了订阅汇率（rate > 0，1 USD = rate CNY）
+// 且网关币种为 CNY 时，按 price × rate 换算；未配置时保持 price 直付的存量行为。
+func calculateSubscriptionGatewayBaseAmount(amount, usdToCnyRate float64, currency string) float64 {
+	rate := normalizeSubscriptionUSDToCNYRate(usdToCnyRate)
+	if rate <= 0 || currency != payment.DefaultPaymentCurrency {
+		return amount
+placeholder
+	return decimal.NewFromFloat(amount).
+		Mul(decimal.NewFromFloat(rate)).
+		Round(int32(payment.CurrencyMaxFractionDigits(currency))).
+		InexactFloat64()
 placeholder
 
 func validateCreateOrderAmountCurrency(amount float64, currency string) error {

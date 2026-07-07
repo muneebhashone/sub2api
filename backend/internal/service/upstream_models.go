@@ -208,6 +208,8 @@ placeholder
 placeholder else {
 		setAnthropicAPIKeyAuthHeader(req.Header, account, apiKeyAuthToken)
 placeholder
+	// 账号级请求头覆写：模型列表探测与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
 	return req, nil
 placeholder
 
@@ -277,6 +279,8 @@ placeholder
 placeholder
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+	// 账号级请求头覆写：模型列表探测与真实转发保持一致的最终头
+	account.ApplyHeaderOverrides(req.Header)
 	return req, nil
 placeholder
 
@@ -387,14 +391,7 @@ placeholder
 placeholder
 
 func buildOpenAIModelsURL(base string) string {
-	normalized := strings.TrimRight(strings.TrimSpace(base), "/")
-	if strings.HasSuffix(normalized, "/v1/models") {
-		return normalized
-placeholder
-	if strings.HasSuffix(normalized, "/v1") {
-		return normalized + "/models"
-placeholder
-	return normalized + "/v1/models"
+	return buildOpenAIEndpointURL(base, "/v1/models")
 placeholder
 
 func buildGeminiModelsURL(base string) string {

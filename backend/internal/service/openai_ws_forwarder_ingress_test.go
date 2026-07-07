@@ -169,6 +169,26 @@ placeholder)
 placeholder)
 placeholder
 
+func TestStripOpenAIImageGenerationToolFromRawPayload(t *testing.T) {
+	payload := []byte(`{
+		"type":"response.create",
+		"model":"gpt-5.4",
+		"tools":[
+			{"type":"function","name":"shell"placeholder,
+			{"type":"image_generation","output_format":"png"placeholder
+		],
+		"tool_choice":{"type":"image_generation"placeholder
+placeholder`)
+
+	updated, changed, err := stripOpenAIImageGenerationToolFromRawPayload(payload)
+
+placeholder
+	require.True(t, changed)
+	require.False(t, gjson.GetBytes(updated, `tools.#(type=="image_generation")`).Exists())
+	require.True(t, gjson.GetBytes(updated, `tools.#(type=="function")`).Exists())
+	require.False(t, gjson.GetBytes(updated, "tool_choice").Exists())
+placeholder
+
 func TestAlignStoreDisabledPreviousResponseID(t *testing.T) {
 	t.Parallel()
 

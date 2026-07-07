@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -211,6 +212,14 @@ placeholder
 	return result.ReleaseFunc, true, nil
 placeholder
 
+func (h *ConcurrencyHelper) TryAcquireUserSlotForAPIKey(ctx context.Context, userID int64, maxConcurrency int, apiKeyID int64) (func(), bool, error) {
+	releaseFunc, acquired, err := h.TryAcquireUserSlot(ctx, userID, maxConcurrency)
+	if err != nil || !acquired {
+		return releaseFunc, acquired, err
+placeholder
+	return h.withAPIKeySlot(ctx, apiKeyID, releaseFunc), true, nil
+placeholder
+
 // TryAcquireAccountSlot 尝试立即获取账号并发槽位。
 // 返回值: (releaseFunc, acquired, error)
 func (h *ConcurrencyHelper) TryAcquireAccountSlot(ctx context.Context, accountID int64, maxConcurrency int) (func(), bool, error) {
@@ -241,7 +250,7 @@ func (h *ConcurrencyHelper) acquireUserSlotWithWaitTimeout(c *gin.Context, userI
 placeholder
 
 	if acquired {
-		return releaseFunc, nil
+		return h.withAPIKeySlotFromGin(c, releaseFunc), nil
 placeholder
 
 	queueLimit := service.CalculateMaxWait(maxConcurrency) - maxConcurrency
@@ -258,7 +267,37 @@ placeholder
 	defer h.DecrementWaitCount(ctx, userID)
 
 	// Need to wait - handle streaming ping if needed
-	return h.waitForSlotWithPingTimeout(c, "user", userID, maxConcurrency, timeout, isStream, streamStarted, false)
+	releaseFunc, err = h.waitForSlotWithPingTimeout(c, "user", userID, maxConcurrency, timeout, isStream, streamStarted, false)
+	if err != nil {
+		return nil, err
+placeholder
+	return h.withAPIKeySlotFromGin(c, releaseFunc), nil
+placeholder
+
+func (h *ConcurrencyHelper) withAPIKeySlotFromGin(c *gin.Context, releaseFunc func()) func() {
+	if c == nil {
+		return releaseFunc
+placeholder
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok || apiKey == nil {
+		return releaseFunc
+placeholder
+	return h.withAPIKeySlot(c.Request.Context(), apiKey.ID, releaseFunc)
+placeholder
+
+func (h *ConcurrencyHelper) withAPIKeySlot(ctx context.Context, apiKeyID int64, releaseFunc func()) func() {
+	if h == nil || h.concurrencyService == nil || apiKeyID <= 0 {
+		return releaseFunc
+placeholder
+	apiKeyReleaseFunc := h.concurrencyService.TrackAPIKeySlot(ctx, apiKeyID)
+	return func() {
+		if releaseFunc != nil {
+			releaseFunc()
+	placeholder
+		if apiKeyReleaseFunc != nil {
+			apiKeyReleaseFunc()
+	placeholder
+placeholder
 placeholder
 
 // AcquireAccountSlotWithWait acquires an account concurrency slot, waiting if necessary.

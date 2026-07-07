@@ -3,6 +3,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -35,6 +36,18 @@ func (s *ConcurrencyCacheSuite) SetupTest() {
 	s.IntegrationRedisSuite.SetupTest()
 	s.rawCache = NewConcurrencyCache(s.rdb, testSlotTTLMinutes, int(testSlotTTL.Seconds())).(*concurrencyCache)
 	s.cache = s.rawCache
+placeholder
+
+type apiKeyConcurrencyCacheForTest interface {
+	TrackAPIKeySlot(ctx context.Context, apiKeyID int64, requestID string) error
+	ReleaseAPIKeySlot(ctx context.Context, apiKeyID int64, requestID string) error
+	GetAPIKeyConcurrencyBatch(ctx context.Context, apiKeyIDs []int64) (map[int64]int, error)
+placeholder
+
+func (s *ConcurrencyCacheSuite) apiKeyConcurrencyCache() apiKeyConcurrencyCacheForTest {
+	cache, ok := s.cache.(apiKeyConcurrencyCacheForTest)
+	require.True(s.T(), ok)
+	return cache
 placeholder
 
 func (s *ConcurrencyCacheSuite) TestAccountSlot_AcquireAndRelease() {
@@ -218,6 +231,34 @@ func (s *ConcurrencyCacheSuite) TestUserSlot_TTL() {
 	s.AssertTTLWithin(ttl, 1*time.Second, testSlotTTL)
 placeholder
 
+func (s *ConcurrencyCacheSuite) TestAPIKeySlot_TrackReleaseAndBatchCount() {
+	cache := s.apiKeyConcurrencyCache()
+	apiKeyID := int64(300)
+	emptyAPIKeyID := int64(301)
+	slotKey := fmt.Sprintf("%s%d", apiKeySlotKeyPrefix, apiKeyID)
+
+	require.NoError(s.T(), cache.TrackAPIKeySlot(s.ctx, apiKeyID, "req1"))
+	require.NoError(s.T(), cache.TrackAPIKeySlot(s.ctx, apiKeyID, "req2"))
+
+	counts, err := cache.GetAPIKeyConcurrencyBatch(s.ctx, []int64{apiKeyID, emptyAPIKeyIDplaceholder)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), map[int64]int{apiKeyID: 2, emptyAPIKeyID: 0placeholder, counts)
+
+	ttl, err := s.rdb.TTL(s.ctx, slotKey).Result()
+	require.NoError(s.T(), err, "TTL")
+	s.AssertTTLWithin(ttl, 1*time.Second, testSlotTTL)
+
+	require.NoError(s.T(), cache.ReleaseAPIKeySlot(s.ctx, apiKeyID, "req1"))
+	counts, err = cache.GetAPIKeyConcurrencyBatch(s.ctx, []int64{apiKeyIDplaceholder)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), 1, counts[apiKeyID])
+
+	require.NoError(s.T(), cache.ReleaseAPIKeySlot(s.ctx, apiKeyID, "req2"))
+	counts, err = cache.GetAPIKeyConcurrencyBatch(s.ctx, []int64{apiKeyIDplaceholder)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), 0, counts[apiKeyID])
+placeholder
+
 func (s *ConcurrencyCacheSuite) TestWaitQueue_IncrementAndDecrement() {
 	userID := int64(20)
 	waitKey := fmt.Sprintf("%s%d", waitQueueKeyPrefix, userID)
@@ -312,9 +353,11 @@ placeholder
 func (s *ConcurrencyCacheSuite) TestCleanupStaleProcessSlots() {
 	accountID := int64(901)
 	userID := int64(902)
+	apiKeyID := int64(903)
 	unindexedAccountID := int64(1901)
 	accountKey := fmt.Sprintf("%s%d", accountSlotKeyPrefix, accountID)
 	userKey := fmt.Sprintf("%s%d", userSlotKeyPrefix, userID)
+	apiKeyKey := fmt.Sprintf("%s%d", apiKeySlotKeyPrefix, apiKeyID)
 	unindexedAccountKey := fmt.Sprintf("%s%d", accountSlotKeyPrefix, unindexedAccountID)
 	userWaitKey := fmt.Sprintf("%s%d", waitQueueKeyPrefix, userID)
 	accountWaitKey := fmt.Sprintf("%s%d", accountWaitKeyPrefix, accountID)
@@ -332,6 +375,10 @@ func (s *ConcurrencyCacheSuite) TestCleanupStaleProcessSlots() {
 	).Err())
 	require.NoError(s.T(), s.rdb.ZAdd(s.ctx, unindexedAccountKey,
 		redis.Z{Score: float64(now), Member: "oldproc-unindexed"placeholder,
+	).Err())
+	require.NoError(s.T(), s.rdb.ZAdd(s.ctx, apiKeyKey,
+		redis.Z{Score: float64(now), Member: "oldproc-3"placeholder,
+		redis.Z{Score: float64(now), Member: "keep-3"placeholder,
 	).Err())
 	require.NoError(s.T(), s.rdb.Set(s.ctx, userWaitKey, 3, time.Minute).Err())
 	require.NoError(s.T(), s.rdb.Set(s.ctx, accountWaitKey, 2, time.Minute).Err())
@@ -354,6 +401,11 @@ placeholder).Err())
 	userMembers, err := s.rdb.ZRange(s.ctx, userKey, 0, -1).Result()
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), []string{"keep-2"placeholder, userMembers)
+
+	// API Key 槽位（stats-only）不在启动清理范围内，靠分数裁剪与 key TTL 自愈。
+	apiKeyMembers, err := s.rdb.ZRange(s.ctx, apiKeyKey, 0, -1).Result()
+	require.NoError(s.T(), err)
+	require.ElementsMatch(s.T(), []string{"keep-3", "oldproc-3"placeholder, apiKeyMembers)
 
 	_, err = s.rdb.Get(s.ctx, userWaitKey).Result()
 	require.True(s.T(), errors.Is(err, redis.Nil))

@@ -79,7 +79,7 @@ import { usePaymentStore placeholder from '@/stores/payment'
 import { useAppStore placeholder from '@/stores'
 import { paymentAPI placeholder from '@/api/payment'
 import { extractI18nErrorMessage placeholder from '@/utils/apiError'
-import { getPaymentPopupFeatures placeholder from '@/components/payment/providerConfig'
+import { getPaymentPopupFeatures, isBuiltInAlipayMethod, isBuiltInWxpayMethod placeholder from '@/components/payment/providerConfig'
 import type { PaymentOrder placeholder from '@/types/payment'
 import { currencySymbol placeholder from '@/components/payment/currency'
 import QRCode from 'qrcode'
@@ -122,8 +122,8 @@ let lastVerifyAt = 0
 const VERIFY_RETRY_INTERVAL_MS = 15000
 const VERIFY_RETRY_MAX_ATTEMPTS = 6
 
-const isAlipay = computed(() => props.paymentType.includes('alipay'))
-const isWxpay = computed(() => props.paymentType.includes('wxpay'))
+const isAlipay = computed(() => isBuiltInAlipayMethod(props.paymentType))
+const isWxpay = computed(() => isBuiltInWxpayMethod(props.paymentType))
 
 const dialogTitle = computed(() => {
   if (success.value) return t('payment.result.success')

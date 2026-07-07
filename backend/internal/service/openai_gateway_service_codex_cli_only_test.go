@@ -59,6 +59,52 @@ placeholder)
 placeholder)
 placeholder
 
+func TestOpenAIGatewayService_Forward_VersionGateMessage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	newCtx := func() (*httptest.ResponseRecorder, *gin.Context) {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+		return rec, c
+placeholder
+	account := func() *Account {
+	placeholderPlatform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{"codex_cli_only": trueplaceholderplaceholder
+placeholder
+	body := []byte(`{"model":"gpt-5.1-codex"placeholder`)
+
+	t.Run("版本太低：返回带版本号的差异化文案", func(t *testing.T) {
+		rec, c := newCtx()
+		svc := &OpenAIGatewayService{codexDetector: &stubCodexRestrictionDetector{result: CodexClientRestrictionDetectionResult{
+			Enabled:         true,
+			Matched:         false,
+			Reason:          CodexClientRestrictionReasonVersionTooLow,
+			DetectedVersion: "0.39.0",
+			MinCodexVersion: "0.42.0",
+	placeholderplaceholderplaceholder
+
+		_, err := svc.Forward(context.Background(), c, account(), body)
+	placeholder
+		require.Equal(t, http.StatusForbidden, rec.Code)
+		require.Contains(t, rec.Body.String(), "Your Codex version (0.39.0) is below the minimum required version (0.42.0)")
+		require.NotContains(t, rec.Body.String(), "This account only allows Codex official clients")
+placeholder)
+
+	t.Run("未命中官方：仍返回通用兜底文案", func(t *testing.T) {
+		rec, c := newCtx()
+		svc := &OpenAIGatewayService{codexDetector: &stubCodexRestrictionDetector{result: CodexClientRestrictionDetectionResult{
+			Enabled: true,
+			Matched: false,
+			Reason:  CodexClientRestrictionReasonNotMatchedUA,
+	placeholderplaceholderplaceholder
+
+		_, err := svc.Forward(context.Background(), c, account(), body)
+	placeholder
+		require.Equal(t, http.StatusForbidden, rec.Code)
+		require.Contains(t, rec.Body.String(), "This account only allows Codex official clients")
+placeholder)
+placeholder
+
 func TestGetAPIKeyIDFromContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

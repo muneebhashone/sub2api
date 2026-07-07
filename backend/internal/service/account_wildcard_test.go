@@ -4,6 +4,8 @@ package service
 
 import (
 	"testing"
+
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 func TestMatchWildcard(t *testing.T) {
@@ -317,6 +319,86 @@ placeholder
 				t.Errorf("GetMappedModel(%q) = %q, want %q", tt.requestedModel, result, tt.expected)
 		placeholder
 	placeholder)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_AntigravityNormalizesGemini31ProAliases(t *testing.T) {
+	t.Parallel()
+
+	account := &Account{
+		Platform: PlatformAntigravity,
+placeholder
+			"model_mapping": map[string]any{
+				domain.AntigravityGemini31ProAgentModel: domain.AntigravityGemini31ProAgentModel,
+				"gemini-3.1-pro-high":                   "gemini-3.1-pro-high",
+				"gemini-3.1-pro-preview":                "gemini-3.1-pro-high",
+		placeholder,
+	placeholder,
+placeholder
+
+	mapping := account.GetModelMapping()
+
+	if got := mapping["gemini-3.1-pro"]; got != domain.AntigravityGemini31ProAgentModel {
+		t.Fatalf("expected gemini-3.1-pro to map to %q, got %q", domain.AntigravityGemini31ProAgentModel, got)
+placeholder
+	if got := mapping["gemini-3.1-pro-high"]; got != domain.AntigravityGemini31ProAgentModel {
+		t.Fatalf("expected gemini-3.1-pro-high to map to %q, got %q", domain.AntigravityGemini31ProAgentModel, got)
+placeholder
+	if got := mapping["gemini-3.1-pro-preview"]; got != domain.AntigravityGemini31ProAgentModel {
+		t.Fatalf("expected gemini-3.1-pro-preview to map to %q, got %q", domain.AntigravityGemini31ProAgentModel, got)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_AntigravityPreservesGemini31ProOverrides(t *testing.T) {
+	t.Parallel()
+
+	account := &Account{
+		Platform: PlatformAntigravity,
+placeholder
+			"model_mapping": map[string]any{
+				domain.AntigravityGemini31ProAgentModel: domain.AntigravityGemini31ProAgentModel,
+				"gemini-3.1-pro-high":                   "custom-high",
+				"gemini-3.1-pro-preview":                "custom-preview",
+		placeholder,
+	placeholder,
+placeholder
+
+	mapping := account.GetModelMapping()
+
+	if got := mapping["gemini-3.1-pro-high"]; got != "custom-high" {
+		t.Fatalf("expected gemini-3.1-pro-high override to be preserved, got %q", got)
+placeholder
+	if got := mapping["gemini-3.1-pro-preview"]; got != "custom-preview" {
+		t.Fatalf("expected gemini-3.1-pro-preview override to be preserved, got %q", got)
+placeholder
+	if got := mapping["gemini-3.1-pro"]; got != domain.AntigravityGemini31ProAgentModel {
+		t.Fatalf("expected gemini-3.1-pro alias to default to %q, got %q", domain.AntigravityGemini31ProAgentModel, got)
+placeholder
+placeholder
+
+func TestAccountGetModelMapping_AntigravityGemini31ProAliasesRespectWildcard(t *testing.T) {
+	t.Parallel()
+
+	account := &Account{
+		Platform: PlatformAntigravity,
+placeholder
+			"model_mapping": map[string]any{
+				domain.AntigravityGemini31ProAgentModel: domain.AntigravityGemini31ProAgentModel,
+				"gemini-3.1-*":                          "custom-wildcard",
+		placeholder,
+	placeholder,
+placeholder
+
+	mapping := account.GetModelMapping()
+
+	if got := mapping["gemini-3.1-pro"]; got != "" {
+		t.Fatalf("expected gemini-3.1-pro exact alias to stay unset when wildcard exists, got %q", got)
+placeholder
+	if got := mapping["gemini-3.1-pro-high"]; got != "" {
+		t.Fatalf("expected gemini-3.1-pro-high exact alias to stay unset when wildcard exists, got %q", got)
+placeholder
+	if got := mapping["gemini-3.1-pro-preview"]; got != "" {
+		t.Fatalf("expected gemini-3.1-pro-preview exact alias to stay unset when wildcard exists, got %q", got)
 placeholder
 placeholder
 

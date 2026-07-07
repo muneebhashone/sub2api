@@ -241,6 +241,32 @@ function buildAntigravityAccount(projectId = 'configured-project') {
   placeholder as any
 placeholder
 
+function buildGrokOAuthAccount() {
+  return {
+    id: 5,
+    name: 'Grok OAuth',
+    notes: '',
+    platform: 'grok',
+    type: 'oauth',
+    credentials: {
+      refresh_token: 'grok-rt',
+      base_url: 'https://api.x.ai/v1',
+      model_mapping: {
+        'grok-latest': 'grok-4.3'
+      placeholder
+    placeholder,
+    extra: {placeholder,
+    proxy_id: null,
+    concurrency: 1,
+    priority: 1,
+    rate_multiplier: 1,
+    status: 'active',
+    group_ids: [],
+    expires_at: null,
+    auto_pause_on_expired: false
+  placeholder as any
+placeholder
+
 function buildOpenAISetupTokenAccount() {
   return {
     ...buildAccount(),
@@ -354,6 +380,35 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.openai_compact_mode).toBe('force_on')
     expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.compact_model_mapping).toEqual({
       'gpt-5.4': 'gpt-5.4-openai-compact'
+    placeholder)
+  placeholder)
+
+  it('loads and submits Grok OAuth model mapping edits', async () => {
+    const account = buildGrokOAuthAccount()
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+    expect(wrapper.text()).toContain('Imagine Image')
+    expect(wrapper.text()).toContain('Imagine Video')
+
+    const inputWithValue = (value: string) => {
+      const input = wrapper
+        .findAll('input')
+        .find((input) => (input.element as HTMLInputElement).value === value)
+      expect(input).toBeTruthy()
+      return input!
+    placeholder
+
+    await inputWithValue('grok-latest').setValue('grok')
+    await inputWithValue('grok-4.3').setValue('grok-build-0.1')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.model_mapping).toEqual({
+      grok: 'grok-build-0.1'
     placeholder)
   placeholder)
 
@@ -556,7 +611,7 @@ placeholder)
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.openai_responses_supported).toBe(true)
   placeholder)
 
-  it('submits account-level Codex image generation bridge override', async () => {
+  it('submits Codex image tool force-inject mode as bridge override', async () => {
     const account = buildAccount()
     account.extra = {
       codex_image_generation_bridge: false,
@@ -569,12 +624,70 @@ placeholder)
 
     const wrapper = mountModal(account)
 
-    await wrapper.get('button[data-testid="codex-image-bridge-enabled"]').trigger('click')
+    await wrapper.get('button[data-testid="codex-image-tool-enabled"]').trigger('click')
     await wrapper.get('form#edit-account-form').trigger('submit.prevent')
 
     expect(updateAccountMock).toHaveBeenCalledTimes(1)
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.codex_image_generation_bridge).toBe(true)
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge_enabled')
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_explicit_tool_policy')
+  placeholder)
+
+  it('submits Codex image tool no-injection mode without strip policy', async () => {
+    const account = buildAccount()
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('button[data-testid="codex-image-tool-disabled"]').trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.codex_image_generation_bridge).toBe(false)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_explicit_tool_policy')
+  placeholder)
+
+  it('submits Codex image tool block mode as strip policy and clears bridge override', async () => {
+    const account = buildAccount()
+    account.extra = {
+      codex_image_generation_bridge: true
+    placeholder
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('button[data-testid="codex-image-tool-block"]').trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.codex_image_generation_explicit_tool_policy).toBe('strip')
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge')
+  placeholder)
+
+  it('loads strip policy as block mode and clears both keys when reset to inherit', async () => {
+    const account = buildAccount()
+    account.extra = {
+      codex_image_generation_explicit_tool_policy: 'strip'
+    placeholder
+    updateAccountMock.mockReset()
+    checkMixedChannelRiskMock.mockReset()
+    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+
+    await wrapper.get('button[data-testid="codex-image-tool-inherit"]').trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_explicit_tool_policy')
+    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge')
   placeholder)
 
   it('setup-token account can select and submit OAuth WS mode', async () => {
