@@ -7465,6 +7465,8 @@ export default {
       deletePlanConfirm: 'Are you sure you want to delete this plan?',
       originalPrice: 'Original Price',
       price: 'Price',
+      subscriptionCnyPayPreview: 'CNY channel charge preview: {amountplaceholder',
+      subscriptionCnyPayPreviewWithFee: '({feeRateplaceholder% fee included: {totalplaceholder)',
       validityDays: 'Validity (days)',
       validityUnit: 'Validity Unit',
       sortOrder: 'Sort Order',
