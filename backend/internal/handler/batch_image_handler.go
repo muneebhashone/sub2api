@@ -147,7 +147,7 @@ placeholder
 		batchImageError(c, err)
 		return
 placeholder
-	defer stream.Reader.Close()
+	defer func() { _ = stream.Reader.Close() placeholder()
 
 	c.Header("Content-Type", stream.ContentType)
 	c.Header("Content-Disposition", service.BatchImageContentDispositionAttachment(stream.Filename))
@@ -181,7 +181,7 @@ placeholder
 		IncludeManifest: true,
 placeholder, c.Writer)
 	if err != nil {
-		if result == nil || c.Writer.Written() == false {
+		if result == nil || !c.Writer.Written() {
 			batchImageError(c, err)
 	placeholder
 		return

@@ -450,11 +450,11 @@ placeholder
 	for _, r := range v {
 		switch {
 		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 		case r == '-', r == '_', r == '.':
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 		default:
-			b.WriteByte('-')
+			_ = b.WriteByte('-')
 	placeholder
 placeholder
 	return b.String()
@@ -876,7 +876,7 @@ placeholder
 		return nil, "", err
 placeholder
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() placeholder()
 		return nil, "", readVertexAPIError(resp)
 placeholder
 	contentType := resp.Header.Get("Content-Type")
@@ -955,7 +955,7 @@ func doVertexDecodeJSON(client *http.Client, req *http.Request, out any) error {
 	if err != nil {
 		return err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return readVertexAPIError(resp)
 placeholder
@@ -967,7 +967,7 @@ func doVertexNoBody(client *http.Client, req *http.Request) error {
 	if err != nil {
 		return err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return readVertexAPIError(resp)
 placeholder

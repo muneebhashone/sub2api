@@ -577,7 +577,7 @@ placeholder
 		return nil, "", err
 placeholder
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() placeholder()
 		return nil, "", readGeminiAPIError(resp)
 placeholder
 	contentType := resp.Header.Get("Content-Type")
@@ -612,7 +612,7 @@ func (c *GeminiBatchHTTPClient) doNoBody(req *http.Request) error {
 	if err != nil {
 		return err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return readGeminiAPIError(resp)
 placeholder
@@ -624,7 +624,7 @@ func (c *GeminiBatchHTTPClient) doJSON(req *http.Request, out any) error {
 	if err != nil {
 		return err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return readGeminiAPIError(resp)
 placeholder

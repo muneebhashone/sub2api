@@ -310,13 +310,7 @@ placeholder
 	for _, item := range normalized.Items {
 		refs := make([]BatchImageReference, 0, len(item.ReferenceImages))
 		for _, ref := range item.ReferenceImages {
-			refs = append(refs, BatchImageReference{
-				ID:       ref.ID,
-				Type:     ref.Type,
-				MimeType: ref.MimeType,
-				Data:     ref.Data,
-				FileURI:  ref.FileURI,
-		placeholder)
+			refs = append(refs, BatchImageReference(ref))
 	placeholder
 		input.Items = append(input.Items, BatchImageInputItem{
 			CustomID:        item.CustomID,

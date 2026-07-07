@@ -62,16 +62,6 @@ placeholder
 placeholder
 placeholder
 
-func newBatchImageDownloadLimiterForTest(rdb *redis.Client, maxActive int, ttl time.Duration) *batchImageDownloadLimiter {
-	if maxActive <= 0 {
-		maxActive = defaultBatchImageDownloadConcurrency
-placeholder
-	if ttl <= 0 {
-		ttl = defaultBatchImageDownloadActiveTTL
-placeholder
-	return &batchImageDownloadLimiter{rdb: rdb, activePrefix: defaultBatchImageDownloadActivePrefix, maxActive: maxActive, ttl: ttlplaceholder
-placeholder
-
 func (l *batchImageDownloadLimiter) Acquire(ctx context.Context, userID string, kind string) (service.BatchImageDownloadPermit, error) {
 	if l == nil || l.rdb == nil {
 		return nil, service.ErrBatchImageDownloadLimited

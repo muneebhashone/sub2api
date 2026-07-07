@@ -144,7 +144,7 @@ placeholder
 	if err != nil {
 		return nil, ErrBatchImageResultMissing.WithCause(err)
 placeholder
-	defer r.Close()
+	defer func() { _ = r.Close() placeholder()
 
 	line, err := findBatchImageLineImages(r, item.CustomID)
 	if err != nil {
@@ -207,7 +207,7 @@ placeholder
 		return nil, err
 placeholder
 	if permit != nil {
-		defer permit.Release(ctx)
+		defer func() { _ = permit.Release(ctx) placeholder()
 placeholder
 
 	provider, account, err := s.providerAndAccount(ctx, job)
@@ -218,7 +218,7 @@ placeholder
 	if err != nil {
 		return nil, ErrBatchImageResultMissing.WithCause(err)
 placeholder
-	defer r.Close()
+	defer func() { _ = r.Close() placeholder()
 
 	streamCtx := ctx
 	cancel := func() {placeholder
@@ -546,13 +546,13 @@ placeholder
 	for _, r := range value {
 		switch {
 		case r == '/' || r == '\\' || r == ':' || r == 0:
-			b.WriteByte('_')
+			_ = b.WriteByte('_')
 		case unicode.IsControl(r):
-			b.WriteByte('_')
+			_ = b.WriteByte('_')
 		case unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' || r == '.':
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 		default:
-			b.WriteByte('_')
+			_ = b.WriteByte('_')
 	placeholder
 placeholder
 	out := strings.Trim(b.String(), ". ")
@@ -577,7 +577,7 @@ func sanitizeBatchImageFilenameExtension(extension string) string {
 	var b strings.Builder
 	for _, r := range extension {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 	placeholder
 placeholder
 	out := b.String()

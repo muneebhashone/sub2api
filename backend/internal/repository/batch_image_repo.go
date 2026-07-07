@@ -25,10 +25,6 @@ func NewBatchImageRepository(db *sql.DB) service.BatchImageRepository {
 	return &batchImageRepository{db: db, sql: dbplaceholder
 placeholder
 
-func newBatchImageRepositoryWithSQL(sqlq batchImageSQLExecutor) *batchImageRepository {
-	return &batchImageRepository{sql: sqlqplaceholder
-placeholder
-
 func (r *batchImageRepository) CreateBatchImageJob(ctx context.Context, params service.CreateBatchImageJobParams) (*service.BatchImageJob, error) {
 	if !service.IsSupportedBatchImageProvider(params.Provider) {
 		return nil, service.ErrBatchImageInvalidProvider
@@ -125,7 +121,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	return scanBatchImageJobs(rows)
 placeholder
 
@@ -449,7 +445,7 @@ func (r *batchImageRepository) batchImageItemPromptPreviews(ctx context.Context,
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	out := make(map[string]string)
 	for rows.Next() {
 		var customID string
@@ -486,7 +482,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 
 	var items []*service.BatchImageItem
 	for rows.Next() {
@@ -540,7 +536,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	return scanBatchImageJobs(rows)
 placeholder
 
@@ -559,7 +555,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	return scanBatchImageJobs(rows)
 placeholder
 
@@ -577,7 +573,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	return scanBatchImageJobs(rows)
 placeholder
 
