@@ -150,6 +150,10 @@ func (r *ModelPricingResolver) applyTokenOverrides(chPricing *ChannelModelPricin
 		// 区间不匹配时回退到 BasePricing，也需要覆盖图片价格
 		if resolved.BasePricing == nil {
 			resolved.BasePricing = &ModelPricing{placeholder
+	placeholder else {
+			// 防止修改 fallbackPrices 中的共享指针
+			cloned := *resolved.BasePricing
+			resolved.BasePricing = &cloned
 	placeholder
 		if chPricing.ImageOutputPrice != nil {
 			resolved.BasePricing.ImageOutputPricePerToken = *chPricing.ImageOutputPrice
@@ -163,6 +167,10 @@ placeholder
 	// 否则用 flat 字段覆盖 BasePricing
 	if resolved.BasePricing == nil {
 		resolved.BasePricing = &ModelPricing{placeholder
+placeholder else {
+		// 防止修改 fallbackPrices 中的共享指针
+		cloned := *resolved.BasePricing
+		resolved.BasePricing = &cloned
 placeholder
 
 	if chPricing.InputPrice != nil {
