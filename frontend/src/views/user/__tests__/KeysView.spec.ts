@@ -149,11 +149,16 @@ const TablePageLayoutStub = {
 placeholder
 
 const DataTableStub = {
+  name: 'DataTable',
   props: ['columns', 'data'],
   emits: ['sort'],
   template: `
     <div>
       <div data-test="columns">{{ columns.map((col) => col.key).join(',') placeholderplaceholder</div>
+      <div data-test="columns-meta">{{ JSON.stringify(columns.map((col) => ({ key: col.key, sortable: !!col.sortable placeholder))) placeholderplaceholder</div>
+      <button data-test="sort-current-concurrency" @click="$emit('sort', 'current_concurrency', 'asc')">
+        Sort Current Concurrency
+      </button>
       <div v-for="row in data" :key="row.id">
         <slot name="cell-name" :value="row.name" :row="row" />
         <div data-test="current-concurrency">
@@ -166,15 +171,28 @@ const DataTableStub = {
 placeholder
 
 const SelectStub = {
+  name: 'Select',
   props: ['modelValue', 'options'],
   emits: ['update:modelValue'],
   template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"></select>',
 placeholder
 
 const SearchInputStub = {
+  name: 'SearchInput',
   props: ['modelValue'],
   emits: ['update:modelValue', 'search'],
   template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+placeholder
+
+const PaginationStub = {
+  name: 'Pagination',
+  props: ['page', 'total', 'pageSize'],
+  emits: ['update:page', 'update:pageSize'],
+  template: `
+    <div>
+      <button data-test="page-size-50" @click="$emit('update:pageSize', 50)">50</button>
+    </div>
+  `,
 placeholder
 
 const IconStub = {
@@ -189,7 +207,7 @@ const mountView = async () => {
         AppLayout: AppLayoutStub,
         TablePageLayout: TablePageLayoutStub,
         DataTable: DataTableStub,
-        Pagination: true,
+        Pagination: PaginationStub,
         BaseDialog: true,
         ConfirmDialog: true,
         EmptyState: true,
@@ -211,6 +229,9 @@ placeholder
 
 const visibleColumnKeys = (wrapper: VueWrapper) =>
   wrapper.get('[data-test="columns"]').text().split(',').filter(Boolean)
+
+const visibleColumnMeta = (wrapper: VueWrapper): Array<{ key: string; sortable: boolean placeholder> =>
+  JSON.parse(wrapper.get('[data-test="columns-meta"]').text())
 
 const getButtonByText = (wrapper: VueWrapper, text: string) => {
   const button = wrapper.findAll('button').find((item) => item.text().includes(text))
@@ -316,5 +337,50 @@ describe('user KeysView column settings', () => {
     const wrapper = await mountView()
 
     expect(wrapper.get('[data-test="current-concurrency"]').text()).toBe('3')
+  placeholder)
+
+  it('marks current concurrency as sortable', async () => {
+    const wrapper = await mountView()
+
+    const currentConcurrencyColumn = visibleColumnMeta(wrapper).find(
+      (column) => column.key === 'current_concurrency'
+    )
+    expect(currentConcurrencyColumn?.sortable).toBe(true)
+  placeholder)
+
+  it('keeps filters and selected page size when sorting by current concurrency', async () => {
+    getAvailableGroups.mockResolvedValue([{ id: 42, name: 'OpenAI' placeholder])
+    const wrapper = await mountView()
+
+    await wrapper.get('[data-test="page-size-50"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.findComponent({ name: 'SearchInput' placeholder).vm.$emit('update:modelValue', 'target')
+    await wrapper.findComponent({ name: 'SearchInput' placeholder).vm.$emit('search')
+    await flushPromises()
+
+    const selects = wrapper.findAllComponents({ name: 'Select' placeholder)
+    await selects[0].vm.$emit('update:modelValue', 42)
+    await flushPromises()
+    await selects[1].vm.$emit('update:modelValue', 'active')
+    await flushPromises()
+
+    listKeys.mockClear()
+
+    await wrapper.get('[data-test="sort-current-concurrency"]').trigger('click')
+    await flushPromises()
+
+    expect(listKeys).toHaveBeenLastCalledWith(
+      1,
+      50,
+      {
+        search: 'target',
+        status: 'active',
+        group_id: 42,
+        sort_by: 'current_concurrency',
+        sort_order: 'asc',
+      placeholder,
+      expect.objectContaining({ signal: expect.any(AbortSignal) placeholder)
+    )
   placeholder)
 placeholder)
