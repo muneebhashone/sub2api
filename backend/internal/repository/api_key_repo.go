@@ -462,7 +462,7 @@ placeholder
 	return nil
 placeholder
 
-func (r *apiKeyRepository) latestUsageLogIPs(ctx context.Context, apiKeyIDs []int64) (map[int64]string, error) {
+func (r *apiKeyRepository) latestUsageLogIPs(ctx context.Context, apiKeyIDs []int64) (result map[int64]string, err error) {
 	if len(apiKeyIDs) == 0 || r.sql == nil {
 		return map[int64]string{placeholder, nil
 placeholder
@@ -472,7 +472,11 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+	placeholder
+placeholder()
 
 	out := make(map[int64]string, len(apiKeyIDs))
 	for rows.Next() {
