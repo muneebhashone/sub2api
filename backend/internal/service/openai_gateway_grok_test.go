@@ -41,6 +41,50 @@ placeholder
 	require.Equal(t, "high", gjson.GetBytes(patched, "reasoning.effort").String())
 placeholder
 
+func TestPatchGrokResponsesBodyDropsGrok45ReasoningUnsupportedFields(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok-latest",
+		"input": "hello",
+		"presence_penalty": 0.1,
+		"presencePenalty": 0.2,
+		"frequency_penalty": 0.3,
+		"frequencyPenalty": 0.4,
+		"stop": ["done"]
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.5")
+placeholder
+	require.True(t, json.Valid(patched))
+	require.Equal(t, "grok-4.5", gjson.GetBytes(patched, "model").String())
+	require.False(t, gjson.GetBytes(patched, "presence_penalty").Exists())
+	require.False(t, gjson.GetBytes(patched, "presencePenalty").Exists())
+	require.False(t, gjson.GetBytes(patched, "frequency_penalty").Exists())
+	require.False(t, gjson.GetBytes(patched, "frequencyPenalty").Exists())
+	require.False(t, gjson.GetBytes(patched, "stop").Exists())
+placeholder
+
+func TestPatchGrokResponsesBodyKeepsPenaltyAndStopFieldsForNon45Models(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok-4.3",
+		"input": "hello",
+		"presence_penalty": 0.1,
+		"frequency_penalty": 0.2,
+		"stop": ["done"]
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.3")
+placeholder
+	require.True(t, json.Valid(patched))
+	require.Equal(t, "grok-4.3", gjson.GetBytes(patched, "model").String())
+	require.Equal(t, 0.1, gjson.GetBytes(patched, "presence_penalty").Float())
+	require.Equal(t, 0.2, gjson.GetBytes(patched, "frequency_penalty").Float())
+	require.Len(t, gjson.GetBytes(patched, "stop").Array(), 1)
+placeholder
+
 func TestPatchGrokResponsesBodyDropsNestedUnsupportedFields(t *testing.T) {
 	t.Parallel()
 
