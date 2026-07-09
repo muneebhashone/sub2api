@@ -28,6 +28,7 @@ placeholder
 		TopP:                req.TopP,
 		Stream:              req.Stream,
 		ServiceTier:         req.ServiceTier,
+		ParallelToolCalls:   req.ParallelToolCalls,
 placeholder
 	if req.Reasoning != nil {
 		out.ReasoningEffort = req.Reasoning.Effort

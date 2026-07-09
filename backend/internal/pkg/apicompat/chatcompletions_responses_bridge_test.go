@@ -127,6 +127,26 @@ placeholder
 placeholder`, string(out.ResponseFormat))
 placeholder
 
+func TestResponsesToChatCompletionsRequest_ParallelToolCalls(t *testing.T) {
+	parallel := false
+	req := &ResponsesRequest{
+		Model: "gpt-4o",
+		Input: json.RawMessage(`[
+			{"role":"user","content":"Use tools"placeholder
+		]`),
+		ParallelToolCalls: &parallel,
+placeholder
+
+	out, err := ResponsesToChatCompletionsRequest(req)
+placeholder
+	require.NotNil(t, out.ParallelToolCalls)
+	assert.False(t, *out.ParallelToolCalls)
+
+	payload, err := json.Marshal(out)
+placeholder
+	assert.Contains(t, string(payload), `"parallel_tool_calls":false`)
+placeholder
+
 func chatMessageRoles(messages []ChatMessage) []string {
 	roles := make([]string, 0, len(messages))
 	for _, message := range messages {
