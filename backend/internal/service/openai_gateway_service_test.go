@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/model"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/cespare/xxhash/v2"
 	"github.com/gin-gonic/gin"
@@ -1410,6 +1411,7 @@ placeholder
 	body := rec.Body.String()
 	require.Contains(t, body, "event: response.failed")
 	require.Contains(t, body, "context_length_exceeded")
+	require.Contains(t, body, `"type":"invalid_request_error"`)
 	require.Contains(t, body, "Your input exceeds the context window")
 	require.NotContains(t, body, "You are GPT-5.1 running in the Codex CLI")
 	require.NotContains(t, body, `"instructions"`)
@@ -1451,7 +1453,57 @@ placeholder
 	require.False(t, errors.As(err, &failoverErr))
 	require.True(t, c.Writer.Written())
 	require.Contains(t, rec.Body.String(), "response.failed")
+	require.Contains(t, rec.Body.String(), `"type":"upstream_error"`)
 	require.Contains(t, rec.Body.String(), "Your input exceeds the context window")
+placeholder
+
+func TestOpenAIStreamingContextWindowResponseFailedBeforeOutputAppliesPassthroughRule(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			StreamDataIntervalTimeout: 0,
+			StreamKeepaliveInterval:   0,
+			MaxLineSize:               defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+	rule := newNonFailoverPassthroughRule(http.StatusBadRequest, "context_length_exceeded", http.StatusBadRequest, "")
+	rule.Platforms = []string{PlatformOpenAIplaceholder
+	rule.PassthroughBody = true
+	rule.CustomMessage = nil
+	ruleSvc := &ErrorPassthroughService{placeholder
+	ruleSvc.setLocalCache([]*model.ErrorPassthroughRule{ruleplaceholder)
+	BindErrorPassthroughService(c, ruleSvc)
+
+	upstreamMessage := "Your input exceeds the context window of this model. Please adjust your input and try again."
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.failed",
+			`data: {"type":"response.failed","response":{"id":"resp_1","error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"` + upstreamMessage + `"placeholderplaceholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-context-window-passthrough-rule"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "model", "model")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	require.True(t, IsResponseCommitted(c))
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	body := rec.Body.String()
+	require.Equal(t, "upstream_error", gjson.Get(body, "error.type").String())
+	require.Equal(t, upstreamMessage, gjson.Get(body, "error.message").String())
+	require.NotContains(t, body, "response.failed")
+	require.NotContains(t, body, "Upstream request failed")
 placeholder
 
 func TestOpenAIStreamingPreambleOnlyMissingTerminalReturnsFailover(t *testing.T) {
@@ -1793,6 +1845,89 @@ placeholder
 	require.Empty(t, rec.Body.String())
 placeholder
 
+func TestOpenAIStreamingPassthroughContextWindowResponseFailedBeforeOutputAppliesPassthroughRule(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+	rule := newNonFailoverPassthroughRule(http.StatusBadRequest, "input exceeds the context window", http.StatusBadRequest, "")
+	rule.Platforms = []string{PlatformOpenAIplaceholder
+	rule.PassthroughBody = true
+	rule.CustomMessage = nil
+	ruleSvc := &ErrorPassthroughService{placeholder
+	ruleSvc.setLocalCache([]*model.ErrorPassthroughRule{ruleplaceholder)
+	BindErrorPassthroughService(c, ruleSvc)
+
+	upstreamMessage := "Your input exceeds the context window of this model. Please adjust your input and try again."
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.failed",
+			`data: {"type":"response.failed","response":{"id":"resp_1","error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"` + upstreamMessage + `"placeholderplaceholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-pass-context-window-passthrough-rule"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "", "")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	require.True(t, IsResponseCommitted(c))
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	body := rec.Body.String()
+	require.Equal(t, "upstream_error", gjson.Get(body, "error.type").String())
+	require.Equal(t, upstreamMessage, gjson.Get(body, "error.message").String())
+	require.NotContains(t, body, "response.failed")
+	require.NotContains(t, body, "Upstream request failed")
+placeholder
+
+func TestOpenAIStreamingPassthroughContextWindowResponseFailedBeforeOutputWithoutRulePassesThrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cfg := &config.Config{
+		Gateway: config.GatewayConfig{
+			MaxLineSize: defaultMaxLineSize,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: cfgplaceholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: response.created",
+			`data: {"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`,
+			"",
+			"event: response.failed",
+			`data: {"type":"response.failed","response":{"id":"resp_1","error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"Your input exceeds the context window of this model. Please adjust your input and try again."placeholderplaceholderplaceholder`,
+			"",
+	placeholder, "\n"))),
+		Header: http.Header{"X-Request-Id": []string{"rid-pass-context-window-no-rule"placeholderplaceholder,
+placeholder
+
+	_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAI, Name: "acc"placeholder, time.Now(), "", "")
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	body := rec.Body.String()
+	require.Contains(t, body, "event: response.failed")
+	require.Contains(t, body, "context_length_exceeded")
+	require.Contains(t, body, "Your input exceeds the context window")
+placeholder
+
 func TestOpenAIStreamingPassthroughResponseFailedAfterOutputSanitizesVerboseResponseForClient(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	cfg := &config.Config{
@@ -1833,6 +1968,7 @@ placeholder
 	body := rec.Body.String()
 	require.Contains(t, body, "event: response.failed")
 	require.Contains(t, body, "context_length_exceeded")
+	require.Contains(t, body, `"type":"invalid_request_error"`)
 	require.Contains(t, body, "Your input exceeds the context window")
 	require.NotContains(t, body, "You are GPT-5.1 running in the Codex CLI")
 	require.NotContains(t, body, `"instructions"`)
