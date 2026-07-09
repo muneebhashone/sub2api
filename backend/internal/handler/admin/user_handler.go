@@ -276,6 +276,7 @@ placeholder
 		Concurrency:   req.Concurrency,
 		RPMLimit:      req.RPMLimit,
 		AllowedGroups: req.AllowedGroups,
+		ActorAdminID:  getAdminIDFromContext(c),
 placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -320,6 +321,7 @@ placeholder
 		Status:        req.Status,
 		AllowedGroups: req.AllowedGroups,
 		GroupRates:    req.GroupRates,
+		ActorAdminID:  getAdminIDFromContext(c),
 placeholder)
 	if err != nil {
 		response.ErrorFrom(c, err)
