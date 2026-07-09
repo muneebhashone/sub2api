@@ -41712,6 +41712,11 @@ type UsageLogMutation struct {
 	image_output_size           *string
 	image_size_source           *string
 	image_size_breakdown        *map[string]int
+	video_count                 *int
+	addvideo_count              *int
+	video_resolution            *string
+	video_duration_seconds      *int
+	addvideo_duration_seconds   *int
 	cache_ttl_overridden        *bool
 	created_at                  *time.Time
 	clearedFields               map[string]struct{placeholder
@@ -43850,6 +43855,181 @@ func (m *UsageLogMutation) ResetImageSizeBreakdown() {
 	delete(m.clearedFields, usagelog.FieldImageSizeBreakdown)
 placeholder
 
+// SetVideoCount sets the "video_count" field.
+func (m *UsageLogMutation) SetVideoCount(i int) {
+	m.video_count = &i
+	m.addvideo_count = nil
+placeholder
+
+// VideoCount returns the value of the "video_count" field in the mutation.
+func (m *UsageLogMutation) VideoCount() (r int, exists bool) {
+	v := m.video_count
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldVideoCount returns the old "video_count" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldVideoCount(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVideoCount is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVideoCount requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVideoCount: %w", err)
+placeholder
+	return oldValue.VideoCount, nil
+placeholder
+
+// AddVideoCount adds i to the "video_count" field.
+func (m *UsageLogMutation) AddVideoCount(i int) {
+	if m.addvideo_count != nil {
+		*m.addvideo_count += i
+placeholder else {
+		m.addvideo_count = &i
+placeholder
+placeholder
+
+// AddedVideoCount returns the value that was added to the "video_count" field in this mutation.
+func (m *UsageLogMutation) AddedVideoCount() (r int, exists bool) {
+	v := m.addvideo_count
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ResetVideoCount resets all changes to the "video_count" field.
+func (m *UsageLogMutation) ResetVideoCount() {
+	m.video_count = nil
+	m.addvideo_count = nil
+placeholder
+
+// SetVideoResolution sets the "video_resolution" field.
+func (m *UsageLogMutation) SetVideoResolution(s string) {
+	m.video_resolution = &s
+placeholder
+
+// VideoResolution returns the value of the "video_resolution" field in the mutation.
+func (m *UsageLogMutation) VideoResolution() (r string, exists bool) {
+	v := m.video_resolution
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldVideoResolution returns the old "video_resolution" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldVideoResolution(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVideoResolution is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVideoResolution requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVideoResolution: %w", err)
+placeholder
+	return oldValue.VideoResolution, nil
+placeholder
+
+// ClearVideoResolution clears the value of the "video_resolution" field.
+func (m *UsageLogMutation) ClearVideoResolution() {
+	m.video_resolution = nil
+	m.clearedFields[usagelog.FieldVideoResolution] = struct{placeholder{placeholder
+placeholder
+
+// VideoResolutionCleared returns if the "video_resolution" field was cleared in this mutation.
+func (m *UsageLogMutation) VideoResolutionCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldVideoResolution]
+	return ok
+placeholder
+
+// ResetVideoResolution resets all changes to the "video_resolution" field.
+func (m *UsageLogMutation) ResetVideoResolution() {
+	m.video_resolution = nil
+	delete(m.clearedFields, usagelog.FieldVideoResolution)
+placeholder
+
+// SetVideoDurationSeconds sets the "video_duration_seconds" field.
+func (m *UsageLogMutation) SetVideoDurationSeconds(i int) {
+	m.video_duration_seconds = &i
+	m.addvideo_duration_seconds = nil
+placeholder
+
+// VideoDurationSeconds returns the value of the "video_duration_seconds" field in the mutation.
+func (m *UsageLogMutation) VideoDurationSeconds() (r int, exists bool) {
+	v := m.video_duration_seconds
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// OldVideoDurationSeconds returns the old "video_duration_seconds" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldVideoDurationSeconds(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVideoDurationSeconds is only allowed on UpdateOne operations")
+placeholder
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVideoDurationSeconds requires an ID field in the mutation")
+placeholder
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVideoDurationSeconds: %w", err)
+placeholder
+	return oldValue.VideoDurationSeconds, nil
+placeholder
+
+// AddVideoDurationSeconds adds i to the "video_duration_seconds" field.
+func (m *UsageLogMutation) AddVideoDurationSeconds(i int) {
+	if m.addvideo_duration_seconds != nil {
+		*m.addvideo_duration_seconds += i
+placeholder else {
+		m.addvideo_duration_seconds = &i
+placeholder
+placeholder
+
+// AddedVideoDurationSeconds returns the value that was added to the "video_duration_seconds" field in this mutation.
+func (m *UsageLogMutation) AddedVideoDurationSeconds() (r int, exists bool) {
+	v := m.addvideo_duration_seconds
+	if v == nil {
+		return
+placeholder
+	return *v, true
+placeholder
+
+// ClearVideoDurationSeconds clears the value of the "video_duration_seconds" field.
+func (m *UsageLogMutation) ClearVideoDurationSeconds() {
+	m.video_duration_seconds = nil
+	m.addvideo_duration_seconds = nil
+	m.clearedFields[usagelog.FieldVideoDurationSeconds] = struct{placeholder{placeholder
+placeholder
+
+// VideoDurationSecondsCleared returns if the "video_duration_seconds" field was cleared in this mutation.
+func (m *UsageLogMutation) VideoDurationSecondsCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldVideoDurationSeconds]
+	return ok
+placeholder
+
+// ResetVideoDurationSeconds resets all changes to the "video_duration_seconds" field.
+func (m *UsageLogMutation) ResetVideoDurationSeconds() {
+	m.video_duration_seconds = nil
+	m.addvideo_duration_seconds = nil
+	delete(m.clearedFields, usagelog.FieldVideoDurationSeconds)
+placeholder
+
 // SetCacheTTLOverridden sets the "cache_ttl_overridden" field.
 func (m *UsageLogMutation) SetCacheTTLOverridden(b bool) {
 	m.cache_ttl_overridden = &b
@@ -44091,7 +44271,7 @@ placeholder
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 41)
+	fields := make([]string, 0, 44)
 	if m.user != nil {
 		fields = append(fields, usagelog.FieldUserID)
 placeholder
@@ -44209,6 +44389,15 @@ placeholder
 	if m.image_size_breakdown != nil {
 		fields = append(fields, usagelog.FieldImageSizeBreakdown)
 placeholder
+	if m.video_count != nil {
+		fields = append(fields, usagelog.FieldVideoCount)
+placeholder
+	if m.video_resolution != nil {
+		fields = append(fields, usagelog.FieldVideoResolution)
+placeholder
+	if m.video_duration_seconds != nil {
+		fields = append(fields, usagelog.FieldVideoDurationSeconds)
+placeholder
 	if m.cache_ttl_overridden != nil {
 		fields = append(fields, usagelog.FieldCacheTTLOverridden)
 placeholder
@@ -44301,6 +44490,12 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.ImageSizeSource()
 	case usagelog.FieldImageSizeBreakdown:
 		return m.ImageSizeBreakdown()
+	case usagelog.FieldVideoCount:
+		return m.VideoCount()
+	case usagelog.FieldVideoResolution:
+		return m.VideoResolution()
+	case usagelog.FieldVideoDurationSeconds:
+		return m.VideoDurationSeconds()
 	case usagelog.FieldCacheTTLOverridden:
 		return m.CacheTTLOverridden()
 	case usagelog.FieldCreatedAt:
@@ -44392,6 +44587,12 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldImageSizeSource(ctx)
 	case usagelog.FieldImageSizeBreakdown:
 		return m.OldImageSizeBreakdown(ctx)
+	case usagelog.FieldVideoCount:
+		return m.OldVideoCount(ctx)
+	case usagelog.FieldVideoResolution:
+		return m.OldVideoResolution(ctx)
+	case usagelog.FieldVideoDurationSeconds:
+		return m.OldVideoDurationSeconds(ctx)
 	case usagelog.FieldCacheTTLOverridden:
 		return m.OldCacheTTLOverridden(ctx)
 	case usagelog.FieldCreatedAt:
@@ -44678,6 +44879,27 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 	placeholder
 		m.SetImageSizeBreakdown(v)
 		return nil
+	case usagelog.FieldVideoCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetVideoCount(v)
+		return nil
+	case usagelog.FieldVideoResolution:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetVideoResolution(v)
+		return nil
+	case usagelog.FieldVideoDurationSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.SetVideoDurationSeconds(v)
+		return nil
 	case usagelog.FieldCacheTTLOverridden:
 		v, ok := value.(bool)
 		if !ok {
@@ -44757,6 +44979,12 @@ placeholder
 	if m.addimage_count != nil {
 		fields = append(fields, usagelog.FieldImageCount)
 placeholder
+	if m.addvideo_count != nil {
+		fields = append(fields, usagelog.FieldVideoCount)
+placeholder
+	if m.addvideo_duration_seconds != nil {
+		fields = append(fields, usagelog.FieldVideoDurationSeconds)
+placeholder
 	return fields
 placeholder
 
@@ -44803,6 +45031,10 @@ func (m *UsageLogMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedFirstTokenMs()
 	case usagelog.FieldImageCount:
 		return m.AddedImageCount()
+	case usagelog.FieldVideoCount:
+		return m.AddedVideoCount()
+	case usagelog.FieldVideoDurationSeconds:
+		return m.AddedVideoDurationSeconds()
 placeholder
 	return nil, false
 placeholder
@@ -44945,6 +45177,20 @@ func (m *UsageLogMutation) AddField(name string, value ent.Value) error {
 	placeholder
 		m.AddImageCount(v)
 		return nil
+	case usagelog.FieldVideoCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddVideoCount(v)
+		return nil
+	case usagelog.FieldVideoDurationSeconds:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+	placeholder
+		m.AddVideoDurationSeconds(v)
+		return nil
 placeholder
 	return fmt.Errorf("unknown UsageLog numeric field %s", name)
 placeholder
@@ -45006,6 +45252,12 @@ placeholder
 placeholder
 	if m.FieldCleared(usagelog.FieldImageSizeBreakdown) {
 		fields = append(fields, usagelog.FieldImageSizeBreakdown)
+placeholder
+	if m.FieldCleared(usagelog.FieldVideoResolution) {
+		fields = append(fields, usagelog.FieldVideoResolution)
+placeholder
+	if m.FieldCleared(usagelog.FieldVideoDurationSeconds) {
+		fields = append(fields, usagelog.FieldVideoDurationSeconds)
 placeholder
 	return fields
 placeholder
@@ -45074,6 +45326,12 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldImageSizeBreakdown:
 		m.ClearImageSizeBreakdown()
+		return nil
+	case usagelog.FieldVideoResolution:
+		m.ClearVideoResolution()
+		return nil
+	case usagelog.FieldVideoDurationSeconds:
+		m.ClearVideoDurationSeconds()
 		return nil
 placeholder
 	return fmt.Errorf("unknown UsageLog nullable field %s", name)
@@ -45199,6 +45457,15 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldImageSizeBreakdown:
 		m.ResetImageSizeBreakdown()
+		return nil
+	case usagelog.FieldVideoCount:
+		m.ResetVideoCount()
+		return nil
+	case usagelog.FieldVideoResolution:
+		m.ResetVideoResolution()
+		return nil
+	case usagelog.FieldVideoDurationSeconds:
+		m.ResetVideoDurationSeconds()
 		return nil
 	case usagelog.FieldCacheTTLOverridden:
 		m.ResetCacheTTLOverridden()
