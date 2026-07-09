@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi placeholder from 'vitest'
 import { flushPromises, mount placeholder from '@vue/test-utils'
+import { createPinia, setActivePinia placeholder from 'pinia'
 
 import type { DashboardStats placeholder from '@/types'
 import DashboardView from '../DashboardView.vue'
@@ -87,6 +88,8 @@ placeholder)
 
 describe('admin DashboardView', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
+
     getSnapshotV2.mockReset()
     getUserUsageTrend.mockReset()
     getUserSpendingRanking.mockReset()
