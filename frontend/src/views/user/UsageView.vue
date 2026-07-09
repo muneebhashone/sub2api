@@ -709,8 +709,7 @@ const allColumns = computed<Column[]>(() => [
   { key: 'billing_mode', label: t('admin.usage.billingMode'), sortable: false placeholder,
   { key: 'tokens', label: t('usage.tokens'), sortable: false placeholder,
   { key: 'cost', label: t('usage.cost'), sortable: false placeholder,
-  { key: 'first_token', label: t('usage.firstToken'), sortable: false placeholder,
-  { key: 'duration', label: t('usage.duration'), sortable: false placeholder,
+  { key: 'latency', label: t('usage.latency'), sortable: false placeholder,
   { key: 'created_at', label: t('usage.time'), sortable: true placeholder,
   { key: 'user_agent', label: t('usage.userAgent'), sortable: false placeholder,
 ])
