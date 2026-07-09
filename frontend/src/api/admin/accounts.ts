@@ -560,7 +560,9 @@ placeholder> {
       action: string
       error?: string
     placeholder>
-  placeholder>('/admin/accounts/sync/crs', params)
+  placeholder>('/admin/accounts/sync/crs', params, {
+    timeout: 180000 // 180s timeout: sync refreshes each existing account's OAuth token serially
+  placeholder)
   return data
 placeholder
 
