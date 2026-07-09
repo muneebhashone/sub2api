@@ -524,6 +524,122 @@ func (_u *GroupUpdate) AddBatchImageHoldMultiplier(v float64) *GroupUpdate {
 	return _u
 placeholder
 
+// SetVideoRateIndependent sets the "video_rate_independent" field.
+func (_u *GroupUpdate) SetVideoRateIndependent(v bool) *GroupUpdate {
+	_u.mutation.SetVideoRateIndependent(v)
+	return _u
+placeholder
+
+// SetNillableVideoRateIndependent sets the "video_rate_independent" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableVideoRateIndependent(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetVideoRateIndependent(*v)
+placeholder
+	return _u
+placeholder
+
+// SetVideoRateMultiplier sets the "video_rate_multiplier" field.
+func (_u *GroupUpdate) SetVideoRateMultiplier(v float64) *GroupUpdate {
+	_u.mutation.ResetVideoRateMultiplier()
+	_u.mutation.SetVideoRateMultiplier(v)
+	return _u
+placeholder
+
+// SetNillableVideoRateMultiplier sets the "video_rate_multiplier" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableVideoRateMultiplier(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetVideoRateMultiplier(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoRateMultiplier adds value to the "video_rate_multiplier" field.
+func (_u *GroupUpdate) AddVideoRateMultiplier(v float64) *GroupUpdate {
+	_u.mutation.AddVideoRateMultiplier(v)
+	return _u
+placeholder
+
+// SetVideoPrice480p sets the "video_price_480p" field.
+func (_u *GroupUpdate) SetVideoPrice480p(v float64) *GroupUpdate {
+	_u.mutation.ResetVideoPrice480p()
+	_u.mutation.SetVideoPrice480p(v)
+	return _u
+placeholder
+
+// SetNillableVideoPrice480p sets the "video_price_480p" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableVideoPrice480p(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetVideoPrice480p(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoPrice480p adds value to the "video_price_480p" field.
+func (_u *GroupUpdate) AddVideoPrice480p(v float64) *GroupUpdate {
+	_u.mutation.AddVideoPrice480p(v)
+	return _u
+placeholder
+
+// ClearVideoPrice480p clears the value of the "video_price_480p" field.
+func (_u *GroupUpdate) ClearVideoPrice480p() *GroupUpdate {
+	_u.mutation.ClearVideoPrice480p()
+	return _u
+placeholder
+
+// SetVideoPrice720p sets the "video_price_720p" field.
+func (_u *GroupUpdate) SetVideoPrice720p(v float64) *GroupUpdate {
+	_u.mutation.ResetVideoPrice720p()
+	_u.mutation.SetVideoPrice720p(v)
+	return _u
+placeholder
+
+// SetNillableVideoPrice720p sets the "video_price_720p" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableVideoPrice720p(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetVideoPrice720p(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoPrice720p adds value to the "video_price_720p" field.
+func (_u *GroupUpdate) AddVideoPrice720p(v float64) *GroupUpdate {
+	_u.mutation.AddVideoPrice720p(v)
+	return _u
+placeholder
+
+// ClearVideoPrice720p clears the value of the "video_price_720p" field.
+func (_u *GroupUpdate) ClearVideoPrice720p() *GroupUpdate {
+	_u.mutation.ClearVideoPrice720p()
+	return _u
+placeholder
+
+// SetVideoPrice1080p sets the "video_price_1080p" field.
+func (_u *GroupUpdate) SetVideoPrice1080p(v float64) *GroupUpdate {
+	_u.mutation.ResetVideoPrice1080p()
+	_u.mutation.SetVideoPrice1080p(v)
+	return _u
+placeholder
+
+// SetNillableVideoPrice1080p sets the "video_price_1080p" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableVideoPrice1080p(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetVideoPrice1080p(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoPrice1080p adds value to the "video_price_1080p" field.
+func (_u *GroupUpdate) AddVideoPrice1080p(v float64) *GroupUpdate {
+	_u.mutation.AddVideoPrice1080p(v)
+	return _u
+placeholder
+
+// ClearVideoPrice1080p clears the value of the "video_price_1080p" field.
+func (_u *GroupUpdate) ClearVideoPrice1080p() *GroupUpdate {
+	_u.mutation.ClearVideoPrice1080p()
+	return _u
+placeholder
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_u *GroupUpdate) SetClaudeCodeOnly(v bool) *GroupUpdate {
 	_u.mutation.SetClaudeCodeOnly(v)
@@ -1222,6 +1338,42 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AddedBatchImageHoldMultiplier(); ok {
 		_spec.AddField(group.FieldBatchImageHoldMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.VideoRateIndependent(); ok {
+		_spec.SetField(group.FieldVideoRateIndependent, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.VideoRateMultiplier(); ok {
+		_spec.SetField(group.FieldVideoRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoRateMultiplier(); ok {
+		_spec.AddField(group.FieldVideoRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.VideoPrice480p(); ok {
+		_spec.SetField(group.FieldVideoPrice480p, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoPrice480p(); ok {
+		_spec.AddField(group.FieldVideoPrice480p, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.VideoPrice480pCleared() {
+		_spec.ClearField(group.FieldVideoPrice480p, field.TypeFloat64)
+placeholder
+	if value, ok := _u.mutation.VideoPrice720p(); ok {
+		_spec.SetField(group.FieldVideoPrice720p, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoPrice720p(); ok {
+		_spec.AddField(group.FieldVideoPrice720p, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.VideoPrice720pCleared() {
+		_spec.ClearField(group.FieldVideoPrice720p, field.TypeFloat64)
+placeholder
+	if value, ok := _u.mutation.VideoPrice1080p(); ok {
+		_spec.SetField(group.FieldVideoPrice1080p, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoPrice1080p(); ok {
+		_spec.AddField(group.FieldVideoPrice1080p, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.VideoPrice1080pCleared() {
+		_spec.ClearField(group.FieldVideoPrice1080p, field.TypeFloat64)
 placeholder
 	if value, ok := _u.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
@@ -2096,6 +2248,122 @@ func (_u *GroupUpdateOne) AddBatchImageHoldMultiplier(v float64) *GroupUpdateOne
 	return _u
 placeholder
 
+// SetVideoRateIndependent sets the "video_rate_independent" field.
+func (_u *GroupUpdateOne) SetVideoRateIndependent(v bool) *GroupUpdateOne {
+	_u.mutation.SetVideoRateIndependent(v)
+	return _u
+placeholder
+
+// SetNillableVideoRateIndependent sets the "video_rate_independent" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableVideoRateIndependent(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetVideoRateIndependent(*v)
+placeholder
+	return _u
+placeholder
+
+// SetVideoRateMultiplier sets the "video_rate_multiplier" field.
+func (_u *GroupUpdateOne) SetVideoRateMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.ResetVideoRateMultiplier()
+	_u.mutation.SetVideoRateMultiplier(v)
+	return _u
+placeholder
+
+// SetNillableVideoRateMultiplier sets the "video_rate_multiplier" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableVideoRateMultiplier(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetVideoRateMultiplier(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoRateMultiplier adds value to the "video_rate_multiplier" field.
+func (_u *GroupUpdateOne) AddVideoRateMultiplier(v float64) *GroupUpdateOne {
+	_u.mutation.AddVideoRateMultiplier(v)
+	return _u
+placeholder
+
+// SetVideoPrice480p sets the "video_price_480p" field.
+func (_u *GroupUpdateOne) SetVideoPrice480p(v float64) *GroupUpdateOne {
+	_u.mutation.ResetVideoPrice480p()
+	_u.mutation.SetVideoPrice480p(v)
+	return _u
+placeholder
+
+// SetNillableVideoPrice480p sets the "video_price_480p" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableVideoPrice480p(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetVideoPrice480p(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoPrice480p adds value to the "video_price_480p" field.
+func (_u *GroupUpdateOne) AddVideoPrice480p(v float64) *GroupUpdateOne {
+	_u.mutation.AddVideoPrice480p(v)
+	return _u
+placeholder
+
+// ClearVideoPrice480p clears the value of the "video_price_480p" field.
+func (_u *GroupUpdateOne) ClearVideoPrice480p() *GroupUpdateOne {
+	_u.mutation.ClearVideoPrice480p()
+	return _u
+placeholder
+
+// SetVideoPrice720p sets the "video_price_720p" field.
+func (_u *GroupUpdateOne) SetVideoPrice720p(v float64) *GroupUpdateOne {
+	_u.mutation.ResetVideoPrice720p()
+	_u.mutation.SetVideoPrice720p(v)
+	return _u
+placeholder
+
+// SetNillableVideoPrice720p sets the "video_price_720p" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableVideoPrice720p(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetVideoPrice720p(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoPrice720p adds value to the "video_price_720p" field.
+func (_u *GroupUpdateOne) AddVideoPrice720p(v float64) *GroupUpdateOne {
+	_u.mutation.AddVideoPrice720p(v)
+	return _u
+placeholder
+
+// ClearVideoPrice720p clears the value of the "video_price_720p" field.
+func (_u *GroupUpdateOne) ClearVideoPrice720p() *GroupUpdateOne {
+	_u.mutation.ClearVideoPrice720p()
+	return _u
+placeholder
+
+// SetVideoPrice1080p sets the "video_price_1080p" field.
+func (_u *GroupUpdateOne) SetVideoPrice1080p(v float64) *GroupUpdateOne {
+	_u.mutation.ResetVideoPrice1080p()
+	_u.mutation.SetVideoPrice1080p(v)
+	return _u
+placeholder
+
+// SetNillableVideoPrice1080p sets the "video_price_1080p" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableVideoPrice1080p(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetVideoPrice1080p(*v)
+placeholder
+	return _u
+placeholder
+
+// AddVideoPrice1080p adds value to the "video_price_1080p" field.
+func (_u *GroupUpdateOne) AddVideoPrice1080p(v float64) *GroupUpdateOne {
+	_u.mutation.AddVideoPrice1080p(v)
+	return _u
+placeholder
+
+// ClearVideoPrice1080p clears the value of the "video_price_1080p" field.
+func (_u *GroupUpdateOne) ClearVideoPrice1080p() *GroupUpdateOne {
+	_u.mutation.ClearVideoPrice1080p()
+	return _u
+placeholder
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_u *GroupUpdateOne) SetClaudeCodeOnly(v bool) *GroupUpdateOne {
 	_u.mutation.SetClaudeCodeOnly(v)
@@ -2824,6 +3092,42 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AddedBatchImageHoldMultiplier(); ok {
 		_spec.AddField(group.FieldBatchImageHoldMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.VideoRateIndependent(); ok {
+		_spec.SetField(group.FieldVideoRateIndependent, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.VideoRateMultiplier(); ok {
+		_spec.SetField(group.FieldVideoRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoRateMultiplier(); ok {
+		_spec.AddField(group.FieldVideoRateMultiplier, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.VideoPrice480p(); ok {
+		_spec.SetField(group.FieldVideoPrice480p, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoPrice480p(); ok {
+		_spec.AddField(group.FieldVideoPrice480p, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.VideoPrice480pCleared() {
+		_spec.ClearField(group.FieldVideoPrice480p, field.TypeFloat64)
+placeholder
+	if value, ok := _u.mutation.VideoPrice720p(); ok {
+		_spec.SetField(group.FieldVideoPrice720p, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoPrice720p(); ok {
+		_spec.AddField(group.FieldVideoPrice720p, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.VideoPrice720pCleared() {
+		_spec.ClearField(group.FieldVideoPrice720p, field.TypeFloat64)
+placeholder
+	if value, ok := _u.mutation.VideoPrice1080p(); ok {
+		_spec.SetField(group.FieldVideoPrice1080p, field.TypeFloat64, value)
+placeholder
+	if value, ok := _u.mutation.AddedVideoPrice1080p(); ok {
+		_spec.AddField(group.FieldVideoPrice1080p, field.TypeFloat64, value)
+placeholder
+	if _u.mutation.VideoPrice1080pCleared() {
+		_spec.ClearField(group.FieldVideoPrice1080p, field.TypeFloat64)
 placeholder
 	if value, ok := _u.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
