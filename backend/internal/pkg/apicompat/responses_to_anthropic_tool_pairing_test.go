@@ -58,7 +58,7 @@ placeholder
 
 func convertAnthropic(t *testing.T, input string) []AnthropicMessage {
 placeholder
-	_, messages, err := convertResponsesInputToAnthropic(json.RawMessage(input))
+	_, messages, err := convertResponsesInputToAnthropic("", json.RawMessage(input))
 placeholder
 	assertAnthropicPairing(t, messages)
 	return messages
