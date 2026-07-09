@@ -425,6 +425,21 @@ placeholder
 			return nil, s.newOpenAIStreamFailoverError(c, account, false, requestID, payload, message)
 	placeholder
 		message = s.recordOpenAIStreamUpstreamError(c, account, false, requestID, "http_error", payload, message)
+		// response.failed 到达在 HTTP 200 SSE 流上，无真实 HTTP 错误码，传 0。
+		if status, errType, errMsg, matched := applyErrorPassthroughRule(
+			c, account.Platform, 0, payload,
+			http.StatusBadGateway, "upstream_error", message,
+		); matched {
+			if status == 0 {
+				status = http.StatusBadGateway
+		placeholder
+			if errMsg == "" {
+				errMsg = message
+		placeholder
+			MarkResponseCommitted(c)
+			writeChatCompletionsError(c, status, errType, errMsg)
+			return nil, fmt.Errorf("upstream response failed (passthrough): %s", errMsg)
+	placeholder
 		writeChatCompletionsError(c, http.StatusBadGateway, "upstream_error", message)
 		return nil, fmt.Errorf("upstream response failed: %s", message)
 placeholder
@@ -581,14 +596,28 @@ placeholder
 				return true
 		placeholder
 			message = s.recordOpenAIStreamUpstreamError(c, account, false, requestID, "http_error", payloadBytes, message)
+			defaultStatus, defaultErrType, defaultMsg := http.StatusBadGateway, "upstream_error", message
+			if status, errType, errMsg, matched := applyErrorPassthroughRule(
+				c, account.Platform, 0, payloadBytes,
+				defaultStatus, defaultErrType, defaultMsg,
+			); matched {
+				if status == 0 {
+					status = defaultStatus
+			placeholder
+				if errMsg == "" {
+					errMsg = defaultMsg
+			placeholder
+				defaultStatus, defaultErrType, defaultMsg = status, errType, errMsg
+				MarkResponseCommitted(c)
+		placeholder
 			errorPayload, _ := json.Marshal(gin.H{
 				"error": gin.H{
-					"type":    "upstream_error",
-					"message": message,
+					"type":    defaultErrType,
+					"message": defaultMsg,
 			placeholder,
 		placeholder)
 			if c != nil && c.Writer != nil && !c.Writer.Written() {
-				writeChatCompletionsError(c, http.StatusBadGateway, "upstream_error", message)
+				writeChatCompletionsError(c, defaultStatus, defaultErrType, defaultMsg)
 				clientOutputStarted = true
 		placeholder else if c != nil && c.Writer != nil && !clientDisconnected {
 				if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", errorPayload); err != nil {

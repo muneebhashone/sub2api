@@ -465,6 +465,20 @@ placeholder
 			return nil, s.newOpenAIStreamFailoverError(c, account, false, requestID, payload, message)
 	placeholder
 		message = s.recordOpenAIStreamUpstreamError(c, account, false, requestID, "http_error", payload, message)
+		if status, errType, errMsg, matched := applyErrorPassthroughRule(
+			c, account.Platform, 0, payload,
+			http.StatusBadGateway, "api_error", message,
+		); matched {
+			if status == 0 {
+				status = http.StatusBadGateway
+		placeholder
+			if errMsg == "" {
+				errMsg = message
+		placeholder
+			MarkResponseCommitted(c)
+			writeAnthropicError(c, status, errType, errMsg)
+			return nil, fmt.Errorf("upstream response failed (passthrough): %s", errMsg)
+	placeholder
 		writeAnthropicError(c, http.StatusBadGateway, "api_error", message)
 		return nil, fmt.Errorf("upstream response failed: %s", message)
 placeholder
@@ -804,18 +818,32 @@ placeholder
 					return true
 			placeholder
 				message = s.recordOpenAIStreamUpstreamError(c, account, false, requestID, "http_error", payloadBytes, message)
+				errStatus, errType, errMsg := http.StatusBadGateway, "api_error", message
+				if status, et, em, matched := applyErrorPassthroughRule(
+					c, account.Platform, 0, payloadBytes,
+					errStatus, errType, errMsg,
+				); matched {
+					if status == 0 {
+						status = errStatus
+				placeholder
+					if em == "" {
+						em = errMsg
+				placeholder
+					errStatus, errType, errMsg = status, et, em
+					MarkResponseCommitted(c)
+			placeholder
 				if !clientDisconnected {
 					if !clientOutputStarted {
-						writeAnthropicError(c, http.StatusBadGateway, "api_error", message)
+						writeAnthropicError(c, errStatus, errType, errMsg)
 						clientOutputStarted = true
 				placeholder else {
 						writeStreamHeaders()
-						if _, err := fmt.Fprint(c.Writer, buildAnthropicStreamErrorSSE("api_error", message)); err == nil {
+						if _, err := fmt.Fprint(c.Writer, buildAnthropicStreamErrorSSE(errType, errMsg)); err == nil {
 							c.Writer.Flush()
 					placeholder
 				placeholder
 			placeholder
-				streamNonFailoverErr = fmt.Errorf("upstream response failed: %s", message)
+				streamNonFailoverErr = fmt.Errorf("upstream response failed: %s", errMsg)
 				return true
 		placeholder
 	placeholder
