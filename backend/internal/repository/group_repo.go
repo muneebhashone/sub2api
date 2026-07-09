@@ -58,6 +58,11 @@ func (r *groupRepository) Create(ctx context.Context, groupIn *service.Group) er
 		SetNillableImagePrice4k(groupIn.ImagePrice4K).
 		SetBatchImageDiscountMultiplier(groupIn.BatchImageDiscountMultiplier).
 		SetBatchImageHoldMultiplier(groupIn.BatchImageHoldMultiplier).
+		SetVideoRateIndependent(groupIn.VideoRateIndependent).
+		SetVideoRateMultiplier(groupIn.VideoRateMultiplier).
+		SetNillableVideoPrice480p(groupIn.VideoPrice480P).
+		SetNillableVideoPrice720p(groupIn.VideoPrice720P).
+		SetNillableVideoPrice1080p(groupIn.VideoPrice1080P).
 		SetDefaultValidityDays(groupIn.DefaultValidityDays).
 		SetClaudeCodeOnly(groupIn.ClaudeCodeOnly).
 		SetNillableFallbackGroupID(groupIn.FallbackGroupID).
@@ -143,6 +148,11 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 		SetNillableImagePrice4k(groupIn.ImagePrice4K).
 		SetBatchImageDiscountMultiplier(groupIn.BatchImageDiscountMultiplier).
 		SetBatchImageHoldMultiplier(groupIn.BatchImageHoldMultiplier).
+		SetVideoRateIndependent(groupIn.VideoRateIndependent).
+		SetVideoRateMultiplier(groupIn.VideoRateMultiplier).
+		SetNillableVideoPrice480p(groupIn.VideoPrice480P).
+		SetNillableVideoPrice720p(groupIn.VideoPrice720P).
+		SetNillableVideoPrice1080p(groupIn.VideoPrice1080P).
 		SetDefaultValidityDays(groupIn.DefaultValidityDays).
 		SetClaudeCodeOnly(groupIn.ClaudeCodeOnly).
 		SetModelRoutingEnabled(groupIn.ModelRoutingEnabled).
@@ -189,6 +199,21 @@ placeholder
 		builder = builder.SetImagePrice4k(*groupIn.ImagePrice4K)
 placeholder else {
 		builder = builder.ClearImagePrice4k()
+placeholder
+	if groupIn.VideoPrice480P != nil {
+		builder = builder.SetVideoPrice480p(*groupIn.VideoPrice480P)
+placeholder else {
+		builder = builder.ClearVideoPrice480p()
+placeholder
+	if groupIn.VideoPrice720P != nil {
+		builder = builder.SetVideoPrice720p(*groupIn.VideoPrice720P)
+placeholder else {
+		builder = builder.ClearVideoPrice720p()
+placeholder
+	if groupIn.VideoPrice1080P != nil {
+		builder = builder.SetVideoPrice1080p(*groupIn.VideoPrice1080P)
+placeholder else {
+		builder = builder.ClearVideoPrice1080p()
 placeholder
 
 	// 处理 FallbackGroupID：nil 时清除，否则设置

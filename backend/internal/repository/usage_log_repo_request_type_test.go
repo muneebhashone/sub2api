@@ -80,6 +80,9 @@ placeholder
 			sqlmock.AnyArg(), // image_output_size
 			sqlmock.AnyArg(), // image_size_source
 			sqlmock.AnyArg(), // image_size_breakdown
+			sqlmock.AnyArg(), // video_count
+			sqlmock.AnyArg(), // video_resolution
+			sqlmock.AnyArg(), // video_duration_seconds
 			sqlmock.AnyArg(), // service_tier
 			sqlmock.AnyArg(), // reasoning_effort
 			sqlmock.AnyArg(), // inbound_endpoint
@@ -163,6 +166,9 @@ placeholder
 			sqlmock.AnyArg(), // image_output_size
 			sqlmock.AnyArg(), // image_size_source
 			sqlmock.AnyArg(), // image_size_breakdown
+			sqlmock.AnyArg(), // video_count
+			sqlmock.AnyArg(), // video_resolution
+			sqlmock.AnyArg(), // video_duration_seconds
 			serviceTier,
 			sqlmock.AnyArg(),
 			sqlmock.AnyArg(),
@@ -281,9 +287,14 @@ func TestAppendUsageLogBillingModeWhereCondition(t *testing.T) {
 		wantCondition string
 placeholder{
 		{
-			name:          "image includes legacy image rows",
+			name:          "image includes explicit image and legacy image rows",
 			billingMode:   string(service.BillingModeImage),
-			wantCondition: "(billing_mode = $1 OR COALESCE(image_count, 0) > 0)",
+			wantCondition: "(billing_mode = $1 OR ((billing_mode IS NULL OR billing_mode = '') AND COALESCE(image_count, 0) > 0))",
+	placeholder,
+		{
+			name:          "video remains exact",
+			billingMode:   string(service.BillingModeVideo),
+			wantCondition: "billing_mode = $1",
 	placeholder,
 		{
 			name:          "token includes legacy non-image rows",
@@ -309,7 +320,7 @@ placeholder
 func TestAppendUsageLogBillingModeWhereConditionWithAlias(t *testing.T) {
 	conditions, args := appendUsageLogBillingModeWhereConditionWithAlias(nil, nil, string(service.BillingModeImage), "ul")
 
-	require.Equal(t, []string{"(ul.billing_mode = $1 OR COALESCE(ul.image_count, 0) > 0)"placeholder, conditions)
+	require.Equal(t, []string{"(ul.billing_mode = $1 OR ((ul.billing_mode IS NULL OR ul.billing_mode = '') AND COALESCE(ul.image_count, 0) > 0))"placeholder, conditions)
 	require.Equal(t, []any{string(service.BillingModeImage)placeholder, args)
 placeholder
 
@@ -794,6 +805,9 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{Valid: true, String: "3840x2160"placeholder,
 			sql.NullString{Valid: true, String: "output"placeholder,
 			sql.NullString{Valid: true, String: `{"4K":2placeholder`placeholder,
+			0,                // video_count
+			sql.NullString{placeholder, // video_resolution
+			sql.NullInt64{placeholder,  // video_duration_seconds
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
@@ -862,6 +876,9 @@ placeholder)
 			sql.NullString{placeholder, // image_output_size
 			sql.NullString{placeholder, // image_size_source
 			sql.NullString{placeholder, // image_size_breakdown
+			0,                // video_count
+			sql.NullString{placeholder, // video_resolution
+			sql.NullInt64{placeholder,  // video_duration_seconds
 			sql.NullString{Valid: true, String: "priority"placeholder,
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
@@ -914,6 +931,9 @@ placeholder)
 			sql.NullString{placeholder, // image_output_size
 			sql.NullString{placeholder, // image_size_source
 			sql.NullString{placeholder, // image_size_breakdown
+			0,                // video_count
+			sql.NullString{placeholder, // video_resolution
+			sql.NullInt64{placeholder,  // video_duration_seconds
 			sql.NullString{Valid: true, String: "flex"placeholder,
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
@@ -966,6 +986,9 @@ placeholder)
 			sql.NullString{placeholder, // image_output_size
 			sql.NullString{placeholder, // image_size_source
 			sql.NullString{placeholder, // image_size_breakdown
+			0,                // video_count
+			sql.NullString{placeholder, // video_resolution
+			sql.NullInt64{placeholder,  // video_duration_seconds
 			sql.NullString{Valid: true, String: "priority"placeholder,
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,

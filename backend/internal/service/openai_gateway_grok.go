@@ -153,6 +153,16 @@ placeholder
 		placeholder
 	placeholder
 placeholder
+	if strings.EqualFold(upstreamModel, "grok-4.5") {
+		for _, unsupportedField := range []string{"presence_penalty", "presencePenalty", "frequency_penalty", "frequencyPenalty", "stop"placeholder {
+			if gjson.GetBytes(out, unsupportedField).Exists() {
+				out, err = sjson.DeleteBytes(out, unsupportedField)
+				if err != nil {
+					return nil, err
+			placeholder
+		placeholder
+	placeholder
+placeholder
 	out, err = sanitizeGrokResponsesUnsupportedFields(out)
 	if err != nil {
 		return nil, err
