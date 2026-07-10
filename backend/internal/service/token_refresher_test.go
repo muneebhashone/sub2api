@@ -195,6 +195,12 @@ placeholder{
 			want:     true,
 	placeholder,
 		{
+			name:     "anthropic setup-token - can refresh",
+			platform: PlatformAnthropic,
+			accType:  AccountTypeSetupToken,
+			want:     true,
+	placeholder,
+		{
 			name:     "anthropic api-key - cannot refresh",
 			platform: PlatformAnthropic,
 			accType:  AccountTypeAPIKey,
