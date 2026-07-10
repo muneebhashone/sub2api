@@ -694,10 +694,3 @@ placeholder
 		_ = s.accountRepo.SetTempUnschedulable(stateCtx, account.ID, until, reason)
 placeholder
 placeholder
-
-func ptrStringOrNil(value string) *string {
-	if strings.TrimSpace(value) == "" {
-		return nil
-placeholder
-	return &value
-placeholder
