@@ -1141,10 +1141,6 @@ placeholder
 	return totalInputTokens > pricing.LongContextInputThreshold
 placeholder
 
-func isOpenAIGPT56Model(normalized string) bool {
-	return normalized == "gpt-5.6-sol" || normalized == "gpt-5.6-terra" || normalized == "gpt-5.6-luna"
-placeholder
-
 func usesOpenAILegacyLongContextPricing(normalized string) bool {
 	return normalized == "gpt-5.4" || normalized == "gpt-5.5" || normalized == "gpt-5.5-pro"
 placeholder
