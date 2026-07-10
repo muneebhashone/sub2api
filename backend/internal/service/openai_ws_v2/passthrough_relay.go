@@ -787,7 +787,7 @@ placeholder
 	parsedUsage := Usage{
 		InputTokens:              inputTokens,
 		OutputTokens:             outputTokens,
-		CacheCreationInputTokens: int(usageResult.Get("cache_creation_input_tokens").Int()),
+		CacheCreationInputTokens: openAICacheCreationTokensFromUsage(usageResult),
 		CacheReadInputTokens:     cachedTokens,
 		ImageOutputTokens:        int(imageTokens),
 placeholder
@@ -808,6 +808,24 @@ placeholder
 		return 0, false
 placeholder
 	return int(value.Int()), true
+placeholder
+
+func openAICacheCreationTokensFromUsage(value gjson.Result) int {
+	for _, field := range []string{
+		"input_tokens_details.cache_write_tokens",
+		"prompt_tokens_details.cache_write_tokens",
+		"input_tokens_details.cache_creation_tokens",
+		"prompt_tokens_details.cache_creation_tokens",
+		"cache_write_tokens",
+		"cache_creation_input_tokens",
+		"cache_write_input_tokens",
+		"cache_creation_tokens",
+placeholder {
+		if tokens := int(value.Get(field).Int()); tokens > 0 {
+			return tokens
+	placeholder
+placeholder
+	return 0
 placeholder
 
 func enrichResult(result *RelayResult, state *relayState, duration time.Duration) {

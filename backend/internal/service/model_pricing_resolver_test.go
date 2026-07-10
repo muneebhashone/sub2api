@@ -114,6 +114,52 @@ placeholder
 	require.Equal(t, basePricing, result)
 placeholder
 
+func TestGPT56ExplicitZeroCacheWritePriceIsPreserved(t *testing.T) {
+	bs := &BillingService{placeholder
+	resolver := NewModelPricingResolver(nil, bs)
+	zero := 0.0
+
+	t.Run("flat channel price", func(t *testing.T) {
+		resolved := &ResolvedPricing{
+			Mode: BillingModeToken,
+			BasePricing: &ModelPricing{
+				InputPricePerToken:  5e-6,
+				OutputPricePerToken: 30e-6,
+		placeholder,
+	placeholder
+		resolver.applyTokenOverrides(&ChannelModelPricing{CacheWritePrice: &zeroplaceholder, resolved)
+
+		require.True(t, resolved.BasePricing.CacheCreationPriceExplicit)
+		cost, err := bs.CalculateCostUnified(CostInput{
+			Model:          "gpt-5.6-sol",
+			Tokens:         UsageTokens{CacheCreationTokens: 100placeholder,
+			RateMultiplier: 1,
+			Resolver:       resolver,
+			Resolved:       resolved,
+	placeholder)
+	placeholder
+		require.Zero(t, cost.CacheCreationCost)
+placeholder)
+
+	t.Run("interval price", func(t *testing.T) {
+		pricing := intervalToModelPricing(&PricingInterval{CacheWritePrice: &zeroplaceholder, false, nil)
+		require.True(t, pricing.CacheCreationPriceExplicit)
+
+		cost, err := bs.CalculateCostUnified(CostInput{
+			Model:          "gpt-5.6-sol",
+			Tokens:         UsageTokens{CacheCreationTokens: 100placeholder,
+			RateMultiplier: 1,
+			Resolver:       resolver,
+			Resolved: &ResolvedPricing{
+				Mode:        BillingModeToken,
+				BasePricing: pricing,
+		placeholder,
+	placeholder)
+	placeholder
+		require.Zero(t, cost.CacheCreationCost)
+placeholder)
+placeholder
+
 func TestGetRequestTierPrice(t *testing.T) {
 	bs := newTestBillingServiceForResolver()
 	r := NewModelPricingResolver(&ChannelService{placeholder, bs)

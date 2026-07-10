@@ -338,6 +338,14 @@ placeholder
 		TotalTokens:      u.InputTokens + u.OutputTokens,
 placeholder
 	usage.PromptTokensDetails = promptDetailsFromResponses(u.InputTokensDetails)
+	if u.CacheCreationInputTokens > 0 {
+		if usage.PromptTokensDetails == nil {
+			usage.PromptTokensDetails = &ChatTokenDetails{placeholder
+	placeholder
+		if usage.PromptTokensDetails.CacheWriteTokens == 0 && usage.PromptTokensDetails.CacheCreationTokens == 0 {
+			usage.PromptTokensDetails.CacheCreationTokens = u.CacheCreationInputTokens
+	placeholder
+placeholder
 	usage.CompletionTokensDetails = completionDetailsFromResponses(u.OutputTokensDetails)
 	return usage
 placeholder
@@ -349,12 +357,14 @@ func promptDetailsFromResponses(src *ResponsesInputTokensDetails) *ChatTokenDeta
 	if src == nil {
 		return nil
 placeholder
-	if src.CachedTokens == 0 && src.AudioTokens == 0 {
+	if src.CachedTokens == 0 && src.AudioTokens == 0 && src.CacheCreationTokens == 0 && src.CacheWriteTokens == 0 {
 		return nil
 placeholder
 	return &ChatTokenDetails{
-		CachedTokens: src.CachedTokens,
-		AudioTokens:  src.AudioTokens,
+		CachedTokens:        src.CachedTokens,
+		AudioTokens:         src.AudioTokens,
+		CacheCreationTokens: src.CacheCreationTokens,
+		CacheWriteTokens:    src.CacheWriteTokens,
 placeholder
 placeholder
 
