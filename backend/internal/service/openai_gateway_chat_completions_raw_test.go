@@ -155,6 +155,57 @@ placeholder
 	require.Equal(t, "max", *result.ReasoningEffort)
 placeholder
 
+func TestForwardAsRawChatCompletions_NonStreamingCapturesCacheWriteUsage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name      string
+		usageJSON string
+		wantWrite int
+placeholder{
+		{
+			name:      "positive cache write",
+			usageJSON: `{"prompt_tokens":12,"completion_tokens":3,"total_tokens":15,"prompt_tokens_details":{"cached_tokens":4,"cache_write_tokens":6placeholderplaceholder`,
+			wantWrite: 6,
+	placeholder,
+		{
+			name:      "nested zero overrides legacy alias",
+			usageJSON: `{"prompt_tokens":12,"completion_tokens":3,"total_tokens":15,"cache_creation_input_tokens":19,"prompt_tokens_details":{"cached_tokens":4,"cache_write_tokens":0placeholderplaceholder`,
+			wantWrite: 0,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := []byte(`{"model":"gpt-5.6","messages":[{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+			c.Request.Header.Set("Content-Type", "application/json")
+
+			upstream := &httpUpstreamRecorder{resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+				Body: io.NopCloser(strings.NewReader(
+					`{"id":"chatcmpl_cache","object":"chat.completion","model":"gpt-5.6","choices":[{"index":0,"message":{"role":"assistant","content":"ok"placeholder,"finish_reason":"stop"placeholder],"usage":` + tt.usageJSON + `placeholder`,
+				)),
+		placeholderplaceholder
+			svc := &OpenAIGatewayService{
+				cfg:          rawChatCompletionsTestConfig(),
+				httpUpstream: upstream,
+		placeholder
+
+			result, err := svc.forwardAsRawChatCompletions(context.Background(), c, rawChatCompletionsTestAccount(), body, "")
+
+		placeholder
+			require.NotNil(t, result)
+			require.Equal(t, 12, result.Usage.InputTokens)
+			require.Equal(t, 4, result.Usage.CacheReadInputTokens)
+			require.Equal(t, tt.wantWrite, result.Usage.CacheCreationInputTokens)
+	placeholder)
+placeholder
+placeholder
+
 func TestForwardAsRawChatCompletions_PreservesDeepSeekReasoningContentNonStreaming(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
