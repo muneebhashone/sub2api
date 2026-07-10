@@ -12,25 +12,48 @@ func TestOpsCaptureWriter_NilInnerWriter_NoPanic(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 		assert.Equal(t, 0, w.Status())
-placeholder, "Status() on released writer must not panic")
-
+placeholder)
 	assert.NotPanics(t, func() {
 		assert.Equal(t, -1, w.Size())
-placeholder, "Size() on released writer must not panic")
-
+placeholder)
 	assert.NotPanics(t, func() {
 		assert.False(t, w.Written())
-placeholder, "Written() on released writer must not panic")
-
+placeholder)
 	assert.NotPanics(t, func() {
 		n, err := w.Write([]byte("test"))
 		assert.Equal(t, 0, n)
 		assert.NoError(t, err)
-placeholder, "Write() on released writer must not panic")
-
+placeholder)
 	assert.NotPanics(t, func() {
 		n, err := w.WriteString("test")
 		assert.Equal(t, 0, n)
 		assert.NoError(t, err)
-placeholder, "WriteString() on released writer must not panic")
+placeholder)
+	assert.NotPanics(t, func() {
+		h := w.Header()
+		assert.NotNil(t, h)
+placeholder)
+	assert.NotPanics(t, func() {
+		w.WriteHeader(200)
+placeholder)
+	assert.NotPanics(t, func() {
+		w.WriteHeaderNow()
+placeholder)
+	assert.NotPanics(t, func() {
+		w.Flush()
+placeholder)
+	assert.NotPanics(t, func() {
+		conn, rw, err := w.Hijack()
+		assert.Nil(t, conn)
+		assert.Nil(t, rw)
+		assert.Error(t, err)
+placeholder)
+	assert.NotPanics(t, func() {
+		ch := w.CloseNotify()
+		assert.NotNil(t, ch)
+placeholder)
+	assert.NotPanics(t, func() {
+		p := w.Pusher()
+		assert.Nil(t, p)
+placeholder)
 placeholder

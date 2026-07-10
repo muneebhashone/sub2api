@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"log"
+	"net"
+	"net/http"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -517,6 +520,57 @@ func (w *opsCaptureWriter) Written() bool {
 		return false
 placeholder
 	return w.ResponseWriter.Written()
+placeholder
+
+func (w *opsCaptureWriter) Header() http.Header {
+	if w.ResponseWriter == nil {
+		return http.Header{placeholder
+placeholder
+	return w.ResponseWriter.Header()
+placeholder
+
+func (w *opsCaptureWriter) WriteHeader(code int) {
+	if w.ResponseWriter == nil {
+		return
+placeholder
+	w.ResponseWriter.WriteHeader(code)
+placeholder
+
+func (w *opsCaptureWriter) WriteHeaderNow() {
+	if w.ResponseWriter == nil {
+		return
+placeholder
+	w.ResponseWriter.WriteHeaderNow()
+placeholder
+
+func (w *opsCaptureWriter) Flush() {
+	if w.ResponseWriter == nil {
+		return
+placeholder
+	w.ResponseWriter.Flush()
+placeholder
+
+func (w *opsCaptureWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if w.ResponseWriter == nil {
+		return nil, nil, errors.New("response writer released")
+placeholder
+	return w.ResponseWriter.Hijack()
+placeholder
+
+func (w *opsCaptureWriter) CloseNotify() <-chan bool {
+	if w.ResponseWriter == nil {
+		ch := make(chan bool)
+		close(ch)
+		return ch
+placeholder
+	return w.ResponseWriter.CloseNotify()
+placeholder
+
+func (w *opsCaptureWriter) Pusher() http.Pusher {
+	if w.ResponseWriter == nil {
+		return nil
+placeholder
+	return w.ResponseWriter.Pusher()
 placeholder
 
 func (w *opsCaptureWriter) Write(b []byte) (int, error) {
