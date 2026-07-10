@@ -286,6 +286,11 @@ placeholder
 			c.JSON(http.StatusInternalServerError, gin.H{"ok": falseplaceholder)
 			return
 	placeholder
+		userIDFromCtx, ok := c.Request.Context().Value(ctxkey.UserID).(int64)
+		if !ok || userIDFromCtx != user.ID {
+			c.JSON(http.StatusInternalServerError, gin.H{"ok": falseplaceholder)
+			return
+	placeholder
 		c.JSON(http.StatusOK, gin.H{"ok": trueplaceholder)
 placeholder)
 
