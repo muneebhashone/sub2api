@@ -182,9 +182,10 @@ type ResponsesEventToAnthropicState struct {
 	// OutputIndexToBlockIdx maps Responses output_index → Anthropic content block index.
 	OutputIndexToBlockIdx map[int]int
 
-	InputTokens          int
-	OutputTokens         int
-	CacheReadInputTokens int
+	InputTokens              int
+	OutputTokens             int
+	CacheReadInputTokens     int
+	CacheCreationInputTokens int
 
 	ResponseID string
 	Model      string
@@ -259,9 +260,10 @@ placeholder
 				StopReason: stopReason,
 		placeholder,
 			Usage: &AnthropicUsage{
-				InputTokens:          state.InputTokens,
-				OutputTokens:         state.OutputTokens,
-				CacheReadInputTokens: state.CacheReadInputTokens,
+				InputTokens:              state.InputTokens,
+				OutputTokens:             state.OutputTokens,
+				CacheReadInputTokens:     state.CacheReadInputTokens,
+				CacheCreationInputTokens: state.CacheCreationInputTokens,
 		placeholder,
 	placeholder,
 		AnthropicStreamEvent{Type: "message_stop"placeholder,
@@ -579,6 +581,7 @@ placeholder
 		state.InputTokens = usage.InputTokens
 		state.OutputTokens = usage.OutputTokens
 		state.CacheReadInputTokens = usage.CacheReadInputTokens
+		state.CacheCreationInputTokens = usage.CacheCreationInputTokens
 placeholder
 	if evt.Response != nil {
 		if evt.Response.Usage != nil {
@@ -586,6 +589,7 @@ placeholder
 			state.InputTokens = usage.InputTokens
 			state.OutputTokens = usage.OutputTokens
 			state.CacheReadInputTokens = usage.CacheReadInputTokens
+			state.CacheCreationInputTokens = usage.CacheCreationInputTokens
 	placeholder
 		switch evt.Response.Status {
 		case "incomplete":
@@ -606,9 +610,10 @@ placeholder
 				StopReason: stopReason,
 		placeholder,
 			Usage: &AnthropicUsage{
-				InputTokens:          state.InputTokens,
-				OutputTokens:         state.OutputTokens,
-				CacheReadInputTokens: state.CacheReadInputTokens,
+				InputTokens:              state.InputTokens,
+				OutputTokens:             state.OutputTokens,
+				CacheReadInputTokens:     state.CacheReadInputTokens,
+				CacheCreationInputTokens: state.CacheCreationInputTokens,
 		placeholder,
 	placeholder,
 		AnthropicStreamEvent{Type: "message_stop"placeholder,

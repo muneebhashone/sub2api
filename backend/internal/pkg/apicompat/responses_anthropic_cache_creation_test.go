@@ -41,6 +41,41 @@ placeholder
 	assert.Equal(t, 0, got.CacheCreationInputTokens)
 placeholder
 
+func TestResponsesEventToAnthropicEvents_StreamingCacheCreation(t *testing.T) {
+	state := NewResponsesEventToAnthropicState()
+	state.MessageStartSent = true
+
+	completedEvt := &ResponsesStreamEvent{
+		Type: "response.completed",
+		Response: &ResponsesResponse{
+			Status: "completed",
+			Usage: &ResponsesUsage{
+				InputTokens:              20,
+				OutputTokens:             5,
+				CacheCreationInputTokens: 6,
+				InputTokensDetails: &ResponsesInputTokensDetails{
+					CachedTokens: 4,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	events := ResponsesEventToAnthropicEvents(completedEvt, state)
+
+	var deltaEvt *AnthropicStreamEvent
+	for i := range events {
+		if events[i].Type == "message_delta" {
+			deltaEvt = &events[i]
+			break
+	placeholder
+placeholder
+	require.NotNil(t, deltaEvt, "should have message_delta event")
+	require.NotNil(t, deltaEvt.Usage)
+	assert.Equal(t, 6, deltaEvt.Usage.CacheCreationInputTokens, "streaming cache_creation must be preserved")
+	assert.Equal(t, 10, deltaEvt.Usage.InputTokens, "input = 20 - 4(read) - 6(creation)")
+	assert.Equal(t, 4, deltaEvt.Usage.CacheReadInputTokens)
+placeholder
+
 func TestAnthropicToResponsesResponse_CacheCreation(t *testing.T) {
 	resp := AnthropicResponse{
 		ID:    "msg_test",
