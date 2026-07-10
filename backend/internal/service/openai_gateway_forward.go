@@ -902,6 +902,10 @@ placeholder
 				req.Header.Set("conversation_id", isolated)
 		placeholder
 	placeholder
+placeholder else if isOpenAIResponsesCompactPath(c) {
+		// compact 上游是 unary JSON 协议：API-key 账号也显式声明 Accept，
+		// 避免 OpenAI 兼容网关按 SSE 返回（#3777 期望行为 4）。
+		req.Header.Set("accept", "application/json")
 placeholder
 
 	// Apply custom User-Agent if configured
