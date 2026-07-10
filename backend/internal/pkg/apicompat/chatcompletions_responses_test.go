@@ -531,6 +531,25 @@ placeholder
 	assert.Equal(t, "flex", resp.ServiceTier)
 placeholder
 
+func TestChatCompletionsToResponses_ParallelToolCalls(t *testing.T) {
+	for _, value := range []bool{false, trueplaceholder {
+		req := &ChatCompletionsRequest{
+			Model:             "gpt-4o",
+			ParallelToolCalls: &value,
+			Messages:          []ChatMessage{{Role: "user", Content: json.RawMessage(`"Hi"`)placeholderplaceholder,
+	placeholder
+
+		resp, err := ChatCompletionsToResponses(req)
+	placeholder
+		require.NotNil(t, resp.ParallelToolCalls)
+		assert.Equal(t, value, *resp.ParallelToolCalls)
+
+		payload, err := json.Marshal(resp)
+	placeholder
+		assert.Contains(t, string(payload), `"parallel_tool_calls":`+string(mustMarshalJSON(t, value)))
+placeholder
+placeholder
+
 // ---------------------------------------------------------------------------
 // temperature / top_p stripping for reasoning models
 // ---------------------------------------------------------------------------
