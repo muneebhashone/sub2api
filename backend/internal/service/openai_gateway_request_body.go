@@ -199,6 +199,32 @@ placeholder
 	return normalized, true, nil
 placeholder
 
+func normalizeOpenAICodexCompactReasoningEffortForAccount(c *gin.Context, account *Account, body []byte) ([]byte, bool, error) {
+	if account == nil || !account.IsOpenAIOAuth() || !isOpenAIResponsesCompactPath(c) {
+		return body, false, nil
+placeholder
+
+	requestedModel := strings.TrimSpace(gjson.GetBytes(body, "model").String())
+	effectiveModel := account.GetMappedModel(requestedModel)
+	return normalizeOpenAICodexCompactReasoningEffort(body, effectiveModel)
+placeholder
+
+func normalizeOpenAICodexCompactReasoningEffort(body []byte, effectiveModel string) ([]byte, bool, error) {
+	if !isOpenAIGPT56Model(effectiveModel) ||
+		!strings.EqualFold(strings.TrimSpace(gjson.GetBytes(body, "reasoning.effort").String()), "max") {
+		return body, false, nil
+placeholder
+
+	// Codex Ultra 在客户端编排层会下发 max；ChatGPT compact 端点目前只接受到
+	// xhigh。这里只降级 OpenAI OAuth 的 GPT-5.6 compact 子请求，普通 Responses、
+	// API Key 请求和其他平台的 OAuth 请求保留 max。
+	normalized, err := sjson.SetBytes(body, "reasoning.effort", "xhigh")
+	if err != nil {
+		return body, false, fmt.Errorf("normalize codex compact reasoning effort: %w", err)
+placeholder
+	return normalized, true, nil
+placeholder
+
 func resolveOpenAICompactSessionID(c *gin.Context) string {
 	if c != nil {
 		if sessionID := strings.TrimSpace(c.GetHeader("session_id")); sessionID != "" {
@@ -259,7 +285,7 @@ placeholder
 	return body
 placeholder
 
-func getOpenAIReasoningEffortFromReqBody(reqBody map[string]any) (value string, present bool) {
+func getOpenAIReasoningEffortFromReqBody(reqBody map[string]any, requestedModel string) (value string, present bool) {
 	if reqBody == nil {
 		return "", false
 placeholder
@@ -267,13 +293,13 @@ placeholder
 	// Primary: reasoning.effort
 	if reasoning, ok := reqBody["reasoning"].(map[string]any); ok {
 		if effort, ok := reasoning["effort"].(string); ok {
-			return normalizeOpenAIReasoningEffort(effort), true
+			return normalizeOpenAIReasoningEffortForModel(effort, requestedModel), true
 	placeholder
 placeholder
 
 	// Fallback: some clients may use a flat field.
 	if effort, ok := reqBody["reasoning_effort"].(string); ok {
-		return normalizeOpenAIReasoningEffort(effort), true
+		return normalizeOpenAIReasoningEffortForModel(effort, requestedModel), true
 placeholder
 
 	return "", false
@@ -302,7 +328,7 @@ placeholder)
 		return ""
 placeholder
 
-	return normalizeOpenAIReasoningEffort(parts[len(parts)-1])
+	return normalizeOpenAIReasoningEffortForModel(parts[len(parts)-1], modelID)
 placeholder
 
 type openAIRequestView struct {
@@ -551,7 +577,7 @@ func extractOpenAIReasoningEffortFromBody(body []byte, requestedModel string) *s
 		reasoningEffort = strings.TrimSpace(gjson.GetBytes(body, "reasoning_effort").String())
 placeholder
 	if reasoningEffort != "" {
-		normalized := normalizeOpenAIReasoningEffort(reasoningEffort)
+		normalized := normalizeOpenAIReasoningEffortForModel(reasoningEffort, requestedModel)
 		if normalized == "" {
 			return nil
 	placeholder
@@ -1134,7 +1160,7 @@ placeholder
 placeholder
 
 func extractOpenAIReasoningEffort(reqBody map[string]any, requestedModel string) *string {
-	if value, present := getOpenAIReasoningEffortFromReqBody(reqBody); present {
+	if value, present := getOpenAIReasoningEffortFromReqBody(reqBody, requestedModel); present {
 		if value == "" {
 			return nil
 	placeholder
@@ -1168,4 +1194,21 @@ placeholder
 		// Only store known effort levels for now to keep UI consistent.
 		return ""
 placeholder
+placeholder
+
+func normalizeOpenAIReasoningEffortForModel(raw, model string) string {
+	if strings.EqualFold(strings.TrimSpace(raw), "max") && isOpenAIGPT56Model(model) {
+		return "max"
+placeholder
+	return normalizeOpenAIReasoningEffort(raw)
+placeholder
+
+func isOpenAIGPT56Model(model string) bool {
+	normalized := canonicalizeOpenAIModelAliasSpelling(model)
+	for _, prefix := range []string{"gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"placeholder {
+		if normalized == prefix || strings.HasPrefix(normalized, prefix+"-") {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
