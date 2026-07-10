@@ -13,6 +13,7 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -584,6 +585,238 @@ func TestPaymentAmountToleranceForThreeDecimalCurrency(t *testing.T) {
 	assert.Equal(t, amountToleranceCNY, paymentAmountToleranceForCurrency("CNY"))
 	assert.Equal(t, amountToleranceCNY, paymentAmountToleranceForCurrency("JPY"))
 	assert.InDelta(t, 0.0005, paymentAmountToleranceForCurrency("KWD"), 1e-12)
+placeholder
+
+func TestRetryFulfillmentRejectsFreshRechargingLease(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	order := createPaymentFulfillmentSubscriptionOrder(t, ctx, client, OrderStatusRecharging, time.Now())
+
+	svc := &PaymentService{entClient: clientplaceholder
+	err := svc.RetryFulfillment(ctx, order.ID)
+placeholder
+	require.Equal(t, "CONFLICT", infraerrors.Reason(err))
+
+	reloaded, getErr := client.PaymentOrder.Get(ctx, order.ID)
+	require.NoError(t, getErr)
+	require.Equal(t, OrderStatusRecharging, reloaded.Status)
+placeholder
+
+func TestAlreadyProcessedRecoversStaleRechargingLease(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	ensurePaymentAuditOrderActionUniqueIndex(t, ctx, client)
+	order := createPaymentFulfillmentSubscriptionOrder(
+		t,
+		ctx,
+		client,
+		OrderStatusRecharging,
+		time.Now().Add(-paymentFulfillmentLeaseDuration-time.Minute),
+	)
+	_, err := client.PaymentAuditLog.Create().
+		SetOrderID(strconv.FormatInt(order.ID, 10)).
+		SetAction("SUBSCRIPTION_ASSIGNED").
+		SetDetail(`{"groupID":7,"validityDays":30placeholder`).
+		SetOperator("system").
+		Save(ctx)
+placeholder
+
+	groupRepo := &subscriptionGroupRepoStub{
+		group: &Group{ID: 7, Status: payment.EntityStatusActive, SubscriptionType: SubscriptionTypeSubscriptionplaceholder,
+placeholder
+	svc := &PaymentService{
+		entClient:       client,
+		groupRepo:       groupRepo,
+		subscriptionSvc: NewSubscriptionService(groupRepo, userSubRepoNoop{placeholder, nil, nil, nil),
+placeholder
+
+	require.NoError(t, svc.alreadyProcessed(ctx, order))
+	reloaded, err := client.PaymentOrder.Get(ctx, order.ID)
+placeholder
+	require.Equal(t, OrderStatusCompleted, reloaded.Status)
+placeholder
+
+func TestFulfillmentLeaseVersionRejectsStaleWorker(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	staleAt := time.Now().Add(-paymentFulfillmentLeaseDuration - time.Minute)
+	order := createPaymentFulfillmentSubscriptionOrder(t, ctx, client, OrderStatusRecharging, staleAt)
+	svc := &PaymentService{entClient: clientplaceholder
+
+	firstLease, err := svc.acquirePaymentFulfillmentLease(ctx, order)
+placeholder
+	require.NotNil(t, firstLease)
+
+	_, err = client.PaymentOrder.UpdateOneID(order.ID).SetUpdatedAt(staleAt).Save(ctx)
+placeholder
+	time.Sleep(time.Millisecond)
+	staleOrder, err := client.PaymentOrder.Get(ctx, order.ID)
+placeholder
+	secondLease, err := svc.acquirePaymentFulfillmentLease(ctx, staleOrder)
+placeholder
+	require.NotNil(t, secondLease)
+	require.False(t, firstLease.version.Equal(secondLease.version))
+
+	err = svc.markCompleted(ctx, order, firstLease, "SUBSCRIPTION_SUCCESS")
+placeholder
+	require.Equal(t, "CONFLICT", infraerrors.Reason(err))
+	svc.markFailed(ctx, order.ID, firstLease, errors.New("stale worker failure"))
+
+	reloaded, err := client.PaymentOrder.Get(ctx, order.ID)
+placeholder
+	require.Equal(t, OrderStatusRecharging, reloaded.Status)
+	require.NoError(t, svc.markCompleted(ctx, order, secondLease, "SUBSCRIPTION_SUCCESS"))
+placeholder
+
+func TestExecuteBalanceFulfillmentRecoversAfterRedeemWithoutCreditingAgain(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	ensurePaymentAuditOrderActionUniqueIndex(t, ctx, client)
+	staleAt := time.Now().Add(-paymentFulfillmentLeaseDuration - time.Minute)
+	order := createPaymentFulfillmentSubscriptionOrder(t, ctx, client, OrderStatusRecharging, staleAt)
+	order, err := client.PaymentOrder.UpdateOneID(order.ID).
+		SetOrderType(payment.OrderTypeBalance).
+		ClearPlanID().
+		ClearSubscriptionGroupID().
+		ClearSubscriptionDays().
+		SetUpdatedAt(staleAt).
+		Save(ctx)
+placeholder
+
+	redeemRepo := &redeemCodeRepoStub{codesByCode: map[string]*RedeemCode{
+		order.RechargeCode: {
+			ID:     101,
+			Code:   order.RechargeCode,
+			Type:   RedeemTypeBalance,
+			Value:  order.Amount,
+			Status: StatusUsed,
+	placeholder,
+placeholderplaceholder
+	svc := &PaymentService{
+		entClient:     client,
+		redeemService: &RedeemService{redeemRepo: redeemRepoplaceholder,
+placeholder
+
+	require.NoError(t, svc.ExecuteBalanceFulfillment(ctx, order.ID))
+	require.Empty(t, redeemRepo.useCalls, "an already-used order code must not be redeemed again")
+	reloaded, err := client.PaymentOrder.Get(ctx, order.ID)
+placeholder
+	require.Equal(t, OrderStatusCompleted, reloaded.Status)
+placeholder
+
+func TestExecuteSubscriptionFulfillmentRecoversCommittedAssignmentWithoutExtendingAgain(t *testing.T) {
+	ctx := context.Background()
+	client := newPaymentConfigServiceTestClient(t)
+	ensurePaymentAuditOrderActionUniqueIndex(t, ctx, client)
+	staleAt := time.Now().Add(-paymentFulfillmentLeaseDuration - time.Minute)
+	order := createPaymentFulfillmentSubscriptionOrder(t, ctx, client, OrderStatusRecharging, staleAt)
+
+	expiresAt := time.Now().Add(30 * 24 * time.Hour).Truncate(time.Second)
+	subRepo := newSubscriptionUserSubRepoStub()
+	subRepo.seed(&UserSubscription{
+		ID:        99,
+		UserID:    order.UserID,
+		GroupID:   *order.SubscriptionGroupID,
+		StartsAt:  time.Now().Add(-time.Hour),
+		ExpiresAt: expiresAt,
+		Status:    SubscriptionStatusActive,
+		Notes:     "manual note\n" + paymentSubscriptionOrderNote(order.ID) + "\nretained note",
+placeholder)
+	groupRepo := &subscriptionGroupRepoStub{
+		group: &Group{ID: 7, Status: payment.EntityStatusActive, SubscriptionType: SubscriptionTypeSubscriptionplaceholder,
+placeholder
+	svc := &PaymentService{
+		entClient:       client,
+		groupRepo:       groupRepo,
+		subscriptionSvc: NewSubscriptionService(groupRepo, subRepo, nil, nil, nil),
+placeholder
+
+	require.NoError(t, svc.ExecuteSubscriptionFulfillment(ctx, order.ID))
+	assertPaymentSubscriptionExpiry(t, subRepo, order, expiresAt)
+
+	assignmentAuditCount, err := client.PaymentAuditLog.Query().
+		Where(
+			paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)),
+			paymentauditlog.ActionEQ("SUBSCRIPTION_ASSIGNED"),
+		).
+		Count(ctx)
+placeholder
+	require.Equal(t, 1, assignmentAuditCount)
+
+	// Simulate another stale recovery attempt after completion. The durable audit
+	// must make replay a no-op for the subscription entitlement.
+	_, err = client.PaymentOrder.UpdateOneID(order.ID).
+		SetStatus(OrderStatusRecharging).
+		SetUpdatedAt(staleAt).
+		ClearCompletedAt().
+		Save(ctx)
+placeholder
+	require.NoError(t, svc.ExecuteSubscriptionFulfillment(ctx, order.ID))
+	assertPaymentSubscriptionExpiry(t, subRepo, order, expiresAt)
+
+	assignmentAuditCount, err = client.PaymentAuditLog.Query().
+		Where(
+			paymentauditlog.OrderIDEQ(strconv.FormatInt(order.ID, 10)),
+			paymentauditlog.ActionEQ("SUBSCRIPTION_ASSIGNED"),
+		).
+		Count(ctx)
+placeholder
+	require.Equal(t, 1, assignmentAuditCount)
+placeholder
+
+func TestHasPaymentSubscriptionOrderNoteRequiresIndependentExactLine(t *testing.T) {
+	t.Parallel()
+	require.True(t, hasPaymentSubscriptionOrderNote("before\r\npayment order 42\r\nafter", "payment order 42"))
+	require.False(t, hasPaymentSubscriptionOrderNote("payment order 420", "payment order 42"))
+	require.False(t, hasPaymentSubscriptionOrderNote("prefix payment order 42 suffix", "payment order 42"))
+placeholder
+
+func createPaymentFulfillmentSubscriptionOrder(
+	t *testing.T,
+	ctx context.Context,
+	client *dbent.Client,
+	status string,
+	updatedAt time.Time,
+) *dbent.PaymentOrder {
+placeholder
+	user, err := client.User.Create().
+		SetEmail("fulfillment-" + strconv.FormatInt(time.Now().UnixNano(), 10) + "@example.com").
+		SetPasswordHash("hash").
+		SetUsername("payment-fulfillment-user").
+		Save(ctx)
+placeholder
+
+	order, err := client.PaymentOrder.Create().
+		SetUserID(user.ID).
+		SetUserEmail(user.Email).
+		SetUserName(user.Username).
+		SetAmount(80).
+		SetPayAmount(80).
+		SetFeeRate(0).
+		SetRechargeCode("PAY-SUB-" + strconv.FormatInt(time.Now().UnixNano(), 10)).
+		SetOutTradeNo("sub2_fulfillment_" + strconv.FormatInt(time.Now().UnixNano(), 10)).
+		SetPaymentType(payment.TypeAlipay).
+		SetPaymentTradeNo("trade-fulfillment").
+		SetOrderType(payment.OrderTypeSubscription).
+		SetPlanID(100).
+		SetSubscriptionGroupID(7).
+		SetSubscriptionDays(30).
+		SetStatus(status).
+		SetPaidAt(time.Now().Add(-time.Hour)).
+		SetExpiresAt(time.Now().Add(time.Hour)).
+		SetClientIP("127.0.0.1").
+		SetSrcHost("api.example.com").
+		SetUpdatedAt(updatedAt).
+		Save(ctx)
+placeholder
+	return order
+placeholder
+
+func assertPaymentSubscriptionExpiry(t *testing.T, repo *subscriptionUserSubRepoStub, order *dbent.PaymentOrder, expected time.Time) {
+placeholder
+	sub, err := repo.GetByUserIDAndGroupID(context.Background(), order.UserID, *order.SubscriptionGroupID)
+placeholder
+	require.True(t, sub.ExpiresAt.Equal(expected), "subscription expiry changed from %s to %s", expected, sub.ExpiresAt)
 placeholder
 
 func TestExecuteSubscriptionFulfillmentAppliesAffiliateRebate(t *testing.T) {
