@@ -100,15 +100,16 @@ placeholder
 		cachedTokens = usage.InputTokensDetails.CachedTokens
 placeholder
 
-	inputTokens := usage.InputTokens - cachedTokens
+	inputTokens := usage.InputTokens - cachedTokens - usage.CacheCreationInputTokens
 	if inputTokens < 0 {
 		inputTokens = 0
 placeholder
 
 	return AnthropicUsage{
-		InputTokens:          inputTokens,
-		OutputTokens:         usage.OutputTokens,
-		CacheReadInputTokens: cachedTokens,
+		InputTokens:              inputTokens,
+		OutputTokens:             usage.OutputTokens,
+		CacheReadInputTokens:     cachedTokens,
+		CacheCreationInputTokens: usage.CacheCreationInputTokens,
 placeholder
 placeholder
 
