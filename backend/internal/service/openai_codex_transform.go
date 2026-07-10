@@ -596,7 +596,7 @@ func hasOpenAIImageGenerationTool(reqBody map[string]any) bool {
 	if toolsContainImageGeneration(reqBody["tools"]) {
 		return true
 placeholder
-	return inputContainsImageGenNamespace(reqBody["input"])
+	return inputContainsImageGenerationTool(reqBody["input"])
 placeholder
 
 func toolsContainImageGeneration(rawTools any) bool {
@@ -612,22 +612,24 @@ placeholder
 		if !ok {
 			continue
 	placeholder
-		if strings.TrimSpace(firstNonEmptyString(toolMap["type"])) == "image_generation" {
-			return true
-	placeholder
-		if isImageGenNamespaceToolMap(toolMap) {
+		if isOpenAIImageGenerationToolMap(toolMap) {
 			return true
 	placeholder
 placeholder
 	return false
 placeholder
 
-func isImageGenNamespaceToolMap(tool map[string]any) bool {
-	return strings.TrimSpace(firstNonEmptyString(tool["type"])) == "namespace" &&
-		strings.TrimSpace(firstNonEmptyString(tool["name"])) == "image_gen"
+func isOpenAIImageGenerationToolMap(tool map[string]any) bool {
+	return isOpenAIImageGenerationType(firstNonEmptyString(tool["type"])) ||
+		isImageGenNamespaceToolMap(tool)
 placeholder
 
-func inputContainsImageGenNamespace(rawInput any) bool {
+func isImageGenNamespaceToolMap(tool map[string]any) bool {
+	return strings.TrimSpace(firstNonEmptyString(tool["type"])) == "namespace" &&
+		isOpenAIImageGenNamespaceName(firstNonEmptyString(tool["name"]))
+placeholder
+
+func inputContainsImageGenerationTool(rawInput any) bool {
 	input, ok := rawInput.([]any)
 	if !ok {
 		return false
@@ -647,54 +649,110 @@ placeholder
 	return false
 placeholder
 
+// stripOpenAIImageGenerationTools keeps account-level strip policy symmetric
+// across standard Responses tools, Responses Lite additional_tools, and tool_choice.
 func stripOpenAIImageGenerationTools(reqBody map[string]any) bool {
-	rawTools, ok := reqBody["tools"]
+	if reqBody == nil {
+		return false
+placeholder
+	modified := stripOpenAIImageGenerationToolList(reqBody, "tools")
+	if stripOpenAIImageGenerationToolsFromInput(reqBody) {
+		modified = true
+placeholder
+	if openAIAnyToolChoiceSelectsImageGeneration(reqBody["tool_choice"]) {
+		delete(reqBody, "tool_choice")
+		modified = true
+placeholder
+	return modified
+placeholder
+
+func stripOpenAIImageGenerationToolList(container map[string]any, key string) bool {
+	rawTools, ok := container[key]
 	if !ok || rawTools == nil {
-		if openAIAnyToolChoiceSelectsImageGeneration(reqBody["tool_choice"]) {
-			delete(reqBody, "tool_choice")
-			return true
-	placeholder
 		return false
 placeholder
 	tools, ok := rawTools.([]any)
 	if !ok {
-		if openAIAnyToolChoiceSelectsImageGeneration(reqBody["tool_choice"]) {
-			delete(reqBody, "tool_choice")
-			return true
-	placeholder
 		return false
 placeholder
 	filtered := make([]any, 0, len(tools))
 	removed := false
 	for _, rawTool := range tools {
-		if toolMap, ok := rawTool.(map[string]any); ok &&
-			strings.TrimSpace(firstNonEmptyString(toolMap["type"])) == "image_generation" {
+		if toolMap, ok := rawTool.(map[string]any); ok && isOpenAIImageGenerationToolMap(toolMap) {
 			removed = true
 			continue
 	placeholder
 		filtered = append(filtered, rawTool)
 placeholder
-	if !removed && !openAIAnyToolChoiceSelectsImageGeneration(reqBody["tool_choice"]) {
+	if !removed {
 		return false
 placeholder
-	if removed {
-		if len(filtered) == 0 {
-			delete(reqBody, "tools")
-	placeholder else {
-			reqBody["tools"] = filtered
-	placeholder
-placeholder
-	if openAIAnyToolChoiceSelectsImageGeneration(reqBody["tool_choice"]) {
-		delete(reqBody, "tool_choice")
+	if len(filtered) == 0 {
+		delete(container, key)
+placeholder else {
+		container[key] = filtered
 placeholder
 	return true
 placeholder
 
-// stripCodexSparkImageGenerationTools removes image_generation tool entries from
-// reqBody["tools"]. gpt-5.3-codex-spark rejects that tool upstream with HTTP 400
-// (invalid_request_error, param=tools), and Codex CLI advertises it by default, so
-// it must be dropped for spark. When the tools list becomes empty the key is removed.
-// Returns true when the body was modified.
+func stripOpenAIImageGenerationToolsFromInput(reqBody map[string]any) bool {
+	input, ok := reqBody["input"].([]any)
+	if !ok {
+		return false
+placeholder
+
+	filteredInput := make([]any, 0, len(input))
+	modified := false
+	for _, rawItem := range input {
+		item, ok := rawItem.(map[string]any)
+		if !ok || strings.TrimSpace(firstNonEmptyString(item["type"])) != "additional_tools" {
+			filteredInput = append(filteredInput, rawItem)
+			continue
+	placeholder
+		if !stripOpenAIImageGenerationToolList(item, "tools") {
+			filteredInput = append(filteredInput, rawItem)
+			continue
+	placeholder
+		modified = true
+		if _, hasTools := item["tools"]; hasTools {
+			filteredInput = append(filteredInput, rawItem)
+	placeholder
+		// An empty additional_tools carrier is not useful upstream; drop the item
+		// after its only declared capability has been removed.
+placeholder
+	if modified {
+		reqBody["input"] = filteredInput
+placeholder
+	return modified
+placeholder
+
+// stripOpenAIImageGenerationToolsFromRawPayload is the shared adapter for paths
+// that forward raw HTTP or WebSocket payloads without the normal request map.
+func stripOpenAIImageGenerationToolsFromRawPayload(payload []byte) ([]byte, bool, error) {
+	if !openAIRequestBodyHasImageGenerationDeclaration(payload) {
+		if json.Valid(payload) {
+			return payload, false, nil
+	placeholder
+		var invalidPayload map[string]any
+		return payload, false, json.Unmarshal(payload, &invalidPayload)
+placeholder
+	payloadMap := make(map[string]any)
+	if err := json.Unmarshal(payload, &payloadMap); err != nil {
+		return payload, false, err
+placeholder
+	if !stripOpenAIImageGenerationTools(payloadMap) {
+		return payload, false, nil
+placeholder
+	rebuilt, err := json.Marshal(payloadMap)
+	if err != nil {
+		return payload, false, err
+placeholder
+	return rebuilt, true, nil
+placeholder
+
+// stripCodexSparkImageGenerationTools removes image tool declarations and choices.
+// gpt-5.3-codex-spark rejects those capabilities upstream, while Codex clients may
+// advertise them by default.
 func stripCodexSparkImageGenerationTools(reqBody map[string]any) bool {
 	return stripOpenAIImageGenerationTools(reqBody)
 placeholder
