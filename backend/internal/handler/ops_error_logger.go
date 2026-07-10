@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"log"
+	"net"
+	"net/http"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -498,7 +501,82 @@ placeholder
 	opsCaptureWriterPool.Put(w)
 placeholder
 
+func (w *opsCaptureWriter) Status() int {
+	if w.ResponseWriter == nil {
+		return 0
+placeholder
+	return w.ResponseWriter.Status()
+placeholder
+
+func (w *opsCaptureWriter) Size() int {
+	if w.ResponseWriter == nil {
+		return -1
+placeholder
+	return w.ResponseWriter.Size()
+placeholder
+
+func (w *opsCaptureWriter) Written() bool {
+	if w.ResponseWriter == nil {
+		return false
+placeholder
+	return w.ResponseWriter.Written()
+placeholder
+
+func (w *opsCaptureWriter) Header() http.Header {
+	if w.ResponseWriter == nil {
+		return http.Header{placeholder
+placeholder
+	return w.ResponseWriter.Header()
+placeholder
+
+func (w *opsCaptureWriter) WriteHeader(code int) {
+	if w.ResponseWriter == nil {
+		return
+placeholder
+	w.ResponseWriter.WriteHeader(code)
+placeholder
+
+func (w *opsCaptureWriter) WriteHeaderNow() {
+	if w.ResponseWriter == nil {
+		return
+placeholder
+	w.ResponseWriter.WriteHeaderNow()
+placeholder
+
+func (w *opsCaptureWriter) Flush() {
+	if w.ResponseWriter == nil {
+		return
+placeholder
+	w.ResponseWriter.Flush()
+placeholder
+
+func (w *opsCaptureWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if w.ResponseWriter == nil {
+		return nil, nil, errors.New("response writer released")
+placeholder
+	return w.ResponseWriter.Hijack()
+placeholder
+
+func (w *opsCaptureWriter) CloseNotify() <-chan bool {
+	if w.ResponseWriter == nil {
+		ch := make(chan bool)
+		close(ch)
+		return ch
+placeholder
+	return w.ResponseWriter.CloseNotify()
+placeholder
+
+func (w *opsCaptureWriter) Pusher() http.Pusher {
+	if w.ResponseWriter == nil {
+		return nil
+placeholder
+	return w.ResponseWriter.Pusher()
+placeholder
+
 func (w *opsCaptureWriter) Write(b []byte) (int, error) {
+	if w.ResponseWriter == nil {
+		return 0, nil
+placeholder
 	if w.Status() >= 400 && w.limit > 0 && w.buf.Len() < w.limit {
 		remaining := w.limit - w.buf.Len()
 		if len(b) > remaining {
@@ -511,6 +589,9 @@ placeholder
 placeholder
 
 func (w *opsCaptureWriter) WriteString(s string) (int, error) {
+	if w.ResponseWriter == nil {
+		return 0, nil
+placeholder
 	if w.Status() >= 400 && w.limit > 0 && w.buf.Len() < w.limit {
 		remaining := w.limit - w.buf.Len()
 		if len(s) > remaining {
