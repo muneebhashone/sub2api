@@ -33,6 +33,7 @@ placeholder{
 		{name: "ws_policy_violation", err: coderws.CloseError{Code: coderws.StatusPolicyViolationplaceholder, want: falseplaceholder,
 		{name: "wrapped_eof_message", err: errors.New("failed to get reader: failed to read frame header: EOF"), want: trueplaceholder,
 		{name: "connection_reset_by_peer", err: errors.New("failed to read frame header: read tcp 127.0.0.1:1234->127.0.0.1:5678: read: connection reset by peer"), want: trueplaceholder,
+		{name: "windows_connection_reset", err: errors.New("failed to get reader: failed to read frame header: read tcp 127.0.0.1:1234->127.0.0.1:5678: wsarecv: An existing connection was forcibly closed by the remote host."), want: trueplaceholder,
 		{name: "broken_pipe", err: errors.New("write tcp 127.0.0.1:1234->127.0.0.1:5678: write: broken pipe"), want: trueplaceholder,
 placeholder
 
@@ -152,6 +153,24 @@ func TestStripCodexSparkImageGenerationToolFromRawPayload(t *testing.T) {
 		require.True(t, gjson.GetBytes(updated, `tools.#(type=="function")`).Exists())
 placeholder)
 
+	t.Run("strips_namespace_tools_for_spark", func(t *testing.T) {
+		payload := []byte(`{
+			"type":"response.create",
+			"model":"gpt-5.3-codex-spark",
+			"input":[
+				{"type":"message","role":"user","content":"hello"placeholder,
+				{"type":"additional_tools","tools":[{"type":"namespace","name":"image_gen"placeholder]placeholder
+			],
+			"tool_choice":{"type":"namespace","name":"image_gen"placeholder
+	placeholder`)
+		updated, changed, err := stripCodexSparkImageGenerationToolFromRawPayload(payload, "gpt-5.3-codex-spark")
+	placeholder
+		require.True(t, changed)
+		require.False(t, IsImageGenerationIntent(openAIResponsesEndpoint, "gpt-5.3-codex-spark", updated))
+		require.Equal(t, "hello", gjson.GetBytes(updated, "input.0.content").String())
+		require.False(t, gjson.GetBytes(updated, "tool_choice").Exists())
+placeholder)
+
 	t.Run("keeps_image_generation_for_non_spark", func(t *testing.T) {
 		payload := []byte(`{"type":"response.create","model":"gpt-5.3-codex","tools":[{"type":"image_generation","output_format":"png"placeholder]placeholder`)
 		updated, changed, err := stripCodexSparkImageGenerationToolFromRawPayload(payload, "gpt-5.3-codex")
@@ -169,24 +188,61 @@ placeholder)
 placeholder)
 placeholder
 
-func TestStripOpenAIImageGenerationToolFromRawPayload(t *testing.T) {
-	payload := []byte(`{
-		"type":"response.create",
-		"model":"gpt-5.4",
-		"tools":[
-			{"type":"function","name":"shell"placeholder,
-			{"type":"image_generation","output_format":"png"placeholder
-		],
-		"tool_choice":{"type":"image_generation"placeholder
-placeholder`)
+func TestStripOpenAIImageGenerationToolsFromRawPayload(t *testing.T) {
+	t.Run("flat image tool", func(t *testing.T) {
+		payload := []byte(`{
+			"type":"response.create",
+			"model":"gpt-5.4",
+			"tools":[
+				{"type":"function","name":"shell"placeholder,
+				{"type":"image_generation","output_format":"png"placeholder
+			],
+			"tool_choice":{"type":"image_generation"placeholder
+	placeholder`)
 
-	updated, changed, err := stripOpenAIImageGenerationToolFromRawPayload(payload)
+		updated, changed, err := stripOpenAIImageGenerationToolsFromRawPayload(payload)
 
-placeholder
-	require.True(t, changed)
-	require.False(t, gjson.GetBytes(updated, `tools.#(type=="image_generation")`).Exists())
-	require.True(t, gjson.GetBytes(updated, `tools.#(type=="function")`).Exists())
-	require.False(t, gjson.GetBytes(updated, "tool_choice").Exists())
+	placeholder
+		require.True(t, changed)
+		require.False(t, gjson.GetBytes(updated, `tools.#(type=="image_generation")`).Exists())
+		require.True(t, gjson.GetBytes(updated, `tools.#(type=="function")`).Exists())
+		require.False(t, gjson.GetBytes(updated, "tool_choice").Exists())
+placeholder)
+
+	t.Run("namespace and Responses Lite tools", func(t *testing.T) {
+		payload := []byte(`{
+			"type":"response.create",
+			"model":"gpt-5.5",
+			"tools":[
+				{"type":"namespace","name":"image_gen","tools":[{"type":"function","name":"imagegen"placeholder]placeholder,
+				{"type":"namespace","name":"code_tools","tools":[{"type":"function","name":"run"placeholder]placeholder
+			],
+			"input":[
+				{"type":"message","role":"user","content":"hello"placeholder,
+				{"type":"additional_tools","tools":[{"type":"namespace","name":"image_gen"placeholder]placeholder
+			],
+			"tool_choice":{"type":"namespace","name":"image_gen"placeholder
+	placeholder`)
+
+		updated, changed, err := stripOpenAIImageGenerationToolsFromRawPayload(payload)
+
+	placeholder
+		require.True(t, changed)
+		require.False(t, IsImageGenerationIntent(openAIResponsesEndpoint, "gpt-5.5", updated))
+		require.True(t, gjson.GetBytes(updated, `tools.#(name=="code_tools")`).Exists())
+		require.Equal(t, "hello", gjson.GetBytes(updated, "input.0.content").String())
+		require.False(t, gjson.GetBytes(updated, "tool_choice").Exists())
+placeholder)
+
+	t.Run("non-image namespace is unchanged", func(t *testing.T) {
+		payload := []byte(`{"type":"response.create","model":"gpt-5.5","tools":[{"type":"namespace","name":"code_tools"placeholder]placeholder`)
+
+		updated, changed, err := stripOpenAIImageGenerationToolsFromRawPayload(payload)
+
+	placeholder
+		require.False(t, changed)
+		require.Equal(t, payload, updated)
+placeholder)
 placeholder
 
 func TestAlignStoreDisabledPreviousResponseID(t *testing.T) {

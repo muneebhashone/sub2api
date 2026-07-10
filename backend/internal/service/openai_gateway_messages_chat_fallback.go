@@ -72,7 +72,7 @@ placeholder
 		chatReq.StreamOptions = &apicompat.ChatStreamOptions{IncludeUsage: trueplaceholder
 placeholder
 
-	reasoningEffort := extractOpenAIReasoningEffortFromBody(body, originalModel)
+	reasoningEffort := extractOpenAIReasoningEffortFromBody(body, upstreamModel, billingModel, originalModel)
 	reasoningEffort = ApplyThinkingEnabledFallback(reasoningEffort, body, billingModel)
 	serviceTier := extractOpenAIServiceTierFromBody(body)
 

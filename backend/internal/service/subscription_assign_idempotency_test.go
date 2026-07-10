@@ -6,10 +6,48 @@ import (
 	"testing"
 	"time"
 
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
+	"github.com/dgraph-io/ristretto"
 	"github.com/stretchr/testify/require"
 )
+
+func TestWithSubscriptionUpdateTx_ReusesExistingTransaction(t *testing.T) {
+	existingTx := &dbent.Tx{placeholder
+	ctx := dbent.NewTxContext(context.Background(), existingTx)
+	svc := &SubscriptionService{entClient: &dbent.Client{placeholderplaceholder
+
+	called := false
+	err := svc.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
+		called = true
+		require.Same(t, existingTx, dbent.TxFromContext(txCtx))
+		return nil
+placeholder)
+
+placeholder
+	require.True(t, called)
+placeholder
+
+func TestMaybeInvalidateAssignmentCaches_DefersForOuterTransactionOwner(t *testing.T) {
+	cache, err := ristretto.NewCache(&ristretto.Config{NumCounters: 1_000, MaxCost: 100, BufferItems: 64placeholder)
+placeholder
+	t.Cleanup(cache.Close)
+
+	svc := &SubscriptionService{subCacheL1: cacheplaceholder
+	key := subCacheKey(7, 9)
+	require.True(t, cache.Set(key, &UserSubscription{ID: 42placeholder, 1))
+	cache.Wait()
+
+	svc.maybeInvalidateAssignmentCaches(7, 9, true)
+	_, cachedBeforeCommit := cache.Get(key)
+	require.True(t, cachedBeforeCommit, "outer transaction must retain caches until its owner commits")
+
+	svc.maybeInvalidateAssignmentCaches(7, 9, false)
+	cache.Wait()
+	_, cachedAfterCommit := cache.Get(key)
+	require.False(t, cachedAfterCommit, "post-commit invalidation must remove the cached subscription")
+placeholder
 
 type groupRepoNoop struct{placeholder
 
@@ -119,13 +157,16 @@ placeholder
 func (userSubRepoNoop) ActivateWindows(context.Context, int64, time.Time) error {
 	panic("unexpected ActivateWindows call")
 placeholder
-func (userSubRepoNoop) ResetDailyUsage(context.Context, int64, time.Time) error {
+func (userSubRepoNoop) ResetUsageWindows(context.Context, int64, bool, bool, bool, time.Time) error {
+	panic("unexpected ResetUsageWindows call")
+placeholder
+func (userSubRepoNoop) ResetDailyUsage(context.Context, int64, *time.Time, time.Time) error {
 	panic("unexpected ResetDailyUsage call")
 placeholder
-func (userSubRepoNoop) ResetWeeklyUsage(context.Context, int64, time.Time) error {
+func (userSubRepoNoop) ResetWeeklyUsage(context.Context, int64, *time.Time, time.Time) error {
 	panic("unexpected ResetWeeklyUsage call")
 placeholder
-func (userSubRepoNoop) ResetMonthlyUsage(context.Context, int64, time.Time) error {
+func (userSubRepoNoop) ResetMonthlyUsage(context.Context, int64, *time.Time, time.Time) error {
 	panic("unexpected ResetMonthlyUsage call")
 placeholder
 func (userSubRepoNoop) IncrementUsage(context.Context, int64, float64) error {

@@ -265,10 +265,12 @@ placeholder)
 				ServiceTier: "PRIORITY",
 				Action:      "filter",
 				Scope:       "all",
+				UserIDs:     []int64{42placeholder,
 	placeholder
 	placeholder
 		out := openaiFastPolicySettingsFromDTO(in)
 		require.Equal(t, service.OpenAIFastTierPriority, out.Rules[0].ServiceTier)
+		require.Equal(t, []int64{42placeholder, out.Rules[0].UserIDs)
 placeholder)
 
 	t.Run("non-empty values pass through (lowercased)", func(t *testing.T) {
