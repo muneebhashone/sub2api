@@ -73,6 +73,60 @@ placeholder
 	assert.JSONEq(t, `"Hello"`, string(out.Messages[2].Content))
 placeholder
 
+func TestResponsesToChatCompletionsRequest_TextFormatJsonObject(t *testing.T) {
+	req := &ResponsesRequest{
+		Model: "gpt-4o",
+		Input: json.RawMessage(`[
+			{"role":"user","content":"Return JSON"placeholder
+		]`),
+		Text: &ResponsesText{
+			Format: json.RawMessage(`{"type":"json_object"placeholder`),
+	placeholder,
+placeholder
+
+	out, err := ResponsesToChatCompletionsRequest(req)
+placeholder
+	assert.JSONEq(t, `{"type":"json_object"placeholder`, string(out.ResponseFormat))
+placeholder
+
+func TestResponsesToChatCompletionsRequest_TextFormatJsonSchema(t *testing.T) {
+	req := &ResponsesRequest{
+		Model: "gpt-4o",
+		Input: json.RawMessage(`[
+			{"role":"user","content":"Return structured JSON"placeholder
+		]`),
+		Text: &ResponsesText{
+			Format: json.RawMessage(`{
+				"type":"json_schema",
+				"name":"answer",
+				"schema":{
+					"type":"object",
+					"properties":{"ok":{"type":"boolean"placeholderplaceholder,
+					"required":["ok"],
+					"additionalProperties":false
+			placeholder,
+				"strict":true
+		placeholder`),
+	placeholder,
+placeholder
+
+	out, err := ResponsesToChatCompletionsRequest(req)
+placeholder
+	assert.JSONEq(t, `{
+		"type":"json_schema",
+		"json_schema":{
+			"name":"answer",
+			"schema":{
+				"type":"object",
+				"properties":{"ok":{"type":"boolean"placeholderplaceholder,
+				"required":["ok"],
+				"additionalProperties":false
+		placeholder,
+			"strict":true
+	placeholder
+placeholder`, string(out.ResponseFormat))
+placeholder
+
 func chatMessageRoles(messages []ChatMessage) []string {
 	roles := make([]string, 0, len(messages))
 	for _, message := range messages {

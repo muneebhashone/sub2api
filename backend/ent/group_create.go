@@ -287,6 +287,20 @@ placeholder
 	return _c
 placeholder
 
+// SetAllowBatchImageGeneration sets the "allow_batch_image_generation" field.
+func (_c *GroupCreate) SetAllowBatchImageGeneration(v bool) *GroupCreate {
+	_c.mutation.SetAllowBatchImageGeneration(v)
+	return _c
+placeholder
+
+// SetNillableAllowBatchImageGeneration sets the "allow_batch_image_generation" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableAllowBatchImageGeneration(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetAllowBatchImageGeneration(*v)
+placeholder
+	return _c
+placeholder
+
 // SetImageRateIndependent sets the "image_rate_independent" field.
 func (_c *GroupCreate) SetImageRateIndependent(v bool) *GroupCreate {
 	_c.mutation.SetImageRateIndependent(v)
@@ -353,6 +367,104 @@ placeholder
 func (_c *GroupCreate) SetNillableImagePrice4k(v *float64) *GroupCreate {
 	if v != nil {
 		_c.SetImagePrice4k(*v)
+placeholder
+	return _c
+placeholder
+
+// SetBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field.
+func (_c *GroupCreate) SetBatchImageDiscountMultiplier(v float64) *GroupCreate {
+	_c.mutation.SetBatchImageDiscountMultiplier(v)
+	return _c
+placeholder
+
+// SetNillableBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableBatchImageDiscountMultiplier(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetBatchImageDiscountMultiplier(*v)
+placeholder
+	return _c
+placeholder
+
+// SetBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field.
+func (_c *GroupCreate) SetBatchImageHoldMultiplier(v float64) *GroupCreate {
+	_c.mutation.SetBatchImageHoldMultiplier(v)
+	return _c
+placeholder
+
+// SetNillableBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableBatchImageHoldMultiplier(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetBatchImageHoldMultiplier(*v)
+placeholder
+	return _c
+placeholder
+
+// SetVideoRateIndependent sets the "video_rate_independent" field.
+func (_c *GroupCreate) SetVideoRateIndependent(v bool) *GroupCreate {
+	_c.mutation.SetVideoRateIndependent(v)
+	return _c
+placeholder
+
+// SetNillableVideoRateIndependent sets the "video_rate_independent" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableVideoRateIndependent(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetVideoRateIndependent(*v)
+placeholder
+	return _c
+placeholder
+
+// SetVideoRateMultiplier sets the "video_rate_multiplier" field.
+func (_c *GroupCreate) SetVideoRateMultiplier(v float64) *GroupCreate {
+	_c.mutation.SetVideoRateMultiplier(v)
+	return _c
+placeholder
+
+// SetNillableVideoRateMultiplier sets the "video_rate_multiplier" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableVideoRateMultiplier(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetVideoRateMultiplier(*v)
+placeholder
+	return _c
+placeholder
+
+// SetVideoPrice480p sets the "video_price_480p" field.
+func (_c *GroupCreate) SetVideoPrice480p(v float64) *GroupCreate {
+	_c.mutation.SetVideoPrice480p(v)
+	return _c
+placeholder
+
+// SetNillableVideoPrice480p sets the "video_price_480p" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableVideoPrice480p(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetVideoPrice480p(*v)
+placeholder
+	return _c
+placeholder
+
+// SetVideoPrice720p sets the "video_price_720p" field.
+func (_c *GroupCreate) SetVideoPrice720p(v float64) *GroupCreate {
+	_c.mutation.SetVideoPrice720p(v)
+	return _c
+placeholder
+
+// SetNillableVideoPrice720p sets the "video_price_720p" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableVideoPrice720p(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetVideoPrice720p(*v)
+placeholder
+	return _c
+placeholder
+
+// SetVideoPrice1080p sets the "video_price_1080p" field.
+func (_c *GroupCreate) SetVideoPrice1080p(v float64) *GroupCreate {
+	_c.mutation.SetVideoPrice1080p(v)
+	return _c
+placeholder
+
+// SetNillableVideoPrice1080p sets the "video_price_1080p" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableVideoPrice1080p(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetVideoPrice1080p(*v)
 placeholder
 	return _c
 placeholder
@@ -736,6 +848,10 @@ placeholder
 		v := group.DefaultAllowImageGeneration
 		_c.mutation.SetAllowImageGeneration(v)
 placeholder
+	if _, ok := _c.mutation.AllowBatchImageGeneration(); !ok {
+		v := group.DefaultAllowBatchImageGeneration
+		_c.mutation.SetAllowBatchImageGeneration(v)
+placeholder
 	if _, ok := _c.mutation.ImageRateIndependent(); !ok {
 		v := group.DefaultImageRateIndependent
 		_c.mutation.SetImageRateIndependent(v)
@@ -743,6 +859,22 @@ placeholder
 	if _, ok := _c.mutation.ImageRateMultiplier(); !ok {
 		v := group.DefaultImageRateMultiplier
 		_c.mutation.SetImageRateMultiplier(v)
+placeholder
+	if _, ok := _c.mutation.BatchImageDiscountMultiplier(); !ok {
+		v := group.DefaultBatchImageDiscountMultiplier
+		_c.mutation.SetBatchImageDiscountMultiplier(v)
+placeholder
+	if _, ok := _c.mutation.BatchImageHoldMultiplier(); !ok {
+		v := group.DefaultBatchImageHoldMultiplier
+		_c.mutation.SetBatchImageHoldMultiplier(v)
+placeholder
+	if _, ok := _c.mutation.VideoRateIndependent(); !ok {
+		v := group.DefaultVideoRateIndependent
+		_c.mutation.SetVideoRateIndependent(v)
+placeholder
+	if _, ok := _c.mutation.VideoRateMultiplier(); !ok {
+		v := group.DefaultVideoRateMultiplier
+		_c.mutation.SetVideoRateMultiplier(v)
 placeholder
 	if _, ok := _c.mutation.ClaudeCodeOnly(); !ok {
 		v := group.DefaultClaudeCodeOnly
@@ -869,11 +1001,26 @@ placeholder
 	if _, ok := _c.mutation.AllowImageGeneration(); !ok {
 		return &ValidationError{Name: "allow_image_generation", err: errors.New(`ent: missing required field "Group.allow_image_generation"`)placeholder
 placeholder
+	if _, ok := _c.mutation.AllowBatchImageGeneration(); !ok {
+		return &ValidationError{Name: "allow_batch_image_generation", err: errors.New(`ent: missing required field "Group.allow_batch_image_generation"`)placeholder
+placeholder
 	if _, ok := _c.mutation.ImageRateIndependent(); !ok {
 		return &ValidationError{Name: "image_rate_independent", err: errors.New(`ent: missing required field "Group.image_rate_independent"`)placeholder
 placeholder
 	if _, ok := _c.mutation.ImageRateMultiplier(); !ok {
 		return &ValidationError{Name: "image_rate_multiplier", err: errors.New(`ent: missing required field "Group.image_rate_multiplier"`)placeholder
+placeholder
+	if _, ok := _c.mutation.BatchImageDiscountMultiplier(); !ok {
+		return &ValidationError{Name: "batch_image_discount_multiplier", err: errors.New(`ent: missing required field "Group.batch_image_discount_multiplier"`)placeholder
+placeholder
+	if _, ok := _c.mutation.BatchImageHoldMultiplier(); !ok {
+		return &ValidationError{Name: "batch_image_hold_multiplier", err: errors.New(`ent: missing required field "Group.batch_image_hold_multiplier"`)placeholder
+placeholder
+	if _, ok := _c.mutation.VideoRateIndependent(); !ok {
+		return &ValidationError{Name: "video_rate_independent", err: errors.New(`ent: missing required field "Group.video_rate_independent"`)placeholder
+placeholder
+	if _, ok := _c.mutation.VideoRateMultiplier(); !ok {
+		return &ValidationError{Name: "video_rate_multiplier", err: errors.New(`ent: missing required field "Group.video_rate_multiplier"`)placeholder
 placeholder
 	if _, ok := _c.mutation.ClaudeCodeOnly(); !ok {
 		return &ValidationError{Name: "claude_code_only", err: errors.New(`ent: missing required field "Group.claude_code_only"`)placeholder
@@ -1019,6 +1166,10 @@ placeholder
 		_spec.SetField(group.FieldAllowImageGeneration, field.TypeBool, value)
 		_node.AllowImageGeneration = value
 placeholder
+	if value, ok := _c.mutation.AllowBatchImageGeneration(); ok {
+		_spec.SetField(group.FieldAllowBatchImageGeneration, field.TypeBool, value)
+		_node.AllowBatchImageGeneration = value
+placeholder
 	if value, ok := _c.mutation.ImageRateIndependent(); ok {
 		_spec.SetField(group.FieldImageRateIndependent, field.TypeBool, value)
 		_node.ImageRateIndependent = value
@@ -1038,6 +1189,34 @@ placeholder
 	if value, ok := _c.mutation.ImagePrice4k(); ok {
 		_spec.SetField(group.FieldImagePrice4k, field.TypeFloat64, value)
 		_node.ImagePrice4k = &value
+placeholder
+	if value, ok := _c.mutation.BatchImageDiscountMultiplier(); ok {
+		_spec.SetField(group.FieldBatchImageDiscountMultiplier, field.TypeFloat64, value)
+		_node.BatchImageDiscountMultiplier = value
+placeholder
+	if value, ok := _c.mutation.BatchImageHoldMultiplier(); ok {
+		_spec.SetField(group.FieldBatchImageHoldMultiplier, field.TypeFloat64, value)
+		_node.BatchImageHoldMultiplier = value
+placeholder
+	if value, ok := _c.mutation.VideoRateIndependent(); ok {
+		_spec.SetField(group.FieldVideoRateIndependent, field.TypeBool, value)
+		_node.VideoRateIndependent = value
+placeholder
+	if value, ok := _c.mutation.VideoRateMultiplier(); ok {
+		_spec.SetField(group.FieldVideoRateMultiplier, field.TypeFloat64, value)
+		_node.VideoRateMultiplier = value
+placeholder
+	if value, ok := _c.mutation.VideoPrice480p(); ok {
+		_spec.SetField(group.FieldVideoPrice480p, field.TypeFloat64, value)
+		_node.VideoPrice480p = &value
+placeholder
+	if value, ok := _c.mutation.VideoPrice720p(); ok {
+		_spec.SetField(group.FieldVideoPrice720p, field.TypeFloat64, value)
+		_node.VideoPrice720p = &value
+placeholder
+	if value, ok := _c.mutation.VideoPrice1080p(); ok {
+		_spec.SetField(group.FieldVideoPrice1080p, field.TypeFloat64, value)
+		_node.VideoPrice1080p = &value
 placeholder
 	if value, ok := _c.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
@@ -1537,6 +1716,18 @@ func (u *GroupUpsert) UpdateAllowImageGeneration() *GroupUpsert {
 	return u
 placeholder
 
+// SetAllowBatchImageGeneration sets the "allow_batch_image_generation" field.
+func (u *GroupUpsert) SetAllowBatchImageGeneration(v bool) *GroupUpsert {
+	u.Set(group.FieldAllowBatchImageGeneration, v)
+	return u
+placeholder
+
+// UpdateAllowBatchImageGeneration sets the "allow_batch_image_generation" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateAllowBatchImageGeneration() *GroupUpsert {
+	u.SetExcluded(group.FieldAllowBatchImageGeneration)
+	return u
+placeholder
+
 // SetImageRateIndependent sets the "image_rate_independent" field.
 func (u *GroupUpsert) SetImageRateIndependent(v bool) *GroupUpsert {
 	u.Set(group.FieldImageRateIndependent, v)
@@ -1636,6 +1827,144 @@ placeholder
 // ClearImagePrice4k clears the value of the "image_price_4k" field.
 func (u *GroupUpsert) ClearImagePrice4k() *GroupUpsert {
 	u.SetNull(group.FieldImagePrice4k)
+	return u
+placeholder
+
+// SetBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field.
+func (u *GroupUpsert) SetBatchImageDiscountMultiplier(v float64) *GroupUpsert {
+	u.Set(group.FieldBatchImageDiscountMultiplier, v)
+	return u
+placeholder
+
+// UpdateBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateBatchImageDiscountMultiplier() *GroupUpsert {
+	u.SetExcluded(group.FieldBatchImageDiscountMultiplier)
+	return u
+placeholder
+
+// AddBatchImageDiscountMultiplier adds v to the "batch_image_discount_multiplier" field.
+func (u *GroupUpsert) AddBatchImageDiscountMultiplier(v float64) *GroupUpsert {
+	u.Add(group.FieldBatchImageDiscountMultiplier, v)
+	return u
+placeholder
+
+// SetBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field.
+func (u *GroupUpsert) SetBatchImageHoldMultiplier(v float64) *GroupUpsert {
+	u.Set(group.FieldBatchImageHoldMultiplier, v)
+	return u
+placeholder
+
+// UpdateBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateBatchImageHoldMultiplier() *GroupUpsert {
+	u.SetExcluded(group.FieldBatchImageHoldMultiplier)
+	return u
+placeholder
+
+// AddBatchImageHoldMultiplier adds v to the "batch_image_hold_multiplier" field.
+func (u *GroupUpsert) AddBatchImageHoldMultiplier(v float64) *GroupUpsert {
+	u.Add(group.FieldBatchImageHoldMultiplier, v)
+	return u
+placeholder
+
+// SetVideoRateIndependent sets the "video_rate_independent" field.
+func (u *GroupUpsert) SetVideoRateIndependent(v bool) *GroupUpsert {
+	u.Set(group.FieldVideoRateIndependent, v)
+	return u
+placeholder
+
+// UpdateVideoRateIndependent sets the "video_rate_independent" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateVideoRateIndependent() *GroupUpsert {
+	u.SetExcluded(group.FieldVideoRateIndependent)
+	return u
+placeholder
+
+// SetVideoRateMultiplier sets the "video_rate_multiplier" field.
+func (u *GroupUpsert) SetVideoRateMultiplier(v float64) *GroupUpsert {
+	u.Set(group.FieldVideoRateMultiplier, v)
+	return u
+placeholder
+
+// UpdateVideoRateMultiplier sets the "video_rate_multiplier" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateVideoRateMultiplier() *GroupUpsert {
+	u.SetExcluded(group.FieldVideoRateMultiplier)
+	return u
+placeholder
+
+// AddVideoRateMultiplier adds v to the "video_rate_multiplier" field.
+func (u *GroupUpsert) AddVideoRateMultiplier(v float64) *GroupUpsert {
+	u.Add(group.FieldVideoRateMultiplier, v)
+	return u
+placeholder
+
+// SetVideoPrice480p sets the "video_price_480p" field.
+func (u *GroupUpsert) SetVideoPrice480p(v float64) *GroupUpsert {
+	u.Set(group.FieldVideoPrice480p, v)
+	return u
+placeholder
+
+// UpdateVideoPrice480p sets the "video_price_480p" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateVideoPrice480p() *GroupUpsert {
+	u.SetExcluded(group.FieldVideoPrice480p)
+	return u
+placeholder
+
+// AddVideoPrice480p adds v to the "video_price_480p" field.
+func (u *GroupUpsert) AddVideoPrice480p(v float64) *GroupUpsert {
+	u.Add(group.FieldVideoPrice480p, v)
+	return u
+placeholder
+
+// ClearVideoPrice480p clears the value of the "video_price_480p" field.
+func (u *GroupUpsert) ClearVideoPrice480p() *GroupUpsert {
+	u.SetNull(group.FieldVideoPrice480p)
+	return u
+placeholder
+
+// SetVideoPrice720p sets the "video_price_720p" field.
+func (u *GroupUpsert) SetVideoPrice720p(v float64) *GroupUpsert {
+	u.Set(group.FieldVideoPrice720p, v)
+	return u
+placeholder
+
+// UpdateVideoPrice720p sets the "video_price_720p" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateVideoPrice720p() *GroupUpsert {
+	u.SetExcluded(group.FieldVideoPrice720p)
+	return u
+placeholder
+
+// AddVideoPrice720p adds v to the "video_price_720p" field.
+func (u *GroupUpsert) AddVideoPrice720p(v float64) *GroupUpsert {
+	u.Add(group.FieldVideoPrice720p, v)
+	return u
+placeholder
+
+// ClearVideoPrice720p clears the value of the "video_price_720p" field.
+func (u *GroupUpsert) ClearVideoPrice720p() *GroupUpsert {
+	u.SetNull(group.FieldVideoPrice720p)
+	return u
+placeholder
+
+// SetVideoPrice1080p sets the "video_price_1080p" field.
+func (u *GroupUpsert) SetVideoPrice1080p(v float64) *GroupUpsert {
+	u.Set(group.FieldVideoPrice1080p, v)
+	return u
+placeholder
+
+// UpdateVideoPrice1080p sets the "video_price_1080p" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateVideoPrice1080p() *GroupUpsert {
+	u.SetExcluded(group.FieldVideoPrice1080p)
+	return u
+placeholder
+
+// AddVideoPrice1080p adds v to the "video_price_1080p" field.
+func (u *GroupUpsert) AddVideoPrice1080p(v float64) *GroupUpsert {
+	u.Add(group.FieldVideoPrice1080p, v)
+	return u
+placeholder
+
+// ClearVideoPrice1080p clears the value of the "video_price_1080p" field.
+func (u *GroupUpsert) ClearVideoPrice1080p() *GroupUpsert {
+	u.SetNull(group.FieldVideoPrice1080p)
 	return u
 placeholder
 
@@ -2235,6 +2564,20 @@ func (u *GroupUpsertOne) UpdateAllowImageGeneration() *GroupUpsertOne {
 placeholder)
 placeholder
 
+// SetAllowBatchImageGeneration sets the "allow_batch_image_generation" field.
+func (u *GroupUpsertOne) SetAllowBatchImageGeneration(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAllowBatchImageGeneration(v)
+placeholder)
+placeholder
+
+// UpdateAllowBatchImageGeneration sets the "allow_batch_image_generation" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateAllowBatchImageGeneration() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAllowBatchImageGeneration()
+placeholder)
+placeholder
+
 // SetImageRateIndependent sets the "image_rate_independent" field.
 func (u *GroupUpsertOne) SetImageRateIndependent(v bool) *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
@@ -2351,6 +2694,167 @@ placeholder
 func (u *GroupUpsertOne) ClearImagePrice4k() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearImagePrice4k()
+placeholder)
+placeholder
+
+// SetBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field.
+func (u *GroupUpsertOne) SetBatchImageDiscountMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetBatchImageDiscountMultiplier(v)
+placeholder)
+placeholder
+
+// AddBatchImageDiscountMultiplier adds v to the "batch_image_discount_multiplier" field.
+func (u *GroupUpsertOne) AddBatchImageDiscountMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddBatchImageDiscountMultiplier(v)
+placeholder)
+placeholder
+
+// UpdateBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateBatchImageDiscountMultiplier() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateBatchImageDiscountMultiplier()
+placeholder)
+placeholder
+
+// SetBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field.
+func (u *GroupUpsertOne) SetBatchImageHoldMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetBatchImageHoldMultiplier(v)
+placeholder)
+placeholder
+
+// AddBatchImageHoldMultiplier adds v to the "batch_image_hold_multiplier" field.
+func (u *GroupUpsertOne) AddBatchImageHoldMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddBatchImageHoldMultiplier(v)
+placeholder)
+placeholder
+
+// UpdateBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateBatchImageHoldMultiplier() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateBatchImageHoldMultiplier()
+placeholder)
+placeholder
+
+// SetVideoRateIndependent sets the "video_rate_independent" field.
+func (u *GroupUpsertOne) SetVideoRateIndependent(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoRateIndependent(v)
+placeholder)
+placeholder
+
+// UpdateVideoRateIndependent sets the "video_rate_independent" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateVideoRateIndependent() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoRateIndependent()
+placeholder)
+placeholder
+
+// SetVideoRateMultiplier sets the "video_rate_multiplier" field.
+func (u *GroupUpsertOne) SetVideoRateMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoRateMultiplier(v)
+placeholder)
+placeholder
+
+// AddVideoRateMultiplier adds v to the "video_rate_multiplier" field.
+func (u *GroupUpsertOne) AddVideoRateMultiplier(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoRateMultiplier(v)
+placeholder)
+placeholder
+
+// UpdateVideoRateMultiplier sets the "video_rate_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateVideoRateMultiplier() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoRateMultiplier()
+placeholder)
+placeholder
+
+// SetVideoPrice480p sets the "video_price_480p" field.
+func (u *GroupUpsertOne) SetVideoPrice480p(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoPrice480p(v)
+placeholder)
+placeholder
+
+// AddVideoPrice480p adds v to the "video_price_480p" field.
+func (u *GroupUpsertOne) AddVideoPrice480p(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoPrice480p(v)
+placeholder)
+placeholder
+
+// UpdateVideoPrice480p sets the "video_price_480p" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateVideoPrice480p() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoPrice480p()
+placeholder)
+placeholder
+
+// ClearVideoPrice480p clears the value of the "video_price_480p" field.
+func (u *GroupUpsertOne) ClearVideoPrice480p() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearVideoPrice480p()
+placeholder)
+placeholder
+
+// SetVideoPrice720p sets the "video_price_720p" field.
+func (u *GroupUpsertOne) SetVideoPrice720p(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoPrice720p(v)
+placeholder)
+placeholder
+
+// AddVideoPrice720p adds v to the "video_price_720p" field.
+func (u *GroupUpsertOne) AddVideoPrice720p(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoPrice720p(v)
+placeholder)
+placeholder
+
+// UpdateVideoPrice720p sets the "video_price_720p" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateVideoPrice720p() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoPrice720p()
+placeholder)
+placeholder
+
+// ClearVideoPrice720p clears the value of the "video_price_720p" field.
+func (u *GroupUpsertOne) ClearVideoPrice720p() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearVideoPrice720p()
+placeholder)
+placeholder
+
+// SetVideoPrice1080p sets the "video_price_1080p" field.
+func (u *GroupUpsertOne) SetVideoPrice1080p(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoPrice1080p(v)
+placeholder)
+placeholder
+
+// AddVideoPrice1080p adds v to the "video_price_1080p" field.
+func (u *GroupUpsertOne) AddVideoPrice1080p(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoPrice1080p(v)
+placeholder)
+placeholder
+
+// UpdateVideoPrice1080p sets the "video_price_1080p" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateVideoPrice1080p() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoPrice1080p()
+placeholder)
+placeholder
+
+// ClearVideoPrice1080p clears the value of the "video_price_1080p" field.
+func (u *GroupUpsertOne) ClearVideoPrice1080p() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearVideoPrice1080p()
 placeholder)
 placeholder
 
@@ -3153,6 +3657,20 @@ func (u *GroupUpsertBulk) UpdateAllowImageGeneration() *GroupUpsertBulk {
 placeholder)
 placeholder
 
+// SetAllowBatchImageGeneration sets the "allow_batch_image_generation" field.
+func (u *GroupUpsertBulk) SetAllowBatchImageGeneration(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAllowBatchImageGeneration(v)
+placeholder)
+placeholder
+
+// UpdateAllowBatchImageGeneration sets the "allow_batch_image_generation" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateAllowBatchImageGeneration() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAllowBatchImageGeneration()
+placeholder)
+placeholder
+
 // SetImageRateIndependent sets the "image_rate_independent" field.
 func (u *GroupUpsertBulk) SetImageRateIndependent(v bool) *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
@@ -3269,6 +3787,167 @@ placeholder
 func (u *GroupUpsertBulk) ClearImagePrice4k() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearImagePrice4k()
+placeholder)
+placeholder
+
+// SetBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field.
+func (u *GroupUpsertBulk) SetBatchImageDiscountMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetBatchImageDiscountMultiplier(v)
+placeholder)
+placeholder
+
+// AddBatchImageDiscountMultiplier adds v to the "batch_image_discount_multiplier" field.
+func (u *GroupUpsertBulk) AddBatchImageDiscountMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddBatchImageDiscountMultiplier(v)
+placeholder)
+placeholder
+
+// UpdateBatchImageDiscountMultiplier sets the "batch_image_discount_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateBatchImageDiscountMultiplier() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateBatchImageDiscountMultiplier()
+placeholder)
+placeholder
+
+// SetBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field.
+func (u *GroupUpsertBulk) SetBatchImageHoldMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetBatchImageHoldMultiplier(v)
+placeholder)
+placeholder
+
+// AddBatchImageHoldMultiplier adds v to the "batch_image_hold_multiplier" field.
+func (u *GroupUpsertBulk) AddBatchImageHoldMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddBatchImageHoldMultiplier(v)
+placeholder)
+placeholder
+
+// UpdateBatchImageHoldMultiplier sets the "batch_image_hold_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateBatchImageHoldMultiplier() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateBatchImageHoldMultiplier()
+placeholder)
+placeholder
+
+// SetVideoRateIndependent sets the "video_rate_independent" field.
+func (u *GroupUpsertBulk) SetVideoRateIndependent(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoRateIndependent(v)
+placeholder)
+placeholder
+
+// UpdateVideoRateIndependent sets the "video_rate_independent" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateVideoRateIndependent() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoRateIndependent()
+placeholder)
+placeholder
+
+// SetVideoRateMultiplier sets the "video_rate_multiplier" field.
+func (u *GroupUpsertBulk) SetVideoRateMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoRateMultiplier(v)
+placeholder)
+placeholder
+
+// AddVideoRateMultiplier adds v to the "video_rate_multiplier" field.
+func (u *GroupUpsertBulk) AddVideoRateMultiplier(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoRateMultiplier(v)
+placeholder)
+placeholder
+
+// UpdateVideoRateMultiplier sets the "video_rate_multiplier" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateVideoRateMultiplier() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoRateMultiplier()
+placeholder)
+placeholder
+
+// SetVideoPrice480p sets the "video_price_480p" field.
+func (u *GroupUpsertBulk) SetVideoPrice480p(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoPrice480p(v)
+placeholder)
+placeholder
+
+// AddVideoPrice480p adds v to the "video_price_480p" field.
+func (u *GroupUpsertBulk) AddVideoPrice480p(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoPrice480p(v)
+placeholder)
+placeholder
+
+// UpdateVideoPrice480p sets the "video_price_480p" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateVideoPrice480p() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoPrice480p()
+placeholder)
+placeholder
+
+// ClearVideoPrice480p clears the value of the "video_price_480p" field.
+func (u *GroupUpsertBulk) ClearVideoPrice480p() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearVideoPrice480p()
+placeholder)
+placeholder
+
+// SetVideoPrice720p sets the "video_price_720p" field.
+func (u *GroupUpsertBulk) SetVideoPrice720p(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoPrice720p(v)
+placeholder)
+placeholder
+
+// AddVideoPrice720p adds v to the "video_price_720p" field.
+func (u *GroupUpsertBulk) AddVideoPrice720p(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoPrice720p(v)
+placeholder)
+placeholder
+
+// UpdateVideoPrice720p sets the "video_price_720p" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateVideoPrice720p() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoPrice720p()
+placeholder)
+placeholder
+
+// ClearVideoPrice720p clears the value of the "video_price_720p" field.
+func (u *GroupUpsertBulk) ClearVideoPrice720p() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearVideoPrice720p()
+placeholder)
+placeholder
+
+// SetVideoPrice1080p sets the "video_price_1080p" field.
+func (u *GroupUpsertBulk) SetVideoPrice1080p(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetVideoPrice1080p(v)
+placeholder)
+placeholder
+
+// AddVideoPrice1080p adds v to the "video_price_1080p" field.
+func (u *GroupUpsertBulk) AddVideoPrice1080p(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddVideoPrice1080p(v)
+placeholder)
+placeholder
+
+// UpdateVideoPrice1080p sets the "video_price_1080p" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateVideoPrice1080p() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateVideoPrice1080p()
+placeholder)
+placeholder
+
+// ClearVideoPrice1080p clears the value of the "video_price_1080p" field.
+func (u *GroupUpsertBulk) ClearVideoPrice1080p() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearVideoPrice1080p()
 placeholder)
 placeholder
 

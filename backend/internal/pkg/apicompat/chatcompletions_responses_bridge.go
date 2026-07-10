@@ -42,6 +42,9 @@ placeholder
 	if len(out.Tools) > 0 && len(req.ToolChoice) > 0 {
 		out.ToolChoice = responsesToolChoiceToChatToolChoice(req.ToolChoice)
 placeholder
+	if req.Text != nil {
+		out.ResponseFormat = responsesTextFormatToChatResponseFormat(req.Text.Format)
+placeholder
 
 	return out, nil
 placeholder

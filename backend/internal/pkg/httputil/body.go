@@ -16,6 +16,7 @@ import (
 const (
 	requestBodyReadInitCap    = 512
 	requestBodyReadMaxInitCap = 1 << 20
+	jsonUTF8BOMLen            = 3
 	// maxDecompressedBodySize limits the decompressed request body to 64 MB
 	// to prevent decompression bomb attacks.
 	maxDecompressedBodySize = 64 << 20
@@ -64,6 +65,16 @@ placeholder
 	return decoded, nil
 placeholder
 
+// ReadLenientJSONRequestBodyWithPrealloc reads a request body and normalizes
+// JSON string control bytes before strict validation.
+func ReadLenientJSONRequestBodyWithPrealloc(req *http.Request, maxNormalizedBytes int64) ([]byte, error) {
+	body, err := ReadRequestBodyWithPrealloc(req)
+	if err != nil {
+		return nil, err
+placeholder
+	return NormalizeLenientJSONRequestBody(body, maxNormalizedBytes)
+placeholder
+
 func decompressRequestBody(encoding string, raw []byte) ([]byte, error) {
 	switch encoding {
 	case "zstd":
@@ -90,4 +101,78 @@ func decompressRequestBody(encoding string, raw []byte) ([]byte, error) {
 	default:
 		return nil, errors.New("unsupported Content-Encoding")
 placeholder
+placeholder
+
+// NormalizeLenientJSONRequestBody escapes raw control bytes that broken
+// OpenAI-compatible clients sometimes place inside JSON strings.
+func NormalizeLenientJSONRequestBody(body []byte, maxNormalizedBytes int64) ([]byte, error) {
+	if maxNormalizedBytes <= 0 {
+		maxNormalizedBytes = maxDecompressedBodySize
+placeholder
+
+	body = trimUTF8BOM(body)
+	if len(body) == 0 {
+		return body, nil
+placeholder
+	if int64(len(body)) > maxNormalizedBytes {
+		return nil, &http.MaxBytesError{Limit: maxNormalizedBytesplaceholder
+placeholder
+
+	var out []byte
+	inString := false
+	escaped := false
+	for i, b := range body {
+		if inString && isJSONControlByte(b) {
+			if out == nil {
+				capHint := len(body) + 6
+				if int64(capHint) > maxNormalizedBytes {
+					capHint = int(maxNormalizedBytes)
+			placeholder
+				out = make([]byte, 0, capHint)
+				out = append(out, body[:i]...)
+		placeholder
+			if int64(len(out)+6) > maxNormalizedBytes {
+				return nil, &http.MaxBytesError{Limit: maxNormalizedBytesplaceholder
+		placeholder
+			out = appendJSONUnicodeEscape(out, b)
+			escaped = false
+			continue
+	placeholder
+
+		switch {
+		case escaped:
+			escaped = false
+		case inString && b == '\\':
+			escaped = true
+		case b == '"':
+			inString = !inString
+	placeholder
+
+		if out != nil {
+			if int64(len(out)+1) > maxNormalizedBytes {
+				return nil, &http.MaxBytesError{Limit: maxNormalizedBytesplaceholder
+		placeholder
+			out = append(out, b)
+	placeholder
+placeholder
+	if out != nil {
+		return out, nil
+placeholder
+	return body, nil
+placeholder
+
+func trimUTF8BOM(body []byte) []byte {
+	if len(body) >= jsonUTF8BOMLen && body[0] == 0xef && body[1] == 0xbb && body[2] == 0xbf {
+		return body[jsonUTF8BOMLen:]
+placeholder
+	return body
+placeholder
+
+func isJSONControlByte(b byte) bool {
+	return b < 0x20 || b == 0x7f
+placeholder
+
+func appendJSONUnicodeEscape(dst []byte, b byte) []byte {
+	const hex = "0123456789abcdef"
+	return append(dst, '\\', 'u', '0', '0', hex[b>>4], hex[b&0x0f])
 placeholder

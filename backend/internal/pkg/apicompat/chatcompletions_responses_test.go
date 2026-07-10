@@ -242,6 +242,62 @@ placeholder
 	assert.Equal(t, "auto", resp.Reasoning.Summary)
 placeholder
 
+func TestChatCompletionsToResponses_ResponseFormatJsonObject(t *testing.T) {
+	req := &ChatCompletionsRequest{
+		Model:          "gpt-4o",
+		Messages:       []ChatMessage{{Role: "user", Content: json.RawMessage(`"Return JSON"`)placeholderplaceholder,
+		ResponseFormat: json.RawMessage(`{"type":"json_object"placeholder`),
+placeholder
+
+	resp, err := ChatCompletionsToResponses(req)
+placeholder
+	require.NotNil(t, resp.Text)
+	assert.JSONEq(t, `{"type":"json_object"placeholder`, string(resp.Text.Format))
+
+	payload, err := json.Marshal(resp)
+placeholder
+	var serialized struct {
+		Text ResponsesText `json:"text"`
+placeholder
+	require.NoError(t, json.Unmarshal(payload, &serialized))
+	assert.JSONEq(t, `{"type":"json_object"placeholder`, string(serialized.Text.Format))
+placeholder
+
+func TestChatCompletionsToResponses_ResponseFormatJsonSchema(t *testing.T) {
+	req := &ChatCompletionsRequest{
+		Model:    "gpt-4o",
+		Messages: []ChatMessage{{Role: "user", Content: json.RawMessage(`"Return structured JSON"`)placeholderplaceholder,
+		ResponseFormat: json.RawMessage(`{
+			"type":"json_schema",
+			"json_schema":{
+				"name":"answer",
+				"schema":{
+					"type":"object",
+					"properties":{"ok":{"type":"boolean"placeholderplaceholder,
+					"required":["ok"],
+					"additionalProperties":false
+			placeholder,
+				"strict":true
+		placeholder
+	placeholder`),
+placeholder
+
+	resp, err := ChatCompletionsToResponses(req)
+placeholder
+	require.NotNil(t, resp.Text)
+	assert.JSONEq(t, `{
+		"type":"json_schema",
+		"name":"answer",
+		"schema":{
+			"type":"object",
+			"properties":{"ok":{"type":"boolean"placeholderplaceholder,
+			"required":["ok"],
+			"additionalProperties":false
+	placeholder,
+		"strict":true
+placeholder`, string(resp.Text.Format))
+placeholder
+
 func TestChatCompletionsToResponses_ImageURL(t *testing.T) {
 	content := `[{"type":"text","text":"Describe this"placeholder,{"type":"image_url","image_url":{"url":"data:image/png;base64,abc123"placeholderplaceholder]`
 	req := &ChatCompletionsRequest{

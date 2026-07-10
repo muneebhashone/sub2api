@@ -10,10 +10,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+)
+
+const (
+	grokComposerImageBridgeVisionModel     = "grok-build-0.1"
+	grokComposerImageBridgeMaxOutputTokens = 512
 )
 
 func (s *OpenAIGatewayService) forwardGrokResponses(
@@ -144,6 +150,16 @@ placeholder
 			out, err = sjson.DeleteBytes(out, unsupportedField)
 			if err != nil {
 				return nil, err
+		placeholder
+	placeholder
+placeholder
+	if strings.EqualFold(upstreamModel, "grok-4.5") {
+		for _, unsupportedField := range []string{"presence_penalty", "presencePenalty", "frequency_penalty", "frequencyPenalty", "stop"placeholder {
+			if gjson.GetBytes(out, unsupportedField).Exists() {
+				out, err = sjson.DeleteBytes(out, unsupportedField)
+				if err != nil {
+					return nil, err
+			placeholder
 		placeholder
 	placeholder
 placeholder
@@ -307,6 +323,303 @@ placeholder
 		return true
 placeholder
 	return false
+placeholder
+
+func (s *OpenAIGatewayService) bridgeGrokComposerImageInputs(
+	ctx context.Context,
+	c *gin.Context,
+	account *Account,
+	body []byte,
+	token string,
+) ([]byte, OpenAIUsage, bool, error) {
+	if !shouldBridgeGrokComposerImageInputs(body) {
+		return body, OpenAIUsage{placeholder, false, nil
+placeholder
+
+	var reqBody map[string]any
+	if err := json.Unmarshal(body, &reqBody); err != nil {
+		return body, OpenAIUsage{placeholder, false, fmt.Errorf("parse grok composer image bridge request: %w", err)
+placeholder
+
+	imageURLs := collectGrokComposerImageURLs(reqBody)
+	if len(imageURLs) == 0 {
+		return body, OpenAIUsage{placeholder, false, nil
+placeholder
+
+	descriptions := make([]string, 0, len(imageURLs))
+	var bridgeUsage OpenAIUsage
+	for index, imageURL := range imageURLs {
+		description, usage, err := s.describeGrokComposerImage(ctx, c, account, token, imageURL, index+1)
+		if err != nil {
+			return body, bridgeUsage, false, err
+	placeholder
+		descriptions = append(descriptions, description)
+		addOpenAIUsage(&bridgeUsage, usage)
+placeholder
+
+	if !rewriteGrokComposerImagesAsText(reqBody, descriptions) {
+		return body, bridgeUsage, false, nil
+placeholder
+	bridgedBody, err := marshalOpenAIUpstreamJSON(reqBody)
+	if err != nil {
+		return body, bridgeUsage, false, fmt.Errorf("serialize grok composer image bridge request: %w", err)
+placeholder
+	return bridgedBody, bridgeUsage, true, nil
+placeholder
+
+func shouldBridgeGrokComposerImageInputs(body []byte) bool {
+	if len(body) == 0 || !isGrokComposerModel(gjson.GetBytes(body, "model").String()) {
+		return false
+placeholder
+	messages := gjson.GetBytes(body, "messages")
+	if !messages.Exists() {
+		return false
+placeholder
+	return openAIJSONValueMayContainImageInput(messages)
+placeholder
+
+func isGrokComposerModel(model string) bool {
+	model = strings.TrimSpace(strings.ToLower(model))
+	if model == "" {
+		return false
+placeholder
+	if strings.Contains(model, "/") {
+		parts := strings.Split(model, "/")
+		model = strings.TrimSpace(parts[len(parts)-1])
+placeholder
+	return strings.Contains(model, "composer")
+placeholder
+
+func collectGrokComposerImageURLs(reqBody map[string]any) []string {
+	messages, ok := reqBody["messages"].([]any)
+	if !ok {
+		return nil
+placeholder
+
+	var imageURLs []string
+	for _, msg := range messages {
+		msgMap, ok := msg.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		parts, ok := msgMap["content"].([]any)
+		if !ok {
+			continue
+	placeholder
+		for _, part := range parts {
+			if imageURL := grokComposerImageURLFromPart(part); imageURL != "" {
+				imageURLs = append(imageURLs, imageURL)
+		placeholder
+	placeholder
+placeholder
+	return imageURLs
+placeholder
+
+func grokComposerImageURLFromPart(part any) string {
+	partMap, ok := part.(map[string]any)
+	if !ok {
+		return ""
+placeholder
+	if strings.TrimSpace(strings.ToLower(fmt.Sprint(partMap["type"]))) != "image_url" {
+		return ""
+placeholder
+	switch imageURL := partMap["image_url"].(type) {
+	case string:
+		return normalizeGrokComposerImageURL(imageURL)
+	case map[string]any:
+		raw, _ := imageURL["url"].(string)
+		return normalizeGrokComposerImageURL(raw)
+	default:
+		return ""
+placeholder
+placeholder
+
+func normalizeGrokComposerImageURL(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || isEmptyBase64DataURI(trimmed) {
+		return ""
+placeholder
+	return trimmed
+placeholder
+
+func (s *OpenAIGatewayService) describeGrokComposerImage(
+	ctx context.Context,
+	c *gin.Context,
+	account *Account,
+	token string,
+	imageURL string,
+	index int,
+) (string, OpenAIUsage, error) {
+	body, err := buildGrokComposerImageDescriptionBody(imageURL, index)
+	if err != nil {
+		return "", OpenAIUsage{placeholder, err
+placeholder
+
+	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
+	upstreamReq, err := buildGrokResponsesRequest(upstreamCtx, c, account, body, token)
+	releaseUpstreamCtx()
+	if err != nil {
+		return "", OpenAIUsage{placeholder, fmt.Errorf("build grok composer image bridge request: %w", err)
+placeholder
+
+	proxyURL := ""
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+
+	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	if err != nil {
+		return "", OpenAIUsage{placeholder, s.handleOpenAIUpstreamTransportError(ctx, c, account, err, false)
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	if resp.StatusCode >= 400 {
+		respBody := s.readUpstreamErrorBody(resp)
+		s.updateGrokUsageSnapshot(ctx, account.ID, xai.ParseQuotaHeaders(resp.Header, resp.StatusCode))
+		upstreamMsg := sanitizeUpstreamErrorMessage(extractUpstreamErrorMessage(respBody))
+		if upstreamMsg == "" {
+			upstreamMsg = fmt.Sprintf("xAI image bridge upstream returned status %d", resp.StatusCode)
+	placeholder
+		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+			Platform:           account.Platform,
+			AccountID:          account.ID,
+			AccountName:        account.Name,
+			UpstreamStatusCode: resp.StatusCode,
+			UpstreamRequestID:  firstNonEmpty(resp.Header.Get("x-request-id"), resp.Header.Get("xai-request-id")),
+			Kind:               "failover",
+			Message:            upstreamMsg,
+	placeholder)
+		s.handleGrokAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+		if s.shouldFailoverUpstreamError(resp.StatusCode) {
+			return "", OpenAIUsage{placeholder, &UpstreamFailoverError{
+				StatusCode:             resp.StatusCode,
+				ResponseBody:           respBody,
+				RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
+		placeholder
+	placeholder
+		return "", OpenAIUsage{placeholder, fmt.Errorf("grok composer image bridge upstream error: %s", upstreamMsg)
+placeholder
+
+	s.updateGrokUsageSnapshot(ctx, account.ID, xai.ParseQuotaHeaders(resp.Header, resp.StatusCode))
+	respBody, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, nil)
+	if err != nil {
+		return "", OpenAIUsage{placeholder, fmt.Errorf("read grok composer image bridge response: %w", err)
+placeholder
+
+	var parsed apicompat.ResponsesResponse
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return "", OpenAIUsage{placeholder, fmt.Errorf("parse grok composer image bridge response: %w", err)
+placeholder
+	description := strings.TrimSpace(grokResponsesOutputText(&parsed))
+	if description == "" {
+		return "", copyOpenAIUsageFromResponsesUsage(parsed.Usage), fmt.Errorf("grok composer image bridge returned empty description")
+placeholder
+	return description, copyOpenAIUsageFromResponsesUsage(parsed.Usage), nil
+placeholder
+
+func buildGrokComposerImageDescriptionBody(imageURL string, index int) ([]byte, error) {
+	prompt := fmt.Sprintf("Describe image %d in concise, factual text for a downstream coding/composer model. Include visible text, UI elements, diagrams, errors, and spatial relationships. Do not mention that you are an image analysis bridge.", index)
+	req := map[string]any{
+		"model":             grokComposerImageBridgeVisionModel,
+		"stream":            false,
+		"store":             false,
+		"max_output_tokens": grokComposerImageBridgeMaxOutputTokens,
+		"input": []any{
+			map[string]any{
+				"type": "message",
+				"role": "user",
+				"content": []any{
+					map[string]any{"type": "input_text", "text": promptplaceholder,
+					map[string]any{"type": "input_image", "image_url": imageURLplaceholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	return marshalOpenAIUpstreamJSON(req)
+placeholder
+
+func grokResponsesOutputText(resp *apicompat.ResponsesResponse) string {
+	if resp == nil {
+		return ""
+placeholder
+	var parts []string
+	for _, output := range resp.Output {
+		for _, content := range output.Content {
+			if content.Type == "output_text" || content.Type == "text" || content.Type == "input_text" {
+				if text := strings.TrimSpace(content.Text); text != "" {
+					parts = append(parts, text)
+			placeholder
+		placeholder
+	placeholder
+placeholder
+	return strings.Join(parts, "\n\n")
+placeholder
+
+func rewriteGrokComposerImagesAsText(reqBody map[string]any, descriptions []string) bool {
+	messages, ok := reqBody["messages"].([]any)
+	if !ok {
+		return false
+placeholder
+
+	imageIndex := 0
+	changed := false
+	for _, msg := range messages {
+		msgMap, ok := msg.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		parts, ok := msgMap["content"].([]any)
+		if !ok {
+			continue
+	placeholder
+		var textParts []string
+		messageChanged := false
+		for _, part := range parts {
+			if imageURL := grokComposerImageURLFromPart(part); imageURL != "" {
+				if imageIndex < len(descriptions) {
+					textParts = append(textParts, fmt.Sprintf("Image %d description: %s", imageIndex+1, strings.TrimSpace(descriptions[imageIndex])))
+			placeholder
+				imageIndex++
+				messageChanged = true
+				continue
+		placeholder
+			if text := grokComposerTextFromPart(part); text != "" {
+				textParts = append(textParts, text)
+		placeholder
+	placeholder
+		if messageChanged {
+			msgMap["content"] = strings.Join(textParts, "\n\n")
+			changed = true
+	placeholder
+placeholder
+	return changed
+placeholder
+
+func grokComposerTextFromPart(part any) string {
+	partMap, ok := part.(map[string]any)
+	if !ok {
+		return ""
+placeholder
+	partType := strings.TrimSpace(strings.ToLower(fmt.Sprint(partMap["type"])))
+	switch partType {
+	case "text", "input_text":
+		text, _ := partMap["text"].(string)
+		return strings.TrimSpace(text)
+	default:
+		return ""
+placeholder
+placeholder
+
+func addOpenAIUsage(dst *OpenAIUsage, usage OpenAIUsage) {
+	if dst == nil {
+		return
+placeholder
+	dst.InputTokens += usage.InputTokens
+	dst.ImageInputTokens += usage.ImageInputTokens
+	dst.OutputTokens += usage.OutputTokens
+	dst.CacheCreationInputTokens += usage.CacheCreationInputTokens
+	dst.CacheReadInputTokens += usage.CacheReadInputTokens
+	dst.ImageOutputTokens += usage.ImageOutputTokens
 placeholder
 
 func buildGrokResponsesRequest(ctx context.Context, c *gin.Context, account *Account, body []byte, token string) (*http.Request, error) {
