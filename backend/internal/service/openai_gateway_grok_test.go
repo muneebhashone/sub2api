@@ -569,7 +569,7 @@ placeholder
 	require.Equal(t, int64(63), accountID)
 placeholder
 
-func TestForwardGrokMediaErrorHonorsCustomErrorCodes(t *testing.T) {
+func TestForwardGrokMedia429ReconcilesRateLimitBeforeCustomErrorBypass(t *testing.T) {
 	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
 	gin.SetMode(gin.TestMode)
 
@@ -589,18 +589,20 @@ placeholder
 			"api_key":                    "api-key",
 			"base_url":                   "https://xai.test/v1",
 			"custom_error_codes_enabled": true,
-			"custom_error_codes":         []any{float64(http.StatusTooManyRequests)placeholder,
+			"custom_error_codes":         []any{float64(http.StatusBadRequest)placeholder,
 	placeholder,
 placeholder
 	upstream := &httpUpstreamRecorder{resp: &http.Response{
-		StatusCode: http.StatusBadRequest,
+		StatusCode: http.StatusTooManyRequests,
 		Header: http.Header{
 			"Content-Type":   []string{"application/json"placeholder,
 			"Xai-Request-Id": []string{"xai-error-req"placeholder,
+			"Retry-After":    []string{"45"placeholder,
 	placeholder,
 		Body: io.NopCloser(strings.NewReader(`{"error":{"message":"do not expose this upstream detail"placeholderplaceholder`)),
 placeholderplaceholder
-	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{httpUpstream: upstream, accountRepo: repoplaceholder
 
 	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointImagesGenerations, "", body, "application/json")
 placeholder
@@ -608,6 +610,9 @@ placeholder
 	require.Equal(t, http.StatusInternalServerError, recorder.Code)
 	require.Contains(t, recorder.Body.String(), "Upstream gateway error")
 	require.NotContains(t, recorder.Body.String(), "do not expose")
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.Zero(t, repo.tempUnschedCalls)
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
 placeholder
 
 func TestForwardAsChatCompletionsForGrokUsesXAIChatCompletionsAndSnapshots(t *testing.T) {
@@ -1137,7 +1142,7 @@ placeholder, "\n")
 placeholder
 placeholder
 
-func TestHandleGrokAccountUpstreamErrorTempUnschedulesReadinessStates(t *testing.T) {
+func TestHandleGrokAccountUpstreamErrorTempUnschedulesNonRateLimitStates(t *testing.T) {
 	tests := []struct {
 		name            string
 		status          int
@@ -1161,12 +1166,11 @@ placeholder{
 			wantMaxCooldown: 30*time.Minute + time.Second,
 	placeholder,
 		{
-			name:            "rate limited retry after",
-			status:          http.StatusTooManyRequests,
-			headers:         http.Header{"Retry-After": []string{"45"placeholderplaceholder,
-			wantReason:      "grok rate limited",
-			wantMinCooldown: 44 * time.Second,
-			wantMaxCooldown: 46 * time.Second,
+			name:            "upstream temporary error",
+			status:          http.StatusInternalServerError,
+			wantReason:      "grok upstream temporary error",
+			wantMinCooldown: 2*time.Minute - time.Second,
+			wantMaxCooldown: 2*time.Minute + time.Second,
 	placeholder,
 placeholder
 
@@ -1181,6 +1185,7 @@ placeholder
 
 			require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
 			require.Equal(t, 1, repo.tempUnschedCalls)
+			require.Zero(t, repo.rateLimitedCalls)
 			require.Equal(t, account.ID, repo.lastTempUnschedID)
 			require.Equal(t, tt.wantReason, repo.lastTempUnschedReason)
 			require.True(t, repo.lastTempUnschedUntil.After(before.Add(tt.wantMinCooldown)))
@@ -1189,10 +1194,83 @@ placeholder
 placeholder
 placeholder
 
-func TestHandleGrokAccountUpstreamErrorDoesNotShortenExistingPause(t *testing.T) {
+func TestHandleGrokAccountUpstreamError429SetsRateLimitedFromRetryAfter(t *testing.T) {
+	account := &Account{ID: 61, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	before := time.Now()
+
+	svc.handleGrokAccountUpstreamError(context.Background(), account, http.StatusTooManyRequests, http.Header{"Retry-After": []string{"45"placeholderplaceholder, nil)
+
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.Equal(t, account.ID, repo.lastRateLimitedID)
+	require.WithinDuration(t, before.Add(45*time.Second), repo.lastRateLimitResetAt, time.Second)
+	require.Zero(t, repo.tempUnschedCalls)
+placeholder
+
+func TestHandleGrokAccountUpstreamError429UsesLatestExhaustedWindowReset(t *testing.T) {
+	now := time.Now()
+	requestReset := now.Add(10 * time.Minute).Truncate(time.Second)
+	tokenReset := now.Add(20 * time.Minute).Truncate(time.Second)
+	headers := http.Header{
+		"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
+		"X-Ratelimit-Remaining-Requests": []string{"0"placeholder,
+		"X-Ratelimit-Reset-Requests":     []string{fmt.Sprintf("%d", requestReset.Unix())placeholder,
+		"X-Ratelimit-Limit-Tokens":       []string{"1000"placeholder,
+		"X-Ratelimit-Remaining-Tokens":   []string{"0"placeholder,
+		"X-Ratelimit-Reset-Tokens":       []string{fmt.Sprintf("%d", tokenReset.Unix())placeholder,
+placeholder
+	account := &Account{ID: 62, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+
+	svc.handleGrokAccountUpstreamError(context.Background(), account, http.StatusTooManyRequests, headers, nil)
+
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.WithinDuration(t, tokenReset, repo.lastRateLimitResetAt, time.Second)
+	require.Zero(t, repo.tempUnschedCalls)
+placeholder
+
+func TestHandleGrokAccountUpstreamError429UsesFallbackReset(t *testing.T) {
+	account := &Account{ID: 63, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	before := time.Now()
+
+	svc.handleGrokAccountUpstreamError(context.Background(), account, http.StatusTooManyRequests, nil, nil)
+
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.WithinDuration(t, before.Add(grokRateLimitFallbackCooldown), repo.lastRateLimitResetAt, time.Second)
+	require.Zero(t, repo.tempUnschedCalls)
+placeholder
+
+func TestGrokRateLimitResetAtUsesFutureWindowAfterRetryAfterExpires(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	observedAt := now.Add(-2 * time.Minute)
+	windowReset := now.Add(15 * time.Minute)
+	retryAfter := 30
+	snapshot := &xai.QuotaSnapshot{
+		StatusCode:        http.StatusTooManyRequests,
+		UpdatedAt:         observedAt.Format(time.RFC3339),
+		RetryAfterSeconds: &retryAfter,
+		Requests: &xai.QuotaWindow{
+			Limit:     grokInt64PtrForTest(10),
+			Remaining: grokInt64PtrForTest(0),
+			ResetUnix: grokInt64PtrForTest(windowReset.Unix()),
+	placeholder,
+placeholder
+
+	resetAt, limited := grokRateLimitResetAt(snapshot, now)
+
+	require.True(t, limited)
+	require.WithinDuration(t, windowReset, resetAt, time.Second)
+placeholder
+
+func TestHandleGrokAccountUpstreamError429DoesNotShortenExistingPause(t *testing.T) {
 	existingUntil := time.Now().Add(15 * time.Minute)
 	account := &Account{
-		ID:                      62,
+		ID:                      64,
 		Platform:                PlatformGrok,
 		Type:                    AccountTypeOAuth,
 		TempUnschedulableUntil:  &existingUntil,
@@ -1203,11 +1281,167 @@ placeholder
 
 	svc.handleGrokAccountUpstreamError(context.Background(), account, http.StatusTooManyRequests, http.Header{"Retry-After": []string{"45"placeholderplaceholder, nil)
 
-	require.Equal(t, 1, repo.tempUnschedCalls)
-	require.WithinDuration(t, existingUntil, repo.lastTempUnschedUntil, time.Second)
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.WithinDuration(t, time.Now().Add(45*time.Second), repo.lastRateLimitResetAt, time.Second)
+	require.Zero(t, repo.tempUnschedCalls)
 	value, ok := svc.openaiAccountRuntimeBlockUntil.Load(account.ID)
 	require.True(t, ok)
 	runtimeUntil, ok := value.(time.Time)
 	require.True(t, ok)
 	require.WithinDuration(t, existingUntil, runtimeUntil, time.Second)
+placeholder
+
+func TestUpdateGrokUsageSnapshotExhaustedSuccessBypassesThrottleAndSetsRateLimited(t *testing.T) {
+	account := &Account{ID: 65, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{
+		accountRepo:           repo,
+		codexSnapshotThrottle: newAccountWriteThrottle(time.Hour),
+placeholder
+	now := time.Now()
+
+	// Consume the normal snapshot write allowance first.
+	svc.updateGrokUsageSnapshot(context.Background(), account, &xai.QuotaSnapshot{
+		StatusCode: http.StatusOK,
+		Requests: &xai.QuotaWindow{
+			Limit:     grokInt64PtrForTest(10),
+			Remaining: grokInt64PtrForTest(9),
+	placeholder,
+		UpdatedAt: now.UTC().Format(time.RFC3339),
+placeholder)
+	resetAt := now.Add(30 * time.Minute).Truncate(time.Second)
+	svc.updateGrokUsageSnapshot(context.Background(), account, &xai.QuotaSnapshot{
+		StatusCode: http.StatusOK,
+		Requests: &xai.QuotaWindow{
+			Limit:     grokInt64PtrForTest(10),
+			Remaining: grokInt64PtrForTest(0),
+			ResetUnix: grokInt64PtrForTest(resetAt.Unix()),
+			ResetAt:   resetAt.UTC().Format(time.RFC3339),
+	placeholder,
+		UpdatedAt: now.UTC().Format(time.RFC3339),
+placeholder)
+
+	require.Equal(t, 2, repo.updateCalls)
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.Equal(t, account.ID, repo.lastRateLimitedID)
+	require.WithinDuration(t, resetAt, repo.lastRateLimitResetAt, time.Second)
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestUpdateGrokUsageSnapshotAvailableSuccessDoesNotSetRateLimited(t *testing.T) {
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	account := &Account{ID: 66, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+
+	svc.updateGrokUsageSnapshot(context.Background(), account, &xai.QuotaSnapshot{
+		StatusCode: http.StatusOK,
+		Requests: &xai.QuotaWindow{
+			Limit:     grokInt64PtrForTest(10),
+			Remaining: grokInt64PtrForTest(1),
+	placeholder,
+		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+placeholder)
+
+	require.Equal(t, 1, repo.updateCalls)
+	require.Zero(t, repo.rateLimitedCalls)
+placeholder
+
+func TestUpdateGrokUsageSnapshotExhaustedSuccessWithoutResetUsesFallback(t *testing.T) {
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	account := &Account{ID: 67, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	before := time.Now()
+
+	svc.updateGrokUsageSnapshot(context.Background(), account, &xai.QuotaSnapshot{
+		StatusCode: http.StatusOK,
+		Tokens: &xai.QuotaWindow{
+			Limit:     grokInt64PtrForTest(2_000_000),
+			Remaining: grokInt64PtrForTest(0),
+	placeholder,
+		UpdatedAt: before.UTC().Format(time.RFC3339),
+placeholder)
+
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.WithinDuration(t, before.Add(grokRateLimitFallbackCooldown), repo.lastRateLimitResetAt, time.Second)
+	stored, ok := repo.updates[account.ID][grokQuotaSnapshotExtraKey].(*xai.QuotaSnapshot)
+	require.True(t, ok)
+	require.NotNil(t, stored.Tokens.ResetUnix)
+	paused, _ := shouldAutoPauseGrokQuotaWindow("tokens", stored.Tokens, before.Add(time.Second))
+	require.True(t, paused)
+	paused, _ = shouldAutoPauseGrokQuotaWindow("tokens", stored.Tokens, repo.lastRateLimitResetAt.Add(time.Second))
+	require.False(t, paused)
+placeholder
+
+func TestOpenAIWSHTTPBridgeGrok429PersistsRateLimit(t *testing.T) {
+	repo := &grokQuotaAccountRepo{placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Header:     http.Header{"Retry-After": []string{"45"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"rate limited"placeholderplaceholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{accountRepo: repo, httpUpstream: upstreamplaceholder
+	account := &Account{ID: 68, Platform: PlatformGrok, Type: AccountTypeOAuth, Concurrency: 1placeholder
+	before := time.Now()
+
+	result, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), nil, account, "token",
+		[]byte(`{"type":"response.create","model":"grok-4.3","input":"hi"placeholder`),
+		64, "grok-4.3", "", "", "", "cache-id", 1,
+		func([]byte) error { return nil placeholder,
+	)
+
+placeholder
+	require.Nil(t, result)
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.WithinDuration(t, before.Add(45*time.Second), repo.lastRateLimitResetAt, time.Second)
+	require.Zero(t, repo.tempUnschedCalls)
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestOpenAIWSHTTPBridgeGrokExhaustedSuccessPersistsRateLimit(t *testing.T) {
+	repo := &grokQuotaAccountRepo{placeholder
+	resetAt := time.Now().Add(20 * time.Minute).UTC().Truncate(time.Second)
+	resp := grokMessagesSSECompletedResponse("resp_ws_limited", 0)
+	resp.Header.Set("X-Ratelimit-Limit-Requests", "10")
+	resp.Header.Set("X-Ratelimit-Remaining-Requests", "0")
+	resp.Header.Set("X-Ratelimit-Reset-Requests", fmt.Sprintf("%d", resetAt.Unix()))
+	upstream := &httpUpstreamRecorder{resp: respplaceholder
+	svc := &OpenAIGatewayService{accountRepo: repo, httpUpstream: upstreamplaceholder
+	account := &Account{ID: 69, Platform: PlatformGrok, Type: AccountTypeOAuth, Concurrency: 1placeholder
+
+	result, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), nil, account, "token",
+		[]byte(`{"type":"response.create","model":"grok-4.3","input":"hi"placeholder`),
+		64, "grok-4.3", "", "", "", "cache-id", 1,
+		func([]byte) error { return nil placeholder,
+	)
+
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.WithinDuration(t, resetAt, repo.lastRateLimitResetAt, time.Second)
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestFailoverOpenAIUpstreamHTTPErrorUsesOnlyGrokRateLimitPolicy(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	account := &Account{ID: 70, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	resp := &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Header:     http.Header{"Retry-After": []string{"45"placeholderplaceholder,
+placeholder
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	failoverErr := svc.failoverOpenAIUpstreamHTTPError(
+		context.Background(), c, account, resp,
+		[]byte(`{"error":{"message":"rate limited"placeholderplaceholder`), "rate limited", "grok-4.3",
+	)
+
+	require.NotNil(t, failoverErr)
+	require.Equal(t, 1, repo.rateLimitedCalls)
+	require.Zero(t, repo.tempUnschedCalls)
 placeholder

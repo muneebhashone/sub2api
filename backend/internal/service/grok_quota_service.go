@@ -91,9 +91,16 @@ placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
 	snapshot := xai.ObserveQuotaHeaders(resp.Header, resp.StatusCode, "active_probe")
+	resetAt, limited := grokRateLimitResetAt(snapshot, time.Now())
+	if limited {
+		normalizeGrokExhaustedWindowResets(snapshot, resetAt, time.Now())
+placeholder
 	_ = s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{
 		grokQuotaSnapshotExtraKey: snapshot,
 placeholder)
+	if limited {
+		persistGrokRateLimit(ctx, s.accountRepo, account, resetAt)
+placeholder
 
 	result := &GrokQuotaProbeResult{
 		Source:          "active_probe",
