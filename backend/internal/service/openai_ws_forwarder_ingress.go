@@ -421,6 +421,10 @@ placeholder
 			storeDisabled,
 		)
 		currentBridgePayload := firstPayload
+		// Keep the first turn as the stable conversation seed. The mapped model
+		// is resolved again for each turn below so an in-connection model switch
+		// cannot reuse another model's upstream cache identity.
+		grokCacheSeedPayload := firstPayload.payloadRaw
 		var bridgeReplayInput []json.RawMessage
 		bridgeReplayInputExists := false
 		for turn := 1; ; turn++ {
@@ -469,6 +473,13 @@ placeholder
 					openAIWSRawPayloadHasToolCallOutput(currentBridgePayload.payloadRaw),
 				)
 		placeholder
+			grokCacheIdentity := ""
+			if account.Platform == PlatformGrok {
+				grokCacheIdentity, err = resolveGrokWSCacheIdentity(c, account, grokCacheSeedPayload, currentBridgePayload.originalModel)
+				if err != nil {
+					return fmt.Errorf("resolve Grok websocket cache identity: %w", err)
+			placeholder
+		placeholder
 			result, bridgeErr := s.proxyOpenAIWSHTTPBridgeTurn(
 				ctx,
 				c,
@@ -480,6 +491,7 @@ placeholder
 				currentBridgePayload.imageBillingModel,
 				currentBridgePayload.imageSizeTier,
 				currentBridgePayload.imageInputSize,
+				grokCacheIdentity,
 				turn,
 				writeClientMessage,
 			)
