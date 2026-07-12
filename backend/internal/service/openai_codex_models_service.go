@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,8 +27,8 @@ type CodexModelsManifest struct {
 	NotModified bool
 placeholder
 
-// FetchCodexModelsManifest fetches the live Codex models manifest from the
-// ChatGPT backend using the account's OAuth credentials.
+// FetchCodexModelsManifest fetches the live Codex models manifest from either
+// the ChatGPT backend for OAuth accounts or a custom upstream for API key accounts.
 //
 // The response body is passed through verbatim: the manifest schema evolves
 // with Codex client releases, and interpreting it here would force the gateway
@@ -41,24 +42,61 @@ placeholder
 	if err != nil {
 		return nil, infraerrors.Newf(http.StatusInternalServerError, "OPENAI_CODEX_MODELS_CREDENTIALS_FAILED", "resolve credential account: %v", err)
 placeholder
-	accessToken := credAccount.GetOpenAIAccessToken()
-	if accessToken == "" {
-		return nil, infraerrors.New(http.StatusBadGateway, "OPENAI_CODEX_MODELS_TOKEN_MISSING", "account has no Codex backend access token")
-placeholder
 
 	clientVersion = strings.TrimSpace(clientVersion)
 	if clientVersion == "" {
 		clientVersion = openAICodexProbeVersion
 placeholder
-	requestURL := chatgptCodexModelsURL + "?client_version=" + url.QueryEscape(clientVersion)
+
+	requestEndpoint := chatgptCodexModelsURL
+	authToken := ""
+	useAPIKeyUpstream := false
+	appendModelsPath := false
+	switch {
+	case credAccount.IsOpenAIOAuth():
+		authToken = strings.TrimSpace(credAccount.GetOpenAIAccessToken())
+		if authToken == "" {
+			return nil, infraerrors.New(http.StatusBadGateway, "OPENAI_CODEX_MODELS_TOKEN_MISSING", "account has no Codex backend access token")
+	placeholder
+	case credAccount.IsOpenAIApiKey():
+		baseURL := strings.TrimSpace(credAccount.GetCredential("base_url"))
+		if baseURL == "" || isOfficialOpenAIModelsBaseURL(baseURL) {
+			return nil, infraerrors.New(
+				http.StatusBadGateway,
+				"OPENAI_CODEX_MODELS_API_KEY_UPSTREAM_UNSUPPORTED",
+				"Codex models manifest requires a custom API key upstream base URL",
+			)
+	placeholder
+		authToken = strings.TrimSpace(credAccount.GetOpenAIApiKey())
+		if authToken == "" {
+			return nil, infraerrors.New(http.StatusBadGateway, "OPENAI_CODEX_MODELS_API_KEY_MISSING", "account has no API key for the Codex models upstream")
+	placeholder
+		normalizedBaseURL, validateErr := s.validateUpstreamBaseURL(baseURL)
+		if validateErr != nil {
+			return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_CODEX_MODELS_API_KEY_UPSTREAM_INVALID", "invalid Codex models upstream base URL: %v", validateErr)
+	placeholder
+		requestEndpoint = normalizedBaseURL
+		useAPIKeyUpstream = true
+		appendModelsPath = true
+	default:
+		return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_CODEX_MODELS_ACCOUNT_TYPE_UNSUPPORTED", "account type %q cannot fetch the Codex models manifest", credAccount.Type)
+placeholder
+
+	requestURL, err := buildCodexModelsManifestURL(requestEndpoint, appendModelsPath, clientVersion)
+	if err != nil {
+		if useAPIKeyUpstream {
+			return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_CODEX_MODELS_API_KEY_UPSTREAM_INVALID", "invalid Codex models upstream base URL: %v", err)
+	placeholder
+		return nil, infraerrors.Newf(http.StatusInternalServerError, "OPENAI_CODEX_MODELS_REQUEST_FAILED", "parse codex models request URL: %v", err)
+placeholder
 
 	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, requestURL, nil)
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, requestURL.String(), nil)
 	if err != nil {
 		return nil, infraerrors.Newf(http.StatusInternalServerError, "OPENAI_CODEX_MODELS_REQUEST_FAILED", "create codex models request: %v", err)
 placeholder
-	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Authorization", "Bearer "+authToken)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Originator", "codex_cli_rs")
 	req.Header.Set("Version", clientVersion)
@@ -66,22 +104,35 @@ placeholder
 	if ifNoneMatch = strings.TrimSpace(ifNoneMatch); ifNoneMatch != "" {
 		req.Header.Set("If-None-Match", ifNoneMatch)
 placeholder
-	setOpenAIChatGPTAccountHeaders(req.Header, credAccount)
+	if useAPIKeyUpstream {
+		credAccount.ApplyHeaderOverrides(req.Header)
+placeholder else {
+		setOpenAIChatGPTAccountHeaders(req.Header, credAccount)
+placeholder
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 placeholder
-	client, err := httpclient.GetClient(httpclient.Options{
-		ProxyURL:              proxyURL,
-		Timeout:               15 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
-placeholder)
-	if err != nil {
-		return nil, infraerrors.Newf(http.StatusInternalServerError, "OPENAI_CODEX_MODELS_PROXY_INVALID", "invalid proxy configuration: %v", err)
-placeholder
 
-	resp, err := client.Do(req)
+	var resp *http.Response
+	if useAPIKeyUpstream {
+		if s.httpUpstream == nil {
+			return nil, infraerrors.New(http.StatusInternalServerError, "OPENAI_CODEX_MODELS_UPSTREAM_NOT_CONFIGURED", "Codex models upstream HTTP client is not configured")
+	placeholder
+		req = req.WithContext(WithHTTPUpstreamProfile(req.Context(), HTTPUpstreamProfileOpenAI))
+		resp, err = s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
+placeholder else {
+		client, clientErr := httpclient.GetClient(httpclient.Options{
+			ProxyURL:              proxyURL,
+			Timeout:               15 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+	placeholder)
+		if clientErr != nil {
+			return nil, infraerrors.Newf(http.StatusInternalServerError, "OPENAI_CODEX_MODELS_PROXY_INVALID", "invalid proxy configuration: %v", clientErr)
+	placeholder
+		resp, err = client.Do(req)
+placeholder
 	if err != nil {
 		return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_CODEX_MODELS_UPSTREAM_FAILED", "codex models manifest request failed: %v", err)
 placeholder
@@ -104,4 +155,36 @@ placeholder
 		return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_CODEX_MODELS_UPSTREAM_FAILED", "read codex models manifest response: %v", err)
 placeholder
 	return &CodexModelsManifest{Body: body, ETag: resp.Header.Get("ETag")placeholder, nil
+placeholder
+
+func isOfficialOpenAIModelsBaseURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return false
+placeholder
+	hostname := strings.TrimSuffix(parsed.Hostname(), ".")
+	return strings.EqualFold(hostname, "api.openai.com")
+placeholder
+
+func buildCodexModelsManifestURL(endpoint string, appendModelsPath bool, clientVersion string) (*url.URL, error) {
+	requestURL, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+placeholder
+	if requestURL.Fragment != "" {
+		return nil, fmt.Errorf("URL fragments are not supported")
+placeholder
+
+	query := requestURL.Query()
+	requestURL.RawQuery = ""
+	requestURL.ForceQuery = false
+	if appendModelsPath {
+		requestURL, err = url.Parse(buildOpenAIModelsURL(requestURL.String()))
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
+	query.Set("client_version", clientVersion)
+	requestURL.RawQuery = query.Encode()
+	return requestURL, nil
 placeholder
