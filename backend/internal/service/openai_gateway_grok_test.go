@@ -42,6 +42,50 @@ placeholder
 	require.Equal(t, "high", gjson.GetBytes(patched, "reasoning.effort").String())
 placeholder
 
+func TestPatchGrokResponsesBodySanitizesComposerReasoningParameters(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		upstreamModel string
+		wantReasoning bool
+placeholder{
+		{name: "composer fast", upstreamModel: "grok-composer-2.5-fast"placeholder,
+		{name: "composer shorthand", upstreamModel: "grok-composer"placeholder,
+		{name: "composer legacy alias", upstreamModel: "composer-2.5"placeholder,
+		{name: "provider-prefixed composer", upstreamModel: "xai/grok-composer-2.5-fast"placeholder,
+		{name: "grok 4.5", upstreamModel: "grok-4.5", wantReasoning: trueplaceholder,
+placeholder
+
+	body := []byte(`{
+		"model": "grok",
+		"input": "hello",
+		"reasoning": {"effort": "medium", "summary": "auto"placeholder,
+		"reasoning_effort": "medium",
+		"reasoningEffort": "medium"
+placeholder`)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			patched, err := patchGrokResponsesBody(body, tt.upstreamModel)
+		placeholder
+			require.True(t, json.Valid(patched))
+			require.Equal(t, tt.upstreamModel, gjson.GetBytes(patched, "model").String())
+
+			if tt.wantReasoning {
+				require.Equal(t, "medium", gjson.GetBytes(patched, "reasoning.effort").String())
+				require.Equal(t, "medium", gjson.GetBytes(patched, "reasoning_effort").String())
+				require.Equal(t, "medium", gjson.GetBytes(patched, "reasoningEffort").String())
+				return
+		placeholder
+
+			require.False(t, gjson.GetBytes(patched, "reasoning").Exists())
+			require.False(t, gjson.GetBytes(patched, "reasoning_effort").Exists())
+			require.False(t, gjson.GetBytes(patched, "reasoningEffort").Exists())
+	placeholder)
+placeholder
+placeholder
+
 func TestExtractGrokResponsesReasoningEffortSupportsOpenAICompatibleField(t *testing.T) {
 	t.Parallel()
 
