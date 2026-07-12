@@ -34,6 +34,51 @@ placeholder
 	assert.Equal(t, "wait", out.Tools[1].Function.Name)
 placeholder
 
+func TestResponsesToChatCompletionsRequest_AdditionalToolsItem(t *testing.T) {
+	req := &ResponsesRequest{
+		Model: "gpt-test",
+		Input: json.RawMessage(`[
+			{"type":"additional_tools","role":"developer","tools":[
+				{"type":"custom","name":"exec","description":"Run PowerShell","format":{"type":"text"placeholderplaceholder,
+				{"type":"function","name":"wait","parameters":{"type":"object","properties":{placeholderplaceholderplaceholder,
+				{"type":"namespace","name":"collaboration","tools":[
+					{"type":"function","name":"send_message","parameters":{"type":"object","properties":{placeholderplaceholderplaceholder
+				]placeholder
+			]placeholder,
+			{"type":"message","role":"user","content":[{"type":"input_text","text":"run Get-Location"placeholder]placeholder
+		]`),
+		ToolChoice: json.RawMessage(`"auto"`),
+placeholder
+
+	effective, err := EffectiveResponsesTools(req)
+placeholder
+	require.Len(t, effective, 3)
+	assert.True(t, CustomToolNames(effective)["exec"])
+	assert.Equal(t, NamespacedToolName{Namespace: "collaboration", Name: "send_message"placeholder, NamespaceToolNames(effective)["collaboration__send_message"])
+
+	out, err := ResponsesToChatCompletionsRequest(req)
+placeholder
+	require.Len(t, out.Tools, 3)
+	assert.Equal(t, "exec", out.Tools[0].Function.Name)
+	assert.Equal(t, "wait", out.Tools[1].Function.Name)
+	assert.Equal(t, "collaboration__send_message", out.Tools[2].Function.Name)
+	assert.JSONEq(t, `"auto"`, string(out.ToolChoice))
+
+	require.Len(t, out.Messages, 1, "additional_tools must not become a chat message")
+	assert.Equal(t, "user", out.Messages[0].Role)
+placeholder
+
+func TestEffectiveResponsesTools_SkipsStringInputItems(t *testing.T) {
+	req := &ResponsesRequest{
+		Input: json.RawMessage(`["plain input",{"type":"additional_tools","tools":[{"type":"custom","name":"exec"placeholder]placeholder]`),
+placeholder
+
+	tools, err := EffectiveResponsesTools(req)
+placeholder
+	require.Len(t, tools, 1)
+	assert.Equal(t, "exec", tools[0].Name)
+placeholder
+
 func TestResponsesToChatCompletionsRequest_DropsToolChoiceWhenNoConvertibleTools(t *testing.T) {
 	req := &ResponsesRequest{
 		Model: "glm-5.2",
