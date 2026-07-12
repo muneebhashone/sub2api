@@ -160,6 +160,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	SetActualOpenAIUpstreamEndpoint(c, grokChatRawEndpoint)
 	customUA := account.GetOpenAIUserAgent()
 	if customUA == "" && account.Platform == PlatformGrok {
 		customUA = "sub2api-grok/1.0"
@@ -213,6 +214,7 @@ placeholder else {
 placeholder
 	if result != nil {
 		addOpenAIUsage(&result.Usage, bridgeUsage)
+		result.UpstreamEndpoint = grokChatRawEndpoint
 placeholder
 	return result, forwardErr
 placeholder
