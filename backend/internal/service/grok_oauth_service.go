@@ -235,7 +235,7 @@ placeholder
 	if tokenInfo.EntitlementStatus != "" {
 		creds["entitlement_status"] = tokenInfo.EntitlementStatus
 placeholder
-	creds["base_url"] = xai.DefaultBaseURL
+	creds["base_url"] = xai.DefaultCLIBaseURL
 	return creds
 placeholder
 
