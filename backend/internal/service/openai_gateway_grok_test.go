@@ -42,6 +42,50 @@ placeholder
 	require.Equal(t, "high", gjson.GetBytes(patched, "reasoning.effort").String())
 placeholder
 
+func TestPatchGrokResponsesBodySanitizesComposerReasoningParameters(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		upstreamModel string
+		wantReasoning bool
+placeholder{
+		{name: "composer fast", upstreamModel: "grok-composer-2.5-fast"placeholder,
+		{name: "composer shorthand", upstreamModel: "grok-composer"placeholder,
+		{name: "composer legacy alias", upstreamModel: "composer-2.5"placeholder,
+		{name: "provider-prefixed composer", upstreamModel: "xai/grok-composer-2.5-fast"placeholder,
+		{name: "grok 4.5", upstreamModel: "grok-4.5", wantReasoning: trueplaceholder,
+placeholder
+
+	body := []byte(`{
+		"model": "grok",
+		"input": "hello",
+		"reasoning": {"effort": "medium", "summary": "auto"placeholder,
+		"reasoning_effort": "medium",
+		"reasoningEffort": "medium"
+placeholder`)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			patched, err := patchGrokResponsesBody(body, tt.upstreamModel)
+		placeholder
+			require.True(t, json.Valid(patched))
+			require.Equal(t, tt.upstreamModel, gjson.GetBytes(patched, "model").String())
+
+			if tt.wantReasoning {
+				require.Equal(t, "medium", gjson.GetBytes(patched, "reasoning.effort").String())
+				require.Equal(t, "medium", gjson.GetBytes(patched, "reasoning_effort").String())
+				require.Equal(t, "medium", gjson.GetBytes(patched, "reasoningEffort").String())
+				return
+		placeholder
+
+			require.False(t, gjson.GetBytes(patched, "reasoning").Exists())
+			require.False(t, gjson.GetBytes(patched, "reasoning_effort").Exists())
+			require.False(t, gjson.GetBytes(patched, "reasoningEffort").Exists())
+	placeholder)
+placeholder
+placeholder
+
 func TestExtractGrokResponsesReasoningEffortSupportsOpenAICompatibleField(t *testing.T) {
 	t.Parallel()
 
@@ -160,6 +204,45 @@ placeholder
 	require.True(t, json.Valid(patched))
 	require.False(t, gjson.GetBytes(patched, "tools").Exists())
 	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
+placeholder
+
+func TestPatchGrokResponsesBodyDropsCodexAdditionalToolsInputItems(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok",
+		"input": [
+			{
+				"type": "additional_tools",
+				"role": "developer",
+				"tools": [
+					{"type": "namespace", "name": "image_gen"placeholder,
+					{"type": "function", "name": "wait"placeholder
+				]
+		placeholder,
+			{
+				"type": "message",
+				"role": "developer",
+				"content": [{"type": "input_text", "text": "system prompt"placeholder]
+		placeholder,
+			{
+				"type": "message",
+				"role": "user",
+				"content": [{"type": "input_text", "text": "hello"placeholder]
+		placeholder
+		]
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.5")
+placeholder
+	require.True(t, json.Valid(patched))
+	require.Equal(t, "grok-4.5", gjson.GetBytes(patched, "model").String())
+	require.Equal(t, 2, len(gjson.GetBytes(patched, "input").Array()))
+	require.False(t, gjson.GetBytes(patched, `input.#(type=="additional_tools")`).Exists())
+	require.Equal(t, "developer", gjson.GetBytes(patched, "input.0.role").String())
+	require.Equal(t, "system prompt", gjson.GetBytes(patched, "input.0.content.0.text").String())
+	require.Equal(t, "user", gjson.GetBytes(patched, "input.1.role").String())
+	require.Equal(t, "hello", gjson.GetBytes(patched, "input.1.content.0.text").String())
 placeholder
 
 func TestBuildGrokResponsesRequestUsesAccountBaseURLAndBearerToken(t *testing.T) {
@@ -754,6 +837,150 @@ placeholder
 	require.NotNil(t, repo.updates[52][grokQuotaSnapshotExtraKey])
 placeholder
 
+func TestForwardGrokResponsesAPIKeyUsesXAIResponses(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok","input":"hi","stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          53,
+		Name:        "grok-api-key",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 2,
+placeholder
+			"api_key":  "xai-test-key",
+			"base_url": "https://api.x.ai/v1",
+	placeholder,
+placeholder
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.output_text.delta","sequence_number":0,"delta":"ok"placeholder`,
+		"",
+		`data: {"type":"response.completed","sequence_number":1,"response":{"id":"resp_grok_api_key","model":"grok-4.5","usage":{"input_tokens":2,"output_tokens":1placeholderplaceholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	result, err := svc.forwardGrokResponses(context.Background(), c, account, body, "grok", true, time.Now())
+placeholder
+	require.Equal(t, "https://api.x.ai/v1/responses", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer xai-test-key", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "grok-4.5", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.Equal(t, "resp_grok_api_key", result.ResponseID)
+	require.Equal(t, 2, result.Usage.InputTokens)
+	require.Equal(t, 1, result.Usage.OutputTokens)
+placeholder
+
+func TestAccountTestServiceGrokAPIKeyUsesXAIResponses(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	account := &Account{
+		ID:          54,
+		Name:        "grok-api-key",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 2,
+placeholder
+			"api_key":  "xai-test-key",
+			"base_url": "https://api.x.ai/v1",
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body: io.NopCloser(strings.NewReader(
+			"data: {\"type\":\"response.output_text.delta\",\"delta\":\"ok\"placeholder\n\n" +
+				"data: {\"type\":\"response.completed\"placeholder\n\n",
+		)),
+placeholderplaceholder
+	svc := &AccountTestService{httpUpstream: upstreamplaceholder
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/54/test", nil)
+
+	err := svc.testGrokAccountConnection(c, account, "grok")
+placeholder
+	require.Equal(t, "https://api.x.ai/v1/responses", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer xai-test-key", upstream.lastReq.Header.Get("Authorization"))
+	require.Contains(t, recorder.Body.String(), `"type":"test_complete"`)
+placeholder
+
+func TestForwardAsChatCompletionsForGrokStreamingUsesRawXAIChatCompletions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok","messages":[{"role":"user","content":"hi"placeholder],"stream":trueplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          53,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token": "access-token",
+			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"base_url":     xai.DefaultCLIBaseURL,
+	placeholder,
+placeholder
+	repo := &grokQuotaAccountRepo{
+		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{53: accountplaceholder,
+	placeholder,
+placeholder
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_grok","object":"chat.completion.chunk","model":"grok-4.3","choices":[{"index":0,"delta":{"content":"ok"placeholderplaceholder]placeholder`,
+		"",
+		`data: {"id":"chatcmpl_grok","object":"chat.completion.chunk","model":"grok-4.3","choices":[],"usage":{"prompt_tokens":6,"completion_tokens":4,"total_tokens":10,"prompt_tokens_details":{"cached_tokens":1placeholderplaceholderplaceholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type":                   []string{"text/event-stream"placeholder,
+			"X-Request-Id":                   []string{"chat-stream-req"placeholder,
+			"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
+			"X-Ratelimit-Remaining-Requests": []string{"7"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:               rawChatCompletionsTestConfig(),
+		httpUpstream:      upstream,
+		grokTokenProvider: NewGrokTokenProvider(repo, nil),
+		accountRepo:       repo,
+placeholder
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "")
+placeholder
+	require.Equal(t, xai.DefaultCLIBaseURL+"/chat/completions", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer access-token", upstream.lastReq.Header.Get("Authorization"))
+	require.Equal(t, "text/event-stream", upstream.lastReq.Header.Get("Accept"))
+	require.Equal(t, "sub2api-grok/1.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "grok-4.5", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.True(t, gjson.GetBytes(upstream.lastBody, "stream_options.include_usage").Bool())
+	require.True(t, result.Stream)
+	require.Equal(t, 6, result.Usage.InputTokens)
+	require.Equal(t, 4, result.Usage.OutputTokens)
+	require.Equal(t, 1, result.Usage.CacheReadInputTokens)
+	require.Contains(t, recorder.Body.String(), "data: [DONE]")
+	require.NotNil(t, repo.updates[53][grokQuotaSnapshotExtraKey])
+placeholder
+
 func TestForwardGrokResponsesNonStreamingUsesCacheIdentityAndCachedUsage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -1159,14 +1386,14 @@ placeholder{
 		{
 			name:            "unauthorized reauth",
 			status:          http.StatusUnauthorized,
-			wantReason:      "grok oauth token unauthorized",
+			wantReason:      "grok credentials unauthorized",
 			wantMinCooldown: 10*time.Minute - time.Second,
 			wantMaxCooldown: 10*time.Minute + time.Second,
 	placeholder,
 		{
 			name:            "forbidden entitlement",
 			status:          http.StatusForbidden,
-			wantReason:      "grok entitlement or subscription tier denied",
+			wantReason:      "grok access or entitlement denied",
 			wantMinCooldown: 30*time.Minute - time.Second,
 			wantMaxCooldown: 30*time.Minute + time.Second,
 	placeholder,
