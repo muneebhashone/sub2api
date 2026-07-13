@@ -42,6 +42,16 @@ placeholder
 	if normalized {
 		body = normalizedBody
 placeholder
+	if account.Type == AccountTypeOAuth {
+		body, err = flattenOpenAIResponsesNamespaces(c, body)
+		if err != nil {
+			setOpsUpstreamError(c, http.StatusBadRequest, err.Error(), "")
+			c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
+				"type": "invalid_request_error", "message": err.Error(), "param": "tools",
+		placeholderplaceholder)
+			return nil, err
+	placeholder
+placeholder
 
 	originalBody := body
 	requestView := newOpenAIRequestView(body)

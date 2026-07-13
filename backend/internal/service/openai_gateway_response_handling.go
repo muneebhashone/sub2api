@@ -305,6 +305,17 @@ placeholder
 				line = "data: " + data
 				eventType = strings.TrimSpace(gjson.GetBytes(dataBytes, "type").String())
 		placeholder
+			restoredData, restoreErr := restoreOpenAIResponsesNamespacePayload(c, dataBytes)
+			if restoreErr != nil {
+				streamEarlyErr = fmt.Errorf("restore OpenAI namespace response: %w", restoreErr)
+				return
+		placeholder
+			if !bytes.Equal(restoredData, dataBytes) {
+				dataBytes = restoredData
+				data = string(restoredData)
+				line = "data: " + data
+				eventType = strings.TrimSpace(gjson.GetBytes(dataBytes, "type").String())
+		placeholder
 			if sanitizedData, sanitized := sanitizeOpenAIResponseFailedEventForClient(
 				dataBytes,
 				eventType,
@@ -850,7 +861,10 @@ placeholder
 	if originalModel != mappedModel {
 		body = s.replaceModelInResponseBody(body, mappedModel, originalModel)
 placeholder
-
+	body, err = restoreOpenAIResponsesNamespacePayload(c, body)
+	if err != nil {
+		return nil, fmt.Errorf("restore OpenAI namespace response: %w", err)
+placeholder
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 
 	contentType := "application/json"
@@ -920,6 +934,11 @@ func (s *OpenAIGatewayService) handleSSEToJSON(resp *http.Response, c *gin.Conte
 	placeholder
 		// Correct tool calls in final response
 		body = s.correctToolCallsInResponseBody(body)
+		restoredBody, restoreErr := restoreOpenAIResponsesNamespacePayload(c, body)
+		if restoreErr != nil {
+			return nil, fmt.Errorf("restore OpenAI namespace response: %w", restoreErr)
+	placeholder
+		body = restoredBody
 placeholder else {
 		terminalType, terminalPayload, terminalOK := extractOpenAISSETerminalEvent(bodyText)
 		if terminalOK && terminalType == "response.failed" {
