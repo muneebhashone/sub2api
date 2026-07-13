@@ -469,6 +469,20 @@ placeholder
 	return _c
 placeholder
 
+// SetWebSearchPricePerCall sets the "web_search_price_per_call" field.
+func (_c *GroupCreate) SetWebSearchPricePerCall(v float64) *GroupCreate {
+	_c.mutation.SetWebSearchPricePerCall(v)
+	return _c
+placeholder
+
+// SetNillableWebSearchPricePerCall sets the "web_search_price_per_call" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableWebSearchPricePerCall(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetWebSearchPricePerCall(*v)
+placeholder
+	return _c
+placeholder
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_c *GroupCreate) SetClaudeCodeOnly(v bool) *GroupCreate {
 	_c.mutation.SetClaudeCodeOnly(v)
@@ -1218,6 +1232,10 @@ placeholder
 		_spec.SetField(group.FieldVideoPrice1080p, field.TypeFloat64, value)
 		_node.VideoPrice1080p = &value
 placeholder
+	if value, ok := _c.mutation.WebSearchPricePerCall(); ok {
+		_spec.SetField(group.FieldWebSearchPricePerCall, field.TypeFloat64, value)
+		_node.WebSearchPricePerCall = &value
+placeholder
 	if value, ok := _c.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
 		_node.ClaudeCodeOnly = value
@@ -1965,6 +1983,30 @@ placeholder
 // ClearVideoPrice1080p clears the value of the "video_price_1080p" field.
 func (u *GroupUpsert) ClearVideoPrice1080p() *GroupUpsert {
 	u.SetNull(group.FieldVideoPrice1080p)
+	return u
+placeholder
+
+// SetWebSearchPricePerCall sets the "web_search_price_per_call" field.
+func (u *GroupUpsert) SetWebSearchPricePerCall(v float64) *GroupUpsert {
+	u.Set(group.FieldWebSearchPricePerCall, v)
+	return u
+placeholder
+
+// UpdateWebSearchPricePerCall sets the "web_search_price_per_call" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateWebSearchPricePerCall() *GroupUpsert {
+	u.SetExcluded(group.FieldWebSearchPricePerCall)
+	return u
+placeholder
+
+// AddWebSearchPricePerCall adds v to the "web_search_price_per_call" field.
+func (u *GroupUpsert) AddWebSearchPricePerCall(v float64) *GroupUpsert {
+	u.Add(group.FieldWebSearchPricePerCall, v)
+	return u
+placeholder
+
+// ClearWebSearchPricePerCall clears the value of the "web_search_price_per_call" field.
+func (u *GroupUpsert) ClearWebSearchPricePerCall() *GroupUpsert {
+	u.SetNull(group.FieldWebSearchPricePerCall)
 	return u
 placeholder
 
@@ -2855,6 +2897,34 @@ placeholder
 func (u *GroupUpsertOne) ClearVideoPrice1080p() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearVideoPrice1080p()
+placeholder)
+placeholder
+
+// SetWebSearchPricePerCall sets the "web_search_price_per_call" field.
+func (u *GroupUpsertOne) SetWebSearchPricePerCall(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetWebSearchPricePerCall(v)
+placeholder)
+placeholder
+
+// AddWebSearchPricePerCall adds v to the "web_search_price_per_call" field.
+func (u *GroupUpsertOne) AddWebSearchPricePerCall(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddWebSearchPricePerCall(v)
+placeholder)
+placeholder
+
+// UpdateWebSearchPricePerCall sets the "web_search_price_per_call" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateWebSearchPricePerCall() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateWebSearchPricePerCall()
+placeholder)
+placeholder
+
+// ClearWebSearchPricePerCall clears the value of the "web_search_price_per_call" field.
+func (u *GroupUpsertOne) ClearWebSearchPricePerCall() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearWebSearchPricePerCall()
 placeholder)
 placeholder
 
@@ -3948,6 +4018,34 @@ placeholder
 func (u *GroupUpsertBulk) ClearVideoPrice1080p() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearVideoPrice1080p()
+placeholder)
+placeholder
+
+// SetWebSearchPricePerCall sets the "web_search_price_per_call" field.
+func (u *GroupUpsertBulk) SetWebSearchPricePerCall(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetWebSearchPricePerCall(v)
+placeholder)
+placeholder
+
+// AddWebSearchPricePerCall adds v to the "web_search_price_per_call" field.
+func (u *GroupUpsertBulk) AddWebSearchPricePerCall(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddWebSearchPricePerCall(v)
+placeholder)
+placeholder
+
+// UpdateWebSearchPricePerCall sets the "web_search_price_per_call" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateWebSearchPricePerCall() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateWebSearchPricePerCall()
+placeholder)
+placeholder
+
+// ClearWebSearchPricePerCall clears the value of the "web_search_price_per_call" field.
+func (u *GroupUpsertBulk) ClearWebSearchPricePerCall() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearWebSearchPricePerCall()
 placeholder)
 placeholder
 

@@ -654,16 +654,10 @@ placeholder
 	return s.processOpenAIStream(c, resp.Body)
 placeholder
 
-// testGrokAccountConnection tests a Grok OAuth account through xAI's Responses API.
+// testGrokAccountConnection tests a Grok OAuth or API-key account through xAI's Responses API.
 func (s *AccountTestService) testGrokAccountConnection(c *gin.Context, account *Account, modelID string) error {
 	ctx := c.Request.Context()
 
-	if account.Type != AccountTypeOAuth {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Unsupported Grok account type: %s", account.Type))
-placeholder
-	if s.grokTokenProvider == nil {
-		return s.sendErrorAndEnd(c, "Grok token provider not configured")
-placeholder
 	if s.httpUpstream == nil {
 		return s.sendErrorAndEnd(c, "HTTP upstream not configured")
 placeholder
@@ -676,9 +670,24 @@ placeholder
 		testModelID = mapped
 placeholder
 
-	authToken, err := s.grokTokenProvider.GetAccessToken(ctx, account)
-	if err != nil {
-		return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to get Grok access token: %s", err.Error()))
+	var authToken string
+	switch account.Type {
+	case AccountTypeOAuth:
+		if s.grokTokenProvider == nil {
+			return s.sendErrorAndEnd(c, "Grok token provider not configured")
+	placeholder
+		var err error
+		authToken, err = s.grokTokenProvider.GetAccessToken(ctx, account)
+		if err != nil {
+			return s.sendErrorAndEnd(c, fmt.Sprintf("Failed to get Grok access token: %s", err.Error()))
+	placeholder
+	case AccountTypeAPIKey:
+		authToken = strings.TrimSpace(account.GetCredential("api_key"))
+		if authToken == "" {
+			return s.sendErrorAndEnd(c, "Grok API key is missing")
+	placeholder
+	default:
+		return s.sendErrorAndEnd(c, fmt.Sprintf("Unsupported Grok account type: %s", account.Type))
 placeholder
 
 	apiURL, err := xai.BuildResponsesURL(account.GetGrokBaseURL())
@@ -710,7 +719,7 @@ placeholder
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+authToken)
-	req.Header.Set("User-Agent", "sub2api-grok/1.0")
+	applyGrokCLIHeaders(req.Header)
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -723,10 +732,19 @@ placeholder
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
-	if snapshot := xai.ParseQuotaHeaders(resp.Header, resp.StatusCode); snapshot != nil && s.accountRepo != nil {
+	now := time.Now()
+	snapshot := parseGrokQuotaSnapshot(resp.Header, resp.StatusCode, now)
+	if snapshot != nil && s.accountRepo != nil {
+		resetAt, limited := grokRateLimitResetAt(snapshot, now)
+		if limited {
+			normalizeGrokExhaustedWindowResets(snapshot, resetAt, now)
+	placeholder
 		_ = s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{
 			grokQuotaSnapshotExtraKey: snapshot,
 	placeholder)
+		if limited {
+			persistGrokRateLimit(ctx, s.accountRepo, account, resetAt)
+	placeholder
 placeholder
 
 	if resp.StatusCode != http.StatusOK {

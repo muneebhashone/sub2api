@@ -25,6 +25,7 @@ placeholder{
 		{"/v1/messages", EndpointMessagesplaceholder,
 		{"/v1/chat/completions", EndpointChatCompletionsplaceholder,
 		{"/v1/embeddings", EndpointEmbeddingsplaceholder,
+		{"/v1/alpha/search", EndpointAlphaSearchplaceholder,
 		{"/v1/responses", EndpointResponsesplaceholder,
 		{"/v1/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/v1/responses/compact/detail", EndpointResponsesCompactplaceholder,
@@ -50,11 +51,13 @@ placeholder{
 		{"/responses", EndpointResponsesplaceholder,
 		{"/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/responses/compact/detail", EndpointResponsesCompactplaceholder,
+		{"/alpha/search", EndpointAlphaSearchplaceholder,
 
 		// Bare Codex direct alias route — root vs. compact.
 		{"/backend-api/codex/responses", EndpointResponsesplaceholder,
 		{"/backend-api/codex/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/backend-api/codex/responses/compact/detail", EndpointResponsesCompactplaceholder,
+		{"/backend-api/codex/alpha/search", EndpointAlphaSearchplaceholder,
 
 		// Must NOT generalize to arbitrary paths merely ending in
 		// "/responses" (or "/responses/compact") that are unrelated to
@@ -119,8 +122,11 @@ placeholder{
 		{"openai from messages", EndpointMessages, "/v1/messages", service.PlatformOpenAI, EndpointResponsesplaceholder,
 		{"openai from completions", EndpointChatCompletions, "/v1/chat/completions", service.PlatformOpenAI, EndpointResponsesplaceholder,
 		{"openai embeddings", EndpointEmbeddings, "/v1/embeddings", service.PlatformOpenAI, EndpointEmbeddingsplaceholder,
+		{"openai alpha search", EndpointAlphaSearch, "/backend-api/codex/alpha/search", service.PlatformOpenAI, EndpointAlphaSearchplaceholder,
 		{"openai image generations", EndpointImagesGenerations, "/v1/images/generations", service.PlatformOpenAI, EndpointImagesGenerationsplaceholder,
 		{"openai image edits", EndpointImagesEdits, "/openai/v1/images/edits", service.PlatformOpenAI, EndpointImagesEditsplaceholder,
+		{"grok chat defaults to responses without runtime result", EndpointChatCompletions, "/v1/chat/completions", service.PlatformGrok, EndpointResponsesplaceholder,
+		{"grok responses", EndpointResponses, "/v1/responses", service.PlatformGrok, EndpointResponsesplaceholder,
 		{"grok video generations", EndpointVideosGenerations, "/v1/videos/generations", service.PlatformGrok, EndpointVideosGenerationsplaceholder,
 		{"grok video status", EndpointVideos, "/videos/req_123", service.PlatformGrok, EndpointVideosplaceholder,
 
@@ -134,6 +140,59 @@ placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.want, DeriveUpstreamEndpoint(tt.inbound, tt.rawPath, tt.platform))
+	placeholder)
+placeholder
+placeholder
+
+func TestResolveOpenAIUpstreamEndpointPrefersForwardResult(t *testing.T) {
+	tests := []struct {
+		name            string
+		account         *service.Account
+		result          *service.OpenAIForwardResult
+		runtimeEndpoint string
+		want            string
+placeholder{
+		{
+			name:            "grok raw chat result overrides stale context",
+			account:         &service.Account{Platform: service.PlatformGrok, Type: service.AccountTypeOAuthplaceholder,
+			result:          &service.OpenAIForwardResult{UpstreamEndpoint: EndpointChatCompletionsplaceholder,
+			runtimeEndpoint: EndpointResponses,
+			want:            EndpointChatCompletions,
+	placeholder,
+		{
+			name:    "grok chat bridged to responses",
+			account: &service.Account{Platform: service.PlatformGrok, Type: service.AccountTypeOAuthplaceholder,
+			result:  &service.OpenAIForwardResult{UpstreamEndpoint: EndpointResponsesplaceholder,
+			want:    EndpointResponses,
+	placeholder,
+		{
+			name:    "grok empty result keeps responses default",
+			account: &service.Account{Platform: service.PlatformGrok, Type: service.AccountTypeOAuthplaceholder,
+			result:  &service.OpenAIForwardResult{placeholder,
+			want:    EndpointResponses,
+	placeholder,
+		{
+			name:            "grok raw error uses runtime endpoint",
+			account:         &service.Account{Platform: service.PlatformGrok, Type: service.AccountTypeOAuthplaceholder,
+			runtimeEndpoint: EndpointChatCompletions,
+			want:            EndpointChatCompletions,
+	placeholder,
+		{
+			name:    "openai behavior remains responses",
+			account: &service.Account{Platform: service.PlatformOpenAI, Type: service.AccountTypeOAuthplaceholder,
+			result:  &service.OpenAIForwardResult{placeholder,
+			want:    EndpointResponses,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, EndpointChatCompletions, nil)
+			c.Set(ctxKeyInboundEndpoint, EndpointChatCompletions)
+			service.SetActualOpenAIUpstreamEndpoint(c, tt.runtimeEndpoint)
+			require.Equal(t, tt.want, resolveOpenAIUpstreamEndpoint(c, tt.account, tt.result))
 	placeholder)
 placeholder
 placeholder

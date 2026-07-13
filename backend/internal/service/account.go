@@ -6,6 +6,7 @@ import (
 	"errors"
 	"hash/fnv"
 	"log/slog"
+	"net/url"
 	"reflect"
 	"sort"
 	"strconv"
@@ -1263,10 +1264,37 @@ func (a *Account) GetGrokBaseURL() string {
 		return ""
 placeholder
 	baseURL := a.GetCredential("base_url")
+	if a.IsGrokOAuth() {
+		if strings.TrimSpace(baseURL) == "" || isOfficialGrokAPIBaseURL(baseURL) {
+			return xai.DefaultCLIBaseURL
+	placeholder
+placeholder
 	if baseURL != "" {
 		return baseURL
 placeholder
 	return xai.DefaultBaseURL
+placeholder
+
+func isOfficialGrokAPIBaseURL(raw string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || parsed == nil || parsed.Opaque != "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return false
+placeholder
+	defaultURL, err := url.Parse(xai.DefaultBaseURL)
+	if err != nil {
+		return false
+placeholder
+	if !strings.EqualFold(parsed.Scheme, defaultURL.Scheme) || !strings.EqualFold(parsed.Hostname(), defaultURL.Hostname()) {
+		return false
+placeholder
+	if port := parsed.Port(); port != "" {
+		portNumber, err := strconv.Atoi(port)
+		if err != nil || portNumber != 443 {
+			return false
+	placeholder
+placeholder
+	path := strings.TrimRight(parsed.Path, "/")
+	return path == "" || path == strings.TrimRight(defaultURL.Path, "/")
 placeholder
 
 func (a *Account) GetGrokAccessToken() string {

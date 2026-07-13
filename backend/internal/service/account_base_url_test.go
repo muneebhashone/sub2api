@@ -4,6 +4,9 @@ package service
 
 import (
 	"testing"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetBaseURL(t *testing.T) {
@@ -155,6 +158,138 @@ placeholder
 			if result != tt.expected {
 				t.Errorf("GetGeminiBaseURL() = %q, want %q", result, tt.expected)
 		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestGetGrokBaseURLUsesSubscriptionProxyForOAuth(t *testing.T) {
+	tests := []struct {
+		name     string
+		account  Account
+		expected string
+placeholder{
+		{
+			name: "oauth without base_url uses CLI subscription proxy",
+			account: Account{
+				Type:        AccountTypeOAuth,
+				Platform:    PlatformGrok,
+		placeholderplaceholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API default is migrated at runtime to CLI subscription proxy",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": xai.DefaultBaseURL,
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API default with trailing slash is migrated at runtime",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": xai.DefaultBaseURL + "/",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API root is migrated at runtime",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://api.x.ai",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API root with canonical HTTPS port is migrated at runtime",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "HTTPS://API.X.AI:443/",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API canonical port with leading zeroes is migrated at runtime",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://api.x.ai:0443/v1",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API encoded version path is migrated at runtime",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://api.x.ai/%76%31",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy API encoded trailing slash is migrated at runtime",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://api.x.ai/v1%2F",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultCLIBaseURL,
+	placeholder,
+		{
+			name: "oauth non-default API port remains an explicit override",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://api.x.ai:8443/v1",
+			placeholder,
+		placeholder,
+			expected: "https://api.x.ai:8443/v1",
+	placeholder,
+		{
+			name: "oauth explicit custom base_url remains supported",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://custom.example.com/v1",
+			placeholder,
+		placeholder,
+			expected: "https://custom.example.com/v1",
+	placeholder,
+		{
+			name: "API key without base_url uses official credit-backed API",
+			account: Account{
+				Type:        AccountTypeAPIKey,
+				Platform:    PlatformGrok,
+		placeholderplaceholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, tt.account.GetGrokBaseURL())
 	placeholder)
 placeholder
 placeholder

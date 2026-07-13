@@ -29,3 +29,10 @@ placeholder
 func apiKeyHasConfiguredVideoPrice(apiKey *APIKey, resolution string) bool {
 	return apiKey != nil && apiKey.Group != nil && apiKey.Group.GetVideoPrice(resolution) != nil
 placeholder
+
+func webSearchPricePerCallFromAPIKey(apiKey *APIKey) *float64 {
+	if apiKey == nil || apiKey.Group == nil {
+		return nil
+placeholder
+	return apiKey.Group.WebSearchPricePerCall
+placeholder
