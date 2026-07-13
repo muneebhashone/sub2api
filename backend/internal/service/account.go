@@ -1260,6 +1260,10 @@ placeholder
 		if strings.TrimSpace(baseURL) == "" || isOfficialGrokAPIBaseURL(baseURL) {
 			return xai.DefaultCLIBaseURL
 	placeholder
+		if _, err := xai.ValidateTrustedBaseURL(baseURL); err == nil {
+			return baseURL
+	placeholder
+		return xai.DefaultCLIBaseURL
 placeholder
 	if baseURL != "" {
 		return baseURL

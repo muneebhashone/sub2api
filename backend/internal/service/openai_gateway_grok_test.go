@@ -271,7 +271,22 @@ placeholder
 	require.Equal(t, `{"model":"grok-4.3"placeholder`, strings.TrimSpace(string(data)))
 placeholder
 
-func TestBuildGrokResponsesRequestRejectsUnsafeAccountBaseURL(t *testing.T) {
+func TestBuildGrokResponsesRequestAllowsPublicAPIKeyBaseURLByDefault(t *testing.T) {
+	account := &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"base_url": "https://grok.example.test/v1/",
+	placeholder,
+placeholder
+
+	req, err := buildGrokResponsesRequest(context.Background(), nil, account, []byte(`{"model":"grok-4.3"placeholder`), "api-key", "")
+placeholder
+	require.Equal(t, "https://grok.example.test/v1/responses", req.URL.String())
+	require.Equal(t, "Bearer api-key", req.Header.Get("Authorization"))
+placeholder
+
+func TestBuildGrokResponsesRequestPinsOAuthCustomBaseURLByDefault(t *testing.T) {
 	t.Parallel()
 
 	account := &Account{
@@ -282,9 +297,9 @@ placeholder
 	placeholder,
 placeholder
 
-	_, err := buildGrokResponsesRequest(context.Background(), nil, account, []byte(`{"model":"grok-4.3"placeholder`), "access-token", "")
+	req, err := buildGrokResponsesRequest(context.Background(), nil, account, []byte(`{"model":"grok-4.3"placeholder`), "access-token", "")
 placeholder
-	require.Contains(t, err.Error(), "invalid base url")
+	require.Equal(t, xai.DefaultCLIBaseURL+"/responses", req.URL.String())
 placeholder
 
 func TestGrokMediaGenerationGateCoversImagesAndVideo(t *testing.T) {
