@@ -266,7 +266,7 @@ placeholder{
 			expected: "https://api.x.ai:8443/v1",
 	placeholder,
 		{
-			name: "oauth explicit custom base_url remains supported",
+			name: "oauth explicit custom base_url stays pinned to CLI proxy by default",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
@@ -274,7 +274,7 @@ placeholder{
 					"base_url": "https://custom.example.com/v1",
 			placeholder,
 		placeholder,
-			expected: "https://custom.example.com/v1",
+			expected: xai.DefaultCLIBaseURL,
 	placeholder,
 		{
 			name: "API key without base_url uses official credit-backed API",
@@ -292,4 +292,17 @@ placeholder
 			require.Equal(t, tt.expected, tt.account.GetGrokBaseURL())
 	placeholder)
 placeholder
+placeholder
+
+func TestGetGrokBaseURLAllowsExplicitOAuthOverrideWhenUnsafeOverridesEnabled(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	account := Account{
+		Type:     AccountTypeOAuth,
+		Platform: PlatformGrok,
+placeholder
+			"base_url": "https://custom.example.com/v1",
+	placeholder,
+placeholder
+
+	require.Equal(t, "https://custom.example.com/v1", account.GetGrokBaseURL())
 placeholder
