@@ -6,7 +6,6 @@ import (
 	"errors"
 	"hash/fnv"
 	"log/slog"
-	"net/url"
 	"reflect"
 	"sort"
 	"strconv"
@@ -1294,36 +1293,6 @@ placeholder
 		return xai.DefaultCLIBaseURL
 placeholder
 	return a.GetGrokBaseURL()
-placeholder
-
-func isOfficialGrokAPIBaseURL(raw string) bool {
-	return isOfficialGrokBaseURL(raw, xai.DefaultBaseURL)
-placeholder
-
-func isOfficialGrokCLIBaseURL(raw string) bool {
-	return isOfficialGrokBaseURL(raw, xai.DefaultCLIBaseURL)
-placeholder
-
-func isOfficialGrokBaseURL(raw, expected string) bool {
-	parsed, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || parsed == nil || parsed.Opaque != "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-		return false
-placeholder
-	defaultURL, err := url.Parse(expected)
-	if err != nil {
-		return false
-placeholder
-	if !strings.EqualFold(parsed.Scheme, defaultURL.Scheme) || !strings.EqualFold(parsed.Hostname(), defaultURL.Hostname()) {
-		return false
-placeholder
-	if port := parsed.Port(); port != "" {
-		portNumber, err := strconv.Atoi(port)
-		if err != nil || portNumber != 443 {
-			return false
-	placeholder
-placeholder
-	path := strings.TrimRight(parsed.Path, "/")
-	return path == "" || path == strings.TrimRight(defaultURL.Path, "/")
 placeholder
 
 func (a *Account) GetGrokAccessToken() string {

@@ -105,7 +105,12 @@ placeholder
 
 func (s *OpenAIGatewayService) openAIAccountRuntimeBlockLock(accountID int64) *sync.Mutex {
 	actual, _ := s.openaiAccountRuntimeBlockLocks.LoadOrStore(accountID, &sync.Mutex{placeholder)
-	return actual.(*sync.Mutex)
+	mu, ok := actual.(*sync.Mutex)
+	if !ok {
+		mu = &sync.Mutex{placeholder
+		s.openaiAccountRuntimeBlockLocks.Store(accountID, mu)
+placeholder
+	return mu
 placeholder
 
 func (s *OpenAIGatewayService) blockAccountSchedulingLocked(account *Account, until time.Time, _ string) (uint64, bool) {
