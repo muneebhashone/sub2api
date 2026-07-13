@@ -177,6 +177,18 @@ placeholder
 	require.Equal(t, "https://openai.example.com/v1/models", openAIReq.URL.String())
 	require.Equal(t, "Bearer openai-key", openAIReq.Header.Get("Authorization"))
 
+	grokReq, err := svc.buildUpstreamModelsRequest(ctx, &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key":  "xai-key",
+			"base_url": "https://xai.example.com/v1",
+	placeholder,
+placeholder)
+placeholder
+	require.Equal(t, "https://xai.example.com/v1/models", grokReq.URL.String())
+	require.Equal(t, "Bearer xai-key", grokReq.Header.Get("Authorization"))
+
 	geminiReq, err := svc.buildGeminiUpstreamModelsRequest(ctx, &Account{
 placeholder
 		Type:     AccountTypeAPIKey,
@@ -200,6 +212,22 @@ placeholder)
 placeholder
 	require.Equal(t, "https://gateway.example.com/antigravity/v1/models", antigravityReq.URL.String())
 	require.Equal(t, "antigravity-key", antigravityReq.Header.Get("x-api-key"))
+placeholder
+
+func TestBuildUpstreamModelsRequestRejectsGrokOAuth(t *testing.T) {
+	t.Parallel()
+
+	svc := &AccountTestService{cfg: upstreamModelSyncTestConfig()placeholder
+	_, err := svc.buildUpstreamModelsRequest(context.Background(), &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder)
+placeholder
+
+	var syncErr *UpstreamModelSyncError
+	require.True(t, errors.As(err, &syncErr))
+	require.Equal(t, UpstreamModelSyncErrorUnsupported, syncErr.Kind)
+	require.Contains(t, syncErr.SafeMessage(), "Unsupported Grok account type")
 placeholder
 
 func TestBuildAntigravityAPIKeyModelsRequestRejectsOfficialCloudCodeBase(t *testing.T) {
@@ -263,6 +291,34 @@ placeholder
 	require.Equal(t, []string{"gpt-5", "o3"placeholder, models)
 	require.Equal(t, "https://openai.example.com/v1/models", upstream.lastReq.URL.String())
 	require.Equal(t, "Bearer openai-key", upstream.lastReq.Header.Get("Authorization"))
+placeholder
+
+func TestFetchUpstreamSupportedModelsParsesGrokAPIKeyResponse(t *testing.T) {
+	t.Parallel()
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"grok-4.5"placeholder,{"id":"grok-4.5"placeholder,{"id":"grok-imagine"placeholder]placeholder`)),
+placeholderplaceholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          upstreamModelSyncTestConfig(),
+placeholder
+
+	models, err := svc.FetchUpstreamSupportedModels(context.Background(), &Account{
+		ID:       9,
+		Platform: PlatformGrok,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key":  "xai-key",
+			"base_url": "https://xai.example.com/v1",
+	placeholder,
+placeholder)
+placeholder
+	require.Equal(t, []string{"grok-4.5", "grok-imagine"placeholder, models)
+	require.Equal(t, "https://xai.example.com/v1/models", upstream.lastReq.URL.String())
+	require.Equal(t, "Bearer xai-key", upstream.lastReq.Header.Get("Authorization"))
 placeholder
 
 func TestFetchUpstreamSupportedModelsDoesNotExposeUpstreamBody(t *testing.T) {

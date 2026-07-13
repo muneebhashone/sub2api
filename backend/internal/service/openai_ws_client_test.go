@@ -110,3 +110,7 @@ placeholder
 	require.NotNil(t, transport)
 	require.Equal(t, 10*time.Second, transport.TLSHandshakeTimeout)
 placeholder
+
+func TestCoderOpenAIWSClientConn_DoesNotSupportIdlePingWithoutReader(t *testing.T) {
+	require.False(t, (&coderOpenAIWSClientConn{placeholder).SupportsIdlePingWithoutReader())
+placeholder

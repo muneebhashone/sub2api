@@ -233,7 +233,7 @@ placeholder
 					h.handleResponsesFailoverExhausted(c, failoverErr, true)
 					return
 			placeholder
-				action := fs.HandleFailoverError(requestCtx, h.gatewayService, account.ID, account.Platform, failoverErr)
+				action := fs.HandleFailoverError(requestCtx, h.gatewayService, account.ID, account.Platform, account.GetPoolModeRetryCount(), failoverErr)
 				switch action {
 				case FailoverContinue:
 					continue
