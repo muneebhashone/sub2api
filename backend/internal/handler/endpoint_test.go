@@ -25,6 +25,7 @@ placeholder{
 		{"/v1/messages", EndpointMessagesplaceholder,
 		{"/v1/chat/completions", EndpointChatCompletionsplaceholder,
 		{"/v1/embeddings", EndpointEmbeddingsplaceholder,
+		{"/v1/alpha/search", EndpointAlphaSearchplaceholder,
 		{"/v1/responses", EndpointResponsesplaceholder,
 		{"/v1/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/v1/responses/compact/detail", EndpointResponsesCompactplaceholder,
@@ -50,11 +51,13 @@ placeholder{
 		{"/responses", EndpointResponsesplaceholder,
 		{"/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/responses/compact/detail", EndpointResponsesCompactplaceholder,
+		{"/alpha/search", EndpointAlphaSearchplaceholder,
 
 		// Bare Codex direct alias route — root vs. compact.
 		{"/backend-api/codex/responses", EndpointResponsesplaceholder,
 		{"/backend-api/codex/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/backend-api/codex/responses/compact/detail", EndpointResponsesCompactplaceholder,
+		{"/backend-api/codex/alpha/search", EndpointAlphaSearchplaceholder,
 
 		// Must NOT generalize to arbitrary paths merely ending in
 		// "/responses" (or "/responses/compact") that are unrelated to
@@ -119,6 +122,7 @@ placeholder{
 		{"openai from messages", EndpointMessages, "/v1/messages", service.PlatformOpenAI, EndpointResponsesplaceholder,
 		{"openai from completions", EndpointChatCompletions, "/v1/chat/completions", service.PlatformOpenAI, EndpointResponsesplaceholder,
 		{"openai embeddings", EndpointEmbeddings, "/v1/embeddings", service.PlatformOpenAI, EndpointEmbeddingsplaceholder,
+		{"openai alpha search", EndpointAlphaSearch, "/backend-api/codex/alpha/search", service.PlatformOpenAI, EndpointAlphaSearchplaceholder,
 		{"openai image generations", EndpointImagesGenerations, "/v1/images/generations", service.PlatformOpenAI, EndpointImagesGenerationsplaceholder,
 		{"openai image edits", EndpointImagesEdits, "/openai/v1/images/edits", service.PlatformOpenAI, EndpointImagesEditsplaceholder,
 		{"grok video generations", EndpointVideosGenerations, "/v1/videos/generations", service.PlatformGrok, EndpointVideosGenerationsplaceholder,
