@@ -178,7 +178,14 @@ placeholder
 	if result.ServiceTier != nil {
 		serviceTier = strings.TrimSpace(*result.ServiceTier)
 placeholder
-	longContextBillingEnabled := account.IsOpenAILongContextBillingEnabled()
+	billingAccount := account
+	if account.IsShadow() {
+		billingAccount, err = resolveCredentialAccount(ctx, s.accountRepo, account)
+		if err != nil {
+			return err
+	placeholder
+placeholder
+	longContextBillingEnabled := billingAccount.IsOpenAILongContextBillingEnabled()
 	cost, err = s.calculateOpenAIRecordUsageCost(
 		ctx,
 		result,

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,7 +69,74 @@ placeholder
 	return concurrency
 placeholder
 
+// ValidateOpenAILongContextBillingExtra validates the OpenAI account billing flag when present.
+func ValidateOpenAILongContextBillingExtra(platform string, extra map[string]any) error {
+	if platform != PlatformOpenAI {
+		return nil
+placeholder
+	raw, exists := extra[openAILongContextBillingEnabledKey]
+	if !exists {
+		return nil
+placeholder
+	if _, ok := raw.(bool); !ok {
+		return infraerrors.BadRequest(
+			"OPENAI_LONG_CONTEXT_BILLING_INVALID",
+			"openai_long_context_billing_enabled must be a boolean",
+		)
+placeholder
+	return nil
+placeholder
+
+func normalizeOpenAILongContextBillingExtra(platform string, extra map[string]any) (map[string]any, error) {
+	if platform != PlatformOpenAI {
+		return extra, nil
+placeholder
+	if err := ValidateOpenAILongContextBillingExtra(platform, extra); err != nil {
+		return nil, err
+placeholder
+
+	normalized := maps.Clone(extra)
+	if normalized == nil {
+		normalized = make(map[string]any, 1)
+placeholder
+	_, exists := normalized[openAILongContextBillingEnabledKey]
+	if !exists {
+		normalized[openAILongContextBillingEnabledKey] = true
+placeholder
+	return normalized, nil
+placeholder
+
+func normalizeOpenAILongContextBillingUpdateExtra(account *Account, input *UpdateAccountInput) (map[string]any, error) {
+	normalized, err := normalizeOpenAILongContextBillingExtra(account.Platform, input.Extra)
+	if err != nil || account.Platform != PlatformOpenAI {
+		return normalized, err
+placeholder
+
+	_, provided := input.Extra[openAILongContextBillingEnabledKey]
+	current, hasCurrent := account.Extra[openAILongContextBillingEnabledKey].(bool)
+	if !provided {
+		if hasCurrent {
+			normalized[openAILongContextBillingEnabledKey] = current
+	placeholder
+		return normalized, nil
+placeholder
+
+	incoming := normalized[openAILongContextBillingEnabledKey].(bool)
+	importSource, _ := input.Extra["import_source"].(string)
+	accessToken, _ := input.Credentials["access_token"].(string)
+	isCodexSessionImport := importSource == "codex_session" && strings.TrimSpace(accessToken) != ""
+	if hasCurrent && !current && incoming && isCodexSessionImport {
+		normalized[openAILongContextBillingEnabledKey] = false
+placeholder
+	return normalized, nil
+placeholder
+
 func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccountInput) (*Account, error) {
+	accountExtra, err := normalizeOpenAILongContextBillingExtra(input.Platform, input.Extra)
+	if err != nil {
+		return nil, err
+placeholder
+
 	// 绑定分组
 	groupIDs := input.GroupIDs
 	// 如果没有指定分组,自动绑定对应平台的默认分组
@@ -103,7 +171,7 @@ placeholder
 		Platform:    input.Platform,
 		Type:        input.Type,
 		Credentials: input.Credentials,
-		Extra:       input.Extra,
+		Extra:       accountExtra,
 		ProxyID:     input.ProxyID,
 		Concurrency: normalizeAccountConcurrency(input.Platform, input.Type, input.Concurrency),
 		Priority:    input.Priority,
@@ -183,6 +251,13 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	if err != nil {
 		return nil, err
 placeholder
+	var normalizedExtra map[string]any
+	if input.Extra != nil {
+		normalizedExtra, err = normalizeOpenAILongContextBillingUpdateExtra(account, input)
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
 	// 安全/身份不变量(影子账号):通用更新路径被 edit/re-auth/refresh/batch 共用,
 	// 必须在此守住,否则仅在创建时的保证可被这些路径绕过。
 	if account.IsCredentialShadow() {
@@ -238,10 +313,10 @@ placeholder
 		// 保留配额用量字段，防止编辑账号时意外重置
 		for _, key := range []string{"quota_used", "quota_daily_used", "quota_daily_start", "quota_weekly_used", "quota_weekly_start"placeholder {
 			if v, ok := account.Extra[key]; ok {
-				input.Extra[key] = v
+				normalizedExtra[key] = v
 		placeholder
 	placeholder
-		account.Extra = input.Extra
+		account.Extra = normalizedExtra
 		if account.Platform == PlatformAntigravity && wasOveragesEnabled && !account.IsOveragesEnabled() {
 			delete(account.Extra, "antigravity_credits_overages") // 清理旧版 overages 运行态
 			// 清除 AICredits 限流 key
@@ -353,6 +428,15 @@ placeholder
 // UpdateAccountExtra 仅对 Extra JSONB 做 key 级合并，避免覆盖其它运行态键
 // （如 model_rate_limits / passive_usage_* 等）。
 func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
+	if _, exists := updates[openAILongContextBillingEnabledKey]; exists {
+		account, err := s.accountRepo.GetByID(ctx, id)
+		if err != nil {
+			return err
+	placeholder
+		if err := ValidateOpenAILongContextBillingExtra(account.Platform, updates); err != nil {
+			return err
+	placeholder
+placeholder
 	if len(updates) == 0 {
 		return nil
 placeholder
@@ -386,15 +470,27 @@ placeholder
 placeholder
 
 	needMixedChannelCheck := input.GroupIDs != nil && !input.SkipMixedChannelCheck
+	_, hasLongContextBillingUpdate := input.Extra[openAILongContextBillingEnabledKey]
 
 	// 预取所有目标账号，供凭据守卫/代理守卫/混合渠道检查共用，避免多次 DB 查询。
 	var cachedTargets []*Account
-	if len(input.Credentials) > 0 || input.ProxyID != nil || needMixedChannelCheck {
+	if len(input.Credentials) > 0 || input.ProxyID != nil || needMixedChannelCheck || hasLongContextBillingUpdate {
 		loaded, err := s.accountRepo.GetByIDs(ctx, input.AccountIDs)
 		if err != nil {
 			return nil, err
 	placeholder
 		cachedTargets = loaded
+placeholder
+	if hasLongContextBillingUpdate {
+		for _, account := range cachedTargets {
+			if account == nil || account.Platform != PlatformOpenAI {
+				continue
+		placeholder
+			if err := ValidateOpenAILongContextBillingExtra(account.Platform, input.Extra); err != nil {
+				return nil, err
+		placeholder
+			break
+	placeholder
 placeholder
 
 	// 影子账号绝不持有凭据:批量更新携带凭据时,目标中不得含影子(外审 G5,与单账号
@@ -745,6 +841,9 @@ placeholder
 		Priority:        priority,
 		Concurrency:     concurrency,
 		Schedulable:     true,
+		Extra: map[string]any{
+			openAILongContextBillingEnabledKey: parent.IsOpenAILongContextBillingEnabled(),
+	placeholder,
 placeholder
 
 	// 5. 持久化（Create 填充 shadow.ID）。并发竞态:预查(步骤2)放行后另一请求抢先建成,本次会撞
