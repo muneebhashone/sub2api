@@ -1546,7 +1546,7 @@ placeholder
 
 func TestGetRequestCredentialSharedCredentialPersistenceFailureStopsWithoutAccountMutation(t *testing.T) {
 	account := expiredGrokOAuthAccountForCredentialTest(782)
-	repo := &tokenRefreshAccountRepo{updateErr: errors.New("database unavailable")placeholder
+	repo := &tokenRefreshAccountRepo{conditionalSuccessErr: errors.New("database unavailable")placeholder
 	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
 	cache := &grokTokenCacheForProviderTest{lockResult: trueplaceholder
 	provider := NewGrokTokenProvider(repo, cache)
@@ -1565,7 +1565,8 @@ placeholderplaceholder)
 	require.Equal(t, GatewayFailureScopeProvider, failoverErr.Scope)
 	require.Equal(t, GrokCredentialReasonProviderDown, failoverErr.Reason)
 	require.Equal(t, NextAccountStop, failoverErr.NextAccountAction)
-	require.Equal(t, 1, repo.updateCredentialsCalls)
+	require.Equal(t, 1, repo.conditionalSuccessCalls)
+	require.Zero(t, repo.updateCredentialsCalls)
 	require.Zero(t, repo.setErrorCalls)
 	require.Zero(t, repo.setTempUnschedCalls)
 	require.Empty(t, cache.deletedKeys)
