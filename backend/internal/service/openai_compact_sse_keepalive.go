@@ -43,12 +43,14 @@ func StartOpenAICompactSSEKeepalive(c *gin.Context, interval time.Duration) func
 	if c == nil || c.Writer == nil || interval <= 0 || !openAICompactClientWantsStream(c) {
 		return func() {placeholder
 placeholder
+	originalWriter := c.Writer
 	k := &openAICompactSSEKeepalive{
-		writer: c.Writer,
+		writer: originalWriter,
 		stop:   make(chan struct{placeholder),
 placeholder
 	c.Set(openAICompactSSEKeepaliveKey, k)
-	c.Writer = &openAICompactKeepaliveWriter{ResponseWriter: c.Writer, k: kplaceholder
+	wrappedWriter := &openAICompactKeepaliveWriter{ResponseWriter: originalWriter, k: kplaceholder
+	c.Writer = wrappedWriter
 
 	var reqDone <-chan struct{placeholder
 	if c.Request != nil {
@@ -71,7 +73,14 @@ placeholder
 			timer.Reset(interval)
 	placeholder
 placeholder()
-	return k.Stop
+	return func() {
+		k.Stop()
+		// Do not leave a pooled middleware writer reachable through the compact
+		// wrapper after the request finishes.
+		if current, ok := c.Writer.(*openAICompactKeepaliveWriter); ok && current == wrappedWriter {
+			c.Writer = originalWriter
+	placeholder
+placeholder
 placeholder
 
 // beat 在锁内提交（首次）响应头并写出一条 SSE 注释行；返回 false 表示心跳已
