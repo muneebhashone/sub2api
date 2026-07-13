@@ -26,6 +26,9 @@ type tokenRefreshAccountRepo struct {
 	lastExtraUpdates       map[string]any
 	lastAccount            *Account
 	updateErr              error
+	setErrorErr            error
+	setTempUnschedErr      error
+	beforeConditionalState func()
 placeholder
 
 func (r *tokenRefreshAccountRepo) Update(ctx context.Context, account *Account) error {
@@ -56,7 +59,7 @@ placeholder
 func (r *tokenRefreshAccountRepo) SetError(ctx context.Context, id int64, errorMsg string) error {
 	r.setErrorCalls++
 	r.lastErrorMessage = errorMsg
-	return nil
+	return r.setErrorErr
 placeholder
 
 func (r *tokenRefreshAccountRepo) ClearTempUnschedulable(ctx context.Context, id int64) error {
@@ -67,7 +70,66 @@ placeholder
 func (r *tokenRefreshAccountRepo) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
 	r.setTempUnschedCalls++
 	r.lastTempUnschedReason = reason
-	return nil
+	return r.setTempUnschedErr
+placeholder
+
+func (r *tokenRefreshAccountRepo) SetGrokCredentialErrorIfMatch(
+	_ context.Context,
+	id int64,
+	snapshot GrokCredentialMutationSnapshot,
+	errorMsg string,
+) (bool, error) {
+	if r.beforeConditionalState != nil {
+		hook := r.beforeConditionalState
+		r.beforeConditionalState = nil
+		hook()
+placeholder
+	account := r.accountsByID[id]
+	if !grokCredentialSnapshotMatchesAccount(account, snapshot) ||
+		(errorMsg == string(GrokCredentialReasonProxyInvalid) && account.Proxy != nil) {
+		return false, nil
+placeholder
+	r.setErrorCalls++
+	r.lastErrorMessage = errorMsg
+	if r.setErrorErr != nil {
+		return false, r.setErrorErr
+placeholder
+	account.Status = StatusError
+	account.Schedulable = false
+	account.ErrorMessage = errorMsg
+	return true, nil
+placeholder
+
+func (r *tokenRefreshAccountRepo) SetGrokCredentialTempUnschedulableIfMatch(
+	_ context.Context,
+	id int64,
+	snapshot GrokCredentialMutationSnapshot,
+	until time.Time,
+	reason string,
+) (bool, error) {
+	if r.beforeConditionalState != nil {
+		hook := r.beforeConditionalState
+		r.beforeConditionalState = nil
+		hook()
+placeholder
+	account := r.accountsByID[id]
+	if !grokCredentialSnapshotMatchesAccount(account, snapshot) {
+		return false, nil
+placeholder
+	r.setTempUnschedCalls++
+	r.lastTempUnschedReason = reason
+	if r.setTempUnschedErr != nil {
+		return false, r.setTempUnschedErr
+placeholder
+	value := until
+	account.TempUnschedulableUntil = &value
+	return true, nil
+placeholder
+
+func grokCredentialSnapshotMatchesAccount(account *Account, snapshot GrokCredentialMutationSnapshot) bool {
+	return account != nil && account.IsGrokOAuth() && account.IsSchedulable() &&
+		grokCredentialMutationSnapshot(account).CredentialsJSON == snapshot.CredentialsJSON &&
+		grokCredentialProxyIDsEqual(account.ProxyID, snapshot.ProxyID)
 placeholder
 
 func (r *tokenRefreshAccountRepo) UpdateExtra(ctx context.Context, id int64, updates map[string]any) error {
@@ -750,6 +812,7 @@ func TestPathA_Success(t *testing.T) {
 		ID:       100,
 placeholder
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 placeholder
 	repo := &tokenRefreshAccountRepo{placeholder
 	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
@@ -771,6 +834,7 @@ func TestPathA_LockHeld(t *testing.T) {
 		ID:       101,
 placeholder
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 placeholder
 	repo := &tokenRefreshAccountRepo{placeholder
 	invalidator := &tokenCacheInvalidatorStub{placeholder
@@ -791,6 +855,7 @@ func TestPathA_AlreadyRefreshed(t *testing.T) {
 		ID:       102,
 placeholder
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 placeholder
 	repo := &tokenRefreshAccountRepo{placeholder
 	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
@@ -830,6 +895,7 @@ func TestPathA_NonRetryableError(t *testing.T) {
 		ID:       103,
 placeholder
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 placeholder
 	repo := &tokenRefreshAccountRepo{placeholder
 	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
@@ -855,6 +921,7 @@ func TestPathA_RetryableErrorExhausted(t *testing.T) {
 		ID:       104,
 placeholder
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 placeholder
 	repo := &tokenRefreshAccountRepo{placeholder
 	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
@@ -888,6 +955,7 @@ func TestPathA_DBUpdateFailed(t *testing.T) {
 		ID:       105,
 placeholder
 		Type:     AccountTypeOAuth,
+		Status:   StatusActive,
 placeholder
 	repo := &tokenRefreshAccountRepo{updateErr: errors.New("db connection lost")placeholder
 	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
@@ -898,7 +966,7 @@ placeholder
 
 	err := service.refreshWithRetry(context.Background(), account, refresher, refresher, time.Hour)
 placeholder
-	require.Contains(t, err.Error(), "DB update failed")
+	require.ErrorIs(t, err, errOAuthRefreshCredentialPersist)
 	require.Equal(t, 1, repo.updateCalls)  // DB 更新被尝试
 	require.Equal(t, 0, invalidator.calls) // DB 失败时不应触发缓存失效
 placeholder

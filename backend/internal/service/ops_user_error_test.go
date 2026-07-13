@@ -17,6 +17,7 @@ placeholder{
 		{"request", "subscription_error", "quota"placeholder,
 		{"request", "invalid_request_error", "invalid_request"placeholder,
 		{"routing", "api_error", "service_unavailable"placeholder,
+		{"account_auth", "upstream_error", "upstream"placeholder,
 		{"upstream", "upstream_error", "upstream"placeholder,
 		{"network", "api_error", "upstream"placeholder,
 		{"internal", "api_error", "internal"placeholder,
@@ -43,7 +44,7 @@ placeholder
 		t.Fatalf("service_unavailable => phases=%v types=%v", phases, types)
 placeholder
 	phases, types = CategoryToFilter("upstream")
-	if len(phases) != 2 || phases[0] != "upstream" || phases[1] != "network" || len(types) != 0 {
+	if len(phases) != 3 || phases[0] != "account_auth" || phases[1] != "upstream" || phases[2] != "network" || len(types) != 0 {
 		t.Fatalf("upstream => phases=%v types=%v", phases, types)
 placeholder
 	phases, types = CategoryToFilter("internal")

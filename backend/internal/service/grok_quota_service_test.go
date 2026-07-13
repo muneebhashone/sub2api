@@ -180,19 +180,26 @@ func (r *grokQuotaProxyRepo) GetByID(_ context.Context, id int64) (*Proxy, error
 	return r.proxies[id], nil
 placeholder
 
+func healthyGrokQuotaOAuthAccount(id int64) *Account {
+placeholder
+		ID:          id,
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"access_token":  "access-token",
+			"refresh_token": "refresh-token",
+			"expires_at":    time.Now().Add(2 * grokTokenRefreshSkew).UTC().Format(time.RFC3339),
+	placeholder,
+placeholder
+placeholder
+
 func TestGrokQuotaServiceProbeUsageStoresHeaders(t *testing.T) {
 	t.Parallel()
 
-	account := &Account{
-		ID:          42,
-		Platform:    PlatformGrok,
-		Type:        AccountTypeOAuth,
-		Concurrency: 1,
-placeholder
-			"access_token": "access-token",
-			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
-	placeholder,
-placeholder
+	account := healthyGrokQuotaOAuthAccount(42)
 	repo := &grokQuotaAccountRepo{
 		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
 			accountsByID: map[int64]*Account{42: accountplaceholder,
@@ -236,19 +243,10 @@ placeholder
 func TestGrokQuotaServiceProbeUsageIgnoresAccountGrokMapping(t *testing.T) {
 	t.Parallel()
 
-	account := &Account{
-		ID:          47,
-		Platform:    PlatformGrok,
-		Type:        AccountTypeOAuth,
-		Concurrency: 1,
-placeholder
-			"access_token": "access-token",
-			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
-			"model_mapping": map[string]any{
-				"grok":          "grok-composer",
-				"grok-composer": "grok-composer-2.5-fast",
-		placeholder,
-	placeholder,
+	account := healthyGrokQuotaOAuthAccount(47)
+	account.Credentials["model_mapping"] = map[string]any{
+		"grok":          "grok-composer",
+		"grok-composer": "grok-composer-2.5-fast",
 placeholder
 	repo := &grokQuotaAccountRepo{
 		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
@@ -272,16 +270,7 @@ placeholder
 func TestGrokQuotaServiceProbeUsageReportsProbeModelOnUpstreamError(t *testing.T) {
 	t.Parallel()
 
-	account := &Account{
-		ID:          48,
-		Platform:    PlatformGrok,
-		Type:        AccountTypeOAuth,
-		Concurrency: 1,
-placeholder
-			"access_token": "access-token",
-			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
-	placeholder,
-placeholder
+	account := healthyGrokQuotaOAuthAccount(48)
 	repo := &grokQuotaAccountRepo{
 		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
 			accountsByID: map[int64]*Account{48: accountplaceholder,
@@ -352,17 +341,8 @@ func TestGrokQuotaServiceProbeUsageLoadsProxyWhenAccountEdgeMissing(t *testing.T
 	t.Parallel()
 
 	proxyID := int64(7)
-	account := &Account{
-		ID:          46,
-		Platform:    PlatformGrok,
-		Type:        AccountTypeOAuth,
-		Concurrency: 1,
-		ProxyID:     &proxyID,
-placeholder
-			"access_token": "access-token",
-			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
-	placeholder,
-placeholder
+	account := healthyGrokQuotaOAuthAccount(46)
+	account.ProxyID = &proxyID
 	repo := &grokQuotaAccountRepo{
 		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
 			accountsByID: map[int64]*Account{46: accountplaceholder,
@@ -394,16 +374,7 @@ placeholder
 func TestGrokQuotaServiceProbeUsageStoresNoHeadersState(t *testing.T) {
 	t.Parallel()
 
-	account := &Account{
-		ID:          45,
-		Platform:    PlatformGrok,
-		Type:        AccountTypeOAuth,
-		Concurrency: 1,
-placeholder
-			"access_token": "access-token",
-			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
-	placeholder,
-placeholder
+	account := healthyGrokQuotaOAuthAccount(45)
 	repo := &grokQuotaAccountRepo{
 		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
 			accountsByID: map[int64]*Account{45: accountplaceholder,
@@ -435,15 +406,7 @@ placeholder
 func TestGrokQuotaServiceProbeUsageReturnsRateLimitedSnapshot(t *testing.T) {
 	t.Parallel()
 
-	account := &Account{
-		ID:       43,
-		Platform: PlatformGrok,
-		Type:     AccountTypeOAuth,
-placeholder
-			"access_token": "access-token",
-			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
-	placeholder,
-placeholder
+	account := healthyGrokQuotaOAuthAccount(43)
 	repo := &grokQuotaAccountRepo{
 		mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
 			accountsByID: map[int64]*Account{43: accountplaceholder,
