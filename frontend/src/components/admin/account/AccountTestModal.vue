@@ -250,6 +250,7 @@ import TextArea from '@/components/common/TextArea.vue'
 import { Icon placeholder from '@/components/icons'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { buildApiUrl placeholder from '@/api/client'
+import { ADMIN_UI_REQUEST_HEADER placeholder from '@/api/adminUIRequest'
 import { adminAPI placeholder from '@/api/admin'
 import type { Account, ClaudeModel placeholder from '@/types'
 
@@ -438,7 +439,8 @@ const startTest = async () => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('auth_token')placeholder`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        [ADMIN_UI_REQUEST_HEADER]: '1'
       placeholder,
       body: JSON.stringify(requestBody),
       signal: abortController.signal
