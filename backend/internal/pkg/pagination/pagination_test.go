@@ -69,3 +69,30 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestPaginationParamsOffsetUsesNormalizedLimit(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		page     int
+		pageSize int
+		want     int
+placeholder{
+		{name: "invalid page uses first page", page: 0, pageSize: 50, want: 0placeholder,
+		{name: "zero page size uses default", page: 2, pageSize: 0, want: 20placeholder,
+		{name: "negative page size uses default", page: 2, pageSize: -1, want: 20placeholder,
+		{name: "normal values", page: 3, pageSize: 50, want: 100placeholder,
+		{name: "page size beyond max is clamped", page: 2, pageSize: 1500, want: 1000placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			params := PaginationParams{Page: tt.page, PageSize: tt.pageSizeplaceholder
+			if got := params.Offset(); got != tt.want {
+				t.Fatalf("Offset() for Page=%d, PageSize=%d = %d, want %d", tt.page, tt.pageSize, got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
