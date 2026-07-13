@@ -61,6 +61,7 @@ placeholder
 
 var schedulerNeutralExtraKeys = map[string]struct{placeholder{
 	"codex_usage_updated_at":     {placeholder,
+	"grok_billing_snapshot":      {placeholder,
 	"session_window_utilization": {placeholder,
 placeholder
 
