@@ -203,6 +203,14 @@ placeholder
 	return conn.pingWithTimeout(timeout)
 placeholder
 
+func (l *openAIWSConnLease) SupportsIdlePingWithoutReader() bool {
+	conn, err := l.activeConn()
+	if err != nil {
+		return false
+placeholder
+	return conn.supportsIdlePingWithoutReader()
+placeholder
+
 func (l *openAIWSConnLease) MarkBroken() {
 	if l == nil || l.pool == nil || l.conn == nil || l.released.Load() {
 		return
@@ -435,6 +443,16 @@ placeholder
 		return err
 placeholder
 	return nil
+placeholder
+
+func (c *openAIWSConn) supportsIdlePingWithoutReader() bool {
+	if c == nil || c.ws == nil {
+		return false
+placeholder
+	capable, ok := c.ws.(openAIWSIdlePingCapable)
+	// Test and alternate implementations keep the historical probe behavior
+	// unless they explicitly declare it unsafe.
+	return !ok || capable.SupportsIdlePingWithoutReader()
 placeholder
 
 func (c *openAIWSConn) touch() {
@@ -707,7 +725,7 @@ placeholder
 	g.SetLimit(10)
 	for _, item := range candidates {
 		item := item
-		if item.conn == nil || item.conn.isLeased() || item.conn.waiters.Load() > 0 {
+		if item.conn == nil || item.conn.isLeased() || item.conn.waiters.Load() > 0 || !item.conn.supportsIdlePingWithoutReader() {
 			continue
 	placeholder
 		g.Go(func() error {
@@ -1613,7 +1631,7 @@ func (p *openAIWSConnPool) nextConnID(accountID int64) string {
 placeholder
 
 func (p *openAIWSConnPool) shouldHealthCheckConn(conn *openAIWSConn) bool {
-	if conn == nil {
+	if conn == nil || !conn.supportsIdlePingWithoutReader() {
 		return false
 placeholder
 	return conn.idleDuration(time.Now()) >= openAIWSConnHealthCheckIdle
@@ -1669,7 +1687,7 @@ placeholder
 		if account.Concurrency <= 0 {
 			return 0
 	placeholder
-		return account.Concurrency
+		return min(account.Concurrency, hardCap)
 placeholder
 	if account == nil || !p.dynamicMaxConnsEnabled() {
 		return hardCap
