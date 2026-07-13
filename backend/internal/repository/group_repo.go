@@ -63,6 +63,7 @@ func (r *groupRepository) Create(ctx context.Context, groupIn *service.Group) er
 		SetNillableVideoPrice480p(groupIn.VideoPrice480P).
 		SetNillableVideoPrice720p(groupIn.VideoPrice720P).
 		SetNillableVideoPrice1080p(groupIn.VideoPrice1080P).
+		SetNillableWebSearchPricePerCall(groupIn.WebSearchPricePerCall).
 		SetDefaultValidityDays(groupIn.DefaultValidityDays).
 		SetClaudeCodeOnly(groupIn.ClaudeCodeOnly).
 		SetNillableFallbackGroupID(groupIn.FallbackGroupID).
@@ -214,6 +215,11 @@ placeholder
 		builder = builder.SetVideoPrice1080p(*groupIn.VideoPrice1080P)
 placeholder else {
 		builder = builder.ClearVideoPrice1080p()
+placeholder
+	if groupIn.WebSearchPricePerCall != nil {
+		builder = builder.SetWebSearchPricePerCall(*groupIn.WebSearchPricePerCall)
+placeholder else {
+		builder = builder.ClearWebSearchPricePerCall()
 placeholder
 
 	// 处理 FallbackGroupID：nil 时清除，否则设置
