@@ -306,3 +306,104 @@ placeholder
 
 	require.Equal(t, "https://custom.example.com/v1", account.GetGrokBaseURL())
 placeholder
+
+func TestGetGrokMediaBaseURLSeparatesOAuthMediaFromCLIProxy(t *testing.T) {
+	tests := []struct {
+		name     string
+		account  Account
+		expected string
+placeholder{
+		{
+			name: "oauth without base_url uses official media API",
+			account: Account{
+				Type:        AccountTypeOAuth,
+				Platform:    PlatformGrok,
+		placeholderplaceholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth stored CLI proxy uses official media API",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": xai.DefaultCLIBaseURL,
+			placeholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth stored CLI proxy variant uses official media API",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "HTTPS://CLI-CHAT-PROXY.GROK.COM:443/%76%31/",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth legacy official API remains on official media API",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": xai.DefaultBaseURL,
+			placeholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth untrusted custom base_url is pinned to official media API",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://custom.example.com/v1",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "API key retains its configured media API",
+			account: Account{
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://grok.example.com/v1",
+			placeholder,
+		placeholder,
+			expected: "https://grok.example.com/v1",
+	placeholder,
+		{
+			name: "non-Grok account has no Grok media base URL",
+			account: Account{
+				Type:        AccountTypeOAuth,
+				Platform:    PlatformOpenAI,
+		placeholderplaceholder,
+		placeholder,
+			expected: "",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, tt.account.GetGrokMediaBaseURL())
+	placeholder)
+placeholder
+placeholder
+
+func TestGetGrokMediaBaseURLAllowsExplicitOAuthOverrideWhenUnsafeOverridesEnabled(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	account := Account{
+		Type:     AccountTypeOAuth,
+		Platform: PlatformGrok,
+placeholder
+			"base_url": "https://custom.example.com/v1",
+	placeholder,
+placeholder
+
+	require.Equal(t, "https://custom.example.com/v1", account.GetGrokMediaBaseURL())
+placeholder
