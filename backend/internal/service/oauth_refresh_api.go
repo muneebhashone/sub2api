@@ -297,7 +297,7 @@ placeholder
 			conditionalRepo, ok := api.accountRepo.(GrokOAuthRefreshSuccessRepository)
 			if !ok {
 				return nil, &providerConfigurationRefreshError{
-					err: fmt.Errorf("Grok OAuth refresh success CAS repository is not configured"),
+					err: fmt.Errorf("grok OAuth refresh success CAS repository is not configured"),
 			placeholder
 		placeholder
 			applied, updateErr := conditionalRepo.UpdateGrokOAuthCredentialsIfUnchanged(

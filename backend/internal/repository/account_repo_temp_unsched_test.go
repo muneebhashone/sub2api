@@ -297,7 +297,9 @@ placeholder
 	require.Len(t, capturedArgs, 3)
 	require.Equal(t, int64(100), capturedArgs[1])
 	require.Equal(t, 200, capturedArgs[2])
-	platforms, err := capturedArgs[0].(interface{ Value() (driver.Value, error) placeholder).Value()
+	valuer, ok := capturedArgs[0].(interface{ Value() (driver.Value, error) placeholder)
+	require.True(t, ok)
+	platforms, err := valuer.Value()
 placeholder
 	require.Contains(t, platforms, service.PlatformGrok)
 	require.NoError(t, mock.ExpectationsWereMet())

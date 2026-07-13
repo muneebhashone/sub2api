@@ -98,15 +98,6 @@ func (r *tokenRefreshCandidateRepo) ClearTempUnschedulable(context.Context, int6
 	return nil
 placeholder
 
-func isOAuthRefreshPlatform(platform string) bool {
-	switch platform {
-	case PlatformAnthropic, PlatformOpenAI, PlatformGemini, PlatformAntigravity, PlatformGrok:
-		return true
-	default:
-		return false
-placeholder
-placeholder
-
 type tokenRefreshTestRefresher struct {
 	err error
 placeholder
