@@ -461,6 +461,22 @@ placeholder
 	return validatedBaseURL + "/videos/generations", nil
 placeholder
 
+func BuildVideosEditsURL(baseURL string) (string, error) {
+	validatedBaseURL, err := ValidatedBaseURL(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid base url: %w", err)
+placeholder
+	return validatedBaseURL + "/videos/edits", nil
+placeholder
+
+func BuildVideosExtensionsURL(baseURL string) (string, error) {
+	validatedBaseURL, err := ValidatedBaseURL(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid base url: %w", err)
+placeholder
+	return validatedBaseURL + "/videos/extensions", nil
+placeholder
+
 func BuildVideoURL(baseURL, requestID string) (string, error) {
 	validatedBaseURL, err := ValidatedBaseURL(baseURL)
 	if err != nil {
