@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,6 +17,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
+	"golang.org/x/net/http2"
 )
 
 type codexModelsHTTPUpstreamStub struct {
@@ -47,6 +50,73 @@ placeholder
 
 func (s *codexModelsHTTPUpstreamStub) DoWithTLS(req *http.Request, proxyURL string, accountID int64, accountConcurrency int, _ *tlsfingerprint.Profile) (*http.Response, error) {
 	return s.Do(req, proxyURL, accountID, accountConcurrency)
+placeholder
+
+func TestIsRetryableCodexModelsManifestTransportError(t *testing.T) {
+	tests := []struct {
+		name      string
+		err       error
+		retryable bool
+placeholder{
+		{name: "nil", err: nilplaceholder,
+		{name: "configuration error", err: errors.New("invalid proxy URL")placeholder,
+		{name: "upstream configuration error", err: errors.New("upstream error: invalid proxy")placeholder,
+		{name: "proxy connection configuration error", err: errors.New("proxy connection error: invalid configuration")placeholder,
+		{name: "canceled request", err: context.Canceledplaceholder,
+		{
+			name: "redirect policy error",
+			err: &url.Error{
+				Op:  "Get",
+				URL: "https://upstream.example/v1/models",
+				Err: errors.New("stopped after 10 redirects"),
+		placeholder,
+	placeholder,
+		{name: "deadline exceeded", err: context.DeadlineExceeded, retryable: trueplaceholder,
+		{name: "unexpected EOF", err: io.ErrUnexpectedEOF, retryable: trueplaceholder,
+		{name: "closed connection", err: net.ErrClosed, retryable: trueplaceholder,
+		{
+			name: "network operation",
+			err: &net.OpError{
+				Op:  "read",
+				Net: "tcp",
+				Err: errors.New("connection reset"),
+		placeholder,
+			retryable: true,
+	placeholder,
+		{
+			name:      "DNS error",
+			err:       &net.DNSError{Err: "temporary failure", Name: "upstream.example"placeholder,
+			retryable: true,
+	placeholder,
+		{
+			name:      "typed HTTP2 GOAWAY",
+			err:       http2.GoAwayError{ErrCode: http2.ErrCodeNoplaceholder,
+			retryable: true,
+	placeholder,
+		{
+			name:      "stdlib HTTP2 GOAWAY",
+			err:       errors.New("http2: server sent GOAWAY and closed the connection; LastStreamID=1, ErrCode=NO_ERROR"),
+			retryable: true,
+	placeholder,
+		{
+			name:      "stdlib HTTP2 refused stream",
+			err:       errors.New("stream error: stream ID 3; REFUSED_STREAM"),
+			retryable: true,
+	placeholder,
+		{
+			name:      "stdlib HTTP2 connection error",
+			err:       errors.New(`Get "https://upstream.example/v1/models": connection error: PROTOCOL_ERROR`),
+			retryable: true,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isRetryableCodexModelsManifestTransportError(tt.err); got != tt.retryable {
+				t.Fatalf("retryable = %v, want %v", got, tt.retryable)
+		placeholder
+	placeholder)
+placeholder
 placeholder
 
 func newCodexModelsAPIKeyTestService(upstream HTTPUpstream) *OpenAIGatewayService {
