@@ -46,15 +46,14 @@ type OpsSystemLogSink struct {
 	lastError atomic.Value
 placeholder
 
+const maxSystemLogHostLength = 255
+
 func NewOpsSystemLogSink(opsRepo OpsRepository) *OpsSystemLogSink {
 	ctx, cancel := context.WithCancel(context.Background())
-	host, err := os.Hostname()
-	if err != nil || strings.TrimSpace(host) == "" {
-		host = "unknown"
-placeholder
+	rawHost, err := os.Hostname()
 	s := &OpsSystemLogSink{
 		opsRepo:       opsRepo,
-		host:          strings.TrimSpace(host),
+		host:          normalizeSystemLogHost(rawHost, err),
 		queue:         make(chan *logger.LogEvent, 5000),
 		batchSize:     200,
 		flushInterval: time.Second,
@@ -63,6 +62,18 @@ placeholder
 placeholder
 	s.lastError.Store("")
 	return s
+placeholder
+
+func normalizeSystemLogHost(host string, err error) string {
+	host = strings.TrimSpace(host)
+	if err != nil || host == "" {
+		return "unknown"
+placeholder
+	runes := []rune(host)
+	if len(runes) > maxSystemLogHostLength {
+		return string(runes[:maxSystemLogHostLength])
+placeholder
+	return host
 placeholder
 
 func (s *OpsSystemLogSink) Start() {

@@ -328,3 +328,20 @@ placeholder
 	placeholder
 placeholder
 placeholder
+
+func TestNormalizeSystemLogHost(t *testing.T) {
+	if got := normalizeSystemLogHost(" api-node-1 ", nil); got != "api-node-1" {
+		t.Fatalf("trimmed host = %q, want api-node-1", got)
+placeholder
+	if got := normalizeSystemLogHost("", nil); got != "unknown" {
+		t.Fatalf("empty host = %q, want unknown", got)
+placeholder
+	if got := normalizeSystemLogHost("api-node-1", errors.New("hostname unavailable")); got != "unknown" {
+		t.Fatalf("errored host = %q, want unknown", got)
+placeholder
+	longHost := strings.Repeat("节", maxSystemLogHostLength+1)
+	got := normalizeSystemLogHost(longHost, nil)
+	if runeCount := len([]rune(got)); runeCount != maxSystemLogHostLength {
+		t.Fatalf("truncated host rune count = %d, want %d", runeCount, maxSystemLogHostLength)
+placeholder
+placeholder
