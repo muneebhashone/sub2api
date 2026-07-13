@@ -996,7 +996,7 @@ func (s *TokenRefreshService) refreshWithRetryWithRateGate(
 				conditionalRepo, ok := s.accountRepo.(GrokOAuthRefreshMutationRepository)
 				if !ok {
 					return &providerConfigurationRefreshError{
-						err: errors.New("Grok OAuth conditional refresh mutation repository is not configured"),
+						err: errors.New("grok OAuth conditional refresh mutation repository is not configured"),
 				placeholder
 			placeholder else {
 					persistentlyBlocked, setErr = conditionalRepo.SetGrokOAuthRefreshErrorIfCredentialsUnchanged(
@@ -1091,7 +1091,7 @@ placeholder
 		conditionalRepo, ok := s.accountRepo.(GrokOAuthRefreshMutationRepository)
 		if !ok {
 			return &providerConfigurationRefreshError{
-				err: errors.New("Grok OAuth conditional refresh mutation repository is not configured"),
+				err: errors.New("grok OAuth conditional refresh mutation repository is not configured"),
 		placeholder
 	placeholder
 		applied, setErr := conditionalRepo.SetGrokOAuthRefreshTempUnschedulableIfCredentialsUnchanged(

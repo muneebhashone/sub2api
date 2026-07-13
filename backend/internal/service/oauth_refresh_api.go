@@ -327,7 +327,7 @@ placeholder
 						readErr = fmt.Errorf("account not found after Grok OAuth success CAS miss")
 				placeholder
 					return nil, &providerCycleContainmentRefreshError{
-						err: fmt.Errorf("Grok OAuth success CAS lost and current state is unavailable: %w", readErr),
+						err: fmt.Errorf("grok OAuth success CAS lost and current state is unavailable: %w", readErr),
 				placeholder
 			placeholder
 				slog.Info("oauth_refresh_success_cas_skipped_stale_credentials",
@@ -342,7 +342,7 @@ placeholder
 					readErr = fmt.Errorf("account not found after Grok OAuth success CAS")
 			placeholder
 				return nil, &providerCycleContainmentRefreshError{
-					err: fmt.Errorf("Grok OAuth success persisted but durable account state is unavailable: %w", readErr),
+					err: fmt.Errorf("grok OAuth success persisted but durable account state is unavailable: %w", readErr),
 			placeholder
 		placeholder
 			// The CAS changes credentials only. A concurrent admin or scheduler
