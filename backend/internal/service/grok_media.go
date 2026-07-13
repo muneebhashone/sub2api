@@ -308,7 +308,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	targetURL, err := endpoint.upstreamURL(account.GetGrokBaseURL(), requestID)
+	targetURL, err := endpoint.upstreamURL(account.GetGrokMediaBaseURL(), requestID)
 	if err != nil {
 		return nil, err
 placeholder
