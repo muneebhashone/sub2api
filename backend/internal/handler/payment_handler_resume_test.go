@@ -119,7 +119,7 @@ placeholder
 placeholder
 
 	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, nil, nil, nil, nil)
-	h := NewPaymentHandler(paymentSvc, nil, nil)
+	h := NewPaymentHandler(paymentSvc, nil)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -219,7 +219,7 @@ placeholder
 
 	configSvc := service.NewPaymentConfigService(client, nil, []byte("placeholder"))
 	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, configSvc, nil, nil, nil)
-	h := NewPaymentHandler(paymentSvc, nil, nil)
+	h := NewPaymentHandler(paymentSvc, nil)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -307,7 +307,7 @@ placeholder
 
 	configSvc := service.NewPaymentConfigService(client, nil, []byte("placeholder"))
 	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, configSvc, nil, nil, nil)
-	h := NewPaymentHandler(paymentSvc, nil, nil)
+	h := NewPaymentHandler(paymentSvc, nil)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
@@ -347,7 +347,7 @@ placeholder
 	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	paymentSvc := service.NewPaymentService(client, payment.NewRegistry(), nil, nil, nil, nil, nil, nil, nil)
-	h := NewPaymentHandler(paymentSvc, nil, nil)
+	h := NewPaymentHandler(paymentSvc, nil)
 
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
