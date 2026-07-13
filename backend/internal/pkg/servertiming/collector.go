@@ -276,9 +276,9 @@ placeholder
 	placeholder
 		switch {
 		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
-			b.WriteRune(r)
+			_, _ = b.WriteRune(r)
 		case r == '_' || r == '-':
-			b.WriteByte('_')
+			_ = b.WriteByte('_')
 	placeholder
 placeholder
 	return strings.Trim(b.String(), "_")

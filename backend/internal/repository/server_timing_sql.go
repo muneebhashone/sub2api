@@ -103,7 +103,9 @@ placeholder else {
 		if opts.ReadOnly {
 			return nil, errors.New("driver does not support read-only transactions")
 	placeholder
-		tx, err = c.Conn.Begin()
+		// The wrapper exposes ConnBeginTx, so it must retain database/sql's
+		// legacy fallback for drivers that only implement Conn.Begin.
+		tx, err = c.Conn.Begin() //nolint:staticcheck // Required driver compatibility fallback.
 placeholder
 	servertiming.RecordInterval(ctx, servertiming.MetricDatabase, startedAt, time.Now())
 	if err != nil || tx == nil {
@@ -162,7 +164,9 @@ placeholder else {
 		var values []driver.Value
 		values, err = namedValues(args)
 		if err == nil {
-			result, err = s.Stmt.Exec(values)
+			// The wrapper exposes StmtExecContext and must preserve the fallback
+			// database/sql would use for a legacy driver statement.
+			result, err = s.Stmt.Exec(values) //nolint:staticcheck // Required driver compatibility fallback.
 	placeholder
 placeholder
 	servertiming.Record(ctx, servertiming.MetricDatabase, startedAt, time.Now(), 1)
@@ -181,7 +185,9 @@ placeholder else {
 		var values []driver.Value
 		values, err = namedValues(args)
 		if err == nil {
-			rows, err = s.Stmt.Query(values)
+			// The wrapper exposes StmtQueryContext and must preserve the fallback
+			// database/sql would use for a legacy driver statement.
+			rows, err = s.Stmt.Query(values) //nolint:staticcheck // Required driver compatibility fallback.
 	placeholder
 placeholder
 	servertiming.Record(ctx, servertiming.MetricDatabase, startedAt, time.Now(), 1)
@@ -196,13 +202,6 @@ func (s *serverTimingStmt) CheckNamedValue(value *driver.NamedValue) error {
 		return checker.CheckNamedValue(value)
 placeholder
 	return driver.ErrSkip
-placeholder
-
-func (s *serverTimingStmt) ColumnConverter(index int) driver.ValueConverter {
-	if converter, ok := s.Stmt.(driver.ColumnConverter); ok {
-		return converter.ColumnConverter(index)
-placeholder
-	return driver.DefaultParameterConverter
 placeholder
 
 func namedValues(args []driver.NamedValue) ([]driver.Value, error) {

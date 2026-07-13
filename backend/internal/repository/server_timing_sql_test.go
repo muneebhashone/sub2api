@@ -159,7 +159,10 @@ func TestServerTimingConnectorRecordsDriverCallsWithoutRowLifetime(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 placeholder
-	conn := rawConn.(*serverTimingConn)
+	conn, ok := rawConn.(*serverTimingConn)
+	if !ok {
+		t.Fatalf("Connect() returned %T, want *serverTimingConn", rawConn)
+placeholder
 
 	if _, err := conn.ExecContext(ctx, "sensitive update", nil); err != nil {
 		t.Fatal(err)
@@ -203,7 +206,10 @@ func TestServerTimingPreparedStatementsAndTransactions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 placeholder
-	timedStmt := stmt.(*serverTimingStmt)
+	timedStmt, ok := stmt.(*serverTimingStmt)
+	if !ok {
+		t.Fatalf("PrepareContext() returned %T, want *serverTimingStmt", stmt)
+placeholder
 	if _, err := timedStmt.ExecContext(ctx, nil); err != nil {
 		t.Fatal(err)
 placeholder
