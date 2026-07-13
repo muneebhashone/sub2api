@@ -1195,14 +1195,10 @@ func (a *Account) IsOpenAI() bool {
 placeholder
 
 func (a *Account) IsOpenAILongContextBillingEnabled() bool {
-	if a == nil || !a.IsOpenAI() {
+	if a == nil || !a.IsOpenAI() || a.Extra == nil {
 		return false
 placeholder
-	raw, exists := a.Extra[openAILongContextBillingEnabledKey]
-	if !exists {
-		return true
-placeholder
-	enabled, ok := raw.(bool)
+	enabled, ok := a.Extra[openAILongContextBillingEnabledKey].(bool)
 	return ok && enabled
 placeholder
 

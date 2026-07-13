@@ -1283,7 +1283,7 @@ placeholder
 		CacheReadCost:             inRangeCost.CacheReadCost + outRangeCost.CacheReadCost,
 		TotalCost:                 inRangeCost.TotalCost + outRangeCost.TotalCost,
 		ActualCost:                inRangeCost.ActualCost + outRangeCost.ActualCost,
-		LongContextBillingApplied: true,
+		LongContextBillingApplied: outRangeCost.ActualCost > 0,
 placeholder, nil
 placeholder
 
