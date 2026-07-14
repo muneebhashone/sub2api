@@ -37,6 +37,14 @@ func (c *outboxCleanupCache) ReopenBucket(ctx context.Context, bucket SchedulerB
 	return SchedulerBucketWriteToken{Bucket: bucket, Epoch: 1placeholder, nil
 placeholder
 
+func (c *outboxCleanupCache) TryAcquireGroupLifecycleLease(context.Context, int64, time.Duration) (SchedulerGroupLifecycleLease, bool, error) {
+	return SchedulerGroupLifecycleLease{placeholder, false, nil
+placeholder
+
+func (c *outboxCleanupCache) ReleaseGroupLifecycleLease(context.Context, SchedulerGroupLifecycleLease) error {
+	return nil
+placeholder
+
 func (c *outboxCleanupCache) GetAccount(ctx context.Context, accountID int64) (*Account, error) {
 	return nil, nil
 placeholder
