@@ -255,19 +255,24 @@ placeholder
 type groupLifecycleTestAccountRepo struct {
 	AccountRepository
 
-	mu             sync.Mutex
-	calls          int
-	err            error
-	started        chan struct{placeholder
-	release        chan struct{placeholder
-	once           sync.Once
-	beforeLoad     func()
-	beforeLoadOnce sync.Once
+	mu              sync.Mutex
+	calls           int
+	callsByPlatform map[string]int
+	err             error
+	started         chan struct{placeholder
+	release         chan struct{placeholder
+	once            sync.Once
+	beforeLoad      func()
+	beforeLoadOnce  sync.Once
 placeholder
 
 func (r *groupLifecycleTestAccountRepo) load(ctx context.Context, platform string) ([]Account, error) {
 	r.mu.Lock()
 	r.calls++
+	if r.callsByPlatform == nil {
+		r.callsByPlatform = make(map[string]int)
+placeholder
+	r.callsByPlatform[platform]++
 	err := r.err
 	started := r.started
 	release := r.release
@@ -307,6 +312,12 @@ func (r *groupLifecycleTestAccountRepo) callCount() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.calls
+placeholder
+
+func (r *groupLifecycleTestAccountRepo) platformCallCount(platform string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.callsByPlatform[platform]
 placeholder
 
 func newGroupLifecycleTestService(cache SchedulerCache, accounts AccountRepository, groups GroupRepository, runMode string) *SchedulerSnapshotService {
@@ -443,7 +454,8 @@ placeholder
 placeholder
 	require.Contains(t, bucketStrings(registered), historical.String())
 	require.Len(t, cache.tokens(), 12)
-	require.Equal(t, 12, accounts.callCount())
+	require.Equal(t, 7, accounts.callCount())
+	require.Equal(t, 1, accounts.platformCallCount(PlatformOpenAI))
 	for _, bucket := range current {
 		_, published := cache.counts(bucket)
 		require.Equal(t, 1, published, bucket.String())
@@ -486,7 +498,7 @@ func TestSchedulerGroupLifecycleInactiveThenActiveAuthoritativelyReopens(t *test
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), make(map[batchSeenKey]struct{placeholder)))
 
 	require.Len(t, cache.tokens(), 12)
-	require.Equal(t, 12, accounts.callCount())
+	require.Equal(t, 7, accounts.callCount())
 	for _, bucket := range expectedGroupLifecycleBuckets(groupID) {
 		_, published := cache.counts(bucket)
 		require.Equal(t, 1, published, bucket.String())
@@ -559,11 +571,11 @@ placeholder
 
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), seen))
 	require.Equal(t, 1, groups.callCount())
-	require.Equal(t, 12, accounts.callCount())
+	require.Equal(t, 7, accounts.callCount())
 	requireLifecycleSeen(t, seen, groupID)
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), seen))
 	require.Equal(t, 1, groups.callCount())
-	require.Equal(t, 12, accounts.callCount())
+	require.Equal(t, 7, accounts.callCount())
 placeholder
 
 func TestSchedulerGroupLifecycleFailuresDoNotMarkSeen(t *testing.T) {
@@ -684,8 +696,10 @@ placeholder
 				require.Zero(t, accounts.callCount())
 		placeholder
 			if tc.name == "account rebuild error" || tc.name == "set snapshot error" {
-				_, unlockCalls := cache.lockStats()
+				lockTTLs, unlockCalls := cache.lockStats()
+				require.Len(t, lockTTLs, 1)
 				require.Equal(t, 1, unlockCalls)
+				require.Equal(t, 1, accounts.callCount())
 		placeholder
 	placeholder)
 placeholder

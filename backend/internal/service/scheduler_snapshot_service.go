@@ -43,6 +43,55 @@ type schedulerBucketWriteTask struct {
 	token  SchedulerBucketWriteToken
 placeholder
 
+type schedulerAccountQueryKey struct {
+	groupID  int64
+	platform string
+placeholder
+
+type schedulerAccountQueryCache struct {
+	remaining map[schedulerAccountQueryKey]int
+	accounts  map[schedulerAccountQueryKey][]Account
+placeholder
+
+func newSchedulerAccountQueryCache(taskSets ...[]schedulerBucketWriteTask) *schedulerAccountQueryCache {
+	queries := &schedulerAccountQueryCache{
+		remaining: make(map[schedulerAccountQueryKey]int),
+		accounts:  make(map[schedulerAccountQueryKey][]Account),
+placeholder
+	for _, tasks := range taskSets {
+		for _, task := range tasks {
+			if key, ok := schedulerAccountQueryKeyForBucket(task.bucket); ok {
+				queries.remaining[key]++
+		placeholder
+	placeholder
+placeholder
+	return queries
+placeholder
+
+func schedulerAccountQueryKeyForBucket(bucket SchedulerBucket) (schedulerAccountQueryKey, bool) {
+	if bucket.Mode != SchedulerModeSingle && bucket.Mode != SchedulerModeForced {
+		return schedulerAccountQueryKey{placeholder, false
+placeholder
+	return schedulerAccountQueryKey{groupID: bucket.GroupID, platform: bucket.Platformplaceholder, true
+placeholder
+
+func (c *schedulerAccountQueryCache) release(bucket SchedulerBucket) {
+	if c == nil {
+		return
+placeholder
+	key, ok := schedulerAccountQueryKeyForBucket(bucket)
+	if !ok {
+		return
+placeholder
+	remaining := c.remaining[key] - 1
+	if remaining <= 0 {
+		delete(c.remaining, key)
+		delete(c.accounts, key)
+		return
+placeholder
+	c.remaining[key] = remaining
+placeholder
+
 type schedulerGroupLifecyclePlan struct {
 	active bool
 	tasks  []schedulerBucketWriteTask
@@ -535,8 +584,9 @@ func (s *SchedulerSnapshotService) reconcileGroupLifecycle(ctx context.Context, 
 		return err
 placeholder
 	if plan.active {
+		queries := newSchedulerAccountQueryCache(plan.tasks)
 		for _, task := range plan.tasks {
-			if err := s.rebuildBucketWithTokenPolicy(ctx, task, "group_change", true); err != nil {
+			if err := s.rebuildBucketWithTokenPolicyAndQueryCache(ctx, task, "group_change", true, queries); err != nil {
 				return err
 		placeholder
 	placeholder
@@ -716,7 +766,8 @@ placeholder
 
 func (s *SchedulerSnapshotService) rebuildBuckets(ctx context.Context, buckets []SchedulerBucket, reason string) error {
 	tasks, firstErr := s.prepareBucketWriteTasks(ctx, buckets)
-	if err := s.rebuildPreparedBucketTasks(ctx, tasks, reason, false); err != nil && firstErr == nil {
+	queries := newSchedulerAccountQueryCache(tasks)
+	if err := s.rebuildPreparedBucketTasks(ctx, tasks, reason, false, queries); err != nil && firstErr == nil {
 		firstErr = err
 placeholder
 	return firstErr
@@ -744,17 +795,32 @@ placeholder
 	return tasks, firstErr
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildPreparedBucketTasks(ctx context.Context, tasks []schedulerBucketWriteTask, reason string, strict bool) error {
+func (s *SchedulerSnapshotService) rebuildPreparedBucketTasks(
+	ctx context.Context,
+	tasks []schedulerBucketWriteTask,
+	reason string,
+	strict bool,
+	queries *schedulerAccountQueryCache,
+) error {
 	var firstErr error
 	for _, task := range tasks {
-		if err := s.rebuildBucketWithTokenPolicy(ctx, task, reason, strict); err != nil && firstErr == nil {
+		if err := s.rebuildBucketWithTokenPolicyAndQueryCache(ctx, task, reason, strict, queries); err != nil && firstErr == nil {
 			firstErr = err
 	placeholder
 placeholder
 	return firstErr
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildBucketWithTokenPolicy(ctx context.Context, task schedulerBucketWriteTask, reason string, strict bool) error {
+func (s *SchedulerSnapshotService) rebuildBucketWithTokenPolicyAndQueryCache(
+	ctx context.Context,
+	task schedulerBucketWriteTask,
+	reason string,
+	strict bool,
+	queries *schedulerAccountQueryCache,
+) error {
+	if queries != nil {
+		defer queries.release(task.bucket)
+placeholder
 	if s.cache == nil {
 		return ErrSchedulerCacheNotReady
 placeholder
@@ -776,7 +842,7 @@ placeholder()
 	rebuildCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	accounts, err := s.loadAccountsFromDB(rebuildCtx, bucket, bucket.Mode == SchedulerModeMixed)
+	accounts, err := s.loadAccountsForRebuild(rebuildCtx, bucket, queries)
 	if err != nil {
 		logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] rebuild failed: bucket=%s reason=%s err=%v", bucket.String(), reason, err)
 		return err
@@ -975,10 +1041,11 @@ placeholder
 		return firstErr
 placeholder
 	captured = append(captured, ordinary...)
-	if err := s.rebuildPreparedBucketTasks(ctx, reopened, reason, true); err != nil {
+	queries := newSchedulerAccountQueryCache(reopened, captured)
+	if err := s.rebuildPreparedBucketTasks(ctx, reopened, reason, true, queries); err != nil {
 		firstErr = err
 placeholder
-	if err := s.rebuildPreparedBucketTasks(ctx, captured, reason, false); err != nil && firstErr == nil {
+	if err := s.rebuildPreparedBucketTasks(ctx, captured, reason, false, queries); err != nil && firstErr == nil {
 		firstErr = err
 placeholder
 	return firstErr
@@ -1139,6 +1206,30 @@ placeholder
 		return s.accountRepo.ListSchedulableByPlatform(ctx, bucket.Platform)
 placeholder
 	return s.accountRepo.ListSchedulableUngroupedByPlatform(ctx, bucket.Platform)
+placeholder
+
+func (s *SchedulerSnapshotService) loadAccountsForRebuild(
+	ctx context.Context,
+	bucket SchedulerBucket,
+	queries *schedulerAccountQueryCache,
+) ([]Account, error) {
+	key, cacheable := schedulerAccountQueryKeyForBucket(bucket)
+	if queries == nil || !cacheable {
+		return s.loadAccountsFromDB(ctx, bucket, bucket.Mode == SchedulerModeMixed)
+placeholder
+
+	if accounts, ok := queries.accounts[key]; ok {
+		return accounts, nil
+placeholder
+	if queries.remaining[key] <= 1 {
+		return s.loadAccountsFromDB(ctx, bucket, false)
+placeholder
+	accounts, err := s.loadAccountsFromDB(ctx, bucket, false)
+	if err != nil {
+		return nil, err
+placeholder
+	queries.accounts[key] = accounts
+	return accounts, nil
 placeholder
 
 func (s *SchedulerSnapshotService) bucketFor(groupID *int64, platform string, mode string) SchedulerBucket {
