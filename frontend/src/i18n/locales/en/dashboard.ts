@@ -85,6 +85,7 @@ export default {
     editKey: 'Edit API Key',
     deleteKey: 'Delete API Key',
     deleteConfirmMessage: "Are you sure you want to delete '{nameplaceholder'? This action cannot be undone.",
+    id: 'ID',
     apiKey: 'API Key',
     group: 'Group',
     currentConcurrency: 'Current Concurrency',
