@@ -38,6 +38,15 @@ placeholder
 	return acc, nil
 placeholder
 
+func (r *stubQuotaAccountRepo) UpdateCredentials(_ context.Context, id int64, credentials map[string]any) error {
+	acc, ok := r.accounts[id]
+	if !ok {
+		return fmt.Errorf("account %d not found", id)
+placeholder
+	acc.Credentials = credentials
+	return nil
+placeholder
+
 // stubQuotaTokenCache 实现 OpenAITokenCache，返回预设静态 token。
 type stubQuotaTokenCache struct {
 	tokens map[string]string
@@ -255,6 +264,55 @@ placeholder
 	require.True(t, strings.HasPrefix(authorization, "AgentAssertion "))
 	require.Equal(t, "account-quota", accountHeader)
 	require.Equal(t, "true", fedrampHeader)
+placeholder
+
+func TestQueryUsageAgentIdentityRecoversInvalidTaskOnce(t *testing.T) {
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+placeholder
+	der, err := x509.MarshalPKCS8PrivateKey(privateKey)
+placeholder
+	account := &Account{
+		ID:       301,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"auth_mode":          OpenAIAuthModeAgentIdentity,
+			"agent_runtime_id":   "runtime-quota-recovery",
+			"agent_private_key":  base64.StdEncoding.EncodeToString(der),
+			"task_id":            "task-quota-old",
+			"chatgpt_account_id": "account-quota-recovery",
+	placeholder,
+placeholder
+	repo := &stubQuotaAccountRepo{accounts: map[int64]*Account{account.ID: accountplaceholderplaceholder
+	usageCalls := 0
+	registerCalls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		if strings.Contains(r.URL.Path, "/task/register") {
+			registerCalls++
+			_, _ = w.Write([]byte(`{"task_id":"task-quota-new"placeholder`))
+			return
+	placeholder
+		usageCalls++
+		if usageCalls == 1 {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))
+			return
+	placeholder
+		_, _ = w.Write([]byte(`{"plan_type":"pro","rate_limit":{"allowed":trueplaceholderplaceholder`))
+placeholder))
+	defer srv.Close()
+	oldBase := openAIAgentIdentityAuthAPIBaseURL
+	openAIAgentIdentityAuthAPIBaseURL = srv.URL
+	t.Cleanup(func() { openAIAgentIdentityAuthAPIBaseURL = oldBase placeholder)
+
+	svc := NewOpenAIQuotaService(repo, nil, nil, newQuotaRedirectingFactory(srv))
+	usage, err := svc.QueryUsage(context.Background(), account.ID)
+placeholder
+	require.NotNil(t, usage)
+	require.Equal(t, 2, usageCalls)
+	require.Equal(t, 1, registerCalls)
+	require.Equal(t, "task-quota-new", account.GetCredential("task_id"))
 placeholder
 
 func TestParseOpenAIRateLimitResetCreditDetails_CompatibleContainers(t *testing.T) {

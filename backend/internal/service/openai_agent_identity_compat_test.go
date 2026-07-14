@@ -55,6 +55,52 @@ placeholderplaceholder
 	require.NotContains(t, upstream.lastReq.Header.Get("Authorization"), privateKey)
 placeholder
 
+func TestAccountTestServiceOpenAICompactAgentIdentityRecoversInvalidTaskOnce(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	key, privateKey := newTestAgentIdentityKey(t)
+	account := &Account{
+		ID:          22,
+		Name:        "agent-identity-recovery",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"auth_mode":          OpenAIAuthModeAgentIdentity,
+			"agent_runtime_id":   key.runtimeID,
+			"agent_private_key":  privateKey,
+			"task_id":            "task-compact-old",
+			"chatgpt_account_id": "account-agent-compact-recovery",
+	placeholder,
+placeholder
+	repo := &accountTestAgentIdentityRepo{account: accountplaceholder
+	registerCalls := 0
+	registerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		registerCalls++
+		_, _ = io.WriteString(w, `{"task_id":"task-compact-new"placeholder`)
+placeholder))
+	defer registerServer.Close()
+	oldBase := openAIAgentIdentityAuthAPIBaseURL
+	openAIAgentIdentityAuthAPIBaseURL = registerServer.URL
+	t.Cleanup(func() { openAIAgentIdentityAuthAPIBaseURL = oldBase placeholder)
+
+	upstream := &httpUpstreamRecorder{responses: []*http.Response{
+		{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"id":"compact-agent","status":"completed"placeholder`))placeholder,
+placeholderplaceholder
+	svc := &AccountTestService{accountRepo: repo, httpUpstream: upstreamplaceholder
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/admin/accounts/22/test", bytes.NewReader(nil))
+
+	require.NoError(t, svc.TestAccountConnection(c, account.ID, "gpt-5.4", "", AccountTestModeCompact))
+	require.Equal(t, 1, registerCalls)
+	require.Len(t, upstream.requests, 2)
+	require.Equal(t, "task-compact-new", account.GetCredential("task_id"))
+	require.Equal(t, 0, repo.setErrorCalls)
+placeholder
+
 func TestOpenAIAgentIdentityPassthroughKeepsSessionAndPromptCacheHeaders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	key, privateKey := newTestAgentIdentityKey(t)
@@ -225,6 +271,7 @@ placeholder))
 		{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
 		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(successBody))placeholder,
 placeholderplaceholder
+	require.True(t, isAgentIdentityTaskInvalidHTTPResponse(http.StatusUnauthorized, []byte(`{"error":{"code":"invalid_task_id"placeholderplaceholder`)))
 	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, accountRepo: repo, httpUpstream: upstreamplaceholder
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -256,7 +303,7 @@ placeholder
 	account.Credentials["task_id"] = "task-old-passthrough"
 	upstream.responses = []*http.Response{
 		{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
-		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(successBody))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader("data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":1,\"output_tokens\":1,\"total_tokens\":2placeholderplaceholderplaceholder\n\ndata: [DONE]\n\n"))placeholder,
 placeholder
 	rec3 := httptest.NewRecorder()
 	c3, _ := gin.CreateTestContext(rec3)
@@ -265,6 +312,80 @@ placeholder
 placeholder
 	require.Equal(t, 3, registerCalls)
 	require.Len(t, upstream.requests, 6)
+placeholder
+
+func TestOpenAIAgentIdentityCompatRoutesRecoverInvalidTaskOnce(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	tests := []struct {
+		name string
+		path string
+		body []byte
+		call func(*OpenAIGatewayService, context.Context, *gin.Context, *Account, []byte) (*OpenAIForwardResult, error)
+placeholder{
+		{
+			name: "chat completions",
+			path: "/v1/chat/completions",
+			body: []byte(`{"model":"gpt-5.4","stream":false,"messages":[{"role":"user","content":"hi"placeholder]placeholder`),
+			call: func(s *OpenAIGatewayService, ctx context.Context, c *gin.Context, account *Account, body []byte) (*OpenAIForwardResult, error) {
+				return s.ForwardAsChatCompletions(ctx, c, account, body, "", "gpt-5.4")
+		placeholder,
+	placeholder,
+		{
+			name: "anthropic messages",
+			path: "/v1/messages",
+			body: []byte(`{"model":"gpt-5.4","stream":false,"max_tokens":32,"messages":[{"role":"user","content":"hi"placeholder]placeholder`),
+			call: func(s *OpenAIGatewayService, ctx context.Context, c *gin.Context, account *Account, body []byte) (*OpenAIForwardResult, error) {
+				return s.ForwardAsAnthropic(ctx, c, account, body, "", "gpt-5.4")
+		placeholder,
+	placeholder,
+placeholder
+
+	for index, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, privateKey := newTestAgentIdentityKey(t)
+			account := &Account{
+				ID:          int64(40 + index),
+				Name:        "agent-identity-compat",
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeOAuth,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+		placeholder
+					"auth_mode":          OpenAIAuthModeAgentIdentity,
+					"agent_runtime_id":   key.runtimeID,
+					"agent_private_key":  privateKey,
+					"task_id":            "task-compat-old",
+					"chatgpt_account_id": "account-compat-recovery",
+			placeholder,
+		placeholder
+			repo := &agentIdentityForwardRepo{account: accountplaceholder
+			registerCalls := 0
+			registerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				registerCalls++
+				_, _ = io.WriteString(w, `{"task_id":"task-compat-new"placeholder`)
+		placeholder))
+			defer registerServer.Close()
+			oldBase := openAIAgentIdentityAuthAPIBaseURL
+			openAIAgentIdentityAuthAPIBaseURL = registerServer.URL
+			t.Cleanup(func() { openAIAgentIdentityAuthAPIBaseURL = oldBase placeholder)
+
+			upstream := &httpUpstreamRecorder{responses: []*http.Response{
+				{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
+				{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
+		placeholderplaceholder
+			svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, accountRepo: repo, httpUpstream: upstreamplaceholder
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, tt.path, bytes.NewReader(tt.body))
+
+			_, err := tt.call(svc, context.Background(), c, account, tt.body)
+		placeholder
+			require.Equal(t, 1, registerCalls)
+			require.Len(t, upstream.requests, 2)
+			require.Equal(t, "task-compat-new", account.GetCredential("task_id"))
+	placeholder)
+placeholder
 placeholder
 
 func decodeAgentAssertionTask(t *testing.T, header string) string {
@@ -282,6 +403,30 @@ placeholder
 type agentIdentityForwardRepo struct {
 	AccountRepository
 	account *Account
+placeholder
+
+type accountTestAgentIdentityRepo struct {
+	AccountRepository
+	account       *Account
+	setErrorCalls int
+placeholder
+
+func (r *accountTestAgentIdentityRepo) GetByID(_ context.Context, _ int64) (*Account, error) {
+	return r.account, nil
+placeholder
+
+func (r *accountTestAgentIdentityRepo) UpdateCredentials(_ context.Context, _ int64, credentials map[string]any) error {
+	r.account.Credentials = credentials
+	return nil
+placeholder
+
+func (r *accountTestAgentIdentityRepo) UpdateExtra(_ context.Context, _ int64, _ map[string]any) error {
+	return nil
+placeholder
+
+func (r *accountTestAgentIdentityRepo) SetError(_ context.Context, _ int64, _ string) error {
+	r.setErrorCalls++
+	return nil
 placeholder
 
 func (r *agentIdentityForwardRepo) GetByID(_ context.Context, _ int64) (*Account, error) {

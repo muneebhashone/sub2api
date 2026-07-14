@@ -317,19 +317,43 @@ func isAgentIdentityTaskInvalidHTTPResponse(statusCode int, body []byte) bool {
 		return false
 placeholder
 	lower := strings.ToLower(string(body))
+	compact := strings.NewReplacer(" ", "", "\t", "", "\r", "", "\n", "").Replace(lower)
 	for _, marker := range []string{
-		"invalid task",
-		"task_id",
-		"task id",
-		"task_not_found",
-		"task_expired",
-		"unknown task",
+		`"code":"invalid_task_id"`,
+		`"code":"task_not_found"`,
+		`"code":"task_expired"`,
+		`"error":"invalid_task_id"`,
+placeholder {
+		if strings.Contains(compact, marker) {
+			return true
+	placeholder
+placeholder
+	for _, marker := range []string{
+		"invalid task_id",
+		"invalid task id",
+		"task_id is invalid",
+		"task id is invalid",
+		"task not found",
+		"task expired",
+		"unknown task_id",
+		"unknown task id",
 placeholder {
 		if strings.Contains(lower, marker) {
 			return true
 	placeholder
 placeholder
 	return false
+placeholder
+
+type agentIdentityTaskRecoveryContextKey struct{placeholder
+
+func markAgentIdentityTaskRecoveryTried(ctx context.Context) context.Context {
+	return context.WithValue(ctx, agentIdentityTaskRecoveryContextKey{placeholder, true)
+placeholder
+
+func agentIdentityTaskRecoveryWasTried(ctx context.Context) bool {
+	tried, _ := ctx.Value(agentIdentityTaskRecoveryContextKey{placeholder).(bool)
+	return tried
 placeholder
 
 func isAgentIdentityTaskInvalidWSDialError(err *openAIWSDialError) bool {
