@@ -59,7 +59,7 @@ placeholder else {
 			payload.Data,
 		)
 		if err != nil {
-			return openAIRateLimitResetCreditDetails{placeholder, err
+			return openAIRateLimitResetCreditDetails{AvailableCount: availableCountplaceholder, err
 	placeholder
 placeholder
 
