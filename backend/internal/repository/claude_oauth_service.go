@@ -276,5 +276,5 @@ placeholder
 		client.SetProxyURL(trimmed)
 placeholder
 
-	return client, nil
+	return instrumentReqClient(client), nil
 placeholder
