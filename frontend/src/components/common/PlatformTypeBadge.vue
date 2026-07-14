@@ -77,6 +77,7 @@ const { t placeholder = useI18n()
 interface Props {
   platform: AccountPlatform
   type: AccountType
+  authMode?: string
   planType?: string
   privacyMode?: string
   subscriptionExpiresAt?: string
@@ -92,7 +93,15 @@ const platformLabel = computed(() => {
   return 'Gemini'
 placeholder)
 
+const normalizedAuthMode = computed(() =>
+  (props.authMode || '').trim().toLowerCase().replace(/[\s_-]+/g, '')
+)
+
 const typeLabel = computed(() => {
+  if (props.platform === 'openai' && props.type === 'oauth') {
+    if (normalizedAuthMode.value === 'agentidentity') return 'Agent Identity'
+    if (normalizedAuthMode.value === 'personalaccesstoken') return 'PAT'
+  placeholder
   switch (props.type) {
     case 'oauth':
       return 'OAuth'
