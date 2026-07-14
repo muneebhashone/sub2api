@@ -163,7 +163,7 @@ func TestEnsureAgentIdentityTaskSharesLockAcrossServicesForSameAccount(t *testin
 		"agent_runtime_id":  key.runtimeID,
 		"agent_private_key": privateKey,
 placeholderplaceholder
-	repo := &agentIdentityCredentialsRepo{placeholder
+	repo := &agentIdentityCredentialsRepo{account: accountplaceholder
 	registerCalls := 0
 	var registerMu sync.Mutex
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,10 +179,11 @@ placeholder))
 
 	start := make(chan struct{placeholder)
 	errors := make(chan error, 2)
-	for range 2 {
+	requests := []*Account{cloneAgentIdentityTestAccount(account), cloneAgentIdentityTestAccount(account)placeholder
+	for _, request := range requests {
 		go func() {
 			<-start
-			errors <- ensureAgentIdentityTaskForAccount(context.Background(), repo, nil, &sync.Mutex{placeholder, account, "")
+			errors <- ensureAgentIdentityTaskForAccount(context.Background(), repo, nil, &sync.Mutex{placeholder, request, "")
 	placeholder()
 placeholder
 	close(start)
@@ -191,13 +192,24 @@ placeholder
 	registerMu.Lock()
 	defer registerMu.Unlock()
 	require.Equal(t, 1, registerCalls)
-	require.Equal(t, "task-shared", account.GetCredential("task_id"))
+	require.Equal(t, "task-shared", repo.account.GetCredential("task_id"))
+placeholder
+
+func cloneAgentIdentityTestAccount(account *Account) *Account {
+	copy := *account
+	copy.Credentials = shallowCopyMap(account.Credentials)
+	return &copy
 placeholder
 
 type agentIdentityCredentialsRepo struct {
 	AccountRepository
 	credentials map[string]any
+	account     *Account
 	mu          sync.Mutex
+placeholder
+
+func (r *agentIdentityCredentialsRepo) GetByID(_ context.Context, _ int64) (*Account, error) {
+	return r.account, nil
 placeholder
 
 func (r *agentIdentityCredentialsRepo) UpdateCredentials(_ context.Context, _ int64, credentials map[string]any) error {
