@@ -124,6 +124,16 @@ placeholder
 	return out
 placeholder
 
+// normalizeMonitorPrimaryModel applies the Grok health-check default while
+// preserving the existing required-model behavior for every other provider.
+func normalizeMonitorPrimaryModel(provider, model string) string {
+	model = strings.TrimSpace(model)
+	if model == "" && provider == MonitorProviderGrok {
+		return MonitorDefaultGrokModel
+placeholder
+	return model
+placeholder
+
 // defaultAPIMode 空串归一为 chat_completions，保证历史数据与旧客户端兼容。
 func defaultAPIMode(apiMode string) string {
 	if strings.TrimSpace(apiMode) == "" {

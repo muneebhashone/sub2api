@@ -460,6 +460,7 @@ placeholder
 		if created.Platform == service.PlatformAntigravity && created.Type == service.AccountTypeOAuth {
 			privacyAccounts = append(privacyAccounts, created)
 	placeholder
+		h.scheduleGrokImportProbe(created)
 		result.AccountCreated++
 placeholder
 

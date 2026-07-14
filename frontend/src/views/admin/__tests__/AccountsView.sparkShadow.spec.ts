@@ -253,4 +253,79 @@ describe('admin AccountsView — 影子行 parent_* OR 兜底展示', () => {
 
     wrapper.unmount()
   placeholder)
+
+  it('passes fresh Grok billing and quota snapshots before stale credential fallbacks', async () => {
+    const grokAccounts = [
+      {
+        id: 201,
+        name: 'oauth-tier',
+        platform: 'grok',
+        type: 'oauth',
+        credentials: { subscription_tier: 'FREE', plan_type: 'legacy' placeholder,
+        extra: {
+          grok_billing_snapshot: { plan: 'SuperGrok' placeholder,
+          subscription_tier: 'BASIC',
+        placeholder,
+      placeholder,
+      {
+        id: 202,
+        name: 'billing-tier',
+        platform: 'grok',
+        type: 'oauth',
+        credentials: {placeholder,
+        extra: {
+          grok_billing_snapshot: { plan: 'SuperGrok Heavy' placeholder,
+          subscription_tier: 'BASIC',
+        placeholder,
+      placeholder,
+      {
+        id: 203,
+        name: 'quota-tier',
+        platform: 'grok',
+        type: 'oauth',
+        credentials: { subscription_tier: 'FREE' placeholder,
+        extra: {
+          grok_quota_snapshot: { subscription_tier: 'SuperGrok' placeholder,
+          subscription_tier: 'BASIC',
+        placeholder,
+      placeholder,
+      {
+        id: 204,
+        name: 'extra-tier',
+        platform: 'grok',
+        type: 'oauth',
+        credentials: { plan_type: 'SuperGrok' placeholder,
+        extra: { subscription_tier: 'BASIC' placeholder,
+      placeholder,
+      {
+        id: 205,
+        name: 'legacy-tier',
+        platform: 'grok',
+        type: 'oauth',
+        credentials: { plan_type: 'SuperGrok' placeholder,
+      placeholder,
+    ]
+
+    listAccounts.mockResolvedValue({
+      items: grokAccounts,
+      total: grokAccounts.length,
+      page: 1,
+      page_size: 20,
+      pages: 1,
+    placeholder)
+
+    const wrapper = mountViewWithRow()
+    await flushPromises()
+
+    const badges = wrapper.findAllComponents(PlatformTypeBadge)
+    expect(badges.map((badge) => badge.props('planType'))).toEqual([
+      'SuperGrok',
+      'SuperGrok Heavy',
+      'SuperGrok',
+      'BASIC',
+      'SuperGrok',
+    ])
+
+    wrapper.unmount()
+  placeholder)
 placeholder)
