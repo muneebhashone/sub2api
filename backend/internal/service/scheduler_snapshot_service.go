@@ -31,6 +31,11 @@ type batchSeenKey struct {
 	platform string
 placeholder
 
+type schedulerBucketWriteTask struct {
+	bucket SchedulerBucket
+	token  SchedulerBucketWriteToken
+placeholder
+
 type SchedulerSnapshotService struct {
 	cache         SchedulerCache
 	outboxRepo    SchedulerOutboxRepository
@@ -117,6 +122,8 @@ func (s *SchedulerSnapshotService) ListSchedulableAccounts(ctx context.Context, 
 	useMixed := (platform == PlatformAnthropic || platform == PlatformGemini) && !hasForcePlatform
 	mode := s.resolveMode(platform, hasForcePlatform)
 	bucket := s.bucketFor(groupID, platform, mode)
+	var writeToken SchedulerBucketWriteToken
+	canPublish := false
 
 	if s.cache != nil {
 		cached, hit, err := s.cache.GetSnapshot(ctx, bucket)
@@ -124,6 +131,17 @@ func (s *SchedulerSnapshotService) ListSchedulableAccounts(ctx context.Context, 
 			logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] cache read failed: bucket=%s err=%v", bucket.String(), err)
 	placeholder else if hit {
 			return derefAccounts(cached), useMixed, nil
+	placeholder
+		token, err := s.cache.CaptureBucketWriteToken(ctx, bucket)
+		if err != nil {
+			if errors.Is(err, ErrSchedulerBucketRetired) || errors.Is(err, ErrSchedulerBucketWriteFenced) {
+				slog.Debug("[Scheduler] cache publish fenced", "bucket", bucket.String())
+		placeholder else {
+				logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] cache publish token failed: bucket=%s err=%v", bucket.String(), err)
+		placeholder
+	placeholder else {
+			writeToken = token
+			canPublish = true
 	placeholder
 placeholder
 
@@ -139,9 +157,13 @@ placeholder
 		return nil, useMixed, err
 placeholder
 
-	if s.cache != nil {
-		if err := s.cache.SetSnapshot(fallbackCtx, bucket, accounts); err != nil {
-			logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] cache write failed: bucket=%s err=%v", bucket.String(), err)
+	if s.cache != nil && canPublish {
+		if err := s.cache.SetSnapshot(fallbackCtx, bucket, writeToken, accounts); err != nil {
+			if errors.Is(err, ErrSchedulerBucketRetired) || errors.Is(err, ErrSchedulerBucketWriteFenced) {
+				slog.Debug("[Scheduler] cache publish fenced", "bucket", bucket.String())
+		placeholder else {
+				logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] cache write failed: bucket=%s err=%v", bucket.String(), err)
+		placeholder
 	placeholder
 placeholder
 
@@ -507,19 +529,12 @@ placeholder
 		return nil
 placeholder
 
-	var firstErr error
-	if err := s.rebuildBucketsForPlatform(ctx, account.Platform, groupIDs, reason, seen); err != nil && firstErr == nil {
-		firstErr = err
-placeholder
+	buckets := s.bucketsForPlatform(account.Platform, groupIDs, seen)
 	if account.Platform == PlatformAntigravity && account.IsMixedSchedulingEnabled() {
-		if err := s.rebuildBucketsForPlatform(ctx, PlatformAnthropic, groupIDs, reason, seen); err != nil && firstErr == nil {
-			firstErr = err
-	placeholder
-		if err := s.rebuildBucketsForPlatform(ctx, PlatformGemini, groupIDs, reason, seen); err != nil && firstErr == nil {
-			firstErr = err
-	placeholder
+		buckets = append(buckets, s.bucketsForPlatform(PlatformAnthropic, groupIDs, seen)...)
+		buckets = append(buckets, s.bucketsForPlatform(PlatformGemini, groupIDs, seen)...)
 placeholder
-	return firstErr
+	return s.rebuildBuckets(ctx, buckets, reason)
 placeholder
 
 func (s *SchedulerSnapshotService) rebuildByGroupIDs(ctx context.Context, groupIDs []int64, reason string, seen map[batchSeenKey]struct{placeholder) error {
@@ -528,20 +543,18 @@ func (s *SchedulerSnapshotService) rebuildByGroupIDs(ctx context.Context, groupI
 		return nil
 placeholder
 	platforms := []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrokplaceholder
-	var firstErr error
+	buckets := make([]SchedulerBucket, 0, len(groupIDs)*12)
 	for _, platform := range platforms {
-		if err := s.rebuildBucketsForPlatform(ctx, platform, groupIDs, reason, seen); err != nil && firstErr == nil {
-			firstErr = err
-	placeholder
+		buckets = append(buckets, s.bucketsForPlatform(platform, groupIDs, seen)...)
 placeholder
-	return firstErr
+	return s.rebuildBuckets(ctx, buckets, reason)
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildBucketsForPlatform(ctx context.Context, platform string, groupIDs []int64, reason string, seen map[batchSeenKey]struct{placeholder) error {
+func (s *SchedulerSnapshotService) bucketsForPlatform(platform string, groupIDs []int64, seen map[batchSeenKey]struct{placeholder) []SchedulerBucket {
 	if platform == "" {
 		return nil
 placeholder
-	var firstErr error
+	buckets := make([]SchedulerBucket, 0, len(groupIDs)*3)
 	for _, gid := range groupIDs {
 		// Within a single poll batch, skip (groupID, platform) pairs that were
 		// already rebuilt. The first rebuild loads fresh DB data for all accounts
@@ -554,35 +567,52 @@ placeholder
 		placeholder
 			seen[key] = struct{placeholder{placeholder
 	placeholder
-		if err := s.rebuildBucket(ctx, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeSingleplaceholder, reason); err != nil && firstErr == nil {
-			firstErr = err
-	placeholder
-		if err := s.rebuildBucket(ctx, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeForcedplaceholder, reason); err != nil && firstErr == nil {
-			firstErr = err
-	placeholder
+		buckets = append(buckets, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeSingleplaceholder)
+		buckets = append(buckets, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeForcedplaceholder)
 		if platform == PlatformAnthropic || platform == PlatformGemini {
-			if err := s.rebuildBucket(ctx, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeMixedplaceholder, reason); err != nil && firstErr == nil {
-				firstErr = err
-		placeholder
+			buckets = append(buckets, SchedulerBucket{GroupID: gid, Platform: platform, Mode: SchedulerModeMixedplaceholder)
 	placeholder
 placeholder
-	return firstErr
+	return buckets
 placeholder
 
 func (s *SchedulerSnapshotService) rebuildBuckets(ctx context.Context, buckets []SchedulerBucket, reason string) error {
-	var firstErr error
-	for _, bucket := range buckets {
-		if err := s.rebuildBucket(ctx, bucket, reason); err != nil && firstErr == nil {
+	tasks, firstErr := s.prepareBucketWriteTasks(ctx, buckets)
+	for _, task := range tasks {
+		if err := s.rebuildBucketWithToken(ctx, task, reason); err != nil && firstErr == nil {
 			firstErr = err
 	placeholder
 placeholder
 	return firstErr
 placeholder
 
-func (s *SchedulerSnapshotService) rebuildBucket(ctx context.Context, bucket SchedulerBucket, reason string) error {
+func (s *SchedulerSnapshotService) prepareBucketWriteTasks(ctx context.Context, buckets []SchedulerBucket) ([]schedulerBucketWriteTask, error) {
+	if s.cache == nil {
+		return nil, ErrSchedulerCacheNotReady
+placeholder
+	tasks := make([]schedulerBucketWriteTask, 0, len(buckets))
+	var firstErr error
+	for _, bucket := range buckets {
+		token, err := s.cache.CaptureBucketWriteToken(ctx, bucket)
+		if err != nil {
+			if errors.Is(err, ErrSchedulerBucketRetired) || errors.Is(err, ErrSchedulerBucketWriteFenced) {
+				continue
+		placeholder
+			if firstErr == nil {
+				firstErr = err
+		placeholder
+			continue
+	placeholder
+		tasks = append(tasks, schedulerBucketWriteTask{bucket: bucket, token: tokenplaceholder)
+placeholder
+	return tasks, firstErr
+placeholder
+
+func (s *SchedulerSnapshotService) rebuildBucketWithToken(ctx context.Context, task schedulerBucketWriteTask, reason string) error {
 	if s.cache == nil {
 		return ErrSchedulerCacheNotReady
 placeholder
+	bucket := task.bucket
 	ok, err := s.cache.TryLockBucket(ctx, bucket, 30*time.Second)
 	if err != nil {
 		return err
@@ -602,7 +632,11 @@ placeholder()
 		logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] rebuild failed: bucket=%s reason=%s err=%v", bucket.String(), reason, err)
 		return err
 placeholder
-	if err := s.cache.SetSnapshot(rebuildCtx, bucket, accounts); err != nil {
+	if err := s.cache.SetSnapshot(rebuildCtx, bucket, task.token, accounts); err != nil {
+		if errors.Is(err, ErrSchedulerBucketRetired) || errors.Is(err, ErrSchedulerBucketWriteFenced) {
+			slog.Debug("[Scheduler] rebuild fenced", "bucket", bucket.String(), "reason", reason)
+			return nil
+	placeholder
 		logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] rebuild cache failed: bucket=%s reason=%s err=%v", bucket.String(), reason, err)
 		return err
 placeholder
