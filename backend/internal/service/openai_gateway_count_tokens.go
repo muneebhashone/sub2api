@@ -215,7 +215,15 @@ placeholder
 		return nil, err
 placeholder
 	req = req.WithContext(WithHTTPUpstreamProfile(req.Context(), HTTPUpstreamProfileOpenAI))
-	req.Header.Set("authorization", "Bearer "+token)
+	authHeaders, err := s.buildOpenAIAuthenticationHeaders(ctx, account, token)
+	if err != nil {
+		return nil, err
+placeholder
+	for key, values := range authHeaders {
+		for _, value := range values {
+			req.Header.Add(key, value)
+	placeholder
+placeholder
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
 
