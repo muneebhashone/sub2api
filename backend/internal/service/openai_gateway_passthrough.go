@@ -914,6 +914,11 @@ placeholder
 				trimmedData = strings.TrimSpace(string(normalizedData))
 				line = "data: " + string(normalizedData)
 		placeholder
+			if normalizedData, normalized := normalizeCompletedImageGenerationStatus(dataBytes); normalized {
+				dataBytes = normalizedData
+				trimmedData = strings.TrimSpace(string(normalizedData))
+				line = "data: " + string(normalizedData)
+		placeholder
 			eventType := strings.TrimSpace(gjson.Get(trimmedData, "type").String())
 			if eventType == "response.failed" {
 				failedMessage = extractOpenAISSEErrorMessage(dataBytes)
