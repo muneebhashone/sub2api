@@ -15,6 +15,16 @@ import (
 	"github.com/tidwall/sjson"
 )
 
+func validateOpenAIWSBearerToken(account *Account, token string) error {
+	if account == nil {
+		return errors.New("account is nil")
+placeholder
+	if strings.TrimSpace(token) == "" && !account.IsOpenAIAgentIdentity() {
+		return errors.New("token is empty")
+placeholder
+	return nil
+placeholder
+
 func (s *OpenAIGatewayService) buildOpenAIResponsesWSURL(account *Account) (string, error) {
 	if account == nil {
 		return "", errors.New("account is nil")

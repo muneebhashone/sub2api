@@ -39,8 +39,8 @@ placeholder
 	if account == nil {
 		return errors.New("account is nil")
 placeholder
-	if strings.TrimSpace(token) == "" {
-		return errors.New("token is empty")
+	if err := validateOpenAIWSBearerToken(account, token); err != nil {
+		return err
 placeholder
 
 	// 预取一次 OpenAI Fast Policy settings，绑定到 ctx，让该 WS session

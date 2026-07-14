@@ -243,8 +243,8 @@ placeholder
 	if account == nil {
 		return errors.New("account is nil")
 placeholder
-	if strings.TrimSpace(token) == "" {
-		return errors.New("token is empty")
+	if err := validateOpenAIWSBearerToken(account, token); err != nil {
+		return err
 placeholder
 	requestModel := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "model").String())
 	requestPreviousResponseID := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "previous_response_id").String())

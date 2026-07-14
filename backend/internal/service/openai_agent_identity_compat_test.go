@@ -189,6 +189,32 @@ placeholder))
 placeholder))
 placeholder
 
+func TestValidateOpenAIWSBearerTokenAllowsAgentIdentityWithoutStoredToken(t *testing.T) {
+	t.Run("Given Agent Identity When a WS path receives no bearer token Then dial-time assertion auth is allowed", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+				"auth_mode": OpenAIAuthModeAgentIdentity,
+		placeholder,
+	placeholder
+
+		require.NoError(t, validateOpenAIWSBearerToken(account, ""))
+placeholder)
+
+	t.Run("Given bearer credentials When a WS path receives no token Then the request is rejected", func(t *testing.T) {
+		accounts := []*Account{
+			{Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder,
+			{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Credentials: map[string]any{"auth_mode": OpenAIAuthModePersonalAccessTokenplaceholderplaceholder,
+			{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder,
+	placeholder
+
+		for _, account := range accounts {
+			require.EqualError(t, validateOpenAIWSBearerToken(account, ""), "token is empty")
+	placeholder
+placeholder)
+placeholder
+
 func TestOpenAIWSConnPoolHeadersFactoryRunsAtDialAndStalePrewarmIsDiscarded(t *testing.T) {
 	cfg := &config.Config{placeholder
 	cfg.Gateway.OpenAIWS.MaxConnsPerAccount = 1
