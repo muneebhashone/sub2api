@@ -1,9 +1,12 @@
 package service
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func TestDeriveOpenAIContentSessionSeed_EmptyInputs(t *testing.T) {
@@ -195,6 +198,184 @@ placeholder`)
 	s1 := deriveOpenAIContentSessionSeed(compact)
 	s2 := deriveOpenAIContentSessionSeed(spaced)
 	require.Equal(t, s1, s2, "different formatting of identical JSON should produce the same seed")
+placeholder
+
+func TestDeriveOpenAIContentSessionSeed_SingleScanMatchesLegacyBytes(t *testing.T) {
+	largeValue := strings.Repeat("payload", 1<<17)
+	tests := []struct {
+		name string
+		body []byte
+placeholder{
+		{
+			name: "large chat completions",
+			body: []byte(`{"metadata":"` + largeValue + `","model":"gpt-5.4","tools":[{"type":"function","function":{"name":"lookup"placeholderplaceholder],"functions":[{"name":"legacy_lookup"placeholder],"messages":[{"role":"system","content":"System prompt"placeholder,{"role":"developer","content":[{"type":"text","text":"Developer prompt"placeholder]placeholder,{"role":"user","content":"Hello"placeholder]placeholder`),
+	placeholder,
+		{
+			name: "large responses",
+			body: []byte(`{"metadata":"` + largeValue + `","model":"gpt-5.4","instructions":"Be concise.","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"system","content":"System prompt"placeholder,{"role":"user","content":[{"type":"input_text","text":"Hello"placeholder]placeholder]placeholder`),
+	placeholder,
+		{
+			name: "fields in reverse order",
+			body: []byte(`{"input":"fallback input","messages":[{"role":"user","content":"chat wins"placeholder],"instructions":"Be concise.","functions":[{"name":"lookup"placeholder],"tools":[{"type":"function","name":"lookup"placeholder],"model":"gpt-5.4"placeholder`),
+	placeholder,
+		{
+			name: "missing and wrong type fields",
+			body: []byte(`{"tools":[],"functions":null,"instructions":0,"messages":{placeholder,"input":[{"type":"input_text","text":"fallback"placeholder]placeholder`),
+	placeholder,
+		{
+			name: "duplicate fields keep first value",
+			body: []byte(`{"model":"first","model":"second","tools":[{"name":"first"placeholder],"tools":[{"name":"second"placeholder],"functions":[],"functions":[{"name":"second"placeholder],"instructions":"first","instructions":"second","messages":null,"messages":[{"role":"user","content":"second"placeholder],"input":"first input","input":"second input"placeholder`),
+	placeholder,
+		{
+			name: "escaped field names",
+			body: []byte(`{"mo\u0064el":"gpt-5.4","mess\u0061ges":[{"role":"user","content":"Hello"placeholder]placeholder`),
+	placeholder,
+		{
+			name: "trailing object fields are outside the root",
+			body: []byte(`{"foo":1placeholder{"model":"trailing","input":"trailing input"placeholder`),
+	placeholder,
+		{
+			name: "trailing quoted fields are outside the root",
+			body: []byte(`{"model":"root"placeholder"input":"trailing input"`),
+	placeholder,
+		{
+			name: "leading garbage before the root",
+			body: []byte(`garbage{"model":"gpt-5.4","input":"Hello"placeholder`),
+	placeholder,
+		{
+			name: "escaped braces remain inside string values",
+			body: []byte(`{"metadata":"escaped placeholder and [ and \" quote","model":"root","input":"Hello"placeholder{"model":"trailing"placeholder`),
+	placeholder,
+		{
+			name: "nested braces do not end the root",
+			body: []byte(`{"metadata":{"nested":"placeholder ]"placeholder,"model":"root","input":"Hello"placeholder{"model":"trailing"placeholder`),
+	placeholder,
+		{
+			name: "root array does not expose nested or trailing object fields",
+			body: []byte(`[{"model":"nested"placeholder]{"model":"trailing","input":"trailing input"placeholder`),
+	placeholder,
+		{
+			name: "trailing messages do not override root input",
+			body: []byte(`{"input":"root input"placeholder{"messages":[{"role":"user","content":"trailing"placeholder]placeholder`),
+	placeholder,
+		{
+			name: "truncated string containing a closing brace",
+			body: []byte(`{"model":"root","metadata":"still placeholder inside`),
+	placeholder,
+		{
+			name: "lenient truncated body",
+			body: []byte(`{"model":"gpt-5.4","messages":[{"role":"user","content":"Hello"placeholder]`),
+	placeholder,
+placeholder
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, legacyDeriveOpenAIContentSessionSeed(test.body), deriveOpenAIContentSessionSeed(test.body))
+	placeholder)
+placeholder
+placeholder
+
+func TestDeriveOpenAIContentSessionSeed_AllTruncationOffsetsMatchLegacyBytes(t *testing.T) {
+	bodies := []string{
+		`{"model":"gpt-5.4","tools":[{"type":"function","function":{"name":"lookup"placeholderplaceholder],"functions":[{"name":"legacy"placeholder],"instructions":"escaped \" placeholder text","messages":[{"role":"system","content":"System"placeholder,{"role":"user","content":[{"type":"text","text":"Hello"placeholder]placeholder],"input":"fallback"placeholder`,
+		`{"model":"gpt-5.4","instructions":"Be concise.","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"system","content":"System"placeholder,{"role":"user","content":[{"type":"input_text","text":"Hello"placeholder]placeholder]placeholder`,
+placeholder
+	for bodyIndex, body := range bodies {
+		for end := 1; end < len(body); end++ {
+			truncated := []byte(body[:end])
+			require.Equalf(t, legacyDeriveOpenAIContentSessionSeed(truncated), deriveOpenAIContentSessionSeed(truncated), "body %d truncated at byte %d", bodyIndex, end)
+	placeholder
+placeholder
+placeholder
+
+func legacyDeriveOpenAIContentSessionSeed(body []byte) string {
+	if len(body) == 0 {
+		return ""
+placeholder
+
+	var b strings.Builder
+
+	if model := gjson.GetBytes(body, "model").String(); model != "" {
+		_, _ = b.WriteString("model=")
+		_, _ = b.WriteString(model)
+placeholder
+
+	if tools := gjson.GetBytes(body, "tools"); tools.Exists() && tools.IsArray() && tools.Raw != "[]" {
+		_, _ = b.WriteString("|tools=")
+		_, _ = b.WriteString(normalizeCompatSeedJSON(json.RawMessage(tools.Raw)))
+placeholder
+
+	if funcs := gjson.GetBytes(body, "functions"); funcs.Exists() && funcs.IsArray() && funcs.Raw != "[]" {
+		_, _ = b.WriteString("|functions=")
+		_, _ = b.WriteString(normalizeCompatSeedJSON(json.RawMessage(funcs.Raw)))
+placeholder
+
+	if instr := gjson.GetBytes(body, "instructions").String(); instr != "" {
+		_, _ = b.WriteString("|instructions=")
+		_, _ = b.WriteString(instr)
+placeholder
+
+	firstUserCaptured := false
+
+	msgs := gjson.GetBytes(body, "messages")
+	if msgs.Exists() && msgs.IsArray() {
+		msgs.ForEach(func(_, msg gjson.Result) bool {
+			role := msg.Get("role").String()
+			switch role {
+			case "system", "developer":
+				_, _ = b.WriteString("|system=")
+				if c := msg.Get("content"); c.Exists() {
+					_, _ = b.WriteString(normalizeCompatSeedJSON(json.RawMessage(c.Raw)))
+			placeholder
+			case "user":
+				if !firstUserCaptured {
+					_, _ = b.WriteString("|first_user=")
+					if c := msg.Get("content"); c.Exists() {
+						_, _ = b.WriteString(normalizeCompatSeedJSON(json.RawMessage(c.Raw)))
+				placeholder
+					firstUserCaptured = true
+			placeholder
+		placeholder
+			return true
+	placeholder)
+placeholder else if inp := gjson.GetBytes(body, "input"); inp.Exists() {
+		if inp.Type == gjson.String {
+			_, _ = b.WriteString("|input=")
+			_, _ = b.WriteString(inp.String())
+	placeholder else if inp.IsArray() {
+			inp.ForEach(func(_, item gjson.Result) bool {
+				role := item.Get("role").String()
+				switch role {
+				case "system", "developer":
+					_, _ = b.WriteString("|system=")
+					if c := item.Get("content"); c.Exists() {
+						_, _ = b.WriteString(normalizeCompatSeedJSON(json.RawMessage(c.Raw)))
+				placeholder
+				case "user":
+					if !firstUserCaptured {
+						_, _ = b.WriteString("|first_user=")
+						if c := item.Get("content"); c.Exists() {
+							_, _ = b.WriteString(normalizeCompatSeedJSON(json.RawMessage(c.Raw)))
+					placeholder
+						firstUserCaptured = true
+				placeholder
+			placeholder
+				if !firstUserCaptured && item.Get("type").String() == "input_text" {
+					_, _ = b.WriteString("|first_user=")
+					if text := item.Get("text").String(); text != "" {
+						_, _ = b.WriteString(text)
+				placeholder
+					firstUserCaptured = true
+			placeholder
+				return true
+		placeholder)
+	placeholder
+placeholder
+
+	if b.Len() == 0 {
+		return ""
+placeholder
+	return contentSessionSeedPrefix + b.String()
 placeholder
 
 func TestDeriveOpenAIContentSessionSeed_ResponsesAPI_InputTextTypedItem(t *testing.T) {
