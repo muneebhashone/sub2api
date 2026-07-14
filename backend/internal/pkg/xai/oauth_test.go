@@ -166,6 +166,14 @@ placeholder
 placeholder
 placeholder
 
+func TestValidateBaseURLsRejectEmptyQueryDelimiter(t *testing.T) {
+	_, err := ValidateBaseURL("https://grok.example.test/v1?")
+placeholder
+
+	_, err = ValidateTrustedBaseURL("https://api.x.ai/v1?")
+placeholder
+placeholder
+
 func TestBuildResponsesURLWithValidatorUsesCallerPolicy(t *testing.T) {
 	validator := func(raw string) (string, error) {
 		return urlvalidator.ValidateURLFormat(raw, true)
@@ -192,6 +200,7 @@ func TestBuildResponsesURLWithValidatorRejectsBaseURLComponents(t *testing.T) {
 placeholder{
 		{name: "userinfo", raw: "https://user:secret@grok.example.test/v1"placeholder,
 		{name: "query", raw: "https://grok.example.test/v1?token=secret"placeholder,
+		{name: "empty query delimiter", raw: "https://grok.example.test/v1?"placeholder,
 		{name: "fragment", raw: "https://grok.example.test/v1#secret"placeholder,
 placeholder
 
