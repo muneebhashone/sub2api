@@ -45,7 +45,47 @@ type stubConcurrencyCacheForTest struct {
 	releasedAPIKeyRequestIDs []string
 placeholder
 
+type ingressLeaseCacheForTest struct {
+	stubConcurrencyCacheForTest
+	acquireIngressResult bool
+	acquireIngressErr    error
+	acquireIngressFn     func(context.Context, int64, int, string) (bool, error)
+	refreshIngressResult bool
+	refreshIngressErr    error
+	refreshIngressFn     func(context.Context, int64, string) (bool, error)
+	releaseIngressErr    error
+	releaseIngressFn     func(context.Context, int64, string) error
+	acquireIngressCalls  int
+	refreshIngressCalls  int
+	releaseIngressCalls  int
+placeholder
+
+func (c *ingressLeaseCacheForTest) AcquireOpenAIWSIngressLease(ctx context.Context, apiKeyID int64, maxConnections int, leaseID string) (bool, error) {
+	c.acquireIngressCalls++
+	if c.acquireIngressFn != nil {
+		return c.acquireIngressFn(ctx, apiKeyID, maxConnections, leaseID)
+placeholder
+	return c.acquireIngressResult, c.acquireIngressErr
+placeholder
+
+func (c *ingressLeaseCacheForTest) RefreshOpenAIWSIngressLease(ctx context.Context, apiKeyID int64, leaseID string) (bool, error) {
+	c.refreshIngressCalls++
+	if c.refreshIngressFn != nil {
+		return c.refreshIngressFn(ctx, apiKeyID, leaseID)
+placeholder
+	return c.refreshIngressResult, c.refreshIngressErr
+placeholder
+
+func (c *ingressLeaseCacheForTest) ReleaseOpenAIWSIngressLease(ctx context.Context, apiKeyID int64, leaseID string) error {
+	c.releaseIngressCalls++
+	if c.releaseIngressFn != nil {
+		return c.releaseIngressFn(ctx, apiKeyID, leaseID)
+placeholder
+	return c.releaseIngressErr
+placeholder
+
 var _ ConcurrencyCache = (*stubConcurrencyCacheForTest)(nil)
+var _ OpenAIWSIngressLeaseCache = (*ingressLeaseCacheForTest)(nil)
 
 func (c *stubConcurrencyCacheForTest) AcquireAccountSlot(_ context.Context, _ int64, _ int, _ string) (bool, error) {
 	return c.acquireResult, c.acquireErr
@@ -283,6 +323,114 @@ placeholder)
 	placeholder
 		require.Equal(t, map[int64]int{1: 3, 2: 0placeholder, counts)
 placeholder)
+placeholder
+
+func TestAcquireOpenAIWSIngressLease(t *testing.T) {
+	t.Run("zero value release is safe", func(t *testing.T) {
+		var lease OpenAIWSIngressLease
+		require.NotPanics(t, lease.Release)
+placeholder)
+
+	t.Run("disabled", func(t *testing.T) {
+		cache := &ingressLeaseCacheForTest{placeholder
+		lease, acquired, err := NewConcurrencyService(cache).AcquireOpenAIWSIngressLease(nil, 1, 0)
+	placeholder
+		require.True(t, acquired)
+		require.Nil(t, lease)
+		require.Zero(t, cache.acquireIngressCalls)
+placeholder)
+
+	t.Run("unsupported cache fails closed", func(t *testing.T) {
+		lease, acquired, err := NewConcurrencyService(&stubConcurrencyCacheForTest{placeholder).AcquireOpenAIWSIngressLease(context.Background(), 1, 1)
+	placeholder
+		require.False(t, acquired)
+		require.Nil(t, lease)
+placeholder)
+
+	t.Run("capacity rejected", func(t *testing.T) {
+		cache := &ingressLeaseCacheForTest{acquireIngressResult: falseplaceholder
+		lease, acquired, err := NewConcurrencyService(cache).AcquireOpenAIWSIngressLease(context.Background(), 1, 1)
+	placeholder
+		require.False(t, acquired)
+		require.Nil(t, lease)
+placeholder)
+
+	t.Run("release returns capacity", func(t *testing.T) {
+		cache := &ingressLeaseCacheForTest{acquireIngressResult: true, refreshIngressResult: trueplaceholder
+		lease, acquired, err := NewConcurrencyService(cache).AcquireOpenAIWSIngressLease(nil, 1, 1)
+	placeholder
+		require.True(t, acquired)
+		require.NotNil(t, lease)
+		lease.Release()
+		lease.Release()
+		require.Equal(t, 1, cache.releaseIngressCalls)
+placeholder)
+placeholder
+
+func TestOpenAIWSIngressLeaseRefreshLoss(t *testing.T) {
+	t.Run("missing lease is lost immediately", func(t *testing.T) {
+		cache := &ingressLeaseCacheForTest{refreshIngressResult: falseplaceholder
+		lease := &OpenAIWSIngressLease{cache: cache, apiKeyID: 1, leaseID: "missing"placeholder
+		_, lost := lease.refresh(time.Now())
+		require.True(t, lost)
+		require.Equal(t, 1, cache.refreshIngressCalls)
+placeholder)
+
+	t.Run("persistent redis errors lose lease after ttl", func(t *testing.T) {
+		cache := &ingressLeaseCacheForTest{refreshIngressErr: errors.New("redis unavailable")placeholder
+		lease := &OpenAIWSIngressLease{cache: cache, apiKeyID: 1, leaseID: "unconfirmed"placeholder
+		_, lost := lease.refresh(time.Now().Add(-openAIWSIngressLeaseTTL))
+		require.True(t, lost)
+		require.Equal(t, 1, cache.refreshIngressCalls)
+placeholder)
+placeholder
+
+func TestOpenAIWSIngressLeaseReleaseWaitsForInFlightRefresh(t *testing.T) {
+	refreshStarted := make(chan struct{placeholder)
+	allowRefresh := make(chan struct{placeholder)
+	cache := &ingressLeaseCacheForTest{
+		refreshIngressFn: func(context.Context, int64, string) (bool, error) {
+			close(refreshStarted)
+			<-allowRefresh
+			return true, nil
+	placeholder,
+placeholder
+	ctx, cancel := context.WithCancelCause(context.Background())
+	lease := &OpenAIWSIngressLease{
+		ctx:         ctx,
+		cancel:      cancel,
+		cache:       cache,
+		apiKeyID:    1,
+		leaseID:     "in-flight-refresh",
+		stopCh:      make(chan struct{placeholder),
+		refreshDone: make(chan struct{placeholder),
+placeholder
+	go func() {
+		defer close(lease.refreshDone)
+		_, _ = lease.refresh(time.Now())
+placeholder()
+	<-refreshStarted
+
+	released := make(chan struct{placeholder)
+	go func() {
+		lease.Release()
+		close(released)
+placeholder()
+
+	select {
+	case <-released:
+		t.Fatal("release returned before the in-flight refresh completed")
+	case <-time.After(20 * time.Millisecond):
+placeholder
+	require.Zero(t, cache.releaseIngressCalls)
+
+	close(allowRefresh)
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("release did not complete after the refresh returned")
+placeholder
+	require.Equal(t, 1, cache.releaseIngressCalls)
 placeholder
 
 func TestGenerateRequestID_UsesStablePrefixAndMonotonicCounter(t *testing.T) {

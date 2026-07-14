@@ -17,6 +17,23 @@ placeholder
 	t.Setenv("JWT_SECRET", strings.Repeat("x", 32))
 placeholder
 
+func TestLoadServerTimingConfig(t *testing.T) {
+	t.Run("disabled by default", func(t *testing.T) {
+		resetViperWithJWTSecret(t)
+		cfg, err := Load()
+	placeholder
+		require.False(t, cfg.Server.EnableServerTiming)
+placeholder)
+
+	t.Run("enabled by exact environment variable", func(t *testing.T) {
+		resetViperWithJWTSecret(t)
+		t.Setenv("ENABLE_SERVER_TIMING", "true")
+		cfg, err := Load()
+	placeholder
+		require.True(t, cfg.Server.EnableServerTiming)
+placeholder)
+placeholder
+
 func TestLoadForBootstrapAllowsMissingJWTSecret(t *testing.T) {
 	viper.Reset()
 	t.Setenv("JWT_SECRET", "")
@@ -182,6 +199,12 @@ placeholder
 	if cfg.Gateway.OpenAIWS.IngressModeDefault != "ctx_pool" {
 		t.Fatalf("Gateway.OpenAIWS.IngressModeDefault = %q, want %q", cfg.Gateway.OpenAIWS.IngressModeDefault, "ctx_pool")
 placeholder
+	if cfg.Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds != 300 {
+		t.Fatalf("Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds = %d, want 300", cfg.Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds)
+placeholder
+	if cfg.Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey != 64 {
+		t.Fatalf("Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey = %d, want 64", cfg.Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey)
+placeholder
 placeholder
 
 func TestLoadDefaultOpenAICompactModel(t *testing.T) {
@@ -234,6 +257,15 @@ func TestLoadOpenAIResponseHeaderTimeoutFromEnv(t *testing.T) {
 	cfg, err := Load()
 placeholder
 	require.Equal(t, 1800, cfg.Gateway.OpenAIResponseHeaderTimeout)
+placeholder
+
+func TestLoadImageNonstreamKeepaliveFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_IMAGE_NONSTREAM_KEEPALIVE_INTERVAL", "15")
+
+	cfg, err := Load()
+placeholder
+	require.Equal(t, 15, cfg.Gateway.ImageNonstreamKeepaliveInterval)
 placeholder
 
 func TestLoadOpenAIWSStickyTTLCompatibility(t *testing.T) {
@@ -1407,6 +1439,16 @@ placeholder{
 			wantErr: "gateway.image_stream_keepalive_interval must be non-negative",
 	placeholder,
 		{
+			name:    "gateway image nonstream keepalive range",
+			mutate:  func(c *Config) { c.Gateway.ImageNonstreamKeepaliveInterval = 4 placeholder,
+			wantErr: "gateway.image_nonstream_keepalive_interval",
+	placeholder,
+		{
+			name:    "gateway image nonstream keepalive negative",
+			mutate:  func(c *Config) { c.Gateway.ImageNonstreamKeepaliveInterval = -1 placeholder,
+			wantErr: "gateway.image_nonstream_keepalive_interval must be non-negative",
+	placeholder,
+		{
 			name:    "gateway image stream data interval range",
 			mutate:  func(c *Config) { c.Gateway.ImageStreamDataIntervalTimeout = 30 placeholder,
 			wantErr: "gateway.image_stream_data_interval_timeout",
@@ -1639,6 +1681,16 @@ placeholder{
 			name:    "max_conns_per_account 必须为正数",
 			mutate:  func(c *Config) { c.Gateway.OpenAIWS.MaxConnsPerAccount = 0 placeholder,
 			wantErr: "gateway.openai_ws.max_conns_per_account",
+	placeholder,
+		{
+			name:    "ingress_inter_turn_idle_timeout_seconds 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds = -1 placeholder,
+			wantErr: "gateway.openai_ws.ingress_inter_turn_idle_timeout_seconds",
+	placeholder,
+		{
+			name:    "max_ingress_connections_per_api_key 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey = -1 placeholder,
+			wantErr: "gateway.openai_ws.max_ingress_connections_per_api_key",
 	placeholder,
 		{
 			name:    "min_idle_per_account 不能为负数",
@@ -1963,6 +2015,9 @@ placeholder
 placeholder
 	if cfg.Gateway.ImageStreamKeepaliveInterval != 10 {
 		t.Fatalf("image_stream_keepalive_interval = %d, want 10", cfg.Gateway.ImageStreamKeepaliveInterval)
+placeholder
+	if cfg.Gateway.ImageNonstreamKeepaliveInterval != 0 {
+		t.Fatalf("image_nonstream_keepalive_interval = %d, want 0", cfg.Gateway.ImageNonstreamKeepaliveInterval)
 placeholder
 	if cfg.Gateway.ImageConcurrency.Enabled {
 		t.Fatalf("image_concurrency.enabled = true, want false")

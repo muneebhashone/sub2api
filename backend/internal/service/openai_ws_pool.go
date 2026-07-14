@@ -208,6 +208,14 @@ placeholder
 	return conn.pingWithTimeout(timeout)
 placeholder
 
+func (l *openAIWSConnLease) SupportsIdlePingWithoutReader() bool {
+	conn, err := l.activeConn()
+	if err != nil {
+		return false
+placeholder
+	return conn.supportsIdlePingWithoutReader()
+placeholder
+
 func (l *openAIWSConnLease) MarkBroken() {
 	if l == nil || l.pool == nil || l.conn == nil || l.released.Load() {
 		return
@@ -223,6 +231,9 @@ placeholder
 		return
 placeholder
 	l.conn.release()
+	if l.pool != nil {
+		l.pool.notifyAccountPoolChanged(l.accountID)
+placeholder
 placeholder
 
 type openAIWSConn struct {
@@ -230,6 +241,7 @@ type openAIWSConn struct {
 	ws openAIWSClientConn
 
 	handshakeHeaders http.Header
+	betaFeatures     string
 
 	leaseCh   chan struct{placeholder
 	closedCh  chan struct{placeholder
@@ -438,6 +450,16 @@ placeholder
 	return nil
 placeholder
 
+func (c *openAIWSConn) supportsIdlePingWithoutReader() bool {
+	if c == nil || c.ws == nil {
+		return false
+placeholder
+	capable, ok := c.ws.(openAIWSIdlePingCapable)
+	// Test and alternate implementations keep the historical probe behavior
+	// unless they explicitly declare it unsafe.
+	return !ok || capable.SupportsIdlePingWithoutReader()
+placeholder
+
 func (c *openAIWSConn) touch() {
 	if c == nil {
 		return
@@ -503,6 +525,10 @@ placeholder
 	return strings.TrimSpace(c.handshakeHeaders.Get(strings.TrimSpace(name)))
 placeholder
 
+func (c *openAIWSConn) matchesBetaFeatures(betaFeatures string) bool {
+	return c != nil && c.betaFeatures == betaFeatures
+placeholder
+
 func (c *openAIWSConn) isPrewarmed() bool {
 	if c == nil {
 		return false
@@ -521,6 +547,7 @@ type openAIWSAccountPool struct {
 	mu            sync.Mutex
 	conns         map[string]*openAIWSConn
 	pinnedConns   map[string]int
+	changedCh     chan struct{placeholder
 	creating      int
 	generation    uint64
 	lastCleanupAt time.Time
@@ -529,6 +556,23 @@ type openAIWSAccountPool struct {
 	prewarmUntil  time.Time
 	prewarmFails  int
 	prewarmFailAt time.Time
+placeholder
+
+func (ap *openAIWSAccountPool) changeChannelLocked() chan struct{placeholder {
+	if ap.changedCh == nil {
+		ap.changedCh = make(chan struct{placeholder)
+placeholder
+	return ap.changedCh
+placeholder
+
+func (ap *openAIWSAccountPool) signalChangedLocked() {
+	if ap == nil {
+		return
+placeholder
+	if ap.changedCh != nil {
+		close(ap.changedCh)
+placeholder
+	ap.changedCh = make(chan struct{placeholder)
 placeholder
 
 type OpenAIWSPoolMetricsSnapshot struct {
@@ -687,7 +731,7 @@ placeholder
 	g.SetLimit(10)
 	for _, item := range candidates {
 		item := item
-		if item.conn == nil || item.conn.isLeased() || item.conn.waiters.Load() > 0 {
+		if item.conn == nil || item.conn.isLeased() || item.conn.waiters.Load() > 0 || !item.conn.supportsIdlePingWithoutReader() {
 			continue
 	placeholder
 		g.Go(func() error {
@@ -792,7 +836,9 @@ placeholder
 		return nil, errors.New("ws url is empty")
 placeholder
 
+retryAcquire:
 	accountID := req.Account.ID
+	betaFeatures := normalizeOpenAIWSBetaFeatures(req.Headers)
 	effectiveMaxConns := p.effectiveMaxConnsByAccount(req.Account)
 	if effectiveMaxConns <= 0 {
 		return nil, errOpenAIWSConnQueueFull
@@ -820,7 +866,7 @@ placeholder
 				return nil, errOpenAIWSPreferredConnUnavailable
 		placeholder
 			preferredConn, ok := ap.conns[preferredConnID]
-			if !ok || preferredConn == nil {
+			if !ok || !preferredConn.matchesBetaFeatures(betaFeatures) {
 				p.recordConnPickDuration(time.Since(pickStartedAt))
 				ap.mu.Unlock()
 				closeOpenAIWSConns(evicted)
@@ -901,7 +947,7 @@ placeholder
 	placeholder
 
 		if preferredConnID != "" {
-			if conn, ok := ap.conns[preferredConnID]; ok && conn.tryAcquire() {
+			if conn, ok := ap.conns[preferredConnID]; ok && conn.matchesBetaFeatures(betaFeatures) && conn.tryAcquire() {
 				connPick := time.Since(pickStartedAt)
 				p.recordConnPickDuration(connPick)
 				ap.mu.Unlock()
@@ -923,7 +969,7 @@ placeholder
 		placeholder
 	placeholder
 
-		best := p.pickLeastBusyConnLocked(ap, "")
+		best := p.pickLeastBusyConnLocked(ap, "", betaFeatures)
 		if best != nil && best.tryAcquire() {
 			connPick := time.Since(pickStartedAt)
 			p.recordConnPickDuration(connPick)
@@ -945,7 +991,7 @@ placeholder
 			return lease, nil
 	placeholder
 		for _, conn := range ap.conns {
-			if conn == nil || conn == best {
+			if conn == nil || conn == best || !conn.matchesBetaFeatures(betaFeatures) {
 				continue
 		placeholder
 			if conn.tryAcquire() {
@@ -967,6 +1013,37 @@ placeholder
 				p.metrics.acquireReuseTotal.Add(1)
 				p.ensureTargetIdleAsync(accountID)
 				return lease, nil
+		placeholder
+	placeholder
+placeholder
+
+	if !req.ForceNewConn && len(ap.conns)+ap.creating >= effectiveMaxConns {
+		compatible := p.pickLeastBusyConnLocked(ap, "", betaFeatures)
+		if idle := p.pickOldestIdleConnWithDifferentBetaFeaturesLocked(ap, betaFeatures); idle != nil {
+			delete(ap.conns, idle.id)
+			evicted = append(evicted, idle)
+			p.metrics.scaleDownTotal.Add(1)
+	placeholder else if compatible == nil {
+			hasConnection := false
+			for _, conn := range ap.conns {
+				if conn != nil {
+					hasConnection = true
+					break
+			placeholder
+		placeholder
+			if !hasConnection && ap.creating == 0 {
+				ap.mu.Unlock()
+				closeOpenAIWSConns(evicted)
+				return nil, errOpenAIWSConnClosed
+		placeholder
+			changedCh := ap.changeChannelLocked()
+			ap.mu.Unlock()
+			closeOpenAIWSConns(evicted)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-changedCh:
+				goto retryAcquire
 		placeholder
 	placeholder
 placeholder
@@ -994,6 +1071,7 @@ placeholder
 		if dialErr != nil {
 			ap.prewarmFails++
 			ap.prewarmFailAt = time.Now()
+			ap.signalChangedLocked()
 			ap.mu.Unlock()
 			return nil, dialErr
 	placeholder
@@ -1022,7 +1100,7 @@ placeholder
 		return nil, errOpenAIWSConnQueueFull
 placeholder
 
-	target := p.pickLeastBusyConnLocked(ap, req.PreferredConnID)
+	target := p.pickLeastBusyConnLocked(ap, req.PreferredConnID, betaFeatures)
 	connPick := time.Since(pickStartedAt)
 	p.recordConnPickDuration(connPick)
 	if target == nil {
@@ -1095,6 +1173,22 @@ placeholder
 	return oldest
 placeholder
 
+func (p *openAIWSConnPool) pickOldestIdleConnWithDifferentBetaFeaturesLocked(ap *openAIWSAccountPool, betaFeatures string) *openAIWSConn {
+	if ap == nil || len(ap.conns) == 0 {
+		return nil
+placeholder
+	var oldest *openAIWSConn
+	for _, conn := range ap.conns {
+		if conn == nil || conn.matchesBetaFeatures(betaFeatures) || conn.isLeased() || conn.waiters.Load() > 0 || p.isConnPinnedLocked(ap, conn.id) {
+			continue
+	placeholder
+		if oldest == nil || conn.lastUsedAt().Before(oldest.lastUsedAt()) {
+			oldest = conn
+	placeholder
+placeholder
+	return oldest
+placeholder
+
 func (p *openAIWSConnPool) getOrCreateAccountPool(accountID int64) *openAIWSAccountPool {
 	if p == nil || accountID <= 0 {
 		return nil
@@ -1107,6 +1201,7 @@ placeholder
 	ap := &openAIWSAccountPool{
 		conns:       make(map[string]*openAIWSConn),
 		pinnedConns: make(map[string]int),
+		changedCh:   make(chan struct{placeholder),
 placeholder
 	actual, _ := p.accounts.LoadOrStore(accountID, ap)
 	if typed, ok := actual.(*openAIWSAccountPool); ok && typed != nil {
@@ -1130,6 +1225,16 @@ placeholder
 placeholder
 	ap, typed := value.(*openAIWSAccountPool)
 	return ap, typed && ap != nil
+placeholder
+
+func (p *openAIWSConnPool) notifyAccountPoolChanged(accountID int64) {
+	ap, ok := p.getAccountPool(accountID)
+	if !ok || ap == nil {
+		return
+placeholder
+	ap.mu.Lock()
+	ap.signalChangedLocked()
+	ap.mu.Unlock()
 placeholder
 
 func (p *openAIWSConnPool) isConnPinnedLocked(ap *openAIWSAccountPool, connID string) bool {
@@ -1218,17 +1323,20 @@ placeholder
 			p.metrics.scaleDownTotal.Add(int64(redundant))
 	placeholder
 placeholder
+	if len(evicted) > 0 {
+		ap.signalChangedLocked()
+placeholder
 
 	return evicted
 placeholder
 
-func (p *openAIWSConnPool) pickLeastBusyConnLocked(ap *openAIWSAccountPool, preferredConnID string) *openAIWSConn {
+func (p *openAIWSConnPool) pickLeastBusyConnLocked(ap *openAIWSAccountPool, preferredConnID, betaFeatures string) *openAIWSConn {
 	if ap == nil || len(ap.conns) == 0 {
 		return nil
 placeholder
 	preferredConnID = stringsTrim(preferredConnID)
 	if preferredConnID != "" {
-		if conn, ok := ap.conns[preferredConnID]; ok {
+		if conn, ok := ap.conns[preferredConnID]; ok && conn.matchesBetaFeatures(betaFeatures) {
 			return conn
 	placeholder
 placeholder
@@ -1236,7 +1344,7 @@ placeholder
 	var bestWaiters int32
 	var bestLastUsed time.Time
 	for _, conn := range ap.conns {
-		if conn == nil {
+		if conn == nil || !conn.matchesBetaFeatures(betaFeatures) {
 			continue
 	placeholder
 		waiters := conn.waiters.Load()
@@ -1407,6 +1515,7 @@ placeholder()
 		if err != nil {
 			ap.prewarmFails++
 			ap.prewarmFailAt = time.Now()
+			ap.signalChangedLocked()
 			ap.mu.Unlock()
 			continue
 	placeholder
@@ -1416,6 +1525,7 @@ placeholder()
 			continue
 	placeholder
 		if len(ap.conns) >= p.effectiveMaxConnsByAccount(req.Account) {
+			ap.signalChangedLocked()
 			ap.mu.Unlock()
 			conn.close()
 			continue
@@ -1423,6 +1533,7 @@ placeholder()
 		ap.conns[conn.id] = conn
 		ap.prewarmFails = 0
 		ap.prewarmFailAt = time.Time{placeholder
+		ap.signalChangedLocked()
 		ap.mu.Unlock()
 placeholder
 placeholder
@@ -1470,6 +1581,7 @@ placeholder
 			if len(ap.pinnedConns) > 0 {
 				delete(ap.pinnedConns, connID)
 		placeholder
+			ap.signalChangedLocked()
 	placeholder
 		ap.mu.Unlock()
 placeholder
@@ -1522,9 +1634,11 @@ placeholder
 	count := ap.pinnedConns[connID]
 	if count <= 1 {
 		delete(ap.pinnedConns, connID)
+		ap.signalChangedLocked()
 		return
 placeholder
 	ap.pinnedConns[connID] = count - 1
+	ap.signalChangedLocked()
 placeholder
 
 func (p *openAIWSConnPool) dialConn(ctx context.Context, req openAIWSAcquireRequest) (*openAIWSConn, error) {
@@ -1561,7 +1675,9 @@ placeholder
 	placeholder
 placeholder
 	id := p.nextConnID(req.Account.ID)
-	return newOpenAIWSConn(id, req.Account.ID, conn, handshakeHeaders), nil
+	pooledConn := newOpenAIWSConn(id, req.Account.ID, conn, handshakeHeaders)
+	pooledConn.betaFeatures = normalizeOpenAIWSBetaFeatures(req.Headers)
+	return pooledConn, nil
 placeholder
 
 func (p *openAIWSConnPool) nextConnID(accountID int64) string {
@@ -1575,7 +1691,7 @@ func (p *openAIWSConnPool) nextConnID(accountID int64) string {
 placeholder
 
 func (p *openAIWSConnPool) shouldHealthCheckConn(conn *openAIWSConn) bool {
-	if conn == nil {
+	if conn == nil || !conn.supportsIdlePingWithoutReader() {
 		return false
 placeholder
 	return conn.idleDuration(time.Now()) >= openAIWSConnHealthCheckIdle
@@ -1631,7 +1747,7 @@ placeholder
 		if account.Concurrency <= 0 {
 			return 0
 	placeholder
-		return account.Concurrency
+		return min(account.Concurrency, hardCap)
 placeholder
 	if account == nil || !p.dynamicMaxConnsEnabled() {
 		return hardCap
@@ -1737,6 +1853,31 @@ func cloneOpenAIWSAcquireRequestPtr(req *openAIWSAcquireRequest) *openAIWSAcquir
 placeholder
 	copied := cloneOpenAIWSAcquireRequest(*req)
 	return &copied
+placeholder
+
+func normalizeOpenAIWSBetaFeatures(headers http.Header) string {
+	features := make(map[string]struct{placeholder)
+	for name, values := range headers {
+		if !strings.EqualFold(strings.TrimSpace(name), "x-codex-beta-features") {
+			continue
+	placeholder
+		for _, value := range values {
+			for _, feature := range strings.Split(value, ",") {
+				if feature = strings.TrimSpace(feature); feature != "" {
+					features[feature] = struct{placeholder{placeholder
+			placeholder
+		placeholder
+	placeholder
+placeholder
+	if len(features) == 0 {
+		return ""
+placeholder
+	normalized := make([]string, 0, len(features))
+	for feature := range features {
+		normalized = append(normalized, feature)
+placeholder
+	sort.Strings(normalized)
+	return strings.Join(normalized, ",")
 placeholder
 
 func cloneHeader(src http.Header) http.Header {

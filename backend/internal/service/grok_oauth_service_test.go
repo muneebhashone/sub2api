@@ -4,7 +4,10 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/stretchr/testify/require"
@@ -12,6 +15,7 @@ import (
 
 type grokOAuthClientStub struct {
 	refreshResponse *xai.TokenResponse
+	ssoResponse     *xai.TokenResponse
 	exchangeCalls   int
 placeholder
 
@@ -22,6 +26,10 @@ placeholder
 
 func (s *grokOAuthClientStub) RefreshToken(context.Context, string, string, string) (*xai.TokenResponse, error) {
 	return s.refreshResponse, nil
+placeholder
+
+func (s *grokOAuthClientStub) ConvertSSOToBuild(context.Context, string, string) (*xai.TokenResponse, error) {
+	return s.ssoResponse, nil
 placeholder
 
 func TestGrokOAuthServiceRefreshTokenPreservesOriginalRefreshTokenWhenNotRotated(t *testing.T) {
@@ -65,4 +73,44 @@ placeholder)
 placeholder
 	require.Contains(t, err.Error(), "GROK_OAUTH_SESSION_NOT_FOUND")
 	require.Zero(t, client.exchangeCalls)
+placeholder
+
+func TestGrokOAuthServiceBuildAccountCredentialsDefaultsToSubscriptionProxy(t *testing.T) {
+	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{placeholder)
+	defer svc.Stop()
+
+	credentials := svc.BuildAccountCredentials(&GrokTokenInfo{
+		AccessToken: "access-token",
+		ExpiresAt:   time.Now().Add(time.Hour).Unix(),
+placeholder)
+
+	require.Equal(t, xai.DefaultCLIBaseURL, credentials["base_url"])
+placeholder
+
+func TestGrokOAuthServiceConvertFromSSOExtractsBuildClaims(t *testing.T) {
+	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{
+		ssoResponse: &xai.TokenResponse{
+			AccessToken:  makeGrokOAuthJWT(map[string]any{"sub": "user-sub", "team_id": "team-1"placeholder),
+			RefreshToken: "refresh-token",
+			IDToken:      makeGrokOAuthJWT(map[string]any{"email": "user@example.com"placeholder),
+			ExpiresIn:    3600,
+	placeholder,
+placeholder)
+	defer svc.Stop()
+
+	info, err := svc.ConvertFromSSO(context.Background(), "sso-token", nil)
+placeholder
+	require.Equal(t, "user@example.com", info.Email)
+	require.Equal(t, "user-sub", info.Subject)
+	require.Equal(t, "team-1", info.TeamID)
+
+	credentials := svc.BuildAccountCredentials(info)
+	require.Equal(t, "user@example.com", credentials["email"])
+	require.Equal(t, "user-sub", credentials["sub"])
+	require.Equal(t, "team-1", credentials["team_id"])
+placeholder
+
+func makeGrokOAuthJWT(claims map[string]any) string {
+	payload, _ := json.Marshal(claims)
+	return "header." + base64.RawURLEncoding.EncodeToString(payload) + ".signature"
 placeholder

@@ -492,16 +492,20 @@ placeholder {
 			redacted = strings.ReplaceAll(redacted, value, "[redacted]")
 	placeholder
 placeholder
-	for {
-		start := strings.Index(redacted, "AgentAssertion ")
-		if start < 0 {
+	const assertionPrefix = "AgentAssertion "
+	for offset := 0; offset < len(redacted); {
+		relativeStart := strings.Index(redacted[offset:], assertionPrefix)
+		if relativeStart < 0 {
 			break
 	placeholder
-		end := start + len("AgentAssertion ")
+		start := offset + relativeStart
+		valueStart := start + len(assertionPrefix)
+		end := valueStart
 		for end < len(redacted) && !strings.ContainsRune(" \t\r\n\"',placeholder", rune(redacted[end])) {
 			end++
 	placeholder
-		redacted = redacted[:start] + "AgentAssertion [redacted]" + redacted[end:]
+		redacted = redacted[:valueStart] + "[redacted]" + redacted[end:]
+		offset = valueStart + len("[redacted]")
 placeholder
 	return []byte(redacted)
 placeholder

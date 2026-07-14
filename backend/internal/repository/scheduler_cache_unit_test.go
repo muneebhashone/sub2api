@@ -3,11 +3,77 @@
 package repository
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
+
+func newSchedulerCacheUnit(t *testing.T) *schedulerCache {
+placeholder
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()placeholder)
+	t.Cleanup(func() { _ = rdb.Close() placeholder)
+	cache, ok := newSchedulerCacheWithChunkSizes(rdb, defaultSchedulerSnapshotMGetChunkSize, defaultSchedulerSnapshotWriteChunkSize).(*schedulerCache)
+	require.True(t, ok)
+	return cache
+placeholder
+
+func TestSchedulerCacheWriteAccountsSkipsUnencodableTimes(t *testing.T) {
+	ctx := context.Background()
+	cache := newSchedulerCacheUnit(t)
+	invalidTime := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	cacheable, err := cache.writeAccounts(ctx, []service.Account{
+		{ID: 111, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKeyplaceholder,
+		{ID: 112, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey, ExpiresAt: &invalidTimeplaceholder,
+placeholder)
+placeholder
+	require.Len(t, cacheable, 1)
+	require.Equal(t, int64(111), cacheable[0].ID)
+
+	cached, err := cache.GetAccount(ctx, 111)
+placeholder
+	require.NotNil(t, cached)
+
+	invalid, err := cache.GetAccount(ctx, 112)
+placeholder
+	require.Nil(t, invalid)
+placeholder
+
+func TestSchedulerCacheSetAccountClearsUnencodablePayload(t *testing.T) {
+	ctx := context.Background()
+	cache := newSchedulerCacheUnit(t)
+
+	account := service.Account{ID: 113, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKeyplaceholder
+	require.NoError(t, cache.SetAccount(ctx, &account))
+
+	invalidTime := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	account.ExpiresAt = &invalidTime
+	require.NoError(t, cache.SetAccount(ctx, &account))
+
+	cached, err := cache.GetAccount(ctx, account.ID)
+placeholder
+	require.Nil(t, cached)
+placeholder
+
+func TestSchedulerCacheUpdateLastUsedClearsUnencodablePayload(t *testing.T) {
+	ctx := context.Background()
+	cache := newSchedulerCacheUnit(t)
+	account := service.Account{ID: 114, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKeyplaceholder
+	require.NoError(t, cache.SetAccount(ctx, &account))
+
+	invalidTime := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, cache.UpdateLastUsed(ctx, map[int64]time.Time{account.ID: invalidTimeplaceholder))
+
+	cached, err := cache.GetAccount(ctx, account.ID)
+placeholder
+	require.Nil(t, cached)
+placeholder
 
 func TestBuildSchedulerMetadataAccount_KeepsOpenAIWSFlags(t *testing.T) {
 	account := service.Account{

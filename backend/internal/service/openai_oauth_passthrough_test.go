@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
@@ -347,6 +348,7 @@ func TestOpenAIGatewayService_OAuthPassthrough_StreamKeepsToolNameAndBodyNormali
 	c.Request.Header.Set("Accept-Encoding", "gzip")
 	c.Request.Header.Set("Proxy-Authorization", "Basic abc")
 	c.Request.Header.Set("X-Test", "keep")
+	c.Request.Header.Set("x-codex-beta-features", "remote_compaction_v2")
 
 	originalBody := []byte(`{"model":"gpt-5.2","stream":true,"store":true,"instructions":"local-test-instructions","input":[{"type":"text","text":"hi"placeholder]placeholder`)
 
@@ -409,6 +411,7 @@ placeholder
 	require.Empty(t, upstream.lastReq.Header.Get("Accept-Encoding"))
 	require.Empty(t, upstream.lastReq.Header.Get("Proxy-Authorization"))
 	require.Empty(t, upstream.lastReq.Header.Get("X-Test"))
+	require.Equal(t, "remote_compaction_v2", upstream.lastReq.Header.Get("x-codex-beta-features"))
 
 	// 3) required OAuth headers are present
 	require.Equal(t, "chatgpt.com", upstream.lastReq.Host)
@@ -418,6 +421,194 @@ placeholder
 	body := rec.Body.String()
 	require.Contains(t, body, "apply_patch")
 	require.NotContains(t, body, "\"name\":\"edit\"")
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_NamespaceRequestAndStreamResponse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+
+	originalBody := []byte(`{
+		"model":"gpt-5.5",
+		"stream":true,
+		"instructions":"local-test-instructions",
+		"tools":[
+			{"type":"function","name":"plain","description":"keep","parameters":{"type":"object"placeholderplaceholder,
+			{"type":"namespace","name":"collaboration","tools":[{"type":"function","name":"spawn_agent","description":"spawn","parameters":{"type":"object"placeholderplaceholder]placeholder
+		],
+		"tool_choice":{"type":"function","name":"spawn_agent","namespace":"collaboration"placeholder,
+		"input":[{"type":"function_call","call_id":"call_old","name":"spawn_agent","namespace":"collaboration","arguments":"{placeholder"placeholder]
+placeholder`)
+
+	upstreamSSE := strings.Join([]string{
+		`data: {"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"collaboration__spawn_agent","arguments":""placeholderplaceholder`,
+		"",
+		`data: {"type":"response.output_item.done","output_index":0,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"collaboration__spawn_agent","arguments":"{placeholder"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_1","status":"completed","output":[{"type":"function_call","id":"fc_1","call_id":"call_1","name":"collaboration__spawn_agent","arguments":"{placeholder"placeholder],"usage":{"input_tokens":2,"output_tokens":1,"total_tokens":3placeholderplaceholderplaceholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_namespace"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamSSE)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID: 123, Name: "acc", Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1,
+placeholder"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Extra:       map[string]any{"openai_passthrough": trueplaceholder, Status: StatusActive, Schedulable: true, RateMultiplier: f64p(1),
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, originalBody)
+placeholder
+	require.NotNil(t, result)
+
+	require.Len(t, gjson.GetBytes(upstream.lastBody, "tools").Array(), 2)
+	require.Equal(t, "plain", gjson.GetBytes(upstream.lastBody, "tools.0.name").String())
+	require.Equal(t, "function", gjson.GetBytes(upstream.lastBody, "tools.1.type").String())
+	require.Equal(t, "collaboration__spawn_agent", gjson.GetBytes(upstream.lastBody, "tools.1.name").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "tools.1.tools").Exists())
+	require.Equal(t, "collaboration__spawn_agent", gjson.GetBytes(upstream.lastBody, "tool_choice.name").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "tool_choice.namespace").Exists())
+	require.Equal(t, "collaboration__spawn_agent", gjson.GetBytes(upstream.lastBody, "input.0.name").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.0.namespace").Exists())
+
+	downstream := rec.Body.String()
+	require.NotContains(t, downstream, "collaboration__spawn_agent")
+	require.Contains(t, downstream, `"name":"spawn_agent"`)
+	require.Contains(t, downstream, `"namespace":"collaboration"`)
+placeholder
+
+func TestOpenAIGatewayService_NativeOAuth_NamespaceRequestAndStreamResponse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+	body := []byte(`{
+		"model":"gpt-5.5","stream":true,"instructions":"test",
+		"tools":[{"type":"namespace","name":"collaboration","tools":[{"type":"function","name":"spawn_agent","parameters":{"type":"object"placeholderplaceholder]placeholder],
+		"input":[{"type":"function_call","call_id":"call_old","name":"spawn_agent","namespace":"collaboration","arguments":"{placeholder"placeholder]
+placeholder`)
+	upstreamSSE := strings.Join([]string{
+		`data: {"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"fc_1","call_id":"call_1","name":"collaboration__spawn_agent","arguments":""placeholderplaceholder`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_1","status":"completed","output":[{"type":"function_call","id":"fc_1","call_id":"call_1","name":"collaboration__spawn_agent","arguments":"{placeholder"placeholder],"usage":{"input_tokens":2,"output_tokens":1,"total_tokens":3placeholderplaceholderplaceholder`,
+		"",
+		"data: [DONE]",
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_native_namespace"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamSSE)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID: 124, Name: "native", Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1,
+placeholder"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Status:      StatusActive, Schedulable: true, RateMultiplier: f64p(1),
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, "function", gjson.GetBytes(upstream.lastBody, "tools.0.type").String())
+	require.Equal(t, "collaboration__spawn_agent", gjson.GetBytes(upstream.lastBody, "tools.0.name").String())
+	require.Equal(t, "collaboration__spawn_agent", gjson.GetBytes(upstream.lastBody, "input.0.name").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.0.namespace").Exists())
+	require.NotContains(t, rec.Body.String(), "collaboration__spawn_agent")
+	require.Contains(t, rec.Body.String(), `"name":"spawn_agent"`)
+	require.Contains(t, rec.Body.String(), `"namespace":"collaboration"`)
+placeholder
+
+func TestOpenAIGatewayService_NativeOAuth_NamespaceNonStreamingResponse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	setOpenAIResponsesNamespaceNames(c, map[string]apicompat.ResponsesNamespaceName{
+		"collaboration__spawn_agent": {Namespace: "collaboration", Name: "spawn_agent"placeholder,
+placeholder)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body: io.NopCloser(strings.NewReader(`{
+			"id":"resp_1","output":[{"type":"function_call","name":"collaboration__spawn_agent","call_id":"call_1","arguments":"{placeholder"placeholder],
+			"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2placeholder
+	placeholder`)),
+placeholder
+
+	result, err := (&OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder).handleNonStreamingResponse(
+		context.Background(), resp, c, &Account{Type: AccountTypeOAuthplaceholder, "gpt-5.5", "gpt-5.5",
+	)
+placeholder
+	require.NotNil(t, result)
+	require.NotContains(t, rec.Body.String(), "collaboration__spawn_agent")
+	require.Contains(t, rec.Body.String(), `"name":"spawn_agent"`)
+	require.Contains(t, rec.Body.String(), `"namespace":"collaboration"`)
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_NamespaceNonStreamingResponse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"id":"resp_1","output":[{"type":"function_call","name":"collaboration__spawn_agent","call_id":"call_1","arguments":"{placeholder"placeholder],"usage":{"input_tokens":1,"output_tokens":1placeholderplaceholder`)),
+placeholder
+	names := map[string]apicompat.ResponsesNamespaceName{
+		"collaboration__spawn_agent": {Namespace: "collaboration", Name: "spawn_agent"placeholder,
+placeholder
+	setOpenAIResponsesNamespaceNames(c, names)
+
+	result, err := (&OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder).handleNonStreamingResponsePassthrough(
+		context.Background(), resp, c, "gpt-5.5", "",
+	)
+placeholder
+	require.NotNil(t, result)
+	require.NotContains(t, rec.Body.String(), "collaboration__spawn_agent")
+	require.Contains(t, rec.Body.String(), `"name":"spawn_agent"`)
+	require.Contains(t, rec.Body.String(), `"namespace":"collaboration"`)
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_NamespaceCollisionReturnsBadRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+	body := []byte(`{
+		"model":"gpt-5.5","stream":true,"instructions":"test",
+		"tools":[
+			{"type":"function","name":"collaboration__spawn_agent","parameters":{"type":"object"placeholderplaceholder,
+			{"type":"namespace","name":"collaboration","tools":[{"type":"function","name":"spawn_agent","parameters":{"type":"object"placeholderplaceholder]placeholder
+		],"input":"hi"
+placeholder`)
+	upstream := &httpUpstreamRecorder{placeholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID: 123, Name: "acc", Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1,
+placeholder"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		Extra:       map[string]any{"openai_passthrough": trueplaceholder, Status: StatusActive, Schedulable: true, RateMultiplier: f64p(1),
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.Nil(t, result)
+	require.Nil(t, upstream.lastReq)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, "invalid_request_error", gjson.Get(rec.Body.String(), "error.type").String())
+	require.Equal(t, "tools", gjson.Get(rec.Body.String(), "error.param").String())
+	require.Contains(t, gjson.Get(rec.Body.String(), "error.message").String(), "conflicts with a top-level tool")
 placeholder
 
 func TestOpenAIGatewayService_OAuthPassthrough_CompactUsesJSONAndKeepsNonStreaming(t *testing.T) {
@@ -1373,6 +1564,7 @@ func TestOpenAIGatewayService_APIKeyPassthrough_PreservesBodyAndUsesResponsesEnd
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
 	c.Request.Header.Set("User-Agent", "curl/8.0")
 	c.Request.Header.Set("X-Test", "keep")
+	c.Request.Header.Set("x-codex-beta-features", "remote_compaction_v2")
 
 	originalBody := []byte(`{"model":"gpt-5.2","stream":false,"service_tier":"flex","max_output_tokens":128,"input":[{"type":"text","text":"hi"placeholder]placeholder`)
 	resp := &http.Response{
@@ -1410,6 +1602,7 @@ placeholder
 	require.Equal(t, "https://api.openai.com/v1/responses", upstream.lastReq.URL.String())
 	require.Equal(t, "Bearer sk-api-key", upstream.lastReq.Header.Get("Authorization"))
 	require.Equal(t, "curl/8.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "remote_compaction_v2", upstream.lastReq.Header.Get("x-codex-beta-features"))
 	require.Empty(t, upstream.lastReq.Header.Get("X-Test"))
 placeholder
 

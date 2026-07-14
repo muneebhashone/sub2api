@@ -6,6 +6,7 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse placeholder from 'axios'
 import type { ApiResponse placeholder from '@/types'
 import { getLocale placeholder from '@/i18n'
+import { ADMIN_UI_REQUEST_HEADER, shouldMarkAdminUIRequest placeholder from './adminUIRequest'
 import { getAPIBaseURL placeholder from './url'
 export { buildApiUrl, buildGatewayUrl placeholder from './url'
 
@@ -72,6 +73,10 @@ apiClient.interceptors.request.use(
         config.params = {placeholder
       placeholder
       config.params.timezone = getUserTimezone()
+    placeholder
+
+    if (config.headers && shouldMarkAdminUIRequest(String(config.url || ''))) {
+      config.headers[ADMIN_UI_REQUEST_HEADER] = '1'
     placeholder
 
     return config

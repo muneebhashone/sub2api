@@ -1,0 +1,164 @@
+#!/bin/bash
+
+set -eu
+
+STATE_DIR="${FAKE_CONTAINER_STATE:?FAKE_CONTAINER_STATE is requiredplaceholder"
+mkdir -p \
+    "${STATE_DIRplaceholder/containers" \
+    "${STATE_DIRplaceholder/running" \
+    "${STATE_DIRplaceholder/networks" \
+    "${STATE_DIRplaceholder/volumes" \
+    "${STATE_DIRplaceholder/unowned/container" \
+    "${STATE_DIRplaceholder/unowned/network" \
+    "${STATE_DIRplaceholder/unowned/volume"
+
+list_names() {
+    local directory=$1
+    local path
+
+    for path in "${directoryplaceholder"/*; do
+        [[ -e "${pathplaceholder" ]] || continue
+        basename "${pathplaceholder"
+    done
+placeholder
+
+last_argument() {
+    local value=""
+
+    for value in "$@"; do :; done
+    printf '%s\n' "${valueplaceholder"
+placeholder
+
+inspect_resource() {
+    local resource_type=$1
+    local resource_name=$2
+    local label_value="apple-container"
+    local address="192.168.65.4/24"
+
+    if [[ -e "${STATE_DIRplaceholder/unowned/${resource_typeplaceholder/${resource_nameplaceholder" ]]; then
+        label_value="other"
+    fi
+    case "${resource_nameplaceholder" in
+        sub2api-apple-postgres) address="192.168.65.2/24" ;;
+        sub2api-apple-redis) address="192.168.65.3/24" ;;
+    esac
+
+    printf '[{"configuration":{"labels":{"org.sub2api.stack":"%s"placeholderplaceholder,"status":{"networks":[{"ipv4Address":"%s"placeholder]placeholderplaceholder]\n' \
+        "${label_valueplaceholder" "${addressplaceholder"
+placeholder
+
+command=${1-placeholder
+if [[ $# -gt 0 ]]; then shift; fi
+
+case "${commandplaceholder" in
+    --version)
+        echo "container CLI version 1.1.0 (build: release, commit: fake)"
+        ;;
+    system)
+        subcommand=${1-placeholder
+        case "${subcommandplaceholder" in
+            status) [[ -e "${STATE_DIRplaceholder/system-running" ]] ;;
+            start) touch "${STATE_DIRplaceholder/system-running" ;;
+            stop) rm -f "${STATE_DIRplaceholder/system-running" "${STATE_DIRplaceholder/running"/* ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    list)
+        include_all=false
+        for argument in "$@"; do
+            [[ "${argumentplaceholder" == "--all" || "${argumentplaceholder" == "-a" ]] && include_all=true
+        done
+        if [[ "${include_allplaceholder" == true ]]; then
+            list_names "${STATE_DIRplaceholder/containers"
+        else
+            list_names "${STATE_DIRplaceholder/running"
+        fi
+        ;;
+    network)
+        subcommand=${1-placeholder
+        shift || true
+        case "${subcommandplaceholder" in
+            list)
+                echo default
+                list_names "${STATE_DIRplaceholder/networks"
+                ;;
+            create) touch "${STATE_DIRplaceholder/networks/$(last_argument "$@")" ;;
+            inspect) inspect_resource network "${1placeholder" ;;
+            delete) rm -f "${STATE_DIRplaceholder/networks/${1placeholder" ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    volume)
+        subcommand=${1-placeholder
+        shift || true
+        case "${subcommandplaceholder" in
+            list) list_names "${STATE_DIRplaceholder/volumes" ;;
+            create) touch "${STATE_DIRplaceholder/volumes/$(last_argument "$@")" ;;
+            inspect) inspect_resource volume "${1placeholder" ;;
+            delete) rm -f "${STATE_DIRplaceholder/volumes/${1placeholder" ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    image)
+        subcommand=${1-placeholder
+        case "${subcommandplaceholder" in
+            inspect|pull) exit 0 ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    create)
+        name=""
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --name)
+                    name=$2
+                    shift 2
+                    ;;
+                --label|--network|--platform|--ulimit|--env-file|--volume|--entrypoint|--publish)
+                    shift 2
+                    ;;
+                *)
+                    shift
+                    ;;
+            esac
+        done
+        [[ -n "${nameplaceholder" ]]
+        touch "${STATE_DIRplaceholder/containers/${nameplaceholder"
+        ;;
+    inspect)
+        inspect_resource container "${1placeholder"
+        ;;
+    start)
+        touch "${STATE_DIRplaceholder/running/${1placeholder"
+        ;;
+    stop)
+        for argument in "$@"; do
+            case "${argumentplaceholder" in
+                --time|--signal) skip_next=true ;;
+                [0-9]*|SIG*) ;;
+                *) rm -f "${STATE_DIRplaceholder/running/${argumentplaceholder" ;;
+            esac
+        done
+        ;;
+    delete)
+        for argument in "$@"; do
+            case "${argumentplaceholder" in
+                --force|-f) ;;
+                *)
+                    rm -f "${STATE_DIRplaceholder/running/${argumentplaceholder"
+                    rm -f "${STATE_DIRplaceholder/containers/${argumentplaceholder"
+                    ;;
+            esac
+        done
+        ;;
+    exec)
+        echo 1
+        ;;
+    logs|copy)
+        exit 0
+        ;;
+    *)
+        echo "Unsupported fake container command: ${commandplaceholder $*" >&2
+        exit 1
+        ;;
+esac

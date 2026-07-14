@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
@@ -139,6 +140,110 @@ placeholder
 	require.Equal(t, lenAfterWrite, rec.Body.Len(), "请求侧写回后心跳必须停止")
 	require.Contains(t, rec.Body.String(), ": keepalive\n\n")
 	require.Contains(t, rec.Body.String(), `{"error":"local reject"placeholder`)
+placeholder
+
+func TestOpenAICompactKeepaliveWriter_NilInnerWriter_NoPanic(t *testing.T) {
+	w := &openAICompactKeepaliveWriter{
+		k: &openAICompactSSEKeepalive{stop: make(chan struct{placeholder)placeholder,
+placeholder
+	w.ResponseWriter = nil
+
+	assert.NotPanics(t, func() {
+		assert.Equal(t, 0, w.Status())
+placeholder)
+	assert.NotPanics(t, func() {
+		assert.Equal(t, 0, w.Size())
+placeholder)
+	assert.NotPanics(t, func() {
+		assert.False(t, w.Written())
+placeholder)
+	assert.NotPanics(t, func() {
+		assert.NotNil(t, w.Header())
+placeholder)
+	assert.NotPanics(t, func() {
+		n, err := w.Write([]byte("test"))
+		assert.Equal(t, 0, n)
+		assert.NoError(t, err)
+placeholder)
+	assert.NotPanics(t, func() {
+		n, err := w.WriteString("test")
+		assert.Equal(t, 0, n)
+		assert.NoError(t, err)
+placeholder)
+	assert.NotPanics(t, func() {
+		w.WriteHeader(http.StatusOK)
+placeholder)
+	assert.NotPanics(t, func() {
+		w.WriteHeaderNow()
+placeholder)
+	assert.NotPanics(t, func() {
+		w.Flush()
+placeholder)
+	assert.NotPanics(t, func() {
+		conn, rw, err := w.Hijack()
+		assert.Nil(t, conn)
+		assert.Nil(t, rw)
+		assert.Error(t, err)
+placeholder)
+	assert.NotPanics(t, func() {
+		ch := w.CloseNotify()
+		assert.NotNil(t, ch)
+placeholder)
+	assert.NotPanics(t, func() {
+		assert.Nil(t, w.Pusher())
+placeholder)
+placeholder
+
+func TestOpenAICompactKeepaliveWriter_NilKeepalive_NoPanic(t *testing.T) {
+	c, rec := newCompactBridgeTestContext(t, true)
+	w := &openAICompactKeepaliveWriter{ResponseWriter: c.Writerplaceholder
+
+	assert.NotPanics(t, func() {
+		assert.Equal(t, 0, w.Status())
+placeholder)
+	assert.NotPanics(t, func() {
+		assert.Equal(t, 0, w.Size())
+placeholder)
+	assert.NotPanics(t, func() {
+		assert.False(t, w.Written())
+placeholder)
+	assert.NotPanics(t, func() {
+		w.Header().Set("X-Test", "ok")
+placeholder)
+	assert.NotPanics(t, func() {
+		w.WriteHeader(http.StatusAccepted)
+placeholder)
+	assert.NotPanics(t, func() {
+		n, err := w.WriteString("ok")
+		assert.Equal(t, 2, n)
+		assert.NoError(t, err)
+placeholder)
+	assert.NotPanics(t, func() {
+		w.Flush()
+placeholder)
+	require.Equal(t, "ok", rec.Header().Get("X-Test"))
+	require.Equal(t, "ok", rec.Body.String())
+placeholder
+
+func TestOpenAICompactKeepaliveWriter_DelegatesWhenReady(t *testing.T) {
+	c, rec := newCompactBridgeTestContext(t, true)
+	stop := StartOpenAICompactSSEKeepalive(c, time.Hour)
+	defer stop()
+
+	w, ok := c.Writer.(*openAICompactKeepaliveWriter)
+	require.True(t, ok)
+
+	w.Header().Set("X-Test", "ok")
+	w.WriteHeader(http.StatusAccepted)
+	n, err := w.WriteString("ready")
+placeholder
+	require.Equal(t, len("ready"), n)
+
+	require.Equal(t, http.StatusAccepted, w.Status())
+	require.Equal(t, len("ready"), w.Size())
+	require.True(t, w.Written())
+	require.Equal(t, "ok", rec.Header().Get("X-Test"))
+	require.Equal(t, "ready", rec.Body.String())
 placeholder
 
 // fast policy block 在心跳提交后必须降级为 response.failed 终止事件。

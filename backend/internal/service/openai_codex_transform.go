@@ -838,6 +838,9 @@ placeholder
 	if isCodexSparkModel(firstNonEmptyString(reqBody["model"])) {
 		return false
 placeholder
+	if hasOpenAIImageGenerationTool(reqBody) {
+		return false
+placeholder
 
 	tool := map[string]any{
 		"type":          "image_generation",
@@ -855,16 +858,6 @@ placeholder
 		reqBody["tools"] = []any{toolplaceholder
 		return true
 placeholder
-	for _, rawTool := range tools {
-		toolMap, ok := rawTool.(map[string]any)
-		if !ok {
-			continue
-	placeholder
-		if strings.TrimSpace(firstNonEmptyString(toolMap["type"])) == "image_generation" {
-			return false
-	placeholder
-placeholder
-
 	reqBody["tools"] = append(tools, tool)
 	return true
 placeholder
@@ -1402,6 +1395,15 @@ func filterCodexInputWithOptions(input []any, opts codexInputFilterOptions) []an
 			// 来自客户端回放，需要删除。
 			// 注意：function_call_output 等 output 类的 id 无此约束，不动。
 			if id, ok := m["id"].(string); ok && id != "" && !strings.HasPrefix(id, "fc") {
+				ensureCopy()
+				delete(newItem, "id")
+		placeholder
+	placeholder else if typ == "message" {
+			// 同理，message 类 item 的 id 必须以 "msg" 开头（上游校验
+			// "Expected an ID that begins with 'msg'"）。item_* 形式的 id
+			// 来自客户端回放，需要删除。
+			// 注意：不改写成 msg_*，改写出的 id 未必对应真实的上游对象。
+			if id, ok := m["id"].(string); ok && id != "" && !strings.HasPrefix(id, "msg") {
 				ensureCopy()
 				delete(newItem, "id")
 		placeholder

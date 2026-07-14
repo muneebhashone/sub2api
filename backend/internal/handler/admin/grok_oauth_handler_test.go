@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,17 +42,35 @@ placeholder
 placeholder
 
 type grokQuotaHandlerUpstream struct {
-	resp     *http.Response
-	lastReq  *http.Request
-	lastBody []byte
+	mu       sync.Mutex
+	requests []*http.Request
+	bodies   [][]byte
 placeholder
 
 func (u *grokQuotaHandlerUpstream) Do(req *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
-	u.lastReq = req
+	var body []byte
 	if req.Body != nil {
-		u.lastBody, _ = io.ReadAll(req.Body)
+		body, _ = io.ReadAll(req.Body)
 placeholder
-	return u.resp, nil
+	u.mu.Lock()
+	u.requests = append(u.requests, req)
+	u.bodies = append(u.bodies, body)
+	u.mu.Unlock()
+	if req.URL.Path == "/v1/responses" {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
+				"X-Ratelimit-Remaining-Requests": []string{"8"placeholder,
+		placeholder,
+			Body: io.NopCloser(strings.NewReader(`{"id":"resp_probe"placeholder`)),
+	placeholder, nil
+placeholder
+	payload := `{"config":{"billingPeriodStart":"2026-07-01T00:00:00Z","billingPeriodEnd":"2026-08-01T00:00:00Z"placeholderplaceholder`
+	if req.URL.RawQuery == "format=credits" {
+		payload = `{"config":{"currentPeriod":{"type":"WEEKLY","start":"2026-07-09T03:25:00Z","end":"2026-07-16T03:25:00Z"placeholderplaceholderplaceholder`
+placeholder
+	return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(payload))placeholder, nil
 placeholder
 
 func (u *grokQuotaHandlerUpstream) DoWithTLS(
@@ -77,14 +96,7 @@ placeholder
 			"expires_at":   time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
 	placeholder,
 placeholderplaceholder
-	upstream := &grokQuotaHandlerUpstream{resp: &http.Response{
-		StatusCode: http.StatusOK,
-		Header: http.Header{
-			"X-Ratelimit-Limit-Requests":     []string{"10"placeholder,
-			"X-Ratelimit-Remaining-Requests": []string{"8"placeholder,
-	placeholder,
-		Body: io.NopCloser(strings.NewReader(`{"id":"resp_probe"placeholder`)),
-placeholderplaceholder
+	upstream := &grokQuotaHandlerUpstream{placeholder
 	quotaService := service.NewGrokQuotaService(repo, nil, service.NewGrokTokenProvider(repo, nil), upstream)
 	handler := NewGrokOAuthHandler(nil, nil, quotaService)
 
@@ -95,12 +107,23 @@ placeholderplaceholder
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusOK, rec.Code)
-	require.Contains(t, rec.Body.String(), `"source":"active_probe"`)
+	require.Contains(t, rec.Body.String(), `"source":"hybrid_probe"`)
+	require.Contains(t, rec.Body.String(), `"billing":`)
+	require.Contains(t, rec.Body.String(), `"snapshot":`)
 	require.Contains(t, rec.Body.String(), `"headers_observed":true`)
 	require.NotContains(t, rec.Body.String(), "access-token")
-	require.Equal(t, xai.DefaultBaseURL+"/responses", upstream.lastReq.URL.String())
-	require.Equal(t, "Bearer access-token", upstream.lastReq.Header.Get("Authorization"))
-	require.Contains(t, string(upstream.lastBody), `"store":false`)
+	upstream.mu.Lock()
+	requests := append([]*http.Request(nil), upstream.requests...)
+	bodies := append([][]byte(nil), upstream.bodies...)
+	upstream.mu.Unlock()
+	require.Len(t, requests, 3)
+	for i, upstreamReq := range requests {
+		require.Equal(t, "Bearer access-token", upstreamReq.Header.Get("Authorization"))
+		if upstreamReq.URL.String() == xai.DefaultCLIBaseURL+"/responses" {
+			require.Contains(t, string(bodies[i]), `"model":"grok-4.5"`)
+			require.Contains(t, string(bodies[i]), `"store":false`)
+	placeholder
+placeholder
 	require.NotNil(t, repo.updates[42])
 placeholder
 
@@ -144,4 +167,52 @@ func TestGrokOAuthHandlerRuntimeSanityDoesNotExposeSecrets(t *testing.T) {
 	require.NotContains(t, rec.Body.String(), "access_token")
 	require.NotContains(t, rec.Body.String(), "secret")
 	require.NotContains(t, rec.Body.String(), "client-secret-like-value")
+placeholder
+
+func TestGrokSSOImportExpiryUsesTokenExpiryWithoutRefreshToken(t *testing.T) {
+	tokenExpiry := time.Now().Add(6 * time.Hour).Unix()
+	expiresAt, autoPause := grokSSOImportExpiry(nil, nil, &service.GrokTokenInfo{
+		ExpiresAt: tokenExpiry,
+placeholder)
+
+	require.NotNil(t, expiresAt)
+	require.Equal(t, tokenExpiry, *expiresAt)
+	require.NotNil(t, autoPause)
+	require.True(t, *autoPause)
+placeholder
+
+func TestGrokSSOImportExpiryUsesEarlierRequestedExpiryWithoutRefreshToken(t *testing.T) {
+	requestedExpiry := time.Now().Add(2 * time.Hour).Unix()
+	tokenExpiry := time.Now().Add(6 * time.Hour).Unix()
+	requestedAutoPause := false
+	expiresAt, autoPause := grokSSOImportExpiry(&requestedExpiry, &requestedAutoPause, &service.GrokTokenInfo{
+		ExpiresAt: tokenExpiry,
+placeholder)
+
+	require.NotNil(t, expiresAt)
+	require.Equal(t, requestedExpiry, *expiresAt)
+	require.NotNil(t, autoPause)
+	require.True(t, *autoPause)
+placeholder
+
+func TestGrokSSOImportExpiryPreservesRequestSettingsWithRefreshToken(t *testing.T) {
+	requestedExpiry := time.Now().Add(2 * time.Hour).Unix()
+	requestedAutoPause := false
+	expiresAt, autoPause := grokSSOImportExpiry(&requestedExpiry, &requestedAutoPause, &service.GrokTokenInfo{
+		RefreshToken: "refresh-token",
+		ExpiresAt:    time.Now().Add(6 * time.Hour).Unix(),
+placeholder)
+
+	require.Same(t, &requestedExpiry, expiresAt)
+	require.Same(t, &requestedAutoPause, autoPause)
+placeholder
+
+func TestGrokSSOImportWorkerRecoversPanic(t *testing.T) {
+	h := &GrokOAuthHandler{placeholder
+	result := h.safeCreateAccountFromSSOToken(context.Background(), GrokSSOToOAuthRequest{placeholder, "token", 2, 3)
+	// Without a service, createAccountFromSSOToken would panic on nil service access.
+	// Recovery must convert that into a failed item and keep the worker alive.
+	require.False(t, result.created)
+	require.Equal(t, 2, result.item.Index)
+	require.Contains(t, result.item.Error, "internal worker panic")
 placeholder

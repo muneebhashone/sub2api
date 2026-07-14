@@ -4,156 +4,153 @@ import "testing"
 
 func TestResolveOpenAIForwardModel(t *testing.T) {
 	tests := []struct {
-		name               string
-		account            *Account
-		requestedModel     string
-		defaultMappedModel string
-		expectedModel      string
+		name                        string
+		account                     *Account
+		requestedModel              string
+		messagesDispatchMappedModel string
+		expectedModel               string
 placeholder{
 		{
-			name: "uses messages dispatch default for claude model",
+			name: "uses messages dispatch model for known claude family",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "claude-opus-4-6",
-			defaultMappedModel: "gpt-4o-mini",
-			expectedModel:      "gpt-4o-mini",
+			requestedModel:              "claude-opus-4-6",
+			messagesDispatchMappedModel: "gpt-4o-mini",
+			expectedModel:               "gpt-4o-mini",
 	placeholder,
 		{
-			name: "does not fall back to group default for invalid gpt model",
+			name: "uses exact messages dispatch model for unknown claude family",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt6",
-			defaultMappedModel: "gpt-5.4",
-			expectedModel:      "gpt6",
+			requestedModel:              "claude-fable-5",
+			messagesDispatchMappedModel: " gpt-5.6-sol ",
+			expectedModel:               "gpt-5.6-sol",
 	placeholder,
 		{
-			name: "preserves explicit gpt-5.4 instead of group default",
+			name:                        "nil account uses messages dispatch model",
+			requestedModel:              "claude-fable-5",
+			messagesDispatchMappedModel: "gpt-5.6-sol",
+			expectedModel:               "gpt-5.6-sol",
+	placeholder,
+		{
+			name:           "nil account without messages dispatch keeps requested model",
+			requestedModel: "claude-fable-5",
+			expectedModel:  "claude-fable-5",
+	placeholder,
+		{
+			name: "ordinary unknown gpt model has no messages dispatch fallback",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt-5.4",
-			defaultMappedModel: "gpt-4o-mini",
-			expectedModel:      "gpt-5.4",
+			requestedModel: "gpt6",
+			expectedModel:  "gpt6",
 	placeholder,
 		{
-			name: "preserves exact passthrough mapping instead of group default",
+			name: "account exact mapping overrides messages dispatch model",
 			account: &Account{
 		placeholder
 					"model_mapping": map[string]any{
-						"gpt-5.4": "gpt-5.4",
+						"claude-fable-5": "gpt-5.5",
 				placeholder,
 			placeholder,
 		placeholder,
-			requestedModel:     "gpt-5.4",
-			defaultMappedModel: "gpt-4o-mini",
-			expectedModel:      "gpt-5.4",
+			requestedModel:              "claude-fable-5",
+			messagesDispatchMappedModel: "gpt-5.6-sol",
+			expectedModel:               "gpt-5.5",
 	placeholder,
 		{
-			name: "preserves wildcard passthrough mapping instead of group default",
+			name: "account wildcard mapping overrides messages dispatch model",
 			account: &Account{
 		placeholder
 					"model_mapping": map[string]any{
-						"gpt-*": "gpt-5.4",
+						"claude-*": "gpt-5.4",
 				placeholder,
 			placeholder,
 		placeholder,
-			requestedModel:     "gpt-5.4",
-			defaultMappedModel: "gpt-4o-mini",
-			expectedModel:      "gpt-5.4",
+			requestedModel:              "claude-fable-5",
+			messagesDispatchMappedModel: "gpt-5.6-sol",
+			expectedModel:               "gpt-5.4",
 	placeholder,
 		{
-			name: "uses account remap when explicit target differs",
+			name: "account passthrough mapping overrides messages dispatch model",
 			account: &Account{
 		placeholder
 					"model_mapping": map[string]any{
-						"gpt-5": "gpt-5.4",
+						"claude-fable-5": "claude-fable-5",
 				placeholder,
 			placeholder,
 		placeholder,
-			requestedModel:     "gpt-5",
-			defaultMappedModel: "gpt-4o-mini",
-			expectedModel:      "gpt-5.4",
+			requestedModel:              "claude-fable-5",
+			messagesDispatchMappedModel: "gpt-5.6-sol",
+			expectedModel:               "claude-fable-5",
 	placeholder,
 		{
-			name: "preserves codex spark instead of group default",
+			name: "ordinary codex spark request keeps requested model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt-5.3-codex-spark",
-			defaultMappedModel: "gpt-5.4",
-			expectedModel:      "gpt-5.3-codex-spark",
+			requestedModel: "gpt-5.3-codex-spark",
+			expectedModel:  "gpt-5.3-codex-spark",
 	placeholder,
 		{
-			name: "preserves gpt-5.5 instead of group default",
+			name: "ordinary gpt-5.5 request keeps requested model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt-5.5",
-			defaultMappedModel: "gpt-5.4",
-			expectedModel:      "gpt-5.5",
+			requestedModel: "gpt-5.5",
+			expectedModel:  "gpt-5.5",
 	placeholder,
 		{
-			name: "preserves gpt-5.5-pro instead of group default",
+			name: "ordinary gpt-5.5-pro request keeps requested model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt-5.5-pro",
-			defaultMappedModel: "gpt-5.5",
-			expectedModel:      "gpt-5.5-pro",
+			requestedModel: "gpt-5.5-pro",
+			expectedModel:  "gpt-5.5-pro",
 	placeholder,
 		{
-			name: "preserves compact-spelled gpt5.5 instead of group default",
+			name: "ordinary compact-spelled gpt5.5 request keeps requested model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt5.5",
-			defaultMappedModel: "gpt-5.4",
-			expectedModel:      "gpt5.5",
+			requestedModel: "gpt5.5",
+			expectedModel:  "gpt5.5",
 	placeholder,
 		{
-			name: "preserves openai namespaced gpt-5.5 instead of group default",
+			name: "ordinary namespaced gpt-5.5 request keeps requested model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "openai/gpt-5.5",
-			defaultMappedModel: "gpt-5.4",
-			expectedModel:      "openai/gpt-5.5",
+			requestedModel: "openai/gpt-5.5",
+			expectedModel:  "openai/gpt-5.5",
 	placeholder,
 		{
-			name: "preserves compact gpt-5.5 instead of group default",
+			name: "ordinary compact gpt-5.5 request keeps requested model",
 			account: &Account{
 		placeholderplaceholder,
 		placeholder,
-			requestedModel:     "gpt-5.5-openai-compact",
-			defaultMappedModel: "gpt-5.4",
-			expectedModel:      "gpt-5.5-openai-compact",
+			requestedModel: "gpt-5.5-openai-compact",
+			expectedModel:  "gpt-5.5-openai-compact",
+	placeholder,
+		{
+			name: "whitespace-only messages dispatch model is ignored",
+			account: &Account{
+		placeholderplaceholder,
+		placeholder,
+			requestedModel:              "gpt-5.5",
+			messagesDispatchMappedModel: "  ",
+			expectedModel:               "gpt-5.5",
 	placeholder,
 placeholder
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := resolveOpenAIForwardModel(tt.account, tt.requestedModel, tt.defaultMappedModel); got != tt.expectedModel {
+			if got := resolveOpenAIForwardModel(tt.account, tt.requestedModel, tt.messagesDispatchMappedModel); got != tt.expectedModel {
 				t.Fatalf("resolveOpenAIForwardModel(...) = %q, want %q", got, tt.expectedModel)
 		placeholder
 	placeholder)
-placeholder
-placeholder
-
-func TestResolveOpenAIForwardModel_PreventsClaudeModelFromFallingBackToGpt54(t *testing.T) {
-	account := &Account{
-placeholderplaceholder,
-placeholder
-
-	withoutDefault := resolveOpenAIForwardModel(account, "claude-opus-4-6", "")
-	if withoutDefault != "claude-opus-4-6" {
-		t.Fatalf("resolveOpenAIForwardModel(...) = %q, want %q", withoutDefault, "claude-opus-4-6")
-placeholder
-
-	withDefault := resolveOpenAIForwardModel(account, "claude-opus-4-6", "gpt-5.4")
-	if withDefault != "gpt-5.4" {
-		t.Fatalf("resolveOpenAIForwardModel(...) = %q, want %q", withDefault, "gpt-5.4")
 placeholder
 placeholder
 

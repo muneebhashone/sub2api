@@ -310,6 +310,10 @@ placeholder
 			_, _ = w.Write([]byte(`{"task_id":"task-quota-new"placeholder`))
 			return
 	placeholder
+		if strings.Contains(r.URL.Path, "rate-limit-reset-credits") {
+			_, _ = w.Write([]byte(`{placeholder`))
+			return
+	placeholder
 		usageCalls++
 		if usageCalls == 1 {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -372,11 +376,11 @@ placeholder
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseOpenAIRateLimitResetCreditDetails([]byte(tt.body))
 		placeholder
-			require.Len(t, got, len(tt.want))
+			require.Len(t, got.Credits, len(tt.want))
 			for i := range tt.want {
-				require.Equal(t, tt.want[i], got[i].ExpiresAt)
+				require.Equal(t, tt.want[i], got.Credits[i].ExpiresAt)
 		placeholder
-			encoded, err := json.Marshal(got)
+			encoded, err := json.Marshal(got.Credits)
 		placeholder
 			require.NotContains(t, string(encoded), "secret-id")
 	placeholder)

@@ -102,9 +102,10 @@ placeholder
 		resp.Usage.CacheReadInputTokens +
 		resp.Usage.CacheCreationInputTokens
 	out.Usage = &ResponsesUsage{
-		InputTokens:  totalInputTokens,
-		OutputTokens: resp.Usage.OutputTokens,
-		TotalTokens:  totalInputTokens + resp.Usage.OutputTokens,
+		InputTokens:              totalInputTokens,
+		OutputTokens:             resp.Usage.OutputTokens,
+		TotalTokens:              totalInputTokens + resp.Usage.OutputTokens,
+		CacheCreationInputTokens: resp.Usage.CacheCreationInputTokens,
 placeholder
 	if resp.Usage.CacheReadInputTokens > 0 {
 		out.Usage.InputTokensDetails = &ResponsesInputTokensDetails{
@@ -163,6 +164,8 @@ type AnthropicEventToResponsesState struct {
 	OutputTokens             int
 	CacheReadInputTokens     int
 	CacheCreationInputTokens int
+
+	StopReason string
 placeholder
 
 // NewAnthropicEventToResponsesState returns an initialised stream state.
@@ -404,7 +407,6 @@ placeholder
 placeholder
 
 func anthToResHandleMessageDelta(evt *AnthropicStreamEvent, state *AnthropicEventToResponsesState) []ResponsesStreamEvent {
-	// Update usage
 	if evt.Usage != nil {
 		state.OutputTokens = evt.Usage.OutputTokens
 		if evt.Usage.InputTokens > 0 {
@@ -417,6 +419,9 @@ func anthToResHandleMessageDelta(evt *AnthropicStreamEvent, state *AnthropicEven
 			state.CacheCreationInputTokens = evt.Usage.CacheCreationInputTokens
 	placeholder
 placeholder
+	if evt.Delta != nil && evt.Delta.StopReason != "" {
+		state.StopReason = evt.Delta.StopReason
+placeholder
 
 	return nil
 placeholder
@@ -427,15 +432,15 @@ func anthToResHandleMessageStop(state *AnthropicEventToResponsesState) []Respons
 placeholder
 
 	var events []ResponsesStreamEvent
-
-	// Close any open item
 	events = append(events, closeCurrentResponsesItem(state)...)
 
-	// Determine status
 	status := "completed"
 	var incompleteDetails *ResponsesIncompleteDetails
+	if state.StopReason == "max_tokens" {
+		status = "incomplete"
+		incompleteDetails = &ResponsesIncompleteDetails{Reason: "max_output_tokens"placeholder
+placeholder
 
-	// Emit response.completed
 	events = append(events, makeResponsesCompletedEvent(state, status, incompleteDetails))
 	state.CompletedSent = true
 	return events
@@ -497,9 +502,10 @@ func makeResponsesCompletedEvent(
 	// back to match OpenAI Responses semantics where input_tokens is the total.
 	totalInputTokens := state.InputTokens + state.CacheReadInputTokens + state.CacheCreationInputTokens
 	usage := &ResponsesUsage{
-		InputTokens:  totalInputTokens,
-		OutputTokens: state.OutputTokens,
-		TotalTokens:  totalInputTokens + state.OutputTokens,
+		InputTokens:              totalInputTokens,
+		OutputTokens:             state.OutputTokens,
+		TotalTokens:              totalInputTokens + state.OutputTokens,
+		CacheCreationInputTokens: state.CacheCreationInputTokens,
 placeholder
 	if state.CacheReadInputTokens > 0 {
 		usage.InputTokensDetails = &ResponsesInputTokensDetails{
@@ -507,15 +513,20 @@ placeholder
 	placeholder
 placeholder
 
+	eventType := "response.completed"
+	if status == "incomplete" {
+		eventType = "response.incomplete"
+placeholder
+
 	return ResponsesStreamEvent{
-		Type:           "response.completed",
+		Type:           eventType,
 		SequenceNumber: seq,
 		Response: &ResponsesResponse{
 			ID:                state.ResponseID,
 			Object:            "response",
 			Model:             state.Model,
 			Status:            status,
-			Output:            []ResponsesOutput{placeholder, // Simplified; full output tracking would add complexity
+			Output:            []ResponsesOutput{placeholder,
 			Usage:             usage,
 			IncompleteDetails: incompleteDetails,
 	placeholder,
