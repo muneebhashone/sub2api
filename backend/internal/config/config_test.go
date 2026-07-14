@@ -259,6 +259,15 @@ placeholder
 	require.Equal(t, 1800, cfg.Gateway.OpenAIResponseHeaderTimeout)
 placeholder
 
+func TestLoadImageNonstreamKeepaliveFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_IMAGE_NONSTREAM_KEEPALIVE_INTERVAL", "15")
+
+	cfg, err := Load()
+placeholder
+	require.Equal(t, 15, cfg.Gateway.ImageNonstreamKeepaliveInterval)
+placeholder
+
 func TestLoadOpenAIWSStickyTTLCompatibility(t *testing.T) {
 	resetViperWithJWTSecret(t)
 	t.Setenv("GATEWAY_OPENAI_WS_STICKY_RESPONSE_ID_TTL_SECONDS", "0")
@@ -1430,6 +1439,16 @@ placeholder{
 			wantErr: "gateway.image_stream_keepalive_interval must be non-negative",
 	placeholder,
 		{
+			name:    "gateway image nonstream keepalive range",
+			mutate:  func(c *Config) { c.Gateway.ImageNonstreamKeepaliveInterval = 4 placeholder,
+			wantErr: "gateway.image_nonstream_keepalive_interval",
+	placeholder,
+		{
+			name:    "gateway image nonstream keepalive negative",
+			mutate:  func(c *Config) { c.Gateway.ImageNonstreamKeepaliveInterval = -1 placeholder,
+			wantErr: "gateway.image_nonstream_keepalive_interval must be non-negative",
+	placeholder,
+		{
 			name:    "gateway image stream data interval range",
 			mutate:  func(c *Config) { c.Gateway.ImageStreamDataIntervalTimeout = 30 placeholder,
 			wantErr: "gateway.image_stream_data_interval_timeout",
@@ -1996,6 +2015,9 @@ placeholder
 placeholder
 	if cfg.Gateway.ImageStreamKeepaliveInterval != 10 {
 		t.Fatalf("image_stream_keepalive_interval = %d, want 10", cfg.Gateway.ImageStreamKeepaliveInterval)
+placeholder
+	if cfg.Gateway.ImageNonstreamKeepaliveInterval != 0 {
+		t.Fatalf("image_nonstream_keepalive_interval = %d, want 0", cfg.Gateway.ImageNonstreamKeepaliveInterval)
 placeholder
 	if cfg.Gateway.ImageConcurrency.Enabled {
 		t.Fatalf("image_concurrency.enabled = true, want false")
