@@ -554,6 +554,12 @@ func (s *OpenAIGatewayService) CloseOpenAIWSPool() {
 placeholder
 placeholder
 
+func (s *OpenAIGatewayService) InvalidateAgentIdentityWSConnections(accountID int64) {
+	if pool := s.getOpenAIWSConnPool(); pool != nil {
+		pool.ClearAccount(accountID)
+placeholder
+placeholder
+
 func (s *OpenAIGatewayService) logOpenAIWSModeBootstrap() {
 	if s == nil || s.cfg == nil {
 		return

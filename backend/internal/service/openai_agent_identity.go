@@ -31,6 +31,10 @@ var openAIAgentIdentityAuthAPIBaseURL = agentIdentityAuthAPIBaseURL
 
 var agentIdentityTaskLocks sync.Map // map[int64]*sync.Mutex
 
+type agentIdentityWSConnectionInvalidator interface {
+	InvalidateAgentIdentityWSConnections(accountID int64)
+placeholder
+
 type agentIdentityKey struct {
 	runtimeID  string
 	privateKey ed25519.PrivateKey
@@ -231,7 +235,7 @@ placeholder
 	return decryptAgentTaskID(key, encrypted)
 placeholder
 
-func ensureAgentIdentityTaskForAccount(ctx context.Context, repo AccountRepository, pool *openAIWSConnPool, taskMu *sync.Mutex, account *Account, expectedTaskID string) error {
+func ensureAgentIdentityTaskForAccount(ctx context.Context, repo AccountRepository, wsInvalidator agentIdentityWSConnectionInvalidator, taskMu *sync.Mutex, account *Account, expectedTaskID string) error {
 	if account == nil || !account.IsOpenAIAgentIdentity() {
 		return nil
 placeholder
@@ -299,8 +303,8 @@ placeholder
 	if !account.IsShadow() && account != credAccount {
 		account.Credentials = shallowCopyMap(credAccount.Credentials)
 placeholder
-	if pool != nil {
-		pool.ClearAccount(credAccount.ID)
+	if wsInvalidator != nil {
+		wsInvalidator.InvalidateAgentIdentityWSConnections(credAccount.ID)
 placeholder
 	return nil
 placeholder
@@ -309,7 +313,7 @@ func (s *OpenAIGatewayService) ensureAgentIdentityTask(ctx context.Context, acco
 	if s == nil {
 		return errors.New("openai gateway service is nil")
 placeholder
-	return ensureAgentIdentityTaskForAccount(ctx, s.accountRepo, s.openaiWSPool, &s.agentIdentityTaskMu, account, expectedTaskID)
+	return ensureAgentIdentityTaskForAccount(ctx, s.accountRepo, s, &s.agentIdentityTaskMu, account, expectedTaskID)
 placeholder
 
 func isAgentIdentityTaskInvalidHTTPResponse(statusCode int, body []byte) bool {
@@ -374,7 +378,7 @@ placeholder
 placeholder
 	headers := make(http.Header)
 	if credAccount != nil && credAccount.IsOpenAIAgentIdentity() {
-		agentHeaders, err := buildAgentIdentityAuthenticationHeaders(ctx, s.accountRepo, s.openaiWSPool, &s.agentIdentityTaskMu, credAccount)
+		agentHeaders, err := buildAgentIdentityAuthenticationHeaders(ctx, s.accountRepo, s, &s.agentIdentityTaskMu, credAccount)
 		if err != nil {
 			return nil, err
 	placeholder
@@ -384,11 +388,11 @@ placeholder
 	return headers, nil
 placeholder
 
-func buildAgentIdentityAuthenticationHeaders(ctx context.Context, repo AccountRepository, pool *openAIWSConnPool, taskMu *sync.Mutex, account *Account) (http.Header, error) {
+func buildAgentIdentityAuthenticationHeaders(ctx context.Context, repo AccountRepository, wsInvalidator agentIdentityWSConnectionInvalidator, taskMu *sync.Mutex, account *Account) (http.Header, error) {
 	if account == nil || !account.IsOpenAIAgentIdentity() {
 		return nil, errors.New("agent identity account is required")
 placeholder
-	if err := ensureAgentIdentityTaskForAccount(ctx, repo, pool, taskMu, account, ""); err != nil {
+	if err := ensureAgentIdentityTaskForAccount(ctx, repo, wsInvalidator, taskMu, account, ""); err != nil {
 		return nil, err
 placeholder
 	key, err := agentIdentityKeyFromAccount(account)
@@ -423,7 +427,7 @@ placeholder
 	if refreshed == nil {
 		refreshed = make(http.Header)
 placeholder
-	authHeaders, err := buildAgentIdentityAuthenticationHeaders(ctx, s.accountRepo, s.openaiWSPool, &s.agentIdentityTaskMu, credAccount)
+	authHeaders, err := buildAgentIdentityAuthenticationHeaders(ctx, s.accountRepo, s, &s.agentIdentityTaskMu, credAccount)
 	if err != nil {
 		return nil, err
 placeholder
