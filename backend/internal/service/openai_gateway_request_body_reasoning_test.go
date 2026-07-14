@@ -14,8 +14,8 @@ func TestTrimOpenAIEncryptedReasoningItems_ContentNull(t *testing.T) {
 			map[string]any{"type": "message", "role": "user", "content": "hi"placeholder,
 			map[string]any{
 				"type":              "reasoning",
-				"summary":          []any{map[string]any{"type": "summary_text", "text": "thinking..."placeholderplaceholder,
-				"content":          nil,
+				"summary":           []any{map[string]any{"type": "summary_text", "text": "thinking..."placeholderplaceholder,
+				"content":           nil,
 				"encrypted_content": nil,
 		placeholder,
 			map[string]any{"type": "message", "role": "assistant", "content": "Hello!"placeholder,
@@ -25,10 +25,12 @@ placeholder
 	changed := trimOpenAIEncryptedReasoningItems(reqBody)
 	require.True(t, changed)
 
-	input := reqBody["input"].([]any)
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
 	require.Len(t, input, 3)
 
-	reasoning := input[1].(map[string]any)
+	reasoning, ok := input[1].(map[string]any)
+	require.True(t, ok)
 	assert.Equal(t, "reasoning", reasoning["type"])
 	assert.NotNil(t, reasoning["summary"])
 	_, hasContent := reasoning["content"]
@@ -52,10 +54,12 @@ placeholder
 	changed := trimOpenAIEncryptedReasoningItems(reqBody)
 	require.True(t, changed)
 
-	input := reqBody["input"].([]any)
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
 	require.Len(t, input, 1)
 
-	reasoning := input[0].(map[string]any)
+	reasoning, ok := input[0].(map[string]any)
+	require.True(t, ok)
 	_, hasContent := reasoning["content"]
 	assert.False(t, hasContent, "content: null should be stripped even without encrypted_content")
 placeholder
@@ -75,8 +79,10 @@ placeholder
 	changed := trimOpenAIEncryptedReasoningItems(reqBody)
 	assert.False(t, changed, "non-null content should not be stripped")
 
-	input := reqBody["input"].([]any)
-	reasoning := input[0].(map[string]any)
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
+	reasoning, ok := input[0].(map[string]any)
+	require.True(t, ok)
 	assert.Equal(t, "some actual content", reasoning["content"])
 placeholder
 
