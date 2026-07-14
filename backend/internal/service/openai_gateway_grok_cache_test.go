@@ -37,6 +37,63 @@ func TestResolveGrokCacheIdentityStableAcrossAppendOnlyTurns(t *testing.T) {
 	require.Equal(t, first, second)
 placeholder
 
+func TestResolveGrokCacheIdentityStableAcrossIndependentPromptsWithSamePrefix(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c := newGrokCacheTestContext(102)
+	firstBody := []byte(`{"model":"grok","instructions":"be concise","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"user","content":"Question A"placeholder]placeholder`)
+	secondBody := []byte(`{"model":"grok","instructions":"be concise","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"user","content":"Question B"placeholder]placeholder`)
+
+	first := resolveGrokCacheIdentity(c, firstBody, "", "grok-4.5")
+	second := resolveGrokCacheIdentity(c, secondBody, "", "grok-4.5")
+
+	require.NotEmpty(t, first)
+	require.Equal(t, first, second)
+placeholder
+
+func TestResolveGrokCacheIdentityStablePrefixIsolation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	baseBody := []byte(`{"model":"grok","instructions":"be concise","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"system","content":"System A"placeholder,{"role":"user","content":"Question A"placeholder]placeholder`)
+	differentInstructions := []byte(`{"model":"grok","instructions":"be detailed","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"system","content":"System A"placeholder,{"role":"user","content":"Question B"placeholder]placeholder`)
+	differentSystem := []byte(`{"model":"grok","instructions":"be concise","tools":[{"type":"function","name":"lookup"placeholder],"input":[{"role":"system","content":"System B"placeholder,{"role":"user","content":"Question B"placeholder]placeholder`)
+	differentTools := []byte(`{"model":"grok","instructions":"be concise","tools":[{"type":"function","name":"search"placeholder],"input":[{"role":"system","content":"System A"placeholder,{"role":"user","content":"Question B"placeholder]placeholder`)
+
+	base := resolveGrokCacheIdentity(newGrokCacheTestContext(103), baseBody, "", "grok-4.5")
+	require.NotEqual(t, base, resolveGrokCacheIdentity(newGrokCacheTestContext(104), baseBody, "", "grok-4.5"))
+	require.NotEqual(t, base, resolveGrokCacheIdentity(newGrokCacheTestContext(103), baseBody, "", "grok-4.3"))
+	require.NotEqual(t, base, resolveGrokCacheIdentity(newGrokCacheTestContext(103), differentInstructions, "", "grok-4.5"))
+	require.NotEqual(t, base, resolveGrokCacheIdentity(newGrokCacheTestContext(103), differentSystem, "", "grok-4.5"))
+	require.NotEqual(t, base, resolveGrokCacheIdentity(newGrokCacheTestContext(103), differentTools, "", "grok-4.5"))
+placeholder
+
+func TestResolveGrokCacheIdentityFallsBackWhenStablePrefixIsEmpty(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c := newGrokCacheTestContext(105)
+	firstBody := []byte(`{"model":"grok","tools":[],"input":"Question A"placeholder`)
+	secondBody := []byte(`{"model":"grok","tools":[],"input":"Question B"placeholder`)
+
+	first := resolveGrokCacheIdentity(c, firstBody, "", "grok-4.5")
+	second := resolveGrokCacheIdentity(c, secondBody, "", "grok-4.5")
+
+	require.NotEmpty(t, first)
+	require.NotEmpty(t, second)
+	require.NotEqual(t, first, second)
+placeholder
+
+func TestResolveGrokCacheIdentitySkipsUnanchoredFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c := newGrokCacheTestContext(106)
+	tests := [][]byte{
+		[]byte(`{"model":"grok"placeholder`),
+		[]byte(`{"model":"grok","messages":[{"role":"assistant","content":"answer"placeholder]placeholder`),
+		[]byte(`{"model":"grok","messages":[{"role":"user","content":""placeholder]placeholder`),
+		[]byte(`{"model":"grok","input":"  "placeholder`),
+placeholder
+
+	for _, body := range tests {
+		require.Empty(t, resolveGrokCacheIdentity(c, body, "", "grok-4.5"))
+placeholder
+placeholder
+
 func TestResolveGrokCacheIdentityIsolatesAPIKeyAndMappedModel(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	body := []byte(`{"model":"grok","input":"same prompt"placeholder`)
