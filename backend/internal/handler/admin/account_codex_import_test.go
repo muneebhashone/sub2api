@@ -630,6 +630,7 @@ placeholder
 			"chatgpt_user_id":    "user-1",
 			"access_token":       existingToken,
 	placeholder,
+		Extra: map[string]any{"openai_long_context_billing_enabled": falseplaceholder,
 placeholderplaceholder)
 	handler := NewAccountHandler(svc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	req := CodexSessionImportRequest{SkipDefaultGroupBind: boolPtr(true)placeholder
@@ -649,6 +650,9 @@ placeholder
 placeholder
 	if len(svc.updatedAccounts) != 1 || svc.updatedAccounts[0].id != 10 {
 		t.Fatalf("updated accounts = %+v, want account 10", svc.updatedAccounts)
+placeholder
+	if got := svc.updatedAccounts[0].input.Extra["openai_long_context_billing_enabled"]; got != false {
+		t.Fatalf("openai_long_context_billing_enabled = %v, want false", got)
 placeholder
 placeholder
 

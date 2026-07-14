@@ -101,6 +101,7 @@ placeholder
 	now := time.Now().UTC()
 	filter := &OpsSystemLogCleanupFilter{
 		StartTime:       &now,
+		Host:            "api-node-1",
 		Level:           "warn",
 		RequestID:       "req-1",
 		ClientRequestID: "creq-1",
@@ -118,6 +119,9 @@ placeholder
 placeholder
 	if audit == nil {
 		t.Fatalf("expected cleanup audit")
+placeholder
+	if !strings.Contains(audit.Conditions, `"host":"api-node-1"`) {
+		t.Fatalf("audit conditions should include host: %s", audit.Conditions)
 placeholder
 	if !strings.Contains(audit.Conditions, `"client_request_id":"creq-1"`) {
 		t.Fatalf("audit conditions should include client_request_id: %s", audit.Conditions)

@@ -216,3 +216,154 @@ placeholder`)
 	require.Contains(t, seed, "|first_user=")
 	require.Contains(t, seed, "Hello from typed message")
 placeholder
+
+func TestDeriveOpenAIStablePrefixSessionSeed_IgnoresUserContent(t *testing.T) {
+	first := []byte(`{
+		"model": "grok",
+		"instructions": "Be concise.",
+		"tools": [{"type":"function","name":"lookup","parameters":{"type":"object"placeholderplaceholder],
+		"input": [{"role":"user","content":"Question A"placeholder]
+placeholder`)
+	second := []byte(`{
+		"model": "grok",
+		"instructions": "Be concise.",
+		"tools": [{"parameters":{"type":"object"placeholder,"name":"lookup","type":"function"placeholder],
+		"input": [{"role":"user","content":"Question B"placeholder]
+placeholder`)
+
+	firstSeed := deriveOpenAIStablePrefixSessionSeed(first)
+	secondSeed := deriveOpenAIStablePrefixSessionSeed(second)
+
+	require.NotEmpty(t, firstSeed)
+	require.Equal(t, firstSeed, secondSeed)
+	require.NotContains(t, firstSeed, "Question A")
+	require.NotContains(t, firstSeed, "first_user")
+placeholder
+
+func TestDeriveOpenAIStablePrefixSessionSeed_IsolatesStablePrefixFields(t *testing.T) {
+	base := []byte(`{
+		"instructions":"Be concise.",
+		"tools":[{"type":"function","name":"lookup"placeholder],
+		"input":[{"role":"system","content":"System A"placeholder,{"role":"user","content":"Question"placeholder]
+placeholder`)
+	differentInstructions := []byte(`{
+		"instructions":"Be detailed.",
+		"tools":[{"type":"function","name":"lookup"placeholder],
+		"input":[{"role":"system","content":"System A"placeholder,{"role":"user","content":"Question"placeholder]
+placeholder`)
+	differentTools := []byte(`{
+		"instructions":"Be concise.",
+		"tools":[{"type":"function","name":"search"placeholder],
+		"input":[{"role":"system","content":"System A"placeholder,{"role":"user","content":"Question"placeholder]
+placeholder`)
+	differentSystem := []byte(`{
+		"instructions":"Be concise.",
+		"tools":[{"type":"function","name":"lookup"placeholder],
+		"input":[{"role":"system","content":"System B"placeholder,{"role":"user","content":"Question"placeholder]
+placeholder`)
+
+	baseSeed := deriveOpenAIStablePrefixSessionSeed(base)
+	require.NotEqual(t, baseSeed, deriveOpenAIStablePrefixSessionSeed(differentInstructions))
+	require.NotEqual(t, baseSeed, deriveOpenAIStablePrefixSessionSeed(differentTools))
+	require.NotEqual(t, baseSeed, deriveOpenAIStablePrefixSessionSeed(differentSystem))
+placeholder
+
+func TestDeriveOpenAIStablePrefixSessionSeed_ChatSystemAndDeveloper(t *testing.T) {
+	first := []byte(`{
+		"messages":[
+			{"role":"system","content":"System prompt"placeholder,
+			{"role":"developer","content":[{"type":"text","text":"Developer prompt"placeholder]placeholder,
+			{"role":"user","content":"Question A"placeholder
+		]
+placeholder`)
+	second := []byte(`{
+		"messages":[
+			{"role":"system","content":"System prompt"placeholder,
+			{"role":"developer","content":[{"text":"Developer prompt","type":"text"placeholder]placeholder,
+			{"role":"user","content":"Question B"placeholder
+		]
+placeholder`)
+
+	firstSeed := deriveOpenAIStablePrefixSessionSeed(first)
+	require.Equal(t, firstSeed, deriveOpenAIStablePrefixSessionSeed(second))
+	require.Contains(t, firstSeed, "System prompt")
+	require.Contains(t, firstSeed, "Developer prompt")
+placeholder
+
+func TestDeriveOpenAIStablePrefixSessionSeed_EncodesSystemAndDeveloperRoles(t *testing.T) {
+	systemThenDeveloper := []byte(`{
+		"messages":[
+			{"role":"system","content":"Prompt A"placeholder,
+			{"role":"developer","content":"Prompt B"placeholder
+		]
+placeholder`)
+	developerThenSystem := []byte(`{
+		"messages":[
+			{"role":"developer","content":"Prompt A"placeholder,
+			{"role":"system","content":"Prompt B"placeholder
+		]
+placeholder`)
+
+	firstSeed := deriveOpenAIStablePrefixSessionSeed(systemThenDeveloper)
+	secondSeed := deriveOpenAIStablePrefixSessionSeed(developerThenSystem)
+
+	require.NotEqual(t, firstSeed, secondSeed)
+	require.Contains(t, firstSeed, "|system=")
+	require.Contains(t, firstSeed, "|developer=")
+placeholder
+
+func TestDeriveOpenAIStablePrefixSessionSeed_EncodesInstructionDelimiters(t *testing.T) {
+	instructionOnly := []byte(`{
+		"instructions":"foo|system=\"bar\""
+placeholder`)
+	instructionAndSystem := []byte(`{
+		"instructions":"foo",
+		"input":[{"role":"system","content":"bar"placeholder]
+placeholder`)
+
+	firstSeed := deriveOpenAIStablePrefixSessionSeed(instructionOnly)
+	secondSeed := deriveOpenAIStablePrefixSessionSeed(instructionAndSystem)
+
+	require.NotEmpty(t, firstSeed)
+	require.NotEmpty(t, secondSeed)
+	require.NotEqual(t, firstSeed, secondSeed)
+placeholder
+
+func TestDeriveOpenAIAnchoredContentSessionSeed_RequiresMeaningfulAnchor(t *testing.T) {
+	emptyAnchors := [][]byte{
+		nil,
+		[]byte(`{"model":"grok"placeholder`),
+		[]byte(`{"model":"grok","messages":[{"role":"assistant","content":"answer"placeholder]placeholder`),
+		[]byte(`{"model":"grok","messages":[{"role":"user","content":"  "placeholder]placeholder`),
+		[]byte(`{"model":"grok","messages":[{"role":"user","content":[{"type":"text","text":""placeholder]placeholder]placeholder`),
+		[]byte(`{"model":"grok","input":"  "placeholder`),
+		[]byte(`{"model":"grok","input":[{"type":"input_text","text":""placeholder]placeholder`),
+placeholder
+	for _, body := range emptyAnchors {
+		require.Empty(t, deriveOpenAIAnchoredContentSessionSeed(body))
+placeholder
+
+	meaningfulAnchors := [][]byte{
+		[]byte(`{"model":"grok","messages":[{"role":"user","content":"question"placeholder]placeholder`),
+		[]byte(`{"model":"grok","messages":[{"role":"user","content":[{"type":"text","text":"question"placeholder]placeholder]placeholder`),
+		[]byte(`{"model":"grok","input":"question"placeholder`),
+		[]byte(`{"model":"grok","input":[{"type":"input_text","text":"question"placeholder]placeholder`),
+placeholder
+	for _, body := range meaningfulAnchors {
+		require.NotEmpty(t, deriveOpenAIAnchoredContentSessionSeed(body))
+placeholder
+placeholder
+
+func TestDeriveOpenAIStablePrefixSessionSeed_RequiresMeaningfulPrefix(t *testing.T) {
+	tests := [][]byte{
+		nil,
+		[]byte(`{placeholder`),
+		[]byte(`{"model":"grok","input":"Question A"placeholder`),
+		[]byte(`{"model":"grok","tools":[],"input":"Question A"placeholder`),
+		[]byte(`{"model":"grok","functions":[],"instructions":"  ","messages":[{"role":"system","content":""placeholder,{"role":"user","content":"Question A"placeholder]placeholder`),
+placeholder
+
+	for _, body := range tests {
+		require.Empty(t, deriveOpenAIStablePrefixSessionSeed(body))
+placeholder
+placeholder

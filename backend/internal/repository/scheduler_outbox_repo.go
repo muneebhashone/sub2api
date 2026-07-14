@@ -93,6 +93,24 @@ placeholder
 	return events, nil
 placeholder
 
+func (r *schedulerOutboxRepository) FirstCreatedAtAfter(ctx context.Context, afterID int64) (time.Time, bool, error) {
+	var createdAt time.Time
+	err := r.db.QueryRowContext(ctx, `
+		SELECT created_at
+		FROM scheduler_outbox
+		WHERE id > $1
+		ORDER BY id ASC
+		LIMIT 1
+	`, afterID).Scan(&createdAt)
+	if err == sql.ErrNoRows {
+		return time.Time{placeholder, false, nil
+placeholder
+	if err != nil {
+		return time.Time{placeholder, false, err
+placeholder
+	return createdAt, true, nil
+placeholder
+
 func (r *schedulerOutboxRepository) MaxID(ctx context.Context) (int64, error) {
 	var maxID int64
 	if err := r.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(id), 0) FROM scheduler_outbox").Scan(&maxID); err != nil {

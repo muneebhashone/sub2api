@@ -33,6 +33,9 @@ type stubAdminService struct {
 	createSparkShadowErr                error
 	updateAccountErr                    error
 	bulkUpdateAccountErr                error
+	getAccountResult                    *service.Account
+	updateAccountCalls                  int
+	updateAccountExtraCalls             int
 	checkMixedErr                       error
 	lastMixedCheck                      struct {
 		accountID int64
@@ -388,6 +391,9 @@ placeholder
 placeholder
 
 func (s *stubAdminService) GetAccount(ctx context.Context, id int64) (*service.Account, error) {
+	if s.getAccountResult != nil {
+		return s.getAccountResult, nil
+placeholder
 	account := service.Account{ID: id, Name: "account", Status: service.StatusActiveplaceholder
 	return &account, nil
 placeholder
@@ -413,6 +419,7 @@ placeholder
 placeholder
 
 func (s *stubAdminService) UpdateAccount(ctx context.Context, id int64, input *service.UpdateAccountInput) (*service.Account, error) {
+	s.updateAccountCalls++
 	if s.updateAccountErr != nil {
 		return nil, s.updateAccountErr
 placeholder
@@ -421,6 +428,7 @@ placeholder
 placeholder
 
 func (s *stubAdminService) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
+	s.updateAccountExtraCalls++
 	return nil
 placeholder
 

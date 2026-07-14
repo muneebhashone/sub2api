@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/servertiming"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
@@ -99,6 +100,24 @@ placeholder
 	require.Equal(t, "http://proxy.example.com:8080", vertexServiceAccountProxyURL(account))
 	require.Empty(t, vertexServiceAccountProxyURL(&Account{Proxy: account.Proxyplaceholder))
 	require.Empty(t, vertexServiceAccountProxyURL(&Account{ProxyID: &proxyIDplaceholder))
+placeholder
+
+func TestVertexServiceAccountHTTPClientRecordsDependency(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+placeholder))
+	defer server.Close()
+
+	client, err := newVertexServiceAccountHTTPClient("")
+placeholder
+	collector := servertiming.New(time.Now())
+	ctx := servertiming.WithCollector(context.Background(), collector)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
+placeholder
+	response, err := client.Do(request)
+placeholder
+	require.NoError(t, response.Body.Close())
+	require.Contains(t, collector.HeaderValue(time.Now(), "bypass"), "dep_http;dur=")
 placeholder
 
 func TestExchangeVertexServiceAccountTokenUsesProxy(t *testing.T) {
