@@ -123,7 +123,7 @@ placeholder
 		APIMode:          defaultAPIMode(p.APIMode),
 		Endpoint:         normalizeEndpoint(p.Endpoint),
 		APIKey:           encrypted, // 注意：传入 repository 时该字段为密文
-		PrimaryModel:     strings.TrimSpace(p.PrimaryModel),
+		PrimaryModel:     normalizeMonitorPrimaryModel(p.Provider, p.PrimaryModel),
 		ExtraModels:      normalizeModels(p.ExtraModels),
 		GroupName:        strings.TrimSpace(p.GroupName),
 		Enabled:          p.Enabled,
@@ -167,7 +167,7 @@ placeholder
 	if strings.TrimSpace(p.APIKey) == "" {
 		return ErrChannelMonitorMissingAPIKey
 placeholder
-	if strings.TrimSpace(p.PrimaryModel) == "" {
+	if normalizeMonitorPrimaryModel(p.Provider, p.PrimaryModel) == "" {
 		return ErrChannelMonitorMissingPrimaryModel
 placeholder
 	return nil
@@ -486,8 +486,8 @@ placeholder
 		if err := validateProvider(*p.Provider); err != nil {
 			return err
 	placeholder
+		providerChanged = existing.Provider != *p.Provider
 		existing.Provider = *p.Provider
-		providerChanged = true
 placeholder
 	if p.Endpoint != nil {
 		if err := validateEndpoint(*p.Endpoint); err != nil {
@@ -496,7 +496,13 @@ placeholder
 		existing.Endpoint = normalizeEndpoint(*p.Endpoint)
 placeholder
 	if p.PrimaryModel != nil {
-		existing.PrimaryModel = strings.TrimSpace(*p.PrimaryModel)
+		primaryModel := normalizeMonitorPrimaryModel(existing.Provider, *p.PrimaryModel)
+		if primaryModel == "" {
+			return ErrChannelMonitorMissingPrimaryModel
+	placeholder
+		existing.PrimaryModel = primaryModel
+placeholder else if providerChanged && existing.Provider == MonitorProviderGrok {
+		existing.PrimaryModel = MonitorDefaultGrokModel
 placeholder
 	if p.ExtraModels != nil {
 		existing.ExtraModels = normalizeModels(*p.ExtraModels)
