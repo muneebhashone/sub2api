@@ -47,16 +47,36 @@ placeholder
 	if len(body) == 0 || !gjson.ValidBytes(body) {
 		return false
 placeholder
-	if model := strings.TrimSpace(gjson.GetBytes(body, "model").String()); isOpenAIImageGenerationModel(model) {
-		return true
-placeholder
-	if openAIJSONToolsContainImageGeneration(gjson.GetBytes(body, "tools")) {
-		return true
-placeholder
-	if openAIJSONInputContainsImageGenTool(gjson.GetBytes(body, "input")) {
-		return true
-placeholder
-	return openAIJSONToolChoiceSelectsImageGeneration(gjson.GetBytes(body, "tool_choice"))
+
+	var modelSeen, toolsSeen, inputSeen, toolChoiceSeen bool
+	imageIntent := false
+	parseRawJSONView(body).ForEach(func(key, value gjson.Result) bool {
+		// GetBytes returns the first duplicate key; retain that behavior while walking the root once.
+		switch key.Str {
+		case "model":
+			if !modelSeen {
+				modelSeen = true
+				imageIntent = isOpenAIImageGenerationModel(strings.TrimSpace(value.String()))
+		placeholder
+		case "tools":
+			if !toolsSeen {
+				toolsSeen = true
+				imageIntent = openAIJSONToolsContainImageGeneration(value)
+		placeholder
+		case "input":
+			if !inputSeen {
+				inputSeen = true
+				imageIntent = openAIJSONInputContainsImageGenTool(value)
+		placeholder
+		case "tool_choice":
+			if !toolChoiceSeen {
+				toolChoiceSeen = true
+				imageIntent = openAIJSONToolChoiceSelectsImageGeneration(value)
+		placeholder
+	placeholder
+		return !imageIntent && (!modelSeen || !toolsSeen || !inputSeen || !toolChoiceSeen)
+placeholder)
+	return imageIntent
 placeholder
 
 // IsImageGenerationIntentMap is the map-backed variant used after service-side request mutation.
