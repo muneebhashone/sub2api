@@ -1771,3 +1771,70 @@ placeholder
 	require.Equal(t, 1, repo.rateLimitedCalls)
 	require.Zero(t, repo.tempUnschedCalls)
 placeholder
+
+func TestPatchGrokResponsesBody_StripsReasoningContentNull(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok-latest",
+		"input": [
+			{"type":"message","role":"user","content":[{"type":"input_text","text":"hi"placeholder]placeholder,
+			{"type":"reasoning","summary":[{"type":"summary_text","text":"thinking..."placeholder],"content":null,"encrypted_content":nullplaceholder,
+			{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello!"placeholder]placeholder
+		]
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.5")
+placeholder
+	require.True(t, json.Valid(patched))
+
+	input := gjson.GetBytes(patched, "input")
+	require.True(t, input.IsArray())
+
+	items := input.Array()
+	require.Len(t, items, 3)
+
+	reasoning := items[1]
+	require.Equal(t, "reasoning", reasoning.Get("type").String())
+	require.True(t, reasoning.Get("summary").Exists(), "summary should be preserved")
+	require.False(t, reasoning.Get("content").Exists(), "content: null should be stripped")
+placeholder
+
+func TestPatchGrokResponsesBody_KeepsReasoningContentNonNull(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok-latest",
+		"input": [
+			{"type":"reasoning","summary":[{"type":"summary_text","text":"ok"placeholder],"content":"real content"placeholder
+		]
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.5")
+placeholder
+
+	reasoning := gjson.GetBytes(patched, "input.0")
+	require.Equal(t, "real content", reasoning.Get("content").String(), "non-null content must not be stripped")
+placeholder
+
+func TestPatchGrokResponsesBody_MultipleReasoningContentNull(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"model": "grok-latest",
+		"input": [
+			{"type":"reasoning","summary":[{"type":"summary_text","text":"r1"placeholder],"content":nullplaceholder,
+			{"type":"message","role":"user","content":"hi"placeholder,
+			{"type":"reasoning","summary":[{"type":"summary_text","text":"r2"placeholder],"content":nullplaceholder
+		]
+placeholder`)
+
+	patched, err := patchGrokResponsesBody(body, "grok-4.5")
+placeholder
+
+	items := gjson.GetBytes(patched, "input").Array()
+	require.Len(t, items, 3)
+
+	require.False(t, items[0].Get("content").Exists())
+	require.False(t, items[2].Get("content").Exists())
+placeholder

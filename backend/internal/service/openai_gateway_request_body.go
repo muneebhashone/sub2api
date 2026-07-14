@@ -136,12 +136,20 @@ placeholder
 		return item, false, true
 placeholder
 
-	_, hasEncryptedContent := inputItem["encrypted_content"]
-	if !hasEncryptedContent {
-		return item, false, true
+	if _, has := inputItem["encrypted_content"]; has {
+		delete(inputItem, "encrypted_content")
+		changed = true
 placeholder
 
-	delete(inputItem, "encrypted_content")
+	// xAI 422: "content": null 导致 untagged enum 反序列化失败
+	if v, has := inputItem["content"]; has && v == nil {
+		delete(inputItem, "content")
+		changed = true
+placeholder
+
+	if !changed {
+		return item, false, true
+placeholder
 	if len(inputItem) == 1 {
 		return nil, true, false
 placeholder

@@ -185,6 +185,10 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	out, err = sanitizeGrokReasoningNullContent(out)
+	if err != nil {
+		return nil, err
+placeholder
 	out, err = sanitizeGrokResponsesTools(out)
 	if err != nil {
 		return nil, err
@@ -302,6 +306,35 @@ placeholder
 		return nil, err
 placeholder
 	return sjson.SetRawBytes(body, "input", encoded)
+placeholder
+
+// sanitizeGrokReasoningNullContent 删除 reasoning 项中的 "content": null。
+// xAI 的 untagged enum 反序列化器拒收该字段，返回 422。
+func sanitizeGrokReasoningNullContent(body []byte) ([]byte, error) {
+	input := gjson.GetBytes(body, "input")
+	if !input.Exists() || !input.IsArray() {
+		return body, nil
+placeholder
+
+	items := input.Array()
+	changed := false
+	for i := len(items) - 1; i >= 0; i-- {
+		item := items[i]
+		if strings.TrimSpace(item.Get("type").String()) != "reasoning" {
+			continue
+	placeholder
+		contentResult := item.Get("content")
+		if contentResult.Exists() && contentResult.Type == gjson.Null {
+			var err error
+			body, err = sjson.DeleteBytes(body, fmt.Sprintf("input.%d.content", i))
+			if err != nil {
+				return nil, err
+		placeholder
+			changed = true
+	placeholder
+placeholder
+	_ = changed
+	return body, nil
 placeholder
 
 var grokResponsesSupportedToolTypes = map[string]struct{placeholder{
