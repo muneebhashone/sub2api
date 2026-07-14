@@ -715,7 +715,7 @@ placeholder)
         usage_percent: null,
         plan: ''
       placeholder,
-      grok_local_usage: {
+      grok_local_usage_24h: {
         requests: 5,
         tokens,
         cost: 0,
@@ -744,23 +744,23 @@ placeholder)
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain(`2M|${expectedplaceholder`)
+    expect(wrapper.text()).toContain(`24h|${expectedplaceholder`)
     expect(wrapper.findAll('span').filter((node) => node.text() === compact)).toHaveLength(1)
     expect(wrapper.findAll('.usage-bar')).toHaveLength(1)
     expect(wrapper.text()).not.toContain('admin.accounts.usageWindow.grokRequests|')
     expect(wrapper.text()).not.toContain('admin.accounts.usageWindow.grokTokens|')
   placeholder)
 
-  it('Grok Free uses the weekly billing window instead of today-only usage', async () => {
+  it('Grok Free uses rolling 24h usage instead of today-only usage', async () => {
     getUsage.mockResolvedValue({
       grok_billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
       grok_local_usage: {
         requests: 2,
-        tokens: 200_000,
+        tokens: 250_000,
         cost: 0,
         standard_cost: 0
       placeholder,
-      grok_local_usage_7d: {
+      grok_local_usage_24h: {
         requests: 12,
         tokens: 1_500_000,
         cost: 0,
@@ -770,13 +770,19 @@ placeholder)
 
     const wrapper = mount(AccountUsageCell, {
       props: {
-        account: makeAccount({ id: 4398, platform: 'grok', type: 'oauth', extra: {placeholder placeholder)
+        account: makeAccount({ id: 4398, platform: 'grok', type: 'oauth', extra: {placeholder placeholder),
+        todayStats: {
+          requests: 2,
+          tokens: 200_000,
+          cost: 0,
+          standard_cost: 0
+        placeholder
       placeholder,
       global: {
         stubs: {
           UsageProgressBar: {
-            props: ['label', 'utilization'],
-            template: '<div class="usage-bar">{{ label placeholderplaceholder|{{ utilization placeholderplaceholder</div>'
+            props: ['label', 'utilization', 'title'],
+            template: '<div class="usage-bar">{{ label placeholderplaceholder|{{ utilization placeholderplaceholder|{{ title placeholderplaceholder</div>'
           placeholder,
           AccountQuotaInfo: true,
           GrokQuotaProbeCell: true
@@ -786,11 +792,14 @@ placeholder)
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain('2M|75')
-    expect(wrapper.text()).toContain('200.0K')
+    expect(wrapper.text()).toContain('24h|75|admin.accounts.usageWindow.grokFreeQuota24hHint')
+    expect(wrapper.text()).toContain('1.5M')
+    expect(wrapper.text()).not.toContain('7d|')
+    expect(wrapper.text()).not.toContain('200.0K')
+    expect(wrapper.text()).not.toContain('250.0K')
   placeholder)
 
-  it('Grok Free falls back to refreshed today stats when weekly usage is unavailable', async () => {
+  it('Grok Free does not substitute today stats when rolling 24h usage is unavailable', async () => {
     getUsage.mockResolvedValue({
       grok_billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
       grok_local_usage: {
@@ -827,9 +836,10 @@ placeholder)
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain('2M|50')
-    expect(wrapper.text()).toContain('1.0M')
-    expect(wrapper.text()).not.toContain('250K')
+    expect(wrapper.findAll('.usage-bar')).toHaveLength(0)
+    expect(wrapper.text()).not.toContain('24h|')
+    expect(wrapper.text()).not.toContain('1.0M')
+    expect(wrapper.text()).not.toContain('250.0K')
   placeholder)
 
   it('Grok paid plans are not mistaken for Free when weekly usage is temporarily missing', async () => {
@@ -914,7 +924,7 @@ placeholder)
   it('Grok credential Free tier keeps the 2M fallback when billing is unavailable', async () => {
     getUsage.mockResolvedValue({
       subscription_tier: 'FREE',
-      grok_local_usage: {
+      grok_local_usage_24h: {
         requests: 3,
         tokens: 1_000_000,
         cost: 0,
@@ -940,10 +950,10 @@ placeholder)
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain('2M|50')
+    expect(wrapper.text()).toContain('24h|50')
   placeholder)
 
-  it('Grok manual probes merge billing, quota headers, and local usage', async () => {
+  it('Grok paid manual probes keep the weekly/local summary when 24h usage is returned', async () => {
     getUsage.mockResolvedValue({
       grok_quota_snapshot_state: 'no_headers',
       error: 'stale error',
@@ -972,6 +982,7 @@ placeholder)
                 entitlement_status: 'ACTIVE',
                 requests: { limit: 100, remaining: 20 placeholder
               placeholder,
+              local_usage_24h: { requests: 3, tokens: 750000, cost: 0.75, standard_cost: 0.75, user_cost: 0.25 placeholder,
               local_usage_7d: { requests: 4, tokens: 1000000, cost: 1, standard_cost: 1, user_cost: 0.5 placeholder,
               local_usage_monthly: { requests: 7, tokens: 1500000, cost: 2, standard_cost: 2, user_cost: 1 placeholder,
               status_code: 200,
@@ -989,8 +1000,49 @@ placeholder)
 
     expect(wrapper.text()).toContain('7d|42|2026-07-17T00:00:00Z')
     expect(wrapper.text()).toContain('1.0M')
+    expect(wrapper.text()).not.toContain('750.0K')
     expect(wrapper.text()).toContain('ACTIVE')
     expect(wrapper.text()).not.toContain('stale error')
+  placeholder)
+
+  it('Grok Free manual probes merge rolling 24h usage', async () => {
+    getUsage.mockResolvedValue({
+      subscription_tier: 'FREE',
+      grok_quota_snapshot_state: 'no_headers'
+    placeholder)
+
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({ id: 4502, platform: 'grok', type: 'oauth', extra: {placeholder placeholder)
+      placeholder,
+      global: {
+        stubs: {
+          UsageProgressBar: {
+            props: ['label', 'utilization'],
+            template: '<div class="usage-bar">{{ label placeholderplaceholder|{{ utilization placeholderplaceholder</div>'
+          placeholder,
+          AccountQuotaInfo: true,
+          GrokQuotaProbeCell: {
+            emits: ['probed'],
+            template: `<button class="probe" @click="$emit('probed', {
+              source: 'hybrid_probe',
+              billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
+              local_usage_24h: { requests: 12, tokens: 1500000, cost: 0, standard_cost: 0 placeholder,
+              headers_observed: false,
+              reset_supported: false,
+              fetched_at: 1
+            placeholder)">probe</button>`
+          placeholder
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+    await wrapper.get('.probe').trigger('click')
+
+    expect(wrapper.text()).toContain('24h|75')
+    expect(wrapper.text()).toContain('1.5M')
+    expect(wrapper.text()).not.toContain('7d|')
   placeholder)
 
   it('Key 账号在 today stats loading 时显示骨架屏', async () => {
