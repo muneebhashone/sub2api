@@ -104,11 +104,43 @@ placeholder
 placeholder
 	svc := &OpenAIGatewayService{placeholder
 	oauthValue := account.GetCredential("access_token")
-	redacted := svc.redactAgentIdentitySensitiveBody(context.Background(), account, []byte(`{"message":"runtime-test task-test `+oauthValue+`"placeholder`))
+	redacted := svc.redactAgentIdentitySensitiveBody(context.Background(), account, []byte(`{"message":"runtime-test task-test `+oauthValue+` AgentAssertion abc123"placeholder`))
 	require.NotContains(t, string(redacted), key.runtimeID)
 	require.NotContains(t, string(redacted), key.taskID)
 	require.NotContains(t, string(redacted), oauthValue)
+	require.NotContains(t, string(redacted), "AgentAssertion abc123")
 	require.Contains(t, string(redacted), "[redacted]")
+placeholder
+
+func TestOpenAIAuthenticationHeadersPreserveOAuthPATAndAPIKeyBearerModes(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	tests := []struct {
+		name    string
+		account *Account
+		token   string
+placeholder{
+		{name: "oauth", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder, token: "oauth-runtime-token"placeholder,
+		{name: "personal access token", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Credentials: map[string]any{"auth_mode": OpenAIAuthModePersonalAccessTokenplaceholderplaceholder, token: "pat-runtime-token"placeholder,
+		{name: "api key", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder, token: "api-key-runtime-token"placeholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers, err := svc.buildOpenAIAuthenticationHeaders(context.Background(), tt.account, tt.token)
+		placeholder
+			require.Equal(t, "Bearer "+tt.token, headers.Get("Authorization"))
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIWSAgentIdentityRecoveryRequiresTaskInvalidBody(t *testing.T) {
+	require.False(t, isAgentIdentityTaskInvalidWSDialError(&openAIWSDialError{
+		StatusCode:   http.StatusUnauthorized,
+		ResponseBody: []byte(`{"error":{"code":"invalid_signature"placeholderplaceholder`),
+placeholder))
+	require.True(t, isAgentIdentityTaskInvalidWSDialError(&openAIWSDialError{
+		StatusCode:   http.StatusUnauthorized,
+		ResponseBody: []byte(`{"error":{"code":"invalid_task_id"placeholderplaceholder`),
+placeholder))
 placeholder
 
 func TestOpenAIWSConnPoolHeadersFactoryRunsAtDialAndStalePrewarmIsDiscarded(t *testing.T) {
@@ -218,6 +250,21 @@ placeholder
 placeholder
 	require.Equal(t, 2, registerCalls)
 	require.Len(t, upstream.requests, 4)
+
+	// Passthrough uses the same one-shot task recovery contract.
+	account.Extra = map[string]any{"openai_passthrough": trueplaceholder
+	account.Credentials["task_id"] = "task-old-passthrough"
+	upstream.responses = []*http.Response{
+		{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(successBody))placeholder,
+placeholder
+	rec3 := httptest.NewRecorder()
+	c3, _ := gin.CreateTestContext(rec3)
+	c3.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"gpt-5.4","instructions":"Reply OK","input":[],"stream":falseplaceholder`))
+	_, err = svc.Forward(context.Background(), c3, account, []byte(`{"model":"gpt-5.4","instructions":"Reply OK","input":[],"stream":falseplaceholder`))
+placeholder
+	require.Equal(t, 3, registerCalls)
+	require.Len(t, upstream.requests, 6)
 placeholder
 
 func decodeAgentAssertionTask(t *testing.T, header string) string {

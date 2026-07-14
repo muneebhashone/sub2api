@@ -29,6 +29,8 @@ const (
 
 var openAIAgentIdentityAuthAPIBaseURL = agentIdentityAuthAPIBaseURL
 
+var agentIdentityTaskLocks sync.Map // map[int64]*sync.Mutex
+
 type agentIdentityKey struct {
 	runtimeID  string
 	privateKey ed25519.PrivateKey
@@ -251,8 +253,14 @@ placeholder
 	if taskMu == nil {
 		return errors.New("agent identity task lock is unavailable")
 placeholder
-	taskMu.Lock()
-	defer taskMu.Unlock()
+	sharedTaskMu := taskMu
+	if credAccount.ID > 0 {
+		candidate := &sync.Mutex{placeholder
+		actual, _ := agentIdentityTaskLocks.LoadOrStore(credAccount.ID, candidate)
+		sharedTaskMu = actual.(*sync.Mutex)
+placeholder
+	sharedTaskMu.Lock()
+	defer sharedTaskMu.Unlock()
 	currentTaskID = strings.TrimSpace(credAccount.GetCredential("task_id"))
 	if currentTaskID != "" && (expectedTaskID == "" || currentTaskID != expectedTaskID) {
 		return nil
@@ -300,6 +308,10 @@ placeholder {
 	placeholder
 placeholder
 	return false
+placeholder
+
+func isAgentIdentityTaskInvalidWSDialError(err *openAIWSDialError) bool {
+	return err != nil && isAgentIdentityTaskInvalidHTTPResponse(err.StatusCode, err.ResponseBody)
 placeholder
 
 func (s *OpenAIGatewayService) buildOpenAIAuthenticationHeaders(ctx context.Context, account *Account, token string) (http.Header, error) {
@@ -401,15 +413,18 @@ placeholder
 // upstream error can reach logs, ops events, or returned error text. Agent
 // Identity responses should not echo these values, but keeping this boundary
 // defensive prevents accidental disclosure if an upstream error does.
-func (s *OpenAIGatewayService) redactAgentIdentitySensitiveBody(ctx context.Context, account *Account, body []byte) []byte {
-	if !s.isAgentIdentityAccount(ctx, account) || len(body) == 0 {
+func redactAgentIdentitySensitiveBodyForAccount(ctx context.Context, repo AccountRepository, account *Account, body []byte) []byte {
+	if account == nil || len(body) == 0 {
 		return body
 placeholder
 	credAccount := account
 	if account != nil && account.IsShadow() {
-		if resolved, err := resolveCredentialAccount(ctx, s.accountRepo, account); err == nil && resolved != nil {
+		if resolved, err := resolveCredentialAccount(ctx, repo, account); err == nil && resolved != nil {
 			credAccount = resolved
 	placeholder
+placeholder
+	if credAccount == nil || !credAccount.IsOpenAIAgentIdentity() {
+		return body
 placeholder
 	redacted := string(body)
 	for _, key := range []string{
@@ -427,5 +442,23 @@ placeholder {
 			redacted = strings.ReplaceAll(redacted, value, "[redacted]")
 	placeholder
 placeholder
+	for {
+		start := strings.Index(redacted, "AgentAssertion ")
+		if start < 0 {
+			break
+	placeholder
+		end := start + len("AgentAssertion ")
+		for end < len(redacted) && !strings.ContainsRune(" \t\r\n\"',placeholder", rune(redacted[end])) {
+			end++
+	placeholder
+		redacted = redacted[:start] + "AgentAssertion [redacted]" + redacted[end:]
+placeholder
 	return []byte(redacted)
+placeholder
+
+func (s *OpenAIGatewayService) redactAgentIdentitySensitiveBody(ctx context.Context, account *Account, body []byte) []byte {
+	if !s.isAgentIdentityAccount(ctx, account) {
+		return body
+placeholder
+	return redactAgentIdentitySensitiveBodyForAccount(ctx, s.accountRepo, account, body)
 placeholder

@@ -171,7 +171,7 @@ placeholder
 placeholder
 	if !resp.IsSuccessState() {
 		status := resp.StatusCode
-		body := truncate(resp.String(), 240)
+		body := truncate(s.redactQuotaErrorBody(ctx, accountID, resp.String()), 240)
 		slog.Warn("openai_quota_query_failed", "account_id", accountID, "status", status, "body", body)
 		return nil, infraerrors.Newf(mapUpstreamStatus(status), "OPENAI_QUOTA_UPSTREAM_ERROR", "upstream returned %d: %s", status, body)
 placeholder
@@ -268,7 +268,7 @@ placeholder
 placeholder
 	if !resp.IsSuccessState() {
 		status := resp.StatusCode
-		body := truncate(resp.String(), 240)
+		body := truncate(s.redactQuotaErrorBody(callCtx, accountID, resp.String()), 240)
 		slog.Warn("openai_quota_reset_failed", "account_id", accountID, "status", status, "body", body)
 		return nil, infraerrors.Newf(mapUpstreamStatus(status), "OPENAI_QUOTA_RESET_UPSTREAM_ERROR", "upstream returned %d: %s", status, body)
 placeholder
@@ -391,6 +391,17 @@ placeholder
 placeholder
 	headers["authorization"] = assertion
 	return headers, nil
+placeholder
+
+func (s *OpenAIQuotaService) redactQuotaErrorBody(ctx context.Context, accountID int64, body string) string {
+	if s == nil || s.accountRepo == nil {
+		return body
+placeholder
+	account, err := s.accountRepo.GetByID(ctx, accountID)
+	if err != nil || account == nil {
+		return body
+placeholder
+	return string(redactAgentIdentitySensitiveBodyForAccount(ctx, s.accountRepo, account, []byte(body)))
 placeholder
 
 // buildCodexCommonHeaders sets the request headers expected by the chatgpt.com
