@@ -157,6 +157,39 @@ placeholder
 placeholder
 placeholder
 
+func TestCreateShadowInheritsParentEffectiveOpenAILongContextBillingValue(t *testing.T) {
+	tests := []struct {
+		name        string
+		parentExtra map[string]any
+		want        bool
+placeholder{
+		{name: "missing parent value defaults disabled", want: falseplaceholder,
+		{name: "explicit parent opt-out is inherited", parentExtra: map[string]any{openAILongContextBillingEnabledKey: falseplaceholder, want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := newSparkShadowRepoStub()
+			svc := &adminServiceImpl{accountRepo: repoplaceholder
+			parent := &Account{
+				Name:        "parent",
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeOAuth,
+				Status:      StatusActive,
+		placeholder"access_token": "token"placeholder,
+				Extra:       tt.parentExtra,
+		placeholder
+			require.NoError(t, repo.Create(context.Background(), parent))
+
+			shadow, err := svc.CreateShadow(context.Background(), parent.ID, ShadowOptions{Name: "shadow"placeholder)
+
+		placeholder
+			require.Equal(t, tt.want, shadow.Extra[openAILongContextBillingEnabledKey])
+			require.Equal(t, tt.want, shadow.IsOpenAILongContextBillingEnabled())
+	placeholder)
+placeholder
+placeholder
+
 // TestCreateShadow_BindGroups は BindGroups の後置呼び出しを検証する。
 // 影子账号が指定グループに属し、ListSchedulableByGroupID で取得可能であること。
 func TestCreateShadow_BindGroups(t *testing.T) {
