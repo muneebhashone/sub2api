@@ -127,6 +127,12 @@ placeholder
 	return committed
 placeholder
 
+// OpenAIImagesJSONKeepalivePresent reports whether the response writer belongs
+// to an Images JSON request, including fast responses before the first beat.
+func OpenAIImagesJSONKeepalivePresent(c *gin.Context) bool {
+	return openAIImagesJSONKeepaliveFromContext(c) != nil
+placeholder
+
 // OpenAIImagesJSONKeepaliveAdjustedWrittenSize excludes heartbeat whitespace
 // from response-size checks so account retry and failover remain available.
 func OpenAIImagesJSONKeepaliveAdjustedWrittenSize(c *gin.Context) int {
