@@ -201,6 +201,9 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	if account.Platform != PlatformGrok && isOpenAIResponsesLiteWebSocketPayload(payload) {
+		upstreamReq.Header.Set(responsesLiteHeader, "true")
+placeholder
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {

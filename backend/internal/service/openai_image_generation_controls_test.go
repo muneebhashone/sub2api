@@ -87,11 +87,13 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 		name          string
 		allowImages   bool
 		bridgeEnabled bool
+		responsesLite bool
 		wantInjected  bool
 placeholder{
 		{name: "disabled group skips injection", allowImages: false, bridgeEnabled: true, wantInjected: falseplaceholder,
 		{name: "enabled group skips injection by default", allowImages: true, bridgeEnabled: false, wantInjected: falseplaceholder,
 		{name: "enabled group injects image tool when bridge enabled", allowImages: true, bridgeEnabled: true, wantInjected: trueplaceholder,
+		{name: "responses lite skips hosted image bridge", allowImages: true, bridgeEnabled: true, responsesLite: true, wantInjected: falseplaceholder,
 placeholder
 
 	for _, tt := range tests {
@@ -106,6 +108,9 @@ placeholder
 			svc := newOpenAIImageGenerationControlTestService(upstream)
 			svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = tt.bridgeEnabled
 			c, _ := newOpenAIImageGenerationControlTestContext(tt.allowImages, "codex_cli_rs/0.98.0")
+			if tt.responsesLite {
+				c.Request.Header.Set(responsesLiteHeader, "true")
+		placeholder
 			account := newOpenAIImageGenerationControlTestAccount()
 
 			result, err := svc.Forward(context.Background(), c, account, []byte(`{"model":"gpt-5.4","input":"write code","stream":falseplaceholder`))
@@ -115,6 +120,11 @@ placeholder
 			require.NotNil(t, upstream.lastReq)
 			hasImageTool := gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists()
 			require.Equal(t, tt.wantInjected, hasImageTool)
+			expectedLiteHeader := ""
+			if tt.responsesLite {
+				expectedLiteHeader = "true"
+		placeholder
+			require.Equal(t, expectedLiteHeader, upstream.lastReq.Header.Get(responsesLiteHeader))
 			instructions := gjson.GetBytes(upstream.lastBody, "instructions").String()
 			require.Equal(t, tt.wantInjected, strings.Contains(instructions, "image_generation"))
 			toolChoice := gjson.GetBytes(upstream.lastBody, "tool_choice")
@@ -124,6 +134,24 @@ placeholder
 		placeholder
 	placeholder)
 placeholder
+placeholder
+
+func TestOpenAIBuildUpstreamRequestOpenAIPassthroughForwardsResponsesLiteHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
+	c.Request.Header.Set(responsesLiteHeader, "true")
+
+	svc := newOpenAIImageGenerationControlTestService(&httpUpstreamRecorder{placeholder)
+	req, err := svc.buildUpstreamRequestOpenAIPassthrough(
+		c.Request.Context(),
+		c,
+		newOpenAIImageGenerationControlTestAccount(),
+		[]byte(`{"model":"gpt-5.4","input":"write code"placeholder`),
+		"test-token",
+	)
+
+placeholder
+	require.Equal(t, "true", req.Header.Get(responsesLiteHeader))
 placeholder
 
 func TestOpenAIGatewayServiceForward_ExplicitImageToolWorksWithBridgeDisabled(t *testing.T) {
