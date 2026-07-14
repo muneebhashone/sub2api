@@ -261,7 +261,11 @@ placeholder
 	if credAccount.ID > 0 {
 		candidate := &sync.Mutex{placeholder
 		actual, _ := agentIdentityTaskLocks.LoadOrStore(credAccount.ID, candidate)
-		sharedTaskMu = actual.(*sync.Mutex)
+		loadedTaskMu, ok := actual.(*sync.Mutex)
+		if !ok {
+			return errors.New("agent identity task lock has invalid type")
+	placeholder
+		sharedTaskMu = loadedTaskMu
 placeholder
 	sharedTaskMu.Lock()
 	defer sharedTaskMu.Unlock()
