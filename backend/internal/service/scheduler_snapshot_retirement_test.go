@@ -4,7 +4,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -161,7 +160,7 @@ func TestSchedulerFullRebuildCapturesAllRegistryTokensBeforeDBLoad(t *testing.T)
 			return []Account{{ID: 6101, Platform: PlatformOpenAI, Status: StatusActive, Schedulable: trueplaceholderplaceholder, nil
 	placeholder,
 placeholder
-	svc := NewSchedulerSnapshotService(cache, nil, repo, nil, &config.Config{
+	svc := NewSchedulerSnapshotService(cache, nil, repo, &retirementGroupRepo{groups: []Group{{ID: 61, Status: StatusActiveplaceholderplaceholderplaceholder, &config.Config{
 		RunMode: config.RunModeStandard,
 		Gateway: config.GatewayConfig{Scheduling: config.GatewaySchedulingConfig{
 			DbFallbackEnabled: true,
@@ -177,7 +176,7 @@ placeholder)
 placeholder
 
 	captures, reopens := cache.captureAndReopenCounts()
-	require.Equal(t, 2, captures, "all registry tokens must be captured before the first DB load")
+	require.Equal(t, 24, captures, "group0 and active-group canonical tokens must be captured before the first DB load")
 	require.Zero(t, reopens)
 	require.NoError(t, cache.RetireBucket(context.Background(), queued))
 	_, err := cache.ReopenBucket(context.Background(), queued)
@@ -261,29 +260,4 @@ placeholder
 	setAttempts, published := cache.counts(bucket)
 	require.Zero(t, setAttempts)
 	require.Zero(t, published)
-placeholder
-
-func TestSchedulerDefaultBucketsUseCaptureAndListActiveFailureKeepsGroupZero(t *testing.T) {
-	cache := newRetirementRaceCache()
-	svc := NewSchedulerSnapshotService(
-		cache,
-		nil,
-		nil,
-		&retirementGroupRepo{err: errors.New("list active failed")placeholder,
-		testConfig(),
-	)
-
-	buckets, err := svc.defaultBuckets(context.Background())
-placeholder
-	require.NotEmpty(t, buckets)
-	for _, bucket := range buckets {
-		require.Zero(t, bucket.GroupID)
-placeholder
-
-	tasks, err := svc.prepareBucketWriteTasks(context.Background(), buckets)
-placeholder
-	require.Len(t, tasks, len(buckets))
-	captures, reopens := cache.captureAndReopenCounts()
-	require.Equal(t, len(buckets), captures)
-	require.Zero(t, reopens)
 placeholder
