@@ -2037,3 +2037,25 @@ placeholder
 	require.False(t, items[0].Get("content").Exists())
 	require.False(t, items[2].Get("content").Exists())
 placeholder
+
+func TestIsGrokImageGenerationModel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		model string
+		want  bool
+placeholder{
+		{"grok-imagine", trueplaceholder,
+		{"grok-imagine-image-quality", trueplaceholder,
+		{"grok-imagine-edit", trueplaceholder,
+		{"grok-imagine-image-hd", trueplaceholder,
+		{"grok-4.5", falseplaceholder,
+		{"grok-composer", falseplaceholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.model, func(t *testing.T) {
+			require.Equal(t, tt.want, isGrokImageGenerationModel(tt.model))
+	placeholder)
+placeholder
+placeholder
+
