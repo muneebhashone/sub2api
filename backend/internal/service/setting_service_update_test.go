@@ -5,6 +5,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"math"
+	"strconv"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -339,6 +341,8 @@ func TestSettingService_UpdateSettings_PaymentVisibleMethodsAndAdvancedScheduler
 		PaymentVisibleMethodWxpaySource:                    "easypay",
 		PaymentVisibleMethodAlipayEnabled:                  true,
 		PaymentVisibleMethodWxpayEnabled:                   false,
+		OpenAILowUpstreamRatePriorityEnabled:               true,
+		OpenAIOAuthSchedulingRateMultiplier:                0.05,
 		OpenAIAdvancedSchedulerEnabled:                     true,
 		OpenAIAdvancedSchedulerStickyWeightedEnabled:       true,
 		OpenAIAdvancedSchedulerSubscriptionPriorityEnabled: true,
@@ -350,6 +354,7 @@ func TestSettingService_UpdateSettings_PaymentVisibleMethodsAndAdvancedScheduler
 		OpenAIAdvancedSchedulerWeightTTFT:                  "0.5",
 		OpenAIAdvancedSchedulerWeightReset:                 "",
 		OpenAIAdvancedSchedulerWeightQuotaHeadroom:         "0.2",
+		OpenAIAdvancedSchedulerWeightUpstreamCost:          "1.5",
 		OpenAIAdvancedSchedulerWeightPreviousResponse:      "8",
 		OpenAIAdvancedSchedulerWeightSessionSticky:         "4",
 placeholder)
@@ -358,6 +363,8 @@ placeholder
 	require.Equal(t, VisibleMethodSourceEasyPayWechat, repo.updates[SettingPaymentVisibleMethodWxpaySource])
 	require.Equal(t, "true", repo.updates[SettingPaymentVisibleMethodAlipayEnabled])
 	require.Equal(t, "false", repo.updates[SettingPaymentVisibleMethodWxpayEnabled])
+	require.Equal(t, "true", repo.updates[SettingKeyOpenAILowUpstreamRatePriorityEnabled])
+	require.Equal(t, "0.05", repo.updates[SettingKeyOpenAIOAuthSchedulingRateMultiplier])
 	require.Equal(t, "true", repo.updates[openAIAdvancedSchedulerSettingKey])
 	require.Equal(t, "true", repo.updates[SettingKeyOpenAIAdvancedSchedulerStickyWeightedEnabled])
 	require.Equal(t, "true", repo.updates[SettingKeyOpenAIAdvancedSchedulerSubscriptionPriorityEnabled])
@@ -369,8 +376,79 @@ placeholder
 	require.Equal(t, "0.5", repo.updates[SettingKeyOpenAIAdvancedSchedulerWeightTTFT])
 	require.Equal(t, "", repo.updates[SettingKeyOpenAIAdvancedSchedulerWeightReset])
 	require.Equal(t, "0.2", repo.updates[SettingKeyOpenAIAdvancedSchedulerWeightQuotaHeadroom])
+	require.Equal(t, "1.5", repo.updates[SettingKeyOpenAIAdvancedSchedulerWeightUpstreamCost])
 	require.Equal(t, "8", repo.updates[SettingKeyOpenAIAdvancedSchedulerWeightPreviousResponse])
 	require.Equal(t, "4", repo.updates[SettingKeyOpenAIAdvancedSchedulerWeightSessionSticky])
+placeholder
+
+func TestSettingService_UpdateSettingsRejectsInvalidOpenAIOAuthSchedulingRateMultiplier(t *testing.T) {
+	repo := &settingUpdateRepoStub{placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	for _, rate := range []float64{-0.01, math.NaN(), math.Inf(1)placeholder {
+		err := svc.UpdateSettings(context.Background(), &SystemSettings{OpenAIOAuthSchedulingRateMultiplier: rateplaceholder)
+	placeholder
+placeholder
+placeholder
+
+func TestSettingService_UpdateSettings_OpenAIAdvancedSchedulerWeightSums(t *testing.T) {
+	maxFloat := strconv.FormatFloat(math.MaxFloat64, 'g', -1, 64)
+	tests := []struct {
+		name    string
+		weights SystemSettings
+		wantErr bool
+placeholder{
+		{
+			name: "reset only base is valid",
+			weights: SystemSettings{
+				OpenAIAdvancedSchedulerWeightPriority:         "0",
+				OpenAIAdvancedSchedulerWeightLoad:             "0",
+				OpenAIAdvancedSchedulerWeightQueue:            "0",
+				OpenAIAdvancedSchedulerWeightErrorRate:        "0",
+				OpenAIAdvancedSchedulerWeightTTFT:             "0",
+				OpenAIAdvancedSchedulerWeightReset:            "1",
+				OpenAIAdvancedSchedulerWeightQuotaHeadroom:    "0",
+				OpenAIAdvancedSchedulerWeightUpstreamCost:     "0",
+				OpenAIAdvancedSchedulerWeightPreviousResponse: "0",
+				OpenAIAdvancedSchedulerWeightSessionSticky:    "0",
+		placeholder,
+	placeholder,
+		{
+			name: "base sum overflow is rejected",
+			weights: SystemSettings{
+				OpenAIAdvancedSchedulerWeightPriority: maxFloat,
+				OpenAIAdvancedSchedulerWeightLoad:     maxFloat,
+		placeholder,
+			wantErr: true,
+	placeholder,
+		{
+			name: "sticky total sum overflow is rejected",
+			weights: SystemSettings{
+				OpenAIAdvancedSchedulerWeightPriority:         maxFloat,
+				OpenAIAdvancedSchedulerWeightPreviousResponse: maxFloat,
+		placeholder,
+			wantErr: true,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := NewSettingService(&settingUpdateRepoStub{placeholder, &config.Config{placeholder)
+			err := svc.UpdateSettings(context.Background(), &tt.weights)
+			if tt.wantErr {
+			placeholder
+				return
+		placeholder
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestSettingService_ParseSettingsDefaultsOpenAIOAuthSchedulingRateMultiplier(t *testing.T) {
+	svc := NewSettingService(&settingUpdateRepoStub{placeholder, &config.Config{placeholder)
+
+	require.Equal(t, 1.0, svc.parseSettings(map[string]string{placeholder).OpenAIOAuthSchedulingRateMultiplier)
+	require.Equal(t, 0.05, svc.parseSettings(map[string]string{SettingKeyOpenAIOAuthSchedulingRateMultiplier: "0.05"placeholder).OpenAIOAuthSchedulingRateMultiplier)
 placeholder
 
 func TestSettingService_GetAllSettings_OpenAIAdvancedSchedulerEffectiveValuesUseConfig(t *testing.T) {
@@ -384,8 +462,9 @@ func TestSettingService_GetAllSettings_OpenAIAdvancedSchedulerEffectiveValuesUse
 		TTFT:             6,
 		Reset:            7,
 		QuotaHeadroom:    8,
-		PreviousResponse: 9,
-		SessionSticky:    10,
+		UpstreamCost:     9,
+		PreviousResponse: 10,
+		SessionSticky:    11,
 placeholder
 	svc := NewSettingService(&settingGetAllRepoStub{values: map[string]string{
 		SettingKeyOpenAIAdvancedSchedulerLBTopK:              "3",
@@ -401,7 +480,8 @@ placeholder
 	require.Equal(t, "13", settings.OpenAIAdvancedSchedulerEffectiveLBTopK)
 	require.Equal(t, "2", settings.OpenAIAdvancedSchedulerEffectiveWeightPriority)
 	require.Equal(t, "3", settings.OpenAIAdvancedSchedulerEffectiveWeightLoad)
-	require.Equal(t, "10", settings.OpenAIAdvancedSchedulerEffectiveWeightSessionSticky)
+	require.Equal(t, "9", settings.OpenAIAdvancedSchedulerEffectiveWeightUpstreamCost)
+	require.Equal(t, "11", settings.OpenAIAdvancedSchedulerEffectiveWeightSessionSticky)
 placeholder
 
 func TestSettingService_UpdateSettings_AntigravityUserAgentVersion(t *testing.T) {

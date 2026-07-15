@@ -366,6 +366,7 @@ placeholder
 			service.OpenAIEndpointCapabilityChatCompletions,
 			requireCompact,
 			false,
+			!imageIntent,
 			requestPlatform,
 		)
 		if err != nil {
@@ -909,6 +910,7 @@ placeholder
 			service.OpenAIEndpointCapabilityChatCompletions,
 			false,
 			false,
+			true,
 			requestPlatform,
 		)
 		if err != nil {
@@ -1461,7 +1463,8 @@ placeholder
 		return
 placeholder
 
-	if service.IsImageGenerationIntent("/v1/responses", reqModel, firstMessage) && !service.GroupAllowsImageGeneration(apiKey.Group) {
+	imageIntent := service.IsImageGenerationIntent("/v1/responses", reqModel, firstMessage)
+	if imageIntent && !service.GroupAllowsImageGeneration(apiKey.Group) {
 		closeOpenAIClientWS(wsConn, coderws.StatusPolicyViolation, service.ImageGenerationPermissionMessage())
 		return
 placeholder
@@ -1604,6 +1607,7 @@ placeholder
 			service.OpenAIEndpointCapabilityChatCompletions,
 			false,
 			previousResponseCanMove,
+			!imageIntent,
 			requestPlatform,
 		)
 		if err != nil {
