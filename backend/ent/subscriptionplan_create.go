@@ -68,6 +68,20 @@ placeholder
 	return _c
 placeholder
 
+// SetCurrency sets the "currency" field.
+func (_c *SubscriptionPlanCreate) SetCurrency(v string) *SubscriptionPlanCreate {
+	_c.mutation.SetCurrency(v)
+	return _c
+placeholder
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableCurrency(v *string) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetCurrency(*v)
+placeholder
+	return _c
+placeholder
+
 // SetValidityDays sets the "validity_days" field.
 func (_c *SubscriptionPlanCreate) SetValidityDays(v int) *SubscriptionPlanCreate {
 	_c.mutation.SetValidityDays(v)
@@ -219,6 +233,10 @@ func (_c *SubscriptionPlanCreate) defaults() {
 		v := subscriptionplan.DefaultDescription
 		_c.mutation.SetDescription(v)
 placeholder
+	if _, ok := _c.mutation.Currency(); !ok {
+		v := subscriptionplan.DefaultCurrency
+		_c.mutation.SetCurrency(v)
+placeholder
 	if _, ok := _c.mutation.ValidityDays(); !ok {
 		v := subscriptionplan.DefaultValidityDays
 		_c.mutation.SetValidityDays(v)
@@ -271,6 +289,14 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.Price(); !ok {
 		return &ValidationError{Name: "price", err: errors.New(`ent: missing required field "SubscriptionPlan.price"`)placeholder
+placeholder
+	if _, ok := _c.mutation.Currency(); !ok {
+		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "SubscriptionPlan.currency"`)placeholder
+placeholder
+	if v, ok := _c.mutation.Currency(); ok {
+		if err := subscriptionplan.CurrencyValidator(v); err != nil {
+			return &ValidationError{Name: "currency", err: fmt.Errorf(`ent: validator failed for field "SubscriptionPlan.currency": %w`, err)placeholder
+	placeholder
 placeholder
 	if _, ok := _c.mutation.ValidityDays(); !ok {
 		return &ValidationError{Name: "validity_days", err: errors.New(`ent: missing required field "SubscriptionPlan.validity_days"`)placeholder
@@ -352,6 +378,10 @@ placeholder
 	if value, ok := _c.mutation.OriginalPrice(); ok {
 		_spec.SetField(subscriptionplan.FieldOriginalPrice, field.TypeFloat64, value)
 		_node.OriginalPrice = &value
+placeholder
+	if value, ok := _c.mutation.Currency(); ok {
+		_spec.SetField(subscriptionplan.FieldCurrency, field.TypeString, value)
+		_node.Currency = value
 placeholder
 	if value, ok := _c.mutation.ValidityDays(); ok {
 		_spec.SetField(subscriptionplan.FieldValidityDays, field.TypeInt, value)
@@ -518,6 +548,18 @@ placeholder
 // ClearOriginalPrice clears the value of the "original_price" field.
 func (u *SubscriptionPlanUpsert) ClearOriginalPrice() *SubscriptionPlanUpsert {
 	u.SetNull(subscriptionplan.FieldOriginalPrice)
+	return u
+placeholder
+
+// SetCurrency sets the "currency" field.
+func (u *SubscriptionPlanUpsert) SetCurrency(v string) *SubscriptionPlanUpsert {
+	u.Set(subscriptionplan.FieldCurrency, v)
+	return u
+placeholder
+
+// UpdateCurrency sets the "currency" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsert) UpdateCurrency() *SubscriptionPlanUpsert {
+	u.SetExcluded(subscriptionplan.FieldCurrency)
 	return u
 placeholder
 
@@ -757,6 +799,20 @@ placeholder
 func (u *SubscriptionPlanUpsertOne) ClearOriginalPrice() *SubscriptionPlanUpsertOne {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
 		s.ClearOriginalPrice()
+placeholder)
+placeholder
+
+// SetCurrency sets the "currency" field.
+func (u *SubscriptionPlanUpsertOne) SetCurrency(v string) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetCurrency(v)
+placeholder)
+placeholder
+
+// UpdateCurrency sets the "currency" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertOne) UpdateCurrency() *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateCurrency()
 placeholder)
 placeholder
 
@@ -1178,6 +1234,20 @@ placeholder
 func (u *SubscriptionPlanUpsertBulk) ClearOriginalPrice() *SubscriptionPlanUpsertBulk {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
 		s.ClearOriginalPrice()
+placeholder)
+placeholder
+
+// SetCurrency sets the "currency" field.
+func (u *SubscriptionPlanUpsertBulk) SetCurrency(v string) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetCurrency(v)
+placeholder)
+placeholder
+
+// UpdateCurrency sets the "currency" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertBulk) UpdateCurrency() *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateCurrency()
 placeholder)
 placeholder
 
