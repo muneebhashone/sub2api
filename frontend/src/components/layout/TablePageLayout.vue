@@ -100,10 +100,6 @@ placeholder
   @apply flex-none min-h-fit;
 placeholder
 
-.table-page-layout.mobile-mode .table-scroll-container :deep(.table-wrapper) {
-  @apply overflow-visible;
-placeholder
-
 .table-page-layout.mobile-mode .table-scroll-container :deep(table) {
   @apply flex-none;
   display: table;
