@@ -145,17 +145,40 @@ placeholder
  */
 const duplicateOperationKeys = new Map<number, string>()
 
+function duplicateOperationStorageKey(id: number): string {
+  return `sub2api:admin:account-duplicate:${idplaceholder`
+placeholder
+
+function getStoredDuplicateOperationKey(id: number): string | null {
+  try {
+    return globalThis.sessionStorage?.getItem(duplicateOperationStorageKey(id)) ?? null
+  placeholder catch {
+    return null
+  placeholder
+placeholder
+
+function storeDuplicateOperationKey(id: number, key: string | null): void {
+  try {
+    if (key) globalThis.sessionStorage?.setItem(duplicateOperationStorageKey(id), key)
+    else globalThis.sessionStorage?.removeItem(duplicateOperationStorageKey(id))
+  placeholder catch {
+    // In-memory retry protection still works when browser storage is unavailable.
+  placeholder
+placeholder
+
 export async function duplicate(id: number): Promise<Account> {
-  let idempotencyKey = duplicateOperationKeys.get(id)
+  let idempotencyKey = duplicateOperationKeys.get(id) ?? getStoredDuplicateOperationKey(id)
   if (!idempotencyKey) {
     const requestID = globalThis.crypto?.randomUUID?.() ?? `${Date.now()placeholder-${Math.random().toString(36).slice(2)placeholder`
     idempotencyKey = `account-duplicate-${idplaceholder-${requestIDplaceholder`
-    duplicateOperationKeys.set(id, idempotencyKey)
   placeholder
+  duplicateOperationKeys.set(id, idempotencyKey)
+  storeDuplicateOperationKey(id, idempotencyKey)
   const { data placeholder = await apiClient.post<Account>(`/admin/accounts/${idplaceholder/duplicate`, undefined, {
     headers: { 'Idempotency-Key': idempotencyKey placeholder
   placeholder)
   duplicateOperationKeys.delete(id)
+  storeDuplicateOperationKey(id, null)
   return data
 placeholder
 

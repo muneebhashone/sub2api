@@ -142,7 +142,7 @@ placeholder
 placeholder
 	require.NoError(t, repo.Create(ctx, source))
 
-	duplicate, err := svc.DuplicateAccount(ctx, source.ID, "")
+	duplicate, err := svc.DuplicateAccount(ctx, source.ID, "admin:1", "")
 
 placeholder
 	require.NotEqual(t, source.ID, duplicate.ID)
@@ -210,7 +210,7 @@ func TestDuplicateAccountRejectsCredentialShadow(t *testing.T) {
 placeholder
 	require.NoError(t, repo.Create(ctx, shadow))
 
-	_, err := svc.DuplicateAccount(ctx, shadow.ID, "")
+	_, err := svc.DuplicateAccount(ctx, shadow.ID, "admin:1", "")
 
 placeholder
 	require.Equal(t, http.StatusBadRequest, infraerrors.Code(err))
@@ -232,7 +232,7 @@ func TestDuplicateAccountRejectsRotatingOrUnknownCredentialTypes(t *testing.T) {
 		placeholder
 			require.NoError(t, repo.Create(ctx, source))
 
-			_, err := svc.DuplicateAccount(ctx, source.ID, "")
+			_, err := svc.DuplicateAccount(ctx, source.ID, "admin:1", "")
 
 		placeholder
 			require.Equal(t, http.StatusBadRequest, infraerrors.Code(err))
@@ -255,7 +255,7 @@ placeholder"api_key": "secret"placeholder,
 placeholder
 	require.NoError(t, repo.Create(ctx, source))
 
-	duplicate, err := svc.DuplicateAccount(ctx, source.ID, "")
+	duplicate, err := svc.DuplicateAccount(ctx, source.ID, "admin:1", "")
 
 placeholder
 	require.Empty(t, duplicate.GroupIDs)
@@ -277,7 +277,7 @@ placeholder
 	require.NoError(t, repo.Create(ctx, source))
 	repo.atomicCreateErr = errors.New("group binding failed")
 
-	_, err := svc.DuplicateAccount(ctx, source.ID, "")
+	_, err := svc.DuplicateAccount(ctx, source.ID, "admin:1", "")
 
 	require.ErrorContains(t, err, "group binding failed")
 	require.Len(t, repo.accounts, 1)
@@ -302,12 +302,21 @@ placeholder"api_key": "secret"placeholder,
 placeholder
 	require.NoError(t, repo.Create(ctx, source))
 
-	first, err := svc.DuplicateAccount(ctx, source.ID, "stable-operation-key")
+	first, err := svc.DuplicateAccount(ctx, source.ID, "admin:7", "stable-operation-key")
 placeholder
-	second, err := svc.DuplicateAccount(ctx, source.ID, "stable-operation-key")
+	second, err := svc.DuplicateAccount(ctx, source.ID, "admin:7", "stable-operation-key")
+placeholder
+	recovered, err := svc.RecoverDuplicateAccount(ctx, source.ID, "admin:7", "stable-operation-key")
+placeholder
+	otherAdminRecovery, err := svc.RecoverDuplicateAccount(ctx, source.ID, "admin:8", "stable-operation-key")
+placeholder
+	otherAdminCopy, err := svc.DuplicateAccount(ctx, source.ID, "admin:8", "stable-operation-key")
 placeholder
 
 	require.Equal(t, first.ID, second.ID)
-	require.Len(t, repo.accounts, 2)
+	require.Equal(t, first.ID, recovered.ID)
+	require.Nil(t, otherAdminRecovery, "durable recovery identity must remain scoped to the initiating admin")
+	require.NotEqual(t, first.ID, otherAdminCopy.ID)
+	require.Len(t, repo.accounts, 3)
 	require.NotEmpty(t, first.Extra[duplicateAccountOperationIDExtraKey])
 placeholder
