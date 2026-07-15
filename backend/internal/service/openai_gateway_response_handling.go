@@ -126,6 +126,8 @@ placeholder
 	clientOutputStarted := false
 	upstreamRequestID := strings.TrimSpace(resp.Header.Get("x-request-id"))
 	var streamEarlyErr error
+	eventShouldFlush := false
+	eventInProgress := false
 	sendErrorEvent := func(reason string) {
 		if errorEventSent || clientDisconnected {
 			return
@@ -161,32 +163,35 @@ placeholder
 			imageOutputSizes: imageCounter.Sizes(),
 	placeholder
 placeholder
+	flushPending := func(disconnectMessage string) {
+		if clientDisconnected || bufferedWriter.Buffered() == 0 {
+			return
+	placeholder
+		if err := flushBuffered(); err != nil {
+			clientDisconnected = true
+			logger.LegacyPrintf("service.openai_gateway", "%s", disconnectMessage)
+			return
+	placeholder
+		clientOutputStarted = true
+		lastDownstreamWriteAt = time.Now()
+placeholder
 	finalizeStream := func() (*openaiStreamingResult, error) {
+		if !sawTerminalEvent && !openAIStreamClientOutputStarted(c, clientOutputStarted) && !eventShouldFlush {
+			return resultWithUsage(), s.newOpenAIStreamFailoverError(
+				c,
+				account,
+				false,
+				upstreamRequestID,
+				nil,
+				"OpenAI stream ended before a terminal event",
+			)
+	placeholder
+		flushPending("Client disconnected during final flush, returning collected usage")
 		if !sawTerminalEvent {
-			if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
-				return resultWithUsage(), s.newOpenAIStreamFailoverError(
-					c,
-					account,
-					false,
-					upstreamRequestID,
-					nil,
-					"OpenAI stream ended before a terminal event",
-				)
-		placeholder
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
 	placeholder
 		if sawFailedEvent {
 			return resultWithUsage(), fmt.Errorf("upstream response failed: %s", failedMessage)
-	placeholder
-		if !clientDisconnected {
-			hadBufferedData := bufferedWriter.Buffered() > 0
-			if err := flushBuffered(); err != nil {
-				clientDisconnected = true
-				logger.LegacyPrintf("service.openai_gateway", "Client disconnected during final flush, returning collected usage")
-		placeholder else if hadBufferedData {
-				clientOutputStarted = true
-				lastDownstreamWriteAt = time.Now()
-		placeholder
 	placeholder
 		return resultWithUsage(), nil
 placeholder
@@ -194,16 +199,19 @@ placeholder
 		if scanErr == nil {
 			return nil, nil, false
 	placeholder
-		if sawTerminalEvent && !sawFailedEvent {
-			logger.LegacyPrintf("service.openai_gateway", "Upstream scan ended after terminal event: %v", scanErr)
-			return resultWithUsage(), nil, true
-	placeholder
-		if sawFailedEvent {
-			return resultWithUsage(), fmt.Errorf("upstream response failed: %s", failedMessage), true
+		if sawTerminalEvent {
+			if !sawFailedEvent {
+				logger.LegacyPrintf("service.openai_gateway", "Upstream scan ended after terminal event: %v", scanErr)
+		placeholder
+			result, err := finalizeStream()
+			return result, err, true
 	placeholder
 		// 客户端断开/取消请求时，上游读取往往会返回 context canceled。
 		// /v1/responses 的 SSE 事件必须符合 OpenAI 协议；这里不注入自定义 error event，避免下游 SDK 解析失败。
 		if errors.Is(scanErr, context.Canceled) || errors.Is(scanErr, context.DeadlineExceeded) {
+			if eventShouldFlush {
+				flushPending("Client disconnected during canceled stream flush, returning collected usage")
+		placeholder
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete: %w", scanErr), true
 	placeholder
 		if errors.Is(scanErr, bufio.ErrTooLong) {
@@ -211,7 +219,7 @@ placeholder
 			sendErrorEvent("response_too_large")
 			return resultWithUsage(), scanErr, true
 	placeholder
-		if !openAIStreamClientOutputStarted(c, clientOutputStarted) {
+		if !openAIStreamClientOutputStarted(c, clientOutputStarted) && !eventShouldFlush {
 			msg := "OpenAI stream disconnected before completion"
 			if errText := strings.TrimSpace(scanErr.Error()); errText != "" {
 				msg += ": " + errText
@@ -345,20 +353,15 @@ placeholder
 					// 保证首个 token 事件尽快出站，避免影响 TTFT。
 					shouldFlush = true
 			placeholder
+				eventShouldFlush = eventShouldFlush || shouldFlush
 				if _, err := bufferedWriter.WriteString(line); err != nil {
 					clientDisconnected = true
 					logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming, continuing to drain upstream for billing")
 			placeholder else if _, err := bufferedWriter.WriteString("\n"); err != nil {
 					clientDisconnected = true
 					logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming, continuing to drain upstream for billing")
-			placeholder else if shouldFlush {
-					if err := flushBuffered(); err != nil {
-						clientDisconnected = true
-						logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming flush, continuing to drain upstream for billing")
-				placeholder else {
-						clientOutputStarted = true
-						lastDownstreamWriteAt = time.Now()
-				placeholder
+			placeholder else {
+					eventInProgress = true
 			placeholder
 		placeholder
 
@@ -371,7 +374,13 @@ placeholder
 			return
 	placeholder
 
-		// Forward non-data lines as-is
+		// Forward non-data lines as-is. Flush only after the blank line that
+		// completes the SSE event, never after a partial data line.
+		shouldFlush := false
+		if line == "" {
+			shouldFlush = eventShouldFlush || (queueDrained && clientOutputStarted)
+			eventShouldFlush = false
+	placeholder
 		if !clientDisconnected {
 			if _, err := bufferedWriter.WriteString(line); err != nil {
 				clientDisconnected = true
@@ -379,13 +388,16 @@ placeholder
 		placeholder else if _, err := bufferedWriter.WriteString("\n"); err != nil {
 				clientDisconnected = true
 				logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming, continuing to drain upstream for billing")
-		placeholder else if queueDrained && clientOutputStarted {
-				if err := flushBuffered(); err != nil {
-					clientDisconnected = true
-					logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming flush, continuing to drain upstream for billing")
-			placeholder else {
-					clientOutputStarted = true
-					lastDownstreamWriteAt = time.Now()
+		placeholder else {
+				eventInProgress = line != ""
+				if shouldFlush {
+					if err := flushBuffered(); err != nil {
+						clientDisconnected = true
+						logger.LegacyPrintf("service.openai_gateway", "Client disconnected during streaming flush, continuing to drain upstream for billing")
+				placeholder else {
+						clientOutputStarted = true
+						lastDownstreamWriteAt = time.Now()
+				placeholder
 			placeholder
 		placeholder
 	placeholder
@@ -470,6 +482,9 @@ placeholder(scanBuf)
 
 		case <-keepaliveCh:
 			if clientDisconnected {
+				continue
+		placeholder
+			if eventInProgress {
 				continue
 		placeholder
 			if time.Since(lastDownstreamWriteAt) < keepaliveInterval {
