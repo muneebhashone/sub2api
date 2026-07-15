@@ -517,9 +517,6 @@ placeholder
 placeholder
 
 func writeSanitizedOpenAIPassthroughError(c *gin.Context, upstreamStatus int, upstreamHeaders http.Header) {
-	if c == nil {
-		return
-placeholder
 	downstreamStatus := upstreamStatus
 	message := "Upstream request failed"
 	switch upstreamStatus {
@@ -533,6 +530,15 @@ placeholder
 		if upstreamStatus >= http.StatusInternalServerError {
 			message = "Upstream service temporarily unavailable"
 	placeholder
+placeholder
+	writeOpenAIPassthroughErrorEnvelope(c, downstreamStatus, upstreamHeaders, message)
+placeholder
+
+// writeOpenAIPassthroughErrorEnvelope 以本地 JSON 信封 + 净化后的头策略写出
+// 错误响应；message 由调用方决定（净化通用文案或脱敏后的上游消息）。
+func writeOpenAIPassthroughErrorEnvelope(c *gin.Context, downstreamStatus int, upstreamHeaders http.Header, message string) {
+	if c == nil {
+		return
 placeholder
 	body, _ := json.Marshal(gin.H{
 		"error": gin.H{
@@ -645,7 +651,14 @@ placeholder
 		Detail:               upstreamDetail,
 		UpstreamResponseBody: upstreamDetail,
 placeholder)
-	writeSanitizedOpenAIPassthroughError(c, resp.StatusCode, resp.Header)
+	// context-window 超限是确定性请求失败（shouldFailoverOpenAIPassthroughResponse
+	// 已保证不切号），其文案对客户端可操作（如触发自动压缩）；在净化信封内保留
+	// 脱敏后的上游消息，而不是抹成通用文案。
+	if isOpenAIContextWindowError(upstreamMsg, body) && upstreamMsg != "" {
+		writeOpenAIPassthroughErrorEnvelope(c, resp.StatusCode, resp.Header, upstreamMsg)
+placeholder else {
+		writeSanitizedOpenAIPassthroughError(c, resp.StatusCode, resp.Header)
+placeholder
 
 	return fmt.Errorf("upstream error: %d (client response sanitized)", resp.StatusCode)
 placeholder
