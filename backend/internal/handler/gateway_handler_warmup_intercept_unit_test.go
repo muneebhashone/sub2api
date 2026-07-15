@@ -31,7 +31,22 @@ placeholder
 func (f *fakeSchedulerCache) GetSnapshot(_ context.Context, _ service.SchedulerBucket) ([]*service.Account, bool, error) {
 	return f.accounts, true, nil
 placeholder
-func (f *fakeSchedulerCache) SetSnapshot(_ context.Context, _ service.SchedulerBucket, _ []service.Account) error {
+func (f *fakeSchedulerCache) CaptureBucketWriteToken(_ context.Context, bucket service.SchedulerBucket) (service.SchedulerBucketWriteToken, error) {
+	return service.SchedulerBucketWriteToken{Bucket: bucket, Epoch: 1placeholder, nil
+placeholder
+func (f *fakeSchedulerCache) SetSnapshot(_ context.Context, _ service.SchedulerBucket, _ service.SchedulerBucketWriteToken, _ []service.Account) error {
+	return nil
+placeholder
+func (f *fakeSchedulerCache) RetireBucket(_ context.Context, _ service.SchedulerBucket) error {
+	return nil
+placeholder
+func (f *fakeSchedulerCache) ReopenBucket(_ context.Context, bucket service.SchedulerBucket) (service.SchedulerBucketWriteToken, error) {
+	return service.SchedulerBucketWriteToken{Bucket: bucket, Epoch: 1placeholder, nil
+placeholder
+func (f *fakeSchedulerCache) TryAcquireGroupLifecycleLease(_ context.Context, _ int64, _ time.Duration) (service.SchedulerGroupLifecycleLease, bool, error) {
+	return service.SchedulerGroupLifecycleLease{placeholder, false, nil
+placeholder
+func (f *fakeSchedulerCache) ReleaseGroupLifecycleLease(_ context.Context, _ service.SchedulerGroupLifecycleLease) error {
 	return nil
 placeholder
 func (f *fakeSchedulerCache) GetAccount(_ context.Context, id int64) (*service.Account, error) {
