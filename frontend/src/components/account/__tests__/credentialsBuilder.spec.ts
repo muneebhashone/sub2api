@@ -10,9 +10,12 @@ import {
   buildHeaderOverridesObject,
   buildPlanTypeOptions,
   getHeaderOverrideTemplate,
-  isHeaderOverridePlatform,
+  isCustomGrokBaseUrl,
+  isHeaderOverrideCapable,
+  parseHeaderOverridesJson,
   planTypeDisplayLabel,
   readPlanType,
+  serializeHeaderOverrideRows,
   splitHeaderOverridesObject,
   validateHeaderOverrideRows
 placeholder from '../credentialsBuilder'
@@ -95,14 +98,97 @@ describe('applyAntigravityProjectID', () => {
   placeholder)
 placeholder)
 
-describe('isHeaderOverridePlatform', () => {
-  it('only anthropic and openai are supported', () => {
-    expect(isHeaderOverridePlatform('anthropic')).toBe(true)
-    expect(isHeaderOverridePlatform('openai')).toBe(true)
-    expect(isHeaderOverridePlatform('gemini')).toBe(false)
-    expect(isHeaderOverridePlatform('grok')).toBe(false)
-    expect(isHeaderOverridePlatform('antigravity')).toBe(false)
-    expect(isHeaderOverridePlatform('')).toBe(false)
+describe('isHeaderOverrideCapable', () => {
+  it('anthropic/openai only support apikey accounts', () => {
+    expect(isHeaderOverrideCapable('anthropic', 'apikey')).toBe(true)
+    expect(isHeaderOverrideCapable('openai', 'apikey')).toBe(true)
+    expect(isHeaderOverrideCapable('anthropic', 'oauth')).toBe(false)
+    expect(isHeaderOverrideCapable('openai', 'oauth')).toBe(false)
+  placeholder)
+
+  it('grok supports both apikey and oauth accounts', () => {
+    expect(isHeaderOverrideCapable('grok', 'apikey')).toBe(true)
+    expect(isHeaderOverrideCapable('grok', 'oauth')).toBe(true)
+    expect(isHeaderOverrideCapable('grok', 'bedrock')).toBe(false)
+  placeholder)
+
+  it('other platforms are not supported', () => {
+    expect(isHeaderOverrideCapable('gemini', 'apikey')).toBe(false)
+    expect(isHeaderOverrideCapable('antigravity', 'apikey')).toBe(false)
+    expect(isHeaderOverrideCapable('', 'apikey')).toBe(false)
+  placeholder)
+placeholder)
+
+describe('parseHeaderOverridesJson', () => {
+  it('parses a flat object and normalizes values to trimmed strings', () => {
+    expect(
+      parseHeaderOverridesJson('{"User-Agent": " my-client/1.0 ", "x-num": 3, "x-flag": trueplaceholder')
+    ).toEqual([
+      { name: 'User-Agent', value: 'my-client/1.0' placeholder,
+      { name: 'x-flag', value: 'true' placeholder,
+      { name: 'x-num', value: '3' placeholder
+    ])
+  placeholder)
+
+  it('drops entries with blank names', () => {
+    expect(parseHeaderOverridesJson('{"  ": "v", "x-app": "cli"placeholder')).toEqual([
+      { name: 'x-app', value: 'cli' placeholder
+    ])
+  placeholder)
+
+  it('rejects invalid JSON, arrays, primitives and nested values', () => {
+    expect(parseHeaderOverridesJson('not json')).toBeNull()
+    expect(parseHeaderOverridesJson('[1,2]')).toBeNull()
+    expect(parseHeaderOverridesJson('"str"')).toBeNull()
+    expect(parseHeaderOverridesJson('null')).toBeNull()
+    expect(parseHeaderOverridesJson('{"a": {"b": 1placeholderplaceholder')).toBeNull()
+    expect(parseHeaderOverridesJson('{"a": nullplaceholder')).toBeNull()
+  placeholder)
+
+  it('parses an empty object to an empty row list', () => {
+    expect(parseHeaderOverridesJson('{placeholder')).toEqual([])
+  placeholder)
+placeholder)
+
+describe('serializeHeaderOverrideRows', () => {
+  it('serializes named rows and skips empty placeholder rows', () => {
+    const text = serializeHeaderOverrideRows([
+      { name: ' user-agent ', value: ' my-client/1.0 ' placeholder,
+      { name: '', value: 'ignored' placeholder,
+      { name: 'x-app', value: '' placeholder
+    ])
+    expect(JSON.parse(text)).toEqual({ 'user-agent': 'my-client/1.0', 'x-app': '' placeholder)
+  placeholder)
+
+  it('round-trips with parseHeaderOverridesJson', () => {
+    const rows = [
+      { name: 'a-header', value: '1' placeholder,
+      { name: 'b-header', value: '2' placeholder
+    ]
+    expect(parseHeaderOverridesJson(serializeHeaderOverrideRows(rows))).toEqual(rows)
+  placeholder)
+placeholder)
+
+describe('isCustomGrokBaseUrl', () => {
+  it('treats official hosts and their variants as not customized', () => {
+    expect(isCustomGrokBaseUrl('https://api.x.ai/v1')).toBe(false)
+    expect(isCustomGrokBaseUrl('https://cli-chat-proxy.grok.com/v1')).toBe(false)
+    expect(isCustomGrokBaseUrl('HTTPS://API.X.AI:443/')).toBe(false)
+    expect(isCustomGrokBaseUrl('https://api.x.ai:8443/v1')).toBe(false)
+  placeholder)
+
+  it('treats empty, non-string and unparseable values as not customized', () => {
+    expect(isCustomGrokBaseUrl('')).toBe(false)
+    expect(isCustomGrokBaseUrl('   ')).toBe(false)
+    expect(isCustomGrokBaseUrl(undefined)).toBe(false)
+    expect(isCustomGrokBaseUrl(42)).toBe(false)
+    expect(isCustomGrokBaseUrl('not a url')).toBe(false)
+  placeholder)
+
+  it('treats third-party hosts as customized', () => {
+    expect(isCustomGrokBaseUrl('https://relay.example.com/v1')).toBe(true)
+    expect(isCustomGrokBaseUrl('https://relay.example.com/xai/v1')).toBe(true)
+    expect(isCustomGrokBaseUrl('http://relay.example.com/v1')).toBe(true)
   placeholder)
 placeholder)
 
@@ -198,6 +284,16 @@ describe('getHeaderOverrideTemplate', () => {
     expect(names).toContain('user-agent')
     expect(names).toContain('originator')
     expect(names).toContain('openai-beta')
+    expect(validateHeaderOverrideRows(rows)).toBeNull()
+  placeholder)
+
+  it('returns Grok forwarding headers with empty values for grok', () => {
+    const rows = getHeaderOverrideTemplate('grok')
+    expect(rows.every((r) => r.value === '')).toBe(true)
+    const names = rows.map((r) => r.name)
+    expect(names).toContain('user-agent')
+    expect(names).toContain('x-xai-token-auth')
+    expect(names).toContain('x-grok-client-version')
     expect(validateHeaderOverrideRows(rows)).toBeNull()
   placeholder)
 placeholder)

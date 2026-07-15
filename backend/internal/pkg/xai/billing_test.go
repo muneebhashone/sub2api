@@ -14,6 +14,20 @@ func TestBuildBillingURL(t *testing.T) {
 	require.Equal(t, "https://cli-chat-proxy.grok.com/v1/billing", BuildBillingURL(false))
 placeholder
 
+func TestBuildBillingURLWithValidator(t *testing.T) {
+	t.Parallel()
+	weeklyURL, err := BuildBillingURLWithValidator(DefaultCLIBaseURL, true, ValidateTrustedBaseURL)
+placeholder
+	require.Equal(t, "https://cli-chat-proxy.grok.com/v1/billing?format=credits", weeklyURL)
+
+	monthlyURL, err := BuildBillingURLWithValidator("https://relay.example.test/v1", false, ValidateBaseURL)
+placeholder
+	require.Equal(t, "https://relay.example.test/v1/billing", monthlyURL)
+
+	_, err = BuildBillingURLWithValidator("https://relay.example.test/v1", true, ValidateTrustedBaseURL)
+placeholder
+placeholder
+
 func TestApplyCLIBillingHeaders(t *testing.T) {
 	t.Parallel()
 	req, err := http.NewRequest(http.MethodGet, BuildBillingURL(true), nil)

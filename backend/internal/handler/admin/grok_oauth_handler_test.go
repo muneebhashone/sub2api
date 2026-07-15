@@ -113,7 +113,7 @@ placeholder
 	placeholder,
 placeholderplaceholder
 	upstream := &grokQuotaHandlerUpstream{placeholder
-	quotaService := service.NewGrokQuotaService(repo, nil, service.NewGrokTokenProvider(repo, nil), upstream)
+	quotaService := service.NewGrokQuotaService(repo, nil, service.NewGrokTokenProvider(repo, nil), upstream, nil)
 	handler := NewGrokOAuthHandler(nil, nil, quotaService, nil)
 
 	router := gin.New()
@@ -151,7 +151,7 @@ func TestGrokOAuthHandlerResetQuotaReturnsUnsupported(t *testing.T) {
 		Platform: service.PlatformGrok,
 		Type:     service.AccountTypeOAuth,
 placeholderplaceholder
-	quotaService := service.NewGrokQuotaService(repo, nil, nil, nil)
+	quotaService := service.NewGrokQuotaService(repo, nil, nil, nil, nil)
 	handler := NewGrokOAuthHandler(nil, nil, quotaService, nil)
 
 	router := gin.New()
