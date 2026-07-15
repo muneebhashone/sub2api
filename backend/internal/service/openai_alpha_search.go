@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -39,13 +40,13 @@ placeholder
 	if upstreamModel != "" && upstreamModel != requestedModel {
 		body = ReplaceModelInBody(body, upstreamModel)
 placeholder
+	sanitizedBody, err := sanitizeOpenAIAlphaSearchBody(body)
+	if err != nil {
+		return nil, fmt.Errorf("sanitize alpha search request body: %w", err)
+placeholder
+	body = sanitizedBody
 
 	token, _, err := s.GetAccessToken(ctx, account)
-	if err != nil {
-		return nil, err
-placeholder
-
-	req, err := s.buildOpenAIAlphaSearchRequest(ctx, c, account, body, token)
 	if err != nil {
 		return nil, err
 placeholder
@@ -54,6 +55,15 @@ placeholder
 	if account.ProxyID != nil && account.Proxy != nil {
 		proxyURL = account.Proxy.URL()
 placeholder
+	if err := s.ensureOpenAIAlphaSearchAuthMetadata(ctx, account, token, proxyURL); err != nil {
+		return nil, err
+placeholder
+
+	req, err := s.buildOpenAIAlphaSearchRequest(ctx, c, account, body, token)
+	if err != nil {
+		return nil, err
+placeholder
+
 	upstreamStart := time.Now()
 	resp, err := s.httpUpstream.Do(req, proxyURL, account.ID, account.Concurrency)
 	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
@@ -71,7 +81,14 @@ placeholder
 		upstreamMessage := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(respBody)))
 		if s.shouldFailoverOpenAIUpstreamResponse(resp.StatusCode, upstreamMessage, respBody) {
 			resp.Body = io.NopCloser(bytes.NewReader(respBody))
-			s.handleFailoverSideEffects(ctx, resp, account, respBody, upstreamModel)
+			// alpha/search 是独立的工具端点，单次 401 不能证明账号的模型调用
+			// 凭据全局失效。若沿用通用 401 逻辑，PAT 会因没有 refresh_token
+			// 被永久标记为 error；历史导入且缺少 auth_mode 标记的 at- token 也会
+			// 漏过 PAT 类型判断。这里仍允许本次请求换号，但不修改任何账号状态；
+			// 真正的凭据失效由普通 Responses 请求或 whoami 校验判定。
+			if shouldApplyOpenAIAlphaSearchAccountErrorSideEffects(resp.StatusCode) {
+				s.handleFailoverSideEffects(ctx, resp, account, respBody, upstreamModel)
+		placeholder
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,
@@ -103,15 +120,6 @@ placeholder, nil
 placeholder
 
 func (s *OpenAIGatewayService) buildOpenAIAlphaSearchRequest(ctx context.Context, c *gin.Context, account *Account, body []byte, token string) (*http.Request, error) {
-	clientBeta := ""
-	if c != nil {
-		clientBeta = c.GetHeader("OpenAI-Beta")
-placeholder
-	req, err := s.buildUpstreamRequestOpenAIPassthrough(ctx, c, account, body, token)
-	if err != nil {
-		return nil, err
-placeholder
-
 	targetURL, err := s.openAIAlphaSearchURL(account)
 	if err != nil {
 		return nil, err
@@ -129,17 +137,163 @@ placeholder
 	placeholder
 		parsedURL.RawQuery = query.Encode()
 placeholder
-	req.URL = parsedURL
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, parsedURL.String(), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+placeholder
+	req = req.WithContext(WithHTTPUpstreamProfile(req.Context(), HTTPUpstreamProfileOpenAI))
+
+	authHeaders, err := s.buildOpenAIAuthenticationHeaders(ctx, account, token)
+	if err != nil {
+		return nil, fmt.Errorf("build openai authentication headers: %w", err)
+placeholder
+	for key, values := range authHeaders {
+		for _, value := range values {
+			req.Header.Add(key, value)
+	placeholder
+placeholder
+
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	if clientBeta == "" {
-		req.Header.Del("OpenAI-Beta")
+
+	if account.Type == AccountTypeOAuth {
+		req.Host = "chatgpt.com"
+		if err := resolveAndSetOpenAIChatGPTAccountHeaders(ctx, s.accountRepo, req.Header, account); err != nil {
+			return nil, fmt.Errorf("resolve chatgpt account headers: %w", err)
+	placeholder
+
+		if turnMetadata := openAIAlphaSearchInboundHeader(c, "X-Codex-Turn-Metadata"); turnMetadata != "" {
+			req.Header.Set("X-Codex-Turn-Metadata", turnMetadata)
+	placeholder
+		if version := openAIAlphaSearchInboundHeader(c, "Version"); version != "" {
+			req.Header.Set("Version", version)
+	placeholder else {
+			req.Header.Set("Version", codexCLIVersion)
+	placeholder
+		if originator := openAIAlphaSearchInboundHeader(c, "Originator"); originator != "" {
+			req.Header.Set("Originator", originator)
+	placeholder else {
+			req.Header.Set("Originator", "codex_cli_rs")
+	placeholder
+		if customUA := account.GetOpenAIUserAgent(); customUA != "" {
+			req.Header.Set("User-Agent", customUA)
+	placeholder else if userAgent := openAIAlphaSearchInboundHeader(c, "User-Agent"); userAgent != "" {
+			req.Header.Set("User-Agent", userAgent)
+	placeholder else {
+			req.Header.Set("User-Agent", codexCLIUserAgent)
+	placeholder
+		if s.cfg != nil && s.cfg.Gateway.ForceCodexCLI {
+			req.Header.Set("User-Agent", codexCLIUserAgent)
+	placeholder
+		s.overrideBrowserUserAgent(ctx, account, req)
+		enforceCodexIdentityHeaders(req.Header)
 placeholder
-	if version := strings.TrimSpace(c.GetHeader("Version")); version != "" {
-		req.Header.Set("Version", version)
-placeholder else if account.Type == AccountTypeOAuth {
-		req.Header.Set("Version", codexCLIVersion)
-placeholder
+
+	account.ApplyHeaderOverrides(req.Header)
+	stripOpenAIAlphaSearchResponsesHeaders(req.Header)
 	return req, nil
+placeholder
+
+// stripOpenAIAlphaSearchResponsesHeaders 让独立搜索请求与官方 Codex
+// SearchClient 的线协议保持一致。alpha/search 不是 /responses 的子请求：官方
+// 客户端仅在 Provider/Auth 基础头之外附加 x-codex-turn-metadata，不发送
+// OpenAI-Beta、会话隔离或 Responses Lite 状态头。originator 与 User-Agent
+// 属于官方默认客户端头，必须保留。
+//
+// alpha/search 使用专用构造器生成官方 SearchClient 的最小线协议形态；
+// 该函数作为最后一道防线，避免账号 header 覆写或后续改动重新带入
+// Responses 专用头，使 PAT 的 alpha/search 被上游按错误认证路径处理。
+func stripOpenAIAlphaSearchResponsesHeaders(headers http.Header) {
+	if headers == nil {
+		return
+placeholder
+	for _, key := range []string{
+		"OpenAI-Beta",
+		"Session_ID",
+		"Conversation_ID",
+		"X-Codex-Beta-Features",
+		"X-Codex-Turn-State",
+		responsesLiteHeaderKey,
+placeholder {
+		headers.Del(key)
+placeholder
+placeholder
+
+func openAIAlphaSearchInboundHeader(c *gin.Context, key string) string {
+	if c == nil {
+		return ""
+placeholder
+	return strings.TrimSpace(c.GetHeader(key))
+placeholder
+
+var openAIAlphaSearchUnsupportedBodyFields = [...]string{
+	// Codex alpha/search 是 SearchRequest 独立协议，不是 /responses 子请求。
+	// 新版 Codex/第三方代理可能把 Responses 公共字段误带到搜索请求里；ChatGPT
+	// alpha/search 会对这些字段返回 Unknown parameter（例如 prompt_cache_key）。
+	"prompt_cache_key",
+	"prompt_cache_retention",
+placeholder
+
+func sanitizeOpenAIAlphaSearchBody(body []byte) ([]byte, error) {
+	if len(body) == 0 {
+		return body, nil
+placeholder
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil || obj == nil {
+		return body, nil
+placeholder
+	changed := false
+	for _, field := range openAIAlphaSearchUnsupportedBodyFields {
+		if _, ok := obj[field]; ok {
+			delete(obj, field)
+			changed = true
+	placeholder
+placeholder
+	if !changed {
+		return body, nil
+placeholder
+	out, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+placeholder
+	return out, nil
+placeholder
+
+func (s *OpenAIGatewayService) ensureOpenAIAlphaSearchAuthMetadata(ctx context.Context, account *Account, token string, proxyURL string) error {
+	if s == nil || account == nil || !account.IsOpenAIPersonalAccessToken() {
+		return nil
+placeholder
+	if strings.TrimSpace(account.GetChatGPTAccountID()) != "" {
+		return nil
+placeholder
+	var oauthService *OpenAIOAuthService
+	if s.openAITokenProvider != nil {
+		oauthService = s.openAITokenProvider.openAIOAuthService
+placeholder
+	if oauthService == nil {
+		return nil
+placeholder
+	tokenInfo, err := oauthService.ValidateCodexPersonalAccessToken(ctx, token, proxyURL)
+	if err != nil {
+		return fmt.Errorf("validate Codex PAT metadata for alpha/search: %w", err)
+placeholder
+	credentials := shallowCopyMap(account.Credentials)
+	for key, value := range oauthService.BuildAccountCredentials(tokenInfo) {
+		credentials[key] = value
+placeholder
+	credentials = NormalizeOpenAIPersonalAccessTokenCredentials(account, tokenInfo, credentials)
+	account.Credentials = shallowCopyMap(credentials)
+	if s.accountRepo != nil {
+		if err := persistAccountCredentials(ctx, s.accountRepo, account, credentials); err != nil {
+			return fmt.Errorf("persist Codex PAT metadata for alpha/search: %w", err)
+	placeholder
+placeholder
+	return nil
+placeholder
+
+func shouldApplyOpenAIAlphaSearchAccountErrorSideEffects(statusCode int) bool {
+	return statusCode != http.StatusUnauthorized
 placeholder
 
 func (s *OpenAIGatewayService) openAIAlphaSearchURL(account *Account) (string, error) {
