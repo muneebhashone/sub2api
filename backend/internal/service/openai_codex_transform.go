@@ -312,11 +312,28 @@ placeholder
 	placeholder
 		return modified
 placeholder
-	if codexToolsContainType(reqBody["tools"], choiceType) {
+	if codexToolsContainType(reqBody["tools"], choiceType) || codexInputAdditionalToolsContainType(reqBody["input"], choiceType) {
 		return modified
 placeholder
 	reqBody["tool_choice"] = "auto"
 	return true
+placeholder
+
+func codexInputAdditionalToolsContainType(rawInput any, toolType string) bool {
+	input, ok := rawInput.([]any)
+	if !ok || strings.TrimSpace(toolType) == "" {
+		return false
+placeholder
+	for _, rawItem := range input {
+		item, ok := rawItem.(map[string]any)
+		if !ok || strings.TrimSpace(firstNonEmptyString(item["type"])) != "additional_tools" {
+			continue
+	placeholder
+		if codexToolsContainType(item["tools"], toolType) {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func codexToolsContainType(rawTools any, toolType string) bool {
