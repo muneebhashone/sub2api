@@ -83,6 +83,8 @@ type codexOAuthTransformOptions struct {
 	PreserveToolCallIDs     bool
 placeholder
 
+const codexImageGenerationFunctionToolName = "image_gen.imagegen"
+
 const (
 	codexImageGenerationBridgeMarker = "<sub2api-codex-image-generation>"
 	codexImageGenerationBridgeText   = codexImageGenerationBridgeMarker + "\nWhen the user asks for raster image generation or editing, use the OpenAI Responses native `image_generation` tool attached to this request. The local Codex client may not expose an `image_gen` namespace, but that does not mean image generation is unavailable. Do not ask the user to switch to CLI fallback solely because `image_gen` is absent.\n</sub2api-codex-image-generation>"
@@ -312,11 +314,28 @@ placeholder
 	placeholder
 		return modified
 placeholder
-	if codexToolsContainType(reqBody["tools"], choiceType) {
+	if codexToolsContainType(reqBody["tools"], choiceType) || codexInputAdditionalToolsContainType(reqBody["input"], choiceType) {
 		return modified
 placeholder
 	reqBody["tool_choice"] = "auto"
 	return true
+placeholder
+
+func codexInputAdditionalToolsContainType(rawInput any, toolType string) bool {
+	input, ok := rawInput.([]any)
+	if !ok || strings.TrimSpace(toolType) == "" {
+		return false
+placeholder
+	for _, rawItem := range input {
+		item, ok := rawItem.(map[string]any)
+		if !ok || strings.TrimSpace(firstNonEmptyString(item["type"])) != "additional_tools" {
+			continue
+	placeholder
+		if codexToolsContainType(item["tools"], toolType) {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func codexToolsContainType(rawTools any, toolType string) bool {
@@ -599,6 +618,11 @@ placeholder
 	return inputContainsImageGenerationTool(reqBody["input"])
 placeholder
 
+func hasCodexImageGenerationFunctionTool(reqBody map[string]any) bool {
+	return len(reqBody) > 0 &&
+		codexToolsContainFunctionName(reqBody["tools"], codexImageGenerationFunctionToolName)
+placeholder
+
 func toolsContainImageGeneration(rawTools any) bool {
 	if rawTools == nil {
 		return false
@@ -838,6 +862,9 @@ placeholder
 	if isCodexSparkModel(firstNonEmptyString(reqBody["model"])) {
 		return false
 placeholder
+	if hasCodexImageGenerationFunctionTool(reqBody) {
+		return false
+placeholder
 	if hasOpenAIImageGenerationTool(reqBody) {
 		return false
 placeholder
@@ -863,7 +890,7 @@ placeholder
 placeholder
 
 func ensureOpenAIResponsesImageGenerationToolChoiceAuto(reqBody map[string]any) bool {
-	if len(reqBody) == 0 || !hasOpenAIImageGenerationTool(reqBody) {
+	if len(reqBody) == 0 || hasCodexImageGenerationFunctionTool(reqBody) || !hasOpenAIImageGenerationTool(reqBody) {
 		return false
 placeholder
 	if isCodexSparkModel(firstNonEmptyString(reqBody["model"])) {
@@ -877,7 +904,7 @@ placeholder
 placeholder
 
 func applyCodexImageGenerationBridgeInstructions(reqBody map[string]any) bool {
-	if len(reqBody) == 0 || !hasOpenAIImageGenerationTool(reqBody) {
+	if len(reqBody) == 0 || hasCodexImageGenerationFunctionTool(reqBody) || !hasOpenAIImageGenerationTool(reqBody) {
 		return false
 placeholder
 	if isCodexSparkModel(firstNonEmptyString(reqBody["model"])) {

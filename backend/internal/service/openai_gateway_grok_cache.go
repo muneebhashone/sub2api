@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -14,6 +15,7 @@ const (
 	grokConversationIDHeader        = "X-Grok-Conv-Id"
 	grokFreeCacheNativeToolsJSON    = `[{"type":"web_search"placeholder,{"type":"x_search"placeholder]`
 	grokFreeCacheDisabledToolChoice = "none"
+	grokFreeRolling24hTokenLimit    = int64(2_000_000)
 )
 
 // resolveGrokCacheIdentity derives one stable, tenant-isolated routing identity
@@ -100,8 +102,8 @@ placeholder
 // Free OAuth requests without native search tools are routed by xAI to the
 // non-cacheable build-free model. For otherwise tool-free requests, add the
 // native tools with tool_choice=none: this selects the cache-capable tier
-// without allowing an actual search. Any explicit client tools or tool_choice
-// disable this augmentation so client function-calling semantics stay intact.
+// without allowing an actual search. Explicit client tools are handled by the
+// narrower Messages-only mixed-tools policy below.
 func applyGrokResponsesCacheIdentity(body, intentSourceBody []byte, identity string, injectFreeTierTools bool) ([]byte, error) {
 	identity = strings.TrimSpace(identity)
 	if identity == "" {
@@ -128,6 +130,169 @@ placeholder
 		return nil, err
 placeholder
 	return sjson.SetBytes(out, "tool_choice", grokFreeCacheDisabledToolChoice)
+placeholder
+
+// applyGrokFreeMessagesFunctionToolCacheRoute enables xAI's cache-capable
+// mixed-tools route only for the Anthropic Messages bridge and only when the
+// selected account is known to be Free. Native tools become eligible under
+// auto selection, so callers must not apply this policy to paid accounts or
+// other ingress protocols implicitly.
+func applyGrokFreeMessagesFunctionToolCacheRoute(body, intentSourceBody []byte, account *Account, cacheIdentity string) ([]byte, error) {
+	if strings.TrimSpace(cacheIdentity) == "" || !isKnownGrokFreeAccount(account) {
+		return body, nil
+placeholder
+	intentTools := gjson.GetBytes(intentSourceBody, "tools")
+	intentToolChoice := gjson.GetBytes(intentSourceBody, "tool_choice")
+	if !isGrokFreeCacheFunctionToolIntent(intentTools, intentToolChoice) {
+		return body, nil
+placeholder
+	return appendMissingGrokFreeCacheNativeTools(body)
+placeholder
+
+func isKnownGrokFreeAccount(account *Account) bool {
+	if account == nil || !account.IsGrokOAuth() {
+		return false
+placeholder
+	freeSignal := false
+	paidSignal := false
+	inferredFreeSignal := false
+	if billing, err := grokBillingSnapshotFromExtra(account.Extra); err == nil && billing != nil {
+		if tier := strings.TrimSpace(billing.Plan); tier != "" {
+			if isGrokFreeSubscriptionTier(tier) {
+				freeSignal = true
+		placeholder else if !isGrokUnknownSubscriptionTier(tier) {
+				paidSignal = true
+		placeholder
+	placeholder
+		if billing.UsagePercent != nil || billing.UsedPercent != nil ||
+			(billing.MonthlyLimitCents != nil && *billing.MonthlyLimitCents > 0) {
+			paidSignal = true
+	placeholder
+		// xAI deliberately reports an empty plan for Free accounts; only paid
+		// subscriptions receive a SuperGrok plan/monthly limit. A successful
+		// monthly billing observation with no paid signal is therefore positive
+		// Free evidence, not an unknown tier. Keep partial probes fail-closed.
+		if strings.TrimSpace(billing.MonthlyUpdatedAt) != "" ||
+			(billing.StatusCode >= http.StatusOK && billing.StatusCode < http.StatusMultipleChoices &&
+				!billing.Partial && len(billing.FailedWindows) == 0) {
+			inferredFreeSignal = true
+	placeholder
+placeholder
+	if snapshot, err := grokQuotaSnapshotFromExtra(account.Extra); err == nil && snapshot != nil {
+		if tier := strings.TrimSpace(snapshot.SubscriptionTier); tier != "" {
+			if isGrokFreeSubscriptionTier(tier) {
+				freeSignal = true
+		placeholder else if !isGrokUnknownSubscriptionTier(tier) {
+				paidSignal = true
+		placeholder
+	placeholder
+		if snapshot.Tokens != nil && snapshot.Tokens.Limit != nil &&
+			*snapshot.Tokens.Limit == grokFreeRolling24hTokenLimit {
+			inferredFreeSignal = true
+	placeholder
+placeholder
+	if tier := strings.TrimSpace(account.GetCredential("subscription_tier")); tier != "" {
+		if isGrokFreeSubscriptionTier(tier) {
+			freeSignal = true
+	placeholder else if !isGrokUnknownSubscriptionTier(tier) {
+			paidSignal = true
+	placeholder
+placeholder
+	// Explicit paid evidence always wins over an inferred Free signal. This
+	// protects upgraded/stale accounts whose previous quota snapshot still
+	// carries the historical 2M Free token limit.
+	return !paidSignal && (freeSignal || inferredFreeSignal)
+placeholder
+
+func isGrokFreeSubscriptionTier(tier string) bool {
+	switch strings.ToLower(strings.TrimSpace(tier)) {
+	case "free", "grok-free", "grok_free", "free-tier", "free_tier", "basic", "grok-basic", "grok_basic":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func isGrokUnknownSubscriptionTier(tier string) bool {
+	switch strings.ToLower(strings.TrimSpace(tier)) {
+	case "", "unknown", "n/a", "none":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func isGrokFreeCacheFunctionToolIntent(tools, toolChoice gjson.Result) bool {
+	if !tools.IsArray() {
+		return false
+placeholder
+	items := tools.Array()
+	if len(items) == 0 {
+		return false
+placeholder
+	for _, tool := range items {
+		if !tool.IsObject() || strings.TrimSpace(tool.Get("type").String()) != "function" {
+			return false
+	placeholder
+		// Responses function declarations keep name at the top level. Reject
+		// Chat Completions' nested function shape and incomplete declarations.
+		if strings.TrimSpace(tool.Get("name").String()) == "" || tool.Get("function").Exists() {
+			return false
+	placeholder
+placeholder
+	if !toolChoice.Exists() {
+		return true
+placeholder
+	return toolChoice.Type == gjson.String && strings.TrimSpace(toolChoice.String()) == "auto"
+placeholder
+
+func appendMissingGrokFreeCacheNativeTools(body []byte) ([]byte, error) {
+	tools := gjson.GetBytes(body, "tools")
+	if !tools.Exists() || !tools.IsArray() {
+		return body, nil
+placeholder
+
+	items := tools.Array()
+	if len(items) == 0 {
+		return body, nil
+placeholder
+	merged := make([]json.RawMessage, 0, len(items)+2)
+	present := make(map[string]bool, 2)
+	hasFunction := false
+	for _, tool := range items {
+		toolType := strings.TrimSpace(tool.Get("type").String())
+		switch toolType {
+		case "function":
+			if !tool.IsObject() || strings.TrimSpace(tool.Get("name").String()) == "" || tool.Get("function").Exists() {
+				return body, nil
+		placeholder
+			hasFunction = true
+		case "web_search", "x_search":
+			// Native tools may already be present when this helper is retried.
+		default:
+			return body, nil
+	placeholder
+		merged = append(merged, json.RawMessage(tool.Raw))
+		present[toolType] = true
+placeholder
+	if !hasFunction {
+		return body, nil
+placeholder
+	for _, toolType := range []string{"web_search", "x_search"placeholder {
+		if present[toolType] {
+			continue
+	placeholder
+		raw, err := json.Marshal(map[string]string{"type": toolTypeplaceholder)
+		if err != nil {
+			return nil, err
+	placeholder
+		merged = append(merged, raw)
+placeholder
+	encoded, err := json.Marshal(merged)
+	if err != nil {
+		return nil, err
+placeholder
+	return sjson.SetRawBytes(body, "tools", encoded)
 placeholder
 
 // applyGrokCacheHeaders applies the documented Chat Completions conversation

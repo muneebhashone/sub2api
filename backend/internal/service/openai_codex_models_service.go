@@ -241,7 +241,7 @@ placeholder
 	switch {
 	case credAccount.IsOpenAIOAuth():
 		authToken = strings.TrimSpace(credAccount.GetOpenAIAccessToken())
-		if authToken == "" {
+		if authToken == "" && !credAccount.IsOpenAIAgentIdentity() {
 			return nil, infraerrors.New(http.StatusBadGateway, "OPENAI_CODEX_MODELS_TOKEN_MISSING", "account has no Codex backend access token")
 	placeholder
 	case credAccount.IsOpenAIApiKey():
@@ -277,16 +277,25 @@ placeholder
 placeholder
 
 	headers := make(http.Header)
-	headers.Set("Authorization", "Bearer "+authToken)
+	if useAPIKeyUpstream {
+		headers.Set("Authorization", "Bearer "+authToken)
+		credAccount.ApplyHeaderOverrides(headers)
+placeholder else {
+		authHeaders, authErr := s.buildOpenAIAuthenticationHeaders(ctx, credAccount, authToken)
+		if authErr != nil {
+			return nil, infraerrors.Newf(http.StatusBadGateway, "OPENAI_CODEX_MODELS_AUTH_FAILED", "build Codex models authentication: %v", authErr)
+	placeholder
+		for key, values := range authHeaders {
+			for _, value := range values {
+				headers.Add(key, value)
+		placeholder
+	placeholder
+		setOpenAIChatGPTAccountHeaders(headers, credAccount)
+placeholder
 	headers.Set("Accept", "application/json")
 	headers.Set("Originator", "codex_cli_rs")
 	headers.Set("Version", clientVersion)
 	headers.Set("User-Agent", codexCLIUserAgent)
-	if useAPIKeyUpstream {
-		credAccount.ApplyHeaderOverrides(headers)
-placeholder else {
-		setOpenAIChatGPTAccountHeaders(headers, credAccount)
-placeholder
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {

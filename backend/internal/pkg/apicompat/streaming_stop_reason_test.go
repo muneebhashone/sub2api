@@ -44,6 +44,29 @@ placeholder
 	assert.Equal(t, "max_output_tokens", completed.Response.IncompleteDetails.Reason)
 placeholder
 
+func TestAnthropicStreamingMaxTokens_FinalizeMapsToIncompleteWithoutMessageStop(t *testing.T) {
+	state := NewAnthropicEventToResponsesState()
+
+	AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type:    "message_start",
+		Message: &AnthropicResponse{ID: "msg_test", Model: "claude-opus-4-6", Role: "assistant"placeholder,
+placeholder, state)
+	AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type:  "message_delta",
+		Delta: &AnthropicDelta{StopReason: "max_tokens"placeholder,
+		Usage: &AnthropicUsage{OutputTokens: placeholder,
+placeholder, state)
+
+	events := FinalizeAnthropicResponsesStream(state)
+	require.Len(t, events, 1)
+	assert.Equal(t, "response.incomplete", events[0].Type)
+	require.NotNil(t, events[0].Response)
+	assert.Equal(t, "incomplete", events[0].Response.Status)
+	require.NotNil(t, events[0].Response.IncompleteDetails)
+	assert.Equal(t, "max_output_tokens", events[0].Response.IncompleteDetails.Reason)
+	assert.Empty(t, FinalizeAnthropicResponsesStream(state), "repeated finalization must be idempotent")
+placeholder
+
 func TestAnthropicStreamingEndTurn_MapsToCompleted(t *testing.T) {
 	state := NewAnthropicEventToResponsesState()
 

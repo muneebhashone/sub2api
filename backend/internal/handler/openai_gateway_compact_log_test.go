@@ -66,6 +66,20 @@ placeholder
 	return false
 placeholder
 
+func (s *handlerInMemoryLogSink) FieldValueForMessage(message, field string) (any, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, event := range s.events {
+		if event == nil || event.Message != message || event.Fields == nil {
+			continue
+	placeholder
+		if value, ok := event.Fields[field]; ok {
+			return value, true
+	placeholder
+placeholder
+	return nil, false
+placeholder
+
 func captureHandlerStructuredLog(t *testing.T) (*handlerInMemoryLogSink, func()) {
 placeholder
 	handlerStructuredLogCaptureMu.Lock()

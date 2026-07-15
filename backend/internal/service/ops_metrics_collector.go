@@ -39,6 +39,10 @@ const (
 
 var opsMetricsCollectorAdvisoryLockID = hashAdvisoryLockID(opsMetricsCollectorLeaderLockKey)
 
+type opsSchedulableAccountLoadRepository interface {
+	ListSchedulableAccountLoads(ctx context.Context) ([]AccountWithConcurrency, error)
+placeholder
+
 type OpsMetricsCollector struct {
 	opsRepo     OpsRepository
 	settingRepo SettingRepository
@@ -375,31 +379,16 @@ placeholder
 	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Second)
 	defer cancel()
 
-	accounts, err := c.accountRepo.ListSchedulable(ctx)
+	accountLoads, err := c.listSchedulableAccountLoads(ctx)
 	if err != nil {
 		return nil
 placeholder
-	if len(accounts) == 0 {
+	if len(accountLoads) == 0 {
 		zero := 0
 		return &zero
 placeholder
 
-	batch := make([]AccountWithConcurrency, 0, len(accounts))
-	for _, acc := range accounts {
-		if acc.ID <= 0 {
-			continue
-	placeholder
-		batch = append(batch, AccountWithConcurrency{
-			ID:             acc.ID,
-			MaxConcurrency: acc.EffectiveLoadFactor(),
-	placeholder)
-placeholder
-	if len(batch) == 0 {
-		zero := 0
-		return &zero
-placeholder
-
-	loadMap, err := c.concurrencyService.GetAccountsLoadBatch(ctx, batch)
+	loadMap, err := c.concurrencyService.GetAccountsLoadBatch(ctx, accountLoads)
 	if err != nil {
 		return nil
 placeholder
@@ -421,6 +410,28 @@ placeholder
 placeholder
 	v := int(total)
 	return &v
+placeholder
+
+func (c *OpsMetricsCollector) listSchedulableAccountLoads(ctx context.Context) ([]AccountWithConcurrency, error) {
+	if repo, ok := c.accountRepo.(opsSchedulableAccountLoadRepository); ok {
+		return repo.ListSchedulableAccountLoads(ctx)
+placeholder
+
+	accounts, err := c.accountRepo.ListSchedulable(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+	loads := make([]AccountWithConcurrency, 0, len(accounts))
+	for _, account := range accounts {
+		if account.ID <= 0 {
+			continue
+	placeholder
+		loads = append(loads, AccountWithConcurrency{
+			ID:             account.ID,
+			MaxConcurrency: account.EffectiveLoadFactor(),
+	placeholder)
+placeholder
+	return loads, nil
 placeholder
 
 type opsCollectedPercentiles struct {

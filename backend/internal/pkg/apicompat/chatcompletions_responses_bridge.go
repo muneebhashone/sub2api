@@ -91,16 +91,22 @@ placeholder
 		if len(raw) == 0 || raw[0] != '{' {
 			continue
 	placeholder
+		var discriminator struct {
+			Type string `json:"type"`
+	placeholder
+		if err := json.Unmarshal(raw, &discriminator); err != nil {
+			return nil, fmt.Errorf("parse responses additional tools item: %w", err)
+	placeholder
+		if discriminator.Type != "additional_tools" {
+			continue
+	placeholder
 		var item struct {
-			Type  string          `json:"type"`
 			Tools []ResponsesTool `json:"tools"`
 	placeholder
 		if err := json.Unmarshal(raw, &item); err != nil {
 			return nil, fmt.Errorf("parse responses additional tools item: %w", err)
 	placeholder
-		if item.Type == "additional_tools" {
-			tools = append(tools, item.Tools...)
-	placeholder
+		tools = append(tools, item.Tools...)
 placeholder
 	return tools, nil
 placeholder

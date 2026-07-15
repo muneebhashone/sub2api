@@ -22,12 +22,16 @@ func (r *GrokTokenRefresher) CacheKey(account *Account) string {
 placeholder
 
 func (r *GrokTokenRefresher) CanRefresh(account *Account) bool {
-	return account != nil && account.Platform == PlatformGrok && account.Type == AccountTypeOAuth
+	return account != nil && account.Platform == PlatformGrok && account.Type == AccountTypeOAuth &&
+		strings.TrimSpace(account.GetGrokRefreshToken()) != ""
 placeholder
 
 func (r *GrokTokenRefresher) NeedsRefresh(account *Account, refreshWindow time.Duration) bool {
 	if account == nil || strings.TrimSpace(account.GetGrokRefreshToken()) == "" {
 		return false
+placeholder
+	if strings.TrimSpace(account.GetGrokAccessToken()) == "" {
+		return true
 placeholder
 	expiresAt := account.GetCredentialAsTime("expires_at")
 	if expiresAt == nil {

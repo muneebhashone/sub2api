@@ -37,14 +37,9 @@ func executeAdminIdempotent(
 		return &service.IdempotencyExecuteResult{Data: dataplaceholder, nil
 placeholder
 
-	actorScope := "admin:0"
-	if subject, ok := middleware2.GetAuthSubjectFromContext(c); ok {
-		actorScope = "admin:" + strconv.FormatInt(subject.UserID, 10)
-placeholder
-
 	return coordinator.Execute(c.Request.Context(), service.IdempotencyExecuteOptions{
 		Scope:          scope,
-		ActorScope:     actorScope,
+		ActorScope:     adminActorScope(c),
 		Method:         c.Request.Method,
 		Route:          c.FullPath(),
 		IdempotencyKey: c.GetHeader("Idempotency-Key"),
@@ -52,6 +47,14 @@ placeholder
 		RequireKey:     true,
 		TTL:            ttl,
 placeholder, execute)
+placeholder
+
+func adminActorScope(c *gin.Context) string {
+	actorScope := "admin:0"
+	if subject, ok := middleware2.GetAuthSubjectFromContext(c); ok {
+		actorScope = "admin:" + strconv.FormatInt(subject.UserID, 10)
+placeholder
+	return actorScope
 placeholder
 
 func executeAdminIdempotentJSON(

@@ -121,6 +121,10 @@ placeholder
 			false,
 		)
 		if err != nil {
+			if failoverClientGone(c) {
+				reqLog.Info("openai_embeddings.account_select_aborted_client_disconnected", zap.Error(err))
+				return
+		placeholder
 			reqLog.Warn("openai_embeddings.account_select_failed",
 				zap.Error(err),
 				zap.Int("excluded_account_count", len(failedAccountIDs)),
@@ -189,6 +193,13 @@ placeholder
 					return
 			placeholder
 				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, false, nil)
+				if failoverClientGone(c) {
+					reqLog.Info("openai_embeddings.failover_aborted_client_disconnected",
+						zap.Int64("account_id", account.ID),
+						zap.Int("upstream_status", failoverErr.StatusCode),
+					)
+					return
+			placeholder
 				h.gatewayService.RecordOpenAIAccountSwitch()
 				failedAccountIDs[account.ID] = struct{placeholder{placeholder
 				lastFailoverErr = failoverErr

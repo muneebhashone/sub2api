@@ -368,6 +368,7 @@ placeholder
 				c.Request = c.Request.WithContext(ctx)
 				continue
 			case FailoverCanceled:
+				failoverClientGone(c)
 				return
 			default: // FailoverExhausted
 				h.handleGeminiFailoverExhausted(c, fs.LastFailoverErr)
@@ -490,6 +491,7 @@ placeholder
 					h.handleGeminiFailoverExhausted(c, fs.LastFailoverErr)
 					return
 				case FailoverCanceled:
+					failoverClientGone(c)
 					return
 			placeholder
 		placeholder

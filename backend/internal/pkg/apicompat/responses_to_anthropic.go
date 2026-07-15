@@ -413,6 +413,28 @@ func resToAnthHandleFuncArgsDelta(evt *ResponsesStreamEvent, state *ResponsesEve
 		return nil
 placeholder
 
+	if state.CurrentBlockType == "tool_use" && state.CurrentToolName == "Read" {
+		state.CurrentToolArgs += evt.Delta
+		if state.CurrentToolHadDelta || !json.Valid([]byte(state.CurrentToolArgs)) {
+			return nil
+	placeholder
+
+		blockIdx, ok := state.OutputIndexToBlockIdx[evt.OutputIndex]
+		if !ok {
+			return nil
+	placeholder
+		state.CurrentToolHadDelta = true
+		sanitized := sanitizeAnthropicToolUseInput(state.CurrentToolName, state.CurrentToolArgs)
+		return []AnthropicStreamEvent{{
+			Type:  "content_block_delta",
+			Index: &blockIdx,
+			Delta: &AnthropicDelta{
+				Type:        "input_json_delta",
+				PartialJSON: string(sanitized),
+		placeholder,
+	placeholderplaceholder
+placeholder
+
 	if state.CurrentBlockType == "tool_use" {
 		state.CurrentToolHadDelta = true
 placeholder
@@ -433,6 +455,9 @@ placeholderplaceholder
 placeholder
 
 func resToAnthHandleFuncArgsDone(evt *ResponsesStreamEvent, state *ResponsesEventToAnthropicState) []AnthropicStreamEvent {
+	if !state.ContentBlockOpen {
+		return nil
+placeholder
 	if state.CurrentBlockType != "tool_use" {
 		return resToAnthHandleBlockDone(state)
 placeholder
@@ -452,10 +477,20 @@ placeholder
 		raw = string(sanitized)
 placeholder
 
-	idx := state.ContentBlockIndex
+	// 从事件的 OutputIndex 解析正确的 block index，与 resToAnthHandleFuncArgsDelta 对齐
+	blockIdx, ok := state.OutputIndexToBlockIdx[evt.OutputIndex]
+	if !ok {
+		blockIdx = state.ContentBlockIndex
+placeholder
+
+	// 如果 block 已关闭（ContentBlockIndex 已越过它），说明 arguments 已通过 delta 流式发完，不再补发
+	if !state.ContentBlockOpen || blockIdx != state.ContentBlockIndex {
+		return nil
+placeholder
+
 	events := []AnthropicStreamEvent{{
 		Type:  "content_block_delta",
-		Index: &idx,
+		Index: &blockIdx,
 		Delta: &AnthropicDelta{
 			Type:        "input_json_delta",
 			PartialJSON: raw,

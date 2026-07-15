@@ -46,8 +46,8 @@ placeholder
 	if account == nil {
 		return errors.New("account is nil")
 placeholder
-	if strings.TrimSpace(token) == "" {
-		return errors.New("token is empty")
+	if err := validateOpenAIWSBearerToken(account, token); err != nil {
+		return err
 placeholder
 
 	// 预取一次 OpenAI Fast Policy settings，绑定到 ctx，让该 WS session
@@ -231,6 +231,17 @@ placeholder
 				return openAIWSClientPayload{placeholder, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", setErr)
 		placeholder
 			normalized = next
+	placeholder
+		if account.IsOpenAIOAuth() && isOpenAIResponsesLiteWebSocketPayload(normalized) {
+			litePayload, _, liteErr := normalizeOpenAIResponsesLiteToolsPayload(normalized)
+			if liteErr != nil {
+				return openAIWSClientPayload{placeholder, NewOpenAIWSClientCloseError(
+					coderws.StatusPolicyViolation,
+					liteErr.Error(),
+					liteErr,
+				)
+		placeholder
+			normalized = litePayload
 	placeholder
 		apiKey := getAPIKeyFromContext(c)
 		imageGenerationAllowed := GroupAllowsImageGeneration(apiKeyGroup(apiKey))
@@ -577,6 +588,9 @@ placeholder
 		Account: account,
 		WSURL:   wsURL,
 		Headers: wsHeaders,
+		HeadersFactory: func(factoryCtx context.Context, headers http.Header) (http.Header, error) {
+			return s.refreshOpenAIAgentIdentityHeaders(factoryCtx, account, headers)
+	placeholder,
 		ProxyURL: func() string {
 			if account.ProxyID != nil && account.Proxy != nil {
 				return account.Proxy.URL()
@@ -640,7 +654,9 @@ placeholder
 		acquireTimeout = 30 * time.Second
 placeholder
 
-	acquireTurnLease := func(turn int, preferred string, forcePreferredConn bool) (*openAIWSConnLease, error) {
+	agentTaskRecoveryTried := false
+	var acquireTurnLease func(int, string, bool) (*openAIWSConnLease, error)
+	acquireTurnLease = func(turn int, preferred string, forcePreferredConn bool) (*openAIWSConnLease, error) {
 		req := cloneOpenAIWSAcquireRequest(baseAcquireReq)
 		req.PreferredConnID = strings.TrimSpace(preferred)
 		req.ForcePreferredConn = forcePreferredConn
@@ -649,6 +665,14 @@ placeholder
 		acquireCtx, acquireCancel := context.WithTimeout(ctx, acquireTimeout)
 		lease, acquireErr := pool.Acquire(acquireCtx, req)
 		acquireCancel()
+		var dialErr *openAIWSDialError
+		if acquireErr != nil && s.isAgentIdentityAccount(ctx, account) && errors.As(acquireErr, &dialErr) && isAgentIdentityTaskInvalidWSDialError(dialErr) && !agentTaskRecoveryTried {
+			agentTaskRecoveryTried = true
+			if recoveryErr := s.recoverAgentIdentityTask(ctx, account, account.GetCredential("task_id")); recoveryErr != nil {
+				return nil, fmt.Errorf("agent identity task recovery failed: %w", recoveryErr)
+		placeholder
+			return acquireTurnLease(turn, preferred, forcePreferredConn)
+	placeholder
 		if acquireErr != nil {
 			dialStatus, dialClass, dialCloseStatus, dialCloseReason, dialRespServer, dialRespVia, dialRespCFRay, dialRespReqID := summarizeOpenAIWSDialError(acquireErr)
 			logOpenAIWSModeInfo(
