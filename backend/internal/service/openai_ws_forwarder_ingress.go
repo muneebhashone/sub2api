@@ -305,7 +305,7 @@ placeholder
 			normalized = stripped
 			logOpenAIWSModeInfo("ingress_ws_codex_spark_image_tool_stripped account_id=%d", account.ID)
 	placeholder
-		imageIntent := IsImageGenerationIntent(openAIResponsesEndpoint, originalModel, normalized)
+		imageIntent := IsImageGenerationIntentForPlatform(openAIResponsesEndpoint, originalModel, normalized, account.Platform)
 		if imageIntent && !imageGenerationAllowed {
 			return openAIWSClientPayload{placeholder, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, ImageGenerationPermissionMessage(), nil)
 	placeholder
