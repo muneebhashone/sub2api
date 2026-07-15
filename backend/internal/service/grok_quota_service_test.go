@@ -227,7 +227,7 @@ placeholder
 	placeholder,
 		Body: io.NopCloser(strings.NewReader(`{"id":"resp_probe"placeholder`)),
 placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.ProbeUsage(context.Background(), 42)
 placeholder
@@ -269,7 +269,7 @@ placeholder
 		Header:     http.Header{placeholder,
 		Body:       io.NopCloser(strings.NewReader(`{"id":"resp_probe"placeholder`)),
 placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.ProbeUsage(context.Background(), 47)
 placeholder
@@ -292,7 +292,7 @@ placeholder
 		Header:     http.Header{placeholder,
 		Body:       io.NopCloser(strings.NewReader(`{"code":"invalid-argument","error":"Model not found"placeholder`)),
 placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	_, err := svc.ProbeUsage(context.Background(), 48)
 placeholder
@@ -320,6 +320,7 @@ placeholderplaceholder
 		nil,
 		NewGrokTokenProvider(repo, nil),
 		upstream,
+		nil,
 	)
 
 	var logs bytes.Buffer
@@ -365,7 +366,7 @@ placeholder
 		Header:     http.Header{placeholder,
 		Body:       io.NopCloser(strings.NewReader(`{"id":"resp_probe"placeholder`)),
 placeholderplaceholder
-	svc := NewGrokQuotaService(repo, proxyRepo, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, proxyRepo, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	_, err := svc.ProbeUsage(context.Background(), 46)
 placeholder
@@ -392,7 +393,7 @@ placeholder
 		Header:     http.Header{placeholder,
 		Body:       io.NopCloser(strings.NewReader(`{"id":"resp_probe"placeholder`)),
 placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.ProbeUsage(context.Background(), 45)
 placeholder
@@ -427,7 +428,7 @@ placeholder
 		Header:     http.Header{"Retry-After": []string{"45"placeholderplaceholder,
 		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"rate limited"placeholderplaceholder`)),
 placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.ProbeUsage(context.Background(), 43)
 placeholder
@@ -450,7 +451,7 @@ func TestGrokQuotaServiceQueryQuotaFreeFallsBackToGrok45(t *testing.T) {
 placeholderplaceholder
 	upstream := &grokHybridUpstream{placeholder
 	usageRepo := &grokQuotaUsageLogRepo{stats: &usagestats.AccountStats{Tokens: 1_000_000placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, usageRepo)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil, usageRepo)
 
 	result, err := svc.QueryQuota(context.Background(), account.ID)
 placeholder
@@ -492,7 +493,7 @@ placeholderplaceholder
 	usagePercent := 25.0
 	upstream := &grokHybridUpstream{weeklyUsagePercent: &usagePercentplaceholder
 	usageRepo := &grokQuotaUsageLogRepo{stats: &usagestats.AccountStats{Tokens: 1_000_000placeholderplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, usageRepo)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil, usageRepo)
 
 	result, err := svc.QueryQuota(context.Background(), account.ID)
 placeholder
@@ -519,7 +520,7 @@ func TestGrokQuotaServiceQueryQuotaCustomPaidMonthlyLimitSkipsActiveProbe(t *tes
 placeholderplaceholder
 	monthlyLimit := 25_000.0
 	upstream := &grokHybridUpstream{monthlyLimitCents: &monthlyLimitplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.QueryQuota(context.Background(), account.ID)
 placeholder
@@ -652,7 +653,7 @@ func TestAccountUsageServiceGrokRefreshUsesBillingOnly(t *testing.T) {
 placeholderplaceholder
 	upstream := &grokHybridUpstream{placeholder
 	usageRepo := &grokQuotaUsageLogRepo{stats: &usagestats.AccountStats{Tokens: placeholder
-	quotaService := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, usageRepo)
+	quotaService := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil, usageRepo)
 	usageService := &AccountUsageService{
 		grokQuotaFetcher: NewGrokQuotaFetcher(),
 		grokQuotaService: quotaService,
@@ -688,7 +689,7 @@ placeholderplaceholder
 	billingStarted := make(chan struct{placeholder)
 	billingRelease := make(chan struct{placeholder)
 	upstream := &grokHybridUpstream{billingStarted: billingStarted, billingRelease: billingReleaseplaceholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	type probeOutcome struct {
 		result *GrokQuotaProbeResult
@@ -745,7 +746,7 @@ placeholderplaceholder
 		billingStatus:  http.StatusTooManyRequests,
 		billingHeaders: http.Header{"Retry-After": []string{"45"placeholderplaceholder,
 placeholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.ProbeBilling(context.Background(), account.ID)
 
@@ -765,7 +766,7 @@ placeholderplaceholder
 		activeStatus:  http.StatusTooManyRequests,
 		activeHeaders: http.Header{"Retry-After": []string{"45"placeholderplaceholder,
 placeholder
-	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream)
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
 
 	result, err := svc.QueryQuota(context.Background(), account.ID)
 placeholder
@@ -791,7 +792,7 @@ placeholder
 			accountsByID: map[int64]*Account{44: accountplaceholder,
 	placeholder,
 placeholder
-	svc := NewGrokQuotaService(repo, nil, nil, nil)
+	svc := NewGrokQuotaService(repo, nil, nil, nil, nil)
 
 	_, err := svc.ResetQuota(context.Background(), 44)
 placeholder

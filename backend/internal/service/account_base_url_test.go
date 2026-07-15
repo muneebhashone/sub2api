@@ -266,7 +266,7 @@ placeholder{
 			expected: xai.DefaultCLIBaseURL,
 	placeholder,
 		{
-			name: "oauth explicit custom base_url stays pinned to CLI proxy by default",
+			name: "oauth explicit custom base_url redirects forwarding traffic",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
@@ -274,7 +274,18 @@ placeholder{
 					"base_url": "https://custom.example.com/v1",
 			placeholder,
 		placeholder,
-			expected: xai.DefaultCLIBaseURL,
+			expected: "https://custom.example.com/v1",
+	placeholder,
+		{
+			name: "oauth custom base_url with path prefix redirects forwarding traffic",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://relay.example.com/xai/v1",
+			placeholder,
+		placeholder,
+			expected: "https://relay.example.com/xai/v1",
 	placeholder,
 		{
 			name: "API key without base_url uses official credit-backed API",
@@ -294,7 +305,7 @@ placeholder
 placeholder
 placeholder
 
-func TestGetGrokBaseURLPinsOAuthWhenUnsafeOverridesEnabled(t *testing.T) {
+func TestGetGrokBaseURLHonorsOAuthCustomRegardlessOfUnsafeOverrides(t *testing.T) {
 	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
 	account := Account{
 		Type:     AccountTypeOAuth,
@@ -304,7 +315,7 @@ placeholder
 	placeholder,
 placeholder
 
-	require.Equal(t, xai.DefaultCLIBaseURL, account.GetGrokBaseURL())
+	require.Equal(t, "https://custom.example.com/v1", account.GetGrokBaseURL())
 placeholder
 
 func TestGetGrokMediaBaseURLPinsOAuthMediaToCLIProxy(t *testing.T) {
@@ -356,7 +367,7 @@ placeholder{
 			expected: xai.DefaultCLIBaseURL,
 	placeholder,
 		{
-			name: "oauth untrusted custom base_url is pinned to CLI proxy",
+			name: "oauth custom base_url redirects media traffic",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
@@ -364,7 +375,7 @@ placeholder{
 					"base_url": "https://custom.example.com/v1",
 			placeholder,
 		placeholder,
-			expected: xai.DefaultCLIBaseURL,
+			expected: "https://custom.example.com/v1",
 	placeholder,
 		{
 			name: "API key retains its configured media API",
@@ -395,7 +406,7 @@ placeholder
 placeholder
 placeholder
 
-func TestGetGrokMediaBaseURLPinsOAuthWhenUnsafeOverridesEnabled(t *testing.T) {
+func TestGetGrokMediaBaseURLHonorsOAuthCustomRegardlessOfUnsafeOverrides(t *testing.T) {
 	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
 	account := Account{
 		Type:     AccountTypeOAuth,
@@ -405,5 +416,5 @@ placeholder
 	placeholder,
 placeholder
 
-	require.Equal(t, xai.DefaultCLIBaseURL, account.GetGrokMediaBaseURL())
+	require.Equal(t, "https://custom.example.com/v1", account.GetGrokMediaBaseURL())
 placeholder

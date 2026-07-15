@@ -30,7 +30,8 @@ placeholder{
 		{"anthropic oauth", PlatformAnthropic, AccountTypeOAuth, falseplaceholder,
 		{"openai oauth", PlatformOpenAI, AccountTypeOAuth, falseplaceholder,
 		{"gemini apikey", PlatformGemini, AccountTypeAPIKey, falseplaceholder,
-		{"grok apikey", PlatformGrok, AccountTypeAPIKey, falseplaceholder,
+		{"grok apikey", PlatformGrok, AccountTypeAPIKey, trueplaceholder,
+		{"grok oauth", PlatformGrok, AccountTypeOAuth, trueplaceholder,
 		{"antigravity apikey", PlatformAntigravity, AccountTypeAPIKey, falseplaceholder,
 		{"anthropic bedrock", PlatformAnthropic, AccountTypeBedrock, falseplaceholder,
 placeholder
