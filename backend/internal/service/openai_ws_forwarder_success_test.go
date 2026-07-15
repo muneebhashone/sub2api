@@ -464,8 +464,59 @@ placeholder
 placeholder
 	require.NotNil(t, result)
 	require.Equal(t, "resp_model_tool_1", result.RequestID)
+	require.Equal(t, "response.completed", result.UpstreamTerminalEvent)
+	require.True(t, result.SucceededForScheduling())
 	require.Equal(t, "custom-original-model", gjson.GetBytes(rec.Body.Bytes(), "model").String(), "响应模型应回写为原始请求模型")
 	require.Equal(t, "edit", gjson.GetBytes(rec.Body.Bytes(), "tool_calls.0.function.name").String(), "工具名称应被修正为 OpenCode 规范")
+placeholder
+
+func TestOpenAIGatewayService_Forward_WSv2_ResponseFailedIsNotSchedulingSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.98.0")
+
+	cfg := newOpenAIWSV2TestConfig()
+	cfg.Security.URLAllowlist.Enabled = false
+	cfg.Security.URLAllowlist.AllowInsecureHTTP = true
+	cfg.Gateway.OpenAIWS.MinIdlePerAccount = 0
+
+	captureConn := &openAIWSCaptureConn{events: [][]byte{
+		[]byte(`{"type":"response.failed","response":{"id":"resp_failed_1","model":"gpt-5.5","error":{"code":"server_error","message":"Internal error"placeholderplaceholderplaceholder`),
+placeholderplaceholder
+	pool := newOpenAIWSConnPool(cfg)
+	pool.setClientDialerForTest(&openAIWSCaptureDialer{conn: captureConnplaceholder)
+
+	svc := &OpenAIGatewayService{
+		cfg:              cfg,
+		rateLimitService: NewRateLimitService(transientCooldownAccountRepo{placeholder, nil, cfg, nil, nil),
+		httpUpstream:     &httpUpstreamRecorder{placeholder,
+		cache:            &stubGatewayCache{placeholder,
+		openaiWSResolver: NewOpenAIWSProtocolResolver(cfg),
+		toolCorrector:    NewCodexToolCorrector(),
+		openaiWSPool:     pool,
+placeholder
+	account := &Account{
+		ID:          1302,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder"api_key": "sk-test"placeholder,
+		Extra:       map[string]any{"responses_websockets_v2_enabled": trueplaceholder,
+placeholder
+	svc.recordOpenAIAccountModelTransientFailure(account, "gpt-5.5", time.Now())
+
+	result, err := svc.Forward(context.Background(), c, account, []byte(`{"model":"gpt-5.5","stream":false,"input":"hello"placeholder`))
+
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, "response.failed", result.UpstreamTerminalEvent)
+	require.False(t, result.SucceededForScheduling())
+	require.True(t, svc.isOpenAIAccountModelRuntimeBlocked(account, "gpt-5.5"))
 placeholder
 
 func TestOpenAIWSPayloadString_OnlyAcceptsStringValues(t *testing.T) {
