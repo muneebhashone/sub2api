@@ -500,12 +500,23 @@ placeholder
 						h.handleFailoverExhausted(c, failoverErr, streamStarted)
 						return
 				placeholder
-					reqLog.Warn("openai.upstream_failover_switching",
+					failoverSwitchFields := []zap.Field{
 						zap.Int64("account_id", account.ID),
 						zap.Int("upstream_status", failoverErr.StatusCode),
 						zap.Int("switch_count", switchCount),
 						zap.Int("max_switches", maxAccountSwitches),
-					)
+				placeholder
+					if account.Proxy != nil {
+						failoverSwitchFields = append(failoverSwitchFields,
+							zap.Int64("proxy_id", account.Proxy.ID),
+							zap.String("proxy_name", account.Proxy.Name),
+							zap.String("proxy_host", account.Proxy.Host),
+							zap.Int("proxy_port", account.Proxy.Port),
+						)
+				placeholder else if account.ProxyID != nil {
+						failoverSwitchFields = append(failoverSwitchFields, zap.Int64p("proxy_id", account.ProxyID))
+				placeholder
+					reqLog.Warn("openai.upstream_failover_switching", failoverSwitchFields...)
 					continue
 			placeholder
 				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, false, nil)
