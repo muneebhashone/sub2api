@@ -44,6 +44,19 @@ placeholder
 	if normalized {
 		body = normalizedBody
 placeholder
+	if account.IsOpenAIOAuth() && isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) {
+		liteBody, changed, liteErr := normalizeOpenAIResponsesLiteToolsPayload(body)
+		if liteErr != nil {
+			setOpsUpstreamError(c, http.StatusBadRequest, liteErr.Error(), "")
+			c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
+				"type": "invalid_request_error", "message": liteErr.Error(), "param": "tools",
+		placeholderplaceholder)
+			return nil, liteErr
+	placeholder
+		if changed {
+			body = liteBody
+	placeholder
+placeholder
 	wsDecision := s.getOpenAIWSProtocolResolver().Resolve(account)
 	// 仅允许 WS 入站请求走 WS 上游，避免出现 HTTP -> WS 协议混用。
 	wsDecision = resolveOpenAIWSDecisionByClientTransport(wsDecision, GetOpenAIClientTransport(c))
