@@ -50,9 +50,29 @@ placeholder{
 			reason: "unsupported_message_role_developer",
 	placeholder,
 		{
-			name:   "image content falls back",
-			body:   `{"model":"grok","messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":"data:image/png;base64,QQ=="placeholderplaceholder]placeholder]placeholder`,
-			reason: "non_text_message_content",
+			name: "image content is bridgeable",
+			body: `{"model":"grok","messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":"data:image/png;base64,QQ=="placeholderplaceholder]placeholder]placeholder`,
+			want: true,
+	placeholder,
+		{
+			name: "text and image parts are bridgeable",
+			body: `{"model":"grok","messages":[{"role":"user","content":[{"type":"text","text":"what is this"placeholder,{"type":"image_url","image_url":{"url":"data:image/png;base64,QQ=="placeholderplaceholder]placeholder]placeholder`,
+			want: true,
+	placeholder,
+		{
+			name: "text only parts are bridgeable",
+			body: `{"model":"grok","messages":[{"role":"user","content":[{"type":"text","text":"hello"placeholder]placeholder]placeholder`,
+			want: true,
+	placeholder,
+		{
+			name:   "unknown content part falls back",
+			body:   `{"model":"grok","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":"AA=="placeholderplaceholder]placeholder]placeholder`,
+			reason: "unsupported_content_part_input_audio",
+	placeholder,
+		{
+			name:   "empty content array falls back",
+			body:   `{"model":"grok","messages":[{"role":"user","content":[]placeholder]placeholder`,
+			reason: "empty_message_content",
 	placeholder,
 		{
 			name:   "function tools fall back",
