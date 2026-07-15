@@ -79,6 +79,31 @@ placeholder
 	assert.Equal(t, "exec", tools[0].Name)
 placeholder
 
+func TestEffectiveResponsesTools_IgnoresMalformedToolsOnNonAdditionalItem(t *testing.T) {
+	req := &ResponsesRequest{
+		Input: json.RawMessage(`[
+			{"type":"message","role":"user","tools":"not-an-array","content":[{"type":"input_text","text":"hello"placeholder]placeholder,
+			{"type":"additional_tools","tools":[{"type":"custom","name":"exec"placeholder]placeholder
+		]`),
+placeholder
+
+	tools, err := EffectiveResponsesTools(req)
+placeholder
+	require.Len(t, tools, 1)
+	assert.Equal(t, "exec", tools[0].Name)
+placeholder
+
+func TestEffectiveResponsesTools_RejectsMalformedAdditionalTools(t *testing.T) {
+	req := &ResponsesRequest{
+		Input: json.RawMessage(`[{"type":"additional_tools","tools":"not-an-array"placeholder]`),
+placeholder
+
+	tools, err := EffectiveResponsesTools(req)
+placeholder
+	assert.Contains(t, err.Error(), "parse responses additional tools item")
+	assert.Empty(t, tools)
+placeholder
+
 func TestResponsesToChatCompletionsRequest_DropsToolChoiceWhenNoConvertibleTools(t *testing.T) {
 	req := &ResponsesRequest{
 		Model: "glm-5.2",
