@@ -227,12 +227,28 @@ placeholder
 	if cfg.Gateway.OpenAIWS.IngressModeDefault != "ctx_pool" {
 		t.Fatalf("Gateway.OpenAIWS.IngressModeDefault = %q, want %q", cfg.Gateway.OpenAIWS.IngressModeDefault, "ctx_pool")
 placeholder
+	if cfg.Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds != DefaultOpenAIWSClientFirstMessageTimeoutSeconds {
+		t.Fatalf(
+			"Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds = %d, want %d",
+			cfg.Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds,
+			DefaultOpenAIWSClientFirstMessageTimeoutSeconds,
+		)
+placeholder
 	if cfg.Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds != 300 {
 		t.Fatalf("Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds = %d, want 300", cfg.Gateway.OpenAIWS.IngressInterTurnIdleTimeoutSeconds)
 placeholder
 	if cfg.Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey != 64 {
 		t.Fatalf("Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey = %d, want 64", cfg.Gateway.OpenAIWS.MaxIngressConnectionsPerAPIKey)
 placeholder
+placeholder
+
+func TestLoadOpenAIWSClientFirstMessageTimeoutFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_OPENAI_WS_CLIENT_FIRST_MESSAGE_TIMEOUT_SECONDS", "120")
+
+	cfg, err := Load()
+placeholder
+	require.Equal(t, 120, cfg.Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds)
 placeholder
 
 func TestLoadDefaultOpenAICompactModel(t *testing.T) {
@@ -1719,6 +1735,16 @@ placeholder{
 			name:    "max_conns_per_account 必须为正数",
 			mutate:  func(c *Config) { c.Gateway.OpenAIWS.MaxConnsPerAccount = 0 placeholder,
 			wantErr: "gateway.openai_ws.max_conns_per_account",
+	placeholder,
+		{
+			name:    "client_first_message_timeout_seconds 必须为正数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds = 0 placeholder,
+			wantErr: "gateway.openai_ws.client_first_message_timeout_seconds",
+	placeholder,
+		{
+			name:    "client_first_message_timeout_seconds 不能为负数",
+			mutate:  func(c *Config) { c.Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds = -1 placeholder,
+			wantErr: "gateway.openai_ws.client_first_message_timeout_seconds",
 	placeholder,
 		{
 			name:    "ingress_inter_turn_idle_timeout_seconds 不能为负数",
