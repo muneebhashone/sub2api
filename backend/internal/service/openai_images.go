@@ -455,8 +455,13 @@ placeholder
 placeholder
 
 func isOpenAIImageGenerationModel(model string) bool {
+	return IsGPTImageGenerationModel(model) || isGrokImageGenerationModel(model)
+placeholder
+
+// IsGPTImageGenerationModel identifies the GPT native image-generation model family.
+func IsGPTImageGenerationModel(model string) bool {
 	model = strings.ToLower(strings.TrimSpace(model))
-	return strings.HasPrefix(model, "gpt-image-") || isGrokImageGenerationModel(model)
+	return strings.HasPrefix(model, "gpt-image-")
 placeholder
 
 func isGrokImageGenerationModel(model string) bool {
