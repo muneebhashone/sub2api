@@ -30,6 +30,7 @@
         <template #cell-price="{ value, row placeholder">
           <div class="text-sm">
             <span class="font-medium text-gray-900 dark:text-white">${{ (value ?? 0).toFixed(2) placeholderplaceholder</span>
+            <span v-if="row.currency" class="ml-1 text-xs text-gray-400">{{ row.currency placeholderplaceholder</span>
             <span v-if="row.original_price" class="ml-1 text-xs text-gray-400 line-through">${{ row.original_price.toFixed(2) placeholderplaceholder</span>
           </div>
         </template>

@@ -1447,6 +1447,7 @@ placeholder
 		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
 		{Name: "price", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
 		{Name: "original_price", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,2)"placeholderplaceholder,
+		{Name: "currency", Type: field.TypeString, Size: 3, Default: ""placeholder,
 		{Name: "validity_days", Type: field.TypeInt, Default: 30placeholder,
 		{Name: "validity_unit", Type: field.TypeString, Size: 10, Default: "day"placeholder,
 		{Name: "features", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
@@ -1470,7 +1471,7 @@ placeholder
 			{
 				Name:    "subscriptionplan_for_sale",
 				Unique:  false,
-				Columns: []*schema.Column{SubscriptionPlansColumns[10]placeholder,
+				Columns: []*schema.Column{SubscriptionPlansColumns[11]placeholder,
 		placeholder,
 	placeholder,
 placeholder
