@@ -860,6 +860,41 @@ placeholder
 	response.Success(c, result.Data)
 placeholder
 
+// Duplicate handles creating an independent account from an existing account's configuration.
+// POST /api/v1/admin/accounts/:id/duplicate
+func (h *AccountHandler) Duplicate(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+placeholder
+
+	result, err := executeAdminIdempotent(
+		c,
+		"admin.accounts.duplicate",
+		struct {
+			AccountID int64 `json:"account_id"`
+	placeholder{AccountID: accountIDplaceholder,
+		service.DefaultWriteIdempotencyTTL(),
+		func(ctx context.Context) (any, error) {
+			account, execErr := h.adminService.DuplicateAccount(ctx, accountID, c.GetHeader("Idempotency-Key"))
+			if execErr != nil {
+				return nil, execErr
+		placeholder
+			return h.buildAccountResponseWithRuntime(ctx, account), nil
+	placeholder,
+	)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	if result != nil && result.Replayed {
+		c.Header("X-Idempotency-Replayed", "true")
+placeholder
+	response.Success(c, result.Data)
+placeholder
+
 // Update handles updating an account
 // PUT /api/v1/admin/accounts/:id
 func (h *AccountHandler) Update(c *gin.Context) {
