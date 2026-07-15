@@ -135,6 +135,7 @@ placeholder
 
 func TestNormalizeOpenAIResponsesLiteTools_KeepsSupportedTopLevelTools(t *testing.T) {
 	reqBody := map[string]any{
+		"reasoning": map[string]any{"context": "all_turns"placeholder,
 		"tools": []any{
 			map[string]any{"type": "function", "name": "shell"placeholder,
 			map[string]any{"type": "custom", "name": "exec"placeholder,
@@ -148,6 +149,46 @@ placeholder
 placeholder
 	require.False(t, changed)
 	require.Len(t, reqBody["tools"], 4)
+placeholder
+
+func TestNormalizeOpenAIResponsesLiteTools_EnsuresReasoningContext(t *testing.T) {
+	tests := []struct {
+		name      string
+		reasoning any
+placeholder{
+		{name: "missing"placeholder,
+		{name: "missing context", reasoning: map[string]any{"effort": "high"placeholderplaceholder,
+		{name: "wrong context", reasoning: map[string]any{"effort": "medium", "context": "current_turn"placeholderplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reqBody := map[string]any{"input": "hello"placeholder
+			if tt.reasoning != nil {
+				reqBody["reasoning"] = tt.reasoning
+		placeholder
+
+			changed, err := normalizeOpenAIResponsesLiteTools(reqBody)
+
+		placeholder
+			require.True(t, changed)
+			reasoning := reqBody["reasoning"].(map[string]any)
+			require.Equal(t, "all_turns", reasoning["context"])
+			if tt.name != "missing" {
+				require.Equal(t, tt.reasoning.(map[string]any)["effort"], reasoning["effort"])
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestNormalizeOpenAIResponsesLiteTools_RejectsNonObjectReasoning(t *testing.T) {
+	reqBody := map[string]any{"reasoning": "high"placeholder
+
+	changed, err := normalizeOpenAIResponsesLiteTools(reqBody)
+
+	require.ErrorContains(t, err, "reasoning to be an object")
+	require.False(t, changed)
+	require.Equal(t, "high", reqBody["reasoning"])
 placeholder
 
 func TestNormalizeOpenAIResponsesLiteTools_RejectsUnsupportedTools(t *testing.T) {
@@ -240,6 +281,7 @@ func TestOpenAIGatewayServiceForward_NormalizesResponsesLiteToolsForOAuth(t *tes
 		placeholder
 			body := []byte(`{
 				"model":"gpt-5.6-terra","stream":true,"instructions":"test",
+				"reasoning":{"effort":"high","context":"current_turn"placeholder,
 				"tools":[
 					{"type":"function","name":"shell","parameters":{"type":"object"placeholderplaceholder,
 					{"type":"custom","name":"exec"placeholder,
@@ -255,6 +297,8 @@ func TestOpenAIGatewayServiceForward_NormalizesResponsesLiteToolsForOAuth(t *tes
 		placeholder
 			require.NotNil(t, result)
 			require.Equal(t, "true", upstream.lastReq.Header.Get(responsesLiteHeader))
+			require.Equal(t, "high", gjson.GetBytes(upstream.lastBody, "reasoning.effort").String())
+			require.Equal(t, "all_turns", gjson.GetBytes(upstream.lastBody, "reasoning.context").String())
 			require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="namespace")`).Exists())
 			require.Equal(t, "shell", gjson.GetBytes(upstream.lastBody, `tools.#(type=="function").name`).String())
 			require.Equal(t, "exec", gjson.GetBytes(upstream.lastBody, `tools.#(type=="custom").name`).String())
