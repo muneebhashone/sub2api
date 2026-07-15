@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/Wei-Shaw/sub2api/internal/util/responseheaders"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
@@ -109,7 +108,7 @@ placeholder
 
 	// Grok Composer does not accept image_url parts directly, but Grok Build
 	// can describe the images first. Bridge only this exact failure mode.
-	token, tokenKind, err := s.GetAccessToken(ctx, account)
+	token, tokenKind, err := s.getRequestCredential(ctx, c, account)
 	if err != nil {
 		return nil, err
 placeholder
@@ -162,7 +161,7 @@ placeholder
 placeholder
 	SetActualOpenAIUpstreamEndpoint(c, grokChatRawEndpoint)
 	customUA := account.GetOpenAIUserAgent()
-	if customUA == "" && account.Platform == PlatformGrok {
+	if customUA == "" && account.IsGrokOAuth() {
 		customUA = "sub2api-grok/1.0"
 placeholder
 	resp, err := s.sendCCUpstreamRequest(ctx, c, account, targetURL, upstreamBody, clientStream, token, customUA, grokCacheIdentity)
@@ -189,6 +188,7 @@ placeholder
 				return nil, &UpstreamFailoverError{
 					StatusCode:             resp.StatusCode,
 					ResponseBody:           respBody,
+					ResponseHeaders:        resp.Header.Clone(),
 					RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
 			placeholder
 		placeholder
@@ -201,7 +201,7 @@ placeholder
 placeholder
 
 	if account.Platform == PlatformGrok {
-		s.updateGrokUsageSnapshot(ctx, account, xai.ParseQuotaHeaders(resp.Header, resp.StatusCode))
+		s.updateGrokUsageFromResponse(ctx, account, resp.Header, resp.StatusCode)
 placeholder
 
 	// 8. Forward response
@@ -221,7 +221,7 @@ placeholder
 
 func (s *OpenAIGatewayService) rawChatCompletionsURL(account *Account) (string, error) {
 	if account.Platform == PlatformGrok {
-		targetURL, err := xai.BuildChatCompletionsURL(account.GetGrokBaseURL())
+		targetURL, err := buildGrokChatCompletionsURL(account, s.cfg)
 		if err != nil {
 			return "", fmt.Errorf("invalid grok base_url: %w", err)
 	placeholder

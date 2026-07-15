@@ -243,8 +243,8 @@ placeholder
 	if account == nil {
 		return errors.New("account is nil")
 placeholder
-	if strings.TrimSpace(token) == "" {
-		return errors.New("token is empty")
+	if err := validateOpenAIWSBearerToken(account, token); err != nil {
+		return err
 placeholder
 	requestModel := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "model").String())
 	requestPreviousResponseID := strings.TrimSpace(gjson.GetBytes(firstClientMessage, "previous_response_id").String())
@@ -359,10 +359,34 @@ placeholder
 		return errors.New("openai ws passthrough dialer is nil")
 placeholder
 
-	dialCtx, cancelDial := context.WithTimeout(ctx, s.openAIWSDialTimeout())
-	defer cancelDial()
-	upstreamConn, statusCode, handshakeHeaders, err := dialer.Dial(dialCtx, wsURL, headers, proxyURL)
-	if err != nil {
+	agentTaskRecoveryTried := false
+	var upstreamConn openAIWSClientConn
+	statusCode := 0
+	var handshakeHeaders http.Header
+	for {
+		headers, err = s.refreshOpenAIAgentIdentityHeaders(ctx, account, headers)
+		if err != nil {
+			return fmt.Errorf("refresh ws authentication headers: %w", err)
+	placeholder
+		dialCtx, cancelDial := context.WithTimeout(ctx, s.openAIWSDialTimeout())
+		upstreamConn, statusCode, handshakeHeaders, err = dialer.Dial(dialCtx, wsURL, headers, proxyURL)
+		cancelDial()
+		if err == nil {
+			break
+	placeholder
+		var handshakeErr *openAIWSHandshakeError
+		responseBody := []byte(nil)
+		if errors.As(err, &handshakeErr) && handshakeErr != nil {
+			responseBody = handshakeErr.Body
+	placeholder
+		dialErr := &openAIWSDialError{StatusCode: statusCode, ResponseBody: responseBody, Err: errplaceholder
+		if s.isAgentIdentityAccount(ctx, account) && isAgentIdentityTaskInvalidWSDialError(dialErr) && !agentTaskRecoveryTried {
+			agentTaskRecoveryTried = true
+			if recoveryErr := s.recoverAgentIdentityTask(ctx, account, account.GetCredential("task_id")); recoveryErr != nil {
+				return fmt.Errorf("agent identity task recovery failed: %w", recoveryErr)
+		placeholder
+			continue
+	placeholder
 		logOpenAIWSV2Passthrough(
 			"relay_dial_failed account_id=%d status_code=%d err=%s",
 			account.ID,
@@ -678,9 +702,15 @@ placeholder
 	wrappedErr := err
 	var dialErr *openAIWSDialError
 	if !errors.As(err, &dialErr) {
+		var handshakeErr *openAIWSHandshakeError
+		var responseBody []byte
+		if errors.As(err, &handshakeErr) && handshakeErr != nil {
+			responseBody = append([]byte(nil), handshakeErr.Body...)
+	placeholder
 		wrappedErr = &openAIWSDialError{
 			StatusCode:      statusCode,
 			ResponseHeaders: cloneHeader(handshakeHeaders),
+			ResponseBody:    responseBody,
 			Err:             err,
 	placeholder
 placeholder

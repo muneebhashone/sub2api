@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/util/urlvalidator"
 	"github.com/stretchr/testify/require"
 )
 
@@ -162,6 +163,44 @@ placeholder
 	require.Equal(t, "https://grok.example.test/v1", baseURL)
 
 	_, err = ValidateTrustedBaseURL("https://grok.example.test/v1")
+placeholder
+placeholder
+
+func TestBuildResponsesURLWithValidatorUsesCallerPolicy(t *testing.T) {
+	validator := func(raw string) (string, error) {
+		return urlvalidator.ValidateURLFormat(raw, true)
+placeholder
+
+	target, err := BuildResponsesURLWithValidator("http://grok.example.test/v1/", validator)
+placeholder
+	require.Equal(t, "http://grok.example.test/v1/responses", target)
+placeholder
+
+func TestBuildResponsesURLPreservesUnsafeOverrideCustomPath(t *testing.T) {
+	t.Setenv(EnvAllowUnsafeURLOverrides, "true")
+
+	target, err := BuildResponsesURL("http://localhost:8080/custom")
+placeholder
+	require.Equal(t, "http://localhost:8080/custom/responses", target)
+placeholder
+
+func TestBuildResponsesURLWithValidatorRejectsBaseURLComponents(t *testing.T) {
+	permissive := func(raw string) (string, error) { return raw, nil placeholder
+	tests := []struct {
+		name string
+		raw  string
+placeholder{
+		{name: "userinfo", raw: "https://user:secret@grok.example.test/v1"placeholder,
+		{name: "query", raw: "https://grok.example.test/v1?token=secret"placeholder,
+		{name: "fragment", raw: "https://grok.example.test/v1#secret"placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := BuildResponsesURLWithValidator(tt.raw, permissive)
+		placeholder
+			require.NotContains(t, err.Error(), "secret")
+	placeholder)
 placeholder
 placeholder
 
