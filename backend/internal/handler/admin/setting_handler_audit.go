@@ -308,6 +308,9 @@ placeholder
 	if before.AffiliateRebatePerInviteeCap != after.AffiliateRebatePerInviteeCap {
 		changed = append(changed, "affiliate_rebate_per_invitee_cap")
 placeholder
+	if before.AdminRechargeRebateEnabled != after.AdminRechargeRebateEnabled {
+		changed = append(changed, "affiliate_admin_recharge_enabled")
+placeholder
 	if !equalDefaultSubscriptions(before.DefaultSubscriptions, after.DefaultSubscriptions) {
 		changed = append(changed, "default_subscriptions")
 placeholder
