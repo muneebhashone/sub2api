@@ -17,6 +17,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/tlsfingerprint"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
 
@@ -240,6 +241,60 @@ placeholder
 	if gotAccountID != "acc-agent" {
 		t.Fatalf("chatgpt-account-id header: got %q", gotAccountID)
 placeholder
+placeholder
+
+func TestFetchCodexModelsManifestAgentIdentityRecoversInvalidTaskOnce(t *testing.T) {
+	key, privateKey := newTestAgentIdentityKey(t)
+	account := &Account{
+		ID:       4,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"auth_mode":          OpenAIAuthModeAgentIdentity,
+			"agent_runtime_id":   key.runtimeID,
+			"agent_private_key":  privateKey,
+			"task_id":            "task-models-old",
+			"chatgpt_account_id": "acc-agent-recovery",
+	placeholder,
+placeholder
+	repo := &stubQuotaAccountRepo{accounts: map[int64]*Account{account.ID: accountplaceholderplaceholder
+	modelsCalls := 0
+	registerCalls := 0
+	var assertions []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		if strings.Contains(r.URL.Path, "/task/register") {
+			registerCalls++
+			_, _ = w.Write([]byte(`{"task_id":"task-models-new"placeholder`))
+			return
+	placeholder
+		modelsCalls++
+		assertions = append(assertions, r.Header.Get("Authorization"))
+		if modelsCalls == 1 {
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))
+			return
+	placeholder
+		_, _ = w.Write([]byte(`{"models":[]placeholder`))
+placeholder))
+	defer server.Close()
+
+	originalModelsURL := chatgptCodexModelsURL
+	chatgptCodexModelsURL = server.URL
+	t.Cleanup(func() { chatgptCodexModelsURL = originalModelsURL placeholder)
+	originalAuthBase := openAIAgentIdentityAuthAPIBaseURL
+	openAIAgentIdentityAuthAPIBaseURL = server.URL
+	t.Cleanup(func() { openAIAgentIdentityAuthAPIBaseURL = originalAuthBase placeholder)
+
+	s := &OpenAIGatewayService{accountRepo: repoplaceholder
+	manifest, err := s.FetchCodexModelsManifest(context.Background(), account, "0.137.0", "")
+placeholder
+	require.Equal(t, `{"models":[]placeholder`, string(manifest.Body))
+	require.Equal(t, 2, modelsCalls)
+	require.Equal(t, 1, registerCalls)
+	require.Len(t, assertions, 2)
+	require.Equal(t, "task-models-old", decodeAgentAssertionTask(t, assertions[0]))
+	require.Equal(t, "task-models-new", decodeAgentAssertionTask(t, assertions[1]))
 placeholder
 
 func TestFetchCodexModelsManifestDefaultClientVersion(t *testing.T) {
