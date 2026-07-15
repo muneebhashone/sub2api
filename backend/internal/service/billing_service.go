@@ -860,6 +860,7 @@ placeholder else {
 		pricing.ImageOutputPricePerToken = 0
 placeholder
 	pricing.ImageOutputPriceExplicit = true
+	applyChannelImageInputPrice(channelPricing, pricing)
 	return pricing, nil
 placeholder
 
