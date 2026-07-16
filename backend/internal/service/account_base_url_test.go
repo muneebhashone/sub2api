@@ -178,7 +178,7 @@ placeholder{
 			expected: xai.DefaultCLIBaseURL,
 	placeholder,
 		{
-			name: "oauth legacy API default is migrated at runtime to CLI subscription proxy",
+			name: "oauth stored official API endpoint is honored (manual endpoint switch)",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
@@ -186,81 +186,37 @@ placeholder{
 					"base_url": xai.DefaultBaseURL,
 			placeholder,
 		placeholder,
-			expected: xai.DefaultCLIBaseURL,
+			expected: xai.DefaultBaseURL,
 	placeholder,
 		{
-			name: "oauth legacy API default with trailing slash is migrated at runtime",
+			name: "oauth stored regional API endpoint is honored",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
 		placeholder
-					"base_url": xai.DefaultBaseURL + "/",
+					"base_url": "https://us-west-2.api.x.ai/v1",
+			placeholder,
+		placeholder,
+			expected: "https://us-west-2.api.x.ai/v1",
+	placeholder,
+		{
+			name: "oauth stored CLI proxy is honored verbatim",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": xai.DefaultCLIBaseURL,
 			placeholder,
 		placeholder,
 			expected: xai.DefaultCLIBaseURL,
 	placeholder,
 		{
-			name: "oauth legacy API root is migrated at runtime",
+			name: "oauth unparseable base_url falls back to CLI proxy",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
 		placeholder
-					"base_url": "https://api.x.ai",
-			placeholder,
-		placeholder,
-			expected: xai.DefaultCLIBaseURL,
-	placeholder,
-		{
-			name: "oauth legacy API root with canonical HTTPS port is migrated at runtime",
-			account: Account{
-				Type:     AccountTypeOAuth,
-				Platform: PlatformGrok,
-		placeholder
-					"base_url": "HTTPS://API.X.AI:443/",
-			placeholder,
-		placeholder,
-			expected: xai.DefaultCLIBaseURL,
-	placeholder,
-		{
-			name: "oauth legacy API canonical port with leading zeroes is migrated at runtime",
-			account: Account{
-				Type:     AccountTypeOAuth,
-				Platform: PlatformGrok,
-		placeholder
-					"base_url": "https://api.x.ai:0443/v1",
-			placeholder,
-		placeholder,
-			expected: xai.DefaultCLIBaseURL,
-	placeholder,
-		{
-			name: "oauth legacy API encoded version path is migrated at runtime",
-			account: Account{
-				Type:     AccountTypeOAuth,
-				Platform: PlatformGrok,
-		placeholder
-					"base_url": "https://api.x.ai/%76%31",
-			placeholder,
-		placeholder,
-			expected: xai.DefaultCLIBaseURL,
-	placeholder,
-		{
-			name: "oauth legacy API encoded trailing slash is migrated at runtime",
-			account: Account{
-				Type:     AccountTypeOAuth,
-				Platform: PlatformGrok,
-		placeholder
-					"base_url": "https://api.x.ai/v1%2F",
-			placeholder,
-		placeholder,
-			expected: xai.DefaultCLIBaseURL,
-	placeholder,
-		{
-			name: "oauth non-default API port remains pinned to CLI proxy",
-			account: Account{
-				Type:     AccountTypeOAuth,
-				Platform: PlatformGrok,
-		placeholder
-					"base_url": "https://api.x.ai:8443/v1",
+					"base_url": "not a url",
 			placeholder,
 		placeholder,
 			expected: xai.DefaultCLIBaseURL,
@@ -318,7 +274,7 @@ placeholder
 	require.Equal(t, "https://custom.example.com/v1", account.GetGrokBaseURL())
 placeholder
 
-func TestGetGrokMediaBaseURLPinsOAuthMediaToCLIProxy(t *testing.T) {
+func TestGetGrokMediaBaseURLFollowsTextTrafficResolution(t *testing.T) {
 	tests := []struct {
 		name     string
 		account  Account
@@ -345,18 +301,7 @@ placeholder{
 			expected: xai.DefaultCLIBaseURL,
 	placeholder,
 		{
-			name: "oauth stored CLI proxy variant is canonicalized to CLI proxy",
-			account: Account{
-				Type:     AccountTypeOAuth,
-				Platform: PlatformGrok,
-		placeholder
-					"base_url": "HTTPS://CLI-CHAT-PROXY.GROK.COM:443/%76%31/",
-			placeholder,
-		placeholder,
-			expected: xai.DefaultCLIBaseURL,
-	placeholder,
-		{
-			name: "oauth legacy official API is pinned to CLI proxy",
+			name: "oauth stored official API endpoint is honored (manual endpoint switch)",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
@@ -364,7 +309,7 @@ placeholder{
 					"base_url": xai.DefaultBaseURL,
 			placeholder,
 		placeholder,
-			expected: xai.DefaultCLIBaseURL,
+			expected: xai.DefaultBaseURL,
 	placeholder,
 		{
 			name: "oauth custom base_url redirects media traffic",

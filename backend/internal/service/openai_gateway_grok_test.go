@@ -288,20 +288,20 @@ placeholder
 	require.NotEqual(t, grokUpstreamUserAgent, req.Header.Get("User-Agent"))
 placeholder
 
-func TestBuildGrokResponsesRequestPinsOAuthOfficialVariantBaseURL(t *testing.T) {
+func TestBuildGrokResponsesRequestHonorsOAuthOfficialEndpointSwitch(t *testing.T) {
 	t.Parallel()
 
 	account := &Account{
 		Platform: PlatformGrok,
 		Type:     AccountTypeOAuth,
 placeholder
-			"base_url": "HTTPS://API.X.AI:443/",
+			"base_url": xai.DefaultBaseURL,
 	placeholder,
 placeholder
 
 	req, err := buildGrokResponsesRequest(context.Background(), nil, account, []byte(`{"model":"grok-4.3"placeholder`), "access-token", "", nil)
 placeholder
-	require.Equal(t, xai.DefaultCLIBaseURL+"/responses", req.URL.String())
+	require.Equal(t, xai.DefaultBaseURL+"/responses", req.URL.String())
 placeholder
 
 func TestBuildGrokResponsesRequestAppliesHeaderOverridesLast(t *testing.T) {
