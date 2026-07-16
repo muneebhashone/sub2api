@@ -274,23 +274,23 @@ placeholder
 	require.Equal(t, "https://custom.example.com/v1", account.GetGrokBaseURL())
 placeholder
 
-func TestGetGrokMediaBaseURLFollowsTextTrafficResolution(t *testing.T) {
+func TestGetGrokMediaBaseURLRedirectsCLIGatewayToOfficialAPI(t *testing.T) {
 	tests := []struct {
 		name     string
 		account  Account
 		expected string
 placeholder{
 		{
-			name: "oauth without base_url uses CLI subscription proxy",
+			name: "oauth without base_url uses official media API",
 			account: Account{
 				Type:        AccountTypeOAuth,
 				Platform:    PlatformGrok,
 		placeholderplaceholder,
 		placeholder,
-			expected: xai.DefaultCLIBaseURL,
+			expected: xai.DefaultBaseURL,
 	placeholder,
 		{
-			name: "oauth stored CLI proxy stays on CLI subscription proxy",
+			name: "oauth stored CLI proxy is separated from the media API",
 			account: Account{
 				Type:     AccountTypeOAuth,
 				Platform: PlatformGrok,
@@ -298,7 +298,29 @@ placeholder{
 					"base_url": xai.DefaultCLIBaseURL,
 			placeholder,
 		placeholder,
-			expected: xai.DefaultCLIBaseURL,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth stored CLI proxy variant is canonicalized to the media API",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "HTTPS://CLI-CHAT-PROXY.GROK.COM:443/%76%31/",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth unparseable base_url falls back to official media API",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "not a url",
+			placeholder,
+		placeholder,
+			expected: xai.DefaultBaseURL,
 	placeholder,
 		{
 			name: "oauth stored official API endpoint is honored (manual endpoint switch)",
@@ -310,6 +332,17 @@ placeholder{
 			placeholder,
 		placeholder,
 			expected: xai.DefaultBaseURL,
+	placeholder,
+		{
+			name: "oauth stored regional API endpoint is honored for media",
+			account: Account{
+				Type:     AccountTypeOAuth,
+				Platform: PlatformGrok,
+		placeholder
+					"base_url": "https://us-west-2.api.x.ai/v1",
+			placeholder,
+		placeholder,
+			expected: "https://us-west-2.api.x.ai/v1",
 	placeholder,
 		{
 			name: "oauth custom base_url redirects media traffic",
