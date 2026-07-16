@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -238,6 +240,100 @@ func TestHTTPUpstreamDoAppliesGrokCLIIdentityBeforeOAuthRoundTrip(t *testing.T) 
 			require.Equal(t, "xai-grok-workspace/0.2.93", capturedHeaders.Get("User-Agent"))
 	placeholder)
 placeholder
+placeholder
+
+func TestHTTPUpstreamDoFallsBackToOfficialGrokAPIOnCLIAccessDenied(t *testing.T) {
+	upstream := NewHTTPUpstream(nil)
+	svc, ok := upstream.(*httpUpstreamService)
+	require.True(t, ok)
+
+	const accountID int64 = 4421
+	isolation := svc.getIsolationMode()
+	profile := service.HTTPUpstreamProfileDefault
+	proxyKey := directProxyKey
+	protocolMode := svc.resolveProtocolMode(profile, proxyKey, nil)
+	settings := svc.resolvePoolSettings(isolation, 1)
+	settings = svc.applyProfilePoolSettings(settings, profile)
+	cacheKey := buildCacheKey(isolation, proxyKey, accountID, protocolMode)
+
+	payload := []byte(`{"model":"grok-4.5","input":"hello"placeholder`)
+	var calls int
+	var fallbackBody []byte
+	var fallbackHeaders http.Header
+	svc.clients[cacheKey] = &upstreamClientEntry{
+		client: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			calls++
+			body, err := io.ReadAll(req.Body)
+		placeholder
+			if calls == 1 {
+				require.Equal(t, grokCLIProxyHost, req.URL.Hostname())
+				require.Equal(t, "xai-grok-cli", req.Header.Get("X-XAI-Token-Auth"))
+				return &http.Response{
+					StatusCode: http.StatusForbidden,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(`{"error":"Access denied"placeholder`)),
+					Request:    req,
+			placeholder, nil
+		placeholder
+
+			fallbackBody = body
+			fallbackHeaders = req.Header.Clone()
+			require.Equal(t, grokOfficialAPIHost, req.URL.Hostname())
+			require.Equal(t, "/v1/responses", req.URL.Path)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`{"id":"response-ok"placeholder`)),
+				Request:    req,
+		placeholder, nil
+	placeholder)placeholder,
+		proxyKey:     proxyKey,
+		poolKey:      buildPoolKey(settings, protocolMode),
+		protocolMode: protocolMode,
+placeholder
+
+	req, err := http.NewRequest(http.MethodPost, "https://cli-chat-proxy.grok.com/v1/responses", bytes.NewReader(payload))
+placeholder
+	req.Header.Set("Authorization", "Bearer oauth-token")
+
+	resp, err := svc.Do(req, "", accountID, 1)
+placeholder
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	responseBody, err := io.ReadAll(resp.Body)
+placeholder
+	require.NoError(t, resp.Body.Close())
+	require.JSONEq(t, `{"id":"response-ok"placeholder`, string(responseBody))
+	require.Equal(t, 2, calls)
+	require.Equal(t, payload, fallbackBody)
+	require.Equal(t, "Bearer oauth-token", fallbackHeaders.Get("Authorization"))
+	require.Empty(t, fallbackHeaders.Get("X-XAI-Token-Auth"))
+	require.Empty(t, fallbackHeaders.Get("x-grok-client-version"))
+	require.Empty(t, fallbackHeaders.Get("User-Agent"))
+placeholder
+
+func TestHTTPUpstreamDoDoesNotFallbackForGrokEntitlementDenial(t *testing.T) {
+	transport := &grokAccessDeniedFallbackTransport{
+		base: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusForbidden,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`{"error":"subscription required"placeholder`)),
+				Request:    req,
+		placeholder, nil
+	placeholder),
+placeholder
+	req, err := http.NewRequest(http.MethodPost, "https://cli-chat-proxy.grok.com/v1/responses", strings.NewReader(`{"model":"grok-4.5"placeholder`))
+placeholder
+	req.Header.Set("Authorization", "Bearer oauth-token")
+	req.Header.Set("X-XAI-Token-Auth", "xai-grok-cli")
+
+	resp, err := transport.RoundTrip(req)
+placeholder
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+placeholder
+	require.NoError(t, resp.Body.Close())
+	require.JSONEq(t, `{"error":"subscription required"placeholder`, string(body))
 placeholder
 
 func TestApplyGrokCLIProxyHeaders(t *testing.T) {

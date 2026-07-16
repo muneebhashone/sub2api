@@ -1020,7 +1020,7 @@ placeholder
 placeholder
 
 	if len(availableModels) > 0 {
-		writeModelsList(c, availableModels)
+		writeModelsList(c, platform, availableModels)
 		return
 placeholder
 
@@ -1040,6 +1040,10 @@ placeholder
 	placeholder)
 		return
 placeholder
+	if platform == service.PlatformGrok {
+		writeGrokModelsList(c, xai.DefaultModelIDs())
+		return
+placeholder
 
 	c.JSON(http.StatusOK, gin.H{
 		"object": "list",
@@ -1047,7 +1051,11 @@ placeholder
 placeholder)
 placeholder
 
-func writeModelsList(c *gin.Context, modelIDs []string) {
+func writeModelsList(c *gin.Context, platform string, modelIDs []string) {
+	if platform == service.PlatformGrok {
+		writeGrokModelsList(c, modelIDs)
+		return
+placeholder
 	models := make([]claude.Model, 0, len(modelIDs))
 	for _, modelID := range modelIDs {
 		models = append(models, claude.Model{
@@ -1068,7 +1076,66 @@ func writeCustomModelsList(c *gin.Context, platform string, modelIDs []string) {
 		writeOpenAIModelsList(c, modelIDs)
 		return
 placeholder
-	writeModelsList(c, modelIDs)
+	writeModelsList(c, platform, modelIDs)
+placeholder
+
+type grokReasoningEffortOption struct {
+	Value   string `json:"value"`
+	Label   string `json:"label"`
+	Default bool   `json:"default,omitempty"`
+placeholder
+
+type grokModelListItem struct {
+	xai.Model
+	SupportsReasoningEffort bool                        `json:"supportsReasoningEffort,omitempty"`
+	ReasoningEffort         string                      `json:"reasoningEffort,omitempty"`
+	ReasoningEfforts        []grokReasoningEffortOption `json:"reasoningEfforts,omitempty"`
+placeholder
+
+func writeGrokModelsList(c *gin.Context, modelIDs []string) {
+	defaults := xai.DefaultModels()
+	defaultsByID := make(map[string]xai.Model, len(defaults))
+	for _, model := range defaults {
+		defaultsByID[model.ID] = model
+placeholder
+
+	models := make([]grokModelListItem, 0, len(modelIDs))
+	for _, modelID := range modelIDs {
+		model, ok := defaultsByID[modelID]
+		if !ok {
+			model = xai.Model{
+				ID:          modelID,
+				Object:      "model",
+				OwnedBy:     "xai",
+				DisplayName: modelID,
+		placeholder
+	placeholder
+		item := grokModelListItem{Model: modelplaceholder
+		if grokModelSupportsConfigurableReasoning(modelID) {
+			item.SupportsReasoningEffort = true
+			item.ReasoningEffort = "high"
+			item.ReasoningEfforts = []grokReasoningEffortOption{
+				{Value: "low", Label: "Low"placeholder,
+				{Value: "medium", Label: "Medium"placeholder,
+				{Value: "high", Label: "High", Default: trueplaceholder,
+		placeholder
+	placeholder
+		models = append(models, item)
+placeholder
+
+	c.JSON(http.StatusOK, gin.H{
+		"object": "list",
+		"data":   models,
+placeholder)
+placeholder
+
+func grokModelSupportsConfigurableReasoning(modelID string) bool {
+	switch strings.ToLower(strings.TrimSpace(modelID)) {
+	case "grok-4.5", "grok-4.5-latest", "grok", "grok-latest", "grok-build", "grok-build-latest", "grok-build-0.1":
+		return true
+	default:
+		return false
+placeholder
 placeholder
 
 func writeOpenAIModelsList(c *gin.Context, modelIDs []string) {
