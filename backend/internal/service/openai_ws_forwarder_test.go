@@ -1,9 +1,13 @@
 package service
 
 import (
+	"context"
+	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
@@ -105,6 +109,81 @@ func TestOpenAIWSCyberPolicyMark_NonCyberPayload(t *testing.T) {
 
 	hit, _, _ := detectOpenAICyberPolicy(payload)
 	require.False(t, hit, "detectOpenAICyberPolicy should return false for non-cyber_policy error code")
+placeholder
+
+func TestOpenAIForwardResultSucceededForScheduling_TerminalEvents(t *testing.T) {
+	tests := []struct {
+		name     string
+		result   *OpenAIForwardResult
+		expected bool
+placeholder{
+		{name: "nil legacy result", result: nil, expected: trueplaceholder,
+		{name: "non websocket zero value", result: &OpenAIForwardResult{placeholder, expected: trueplaceholder,
+		{name: "websocket legacy empty terminal", result: &OpenAIForwardResult{OpenAIWSMode: trueplaceholder, expected: trueplaceholder,
+		{name: "completed", result: &OpenAIForwardResult{OpenAIWSMode: true, UpstreamTerminalEvent: "response.completed"placeholder, expected: trueplaceholder,
+		{name: "done", result: &OpenAIForwardResult{OpenAIWSMode: true, UpstreamTerminalEvent: "response.done"placeholder, expected: trueplaceholder,
+		{name: "failed", result: &OpenAIForwardResult{OpenAIWSMode: true, UpstreamTerminalEvent: "response.failed"placeholder, expected: falseplaceholder,
+		{name: "incomplete", result: &OpenAIForwardResult{OpenAIWSMode: true, UpstreamTerminalEvent: "response.incomplete"placeholder, expected: falseplaceholder,
+		{name: "cancelled", result: &OpenAIForwardResult{OpenAIWSMode: true, UpstreamTerminalEvent: "response.cancelled"placeholder, expected: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, tt.result.SucceededForScheduling())
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIWSTerminalEvent_ResponseFailedRecordsModelTransient(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	svc.rateLimitService = NewRateLimitService(transientCooldownAccountRepo{placeholder, nil, &config.Config{placeholder, nil, nil)
+	account := &Account{ID: 5201, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+	payload := []byte(`{"type":"response.failed","response":{"error":{"code":"server_error","message":"Internal error"placeholderplaceholderplaceholder`)
+
+	for range 2 {
+		terminalEvent := svc.handleOpenAIWSTerminalTransientFailure(context.Background(), account, "gpt-5.5", http.Header{placeholder, payload)
+		require.Equal(t, "response.failed", terminalEvent)
+placeholder
+
+	require.True(t, svc.isOpenAIAccountModelRuntimeBlocked(account, "gpt-5.5"))
+placeholder
+
+func TestOpenAIWSErrorEvent_ServerErrorRecordsModelTransient(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	svc.rateLimitService = NewRateLimitService(transientCooldownAccountRepo{placeholder, nil, &config.Config{placeholder, nil, nil)
+	account := &Account{ID: 5203, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+	payload := []byte(`{"type":"error","error":{"code":"server_error","type":"server_error","message":"Internal error"placeholderplaceholder`)
+
+	for range 2 {
+		svc.handleOpenAIWSErrorEventTransientFailure(context.Background(), account, "gpt-5.5", http.Header{placeholder, payload)
+placeholder
+
+	require.True(t, svc.isOpenAIAccountModelRuntimeBlocked(account, "gpt-5.5"))
+placeholder
+
+func TestOpenAIWSPayloadTransientStatus_Explicit529IsNotModelTransient(t *testing.T) {
+	payload := []byte(`{"type":"response.failed","response":{"error":{"status_code":529,"code":"server_error","message":"overloaded"placeholderplaceholderplaceholder`)
+
+	require.Zero(t, openAIWSPayloadTransientStatus(payload))
+placeholder
+
+func TestOpenAIWSDial5xxRecordsModelTransient(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	svc.rateLimitService = NewRateLimitService(transientCooldownAccountRepo{placeholder, nil, &config.Config{placeholder, nil, nil)
+	account := &Account{ID: 5202, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+	dialErr := &openAIWSDialError{
+		StatusCode:      http.StatusBadGateway,
+		ResponseHeaders: http.Header{"X-Request-Id": []string{"req-ws-502"placeholderplaceholder,
+		ResponseBody:    []byte(`{"error":{"message":"bad gateway"placeholderplaceholder`),
+placeholder
+
+	for range 2 {
+		svc.handleOpenAIWSDialTransientFailure(context.Background(), account, "gpt-5.5", dialErr)
+placeholder
+
+	require.Eventually(t, func() bool {
+		return svc.isOpenAIAccountModelRuntimeBlocked(account, "gpt-5.5")
+placeholder, time.Second, 10*time.Millisecond)
 placeholder
 
 // TestIsOpenAIWSTokenEvent_DisjointWithTerminal 守护「token 事件集合与终止事件集合互斥」的不变量。
