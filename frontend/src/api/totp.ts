@@ -71,13 +71,32 @@ export async function disable(request: TotpDisableRequest): Promise<{ success: b
   return data
 placeholder
 
+/**
+ * Step-up verification response
+ */
+export interface TotpStepUpResponse {
+  verified: boolean
+  expires_in: number
+placeholder
+
+/**
+ * Verify a TOTP code to grant the current session a short-lived step-up
+ * (sudo) window for sensitive operations (account export, DB backup download...).
+ * @param code - 6-digit TOTP code
+ */
+export async function stepUp(code: string): Promise<TotpStepUpResponse> {
+  const { data placeholder = await apiClient.post<TotpStepUpResponse>('/user/totp/step-up', { code placeholder)
+  return data
+placeholder
+
 export const totpAPI = {
   getStatus,
   getVerificationMethod,
   sendVerifyCode,
   initiateSetup,
   enable,
-  disable
+  disable,
+  stepUp
 placeholder
 
 export default totpAPI

@@ -3360,6 +3360,14 @@ func (s *oauthPendingFlowTotpCacheStub) ClearVerifyAttempts(_ context.Context, u
 	return nil
 placeholder
 
+func (s *oauthPendingFlowTotpCacheStub) SetStepUpGrant(_ context.Context, _ int64, _ string, _ time.Duration) error {
+	return nil
+placeholder
+
+func (s *oauthPendingFlowTotpCacheStub) HasStepUpGrant(_ context.Context, _ int64, _ string) (bool, error) {
+	return false, nil
+placeholder
+
 type oauthPendingFlowTotpEncryptorStub struct{placeholder
 
 func (oauthPendingFlowTotpEncryptorStub) Encrypt(plaintext string) (string, error) {
