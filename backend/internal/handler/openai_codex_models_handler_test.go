@@ -49,6 +49,7 @@ type codexModelsFailoverHTTPUpstream struct {
 	accountIDs  []int64
 	firstErr    error
 	firstStatus int
+	firstBody   string
 	statuses    map[int64]int
 placeholder
 
@@ -61,6 +62,14 @@ func (u *codexModelsFailoverHTTPUpstream) Do(_ *http.Request, _ string, accountI
 	if accountID == 1 || hasStatus {
 		if u.firstErr != nil {
 			return nil, u.firstErr
+	placeholder
+		if u.firstBody != "" && !hasStatus {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Status:     "200 OK",
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(u.firstBody)),
+		placeholder, nil
 	placeholder
 		if !hasStatus {
 			status = u.firstStatus
@@ -147,6 +156,22 @@ placeholder
 placeholder
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d; body=%s", recorder.Code, http.StatusOK, recorder.Body.String())
+placeholder
+placeholder
+
+func TestCodexModelsFailsOverFromInvalidManifestEnvelope(t *testing.T) {
+	handler, upstream, groupID := newCodexModelsFailoverTestHandler(http.StatusOK)
+	upstream.firstBody = `{"object":"list","data":[]placeholder`
+	recorder := performCodexModelsRequest(t, handler, groupID)
+
+	if got, want := upstream.calls(), []int64{1, 2placeholder; !equalInt64Slices(got, want) {
+		t.Fatalf("upstream account calls: got %v, want %v", got, want)
+placeholder
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status: got %d, want %d; body=%s", recorder.Code, http.StatusOK, recorder.Body.String())
+placeholder
+	if got, want := recorder.Body.String(), `{"models":[{"slug":"gpt-5.6-sol"placeholder]placeholder`; got != want {
+		t.Fatalf("body: got %q, want %q", got, want)
 placeholder
 placeholder
 

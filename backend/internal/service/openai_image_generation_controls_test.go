@@ -649,6 +649,12 @@ placeholder{
 			want:        `{"type":"response.output_item.added","item":{"type":"image_generation_call","status":"generating","result":"image-data"placeholderplaceholder`,
 			wantChanged: false,
 	placeholder,
+		{
+			name:        "done preserves base64 result",
+			input:       `{"type":"response.done","response":{"output":[{"type":"image_generation_call","status":"generating","result":"iVBORw0KGgoAAAANSUhEUg/+=="placeholder]placeholderplaceholder`,
+			want:        `{"type":"response.done","response":{"output":[{"type":"image_generation_call","status":"completed","result":"iVBORw0KGgoAAAANSUhEUg/+=="placeholder]placeholderplaceholder`,
+			wantChanged: true,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {

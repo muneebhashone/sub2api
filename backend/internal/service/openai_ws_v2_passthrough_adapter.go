@@ -212,6 +212,11 @@ placeholder
 	if ctx == nil {
 		ctx = context.Background()
 placeholder
+	if msgType == coderws.MessageText {
+		if normalized, changed := normalizeCompletedImageGenerationStatus(payload); changed {
+			payload = normalized
+	placeholder
+placeholder
 	return c.conn.Write(ctx, msgType, payload)
 placeholder
 
