@@ -960,15 +960,63 @@ placeholder
 		"auto_pause_5h_disabled",
 		"auto_pause_7d_disabled",
 		"model_rate_limits",
+		service.UpstreamBillingProbeExtraKey,
 placeholder
 	filtered := make(map[string]any)
 	for _, key := range keys {
 		if value, ok := extra[key]; ok && value != nil {
+			if key == service.UpstreamBillingProbeExtraKey {
+				filteredProbe := filterSchedulerUpstreamBillingProbe(value)
+				if filteredProbe == nil {
+					continue
+			placeholder
+				value = filteredProbe
+		placeholder
 			filtered[key] = value
 	placeholder
 placeholder
 	if len(filtered) == 0 {
 		return nil
+placeholder
+	return filtered
+placeholder
+
+func filterSchedulerUpstreamBillingProbe(value any) map[string]any {
+	source, ok := value.(map[string]any)
+	if !ok {
+		return nil
+placeholder
+
+	status, ok := source["status"].(string)
+	if !ok || status == "" {
+		return nil
+placeholder
+	filtered := map[string]any{"status": statusplaceholder
+	for _, key := range []string{"received_at", "fresh_until", "next_probe_at"placeholder {
+		if field, exists := source[key]; exists && field != nil {
+			filtered[key] = field
+	placeholder
+placeholder
+	data, ok := source["data"].(map[string]any)
+	if !ok {
+		return filtered
+placeholder
+	filteredData := make(map[string]any)
+	for _, key := range []string{
+		"billing_scope",
+		"resolved_rate_multiplier",
+		"peak_rate_enabled",
+		"peak_start",
+		"peak_end",
+		"peak_rate_multiplier",
+		"timezone",
+placeholder {
+		if field, exists := data[key]; exists && field != nil {
+			filteredData[key] = field
+	placeholder
+placeholder
+	if len(filteredData) > 0 {
+		filtered["data"] = filteredData
 placeholder
 	return filtered
 placeholder

@@ -121,6 +121,7 @@ placeholder
 			service.OpenAIEndpointCapabilityAlphaSearch,
 			false,
 			false,
+			false,
 			service.PlatformOpenAI,
 		)
 		if err != nil || selection == nil || selection.Account == nil {

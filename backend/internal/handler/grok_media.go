@@ -189,6 +189,7 @@ placeholder
 			"",
 			false,
 			false,
+			false,
 			service.PlatformGrok,
 		)
 		if err != nil {

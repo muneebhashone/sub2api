@@ -20,6 +20,7 @@ func TestOpenAIGatewayService_SelectAccountWithScheduler_UsesWSPassthroughSnapsh
 		Status:      StatusActive,
 		Schedulable: true,
 		Concurrency: 10,
+		GroupIDs:    []int64{groupIDplaceholder,
 		Extra: map[string]any{
 			"openai_oauth_responses_websockets_v2_mode": OpenAIWSIngressModePassthrough,
 	placeholder,

@@ -119,6 +119,7 @@ placeholder
 			service.OpenAIEndpointCapabilityEmbeddings,
 			false,
 			false,
+			true,
 		)
 		if err != nil {
 			if failoverClientGone(c) {
