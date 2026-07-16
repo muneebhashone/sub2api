@@ -631,7 +631,7 @@ placeholder
 				"X-Request-Id": []string{"req_img_123"placeholder,
 		placeholder,
 			Body: io.NopCloser(strings.NewReader(
-				"data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1710000000,\"usage\":{\"input_tokens\":11,\"output_tokens\":22,\"input_tokens_details\":{\"cached_tokens\":3placeholder,\"output_tokens_details\":{\"image_tokens\":7placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"images\":3placeholderplaceholder,\"output\":[{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2UtMQ==\",\"revised_prompt\":\"draw a cat 1\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder,{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2UtMg==\",\"revised_prompt\":\"draw a cat 2\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder,{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2UtMw==\",\"revised_prompt\":\"draw a cat 3\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder]placeholderplaceholder\n\n" +
+				"data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1710000000,\"usage\":{\"input_tokens\":11,\"output_tokens\":22,\"input_tokens_details\":{\"cached_tokens\":3placeholder,\"output_tokens_details\":{\"image_tokens\":7placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"input_tokens\":46,\"output_tokens\":2459,\"output_tokens_details\":{\"image_tokens\":placeholder,\"images\":3placeholderplaceholder,\"output\":[{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2UtMQ==\",\"revised_prompt\":\"draw a cat 1\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder,{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2UtMg==\",\"revised_prompt\":\"draw a cat 2\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder,{\"type\":\"image_generation_call\",\"result\":\"aW1hZ2UtMw==\",\"revised_prompt\":\"draw a cat 3\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder]placeholderplaceholder\n\n" +
 					"data: [DONE]\n\n",
 			)),
 	placeholder,
@@ -655,9 +655,9 @@ placeholder
 	require.Equal(t, "gpt-image-2", result.Model)
 	require.Equal(t, "gpt-image-2", result.UpstreamModel)
 	require.Equal(t, 3, result.ImageCount)
-	require.Equal(t, 11, result.Usage.InputTokens)
-	require.Equal(t, 22, result.Usage.OutputTokens)
-	require.Equal(t, 7, result.Usage.ImageOutputTokens)
+	require.Equal(t, 46, result.Usage.InputTokens)
+	require.Equal(t, 2459, result.Usage.OutputTokens)
+	require.Equal(t, 2459, result.Usage.ImageOutputTokens)
 
 	require.NotNil(t, upstream.lastReq)
 	require.Equal(t, chatgptCodexURL, upstream.lastReq.URL.String())
@@ -686,6 +686,81 @@ placeholder
 	require.Equal(t, "aW1hZ2UtMw==", gjson.Get(rec.Body.String(), "data.2.b64_json").String())
 	require.Equal(t, "draw a cat 1", gjson.Get(rec.Body.String(), "data.0.revised_prompt").String())
 	require.Equal(t, "draw a cat 3", gjson.Get(rec.Body.String(), "data.2.revised_prompt").String())
+placeholder
+
+func TestParseOpenAIImagesSSEUsageBytes_ToolUsagePrecedenceAndFallback(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	fallback := OpenAIUsage{InputTokens: 3, OutputTokens: 4, ImageOutputTokens: 2placeholder
+	tests := []struct {
+		name      string
+		toolUsage string
+		want      OpenAIUsage
+placeholder{
+		{
+			name:      "valid tool usage takes atomic precedence",
+			toolUsage: `{"input_tokens":4.6e1,"output_tokens":2459e0,"output_tokens_details":{"image_tokens":placeholder`,
+			want:      OpenAIUsage{InputTokens: 46, OutputTokens: 2459, ImageOutputTokens: placeholder,
+	placeholder,
+		{name: "absent", want: fallbackplaceholder,
+		{name: "malformed field", toolUsage: `{"input_tokens":"46","output_tokens":2459,"output_tokens_details":{"image_tokens":placeholderplaceholder`, want: fallbackplaceholder,
+		{name: "fractional field", toolUsage: `{"input_tokens":46,"output_tokens":2459.5,"output_tokens_details":{"image_tokens":placeholderplaceholder`, want: fallbackplaceholder,
+		{name: "negative field", toolUsage: `{"input_tokens":46,"output_tokens":2459,"output_tokens_details":{"image_tokens":-1placeholderplaceholder`, want: fallbackplaceholder,
+		{name: "overflow field", toolUsage: `{"input_tokens":46,"output_tokens":9223372036854775808,"output_tokens_details":{"image_tokens":placeholderplaceholder`, want: fallbackplaceholder,
+		{name: "incomplete object", toolUsage: `{"input_tokens":46,"output_tokens":placeholder`, want: fallbackplaceholder,
+		{name: "hostile huge exponent", toolUsage: `{"input_tokens":1e1000000000,"output_tokens":2459,"output_tokens_details":{"image_tokens":placeholderplaceholder`, want: fallbackplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			toolUsageField := ""
+			if tt.toolUsage != "" {
+				toolUsageField = `,"tool_usage":{"image_gen":` + tt.toolUsage + `placeholder`
+		placeholder
+			payload := []byte(`{"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":4,"output_tokens_details":{"image_tokens":2placeholderplaceholder` + toolUsageField + `placeholderplaceholder`)
+			var got OpenAIUsage
+			svc.parseOpenAIImagesSSEUsageBytes(payload, &got)
+			require.Equal(t, tt.want, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestParseOpenAIImagesSSEUsageBytes_MalformedCompletedDoesNotOverrideUsage(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	var usage OpenAIUsage
+
+	svc.parseOpenAIImagesSSEUsageBytes([]byte(`{"type":"response.output_item.done","item":{"type":"image_generation_call","result":"aW1hZ2U="placeholderplaceholder`), &usage)
+	svc.parseOpenAIImagesSSEUsageBytes([]byte(`{"type":"response.completed","response":{"usage":{"input_tokens":3,"output_tokens":4,"output_tokens_details":{"image_tokens":2placeholderplaceholderplaceholderplaceholder`), &usage)
+	svc.parseOpenAIImagesSSEUsageBytes([]byte(`{"type":"response.completed","response":{"tool_usage":{"image_gen":{"input_tokens":46,"output_tokens":2459,"output_tokens_details":{"image_tokens":placeholderplaceholderplaceholderplaceholderplaceholder trailing`), &usage)
+
+	require.Equal(t, OpenAIUsage{InputTokens: 3, OutputTokens: 4, ImageOutputTokens: 2placeholder, usage)
+placeholder
+
+func TestBoundedJSONNonNegativeInt(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want int
+		ok   bool
+placeholder{
+		{name: "scale reduction before accumulation", raw: `10000000000000000000e-19`, want: 1, ok: trueplaceholder,
+		{name: "decimal scale reduction", raw: `10000000000000000000.0e-19`, want: 1, ok: trueplaceholder,
+		{name: "fractional after scale reduction", raw: `10000000000000000001e-19`, ok: falseplaceholder,
+		{name: "overflow after scale reduction", raw: `92233720368547758080e-1`, ok: falseplaceholder,
+		{name: "zero with negative exponent", raw: `0e-100`, want: 0, ok: trueplaceholder,
+		{name: "zero beyond exponent bound", raw: `0e101`, want: 0, ok: trueplaceholder,
+		{name: "zero padded decimal beyond exponent bound", raw: `0.000000e+000000000000000000000000000000000000000000000000101`, want: 0, ok: trueplaceholder,
+		{name: "zero padded exponent", raw: `1e0000`, want: 1, ok: trueplaceholder,
+		{name: "negative zero syntax", raw: `-0e101`, ok: falseplaceholder,
+		{name: "hostile exponent", raw: `1e-1000`, ok: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := boundedJSONNonNegativeInt(gjson.Parse(tt.raw))
+			require.Equal(t, tt.ok, ok)
+			require.Equal(t, tt.want, got)
+	placeholder)
+placeholder
 placeholder
 
 func TestOpenAIGatewayServiceForwardImages_OAuthUpstreamHTTPErrorSurfacesRealError(t *testing.T) {
@@ -1244,7 +1319,7 @@ placeholder
 			Body: io.NopCloser(strings.NewReader(
 				"data: {\"type\":\"response.created\",\"response\":{\"created_at\":1710000001,\"tools\":[{\"type\":\"image_generation\",\"model\":\"gpt-image-2\",\"background\":\"auto\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder]placeholderplaceholder\n\n" +
 					"data: {\"type\":\"response.image_generation_call.partial_image\",\"partial_image_b64\":\"cGFydGlhbA==\",\"partial_image_index\":0,\"output_format\":\"png\",\"background\":\"auto\"placeholder\n\n" +
-					"data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1710000001,\"usage\":{\"input_tokens\":5,\"output_tokens\":9,\"output_tokens_details\":{\"image_tokens\":4placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"images\":1placeholderplaceholder,\"tools\":[{\"type\":\"image_generation\",\"model\":\"gpt-image-2\",\"background\":\"auto\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder],\"output\":[{\"type\":\"image_generation_call\",\"result\":\"ZmluYWw=\",\"output_format\":\"png\"placeholder]placeholderplaceholder\n\n" +
+					"data: {\"type\":\"response.completed\",\"response\":{\"created_at\":1710000001,\"usage\":{\"input_tokens\":5,\"output_tokens\":9,\"output_tokens_details\":{\"image_tokens\":4placeholderplaceholder,\"tool_usage\":{\"image_gen\":{\"input_tokens\":46,\"output_tokens\":2459,\"output_tokens_details\":{\"image_tokens\":placeholder,\"images\":1placeholderplaceholder,\"tools\":[{\"type\":\"image_generation\",\"model\":\"gpt-image-2\",\"background\":\"auto\",\"output_format\":\"png\",\"quality\":\"high\",\"size\":\"1024x1024\"placeholder],\"output\":[{\"type\":\"image_generation_call\",\"result\":\"ZmluYWw=\",\"output_format\":\"png\"placeholder]placeholderplaceholder\n\n" +
 					"data: [DONE]\n\n",
 			)),
 	placeholder,
@@ -1266,6 +1341,7 @@ placeholder
 	require.NotNil(t, result)
 	require.True(t, result.Stream)
 	require.Equal(t, 1, result.ImageCount)
+	require.Equal(t, OpenAIUsage{InputTokens: 46, OutputTokens: 2459, ImageOutputTokens: placeholder, result.Usage)
 	events := parseOpenAIImageTestSSEEvents(rec.Body.String())
 	partial, ok := findOpenAIImageTestSSEEvent(events, "image_generation.partial_image")
 	require.True(t, ok)
@@ -1290,7 +1366,7 @@ placeholder
 	require.Equal(t, "high", gjson.Get(completed.Data, "quality").String())
 	require.Equal(t, "1024x1024", gjson.Get(completed.Data, "size").String())
 	require.Equal(t, "auto", gjson.Get(completed.Data, "background").String())
-	require.JSONEq(t, `{"images":1placeholder`, gjson.Get(completed.Data, "usage").Raw)
+	require.JSONEq(t, `{"input_tokens":46,"output_tokens":2459,"output_tokens_details":{"image_tokens":placeholder,"images":1placeholder`, gjson.Get(completed.Data, "usage").Raw)
 	require.False(t, gjson.Get(completed.Data, "revised_prompt").Exists())
 placeholder
 
