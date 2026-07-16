@@ -28,6 +28,7 @@ placeholder
 		&handler.Handlers{
 			Gateway:       &handler.GatewayHandler{placeholder,
 			OpenAIGateway: &handler.OpenAIGatewayHandler{placeholder,
+			AsyncImage:    handler.NewAsyncImageHandler(nil, nil),
 	placeholder,
 		servermiddleware.APIKeyAuthMiddleware(func(c *gin.Context) {
 			groupID := int64(1)
@@ -110,6 +111,25 @@ placeholder {
 
 		router.ServeHTTP(w, req)
 		require.NotEqual(t, http.StatusNotFound, w.Code, "path=%s should hit OpenAI images handler", path)
+placeholder
+placeholder
+
+func TestGatewayRoutesAsyncImagesPathsAreRegistered(t *testing.T) {
+	router := newGatewayRoutesTestRouter()
+	registered := make(map[string]bool)
+	for _, route := range router.Routes() {
+		registered[route.Method+" "+route.Path] = true
+placeholder
+
+	for _, route := range []string{
+		"POST /v1/images/generations/async",
+		"POST /v1/images/edits/async",
+		"GET /v1/images/tasks/:task_id",
+		"POST /images/generations/async",
+		"POST /images/edits/async",
+		"GET /images/tasks/:task_id",
+placeholder {
+		require.True(t, registered[route], "%s should be registered", route)
 placeholder
 placeholder
 
