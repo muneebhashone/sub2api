@@ -645,6 +645,7 @@ placeholder{
 		{"output_price", p.OutputPriceplaceholder,
 		{"cache_write_price", p.CacheWritePriceplaceholder,
 		{"cache_read_price", p.CacheReadPriceplaceholder,
+		{"image_input_price", p.ImageInputPriceplaceholder,
 		{"image_output_price", p.ImageOutputPriceplaceholder,
 		{"per_request_price", p.PerRequestPriceplaceholder,
 placeholder

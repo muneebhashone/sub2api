@@ -7,18 +7,23 @@ import (
 	"strings"
 )
 
-// normalizeOpenAIResponsesLiteTools converts private namespace declarations
-// into the input.additional_tools carrier required by Responses Lite. Other
-// top-level tools must belong to the small set accepted by the Lite endpoint;
-// rejecting unsupported hosted tools is intentional because silently dropping
-// them would change the client's requested behavior.
+// normalizeOpenAIResponsesLiteTools applies the Responses Lite request
+// contract: reasoning must cover all turns, and private namespace declarations
+// use the input.additional_tools carrier. Other top-level tools must belong to
+// the small set accepted by the Lite endpoint; rejecting unsupported hosted
+// tools is intentional because silently dropping them would change behavior.
 func normalizeOpenAIResponsesLiteTools(reqBody map[string]any) (bool, error) {
 	if reqBody == nil {
 		return false, nil
 placeholder
+	if rawReasoning, exists := reqBody["reasoning"]; exists && rawReasoning != nil {
+		if _, ok := rawReasoning.(map[string]any); !ok {
+			return false, fmt.Errorf("responses Lite requires reasoning to be an object")
+	placeholder
+placeholder
 	rawTools, exists := reqBody["tools"]
 	if !exists || rawTools == nil {
-		return false, nil
+		return ensureOpenAIResponsesLiteReasoningContext(reqBody)
 placeholder
 	tools, ok := rawTools.([]any)
 	if !ok {
@@ -52,11 +57,14 @@ placeholder
 	placeholder
 placeholder
 	if len(namespaceTools) == 0 {
-		return false, nil
+		return ensureOpenAIResponsesLiteReasoningContext(reqBody)
 placeholder
 
 	input, err := appendOpenAIResponsesLiteAdditionalTools(reqBody["input"], namespaceTools)
 	if err != nil {
+		return false, err
+placeholder
+	if _, err := ensureOpenAIResponsesLiteReasoningContext(reqBody); err != nil {
 		return false, err
 placeholder
 	reqBody["input"] = input
@@ -65,6 +73,23 @@ placeholder
 placeholder else {
 		reqBody["tools"] = topLevelTools
 placeholder
+	return true, nil
+placeholder
+
+func ensureOpenAIResponsesLiteReasoningContext(reqBody map[string]any) (bool, error) {
+	rawReasoning, exists := reqBody["reasoning"]
+	if !exists || rawReasoning == nil {
+		reqBody["reasoning"] = map[string]any{"context": "all_turns"placeholder
+		return true, nil
+placeholder
+	reasoning, ok := rawReasoning.(map[string]any)
+	if !ok {
+		return false, fmt.Errorf("responses Lite requires reasoning to be an object")
+placeholder
+	if context, ok := reasoning["context"].(string); ok && context == "all_turns" {
+		return false, nil
+placeholder
+	reasoning["context"] = "all_turns"
 	return true, nil
 placeholder
 

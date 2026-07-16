@@ -1072,6 +1072,165 @@ placeholder
 	return true
 placeholder
 
+func (s *OpenAIGatewayService) parseOpenAIImagesSSEUsageBytes(data []byte, usage *OpenAIUsage) {
+	s.parseSSEUsageBytes(data, usage)
+	if usage == nil || !gjson.ValidBytes(data) || gjson.GetBytes(data, "type").String() != "response.completed" {
+		return
+placeholder
+	if toolUsage, ok := openAIImagesToolUsageFromGJSON(gjson.GetBytes(data, "response.tool_usage.image_gen")); ok {
+		*usage = toolUsage
+placeholder
+placeholder
+
+func openAIImagesToolUsageFromGJSON(value gjson.Result) (OpenAIUsage, bool) {
+	if !value.Exists() || !value.IsObject() {
+		return OpenAIUsage{placeholder, false
+placeholder
+	inputTokens, inputOK := boundedJSONNonNegativeInt(value.Get("input_tokens"))
+	outputTokens, outputOK := boundedJSONNonNegativeInt(value.Get("output_tokens"))
+	imageOutputTokens, imageOutputOK := boundedJSONNonNegativeInt(value.Get("output_tokens_details.image_tokens"))
+	if !inputOK || !outputOK || !imageOutputOK {
+		return OpenAIUsage{placeholder, false
+placeholder
+	return OpenAIUsage{
+		InputTokens:       inputTokens,
+		OutputTokens:      outputTokens,
+		ImageOutputTokens: imageOutputTokens,
+placeholder, true
+placeholder
+
+// boundedJSONNonNegativeInt parses integral JSON exponent notation without
+// invoking an arbitrary-precision parser on an upstream-controlled exponent.
+func boundedJSONNonNegativeInt(value gjson.Result) (int, bool) {
+	if !value.Exists() || value.Type != gjson.Number {
+		return 0, false
+placeholder
+	raw := value.Raw
+	if len(raw) == 0 || len(raw) > 64 || raw[0] == '-' {
+		return 0, false
+placeholder
+
+	mantissaEnd := len(raw)
+	for i, c := range raw {
+		if c != 'e' && c != 'E' {
+			continue
+	placeholder
+		mantissaEnd = i
+		break
+placeholder
+
+	digits := raw[:mantissaEnd]
+	fractionDigits := 0
+	digitCount := 0
+	dotSeen := false
+	mantissaIsZero := true
+	for _, c := range digits {
+		switch {
+		case c == '.' && !dotSeen:
+			dotSeen = true
+		case c >= '0' && c <= '9':
+			digitCount++
+			mantissaIsZero = mantissaIsZero && c == '0'
+			if dotSeen {
+				fractionDigits++
+		placeholder
+		default:
+			return 0, false
+	placeholder
+placeholder
+
+	exponent := 0
+	if mantissaEnd < len(raw) {
+		exponentRaw := raw[mantissaEnd+1:]
+		negative := false
+		if len(exponentRaw) > 0 && (exponentRaw[0] == '+' || exponentRaw[0] == '-') {
+			negative = exponentRaw[0] == '-'
+			exponentRaw = exponentRaw[1:]
+	placeholder
+		if len(exponentRaw) == 0 {
+			return 0, false
+	placeholder
+		for len(exponentRaw) > 1 && exponentRaw[0] == '0' {
+			exponentRaw = exponentRaw[1:]
+	placeholder
+		for _, digit := range exponentRaw {
+			if digit < '0' || digit > '9' {
+				return 0, false
+		placeholder
+	placeholder
+		if mantissaIsZero {
+			return 0, true
+	placeholder
+		if len(exponentRaw) > 3 {
+			return 0, false
+	placeholder
+		for _, digit := range exponentRaw {
+			exponent = exponent*10 + int(digit-'0')
+	placeholder
+		if exponent > 100 {
+			return 0, false
+	placeholder
+		if negative {
+			exponent = -exponent
+	placeholder
+placeholder
+
+	trailingZeros := exponent - fractionDigits
+	scaleReduction := 0
+	if trailingZeros < 0 {
+		scaleReduction = -trailingZeros
+		remaining := scaleReduction
+		allZeros := true
+		for i := len(digits) - 1; i >= 0; i-- {
+			if digits[i] == '.' {
+				continue
+		placeholder
+			if digits[i] != '0' {
+				allZeros = false
+				if remaining > 0 {
+					return 0, false
+			placeholder
+		placeholder
+			if remaining > 0 {
+				remaining--
+		placeholder
+	placeholder
+		if remaining > 0 {
+			if allZeros {
+				return 0, true
+		placeholder
+			return 0, false
+	placeholder
+placeholder
+
+	maxInt := int(^uint(0) >> 1)
+	parsed := 0
+	digitsToAccumulate := digitCount - scaleReduction
+	for _, c := range digits {
+		if c == '.' {
+			continue
+	placeholder
+		if digitsToAccumulate <= 0 {
+			break
+	placeholder
+		if parsed > (maxInt-int(c-'0'))/10 {
+			return 0, false
+	placeholder
+		parsed = parsed*10 + int(c-'0')
+		digitsToAccumulate--
+placeholder
+	if trailingZeros < 0 {
+		return parsed, true
+placeholder
+	for ; trailingZeros > 0; trailingZeros-- {
+		if parsed > maxInt/10 {
+			return 0, false
+	placeholder
+		parsed *= 10
+placeholder
+	return parsed, true
+placeholder
+
 func (s *OpenAIGatewayService) handleOpenAIImagesOAuthNonStreamingResponse(
 	resp *http.Response,
 	c *gin.Context,
@@ -1085,7 +1244,7 @@ placeholder
 
 	var usage OpenAIUsage
 	forEachOpenAISSEDataPayload(string(body), func(data []byte) {
-		s.parseSSEUsageBytes(data, &usage)
+		s.parseOpenAIImagesSSEUsageBytes(data, &usage)
 placeholder)
 	results, createdAt, usageRaw, firstMeta, _, err := collectOpenAIImagesFromResponsesBody(body)
 	if err != nil {
@@ -1192,7 +1351,7 @@ placeholder
 			ms := int(time.Since(startTime).Milliseconds())
 			firstTokenMs = &ms
 	placeholder
-		s.parseSSEUsageBytes(dataBytes, &usage)
+		s.parseOpenAIImagesSSEUsageBytes(dataBytes, &usage)
 		if !gjson.ValidBytes(dataBytes) {
 			return
 	placeholder

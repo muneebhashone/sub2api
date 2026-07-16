@@ -659,7 +659,7 @@ placeholder
 		_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 		return nil
 placeholder
-	if s.isOpenAIAccountRuntimeBlocked(account) {
+	if s.isOpenAIAccountRequestRuntimeBlocked(account, requestedModel) {
 		_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 		return nil
 placeholder
@@ -863,7 +863,7 @@ placeholder
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 				placeholder else if !s.openAIAccountMatchesSchedulingGroup(account, groupID) {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
-				placeholder else if s.isOpenAIAccountRuntimeBlocked(account) {
+				placeholder else if s.isOpenAIAccountRequestRuntimeBlocked(account, requestedModel) {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
 				placeholder else if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, account, requestedModel, requireCompact) {
 						_ = s.deleteStickySessionAccountID(ctx, groupID, sessionHash)
@@ -926,7 +926,7 @@ placeholder
 		if !parentHealthyForShadow(acc, parentLookupL2) {
 			continue
 	placeholder
-		if s.isOpenAIAccountRuntimeBlocked(acc) {
+		if s.isOpenAIAccountRequestRuntimeBlocked(acc, requestedModel) {
 			continue
 	placeholder
 		if needsUpstreamCheck && s.isUpstreamModelRestrictedByChannel(ctx, *groupID, acc, requestedModel, requireCompact) {
@@ -1180,7 +1180,7 @@ placeholder
 	if !parentHealthyForShadow(fresh, s.parentAccountLookup(ctx)) {
 		return nil
 placeholder
-	if s.isOpenAIAccountRuntimeBlocked(fresh) {
+	if s.isOpenAIAccountRequestRuntimeBlocked(fresh, requestedModel) {
 		return nil
 placeholder
 	return fresh
@@ -1228,7 +1228,7 @@ placeholder
 	if !parentHealthyForShadow(latest, s.parentAccountLookup(ctx)) {
 		return nil
 placeholder
-	if s.isOpenAIAccountRuntimeBlocked(latest) {
+	if s.isOpenAIAccountRequestRuntimeBlocked(latest, requestedModel) {
 		return nil
 placeholder
 	return latest

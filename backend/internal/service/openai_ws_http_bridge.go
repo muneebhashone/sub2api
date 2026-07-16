@@ -235,6 +235,9 @@ placeholder
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, openAIWSHTTPBridgeErrorBodyLimitBytes))
 		if account.Platform == PlatformGrok {
 			s.handleGrokAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+	placeholder else if shouldCooldownOpenAITransientUpstreamError(resp.StatusCode, respBody) {
+			canonicalModel := canonicalOpenAIAccountSchedulingModel(account, originalModel)
+			s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody, canonicalModel)
 	placeholder
 		upstreamMsg := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(respBody)))
 		if upstreamMsg == "" {
@@ -258,6 +261,7 @@ placeholder
 	replayCollector := &openAIWSToolCallReplayCollector{placeholder
 	firstEventType := ""
 	lastEventType := ""
+	upstreamTerminalEvent := ""
 	sawDone := false
 	wroteDownstream := false
 	clientDisconnected := false
@@ -275,17 +279,18 @@ placeholder
 	resultWithUsage := func() *OpenAIForwardResult {
 		imageCount := imageCounter.Count()
 		result := &OpenAIForwardResult{
-			RequestID:       responseID,
-			Usage:           usage,
-			Model:           originalModel,
-			UpstreamModel:   mappedModel,
-			ServiceTier:     extractOpenAIServiceTierFromBody(body),
-			ReasoningEffort: ApplyThinkingEnabledFallback(extractOpenAIReasoningEffortFromBody(body, mappedModel, originalModel), body, mappedModel),
-			Stream:          reqStream,
-			OpenAIWSMode:    true,
-			ResponseHeaders: cloneHeader(resp.Header),
-			Duration:        time.Since(turnStart),
-			FirstTokenMs:    firstTokenMs,
+			RequestID:             responseID,
+			Usage:                 usage,
+			Model:                 originalModel,
+			UpstreamModel:         mappedModel,
+			ServiceTier:           extractOpenAIServiceTierFromBody(body),
+			ReasoningEffort:       ApplyThinkingEnabledFallback(extractOpenAIReasoningEffortFromBody(body, mappedModel, originalModel), body, mappedModel),
+			Stream:                reqStream,
+			OpenAIWSMode:          true,
+			UpstreamTerminalEvent: upstreamTerminalEvent,
+			ResponseHeaders:       cloneHeader(resp.Header),
+			Duration:              time.Since(turnStart),
+			FirstTokenMs:          firstTokenMs,
 	placeholder
 		if replayInput := replayCollector.Items(); len(replayInput) > 0 {
 			result.wsReplayInput = replayInput
@@ -384,6 +389,7 @@ placeholder
 	placeholder
 
 		if eventType == "error" {
+			s.handleOpenAIWSErrorEventTransientFailure(ctx, account, canonicalOpenAIAccountSchedulingModel(account, originalModel), resp.Header, upstreamMessage)
 			errCodeRaw, errTypeRaw, errMsgRaw := parseOpenAIWSErrorEventFields(upstreamMessage)
 			s.persistOpenAIWSRateLimitSignal(ctx, account, resp.Header, upstreamMessage, errCodeRaw, errTypeRaw, errMsgRaw)
 			errMessage := strings.TrimSpace(errMsgRaw)
@@ -393,6 +399,7 @@ placeholder
 			return resultWithUsage(), errors.New(errMessage)
 	placeholder
 		if isOpenAIWSTerminalEvent(eventType) {
+			upstreamTerminalEvent = s.handleOpenAIWSTerminalTransientFailure(ctx, account, canonicalOpenAIAccountSchedulingModel(account, originalModel), resp.Header, upstreamMessage)
 			terminalEventCount++
 			firstTokenMsValue := -1
 			if firstTokenMs != nil {
