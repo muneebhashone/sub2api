@@ -77,7 +77,7 @@ placeholder
 	)
 	gatewayService := service.NewGatewayService(
 		nil, nil, nil, nil, nil, nil, rateRepo, nil, cfg, nil, nil, nil, nil, nil,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 	openAIGatewayService := service.NewOpenAIGatewayService(
 		nil, nil, nil, nil, nil, rateRepo, nil, cfg, nil, nil, nil,
@@ -97,6 +97,7 @@ placeholder
 		&handler.Handlers{Gateway: gatewayHandler, OpenAIGateway: &handler.OpenAIGatewayHandler{placeholderplaceholder,
 		servermiddleware.NewAPIKeyAuthMiddleware(apiKeyService, nil, cfg),
 		apiKeyService,
+		nil,
 		nil,
 		nil,
 		nil,
