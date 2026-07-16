@@ -102,8 +102,8 @@ placeholder
 // Free OAuth requests without native search tools are routed by xAI to the
 // non-cacheable build-free model. For otherwise tool-free requests, add the
 // native tools with tool_choice=none: this selects the cache-capable tier
-// without allowing an actual search. Explicit client tools are handled by the
-// narrower Messages-only mixed-tools policy below.
+// without allowing an actual search. Explicit client function tools are handled by
+// applyGrokFreeMessagesFunctionToolCacheRoute (Messages bridge and native Responses).
 func applyGrokResponsesCacheIdentity(body, intentSourceBody []byte, identity string, injectFreeTierTools bool) ([]byte, error) {
 	identity = strings.TrimSpace(identity)
 	if identity == "" {
@@ -263,17 +263,35 @@ placeholder
 		toolType := strings.TrimSpace(tool.Get("type").String())
 		switch toolType {
 		case "function":
-			if !tool.IsObject() || strings.TrimSpace(tool.Get("name").String()) == "" || tool.Get("function").Exists() {
+			name := strings.TrimSpace(tool.Get("name").String())
+			if !tool.IsObject() || name == "" || tool.Get("function").Exists() {
 				return body, nil
 		placeholder
+			// Grok Build may declare search as function tools. Convert to native
+			// entries so Free OAuth stays cache-capable without duplicate names.
+			if name == "web_search" || name == "x_search" {
+				if present[name] {
+					continue
+			placeholder
+				raw, err := json.Marshal(map[string]string{"type": nameplaceholder)
+				if err != nil {
+					return nil, err
+			placeholder
+				merged = append(merged, raw)
+				present[name] = true
+				continue
+		placeholder
 			hasFunction = true
+			merged = append(merged, json.RawMessage(tool.Raw))
 		case "web_search", "x_search":
-			// Native tools may already be present when this helper is retried.
+			if present[toolType] {
+				continue
+		placeholder
+			merged = append(merged, json.RawMessage(tool.Raw))
+			present[toolType] = true
 		default:
 			return body, nil
 	placeholder
-		merged = append(merged, json.RawMessage(tool.Raw))
-		present[toolType] = true
 placeholder
 	if !hasFunction {
 		return body, nil
