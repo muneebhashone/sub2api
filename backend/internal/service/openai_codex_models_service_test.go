@@ -470,6 +470,81 @@ placeholder
 placeholder
 placeholder
 
+func TestFetchCodexModelsManifestRejectsInvalidEnvelope(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+placeholder{
+		{name: "OpenAI models list", body: `{"object":"list","data":[]placeholder`placeholder,
+		{name: "invalid JSON", body: `{"models":`placeholder,
+		{name: "non-object", body: `[]`placeholder,
+		{name: "null object", body: `null`placeholder,
+		{name: "missing models", body: `{placeholder`placeholder,
+		{name: "models object", body: `{"models":{placeholderplaceholder`placeholder,
+		{name: "models null", body: `{"models":nullplaceholder`placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			upstream := &codexModelsHTTPUpstreamStub{do: func(_ *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(tt.body)),
+			placeholder, nil
+		placeholderplaceholder
+
+			s := newCodexModelsAPIKeyTestService(upstream)
+			_, err := s.FetchCodexModelsManifest(
+				context.Background(),
+				newCodexModelsAPIKeyTestAccount("https://upstream.example"),
+				"0.144.0",
+				"",
+			)
+			if err == nil {
+				t.Fatal("expected invalid manifest error, got nil")
+		placeholder
+			if infraerrors.Reason(err) != "OPENAI_CODEX_MODELS_UPSTREAM_INVALID_MANIFEST" {
+				t.Errorf("error reason: got %q", infraerrors.Reason(err))
+		placeholder
+			if !IsRetryableCodexModelsManifestError(err) {
+				t.Error("invalid upstream manifest must be retryable")
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestFetchCodexModelsManifestAPIKeyDoesNotCacheInvalidEnvelope(t *testing.T) {
+	var calls atomic.Int32
+	upstream := &codexModelsHTTPUpstreamStub{do: func(_ *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+		body := `{"object":"list","data":[]placeholder`
+		if calls.Add(1) > 1 {
+			body = `{"models":[{"slug":"gpt-5.6"placeholder]placeholder`
+	placeholder
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(body)),
+	placeholder, nil
+placeholderplaceholder
+
+	s := newCodexModelsAPIKeyTestService(upstream)
+	account := newCodexModelsAPIKeyTestAccount("https://upstream.example")
+	if _, err := s.FetchCodexModelsManifest(context.Background(), account, "0.144.0", ""); err == nil {
+		t.Fatal("expected invalid manifest error on first fetch")
+placeholder
+	manifest, err := s.FetchCodexModelsManifest(context.Background(), account, "0.144.0", "")
+	if err != nil {
+		t.Fatalf("second fetch returned error: %v", err)
+placeholder
+	if got, want := string(manifest.Body), `{"models":[{"slug":"gpt-5.6"placeholder]placeholder`; got != want {
+		t.Errorf("body: got %q, want %q", got, want)
+placeholder
+	if got := calls.Load(); got != 2 {
+		t.Errorf("upstream calls: got %d, want 2", got)
+placeholder
+placeholder
+
 func TestFetchCodexModelsManifestAPIKeySharedRefreshSurvivesCallerCancellation(t *testing.T) {
 	const manifestBody = `{"models":[{"slug":"gpt-5.6"placeholder]placeholder`
 	var calls atomic.Int32
@@ -693,7 +768,7 @@ func TestFetchCodexModelsManifestAPIKeyCacheBoundsEntriesAndBodySize(t *testing.
 		calls.Add(1)
 		body := `{"models":[]placeholder`
 		if strings.Contains(req.URL.Host, "large") {
-			body = strings.Repeat("x", (1<<20)+1)
+			body = `{"models":[],"padding":"` + strings.Repeat("x", (1<<20)+1) + `"placeholder`
 	placeholder
 		return &http.Response{
 			StatusCode: http.StatusOK,

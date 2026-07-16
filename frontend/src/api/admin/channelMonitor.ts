@@ -157,6 +157,88 @@ export async function create(params: CreateParams): Promise<ChannelMonitor> {
 placeholder
 
 /**
+ * Duplicate a monitor without exposing its stored API key to the browser.
+ * Keep the operation key after ambiguous failures so a retry replays the
+ * original server-side operation instead of creating another monitor.
+ */
+const duplicateOperationKeys = new Map<string, string>()
+
+interface DuplicateOperationScope {
+  adminID: string
+  key: string
+placeholder
+
+function getCurrentAdminID(): string | null {
+  try {
+    const rawUser = globalThis.localStorage?.getItem('auth_user')
+    if (!rawUser) return null
+
+    const user: unknown = JSON.parse(rawUser)
+    if (typeof user !== 'object' || user === null) return null
+
+    const id = (user as { id?: unknown placeholder).id
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) return null
+    return String(id)
+  placeholder catch {
+    return null
+  placeholder
+placeholder
+
+function duplicateOperationScope(id: number): DuplicateOperationScope | null {
+  const adminID = getCurrentAdminID()
+  if (!adminID) return null
+
+  return {
+    adminID,
+    key: `sub2api:admin:channel-monitor-duplicate:${adminIDplaceholder:${idplaceholder`,
+  placeholder
+placeholder
+
+function getStoredDuplicateOperationKey(storageKey: string): string | null {
+  try {
+    return globalThis.sessionStorage?.getItem(storageKey) ?? null
+  placeholder catch {
+    return null
+  placeholder
+placeholder
+
+function storeDuplicateOperationKey(storageKey: string, key: string | null): void {
+  try {
+    if (key) globalThis.sessionStorage?.setItem(storageKey, key)
+    else globalThis.sessionStorage?.removeItem(storageKey)
+  placeholder catch {
+    // In-memory retry protection still works when browser storage is unavailable.
+  placeholder
+placeholder
+
+export async function duplicate(id: number): Promise<ChannelMonitor> {
+  const scope = duplicateOperationScope(id)
+  let idempotencyKey = scope
+    ? duplicateOperationKeys.get(scope.key) ?? getStoredDuplicateOperationKey(scope.key)
+    : null
+  if (!idempotencyKey) {
+    const requestID = globalThis.crypto?.randomUUID?.() ?? `${Date.now()placeholder-${Math.random().toString(36).slice(2)placeholder`
+    idempotencyKey = `channel-monitor-duplicate-${scope?.adminID ?? 'unknown-admin'placeholder-${idplaceholder-${requestIDplaceholder`
+  placeholder
+  if (scope) {
+    duplicateOperationKeys.set(scope.key, idempotencyKey)
+    storeDuplicateOperationKey(scope.key, idempotencyKey)
+  placeholder
+
+  const { data placeholder = await apiClient.post<ChannelMonitor>(
+    `/admin/channel-monitors/${idplaceholder/duplicate`,
+    undefined,
+    { headers: { 'Idempotency-Key': idempotencyKey placeholder placeholder
+  )
+
+  if (scope) {
+    duplicateOperationKeys.delete(scope.key)
+    storeDuplicateOperationKey(scope.key, null)
+  placeholder
+  return data
+placeholder
+
+/**
  * Update an existing channel monitor.
  * api_key field: empty string means "do not modify".
  */
@@ -199,6 +281,7 @@ export const channelMonitorAPI = {
   list,
   get,
   create,
+  duplicate,
   update,
   del,
   runNow,

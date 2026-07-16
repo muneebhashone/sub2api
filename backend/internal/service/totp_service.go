@@ -141,6 +141,31 @@ placeholder
 placeholder, nil
 placeholder
 
+// usesEmailVerification 判断 TOTP 启用/停用时的身份校验方式。
+// 管理员一律使用密码校验：管理员账号的邮箱常为占位地址收不到验证码，
+// 且管理员凭证失守时攻击者往往同时控制通知邮箱，邮箱验证码不构成有效防线。
+// 普通用户维持原有行为：开启邮箱验证时用邮箱验证码，否则用密码。
+func (s *TotpService) usesEmailVerification(ctx context.Context, user *User) bool {
+	return user.Role != RoleAdmin && s.settingService.IsEmailVerifyEnabled(ctx)
+placeholder
+
+// verifyIdentity 按 usesEmailVerification 的结果校验邮箱验证码或密码。
+func (s *TotpService) verifyIdentity(ctx context.Context, user *User, emailCode, password string) error {
+	if s.usesEmailVerification(ctx, user) {
+		if emailCode == "" {
+			return ErrVerifyCodeRequired
+	placeholder
+		return s.emailService.VerifyCode(ctx, user.Email, emailCode)
+placeholder
+	if password == "" {
+		return ErrPasswordRequired
+placeholder
+	if !user.CheckPassword(password) {
+		return ErrPasswordIncorrect
+placeholder
+	return nil
+placeholder
+
 // InitiateSetup starts the TOTP setup process
 // If email verification is enabled, emailCode is required; otherwise password is required
 func (s *TotpService) InitiateSetup(ctx context.Context, userID int64, emailCode, password string) (*TotpSetupResponse, error) {
@@ -159,23 +184,8 @@ placeholder
 		return nil, ErrTotpAlreadyEnabled
 placeholder
 
-	// Verify identity based on email verification setting
-	if s.settingService.IsEmailVerifyEnabled(ctx) {
-		// Email verification enabled - verify email code
-		if emailCode == "" {
-			return nil, ErrVerifyCodeRequired
-	placeholder
-		if err := s.emailService.VerifyCode(ctx, user.Email, emailCode); err != nil {
-			return nil, err
-	placeholder
-placeholder else {
-		// Email verification disabled - verify password
-		if password == "" {
-			return nil, ErrPasswordRequired
-	placeholder
-		if !user.CheckPassword(password) {
-			return nil, ErrPasswordIncorrect
-	placeholder
+	if err := s.verifyIdentity(ctx, user, emailCode, password); err != nil {
+		return nil, err
 placeholder
 
 	// Generate a new TOTP key
@@ -306,23 +316,8 @@ placeholder
 		return ErrTotpNotSetup
 placeholder
 
-	// Verify identity based on email verification setting
-	if s.settingService.IsEmailVerifyEnabled(ctx) {
-		// Email verification enabled - verify email code
-		if emailCode == "" {
-			return ErrVerifyCodeRequired
-	placeholder
-		if err := s.emailService.VerifyCode(ctx, user.Email, emailCode); err != nil {
-			return err
-	placeholder
-placeholder else {
-		// Email verification disabled - verify password
-		if password == "" {
-			return ErrPasswordRequired
-	placeholder
-		if !user.CheckPassword(password) {
-			return ErrPasswordIncorrect
-	placeholder
+	if err := s.verifyIdentity(ctx, user, emailCode, password); err != nil {
+		return err
 placeholder
 
 	// Disable TOTP
@@ -532,12 +527,17 @@ type VerificationMethod struct {
 	Method string `json:"method"` // "email" or "password"
 placeholder
 
-// GetVerificationMethod returns the verification method for TOTP operations
-func (s *TotpService) GetVerificationMethod(ctx context.Context) *VerificationMethod {
-	if s.settingService.IsEmailVerifyEnabled(ctx) {
-		return &VerificationMethod{Method: "email"placeholder
+// GetVerificationMethod returns the verification method for TOTP operations.
+// 与 verifyIdentity 保持同一判定：管理员一律返回 password。
+func (s *TotpService) GetVerificationMethod(ctx context.Context, userID int64) (*VerificationMethod, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
 placeholder
-	return &VerificationMethod{Method: "password"placeholder
+	if s.usesEmailVerification(ctx, user) {
+		return &VerificationMethod{Method: "email"placeholder, nil
+placeholder
+	return &VerificationMethod{Method: "password"placeholder, nil
 placeholder
 
 // SendVerifyCode sends an email verification code for TOTP operations
