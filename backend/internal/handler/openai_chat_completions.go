@@ -80,6 +80,10 @@ placeholder
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", invalidStreamFieldTypeMessage)
 		return
 placeholder
+	if service.IsGPTImageGenerationModel(reqModel) {
+		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "This model is not supported on the Chat Completions endpoint")
+		return
+placeholder
 
 	reqLog = reqLog.With(zap.String("model", reqModel), zap.Bool("stream", reqStream))
 
