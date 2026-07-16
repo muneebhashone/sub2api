@@ -606,6 +606,73 @@ placeholder
 	response.Success(c, gin.H{"affected": affectedplaceholder)
 placeholder
 
+// BatchUpdateLimits overwrites concurrency and/or RPM limits for multiple users.
+// POST /api/v1/admin/users/batch-limits
+type BatchUpdateLimitsRequest struct {
+	UserIDs     []int64 `json:"user_ids"`
+	All         bool    `json:"all"`
+	Concurrency *int    `json:"concurrency" binding:"omitempty,min=0"`
+	RPMLimit    *int    `json:"rpm_limit" binding:"omitempty,min=0"`
+placeholder
+
+func (h *UserHandler) BatchUpdateLimits(c *gin.Context) {
+	var req BatchUpdateLimitsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	if req.Concurrency == nil && req.RPMLimit == nil {
+		response.BadRequest(c, "at least one of concurrency or rpm_limit is required")
+		return
+placeholder
+	if !req.All && len(req.UserIDs) == 0 {
+		response.BadRequest(c, "user_ids is required unless all=true")
+		return
+placeholder
+	if !req.All && len(req.UserIDs) > 500 {
+		response.BadRequest(c, "user_ids cannot exceed 500")
+		return
+placeholder
+
+	userIDs := req.UserIDs
+	if req.All {
+		userIDs = nil
+		page := 1
+		const pageSize = 500
+		for {
+			users, _, err := h.adminService.ListUsers(c.Request.Context(), page, pageSize, service.UserListFilters{placeholder, "id", "asc")
+			if err != nil {
+				response.ErrorFrom(c, err)
+				return
+		placeholder
+			for _, user := range users {
+				userIDs = append(userIDs, user.ID)
+		placeholder
+			if len(users) < pageSize {
+				break
+		placeholder
+			page++
+	placeholder
+placeholder
+
+	if len(userIDs) == 0 {
+		response.Success(c, gin.H{"affected": 0placeholder)
+		return
+placeholder
+
+	affected, err := h.adminService.BatchUpdateLimits(
+		c.Request.Context(),
+		userIDs,
+		req.Concurrency,
+		req.RPMLimit,
+	)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, gin.H{"affected": affectedplaceholder)
+placeholder
+
 // GetUserPlatformQuotas GET /admin/users/:id/platform-quotas
 // admin 视角：D14 lazy 归零 + 暴露 *_window_start 调试字段
 func (h *UserHandler) GetUserPlatformQuotas(c *gin.Context) {

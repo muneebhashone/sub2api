@@ -133,6 +133,9 @@ placeholder
 
 func (s *userRepoStub) BatchSetConcurrency(context.Context, []int64, int) (int, error) { return 0, nil placeholder
 func (s *userRepoStub) BatchAddConcurrency(context.Context, []int64, int) (int, error) { return 0, nil placeholder
+func (s *userRepoStub) BatchUpdateLimits(context.Context, []int64, *int, *int) (int, error) {
+	return 0, nil
+placeholder
 
 func (s *userRepoStub) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	if s.existsErr != nil {
