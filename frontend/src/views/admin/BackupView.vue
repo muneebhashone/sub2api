@@ -285,7 +285,7 @@ import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api'
 import { useAppStore placeholder from '@/stores'
 import type { BackupS3Config, BackupScheduleConfig, BackupRecord placeholder from '@/api/admin/backup'
-import { useStepUp, isStepUpBlocked, stepUpBlockReason placeholder from '@/composables/useStepUp'
+import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason placeholder from '@/composables/useStepUp'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
 
 const { t placeholder = useI18n()
@@ -543,6 +543,10 @@ async function createBackup() {
     backups.value.unshift(record)
     startPolling(record.id)
   placeholder catch (error: any) {
+    if (isStepUpCancelled(error)) {
+      creatingBackup.value = false
+      return
+    placeholder
     if (reportStepUpBlocked(error)) {
       creatingBackup.value = false
       return
@@ -559,8 +563,14 @@ placeholder
 async function downloadBackup(id: string) {
   try {
     const result = await backupStepUp.run(() => adminAPI.backup.getDownloadURL(id))
-    window.open(result.url, '_blank')
+    // 预签名 URL 带 attachment disposition，同页 anchor 导航直接触发下载；
+    // 不用 window.open：step-up 弹窗 await 会耗尽瞬态用户激活，新标签页会被浏览器拦截。
+    const link = document.createElement('a')
+    link.href = result.url
+    link.rel = 'noopener'
+    link.click()
   placeholder catch (error) {
+    if (isStepUpCancelled(error)) return
     if (reportStepUpBlocked(error)) return
     appStore.showError((error as { message?: string placeholder)?.message || t('errors.networkError'))
   placeholder

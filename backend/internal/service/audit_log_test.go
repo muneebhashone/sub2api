@@ -62,6 +62,65 @@ placeholder
 placeholder
 placeholder
 
+// TestRedactAuditBody_AuthoritativeTablesSynced 覆盖曾经漏网的凭证字段：
+// 账号 credentials 敏感子键、支付渠道无分隔符密钥、字符串值内嵌凭证的 proxy_key / custom_key，
+// 以及 camelCase 等命名变体（归一化比对）。
+func TestRedactAuditBody_AuthoritativeTablesSynced(t *testing.T) {
+	raw := []byte(`{
+		"credentials": {
+			"session_key": "sk-session-aaa",
+			"service_account_json": "{\"private_key\":\"pem-body-bbb\"placeholder",
+			"service_account": "sa-blob-ccc"
+	placeholder,
+		"proxy_key": "socks5|1.2.3.4|1080|proxyuser|proxypass-ddd",
+		"custom_key": "sk-custom-eee",
+		"config": {
+			"pkey": "easypay-merchant-fff",
+			"privateKey": "alipay-pem-ggg",
+			"apiv3key": "wxpay-v3-hhh",
+			"SecretKey": "stripe-sk-iii",
+			"webhookSecret": "whsec-jjj"
+	placeholder,
+		"provider_key": "stripe",
+		"name": "instance-1"
+placeholder`)
+	out := RedactAuditBody(raw, "application/json")
+
+	for _, secret := range []string{
+		"sk-session-aaa", "pem-body-bbb", "sa-blob-ccc",
+		"proxypass-ddd", "sk-custom-eee",
+		"easypay-merchant-fff", "alipay-pem-ggg", "wxpay-v3-hhh",
+		"stripe-sk-iii", "whsec-jjj",
+placeholder {
+		if strings.Contains(out, secret) {
+			t.Fatalf("redacted body still contains secret %q: %s", secret, out)
+	placeholder
+placeholder
+	// provider_key 是渠道标识而非密钥，必须保留以便追责。
+	if !strings.Contains(out, `"provider_key":"stripe"`) {
+		t.Fatalf("provider_key should be preserved for accountability: %s", out)
+placeholder
+	if !strings.Contains(out, "instance-1") {
+		t.Fatalf("name should be preserved: %s", out)
+placeholder
+placeholder
+
+// SensitiveCredentialKeys 中的每个键都必须被审计脱敏判定命中（防两表漂移的守卫）。
+func TestAuditSensitiveKeys_CoverCredentialTable(t *testing.T) {
+	for _, k := range SensitiveCredentialKeys {
+		if !isAuditSensitiveBodyKey(k) {
+			t.Fatalf("credential key %q is not covered by audit redaction", k)
+	placeholder
+placeholder
+	for provider, fields := range providerSensitiveConfigFields {
+		for k := range fields {
+			if !isAuditSensitiveBodyKey(k) {
+				t.Fatalf("payment provider %q sensitive field %q is not covered by audit redaction", provider, k)
+		placeholder
+	placeholder
+placeholder
+placeholder
+
 func TestRedactAuditBody_NonJSONOmitted(t *testing.T) {
 	out := RedactAuditBody([]byte("username=admin&password=secret"), "application/x-www-form-urlencoded")
 	if strings.Contains(out, "secret") {

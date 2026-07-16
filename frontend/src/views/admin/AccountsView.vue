@@ -489,7 +489,7 @@ import { adminAPI placeholder from '@/api/admin'
 import { useTableLoader placeholder from '@/composables/useTableLoader'
 import { useSwipeSelect, type SwipeSelectVirtualContext placeholder from '@/composables/useSwipeSelect'
 import { useTableSelection placeholder from '@/composables/useTableSelection'
-import { useStepUp, isStepUpBlocked, stepUpBlockReason placeholder from '@/composables/useStepUp'
+import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason placeholder from '@/composables/useStepUp'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
@@ -1825,7 +1825,9 @@ const handleExportData = async () => {
       appStore.showSuccess(t('admin.accounts.dataExported'))
     placeholder
   placeholder catch (error: any) {
-    if (isStepUpBlocked(error)) {
+    if (isStepUpCancelled(error)) {
+      // 用户主动取消 step-up 验证，静默返回，不弹错误提示。
+    placeholder else if (isStepUpBlocked(error)) {
       appStore.showError(
         stepUpBlockReason(error) === 'STEP_UP_ADMIN_API_KEY_FORBIDDEN'
           ? t('stepUp.adminApiKeyForbidden')
