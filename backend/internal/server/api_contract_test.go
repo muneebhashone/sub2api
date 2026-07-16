@@ -1731,6 +1731,14 @@ func (stubGroupRepo) UpdateSortOrders(ctx context.Context, updates []service.Gro
 	return nil
 placeholder
 
+func (stubGroupRepo) FindByDuplicateOperationID(ctx context.Context, operationID string) (*service.Group, error) {
+	return nil, nil
+placeholder
+
+func (stubGroupRepo) CreateFromSource(ctx context.Context, group *service.Group, sourceGroupID int64) error {
+	return errors.New("not implemented")
+placeholder
+
 type stubAccountRepo struct {
 	bulkUpdateIDs []int64
 placeholder

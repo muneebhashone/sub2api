@@ -928,6 +928,7 @@ placeholder
 		IsExclusive:                     g.IsExclusive,
 		Status:                          g.Status,
 		Hydrated:                        true,
+		DuplicateOperationID:            derefString(g.DuplicateOperationID),
 		SubscriptionType:                g.SubscriptionType,
 		DailyLimitUSD:                   g.DailyLimitUsd,
 		WeeklyLimitUSD:                  g.WeeklyLimitUsd,
