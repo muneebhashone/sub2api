@@ -38,6 +38,7 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_KeepLeaseAcrossT
 
 	captureConn := &openAIWSCaptureConn{
 		events: [][]byte{
+			[]byte(`{"type":"response.output_item.done","item":{"id":"ig_ingress_1","type":"image_generation_call","status":"generating","result":"iVBORw0KGgoAAAANSUhEUg/+=="placeholderplaceholder`),
 			[]byte(`{"type":"response.completed","response":{"id":"resp_ingress_turn_1","model":"gpt-5.1","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
 			[]byte(`{"type":"response.completed","response":{"id":"resp_ingress_turn_2","model":"gpt-5.1","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
 	placeholder,
@@ -138,6 +139,10 @@ placeholder
 placeholder
 
 	writeMessage(`{"type":"response.create","model":"gpt-5.1","stream":falseplaceholder`)
+	firstTurnImageEvent := readMessage()
+	require.Equal(t, "response.output_item.done", gjson.GetBytes(firstTurnImageEvent, "type").String())
+	require.Equal(t, "completed", gjson.GetBytes(firstTurnImageEvent, "item.status").String())
+	require.Equal(t, "iVBORw0KGgoAAAANSUhEUg/+==", gjson.GetBytes(firstTurnImageEvent, "item.result").String())
 	firstTurnEvent := readMessage()
 	require.Equal(t, "response.completed", gjson.GetBytes(firstTurnEvent, "type").String())
 	require.Equal(t, "resp_ingress_turn_1", gjson.GetBytes(firstTurnEvent, "response.id").String())
@@ -765,7 +770,7 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_PassthroughModeR
 
 	upstreamConn := &openAIWSCaptureConn{
 		events: [][]byte{
-			[]byte(`{"type":"response.completed","response":{"id":"resp_passthrough_turn_1","model":"gpt-5.1","usage":{"input_tokens":2,"output_tokens":3placeholderplaceholderplaceholder`),
+			[]byte(`{"type":"response.completed","response":{"id":"resp_passthrough_turn_1","model":"gpt-5.1","output":[{"id":"ig_passthrough_1","type":"image_generation_call","status":"generating","result":"final-image"placeholder],"usage":{"input_tokens":2,"output_tokens":3placeholderplaceholderplaceholder`),
 	placeholder,
 placeholder
 	captureDialer := &openAIWSCaptureDialer{conn: upstreamConnplaceholder
@@ -858,6 +863,7 @@ placeholder
 	require.NoError(t, readErr)
 	require.Equal(t, "response.completed", gjson.GetBytes(event, "type").String())
 	require.Equal(t, "resp_passthrough_turn_1", gjson.GetBytes(event, "response.id").String())
+	require.Equal(t, "completed", gjson.GetBytes(event, "response.output.0.status").String())
 	_ = clientConn.Close(coderws.StatusNormalClosure, "done")
 
 	select {
@@ -1047,7 +1053,7 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_HTTPBridgeModeRe
 			Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_bridge_1"placeholderplaceholder,
 			Body: io.NopCloser(strings.NewReader(
 				"data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"placeholder\n\n" +
-					"data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_http_bridge_1\",\"usage\":{\"input_tokens\":2,\"output_tokens\":1,\"input_tokens_details\":{\"cached_tokens\":1placeholderplaceholderplaceholderplaceholder\n\n" +
+					"data: {\"type\":\"response.done\",\"response\":{\"id\":\"resp_http_bridge_1\",\"output\":[{\"id\":\"ig_bridge_1\",\"type\":\"image_generation_call\",\"status\":\"in_progress\",\"result\":\"final-image\"placeholder],\"usage\":{\"input_tokens\":2,\"output_tokens\":1,\"input_tokens_details\":{\"cached_tokens\":1placeholderplaceholderplaceholderplaceholder\n\n" +
 					"data: [DONE]\n\n",
 			)),
 	placeholder,
@@ -1145,8 +1151,9 @@ placeholder
 	_, event2, readErr2 := clientConn.Read(readCtx2)
 	cancelRead2()
 	require.NoError(t, readErr2)
-	require.Equal(t, "response.completed", gjson.GetBytes(event2, "type").String())
+	require.Equal(t, "response.done", gjson.GetBytes(event2, "type").String())
 	require.Equal(t, "resp_http_bridge_1", gjson.GetBytes(event2, "response.id").String())
+	require.Equal(t, "completed", gjson.GetBytes(event2, "response.output.0.status").String())
 
 	_ = clientConn.Close(coderws.StatusNormalClosure, "done")
 
