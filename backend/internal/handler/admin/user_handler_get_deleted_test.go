@@ -26,7 +26,7 @@ placeholder
 func setupGetByIDRouter(svc service.AdminService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewUserHandler(svc, nil, nil, nil)
+	h := NewUserHandler(svc, nil, nil, nil, nil, nil)
 	r.GET("/admin/users/:id", h.GetByID)
 	return r
 placeholder

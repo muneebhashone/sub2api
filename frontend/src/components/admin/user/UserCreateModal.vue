@@ -64,34 +64,57 @@
       </div>
     </template>
   </BaseDialog>
+
+  <!-- 创建管理员账号时后端要求 step-up 2FA，弹出 TOTP 验证后自动重试 -->
+  <TotpStepUpDialog :controller="stepUp" />
 </template>
 
 <script setup lang="ts">
-import { reactive, watch placeholder from 'vue'
+import { reactive, ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'; import { adminAPI placeholder from '@/api/admin'
-import { useForm placeholder from '@/composables/useForm'
+import { useAppStore placeholder from '@/stores/app'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason placeholder from '@/composables/useStepUp'
+import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
 
 const props = defineProps<{ show: boolean placeholder>()
 const emit = defineEmits(['close', 'success']); const { t placeholder = useI18n()
+const appStore = useAppStore()
 
 const form = reactive({ email: '', password: '', username: '', notes: '', role: 'user' as 'user' | 'admin', balance: '', concurrency: 1, rpm_limit: 0 placeholder)
 
-const { loading, submit placeholder = useForm({
-  form,
-  submitFn: async (data) => {
-    const { balance: rawBalance, ...rest placeholder = data
+const stepUp = useStepUp()
+const loading = ref(false)
+
+const submit = async () => {
+  if (loading.value) return
+  loading.value = true
+  try {
+    const { balance: rawBalance, ...rest placeholder = { ...form placeholder
     const balance = String(rawBalance).trim()
     const payload: typeof rest & { balance?: number placeholder = { ...rest placeholder
     if (balance !== '') {
       payload.balance = Number(balance)
     placeholder
-    await adminAPI.users.create(payload)
+    // 创建管理员属敏感操作：后端返回 STEP_UP_REQUIRED 时弹 TOTP 验证并重试
+    await stepUp.run(() => adminAPI.users.create(payload))
+    appStore.showSuccess(t('admin.users.userCreated'))
     emit('success'); emit('close')
-  placeholder,
-  successMsg: t('admin.users.userCreated')
-placeholder)
+  placeholder catch (e: any) {
+    if (isStepUpCancelled(e)) {
+      // 用户主动取消二次验证：静默返回，表单保持打开。
+    placeholder else if (isStepUpBlocked(e)) {
+      appStore.showError(
+        stepUpBlockReason(e) === 'STEP_UP_ADMIN_API_KEY_FORBIDDEN'
+          ? t('stepUp.adminApiKeyForbidden')
+          : t('stepUp.notEnabled')
+      )
+    placeholder else {
+      appStore.showError(e?.message || t('admin.users.failedToCreate'))
+    placeholder
+  placeholder finally { loading.value = false placeholder
+placeholder
 
 watch(() => props.show, (v) => { if(v) Object.assign(form, { email: '', password: '', username: '', notes: '', role: 'user', balance: '', concurrency: 1, rpm_limit: 0 placeholder) placeholder)
 

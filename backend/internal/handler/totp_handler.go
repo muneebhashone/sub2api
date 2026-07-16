@@ -159,7 +159,17 @@ placeholder
 // GetVerificationMethod returns the verification method for TOTP operations
 // GET /api/v1/user/totp/verification-method
 func (h *TotpHandler) GetVerificationMethod(c *gin.Context) {
-	method := h.totpService.GetVerificationMethod(c.Request.Context())
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+placeholder
+
+	method, err := h.totpService.GetVerificationMethod(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
 	response.Success(c, method)
 placeholder
 
