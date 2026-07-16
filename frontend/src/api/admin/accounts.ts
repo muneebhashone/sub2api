@@ -20,7 +20,9 @@ import type {
   CodexSessionImportResult,
   OpenAICodexPATCreateRequest,
   CheckMixedChannelRequest,
-  CheckMixedChannelResponse
+  CheckMixedChannelResponse,
+  UpstreamBillingProbeResult,
+  UpstreamBillingProbeSettings
 placeholder from '@/types'
 
 /**
@@ -848,6 +850,38 @@ export async function createSparkShadow(parentId: number, payload: SparkShadowCr
   return data
 placeholder
 
+export async function getUpstreamBillingProbeSettings(): Promise<UpstreamBillingProbeSettings> {
+  const { data placeholder = await apiClient.get<UpstreamBillingProbeSettings>('/admin/accounts/upstream-billing-probe/settings')
+  return data
+placeholder
+
+export async function updateUpstreamBillingProbeSettings(
+  settings: UpstreamBillingProbeSettings
+): Promise<UpstreamBillingProbeSettings> {
+  const { data placeholder = await apiClient.put<UpstreamBillingProbeSettings>(
+    '/admin/accounts/upstream-billing-probe/settings',
+    settings
+  )
+  return data
+placeholder
+
+export async function setUpstreamBillingProbeEnabled(id: number, enabled: boolean): Promise<void> {
+  await apiClient.put(`/admin/accounts/${idplaceholder/upstream-billing-probe`, { enabled placeholder)
+placeholder
+
+export async function probeUpstreamBilling(id: number): Promise<UpstreamBillingProbeResult> {
+  const { data placeholder = await apiClient.post<UpstreamBillingProbeResult>(`/admin/accounts/${idplaceholder/upstream-billing-probe`)
+  return data
+placeholder
+
+export async function probeUpstreamBillingBatch(accountIds: number[]): Promise<UpstreamBillingProbeResult[]> {
+  const { data placeholder = await apiClient.post<{ results: UpstreamBillingProbeResult[] placeholder>(
+    '/admin/accounts/upstream-billing-probe/batch',
+    { account_ids: accountIds placeholder
+  )
+  return data.results
+placeholder
+
 export const accountsAPI = {
   list,
   listWithEtag,
@@ -894,7 +928,12 @@ export const accountsAPI = {
   revertProxyFallback,
   queryOpenAIQuota,
   resetOpenAIQuota,
-  createSparkShadow
+  createSparkShadow,
+  getUpstreamBillingProbeSettings,
+  updateUpstreamBillingProbeSettings,
+  setUpstreamBillingProbeEnabled,
+  probeUpstreamBilling,
+  probeUpstreamBillingBatch
 placeholder
 
 export default accountsAPI
