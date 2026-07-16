@@ -137,7 +137,7 @@ async function initStripe(clientSecret: string, publishableKey: string) {
     return
   placeholder
   try {
-    const { loadStripe placeholder = await import('@stripe/stripe-js')
+    const { loadStripe placeholder = await import('@stripe/stripe-js/pure')
     const stripe = await loadStripe(publishableKey)
     if (!stripe) { error.value = t('payment.stripeLoadFailed'); return placeholder
 
