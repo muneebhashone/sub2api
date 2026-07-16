@@ -784,7 +784,11 @@ model_context_window = 1000000
 name = "Sub2API Grok"
 base_url = "${baseUrlplaceholder"
 env_key = "SUB2API_API_KEY"
-wire_api = "responses"`
+wire_api = "responses"
+supports_websockets = true
+
+[features]
+responses_websockets_v2 = true`
   const environmentContent = isWindows
     ? `$env:SUB2API_API_KEY="${apiKeyplaceholder"`
     : `export SUB2API_API_KEY="${apiKeyplaceholder"`
