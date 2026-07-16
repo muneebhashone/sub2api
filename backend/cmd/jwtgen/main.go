@@ -48,7 +48,7 @@ placeholder
 		log.Fatalf("failed to resolve admin user: %v", err)
 placeholder
 
-	token, err := authService.GenerateToken(user)
+	token, err := authService.GenerateToken(ctx, user)
 	if err != nil {
 		log.Fatalf("failed to generate token: %v", err)
 placeholder

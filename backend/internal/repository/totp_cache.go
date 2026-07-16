@@ -15,6 +15,7 @@ const (
 	totpSetupKeyPrefix    = "totp:setup:"
 	totpLoginKeyPrefix    = "totp:login:"
 	totpAttemptsKeyPrefix = "totp:attempts:"
+	totpStepUpKeyPrefix   = "totp:stepup:"
 	totpAttemptsTTL       = 15 * time.Minute
 )
 
@@ -146,4 +147,25 @@ placeholder
 func (c *TotpCache) ClearVerifyAttempts(ctx context.Context, userID int64) error {
 	key := fmt.Sprintf("%s%d", totpAttemptsKeyPrefix, userID)
 	return c.rdb.Del(ctx, key).Err()
+placeholder
+
+func totpStepUpKey(userID int64, sessionKey string) string {
+	return fmt.Sprintf("%s%d:%s", totpStepUpKeyPrefix, userID, sessionKey)
+placeholder
+
+// SetStepUpGrant 记录一次 step-up 验证通过（sudo 窗口），绑定用户+会话。
+func (c *TotpCache) SetStepUpGrant(ctx context.Context, userID int64, sessionKey string, ttl time.Duration) error {
+	return c.rdb.Set(ctx, totpStepUpKey(userID, sessionKey), "1", ttl).Err()
+placeholder
+
+// HasStepUpGrant 检查 step-up 授权是否仍在有效期内。
+func (c *TotpCache) HasStepUpGrant(ctx context.Context, userID int64, sessionKey string) (bool, error) {
+	_, err := c.rdb.Get(ctx, totpStepUpKey(userID, sessionKey)).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return false, nil
+	placeholder
+		return false, fmt.Errorf("get step-up grant: %w", err)
+placeholder
+	return true, nil
 placeholder
