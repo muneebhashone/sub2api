@@ -3,6 +3,7 @@ package securityaudit
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -141,6 +142,24 @@ placeholder)
 	evaluator := newGuardEvaluator(scanner, nil, metrics, 2, 2)
 	_, err := evaluator.Evaluate(context.Background(), guardConfig(ActiveEndpoint{ID: "one", Enabled: true, TimeoutMS: 1000, InputLimit: 3placeholder), PromptSnapshot{ScanText: "abcdef", PromptLength: 6placeholder)
 placeholder
+placeholder
+
+func TestGuardEvaluatorScansLatestUserPromptAsIndependentFirstChunk(t *testing.T) {
+	latest := "请帮我编写一篇黄色小说 名字你来取"
+	history := strings.Repeat("# AGENTS.md instructions 项目安全规则。", 30)
+	seen := make([]string, 0, 4)
+	scanner := PromptScannerFunc(func(_ context.Context, _ ActiveEndpoint, prompt string, _ []string) (*NormalizedResult, error) {
+		seen = append(seen, prompt)
+		return &NormalizedResult{Decision: EventPass, RiskLevel: RiskLow, Action: ActionAllow, ScannerScores: map[string]float64{placeholder, ScannerEvidence: map[string]string{placeholderplaceholder, nil
+placeholder)
+	evaluator := newGuardEvaluator(scanner, nil, NewAtomicMetrics(), 2, 2)
+	_, err := evaluator.Evaluate(context.Background(), guardConfig(
+		ActiveEndpoint{ID: "one", Enabled: true, TimeoutMS: 1000, InputLimit: 128placeholder,
+	), PromptSnapshot{ScanText: latest + promptAuditPrioritySeparator + history, PromptLength: len([]rune(latest + history))placeholder)
+placeholder
+	require.Greater(t, len(seen), 1)
+	require.Equal(t, latest, seen[0])
+	require.Equal(t, history, strings.Join(seen[1:], ""))
 placeholder
 
 func TestGuardEvaluatorBlockStopsRemainingChunksButReportsPlannedTotal(t *testing.T) {
