@@ -54,6 +54,34 @@ placeholder
 	require.Empty(t, snapshot.Redacted().ScanText)
 placeholder
 
+func TestSnapshotFullPromptKeepsUnredactedText(t *testing.T) {
+	body := `{"messages":[{"role":"user","content":"PROMPT_CANARY_ABC123 email@example.com sk-secretvalue123"placeholder]placeholder`
+	snapshot, err := ExtractPromptSnapshot(Request{Protocol: "openai_chat_completions", Body: []byte(body)placeholder)
+placeholder
+	// The full prompt is stored verbatim for admin review, unlike the preview.
+	require.Contains(t, snapshot.FullPrompt, "PROMPT_CANARY_ABC123 email@example.com sk-secretvalue123")
+	require.NotContains(t, snapshot.RedactedPreview, "PROMPT_CANARY_ABC123")
+	require.Equal(t, snapshot.FullPrompt, snapshot.Redacted().FullPrompt)
+placeholder
+
+func TestBuildFullPromptStripsNULAndTruncates(t *testing.T) {
+	require.Equal(t, "abcd", BuildFullPrompt("ab\x00cd", 0))
+	long := strings.Repeat("长", DefaultFullPromptMaxRunes+10)
+	trimmed := BuildFullPrompt(long, DefaultFullPromptMaxRunes)
+	require.Equal(t, DefaultFullPromptMaxRunes+1, utf8.RuneCountInString(trimmed))
+	require.True(t, strings.HasSuffix(trimmed, "…"))
+placeholder
+
+func TestFullPromptFromScanTextRestoresMultiSegmentLayout(t *testing.T) {
+	scanText, metadataText := buildPrioritizedScanText([]string{"latest user", "system policy", "earlier user"placeholder)
+	require.Contains(t, scanText, promptAuditPrioritySeparator)
+	require.Equal(t, metadataText, FullPromptFromScanText(scanText))
+
+	singleScan, singleMeta := buildPrioritizedScanText([]string{"only"placeholder)
+	require.NotContains(t, singleScan, promptAuditPrioritySeparator)
+	require.Equal(t, singleMeta, FullPromptFromScanText(singleScan))
+placeholder
+
 func TestSplitRunesDoesNotSplitUTF8(t *testing.T) {
 	chunks := SplitRunes("中文😀éabc", 2)
 	require.Equal(t, []string{"中文", "😀e", "́a", "bc"placeholder, chunks)
