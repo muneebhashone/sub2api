@@ -13,6 +13,18 @@ import (
 
 const securityAuditCompletedContextKey = "sub2api.security_audit.completed"
 
+// cachesSecurityAuditCompletion reports whether a successful audit may be
+// reused for the rest of the gin request. WebSocket turns share one Context
+// across many response.create frames and must be audited independently.
+func cachesSecurityAuditCompletion(stage string) bool {
+	switch strings.TrimSpace(stage) {
+	case "", "http":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
 func (h *GatewayHandler) checkSecurityAudit(c *gin.Context, reqLog *zap.Logger, apiKey *service.APIKey, subject middleware2.AuthSubject, protocol, model string, body []byte) *securityaudit.Decision {
 	if h == nil {
 		return nil
@@ -38,8 +50,11 @@ func runSecurityAudit(c *gin.Context, reqLog *zap.Logger, coordinator *securitya
 	if c == nil || c.Request == nil {
 		return nil
 placeholder
-	if completed, exists := c.Get(securityAuditCompletedContextKey); exists && completed == true {
-		return nil
+	cacheCompletion := cachesSecurityAuditCompletion(stage)
+	if cacheCompletion {
+		if completed, exists := c.Get(securityAuditCompletedContextKey); exists && completed == true {
+			return nil
+	placeholder
 placeholder
 	if coordinator == nil {
 		legacyDecision := runContentModeration(c, reqLog, legacy, apiKey, subject, protocol, model, body)
@@ -55,7 +70,7 @@ placeholder
 		if legacyDecision.Blocked {
 			decision.Kind, decision.HTTPStatus, decision.ErrorCode, decision.ClientMessage, decision.AllowNextStage = securityaudit.DecisionBlock, contentModerationStatus(legacyDecision), "content_policy_violation", legacyDecision.Message, false
 	placeholder
-		if decision.AllowNextStage {
+		if decision.AllowNextStage && cacheCompletion {
 			c.Set(securityAuditCompletedContextKey, true)
 	placeholder
 		return &decision
@@ -70,7 +85,7 @@ placeholder
 			zap.Int("body_bytes", len(body)))
 placeholder
 	decision := coordinator.Check(c.Request.Context(), request)
-	if decision.AllowNextStage {
+	if decision.AllowNextStage && cacheCompletion {
 		c.Set(securityAuditCompletedContextKey, true)
 placeholder
 	if reqLog != nil {

@@ -143,6 +143,9 @@ func (s *PromptService) Evaluate(ctx context.Context, req Request) (*PromptDecis
 	if s == nil || s.config == nil || s.evaluator == nil {
 		return nil, &GuardError{Code: ErrorCodeUnavailableplaceholder
 placeholder
+	if s.config.BlockingActivationDegraded() {
+		return nil, &GuardError{Code: ErrorCodeUnavailableplaceholder
+placeholder
 	cfg, ok := s.config.Active()
 	if !ok {
 		if s.config.EffectiveMode() == ModeBlocking {
@@ -172,10 +175,10 @@ placeholder
 func (s *PromptService) Runtime(ctx context.Context) RuntimeSnapshot {
 	expected, activeVersion, loadedAt, loadError := s.config.RuntimeState()
 	cfg, hasConfig := s.config.Active()
-	mode := ModeOff
+	mode := s.EffectiveMode()
 	workerTotal, queueCapacity := 0, 0
 	if hasConfig {
-		mode, workerTotal, queueCapacity = cfg.EffectiveMode(), cfg.WorkerCount, cfg.QueueCapacity
+		workerTotal, queueCapacity = cfg.WorkerCount, cfg.QueueCapacity
 placeholder
 	runtime := RuntimeSnapshot{
 		ProcessStatus: "disabled", EffectiveMode: mode, ExpectedConfigVersion: expected,

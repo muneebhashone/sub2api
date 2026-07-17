@@ -180,6 +180,72 @@ placeholder
 placeholder
 placeholder
 
+func TestPromptSnapshotIncludesClientControlledInstructions(t *testing.T) {
+	tests := []struct {
+		name, protocol, body string
+		want                 []string
+placeholder{
+		{
+			name:     "openai system and developer",
+			protocol: "openai_chat_completions",
+			body:     `{"messages":[{"role":"system","content":"system jailbreak"placeholder,{"role":"developer","content":"developer policy"placeholder,{"role":"assistant","content":"ignore"placeholder,{"role":"user","content":"hello"placeholder]placeholder`,
+			want:     []string{"system jailbreak", "developer policy", "hello"placeholder,
+	placeholder,
+		{
+			name:     "openai system only",
+			protocol: "openai_chat_completions",
+			body:     `{"messages":[{"role":"system","content":"only system instruction"placeholder]placeholder`,
+			want:     []string{"only system instruction"placeholder,
+	placeholder,
+		{
+			name:     "responses instructions",
+			protocol: "openai_responses",
+			body:     `{"instructions":"response instructions","input":[{"role":"user","content":[{"type":"input_text","text":"user turn"placeholder]placeholder]placeholder`,
+			want:     []string{"response instructions", "user turn"placeholder,
+	placeholder,
+		{
+			name:     "anthropic system",
+			protocol: "anthropic_messages",
+			body:     `{"system":"claude system","messages":[{"role":"user","content":[{"type":"text","text":"claude user"placeholder]placeholder]placeholder`,
+			want:     []string{"claude system", "claude user"placeholder,
+	placeholder,
+		{
+			name:     "gemini systemInstruction",
+			protocol: "gemini",
+			body:     `{"systemInstruction":{"parts":[{"text":"gemini system"placeholder]placeholder,"contents":[{"role":"user","parts":[{"text":"gemini user"placeholder]placeholder]placeholder`,
+			want:     []string{"gemini system", "gemini user"placeholder,
+	placeholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			snapshot, err := ExtractPromptSnapshot(Request{Protocol: tt.protocol, Body: []byte(tt.body)placeholder)
+		placeholder
+			for _, expected := range tt.want {
+				require.Contains(t, snapshot.ScanText, expected)
+		placeholder
+			require.NotContains(t, snapshot.ScanText, "ignore")
+	placeholder)
+placeholder
+placeholder
+
+func TestBuildPromptPreviewWithholdsMajorityOfOrdinaryText(t *testing.T) {
+	prompt := strings.Repeat("机密业务提示词内容", 40)
+	preview := BuildPromptPreview(prompt, DefaultPromptPreviewMaxRunes)
+	require.NotEmpty(t, preview)
+	require.Contains(t, preview, "***")
+	require.LessOrEqual(t, utf8.RuneCountInString(strings.TrimSuffix(strings.TrimSuffix(preview, "…"), "***")), 24)
+	require.Less(t, utf8.RuneCountInString(preview), utf8.RuneCountInString(prompt)/2)
+	require.NotContains(t, preview, prompt)
+placeholder
+
+func TestBuildPromptPreviewFullyMasksShortUnlabelledSecrets(t *testing.T) {
+	require.Equal(t, "***", BuildPromptPreview("short-secret-value!!", DefaultPromptPreviewMaxRunes))
+	require.Equal(t, "***", BuildPromptPreview(strings.Repeat("a", 31), DefaultPromptPreviewMaxRunes))
+	partial := BuildPromptPreview(strings.Repeat("b", 32), DefaultPromptPreviewMaxRunes)
+	require.True(t, strings.HasPrefix(partial, "b"))
+	require.Contains(t, partial, "***")
+placeholder
+
 func mustJSON(t *testing.T, value string) []byte {
 placeholder
 	raw, err := json.Marshal(value)
