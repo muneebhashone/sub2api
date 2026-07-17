@@ -471,10 +471,12 @@ func TestCanonicalizeGrokMediaImageURLFieldsPreservesOfficialURL(t *testing.T) {
 		"images":[
 			{"image_url":"https://example.com/first.png"placeholder,
 			{"url":"https://example.com/second.png"placeholder
-		]
+		],
+		"reference_images":[{"image_url":"https://example.com/reference.png"placeholder],
+		"mask":{"image_url":"https://example.com/mask.png"placeholder
 placeholder`)
 
-	out, err := canonicalizeGrokMediaImageURLFields(body, "image", "images")
+	out, err := canonicalizeGrokMediaImageURLFields(body, "image", "images", "reference_images", "mask")
 
 placeholder
 	require.Equal(t, "https://example.com/official.png", gjson.GetBytes(out, "image.url").String())
@@ -482,6 +484,20 @@ placeholder
 	require.Equal(t, "https://example.com/first.png", gjson.GetBytes(out, "images.0.url").String())
 	require.False(t, gjson.GetBytes(out, "images.0.image_url").Exists())
 	require.Equal(t, "https://example.com/second.png", gjson.GetBytes(out, "images.1.url").String())
+	require.Equal(t, "https://example.com/reference.png", gjson.GetBytes(out, "reference_images.0.url").String())
+	require.False(t, gjson.GetBytes(out, "reference_images.0.image_url").Exists())
+	require.Equal(t, "https://example.com/mask.png", gjson.GetBytes(out, "mask.url").String())
+	require.False(t, gjson.GetBytes(out, "mask.image_url").Exists())
+placeholder
+
+func TestCanonicalizeGrokMediaImageURLFieldsReplacesEmptyOfficialURL(t *testing.T) {
+	body := []byte(`{"image":{"url":" ","image_url":"https://example.com/legacy.png"placeholderplaceholder`)
+
+	out, err := canonicalizeGrokMediaImageURLFields(body, "image")
+
+placeholder
+	require.Equal(t, "https://example.com/legacy.png", gjson.GetBytes(out, "image.url").String())
+	require.False(t, gjson.GetBytes(out, "image.image_url").Exists())
 placeholder
 
 func TestNormalizeGrokMediaModelForEndpoint(t *testing.T) {

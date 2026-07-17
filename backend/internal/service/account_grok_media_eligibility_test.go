@@ -23,6 +23,16 @@ placeholder
 		StatusCode:       http.StatusOK,
 		WeeklyStatusCode: http.StatusOK,
 placeholder
+	weeklyForbidden := &xai.BillingSummary{
+		StatusCode:        http.StatusOK,
+		WeeklyStatusCode:  http.StatusForbidden,
+		MonthlyStatusCode: http.StatusOK,
+placeholder
+	monthlyForbidden := &xai.BillingSummary{
+		StatusCode:        http.StatusOK,
+		WeeklyStatusCode:  http.StatusOK,
+		MonthlyStatusCode: http.StatusForbidden,
+placeholder
 
 	tests := []struct {
 		name       string
@@ -36,6 +46,10 @@ placeholder{
 		{name: "unobserved oauth preserves legacy routing", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder, want: true, wantReason: "billing_unobserved"placeholder,
 		{name: "weekly allowance is not treated as weekly subscription", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: weeklyAllowanceplaceholderplaceholder, want: true, wantReason: "eligible"placeholder,
 		{name: "billing forbidden is rejected", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: forbiddenBillingplaceholderplaceholder, want: false, wantReason: "billing_forbidden"placeholder,
+		{name: "weekly billing forbidden is rejected after partial success", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: weeklyForbiddenplaceholderplaceholder, want: false, wantReason: "billing_forbidden"placeholder,
+		{name: "monthly billing forbidden is rejected after partial success", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: monthlyForbiddenplaceholderplaceholder, want: false, wantReason: "billing_forbidden"placeholder,
+		{name: "malformed billing observation preserves legacy routing", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: make(chan int)placeholderplaceholder, want: true, wantReason: "billing_unobserved"placeholder,
+		{name: "malformed override falls back to observations", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{GrokMediaEligibleExtraKey: "false", grokBillingExtraKey: weeklyAllowanceplaceholderplaceholder, want: true, wantReason: "eligible"placeholder,
 		{name: "explicit disable wins", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{GrokMediaEligibleExtraKey: falseplaceholderplaceholder, want: false, wantReason: "override_disabled"placeholder,
 		{name: "explicit enable wins over forbidden probe", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{GrokMediaEligibleExtraKey: true, grokBillingExtraKey: forbiddenBillingplaceholderplaceholder, want: true, wantReason: "override_enabled"placeholder,
 placeholder
@@ -117,5 +131,30 @@ placeholder)
 	placeholder
 		require.NotContains(t, normalized, GrokMediaEligibleExtraKey)
 		require.Contains(t, input.Extra, GrokMediaEligibleExtraKey)
+placeholder)
+
+	t.Run("provided boolean replaces current override", func(t *testing.T) {
+		input := &UpdateAccountInput{Extra: map[string]any{GrokMediaEligibleExtraKey: trueplaceholderplaceholder
+		normalized, err := normalizeGrokMediaEligibilityUpdateExtra(account, input, map[string]any{GrokMediaEligibleExtraKey: trueplaceholder)
+
+	placeholder
+		require.Equal(t, true, normalized[GrokMediaEligibleExtraKey])
+placeholder)
+
+	t.Run("malformed override is rejected on update", func(t *testing.T) {
+		input := &UpdateAccountInput{Extra: map[string]any{GrokMediaEligibleExtraKey: "false"placeholderplaceholder
+		_, err := normalizeGrokMediaEligibilityUpdateExtra(account, input, nil)
+
+	placeholder
+		require.Equal(t, http.StatusBadRequest, infraerrors.Code(err))
+placeholder)
+
+	t.Run("non grok update is unchanged", func(t *testing.T) {
+		input := &UpdateAccountInput{Extra: map[string]any{GrokMediaEligibleExtraKey: "provider-owned"placeholderplaceholder
+		normalized := map[string]any{GrokMediaEligibleExtraKey: "provider-owned"placeholder
+		got, err := normalizeGrokMediaEligibilityUpdateExtra(&Account{Platform: PlatformOpenAIplaceholder, input, normalized)
+
+	placeholder
+		require.Equal(t, normalized, got)
 placeholder)
 placeholder
