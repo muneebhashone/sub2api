@@ -755,6 +755,35 @@ placeholder
 	require.Zero(t, repo.rateLimitedCalls)
 placeholder
 
+func TestGrokQuotaServiceBilling403PersistsMediaEligibilitySignal(t *testing.T) {
+	t.Parallel()
+
+	account := healthyGrokQuotaOAuthAccount(58)
+	repo := &grokQuotaAccountRepo{mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+		accountsByID: map[int64]*Account{account.ID: accountplaceholder,
+placeholderplaceholder
+	upstream := &grokHybridUpstream{billingStatus: http.StatusForbiddenplaceholder
+	svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
+
+	result, err := svc.ProbeBilling(context.Background(), account.ID)
+
+placeholder
+	require.Nil(t, result)
+	require.Equal(t, 1, repo.updateCalls)
+	raw := repo.updates[account.ID][grokBillingExtraKey]
+	billing, ok := raw.(*xai.BillingSummary)
+	require.True(t, ok)
+	require.Equal(t, http.StatusForbidden, billing.StatusCode)
+	require.Equal(t, http.StatusForbidden, billing.WeeklyStatusCode)
+	require.Equal(t, http.StatusForbidden, billing.MonthlyStatusCode)
+	require.True(t, billing.Partial)
+
+	account.Extra = map[string]any{grokBillingExtraKey: billingplaceholder
+	eligible, reason := account.GrokMediaGenerationEligibility()
+	require.False(t, eligible)
+	require.Equal(t, "billing_forbidden", reason)
+placeholder
+
 func TestGrokQuotaServiceQueryQuotaFree429PersistsLimitAndKeepsBilling(t *testing.T) {
 	t.Parallel()
 

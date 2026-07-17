@@ -173,6 +173,7 @@ placeholder
 		maxAccountSwitches = 3
 placeholder
 	routingStart := time.Now()
+	requiredCapability := grokMediaRequiredCapability(endpoint)
 
 	for {
 		if failoverClientGone(c) {
@@ -186,7 +187,7 @@ placeholder
 			requestModel,
 			failedAccountIDs,
 			service.OpenAIUpstreamTransportHTTPSSE,
-			"",
+			requiredCapability,
 			false,
 			false,
 			false,
@@ -201,6 +202,11 @@ placeholder
 				zap.Error(err),
 				zap.Int("excluded_account_count", len(failedAccountIDs)),
 			)
+			if endpoint.IsGenerationRequest() && len(failedAccountIDs) == 0 && errors.Is(err, service.ErrNoAvailableAccounts) {
+				markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
+				h.errorResponse(c, http.StatusServiceUnavailable, "grok_media_no_eligible_account", "No eligible Grok media accounts")
+				return
+		placeholder
 			if len(failedAccountIDs) == 0 {
 				cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, requestModel, requestModel, service.PlatformGrok)
 				if !cls.ModelNotFound {
@@ -217,6 +223,11 @@ placeholder
 			return
 	placeholder
 		if selection == nil || selection.Account == nil {
+			if endpoint.IsGenerationRequest() {
+				markOpsRoutingCapacityLimited(c)
+				h.errorResponse(c, http.StatusServiceUnavailable, "grok_media_no_eligible_account", "No eligible Grok media accounts")
+				return
+		placeholder
 			cls := classifyNoAccountErrorFromGin(c, h.gatewayService, apiKey, requestModel, requestModel, service.PlatformGrok)
 			if !cls.ModelNotFound {
 				markOpsRoutingCapacityLimited(c)
@@ -352,6 +363,13 @@ placeholder
 		)
 		return
 placeholder
+placeholder
+
+func grokMediaRequiredCapability(endpoint service.GrokMediaEndpoint) service.OpenAIEndpointCapability {
+	if endpoint.IsGenerationRequest() {
+		return service.OpenAIEndpointCapabilityGrokMediaGeneration
+placeholder
+	return ""
 placeholder
 
 func shouldRecordGrokMediaUsage(endpoint service.GrokMediaEndpoint, requestModel string) bool {
