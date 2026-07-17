@@ -209,6 +209,50 @@ placeholder{
 			body:       []byte(`unauthorized`),
 			expected:   ErrorPolicySkipped,
 	placeholder,
+		{
+			name: "pool_mode_temp_unschedulable_hit_returns_temp_unscheduled",
+			account: &Account{
+				ID:       9,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"pool_mode":                  true,
+					"temp_unschedulable_enabled": true,
+					"temp_unschedulable_rules": []any{
+						map[string]any{
+							"error_code":       float64(http.StatusServiceUnavailable),
+							"keywords":         []any{"unavailable"placeholder,
+							"duration_minutes": float64(30),
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+			statusCode: http.StatusServiceUnavailable,
+			body:       []byte(`Service temporarily unavailable`),
+			expected:   ErrorPolicyTempUnscheduled,
+	placeholder,
+		{
+			name: "pool_mode_temp_unschedulable_miss_returns_skipped",
+			account: &Account{
+				ID:       10,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"pool_mode":                  true,
+					"temp_unschedulable_enabled": true,
+					"temp_unschedulable_rules": []any{
+						map[string]any{
+							"error_code":       float64(http.StatusServiceUnavailable),
+							"keywords":         []any{"maintenance"placeholder,
+							"duration_minutes": float64(30),
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+			statusCode: http.StatusServiceUnavailable,
+			body:       []byte(`Service temporarily unavailable`),
+			expected:   ErrorPolicySkipped,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -222,7 +266,7 @@ placeholder
 placeholder
 placeholder
 
-func TestHandleUpstreamError_PoolModeCustomErrorCodesOverride(t *testing.T) {
+func TestHandleUpstreamError_PoolModePolicies(t *testing.T) {
 	t.Run("pool_mode_without_custom_error_codes_still_skips", func(t *testing.T) {
 		repo := &errorPolicyRepoStub{placeholder
 		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
@@ -260,6 +304,72 @@ placeholder)
 
 		require.True(t, shouldDisable)
 		require.Equal(t, 1, repo.setErrCalls)
+		require.Equal(t, 0, repo.tempCalls)
+placeholder)
+
+	t.Run("pool_mode_explicit_temp_rule_stops_scheduling", func(t *testing.T) {
+		repo := &errorPolicyRepoStub{placeholder
+		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+		account := &Account{
+			ID:       32,
+			Type:     AccountTypeAPIKey,
+			Platform: PlatformOpenAI,
+	placeholder
+				"pool_mode":                  true,
+				"temp_unschedulable_enabled": true,
+				"temp_unschedulable_rules": []any{
+					map[string]any{
+						"error_code":       float64(http.StatusServiceUnavailable),
+						"keywords":         []any{"unavailable"placeholder,
+						"duration_minutes": float64(30),
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder
+
+		shouldDisable := svc.HandleUpstreamError(
+			context.Background(),
+			account,
+			http.StatusServiceUnavailable,
+			http.Header{placeholder,
+			[]byte("Service temporarily unavailable"),
+		)
+
+		require.True(t, shouldDisable)
+		require.Equal(t, 0, repo.setErrCalls)
+		require.Equal(t, 1, repo.tempCalls)
+placeholder)
+
+	t.Run("pool_mode_temp_rule_miss_still_skips", func(t *testing.T) {
+		repo := &errorPolicyRepoStub{placeholder
+		svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+		account := &Account{
+			ID:       33,
+			Type:     AccountTypeAPIKey,
+			Platform: PlatformOpenAI,
+	placeholder
+				"pool_mode":                  true,
+				"temp_unschedulable_enabled": true,
+				"temp_unschedulable_rules": []any{
+					map[string]any{
+						"error_code":       float64(http.StatusServiceUnavailable),
+						"keywords":         []any{"maintenance"placeholder,
+						"duration_minutes": float64(30),
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder
+
+		shouldDisable := svc.HandleUpstreamError(
+			context.Background(),
+			account,
+			http.StatusServiceUnavailable,
+			http.Header{placeholder,
+			[]byte("Service temporarily unavailable"),
+		)
+
+		require.False(t, shouldDisable)
+		require.Equal(t, 0, repo.setErrCalls)
 		require.Equal(t, 0, repo.tempCalls)
 placeholder)
 placeholder
