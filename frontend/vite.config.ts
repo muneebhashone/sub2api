@@ -96,6 +96,11 @@ export default defineConfig(({ mode placeholder) => {
               return 'vendor-i18n'
             placeholder
 
+            // Stripe 仅在支付流程中按需加载，避免进入首页公共依赖。
+            if (id.includes('/@stripe/stripe-js/')) {
+              return 'vendor-stripe'
+            placeholder
+
             // 其他小型第三方库合并
             return 'vendor-misc'
           placeholder
