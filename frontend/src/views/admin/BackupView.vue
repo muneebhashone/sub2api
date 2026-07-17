@@ -471,10 +471,14 @@ placeholder
 async function saveS3Config() {
   savingS3.value = true
   try {
-    await adminAPI.backup.updateS3Config(s3Form.value)
+    await backupStepUp.run(() => adminAPI.backup.updateS3Config(s3Form.value))
     appStore.showSuccess(t('admin.backup.s3.saved'))
     await loadS3Config()
   placeholder catch (error) {
+    if (isStepUpCancelled(error)) {
+      savingS3.value = false
+      return
+    placeholder
     appStore.showError((error as { message?: string placeholder)?.message || t('errors.networkError'))
   placeholder finally {
     savingS3.value = false
