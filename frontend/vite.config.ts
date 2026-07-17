@@ -3,6 +3,49 @@ import vue from '@vitejs/plugin-vue'
 import checker from 'vite-plugin-checker'
 import { resolve placeholder from 'path'
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  placeholder)[character] || character)
+placeholder
+
+function isSafeImageUrl(value: string): boolean {
+  const trimmed = value.trim()
+  if ((trimmed.startsWith('/') && !trimmed.startsWith('//')) || /^data:image\//i.test(trimmed)) {
+    return true
+  placeholder
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  placeholder catch {
+    return false
+  placeholder
+placeholder
+
+function injectBranding(html: string, config: { site_name?: string; site_logo?: string placeholder): string {
+  let brandedHtml = html
+  const siteName = config.site_name?.trim()
+  if (siteName) {
+    brandedHtml = brandedHtml.replace(
+      /<title>[^<]*<\/title>/i,
+      `<title>${escapeHtml(siteName)placeholder - AI API Gateway</title>`,
+    )
+  placeholder
+
+  const siteLogo = config.site_logo?.trim()
+  if (siteLogo && isSafeImageUrl(siteLogo)) {
+    brandedHtml = brandedHtml.replace(
+      /<link\s+rel=["']icon["'][^>]*>/i,
+      `<link rel="icon" href="${escapeHtml(siteLogo)placeholder" />`,
+    )
+  placeholder
+  return brandedHtml
+placeholder
+
 /**
  * Vite 插件：开发模式下注入公开配置到 index.html
  * 与生产模式的后端注入行为保持一致，消除闪烁
@@ -22,7 +65,7 @@ function injectPublicSettings(backendUrl: string): Plugin {
             const data = await response.json()
             if (data.code === 0 && data.data) {
               const script = `<script>window.__APP_CONFIG__=${JSON.stringify(data.data)placeholder;</script>`
-              return html.replace('</head>', `${scriptplaceholder\n</head>`)
+              return injectBranding(html, data.data).replace('</head>', `${scriptplaceholder\n</head>`)
             placeholder
           placeholder
         placeholder catch (e) {

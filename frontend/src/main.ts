@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import i18n, { initI18n placeholder from './i18n'
 import { useAppStore placeholder from '@/stores/app'
+import { updateFavicon placeholder from '@/utils/branding'
 import './style.css'
 
 function initThemeClass() {
@@ -31,6 +32,7 @@ async function bootstrap() {
   if (appStore.siteName && appStore.siteName !== 'Sub2API') {
     document.title = `${appStore.siteNameplaceholder - AI API Gateway`
   placeholder
+  updateFavicon(appStore.siteLogo)
 
   await initI18n()
 
