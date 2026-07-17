@@ -52,3 +52,24 @@ placeholder
 	placeholder)
 placeholder
 placeholder
+
+func TestGrokMediaRequiredCapability(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint service.GrokMediaEndpoint
+		want     service.OpenAIEndpointCapability
+placeholder{
+		{name: "image generation", endpoint: service.GrokMediaEndpointImagesGenerations, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
+		{name: "image edit", endpoint: service.GrokMediaEndpointImagesEdits, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
+		{name: "video generation", endpoint: service.GrokMediaEndpointVideosGenerations, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
+		{name: "video edit", endpoint: service.GrokMediaEndpointVideosEdits, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
+		{name: "video extension", endpoint: service.GrokMediaEndpointVideosExtensions, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
+		{name: "video status preserves lookup", endpoint: service.GrokMediaEndpointVideoStatus, want: ""placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, grokMediaRequiredCapability(tt.endpoint))
+	placeholder)
+placeholder
+placeholder

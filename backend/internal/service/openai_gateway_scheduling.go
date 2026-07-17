@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -176,9 +175,21 @@ func noAvailableOpenAISelectionError(requestedModel string, compactBlocked bool)
 		return ErrNoAvailableCompactAccounts
 placeholder
 	if requestedModel != "" {
-		return fmt.Errorf("no available OpenAI accounts supporting model: %s", requestedModel)
+		return openAINoAvailableSelectionError{message: fmt.Sprintf("no available OpenAI accounts supporting model: %s", requestedModel)placeholder
 placeholder
-	return errors.New("no available OpenAI accounts")
+	return openAINoAvailableSelectionError{message: "no available OpenAI accounts"placeholder
+placeholder
+
+type openAINoAvailableSelectionError struct {
+	message string
+placeholder
+
+func (e openAINoAvailableSelectionError) Error() string {
+	return e.message
+placeholder
+
+func (e openAINoAvailableSelectionError) Unwrap() error {
+	return ErrNoAvailableAccounts
 placeholder
 
 // openAICompactSupportTier classifies an OpenAI account by compact capability.
@@ -235,6 +246,10 @@ placeholder
 		return false
 placeholder
 	if !account.SupportsOpenAIEndpointCapability(requiredCapability) {
+		if account.IsGrok() && requiredCapability == OpenAIEndpointCapabilityGrokMediaGeneration {
+			_, reason := account.GrokMediaGenerationEligibility()
+			slog.Debug("grok_media_account_ineligible", "account_id", account.ID, "reason", reason)
+	placeholder
 		return false
 placeholder
 	if requireCompact && (!account.IsOpenAI() || openAICompactSupportTier(account) == 0) {
