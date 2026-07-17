@@ -32,6 +32,63 @@ placeholder
 	return w.ResponseWriter.Write(p)
 placeholder
 
+type openAIChatStreamReadErrorCloser struct {
+	payload []byte
+	err     error
+	sent    bool
+placeholder
+
+func (r *openAIChatStreamReadErrorCloser) Read(p []byte) (int, error) {
+	if !r.sent {
+		r.sent = true
+		return copy(p, r.payload), nil
+placeholder
+	return 0, r.err
+placeholder
+
+func (r *openAIChatStreamReadErrorCloser) Close() error { return nil placeholder
+
+func TestHandleChatStreamingResponse_ClassifiesHTTP2ReadError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": []string{"text/event-stream"placeholder,
+			"x-request-id": []string{"upstream-rid"placeholder,
+	placeholder,
+		Body: &openAIChatStreamReadErrorCloser{
+			payload: []byte("data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\"placeholder\n\n"),
+			err:     errors.New("stream error: stream ID 5; INTERNAL_ERROR; received from peer"),
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder
+
+	result, err := svc.handleChatStreamingResponse(
+		resp,
+		c,
+		&Account{ID: 1, Name: "openai-oauth", Platform: PlatformOpenAIplaceholder,
+		"gpt-5.6-sol",
+		"gpt-5.6-sol",
+		"gpt-5.6-sol",
+		time.Now(),
+		0,
+	)
+
+placeholder
+	require.NotNil(t, result)
+	require.True(t, c.Writer.Written(), "partial output must make replay unsafe")
+	code, message, ok := OpenAIUpstreamStreamReadErrorDetails(err)
+	require.True(t, ok)
+	require.Equal(t, OpenAIUpstreamHTTP2StreamErrorCode, code)
+	require.Equal(t, "Upstream HTTP/2 stream failed", message)
+	require.NotContains(t, message, "stream ID")
+	require.NotContains(t, message, "INTERNAL_ERROR")
+placeholder
+
 func TestNormalizeResponsesRequestServiceTier(t *testing.T) {
 	t.Parallel()
 

@@ -1072,8 +1072,20 @@ placeholder
 	if classifyStatus <= 0 {
 		classifyStatus = wireStatus
 placeholder
-	normalizedType := normalizeOpsErrorType(streamErr.ErrType, "")
-	phase, isBusinessLimited, errorOwner, errorSource := classifyOpsErrorLog(c, normalizedType, streamErr.Message, "", classifyStatus)
+	normalizedType := normalizeOpsErrorType(streamErr.ErrType, streamErr.Code)
+	phase, isBusinessLimited, errorOwner, errorSource := classifyOpsErrorLog(c, normalizedType, streamErr.Message, streamErr.Code, classifyStatus)
+	recordedStatus := wireStatus
+	if streamErr.CountTowardsSLA && streamErr.IntendedStatus >= 400 {
+		recordedStatus = streamErr.IntendedStatus
+placeholder
+	errorBody := ""
+	if streamErr.Code != "" {
+		if payload, err := json.Marshal(gin.H{"error": gin.H{
+			"type": normalizedType, "code": streamErr.Code, "message": streamErr.Message,
+	placeholderplaceholder); err == nil {
+			errorBody = string(payload)
+	placeholder
+placeholder
 
 	apiKey := getOpsAPIKey(c)
 	clientRequestID, _ := c.Request.Context().Value(ctxkey.ClientRequestID).(string)
@@ -1140,12 +1152,12 @@ placeholder
 		ErrorPhase:        phase,
 		ErrorType:         normalizedType,
 		Severity:          classifyOpsSeverity(normalizedType, classifyStatus),
-		StatusCode:        wireStatus,
+		StatusCode:        recordedStatus,
 		IsBusinessLimited: isBusinessLimited,
 		IsCountTokens:     isCountTokensRequest(c),
 
 		ErrorMessage: streamErr.Message,
-		ErrorBody:    "",
+		ErrorBody:    errorBody,
 		ErrorSource:  errorSource,
 		ErrorOwner:   errorOwner,
 
