@@ -39,6 +39,12 @@ placeholder{
 			want:     false,
 	placeholder,
 		{
+			name:     "video content skips usage",
+			endpoint: service.GrokMediaEndpointVideoContent,
+			model:    "",
+			want:     false,
+	placeholder,
+		{
 			name:     "generation skips usage without model",
 			endpoint: service.GrokMediaEndpointImagesGenerations,
 			model:    " ",
@@ -65,6 +71,7 @@ placeholder{
 		{name: "video edit", endpoint: service.GrokMediaEndpointVideosEdits, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
 		{name: "video extension", endpoint: service.GrokMediaEndpointVideosExtensions, want: service.OpenAIEndpointCapabilityGrokMediaGenerationplaceholder,
 		{name: "video status preserves lookup", endpoint: service.GrokMediaEndpointVideoStatus, want: ""placeholder,
+		{name: "video content preserves lookup", endpoint: service.GrokMediaEndpointVideoContent, want: ""placeholder,
 placeholder
 
 	for _, tt := range tests {

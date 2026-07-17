@@ -46,6 +46,11 @@ func (h *OpenAIGatewayHandler) GrokVideoStatus(c *gin.Context) {
 	h.handleGrokMedia(c, service.GrokMediaEndpointVideoStatus, c.Param("request_id"))
 placeholder
 
+// GrokVideoContent proxies downloadable video content through the task's upstream account.
+func (h *OpenAIGatewayHandler) GrokVideoContent(c *gin.Context) {
+	h.handleGrokMedia(c, service.GrokMediaEndpointVideoContent, c.Param("request_id"))
+placeholder
+
 func (h *OpenAIGatewayHandler) handleGrokMedia(c *gin.Context, endpoint service.GrokMediaEndpoint, requestID string) {
 	streamStarted := false
 	defer h.recoverResponsesPanic(c, &streamStarted)
@@ -99,7 +104,7 @@ placeholder
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
 		return
 placeholder
-	if endpoint == service.GrokMediaEndpointVideoStatus && strings.TrimSpace(requestID) == "" {
+	if endpoint.IsVideoLookupRequest() && strings.TrimSpace(requestID) == "" {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "request_id is required")
 		return
 placeholder
@@ -159,7 +164,7 @@ placeholder
 		sessionSeed = []byte(requestID)
 placeholder
 	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, sessionSeed)
-	if endpoint == service.GrokMediaEndpointVideoStatus {
+	if endpoint.IsVideoLookupRequest() {
 		sessionHash = service.GrokMediaVideoRequestSessionHash(requestID)
 placeholder
 	requestCtx := c.Request.Context()
@@ -334,7 +339,7 @@ placeholder
 				continue
 		placeholder
 			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), false, nil)
-			if c.Writer.Size() == writerSizeBeforeForward {
+			if !service.IsResponseCommitted(c) && c.Writer.Size() == writerSizeBeforeForward {
 				h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
 		placeholder
 			reqLog.Warn("grok_media.forward_failed",
