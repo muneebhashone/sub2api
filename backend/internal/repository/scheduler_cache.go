@@ -961,6 +961,8 @@ placeholder
 		"auto_pause_7d_disabled",
 		"model_rate_limits",
 		service.UpstreamBillingProbeExtraKey,
+		service.GrokMediaEligibleExtraKey,
+		"grok_billing_snapshot",
 placeholder
 	filtered := make(map[string]any)
 	for _, key := range keys {
