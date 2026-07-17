@@ -156,8 +156,8 @@ placeholder
 	a.stopOnce.Do(func() {
 		a.accepting.Store(false)
 		a.recordMu.Lock()
-		a.recordMu.Unlock()
 		a.cancel()
+		a.recordMu.Unlock()
 		a.wg.Wait()
 		a.snapshotAndEnqueue(false)
 		a.flushPending()
