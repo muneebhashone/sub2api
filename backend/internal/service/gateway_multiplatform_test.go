@@ -156,6 +156,34 @@ placeholder
 func (m *mockAccountRepoForPlatform) ListSchedulableUngroupedByPlatforms(ctx context.Context, platforms []string) ([]Account, error) {
 	return m.ListSchedulableByPlatforms(ctx, platforms)
 placeholder
+func (m *mockAccountRepoForPlatform) ListModelAvailabilityCandidates(_ context.Context, groupID *int64, platforms []string, includeGrouped bool) ([]Account, error) {
+	platformSet := make(map[string]struct{placeholder, len(platforms))
+	for _, platform := range platforms {
+		platformSet[platform] = struct{placeholder{placeholder
+placeholder
+	result := make([]Account, 0, len(m.accounts))
+	for _, acc := range m.accounts {
+		if _, ok := platformSet[acc.Platform]; !ok || acc.Status != StatusActive || !acc.Schedulable {
+			continue
+	placeholder
+		if groupID != nil {
+			inGroup := false
+			for _, accountGroup := range acc.AccountGroups {
+				if accountGroup.GroupID == *groupID {
+					inGroup = true
+					break
+			placeholder
+		placeholder
+			if !inGroup {
+				continue
+		placeholder
+	placeholder else if !includeGrouped && (len(acc.AccountGroups) > 0 || len(acc.GroupIDs) > 0) {
+			continue
+	placeholder
+		result = append(result, acc)
+placeholder
+	return result, nil
+placeholder
 func (m *mockAccountRepoForPlatform) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	return nil
 placeholder

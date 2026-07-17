@@ -1877,6 +1877,46 @@ placeholder
 placeholder)
 placeholder
 
+// ListModelAvailabilityCandidates returns the persistently configured account
+// pool used to decide whether a model is supported. Unlike scheduling queries,
+// it intentionally ignores transient runtime state (rate limits, overload,
+// temporary unschedulability, and expiry windows).
+func (r *accountRepository) ListModelAvailabilityCandidates(
+	ctx context.Context,
+	groupID *int64,
+	platforms []string,
+	includeGrouped bool,
+) ([]service.Account, error) {
+	if len(platforms) == 0 {
+		return []service.Account{placeholder, nil
+placeholder
+	if groupID != nil {
+		return r.queryAccountsByGroup(ctx, *groupID, accountGroupQueryOptions{
+			status:               service.StatusActive,
+			schedulable:          true,
+			ignoreTransientState: true,
+			platforms:            platforms,
+	placeholder)
+placeholder
+
+	preds := []dbpredicate.Account{
+		dbaccount.StatusEQ(service.StatusActive),
+		dbaccount.SchedulableEQ(true),
+		dbaccount.PlatformIn(platforms...),
+placeholder
+	if !includeGrouped {
+		preds = append(preds, dbaccount.Not(dbaccount.HasAccountGroups()))
+placeholder
+	accounts, err := r.client.Account.Query().
+		Where(preds...).
+		Order(dbent.Asc(dbaccount.FieldPriority)).
+		All(ctx)
+	if err != nil {
+		return nil, err
+placeholder
+	return r.accountsToService(ctx, accounts)
+placeholder
+
 func (r *accountRepository) SetRateLimited(ctx context.Context, id int64, resetAt time.Time) error {
 	now := time.Now()
 	_, err := r.client.Account.Update().
@@ -2662,9 +2702,10 @@ placeholder
 placeholder
 
 type accountGroupQueryOptions struct {
-	status      string
-	schedulable bool
-	platforms   []string // 允许的多个平台，空切片表示不进行平台过滤
+	status               string
+	schedulable          bool
+	ignoreTransientState bool
+	platforms            []string // 允许的多个平台，空切片表示不进行平台过滤
 placeholder
 
 func (r *accountRepository) queryAccountsByGroup(ctx context.Context, groupID int64, opts accountGroupQueryOptions) ([]service.Account, error) {
@@ -2681,14 +2722,16 @@ placeholder
 		preds = append(preds, dbaccount.PlatformIn(opts.platforms...))
 placeholder
 	if opts.schedulable {
-		now := time.Now()
-		preds = append(preds,
-			dbaccount.SchedulableEQ(true),
-			tempUnschedulablePredicate(),
-			notExpiredPredicate(now),
-			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
-		)
+		preds = append(preds, dbaccount.SchedulableEQ(true))
+		if !opts.ignoreTransientState {
+			now := time.Now()
+			preds = append(preds,
+				tempUnschedulablePredicate(),
+				notExpiredPredicate(now),
+				dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
+				dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+			)
+	placeholder
 placeholder
 
 	if len(preds) > 0 {
