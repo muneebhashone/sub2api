@@ -89,6 +89,9 @@ placeholder
 		imageTaskJSONError(c, http.StatusBadRequest, "invalid_request_error", err.Error())
 		return
 placeholder
+	if !h.checkSecurityAuditBeforeSubmit(c, apiKey, platform, body) {
+		return
+placeholder
 
 	taskCtx, recorder, cancel := newAsyncImageContext(c, body, h.tasks.ExecutionTimeout())
 	task, err := h.tasks.Create(c.Request.Context(), service.ImageTaskOwner{UserID: apiKey.UserID, APIKeyID: apiKey.IDplaceholder)
@@ -113,6 +116,42 @@ placeholder
 placeholder)
 
 	go h.run(task.ID, platform, taskCtx, recorder, cancel)
+placeholder
+
+func (h *AsyncImageHandler) checkSecurityAuditBeforeSubmit(c *gin.Context, apiKey *service.APIKey, platform string, body []byte) bool {
+	if h == nil || h.openAI == nil {
+		return true
+placeholder
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		imageTaskJSONError(c, http.StatusInternalServerError, "api_error", "User context not found")
+		return false
+placeholder
+	model := ""
+	moderationBody := body
+	if platform == service.PlatformGrok {
+		parsed := service.ParseGrokMediaRequest(c.GetHeader("Content-Type"), body)
+		model, moderationBody = parsed.Model, parsed.ModerationBody()
+placeholder else if h.openAI.gatewayService != nil {
+		parsed, err := h.openAI.gatewayService.ParseOpenAIImagesRequest(c, body)
+		if err != nil {
+			imageTaskJSONError(c, http.StatusBadRequest, "invalid_request_error", err.Error())
+			return false
+	placeholder
+		model, moderationBody = parsed.Model, parsed.ModerationBody()
+placeholder
+	if len(moderationBody) == 0 {
+		c.Set(securityAuditCompletedContextKey, true)
+		return true
+placeholder
+	reqLog := requestLogger(c, "handler.async_image.security_audit",
+		zap.Int64("user_id", subject.UserID), zap.Int64("api_key_id", apiKey.ID), zap.String("model", model))
+	decision := h.openAI.checkSecurityAudit(c, reqLog, apiKey, subject, service.ContentModerationProtocolOpenAIImages, model, moderationBody)
+	if decision != nil && !decision.AllowNextStage {
+		h.openAI.openAISecurityAuditError(c, decision)
+		return false
+placeholder
+	return true
 placeholder
 
 func (h *AsyncImageHandler) Get(c *gin.Context) {
