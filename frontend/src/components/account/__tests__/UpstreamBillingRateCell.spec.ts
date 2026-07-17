@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi placeholder from 'vitest'
-import { mount placeholder from '@vue/test-utils'
+import { flushPromises, mount placeholder from '@vue/test-utils'
 import UpstreamBillingRateCell from '../UpstreamBillingRateCell.vue'
+import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import type { Account placeholder from '@/types'
 
 vi.mock('vue-i18n', async () => {
@@ -83,7 +84,6 @@ describe('UpstreamBillingRateCell', () => {
             placeholder
           placeholder
         placeholder),
-        intervalMinutes: 30,
         now: Date.now()
       placeholder
     placeholder)
@@ -113,9 +113,9 @@ describe('UpstreamBillingRateCell', () => {
         placeholder
       placeholder
     placeholder)
-    const wrapper = mount(UpstreamBillingRateCell, { props: { account, intervalMinutes: 30, now: Date.now() placeholder placeholder)
+    const wrapper = mount(UpstreamBillingRateCell, { props: { account, now: Date.now() placeholder placeholder)
     expect(wrapper.text()).toContain('admin.accounts.upstreamBilling.stale')
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.stale')
 
     await wrapper.setProps({
       account: makeAccount({
@@ -140,7 +140,7 @@ describe('UpstreamBillingRateCell', () => {
     expect(wrapper.text()).not.toContain('admin.accounts.upstreamBilling.stale')
 
     await wrapper.setProps({ now: Date.parse('2026-07-13T01:00:00.001Z') placeholder)
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.stale')
     expect(wrapper.text()).toContain('admin.accounts.upstreamBilling.stale')
 
     await wrapper.setProps({
@@ -159,13 +159,111 @@ describe('UpstreamBillingRateCell', () => {
         placeholder
       placeholder)
     placeholder)
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.stale')
     expect(wrapper.text()).toContain('admin.accounts.upstreamBilling.stale')
+  placeholder)
+
+  it('shows stale snapshot details, local next probe time, and the account probe state', async () => {
+    const wrapper = mount(UpstreamBillingRateCell, {
+      attachTo: document.body,
+      props: {
+        account: makeAccount({
+          extra: {
+            upstream_billing_probe_enabled: true,
+            upstream_billing_probe: {
+              status: 'ok',
+              data: billingData,
+              received_at: '2026-07-12T22:00:00Z',
+              fresh_until: '2026-07-12T23:00:00Z',
+              last_attempt_at: '2026-07-12T22:00:00Z',
+              next_probe_at: '2026-07-13T01:00:00Z'
+            placeholder
+          placeholder
+        placeholder),
+        now: Date.now()
+      placeholder
+    placeholder)
+
+    expect(wrapper.getComponent(HelpTooltip).props('widthClass')).toBe('w-max max-w-[calc(100vw-2rem)]')
+    await wrapper.get('[data-testid="upstream-billing-details"]').trigger('mouseenter')
+    await flushPromises()
+
+    const tooltips = document.body.querySelectorAll('[role="tooltip"]')
+    const tooltip = tooltips[tooltips.length - 1] as HTMLElement
+    expect(tooltip.textContent).toContain('admin.accounts.upstreamBilling.lastDetectedRate:0.9')
+    expect(tooltip.textContent).toContain('admin.accounts.upstreamBilling.lastDetectedAt:')
+    expect(tooltip.textContent).toContain('admin.accounts.upstreamBilling.elapsedSince:admin.accounts.upstreamBilling.hoursAgo:2')
+    expect(tooltip.textContent).toContain('admin.accounts.upstreamBilling.nextProbeAt:')
+    expect(tooltip.textContent).not.toContain('admin.accounts.upstreamBilling.stale')
+    expect(tooltip.querySelector('[data-testid="upstream-billing-probe-state"] span')?.className).toContain('text-emerald-400')
+
+    await wrapper.setProps({
+      account: makeAccount({
+        extra: {
+          upstream_billing_probe_enabled: false,
+          upstream_billing_probe: {
+            status: 'unsupported',
+            last_attempt_at: '2026-07-13T00:00:00Z',
+            next_probe_at: '2026-07-13T01:00:00Z'
+          placeholder
+        placeholder
+      placeholder)
+    placeholder)
+    expect(tooltip.querySelector('[data-testid="upstream-billing-next-probe"]')).toBeNull()
+    expect(tooltip.querySelector('[data-testid="upstream-billing-probe-state"] span')?.className).toContain('text-red-400')
+    wrapper.unmount()
+  placeholder)
+
+  it('stacks the global-off state below the account state and hides it when globally enabled', async () => {
+    const wrapper = mount(UpstreamBillingRateCell, {
+      attachTo: document.body,
+      props: {
+        account: makeAccount({
+          extra: {
+            upstream_billing_probe_enabled: true,
+            upstream_billing_probe: {
+              status: 'unsupported',
+              last_attempt_at: '2026-07-13T00:00:00Z',
+              next_probe_at: '2026-07-13T01:00:00Z'
+            placeholder
+          placeholder
+        placeholder),
+        globalProbeEnabled: false,
+        now: Date.now()
+      placeholder
+    placeholder)
+
+    await wrapper.get('[data-testid="upstream-billing-details"]').trigger('mouseenter')
+    await flushPromises()
+
+    const tooltips = document.body.querySelectorAll('[role="tooltip"]')
+    const tooltip = tooltips[tooltips.length - 1] as HTMLElement
+    const accountState = tooltip.querySelector('[data-testid="upstream-billing-probe-state"]')
+    const globalState = tooltip.querySelector('[data-testid="upstream-billing-global-probe-state"]')
+    expect(accountState?.querySelector('span')?.className).toContain('text-emerald-400')
+    expect(globalState?.textContent).toContain('admin.accounts.upstreamBilling.globalProbeState')
+    expect(globalState?.querySelector('span')?.className).toContain('text-red-400')
+    expect(tooltip.querySelector('[data-testid="upstream-billing-next-probe"]')).toBeNull()
+
+    await wrapper.setProps({ globalProbeEnabled: true placeholder)
+    expect(tooltip.querySelector('[data-testid="upstream-billing-global-probe-state"]')).toBeNull()
+    expect(tooltip.querySelector('[data-testid="upstream-billing-next-probe"]')).not.toBeNull()
+
+    await wrapper.setProps({
+      globalProbeEnabled: false,
+      account: makeAccount({
+        extra: { upstream_billing_probe_enabled: false placeholder
+      placeholder)
+    placeholder)
+    expect(accountState?.querySelector('span')?.className).toContain('text-red-400')
+    expect(tooltip.querySelector('[data-testid="upstream-billing-global-probe-state"]')).not.toBeNull()
+    expect(tooltip.querySelector('[data-testid="upstream-billing-next-probe"]')).toBeNull()
+    wrapper.unmount()
   placeholder)
 
   it('emits manual probe commands only for eligible accounts', async () => {
     const wrapper = mount(UpstreamBillingRateCell, {
-      props: { account: makeAccount(), intervalMinutes: 30, now: Date.now() placeholder
+      props: { account: makeAccount(), now: Date.now() placeholder
     placeholder)
     await wrapper.get('[data-testid="upstream-billing-probe"]').trigger('click')
     expect(wrapper.emitted('probe')).toHaveLength(1)
@@ -199,7 +297,6 @@ describe('UpstreamBillingRateCell', () => {
           peak_rate_enabled: false,
           effective_rate_multiplier: -1
         placeholder),
-        intervalMinutes: 30,
         now: Date.now()
       placeholder
     placeholder)
@@ -208,11 +305,13 @@ describe('UpstreamBillingRateCell', () => {
     await wrapper.setProps({ account: malformedAccount({ billing_scope: 'request' as 'token' placeholder) placeholder)
     expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
     await wrapper.setProps({ account: malformedAccount({placeholder, { received_at: 'not-a-time' placeholder) placeholder)
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.stale')
     await wrapper.setProps({ account: malformedAccount({placeholder, { received_at: '2026-07-13T00:31:00Z' placeholder) placeholder)
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('0.6x')
+    await wrapper.setProps({ account: malformedAccount({placeholder, { received_at: '2026-07-13T00:36:00Z' placeholder) placeholder)
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.stale')
     await wrapper.setProps({ account: malformedAccount({placeholder, { fresh_until: '2026-07-12T23:59:00Z' placeholder) placeholder)
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.stale')
 
     await wrapper.setProps({
       account: makeAccount({
@@ -226,8 +325,31 @@ describe('UpstreamBillingRateCell', () => {
         placeholder
       placeholder)
     placeholder)
-    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('-')
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe('admin.accounts.upstreamBilling.failed')
     expect(wrapper.text()).toContain('admin.accounts.upstreamBilling.failed')
     expect(wrapper.text()).not.toContain('admin.accounts.upstreamBilling.stale')
+  placeholder)
+
+  it('uses unsupported as the primary tooltip trigger without a dash', () => {
+    const wrapper = mount(UpstreamBillingRateCell, {
+      props: {
+        account: makeAccount({
+          extra: {
+            upstream_billing_probe: {
+              status: 'unsupported',
+              last_attempt_at: '2026-07-13T00:00:00Z',
+              next_probe_at: '2026-07-13T00:30:00Z',
+              last_error: 'unsupported'
+            placeholder
+          placeholder
+        placeholder),
+        now: Date.now()
+      placeholder
+    placeholder)
+
+    expect(wrapper.get('[data-testid="upstream-billing-rate"]').text()).toBe(
+      'admin.accounts.upstreamBilling.unsupported'
+    )
+    expect(wrapper.text()).not.toContain('-admin.accounts.upstreamBilling.unsupported')
   placeholder)
 placeholder)
