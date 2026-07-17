@@ -302,7 +302,7 @@ placeholder{
 			cfg.GroupIDs = []int64{9placeholder
 			return cfg
 	placeholder(), req: asyncRequest()placeholder,
-		{name: "no user text", cfg: asyncConfig(), req: Request{Protocol: "openai_chat_completions", Body: []byte(`{"messages":[{"role":"assistant","content":"ignore"placeholder]placeholder`)placeholderplaceholder,
+		{name: "no user text", cfg: asyncConfig(), req: Request{Protocol: "openai_chat_completions", Body: []byte(`{"messages":[{"role":"function","content":"not audited"placeholder]placeholder`)placeholderplaceholder,
 placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

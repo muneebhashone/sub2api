@@ -131,6 +131,22 @@ placeholder
 	require.Equal(t, ErrorCodeUnavailable, guardErr.Code)
 placeholder
 
+type errorSettingRepository struct{ staticSettingRepository placeholder
+
+func (errorSettingRepository) GetMultiple(context.Context, []string) (map[string]string, error) {
+	return nil, errors.New("settings unavailable")
+placeholder
+
+func TestConfigManagerStartupLoadFailureFailsClosedWithoutSnapshot(t *testing.T) {
+	manager := NewConfigManager(nil, errorSettingRepository{placeholder, nil, prefixEncryptor{placeholder)
+	err := manager.Start(context.Background())
+placeholder
+	require.True(t, manager.configUntrusted.Load())
+	require.True(t, manager.BlockingActivationDegraded())
+	require.Equal(t, ModeBlocking, manager.EffectiveMode())
+	require.NoError(t, manager.Shutdown(context.Background()))
+placeholder
+
 func TestParseLegacyConfigDefaultsMissingFieldsWithoutEnablingBlocking(t *testing.T) {
 	storage, err := ParseStorageConfig(`{"enabled":false,"config_version":9placeholder`)
 placeholder

@@ -92,7 +92,10 @@ func extractProtocolSegments(protocol string, document any) []string {
 placeholder
 placeholder
 
-var clientInstructionRoles = []string{"user", "system", "developer"placeholder
+// clientInstructionRoles are roles a client may freely populate. Attackers can
+// place jailbreak/PII text in assistant/tool turns, so blocking audit must scan
+// them too—not only user/system/developer instructions.
+var clientInstructionRoles = []string{"user", "system", "developer", "assistant", "tool"placeholder
 
 func extractChatLikeSegments(root map[string]any) []string {
 	if root == nil {
@@ -168,7 +171,7 @@ func extractResponses(value any) []string {
 				result = append(result, entry)
 			case map[string]any:
 				role := strings.ToLower(stringValue(entry["role"]))
-				if role != "" && role != "user" && role != "system" && role != "developer" {
+				if role != "" && !isClientInstructionRole(role) {
 					continue
 			placeholder
 				if content, exists := entry["content"]; exists {
@@ -183,12 +186,21 @@ func extractResponses(value any) []string {
 		return result
 	case map[string]any:
 		role := strings.ToLower(stringValue(typed["role"]))
-		if role != "" && role != "user" && role != "system" && role != "developer" {
+		if role != "" && !isClientInstructionRole(role) {
 			return nil
 	placeholder
 		return contentTexts(typed["content"])
 	default:
 		return nil
+placeholder
+placeholder
+
+func isClientInstructionRole(role string) bool {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "user", "system", "developer", "assistant", "tool", "model":
+		return true
+	default:
+		return false
 placeholder
 placeholder
 
@@ -209,7 +221,7 @@ placeholder
 			continue
 	placeholder
 		role := strings.ToLower(stringValue(content["role"]))
-		if role != "" && role != "user" {
+		if role != "" && !isClientInstructionRole(role) {
 			continue
 	placeholder
 		parts, _ := content["parts"].([]any)
