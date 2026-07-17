@@ -95,7 +95,7 @@ func TestCheckIPRestrictionWithCompiledRules_InvalidWhitelistStillDenies(t *test
 	require.Equal(t, "access denied", reason)
 placeholder
 
-func TestGetSecurityClientIPHonorsTrustToggle(t *testing.T) {
+func TestGetSecurityClientIPNeverTrustsHeadersFromUntrustedPeer(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	for _, tc := range []struct {
@@ -103,8 +103,8 @@ func TestGetSecurityClientIPHonorsTrustToggle(t *testing.T) {
 		trustForwarded bool
 		want           string
 placeholder{
-		{name: "trust disabled uses trusted proxy chain", trustForwarded: false, want: "9.9.9.9"placeholder,
-		{name: "trust enabled uses forwarded header", trustForwarded: true, want: "1.2.3.4"placeholder,
+		{name: "legacy toggle disabled", trustForwarded: false, want: "9.9.9.9"placeholder,
+		{name: "legacy toggle enabled", trustForwarded: true, want: "9.9.9.9"placeholder,
 placeholder {
 		t.Run(tc.name, func(t *testing.T) {
 			r := gin.New()
@@ -123,4 +123,19 @@ placeholder {
 			require.Equal(t, tc.want, w.Body.String())
 	placeholder)
 placeholder
+placeholder
+
+func TestGetSecurityClientIPUsesConfiguredTrustedProxy(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	require.NoError(t, r.SetTrustedProxies([]string{"9.9.9.9"placeholder))
+	r.GET("/t", func(c *gin.Context) { c.String(200, GetSecurityClientIP(c, true)) placeholder)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/t", nil)
+	req.RemoteAddr = "9.9.9.9:12345"
+	req.Header.Set("X-Forwarded-For", "1.2.3.4")
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, "1.2.3.4", w.Body.String())
 placeholder

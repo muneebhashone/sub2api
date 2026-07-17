@@ -1622,6 +1622,9 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
+	if h.opsService != nil {
+		h.opsService.SetMonitoringEnabled(settings.OpsMonitoringEnabled)
+placeholder
 
 	// Update OpenAI fast policy (stored under dedicated key, only when provided).
 	if req.OpenAIFastPolicySettings != nil {

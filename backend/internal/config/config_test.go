@@ -35,6 +35,18 @@ placeholder)
 placeholder)
 placeholder
 
+func TestLoadHTTPIngressSafetyDefaults(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+placeholder
+	require.Equal(t, 10, cfg.Server.ReadHeaderTimeout)
+	require.Equal(t, 64*1024, cfg.Server.MaxHeaderBytes)
+	require.Equal(t, int64(32*1024*1024), cfg.Gateway.TextMaxBodySize)
+	require.True(t, cfg.APIKeyAuth.InvalidAbuse.Enabled)
+	require.Equal(t, 120, cfg.APIKeyAuth.InvalidAbuse.Threshold)
+	require.Equal(t, 16384, cfg.APIKeyAuth.InvalidAbuse.Capacity)
+placeholder
+
 func TestLoadForBootstrapAllowsMissingJWTSecret(t *testing.T) {
 	viper.Reset()
 	t.Setenv("JWT_SECRET", "")
@@ -1186,6 +1198,51 @@ placeholder
 		wantErr string
 placeholder{
 		{
+			name:    "server read header timeout",
+			mutate:  func(c *Config) { c.Server.ReadHeaderTimeout = 0 placeholder,
+			wantErr: "server.read_header_timeout",
+	placeholder,
+		{
+			name:    "server max header bytes too small",
+			mutate:  func(c *Config) { c.Server.MaxHeaderBytes = 4096 placeholder,
+			wantErr: "server.max_header_bytes",
+	placeholder,
+		{
+			name:    "server max request body size",
+			mutate:  func(c *Config) { c.Server.MaxRequestBodySize = -1 placeholder,
+			wantErr: "server.max_request_body_size",
+	placeholder,
+		{
+			name: "h2c zero concurrent streams",
+			mutate: func(c *Config) {
+				c.Server.H2C.Enabled = true
+				c.Server.H2C.MaxConcurrentStreams = 0
+		placeholder,
+			wantErr: "server.h2c.max_concurrent_streams",
+	placeholder,
+		{
+			name: "h2c oversized read frame",
+			mutate: func(c *Config) {
+				c.Server.H2C.Enabled = true
+				c.Server.H2C.MaxReadFrameSize = 16 * 1024 * 1024
+		placeholder,
+			wantErr: "server.h2c.max_read_frame_size",
+	placeholder,
+		{
+			name: "invalid auth abuse threshold too small",
+			mutate: func(c *Config) {
+				c.APIKeyAuth.InvalidAbuse.Threshold = 9
+		placeholder,
+			wantErr: "api_key_auth_cache.invalid_abuse.threshold",
+	placeholder,
+		{
+			name: "invalid auth abuse capacity too small",
+			mutate: func(c *Config) {
+				c.APIKeyAuth.InvalidAbuse.Capacity = 255
+		placeholder,
+			wantErr: "api_key_auth_cache.invalid_abuse.capacity",
+	placeholder,
+		{
 			name:    "jwt secret required",
 			mutate:  func(c *Config) { c.JWT.Secret = "" placeholder,
 			wantErr: "jwt.secret is required",
@@ -1385,6 +1442,11 @@ placeholder{
 			name:    "gateway max body size",
 			mutate:  func(c *Config) { c.Gateway.MaxBodySize = 0 placeholder,
 			wantErr: "gateway.max_body_size",
+	placeholder,
+		{
+			name:    "gateway text body exceeds media body",
+			mutate:  func(c *Config) { c.Gateway.TextMaxBodySize = c.Gateway.MaxBodySize + 1 placeholder,
+			wantErr: "gateway.text_max_body_size",
 	placeholder,
 		{
 			name:    "gateway response header timeout",

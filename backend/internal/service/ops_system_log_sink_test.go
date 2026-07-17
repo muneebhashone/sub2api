@@ -37,6 +37,15 @@ placeholder{
 			want:  true,
 	placeholder,
 		{
+			name: "rejected access excluded from database sink",
+			event: &logger.LogEvent{
+				Level:     "info",
+				Component: "http.access",
+				Fields:    map[string]any{logger.OpsSystemLogSkipField: trueplaceholder,
+		placeholder,
+			want: false,
+	placeholder,
+		{
 			name: "access component from fields (real zap path)",
 			event: &logger.LogEvent{
 				Level:     "info",
