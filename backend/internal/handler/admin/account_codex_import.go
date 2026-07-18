@@ -532,7 +532,7 @@ placeholder
 			if item.AgentTaskID == "" {
 				item.WarningTexts = append(item.WarningTexts, "未包含 task_id，首次请求会使用现有 runtime 注册新 task")
 		placeholder
-			item.IdentityKeys = buildCodexAgentIdentityKeys(item.AccountID, item.UserID, item.Email, item.AgentRuntimeID)
+			item.IdentityKeys = buildCodexAgentIdentityKeys(item.AccountID)
 			item.Name = buildCodexImportAccountName(item, entry.Index)
 			return item, nil
 	placeholder
@@ -894,12 +894,17 @@ placeholder
 	return buildCodexStoredIdentityKeys(accountID, userID, email, accessToken)
 placeholder
 
-func buildCodexAgentIdentityKeys(accountID, userID, email, runtimeID string) []string {
-	keys := buildCodexStoredIdentityKeys(accountID, userID, email, "")
-	if runtimeID = strings.TrimSpace(runtimeID); runtimeID != "" {
-		keys = append([]string{"agent:" + runtimeIDplaceholder, keys...)
+func buildCodexAgentIdentityKeys(accountID string) []string {
+	// Agent Identity credentials belonging to the same ChatGPT account are
+	// intentionally merged, while the same user may own multiple accounts.
+	// Do not use user/email/runtime as fallback keys here: user_id is shared
+	// across Team workspaces and runtime_id changes when a new runtime is
+	// registered for the same account.
+	accountID = strings.TrimSpace(accountID)
+	if accountID == "" {
+		return nil
 placeholder
-	return keys
+	return []string{"account:" + accountIDplaceholder
 placeholder
 
 // buildCodexStoredIdentityKeys 生成存量账号索引键，保留 user/account 维度，
