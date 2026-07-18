@@ -95,6 +95,25 @@ placeholder
 placeholder
 placeholder
 
+func TestGrokMediaScheduleModelUsesNormalizedMappedUpstream(t *testing.T) {
+	account := &service.Account{
+		Platform: service.PlatformGrok,
+placeholder
+			"model_mapping": map[string]any{
+				"grok-imagine-video-1.5": "wrong-raw-model",
+				"grok-imagine-video":     "mapped-video-model",
+		placeholder,
+	placeholder,
+placeholder
+
+	require.Equal(t, "mapped-video-model", grokMediaScheduleModel(account, "grok-imagine-video", nil))
+	require.Equal(t, "actual-upstream-model", grokMediaScheduleModel(account, "grok-imagine-video", &service.OpenAIForwardResult{
+		UpstreamModel: "actual-upstream-model",
+placeholder))
+	require.Equal(t, "mapped-video-model", grokMediaScheduleModel(account, "grok-imagine-video", &service.OpenAIForwardResult{placeholder))
+	require.Equal(t, "grok-imagine-video", grokMediaScheduleModel(nil, " grok-imagine-video ", nil))
+placeholder
+
 func TestEnsureGrokMediaAccountEligibility(t *testing.T) {
 	t.Run("non oauth account does not probe", func(t *testing.T) {
 		prober := &grokMediaEligibilityProberStub{placeholder
