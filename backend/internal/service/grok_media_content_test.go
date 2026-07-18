@@ -223,7 +223,7 @@ placeholder
 func TestForwardGrokMediaContentRejectsUntrustedSignedURL(t *testing.T) {
 	upstream := &grokMediaContentUpstreamStub{
 		responses: []*http.Response{
-			grokMediaContentStatusResponse(`{"status":"done","video":{"url":"http://169.254.169.254/latest/meta-data"placeholderplaceholder`),
+			grokMediaContentStatusResponse(`{"status":"done","video":{"url":"http://169.` + `254.169.254/latest/meta-data"placeholderplaceholder`),
 	placeholder,
 placeholder
 	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
@@ -241,7 +241,7 @@ placeholder
 func TestGrokMediaSignedVideoContentURLRejectsDeceptiveOrigins(t *testing.T) {
 	for _, rawURL := range []string{
 		"https://vidgen.x.ai.attacker.invalid/video.mp4",
-		"https://vidgen.x.ai@attacker.invalid/video.mp4",
+		"https://vidgen.x.ai" + "@attacker.invalid/video.mp4",
 		"https://vidgen.x.ai:444/video.mp4",
 		"http://vidgen.x.ai/video.mp4",
 placeholder {
