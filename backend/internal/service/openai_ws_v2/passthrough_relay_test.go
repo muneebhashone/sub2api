@@ -31,6 +31,12 @@ type delayedReadFrameConn struct {
 	once       sync.Once
 placeholder
 
+type readStartSpyFrameConn struct {
+	base      FrameConn
+	started   chan struct{placeholder
+	startOnce sync.Once
+placeholder
+
 type closeSpyFrameConn struct {
 	closeCalls atomic.Int32
 placeholder
@@ -123,6 +129,19 @@ func (c *delayedReadFrameConn) Close() error {
 	if c == nil || c.base == nil {
 		return nil
 placeholder
+	return c.base.Close()
+placeholder
+
+func (c *readStartSpyFrameConn) ReadFrame(ctx context.Context) (coderws.MessageType, []byte, error) {
+	c.startOnce.Do(func() { close(c.started) placeholder)
+	return c.base.ReadFrame(ctx)
+placeholder
+
+func (c *readStartSpyFrameConn) WriteFrame(ctx context.Context, msgType coderws.MessageType, payload []byte) error {
+	return c.base.WriteFrame(ctx, msgType, payload)
+placeholder
+
+func (c *readStartSpyFrameConn) Close() error {
 	return c.base.Close()
 placeholder
 
@@ -659,6 +678,51 @@ func TestRelay_ContextCanceled(t *testing.T) {
 	_, relayExit := Relay(ctx, clientConn, upstreamConn, firstPayload, RelayOptions{placeholder)
 	// context 取消导致写首包失败
 	require.NotNil(t, relayExit)
+placeholder
+
+func TestRelay_DownstreamPreambleStartsClientReader(t *testing.T) {
+	clientBase := newPassthroughTestFrameConn(nil, false)
+	clientConn := &readStartSpyFrameConn{base: clientBase, started: make(chan struct{placeholder)placeholder
+	upstreamConn := newPassthroughTestFrameConn(nil, false)
+	resultCh := make(chan *RelayExit, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	go func() {
+		_, relayExit := Relay(
+			ctx,
+			clientConn,
+			upstreamConn,
+			[]byte(`{"type":"response.create","model":"gpt-5.1"placeholder`),
+			RelayOptions{
+				StartClientAfterFirstDownstream: true,
+		placeholder,
+		)
+		resultCh <- relayExit
+placeholder()
+
+	upstreamConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.created","response":{"id":"resp_semantic_gate"placeholderplaceholder`),
+placeholder
+	require.Eventually(t, func() bool { return len(clientBase.Writes()) == 1 placeholder, time.Second, 10*time.Millisecond)
+	select {
+	case <-clientConn.started:
+	case <-time.After(time.Second):
+		t.Fatal("response.created did not start the client reader")
+placeholder
+
+	upstreamConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.completed","response":{"id":"resp_semantic_gate","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+placeholder
+	_ = upstreamConn.Close()
+	select {
+	case relayExit := <-resultCh:
+		require.Nil(t, relayExit)
+	case <-time.After(time.Second):
+		t.Fatal("relay did not finish after terminal event and upstream close")
+placeholder
 placeholder
 
 func TestRelay_TraceEvents_ContainsLifecycleStages(t *testing.T) {
