@@ -211,6 +211,7 @@ placeholder
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Pure client function tools without search → no native injection (#4486).
 			intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"lookup","description":"look up a value","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"save","parameters":{"type":"object"placeholderplaceholder]` + tt.toolChoiceJSON + `placeholder`)
 			body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
 		placeholder
@@ -219,26 +220,33 @@ placeholder
 		placeholder
 			require.Equal(t, "isolated-id", gjson.GetBytes(body, "prompt_cache_key").String())
 			tools := gjson.GetBytes(body, "tools").Array()
-			require.Len(t, tools, 4)
+			require.Len(t, tools, 2, "pure client functions should not get native search injected")
 			require.Equal(t, "function", tools[0].Get("type").String())
 			require.Equal(t, "lookup", tools[0].Get("name").String())
 			require.Equal(t, "function", tools[1].Get("type").String())
 			require.Equal(t, "save", tools[1].Get("name").String())
-			require.Equal(t, "web_search", tools[2].Get("type").String())
-			require.Equal(t, "x_search", tools[3].Get("type").String())
 			require.Equal(t, tt.wantChoice, gjson.GetBytes(body, "tool_choice").Exists())
-			if tt.wantChoice {
-				require.Equal(t, "auto", gjson.GetBytes(body, "tool_choice").String())
-		placeholder
-
-			second, err := applyGrokResponsesCacheIdentity(body, intentBody, "isolated-id", true)
-		placeholder
-			second, err = applyGrokFreeMessagesFunctionToolCacheRoute(second, intentBody, account, "isolated-id")
-		placeholder
-			require.JSONEq(t, string(body), string(second), "native tools must not be duplicated")
-			require.Len(t, gjson.GetBytes(second, "tools").Array(), 4)
 	placeholder)
 placeholder
+placeholder
+
+func TestApplyGrokCacheIdentityAppendsNativeToolsWhenSearchPresent(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(901, "access-token")
+	account.Credentials["subscription_tier"] = " FREE "
+
+	// Function tools INCLUDING web_search → convert + complement with x_search.
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"lookup","description":"look up a value","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"web_search","description":"search","parameters":{"type":"object"placeholderplaceholder]placeholder`)
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeMessagesFunctionToolCacheRoute(body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 3, "lookup(function) + web_search(native) + x_search(native)")
+	require.Equal(t, "function", tools[0].Get("type").String())
+	require.Equal(t, "lookup", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
 placeholder
 
 func TestApplyGrokCacheIdentityRequiresPatchedFunctionTools(t *testing.T) {
@@ -272,7 +280,9 @@ placeholder
 placeholder
 
 func TestGrokFreeMessagesFunctionToolCacheRouteRequiresKnownFreeTier(t *testing.T) {
-	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"lookup"placeholder],"tool_choice":"auto"placeholder`)
+	// Include web_search as function to trigger native tool injection (pure client
+	// functions no longer trigger injection after #4486 fix).
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"lookup"placeholder,{"type":"function","name":"web_search"placeholder],"tool_choice":"auto"placeholder`)
 	tests := []struct {
 		name    string
 		account *Account
@@ -382,7 +392,7 @@ placeholder
 				require.Equal(t, "x_search", tools[2].Get("type").String())
 				return
 		placeholder
-			require.Len(t, tools, 1)
+			require.Len(t, tools, 2, "non-free accounts should not get native search injected")
 	placeholder)
 placeholder
 placeholder
