@@ -35,6 +35,10 @@ placeholder
 		mediaURL, err := buildGrokMediaURL(account, cfg, GrokMediaEndpointImagesGenerations, "")
 	placeholder
 		require.Equal(t, "http://grok.example.test/v1/images/generations", mediaURL)
+
+		contentURL, err := buildGrokMediaURL(account, cfg, GrokMediaEndpointVideoContent, "request 123")
+	placeholder
+		require.Equal(t, "http://grok.example.test/v1/videos/request%20123/content", contentURL)
 placeholder)
 
 	t.Run("insecure HTTP disabled", func(t *testing.T) {

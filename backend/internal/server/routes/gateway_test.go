@@ -160,6 +160,8 @@ placeholder
 	for _, path := range []string{
 		"/v1/videos/request-123",
 		"/videos/request-123",
+		"/v1/videos/request-123/content",
+		"/videos/request-123/content",
 placeholder {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		w := httptest.NewRecorder()
@@ -186,6 +188,8 @@ placeholder{
 		{http.MethodPost, "/videos/extensions", `{"model":"grok-imagine-video","prompt":"waves","video":{"url":"https://example.com/in.mp4"placeholderplaceholder`placeholder,
 		{http.MethodGet, "/v1/videos/request-123", ""placeholder,
 		{http.MethodGet, "/videos/request-123", ""placeholder,
+		{http.MethodGet, "/v1/videos/request-123/content", ""placeholder,
+		{http.MethodGet, "/videos/request-123/content", ""placeholder,
 placeholder {
 		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
 		req.Header.Set("Content-Type", "application/json")
