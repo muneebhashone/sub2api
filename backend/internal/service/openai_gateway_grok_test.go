@@ -749,8 +749,9 @@ placeholder
 		Type:        AccountTypeAPIKey,
 		Concurrency: 1,
 placeholder
-			"api_key":  "api-key",
-			"base_url": "https://xai.test/v1",
+			"api_key":       "api-key",
+			"base_url":      "https://xai.test/v1",
+			"model_mapping": map[string]any{"grok-imagine-edit": "vendor-image-edit"placeholder,
 	placeholder,
 placeholder
 	upstream := &httpUpstreamRecorder{resp: &http.Response{
