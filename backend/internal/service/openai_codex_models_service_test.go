@@ -470,6 +470,88 @@ placeholder
 placeholder
 placeholder
 
+func TestFetchCodexModelsManifestAPIKeyConvertsStandardOpenAIModelList(t *testing.T) {
+	upstreamBody := `{"object":"list","data":[{"id":"gpt-5.6","object":"model"placeholder,{"id":"  ","object":"model"placeholder,{"id":"gpt-5.6-codex","object":"model"placeholder]placeholder`
+	upstream := &codexModelsHTTPUpstreamStub{do: func(_ *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+		header := make(http.Header)
+		header.Set("ETag", `W/"openai-list"`)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     header,
+			Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+	placeholder, nil
+placeholderplaceholder
+
+	s := newCodexModelsAPIKeyTestService(upstream)
+	manifest, err := s.FetchCodexModelsManifest(
+		context.Background(),
+		newCodexModelsAPIKeyTestAccount("https://upstream.example/v1"),
+		"0.144.0",
+		"",
+	)
+	if err != nil {
+		t.Fatalf("FetchCodexModelsManifest returned error: %v", err)
+placeholder
+	if got, want := string(manifest.Body), `{"models":[{"slug":"gpt-5.6"placeholder,{"slug":"gpt-5.6-codex"placeholder]placeholder`; got != want {
+		t.Errorf("converted body: got %q, want %q", got, want)
+placeholder
+	if manifest.ETag != `W/"openai-list"` {
+		t.Errorf("etag not passed through: got %q", manifest.ETag)
+placeholder
+placeholder
+
+func TestConvertOpenAIModelListToCodexManifest(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+placeholder{
+		{
+			name: "standard list",
+			body: `{"object":"list","data":[{"id":"m-1"placeholder,{"id":"m-2"placeholder]placeholder`,
+			want: `{"models":[{"slug":"m-1"placeholder,{"slug":"m-2"placeholder]placeholder`,
+	placeholder,
+		{
+			name: "codex manifest unchanged",
+			body: `{"models":[{"slug":"m-1"placeholder]placeholder`,
+			want: `{"models":[{"slug":"m-1"placeholder]placeholder`,
+	placeholder,
+		{
+			name: "empty data unchanged",
+			body: `{"object":"list","data":[]placeholder`,
+			want: `{"object":"list","data":[]placeholder`,
+	placeholder,
+		{
+			name: "data not an array unchanged",
+			body: `{"object":"list","data":{"id":"m-1"placeholderplaceholder`,
+			want: `{"object":"list","data":{"id":"m-1"placeholderplaceholder`,
+	placeholder,
+		{
+			name: "entries without usable IDs unchanged",
+			body: `{"object":"list","data":[{"id":""placeholder,{"object":"model"placeholder]placeholder`,
+			want: `{"object":"list","data":[{"id":""placeholder,{"object":"model"placeholder]placeholder`,
+	placeholder,
+		{
+			name: "invalid JSON unchanged",
+			body: `{"data":`,
+			want: `{"data":`,
+	placeholder,
+		{
+			name: "non-object unchanged",
+			body: `[]`,
+			want: `[]`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := string(convertOpenAIModelListToCodexManifest([]byte(tt.body))); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func TestFetchCodexModelsManifestRejectsInvalidEnvelope(t *testing.T) {
 	tests := []struct {
 		name string

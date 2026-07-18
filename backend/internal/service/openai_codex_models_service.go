@@ -463,6 +463,9 @@ placeholder
 			retryable: isRetryableCodexModelsManifestTransportError(err),
 	placeholder
 placeholder
+	if request.useAPIKeyUpstream {
+		body = convertOpenAIModelListToCodexManifest(body)
+placeholder
 	if err := validateCodexModelsManifestEnvelope(body); err != nil {
 		return nil, &codexModelsManifestUpstreamError{
 			err: infraerrors.Newf(
@@ -475,6 +478,52 @@ placeholder
 	placeholder
 placeholder
 	return &CodexModelsManifest{Body: body, ETag: resp.Header.Get("ETag")placeholder, nil
+placeholder
+
+// convertOpenAIModelListToCodexManifest rewrites a standard OpenAI
+// GET /v1/models response ({"object":"list","data":[{"id":...placeholder,...]placeholder) into the
+// Codex manifest envelope ({"models":[{"slug":...placeholder,...]placeholder) so custom API key
+// upstreams that only implement the standard endpoint can serve Codex model
+// discovery. Bodies that already carry a top-level models field, are not the
+// standard list shape, or yield no usable model IDs are returned unchanged so
+// envelope validation reports the original payload.
+func convertOpenAIModelListToCodexManifest(body []byte) []byte {
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal(body, &envelope); err != nil || envelope == nil {
+		return body
+placeholder
+	if _, ok := envelope["models"]; ok {
+		return body
+placeholder
+	data, ok := envelope["data"]
+	if !ok {
+		return body
+placeholder
+	var entries []struct {
+		ID string `json:"id"`
+placeholder
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return body
+placeholder
+	type codexModelEntry struct {
+		Slug string `json:"slug"`
+placeholder
+	models := make([]codexModelEntry, 0, len(entries))
+	for _, entry := range entries {
+		id := strings.TrimSpace(entry.ID)
+		if id == "" {
+			continue
+	placeholder
+		models = append(models, codexModelEntry{Slug: idplaceholder)
+placeholder
+	if len(models) == 0 {
+		return body
+placeholder
+	converted, err := json.Marshal(map[string][]codexModelEntry{"models": modelsplaceholder)
+	if err != nil {
+		return body
+placeholder
+	return converted
 placeholder
 
 func validateCodexModelsManifestEnvelope(body []byte) error {
