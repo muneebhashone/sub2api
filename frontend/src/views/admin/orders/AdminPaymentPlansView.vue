@@ -142,7 +142,7 @@ const planColumns = computed((): Column[] => [
   { key: 'name', label: t('payment.admin.planName') placeholder,
   { key: 'group_id', label: t('payment.admin.group') placeholder,
   { key: 'price', label: t('payment.admin.price') placeholder,
-  { key: 'validity_days', label: t('payment.admin.validityDays') placeholder,
+  { key: 'validity_days', label: t('payment.admin.validity') placeholder,
   { key: 'for_sale', label: t('payment.admin.forSale') placeholder,
   { key: 'sort_order', label: t('payment.admin.sortOrder') placeholder,
   { key: 'actions', label: t('common.actions') placeholder,
