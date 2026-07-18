@@ -32,6 +32,7 @@ placeholder
 
 	billing, _ := grokBillingSnapshotFromExtra(account.Extra)
 	snapshot, err := grokQuotaSnapshotFromExtra(account.Extra)
+	activeProbeClearsForbidden := newerSuccessfulGrokActiveProbeClearsBillingForbidden(billing, snapshot)
 	if billing != nil {
 		usage.GrokBilling = billing
 		if billing.Plan != "" {
@@ -87,7 +88,13 @@ placeholder
 		usage.GrokLastQuotaProbeAt = snapshot.LastProbeAt
 placeholder
 	usage.GrokLastHeadersSeenAt = snapshot.LastHeadersSeenAt
-	if snapshot.StatusCode >= http.StatusBadRequest || usage.GrokLastStatusCode == 0 {
+	if activeProbeClearsForbidden {
+		usage.IsForbidden = false
+		usage.ForbiddenType = ""
+		usage.ErrorCode = ""
+		usage.GrokLastQuotaProbeAt = snapshot.LastProbeAt
+		usage.GrokLastStatusCode = snapshot.StatusCode
+placeholder else if snapshot.StatusCode >= http.StatusBadRequest || usage.GrokLastStatusCode == 0 {
 		usage.GrokLastStatusCode = snapshot.StatusCode
 placeholder
 	if snapshot.HasObservedHeaders() {
@@ -117,7 +124,34 @@ placeholder
 	placeholder
 placeholder
 	applyGrokCredentialUsageFallback(usage, account)
+	if activeProbeClearsForbidden && strings.TrimSpace(snapshot.EntitlementStatus) == "" &&
+		strings.EqualFold(strings.TrimSpace(usage.GrokEntitlementStatus), "forbidden") {
+		usage.GrokEntitlementStatus = ""
+placeholder
 	return usage
+placeholder
+
+func newerSuccessfulGrokActiveProbeClearsBillingForbidden(billing *xai.BillingSummary, snapshot *xai.QuotaSnapshot) bool {
+	if billing == nil || billing.StatusCode != http.StatusForbidden || snapshot == nil ||
+		snapshot.StatusCode != http.StatusOK || strings.TrimSpace(snapshot.ObservationSource) != "active_probe" {
+		return false
+placeholder
+
+	billingAt, billingOK := firstGrokObservationTime(billing.UpdatedAt, billing.FetchedAt)
+	probeAt, probeOK := firstGrokObservationTime(snapshot.LastProbeAt, snapshot.UpdatedAt)
+	// Both snapshots use second precision, so a billing request followed by the
+	// active probe in the same refresh can legitimately have equal timestamps.
+	return billingOK && probeOK && !probeAt.Before(billingAt)
+placeholder
+
+func firstGrokObservationTime(values ...string) (time.Time, bool) {
+	for _, value := range values {
+		parsedAt, err := time.Parse(time.RFC3339, strings.TrimSpace(value))
+		if err == nil {
+			return parsedAt, true
+	placeholder
+placeholder
+	return time.Time{placeholder, false
 placeholder
 
 func applyGrokCredentialUsageFallback(usage *UsageInfo, account *Account) {
