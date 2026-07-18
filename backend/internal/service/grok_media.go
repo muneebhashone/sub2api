@@ -845,7 +845,11 @@ placeholder
 	if err := decoder.Decode(&value); err != nil {
 		return body
 placeholder
-	if !rewriteGrokMediaVideoContentURLValue(&value, requestID, proxyURL) {
+	changed := rewriteGrokMediaKnownVideoURL(&value, proxyURL)
+	if rewriteGrokMediaVideoContentURLValue(&value, requestID, proxyURL) {
+		changed = true
+placeholder
+	if !changed {
 		return body
 placeholder
 	rewritten, err := json.Marshal(value)
@@ -853,6 +857,26 @@ placeholder
 		return body
 placeholder
 	return rewritten
+placeholder
+
+func rewriteGrokMediaKnownVideoURL(value *any, proxyURL string) bool {
+	if value == nil {
+		return false
+placeholder
+	root, ok := (*value).(map[string]any)
+	if !ok {
+		return false
+placeholder
+	video, ok := root["video"].(map[string]any)
+	if !ok {
+		return false
+placeholder
+	rawURL, ok := video["url"].(string)
+	if !ok || strings.TrimSpace(rawURL) == "" {
+		return false
+placeholder
+	video["url"] = proxyURL
+	return true
 placeholder
 
 func rewriteGrokMediaVideoContentURLValue(value *any, requestID, proxyURL string) bool {
