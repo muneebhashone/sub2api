@@ -508,6 +508,25 @@ placeholder
 		if getErr != nil {
 			return nil, false, getErr
 	placeholder
+		now := time.Now()
+		if sub.Status == SubscriptionStatusExpired ||
+			(sub.Status != SubscriptionStatusSuspended && !sub.ExpiresAt.After(now)) {
+			validityDays := normalizeAssignValidityDays(input.ValidityDays)
+			newExpiresAt := now.AddDate(0, 0, validityDays)
+			if newExpiresAt.After(MaxExpiresAt) {
+				newExpiresAt = MaxExpiresAt
+		placeholder
+			renewalNotes := input.Notes
+			if strings.TrimSpace(sub.Notes) == strings.TrimSpace(input.Notes) {
+				renewalNotes = ""
+		placeholder
+			if err := s.updateExistingSubscriptionTerm(ctx, sub, renewalNotes, now, newExpiresAt, true); err != nil {
+				return nil, false, err
+		placeholder
+			s.maybeInvalidateAssignmentCaches(input.UserID, input.GroupID, false)
+			renewed, getErr := s.userSubRepo.GetByID(ctx, sub.ID)
+			return renewed, true, getErr
+	placeholder
 		if conflictReason, conflict := detectAssignSemanticConflict(sub, input); conflict {
 			return nil, false, ErrSubscriptionAssignConflict.WithMetadata(map[string]string{
 				"conflict_reason": conflictReason,
