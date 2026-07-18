@@ -311,6 +311,119 @@ placeholder
 	require.Empty(t, fallbackHeaders.Get("User-Agent"))
 placeholder
 
+func TestGrokAccessDeniedFallbackRecognizesChatEndpointPermissionDenied(t *testing.T) {
+	var hosts []string
+	transport := &grokAccessDeniedFallbackTransport{
+		base: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			hosts = append(hosts, req.URL.Hostname())
+			if req.URL.Hostname() == grokCLIProxyHost {
+				return &http.Response{
+					StatusCode: http.StatusForbidden,
+					Header:     make(http.Header),
+					Body: io.NopCloser(strings.NewReader(
+						`{"code":"permission_denied","error":"Access to the chat endpoint is denied. Please ensure you're using the correct credentials. If you believe this is a mistake, please contact support."placeholder`,
+					)),
+					Request: req,
+			placeholder, nil
+		placeholder
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body:       io.NopCloser(strings.NewReader(`{"id":"response-ok"placeholder`)),
+				Request:    req,
+		placeholder, nil
+	placeholder),
+placeholder
+
+	req, err := http.NewRequest(http.MethodPost, "https://cli-chat-proxy.grok.com/v1/responses", strings.NewReader(`{"model":"grok-4.5"placeholder`))
+placeholder
+	req.Header.Set("Authorization", "Bearer oauth-token")
+	req.Header.Set("X-XAI-Token-Auth", "xai-grok-cli")
+
+	resp, err := transport.RoundTrip(req)
+placeholder
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, []string{grokCLIProxyHost, grokOfficialAPIHostplaceholder, hosts)
+placeholder
+
+func TestIsGrokCLICompatibilityAccessDenied(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+placeholder{
+		{name: "legacy compatibility wording", body: `{"error":"Access denied"placeholder`, want: trueplaceholder,
+		{
+			name: "observed chat endpoint permission denial",
+			body: `{"code":"permission_denied","error":"Access to the chat endpoint is denied. Please ensure you're using the correct credentials. If you believe this is a mistake, please contact support."placeholder`,
+			want: true,
+	placeholder,
+		{
+			name: "entitlement denial using the same broad terms",
+			body: `{"code":"permission_denied","error":"Access to the chat endpoint is denied because a subscription is required"placeholder`,
+			want: false,
+	placeholder,
+		{
+			name: "different permission denied endpoint",
+			body: `{"code":"permission_denied","error":"Access to the billing endpoint is denied."placeholder`,
+			want: false,
+	placeholder,
+		{
+			name: "wrong structured error code",
+			body: `{"code":"subscription_required","error":"Access to the chat endpoint is denied. Please ensure you're using the correct credentials. If you believe this is a mistake, please contact support."placeholder`,
+			want: false,
+	placeholder,
+		{name: "malformed response", body: `permission_denied: chat endpoint denied`, want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, isGrokCLICompatibilityAccessDenied([]byte(tt.body)))
+	placeholder)
+placeholder
+placeholder
+
+func TestIsGrokCLIAccessDeniedFallbackCandidateRequiresAuthenticatedReplayableCLI403(t *testing.T) {
+	newRequest := func() *http.Request {
+		req, err := http.NewRequest(http.MethodPost, "https://cli-chat-proxy.grok.com/v1/responses", strings.NewReader(`{"model":"grok-4.5"placeholder`))
+	placeholder
+		req.Header.Set("Authorization", "Bearer oauth-token")
+		req.Header.Set("X-XAI-Token-Auth", "xai-grok-cli")
+		return req
+placeholder
+	newResponse := func() *http.Response { return &http.Response{StatusCode: http.StatusForbiddenplaceholder placeholder
+
+	t.Run("valid candidate", func(t *testing.T) {
+		require.True(t, isGrokCLIAccessDeniedFallbackCandidate(newRequest(), newResponse()))
+placeholder)
+	t.Run("non CLI host", func(t *testing.T) {
+		req := newRequest()
+		req.URL.Host = "api.x.ai"
+		require.False(t, isGrokCLIAccessDeniedFallbackCandidate(req, newResponse()))
+placeholder)
+	t.Run("missing CLI identity", func(t *testing.T) {
+		req := newRequest()
+		req.Header.Del("X-XAI-Token-Auth")
+		require.False(t, isGrokCLIAccessDeniedFallbackCandidate(req, newResponse()))
+placeholder)
+	t.Run("missing bearer authentication", func(t *testing.T) {
+		req := newRequest()
+		req.Header.Del("Authorization")
+		require.False(t, isGrokCLIAccessDeniedFallbackCandidate(req, newResponse()))
+placeholder)
+	t.Run("non forbidden response", func(t *testing.T) {
+		resp := newResponse()
+		resp.StatusCode = http.StatusUnauthorized
+		require.False(t, isGrokCLIAccessDeniedFallbackCandidate(newRequest(), resp))
+placeholder)
+	t.Run("non replayable request", func(t *testing.T) {
+		req := newRequest()
+		req.GetBody = nil
+		require.False(t, isGrokCLIAccessDeniedFallbackCandidate(req, newResponse()))
+placeholder)
+placeholder
+
 func TestHTTPUpstreamDoDoesNotFallbackForGrokEntitlementDenial(t *testing.T) {
 	transport := &grokAccessDeniedFallbackTransport{
 		base: roundTripFunc(func(req *http.Request) (*http.Response, error) {
