@@ -29,7 +29,7 @@ placeholder
 		Status: service.StatusActive,
 placeholder)
 
-	h := NewUserHandler(adminSvc, nil, nil, nil, nil, nil)
+	h := NewUserHandler(adminSvc, nil, nil, nil, nil, nil, nil)
 	router.POST("/api/v1/admin/users", h.Create)
 	router.PUT("/api/v1/admin/users/:id", h.Update)
 	return router, adminSvc
