@@ -164,8 +164,17 @@ placeholder
 		sessionSeed = []byte(requestID)
 placeholder
 	sessionHash := h.gatewayService.GenerateExplicitSessionHash(c, sessionSeed)
+	boundLookupAccountID := int64(0)
 	if endpoint.IsVideoLookupRequest() {
-		sessionHash = service.GrokMediaVideoRequestSessionHash(requestID)
+		sessionHash = service.GrokMediaVideoRequestSessionHash(requestID, subject.UserID, apiKey.ID)
+		boundLookupAccountID, err = h.gatewayService.ResolveGrokMediaVideoRequestAccount(
+			c.Request.Context(), apiKey.GroupID, requestID, subject.UserID, apiKey.ID,
+		)
+		if err != nil || boundLookupAccountID <= 0 {
+			reqLog.Info("grok_media.video_lookup_owner_binding_missing", zap.Error(err))
+			h.errorResponse(c, http.StatusNotFound, "not_found_error", "Video request not found")
+			return
+	placeholder
 placeholder
 	requestCtx := c.Request.Context()
 	failedAccountIDs := make(map[int64]struct{placeholder)
@@ -240,6 +249,14 @@ placeholder
 			h.errorResponse(c, cls.Status, cls.ErrType, cls.Message)
 			return
 	placeholder
+		if boundLookupAccountID > 0 && selection.Account.ID != boundLookupAccountID {
+			reqLog.Warn("grok_media.video_lookup_bound_account_unavailable",
+				zap.Int64("bound_account_id", boundLookupAccountID),
+				zap.Int64("selected_account_id", selection.Account.ID),
+			)
+			h.errorResponse(c, http.StatusNotFound, "not_found_error", "Video request not found")
+			return
+	placeholder
 
 		reqLog.Debug("grok_media.account_schedule_decision",
 			zap.String("layer", scheduleDecision.Layer),
@@ -300,6 +317,10 @@ placeholder
 					h.handleFailoverExhausted(c, failoverErr, false)
 					return
 			placeholder
+				if endpoint.IsVideoLookupRequest() {
+					h.handleFailoverExhausted(c, failoverErr, false)
+					return
+			placeholder
 				if failoverErr.RetryableOnSameAccount {
 					retryLimit := account.GetPoolModeRetryCount()
 					if sameAccountRetryCount[account.ID] < retryLimit {
@@ -351,7 +372,9 @@ placeholder
 
 		h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(requestModel), true, nil)
 		if endpoint.IsGenerationRequest() && strings.TrimSpace(result.ResponseID) != "" {
-			if err := h.gatewayService.BindGrokMediaVideoRequestAccount(requestCtx, apiKey.GroupID, result.ResponseID, account.ID); err != nil {
+			if err := h.gatewayService.BindGrokMediaVideoRequestAccount(
+				requestCtx, apiKey.GroupID, result.ResponseID, subject.UserID, apiKey.ID, account.ID,
+			); err != nil {
 				reqLog.Warn("grok_media.bind_video_request_account_failed",
 					zap.Int64("account_id", account.ID),
 					zap.String("request_id", result.ResponseID),
