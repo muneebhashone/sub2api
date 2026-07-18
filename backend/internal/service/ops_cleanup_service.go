@@ -299,6 +299,7 @@ placeholder
 
 	targets := []opsCleanupTarget{
 		{effective.ErrorLogRetentionDays, "ops_error_logs", "created_at", false, &out.errorLogsplaceholder,
+		{effective.ErrorLogRetentionDays, "ops_ingress_reject_aggregates", "bucket_start", false, &out.ingressRejectsplaceholder,
 		{effective.ErrorLogRetentionDays, "ops_alert_events", "created_at", false, &out.alertEventsplaceholder,
 		{effective.ErrorLogRetentionDays, "ops_system_logs", "created_at", false, &out.systemLogsplaceholder,
 		{effective.ErrorLogRetentionDays, "ops_system_log_cleanup_audits", "created_at", false, &out.logAuditsplaceholder,

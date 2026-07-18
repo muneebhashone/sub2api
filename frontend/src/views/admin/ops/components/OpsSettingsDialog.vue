@@ -574,16 +574,6 @@ placeholder
 
             <div class="flex items-center justify-between">
               <div>
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.ignoreInvalidApiKeyErrors') placeholderplaceholder</label>
-                <p class="mt-1 text-xs text-gray-500">
-                  {{ t('admin.ops.settings.ignoreInvalidApiKeyErrorsHint') placeholderplaceholder
-                </p>
-              </div>
-              <Toggle v-model="advancedSettings.ignore_invalid_api_key_errors" />
-            </div>
-
-            <div class="flex items-center justify-between">
-              <div>
                 <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('admin.ops.settings.ignoreInsufficientBalanceErrors') placeholderplaceholder</label>
                 <p class="mt-1 text-xs text-gray-500">
                   {{ t('admin.ops.settings.ignoreInsufficientBalanceErrorsHint') placeholderplaceholder

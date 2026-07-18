@@ -824,6 +824,7 @@ placeholder
 				"access_token": "expired", "refresh_token": "revoked-refresh",
 				"expires_at": time.Now().Add(-time.Minute).UTC().Format(time.RFC3339),
 		placeholder,
+			Extra: map[string]any{service.GrokMediaEligibleExtraKey: trueplaceholder,
 	placeholder,
 		{
 			ID: 802, Name: "healthy", Platform: service.PlatformGrok, Type: service.AccountTypeOAuth,
@@ -832,6 +833,7 @@ placeholder
 				"access_token": "healthy-access", "refresh_token": "healthy-refresh",
 				"expires_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		placeholder,
+			Extra: map[string]any{service.GrokMediaEligibleExtraKey: trueplaceholder,
 	placeholder,
 placeholder
 	if mode == "postmap_cancel" || mode == "first_429" || mode == "all_429" || mode == "mixed_429_500" || mode == "mixed_500_429" || mode == "oauth_429_apikey_500" {
@@ -845,6 +847,7 @@ placeholder
 				"access_token": "untried-healthy-access", "refresh_token": "untried-healthy-refresh",
 				"expires_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		placeholder,
+			Extra: map[string]any{service.GrokMediaEligibleExtraKey: trueplaceholder,
 	placeholder)
 placeholder
 	if mode == "oauth_429_apikey_500" {

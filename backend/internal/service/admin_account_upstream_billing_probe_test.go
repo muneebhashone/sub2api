@@ -38,6 +38,32 @@ placeholder
 	require.NotContains(t, created.Extra, UpstreamBillingProbeExtraKey)
 placeholder
 
+func TestCreateAccountAcceptsDedicatedUpstreamBillingProbeSetting(t *testing.T) {
+	enabled := true
+	repo := &upstreamBillingProbeAccountRepo{placeholder
+	created, err := (&adminServiceImpl{accountRepo: repoplaceholder).CreateAccount(context.Background(), &CreateAccountInput{
+		Name:                 "upstream",
+		Platform:             PlatformOpenAI,
+		Type:                 AccountTypeAPIKey,
+		Credentials:          map[string]any{"api_key": "sk-test"placeholder,
+		ProbeEnabled:         &enabled,
+		SkipDefaultGroupBind: true,
+placeholder)
+
+placeholder
+	require.Equal(t, true, created.Extra[UpstreamBillingProbeEnabledExtraKey])
+
+	_, err = (&adminServiceImpl{accountRepo: repoplaceholder).CreateAccount(context.Background(), &CreateAccountInput{
+		Name:                 "oauth",
+		Platform:             PlatformOpenAI,
+		Type:                 AccountTypeOAuth,
+		Credentials:          map[string]any{"access_token": "token"placeholder,
+		ProbeEnabled:         &enabled,
+		SkipDefaultGroupBind: true,
+placeholder)
+	require.ErrorIs(t, err, ErrUpstreamBillingProbeAccountInvalid)
+placeholder
+
 func TestUpdateAccountPreservesManagedUpstreamBillingProbeStateForUnrelatedEdit(t *testing.T) {
 	accountID := int64(110)
 	repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{
@@ -358,6 +384,63 @@ placeholder
 	require.Equal(t, "value", repo.bulkUpdates[0].Extra["custom"])
 	require.NotContains(t, repo.bulkUpdates[0].Extra, UpstreamBillingProbeEnabledExtraKey)
 	require.NotContains(t, repo.bulkUpdates[0].Extra, UpstreamBillingProbeExtraKey)
+placeholder
+
+func TestBulkUpdateAccountsAcceptsDedicatedUpstreamBillingProbeSetting(t *testing.T) {
+	for _, enabled := range []bool{true, falseplaceholder {
+		t.Run(map[bool]string{true: "enable", false: "disable"placeholder[enabled], func(t *testing.T) {
+			repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{
+				1: {ID: 1, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder,
+				2: {ID: 2, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder,
+		placeholderplaceholder
+
+			result, err := (&adminServiceImpl{accountRepo: repoplaceholder).BulkUpdateAccounts(context.Background(), &BulkUpdateAccountsInput{
+				AccountIDs:   []int64{1, 2placeholder,
+				ProbeEnabled: &enabled,
+		placeholder)
+
+		placeholder
+			require.Equal(t, 2, result.Success)
+			require.Len(t, repo.bulkUpdates, 1)
+			require.Equal(t, enabled, repo.bulkUpdates[0].Extra[UpstreamBillingProbeEnabledExtraKey])
+			require.NotNil(t, repo.bulkUpdates[0].ProbeEnabled)
+			require.Equal(t, enabled, *repo.bulkUpdates[0].ProbeEnabled)
+	placeholder)
+placeholder
+placeholder
+
+func TestBulkUpdateAccountsRejectsProbeSettingForIneligibleTargetBeforeWrite(t *testing.T) {
+	for _, enabled := range []bool{true, falseplaceholder {
+		t.Run(map[bool]string{true: "enable", false: "disable"placeholder[enabled], func(t *testing.T) {
+			repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{
+				1: {ID: 1, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder,
+				2: {ID: 2, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder,
+		placeholderplaceholder
+
+			_, err := (&adminServiceImpl{accountRepo: repoplaceholder).BulkUpdateAccounts(context.Background(), &BulkUpdateAccountsInput{
+				AccountIDs:   []int64{1, 2placeholder,
+				ProbeEnabled: &enabled,
+		placeholder)
+
+			require.ErrorIs(t, err, ErrUpstreamBillingProbeAccountInvalid)
+			require.Empty(t, repo.bulkUpdates)
+	placeholder)
+placeholder
+placeholder
+
+func TestBulkUpdateAccountsRejectsProbeSettingWhenTargetIsMissing(t *testing.T) {
+	enabled := true
+	repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{
+		1: {ID: 1, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder,
+placeholderplaceholder
+
+	_, err := (&adminServiceImpl{accountRepo: repoplaceholder).BulkUpdateAccounts(context.Background(), &BulkUpdateAccountsInput{
+		AccountIDs:   []int64{1, 2placeholder,
+		ProbeEnabled: &enabled,
+placeholder)
+
+	require.ErrorIs(t, err, ErrAccountNotFound)
+	require.Empty(t, repo.bulkUpdates)
 placeholder
 
 func TestBulkUpdateAccountsInvalidatesProbeSnapshotForIdentityCredentials(t *testing.T) {
