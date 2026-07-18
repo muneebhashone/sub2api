@@ -920,7 +920,7 @@ placeholder)
 		return nil, &UpstreamFailoverError{
 			StatusCode:             resp.StatusCode,
 			ResponseBody:           body,
-			RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
+			RetryableOnSameAccount: false,
 	placeholder
 placeholder
 
@@ -1752,11 +1752,11 @@ placeholder
 				Kind:               "failover",
 				Message:            upstreamMsg,
 		placeholder)
-			s.handleFailoverSideEffects(upstreamCtx, resp, account, respBody, requestModel)
+			shouldDisable := s.handleFailoverSideEffects(upstreamCtx, resp, account, respBody, requestModel)
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,
-				RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
+				RetryableOnSameAccount: !shouldDisable && account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
 		placeholder
 	placeholder
 		return s.handleOpenAIImagesErrorResponse(upstreamCtx, resp, c, account, requestModel)
@@ -1885,11 +1885,11 @@ placeholder)
 placeholder
 
 	responseBody := openAIImagesUpstreamErrorResponseBody(upstreamErr)
-	s.handleOpenAIAccountUpstreamError(ctx, account, upstreamErr.StatusCode, headers, responseBody, requestedModel)
+	shouldDisable := s.handleOpenAIAccountUpstreamError(ctx, account, upstreamErr.StatusCode, headers, responseBody, requestedModel)
 	return &UpstreamFailoverError{
 		StatusCode:             upstreamErr.StatusCode,
 		ResponseBody:           responseBody,
 		ResponseHeaders:        headers,
-		RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(upstreamErr.StatusCode),
+		RetryableOnSameAccount: !shouldDisable && account.IsPoolMode() && account.IsPoolModeRetryableStatus(upstreamErr.StatusCode),
 placeholder
 placeholder
