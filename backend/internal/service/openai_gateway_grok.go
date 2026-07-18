@@ -75,10 +75,6 @@ placeholder
 
 	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
 	defer releaseUpstreamCtx()
-	upstreamReq, err := buildGrokResponsesRequest(upstreamCtx, c, account, patchedBody, token, cacheIdentity, s.cfg)
-	if err != nil {
-		return nil, err
-placeholder
 
 	proxyURL := ""
 	if account.ProxyID != nil && account.Proxy != nil {
@@ -86,10 +82,45 @@ placeholder
 placeholder
 
 	upstreamStart := time.Now()
-	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
-	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
-	if err != nil {
-		return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, err, false)
+	var resp *http.Response
+	for attempt := 0; ; attempt++ {
+		upstreamReq, buildErr := buildGrokResponsesRequest(upstreamCtx, c, account, patchedBody, token, cacheIdentity, s.cfg)
+		if buildErr != nil {
+			return nil, buildErr
+	placeholder
+
+		resp, err = s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+		if err != nil {
+			return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, err, false)
+	placeholder
+
+		// xAI can reject encrypted reasoning copied from a response produced under
+		// another account or cache identity. Retry once with the same routing and
+		// credential after removing only the rejected encrypted reasoning payload.
+		if attempt > 0 || resp.StatusCode != http.StatusBadRequest {
+			break
+	placeholder
+		respBody := s.readUpstreamErrorBody(resp)
+		if resp.Body != nil {
+			_ = resp.Body.Close()
+	placeholder
+		if !isGrokInvalidEncryptedContentResponse(resp.StatusCode, respBody) {
+			resp.Body = io.NopCloser(bytes.NewReader(respBody))
+			break
+	placeholder
+
+		retryBody, changed, trimErr := trimGrokInvalidEncryptedContentRetryBody(patchedBody)
+		if trimErr != nil {
+			return nil, fmt.Errorf("prepare Grok invalid encrypted_content retry: %w", trimErr)
+	placeholder
+		if !changed {
+			resp.Body = io.NopCloser(bytes.NewReader(respBody))
+			break
+	placeholder
+
+		patchedBody = retryBody
+		slog.Info("grok_invalid_encrypted_content_retry", "account_id", account.ID, "cache_identity_present", cacheIdentity != "")
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
@@ -160,6 +191,57 @@ placeholder
 		Duration:        time.Since(startTime),
 		FirstTokenMs:    firstTokenMs,
 placeholder, nil
+placeholder
+
+func isGrokInvalidEncryptedContentResponse(statusCode int, body []byte) bool {
+	if statusCode != http.StatusBadRequest {
+		return false
+placeholder
+
+	code := gjson.GetBytes(body, "code")
+	message := gjson.GetBytes(body, "error")
+	if code.Type != gjson.String || message.Type != gjson.String ||
+		!strings.EqualFold(strings.TrimSpace(code.String()), "invalid-argument") {
+		return false
+placeholder
+
+	normalizedMessage := strings.ToLower(message.String())
+	return strings.Contains(normalizedMessage, "decrypt") && strings.Contains(normalizedMessage, "encrypted_content")
+placeholder
+
+func trimGrokInvalidEncryptedContentRetryBody(body []byte) ([]byte, bool, error) {
+	input := gjson.GetBytes(body, "input")
+	items := input.Array()
+	if input.IsObject() {
+		items = []gjson.Result{inputplaceholder
+placeholder
+
+	hasEncryptedReasoning := false
+	for _, item := range items {
+		if strings.TrimSpace(item.Get("type").String()) == "reasoning" && item.Get("encrypted_content").Exists() {
+			hasEncryptedReasoning = true
+			break
+	placeholder
+placeholder
+	if !hasEncryptedReasoning {
+		return body, false, nil
+placeholder
+
+	var requestBody map[string]any
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.UseNumber()
+	if err := decoder.Decode(&requestBody); err != nil {
+		return nil, false, err
+placeholder
+	if !trimOpenAIEncryptedReasoningItems(requestBody) {
+		return body, false, nil
+placeholder
+
+	retryBody, err := marshalOpenAIUpstreamJSON(requestBody)
+	if err != nil {
+		return nil, false, err
+placeholder
+	return retryBody, true, nil
 placeholder
 
 func patchGrokResponsesBody(body []byte, upstreamModel string) ([]byte, error) {
