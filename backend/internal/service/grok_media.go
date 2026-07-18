@@ -336,6 +336,9 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	if endpoint == GrokMediaEndpointVideoContent {
+		return s.forwardGrokMediaVideoContent(ctx, c, account, token, requestID, startTime)
+placeholder
 	targetURL, err := buildGrokMediaURL(account, s.cfg, endpoint, requestID)
 	if err != nil {
 		return nil, err
@@ -366,16 +369,7 @@ placeholder
 		return nil, err
 placeholder
 	upstreamReq.Header.Set("Authorization", "Bearer "+token)
-	if endpoint == GrokMediaEndpointVideoContent {
-		upstreamReq.Header.Set("Accept", "*/*")
-		if c != nil {
-			if rangeHeader := strings.TrimSpace(c.GetHeader("Range")); rangeHeader != "" {
-				upstreamReq.Header.Set("Range", rangeHeader)
-		placeholder
-	placeholder
-placeholder else {
-		upstreamReq.Header.Set("Accept", "application/json")
-placeholder
+	upstreamReq.Header.Set("Accept", "application/json")
 	if account.IsGrokOAuth() && isGrokCLIProxyTarget(targetURL) {
 		applyGrokCLIHeaders(upstreamReq.Header)
 placeholder
@@ -403,22 +397,11 @@ placeholder
 
 	requestIDHeader := firstNonEmpty(resp.Header.Get("x-request-id"), resp.Header.Get("xai-request-id"))
 	requestModel := requestInfo.Model
-	preserveContentRangeError := endpoint == GrokMediaEndpointVideoContent && resp.StatusCode == http.StatusRequestedRangeNotSatisfiable
-	if resp.StatusCode >= 400 && !preserveContentRangeError {
+	if resp.StatusCode >= 400 {
 		return s.handleGrokMediaErrorResponse(ctx, resp, c, account, requestIDHeader, requestModel)
 placeholder
 
 	s.updateGrokUsageFromResponse(ctx, account, resp.Header, resp.StatusCode)
-	if endpoint == GrokMediaEndpointVideoContent {
-		if err := writeGrokMediaContentResponse(c, resp); err != nil {
-			return nil, err
-	placeholder
-		return &OpenAIForwardResult{
-			RequestID:       requestIDHeader,
-			ResponseHeaders: resp.Header.Clone(),
-			Duration:        time.Since(startTime),
-	placeholder, nil
-placeholder
 	respBody, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, openAITooLargeError)
 	if err != nil {
 		return nil, err
@@ -449,6 +432,139 @@ placeholder
 		VideoResolution:      usage.VideoResolution,
 		VideoDurationSeconds: usage.VideoDurationSeconds,
 placeholder, nil
+placeholder
+
+func (s *OpenAIGatewayService) forwardGrokMediaVideoContent(
+	ctx context.Context,
+	c *gin.Context,
+	account *Account,
+	token, requestID string,
+	startTime time.Time,
+) (*OpenAIForwardResult, error) {
+	statusURL, err := buildGrokMediaURL(account, s.cfg, GrokMediaEndpointVideoStatus, requestID)
+	if err != nil {
+		return nil, err
+placeholder
+
+	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
+	defer releaseUpstreamCtx()
+	statusReq, err := http.NewRequestWithContext(
+		WithHTTPUpstreamRedirectsDisabled(upstreamCtx),
+		http.MethodGet,
+		statusURL,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+placeholder
+	statusReq.Header.Set("Authorization", "Bearer "+token)
+	statusReq.Header.Set("Accept", "application/json")
+	if account.IsGrokOAuth() && isGrokCLIProxyTarget(statusURL) {
+		applyGrokCLIHeaders(statusReq.Header)
+placeholder
+	account.ApplyHeaderOverrides(statusReq.Header)
+
+	proxyURL := ""
+	if account.ProxyID != nil && account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+	upstreamStart := time.Now()
+	statusResp, err := s.httpUpstream.Do(statusReq, proxyURL, account.ID, account.Concurrency)
+	if err != nil {
+		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+		return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, err, false)
+placeholder
+	statusRequestID := firstNonEmpty(statusResp.Header.Get("x-request-id"), statusResp.Header.Get("xai-request-id"))
+	if statusResp.StatusCode >= 300 {
+		defer func() { _ = statusResp.Body.Close() placeholder()
+		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+		if statusResp.StatusCode < 400 {
+			return nil, fmt.Errorf("grok media status redirect is not allowed")
+	placeholder
+		return s.handleGrokMediaErrorResponse(ctx, statusResp, c, account, statusRequestID, "")
+placeholder
+	statusBody, err := ReadUpstreamResponseBody(statusResp.Body, s.cfg, c, openAITooLargeError)
+	_ = statusResp.Body.Close()
+	if err != nil {
+		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+		return nil, err
+placeholder
+
+	contentURL, err := grokMediaSignedVideoContentURL(statusBody)
+	if err != nil {
+		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+		return nil, err
+placeholder
+	signedContent := contentURL != ""
+	if !signedContent {
+		contentURL, err = buildGrokMediaURL(account, s.cfg, GrokMediaEndpointVideoContent, requestID)
+		if err != nil {
+			SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+			return nil, err
+	placeholder
+placeholder
+
+	contentReq, err := http.NewRequestWithContext(
+		WithHTTPUpstreamRedirectsDisabled(upstreamCtx),
+		http.MethodGet,
+		contentURL,
+		nil,
+	)
+	if err != nil {
+		SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+		return nil, err
+placeholder
+	contentReq.Header.Set("Accept", "*/*")
+	if c != nil {
+		if rangeHeader := strings.TrimSpace(c.GetHeader("Range")); rangeHeader != "" {
+			contentReq.Header.Set("Range", rangeHeader)
+	placeholder
+placeholder
+	if !signedContent {
+		contentReq.Header.Set("Authorization", "Bearer "+token)
+		if account.IsGrokOAuth() && isGrokCLIProxyTarget(contentURL) {
+			applyGrokCLIHeaders(contentReq.Header)
+	placeholder
+		account.ApplyHeaderOverrides(contentReq.Header)
+placeholder
+
+	contentResp, err := s.httpUpstream.Do(contentReq, proxyURL, account.ID, account.Concurrency)
+	SetOpsLatencyMs(c, OpsUpstreamLatencyMsKey, time.Since(upstreamStart).Milliseconds())
+	if err != nil {
+		return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, err, false)
+placeholder
+	defer func() { _ = contentResp.Body.Close() placeholder()
+	contentRequestID := firstNonEmpty(contentResp.Header.Get("x-request-id"), contentResp.Header.Get("xai-request-id"), statusRequestID)
+	if contentResp.StatusCode >= 300 && contentResp.StatusCode < 400 {
+		return nil, fmt.Errorf("grok media signed content redirect is not allowed")
+placeholder
+	if contentResp.StatusCode >= 400 && contentResp.StatusCode != http.StatusRequestedRangeNotSatisfiable {
+		return s.handleGrokMediaErrorResponse(ctx, contentResp, c, account, contentRequestID, "")
+placeholder
+
+	s.updateGrokUsageFromResponse(ctx, account, contentResp.Header, contentResp.StatusCode)
+	if err := writeGrokMediaContentResponse(c, contentResp); err != nil {
+		return nil, err
+placeholder
+	return &OpenAIForwardResult{
+		RequestID:       contentRequestID,
+		ResponseHeaders: contentResp.Header.Clone(),
+		Duration:        time.Since(startTime),
+placeholder, nil
+placeholder
+
+func grokMediaSignedVideoContentURL(body []byte) (string, error) {
+	rawURL := strings.TrimSpace(gjson.GetBytes(body, "video.url").String())
+	if rawURL == "" {
+		return "", nil
+placeholder
+	parsed, err := url.Parse(rawURL)
+	if err != nil || !strings.EqualFold(parsed.Scheme, "https") ||
+		!strings.EqualFold(parsed.Hostname(), "vidgen.x.ai") ||
+		(parsed.Port() != "" && parsed.Port() != "443") || parsed.User != nil {
+		return "", fmt.Errorf("grok media status returned an unsupported video content URL")
+placeholder
+	return parsed.String(), nil
 placeholder
 
 func isGrokCLIProxyTarget(rawURL string) bool {

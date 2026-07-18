@@ -18,12 +18,20 @@ import (
 )
 
 type grokMediaContentUpstreamStub struct {
-	request  *http.Request
-	response *http.Response
+	request   *http.Request
+	requests  []*http.Request
+	response  *http.Response
+	responses []*http.Response
 placeholder
 
 func (s *grokMediaContentUpstreamStub) Do(req *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
 	s.request = req
+	s.requests = append(s.requests, req)
+	if len(s.responses) > 0 {
+		resp := s.responses[0]
+		s.responses = s.responses[1:]
+		return resp, nil
+placeholder
 	return s.response, nil
 placeholder
 
@@ -54,9 +62,17 @@ placeholder
 	return c, recorder
 placeholder
 
+func grokMediaContentStatusResponse(body string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(body)),
+placeholder
+placeholder
+
 func TestForwardGrokMediaContentUsesUpstreamCredentialAndStreamsRange(t *testing.T) {
 	upstream := &grokMediaContentUpstreamStub{
-		response: &http.Response{
+		responses: []*http.Response{grokMediaContentStatusResponse(`{"status":"completed"placeholder`), {
 			StatusCode: http.StatusPartialContent,
 			Header: http.Header{
 				"Content-Type":   []string{"video/mp4"placeholder,
@@ -68,7 +84,7 @@ func TestForwardGrokMediaContentUsesUpstreamCredentialAndStreamsRange(t *testing
 			placeholder,
 		placeholder,
 			Body: io.NopCloser(strings.NewReader("video-payload")),
-	placeholder,
+placeholder
 placeholder
 	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
 	c, recorder := grokMediaContentTestContext(http.MethodGet, "https://api.example/v1/videos/task-1/content", map[string]string{
@@ -84,10 +100,13 @@ placeholder
 	require.NotNil(t, result)
 	require.Equal(t, http.StatusPartialContent, recorder.Code)
 	require.Equal(t, "video-payload", recorder.Body.String())
-	require.Equal(t, "https://relay.example/v1/videos/task-1/content", upstream.request.URL.String())
-	require.Equal(t, "Bearer upstream-key", upstream.request.Header.Get("Authorization"))
-	require.Equal(t, "bytes=0-12", upstream.request.Header.Get("Range"))
-	require.Equal(t, "*/*", upstream.request.Header.Get("Accept"))
+	require.Len(t, upstream.requests, 2)
+	require.Equal(t, "https://relay.example/v1/videos/task-1", upstream.requests[0].URL.String())
+	require.Equal(t, "Bearer upstream-key", upstream.requests[0].Header.Get("Authorization"))
+	require.Equal(t, "https://relay.example/v1/videos/task-1/content", upstream.requests[1].URL.String())
+	require.Equal(t, "Bearer upstream-key", upstream.requests[1].Header.Get("Authorization"))
+	require.Equal(t, "bytes=0-12", upstream.requests[1].Header.Get("Range"))
+	require.Equal(t, "*/*", upstream.requests[1].Header.Get("Accept"))
 	require.Equal(t, "video/mp4", recorder.Header().Get("Content-Type"))
 	require.Equal(t, "13", recorder.Header().Get("Content-Length"))
 	require.Equal(t, "bytes 0-12/100", recorder.Header().Get("Content-Range"))
@@ -98,12 +117,12 @@ placeholder
 
 func TestForwardGrokMediaContentStreamsFullResponseWithSafeDefaults(t *testing.T) {
 	upstream := &grokMediaContentUpstreamStub{
-		response: &http.Response{
+		responses: []*http.Response{grokMediaContentStatusResponse(`{"status":"completed"placeholder`), {
 			StatusCode:    http.StatusOK,
 			Header:        http.Header{"Set-Cookie": []string{"secret=upstream"placeholder, "X-Upstream-Secret": []string{"hidden"placeholderplaceholder,
 			Body:          io.NopCloser(strings.NewReader("full-video")),
 			ContentLength: -1,
-	placeholder,
+placeholder
 placeholder
 	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
 	c, recorder := grokMediaContentTestContext(http.MethodGet, "https://api.example/v1/videos/task-1/content", nil)
@@ -116,7 +135,8 @@ placeholder
 placeholder
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.Equal(t, "full-video", recorder.Body.String())
-	require.Empty(t, upstream.request.Header.Get("Range"))
+	require.Len(t, upstream.requests, 2)
+	require.Empty(t, upstream.requests[1].Header.Get("Range"))
 	require.Equal(t, "application/octet-stream", recorder.Header().Get("Content-Type"))
 	require.Empty(t, recorder.Header().Get("Content-Length"))
 	require.Empty(t, recorder.Header().Get("Set-Cookie"))
@@ -126,7 +146,7 @@ placeholder
 
 func TestForwardGrokMediaContentPreservesRangeNotSatisfiable(t *testing.T) {
 	upstream := &grokMediaContentUpstreamStub{
-		response: &http.Response{
+		responses: []*http.Response{grokMediaContentStatusResponse(`{"status":"completed"placeholder`), {
 			StatusCode: http.StatusRequestedRangeNotSatisfiable,
 			Header: http.Header{
 				"Content-Type":   []string{"text/plain"placeholder,
@@ -135,7 +155,7 @@ func TestForwardGrokMediaContentPreservesRangeNotSatisfiable(t *testing.T) {
 				"Accept-Ranges":  []string{"bytes"placeholder,
 		placeholder,
 			Body: io.NopCloser(strings.NewReader("bad-range!!")),
-	placeholder,
+placeholder
 placeholder
 	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
 	c, recorder := grokMediaContentTestContext(http.MethodGet, "https://api.example/v1/videos/task-1/content", map[string]string{
@@ -150,10 +170,86 @@ placeholder)
 placeholder
 	require.Equal(t, http.StatusRequestedRangeNotSatisfiable, recorder.Code)
 	require.Equal(t, "bad-range!!", recorder.Body.String())
-	require.Equal(t, "bytes=500-600", upstream.request.Header.Get("Range"))
+	require.Len(t, upstream.requests, 2)
+	require.Equal(t, "bytes=500-600", upstream.requests[1].Header.Get("Range"))
 	require.Equal(t, "bytes */100", recorder.Header().Get("Content-Range"))
 	require.Equal(t, "bytes", recorder.Header().Get("Accept-Ranges"))
 	require.True(t, IsResponseCommitted(c))
+placeholder
+
+func TestForwardGrokMediaContentFetchesValidatedSignedURLWithoutCredentials(t *testing.T) {
+	upstream := &grokMediaContentUpstreamStub{
+		responses: []*http.Response{
+			grokMediaContentStatusResponse(`{"status":"done","video":{"url":"https://vidgen.x.ai/signed-token/xai-video-task-1.mp4"placeholderplaceholder`),
+			{
+				StatusCode: http.StatusPartialContent,
+				Header: http.Header{
+					"Content-Type":   []string{"video/mp4"placeholder,
+					"Content-Length": []string{"13"placeholder,
+					"Content-Range":  []string{"bytes 0-12/100"placeholder,
+			placeholder,
+				Body: io.NopCloser(strings.NewReader("video-payload")),
+		placeholder,
+	placeholder,
+placeholder
+	account := grokMediaContentTestAccount()
+	account.Credentials[credKeyHeaderOverrideEnabled] = true
+	account.Credentials[credKeyHeaderOverrides] = map[string]any{"user-agent": "private-agent"placeholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	c, recorder := grokMediaContentTestContext(http.MethodGet, "https://api.example/v1/videos/task-1/content", map[string]string{
+		"Range": "bytes=0-12",
+placeholder)
+
+	_, err := svc.ForwardGrokMedia(
+		context.Background(), c, account,
+		GrokMediaEndpointVideoContent, "task-1", nil, "",
+	)
+
+placeholder
+	require.Equal(t, http.StatusPartialContent, recorder.Code)
+	require.Equal(t, "video-payload", recorder.Body.String())
+	require.Len(t, upstream.requests, 2)
+	require.Equal(t, "https://relay.example/v1/videos/task-1", upstream.requests[0].URL.String())
+	require.Equal(t, "Bearer upstream-key", upstream.requests[0].Header.Get("Authorization"))
+	require.Equal(t, "private-agent", upstream.requests[0].Header.Get("User-Agent"))
+	require.True(t, HTTPUpstreamRedirectsDisabled(upstream.requests[0].Context()))
+	require.Equal(t, "https://vidgen.x.ai/signed-token/xai-video-task-1.mp4", upstream.requests[1].URL.String())
+	require.Empty(t, upstream.requests[1].Header.Get("Authorization"))
+	require.Empty(t, upstream.requests[1].Header.Get("User-Agent"))
+	require.Equal(t, "bytes=0-12", upstream.requests[1].Header.Get("Range"))
+	require.True(t, HTTPUpstreamRedirectsDisabled(upstream.requests[1].Context()))
+placeholder
+
+func TestForwardGrokMediaContentRejectsUntrustedSignedURL(t *testing.T) {
+	upstream := &grokMediaContentUpstreamStub{
+		responses: []*http.Response{
+			grokMediaContentStatusResponse(`{"status":"done","video":{"url":"http://169.254.169.254/latest/meta-data"placeholderplaceholder`),
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	c, _ := grokMediaContentTestContext(http.MethodGet, "https://api.example/v1/videos/task-1/content", nil)
+
+	_, err := svc.ForwardGrokMedia(
+		context.Background(), c, grokMediaContentTestAccount(),
+		GrokMediaEndpointVideoContent, "task-1", nil, "",
+	)
+
+	require.ErrorContains(t, err, "unsupported video content URL")
+	require.Len(t, upstream.requests, 1)
+placeholder
+
+func TestGrokMediaSignedVideoContentURLRejectsDeceptiveOrigins(t *testing.T) {
+	for _, rawURL := range []string{
+		"https://vidgen.x.ai.attacker.invalid/video.mp4",
+		"https://vidgen.x.ai@attacker.invalid/video.mp4",
+		"https://vidgen.x.ai:444/video.mp4",
+		"http://vidgen.x.ai/video.mp4",
+placeholder {
+		t.Run(rawURL, func(t *testing.T) {
+			_, err := grokMediaSignedVideoContentURL([]byte(`{"video":{"url":"` + rawURL + `"placeholderplaceholder`))
+			require.ErrorContains(t, err, "unsupported video content URL")
+	placeholder)
+placeholder
 placeholder
 
 func TestForwardGrokVideoStatusRewritesOnlyProtectedContentURL(t *testing.T) {
