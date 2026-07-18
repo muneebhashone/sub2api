@@ -44,6 +44,18 @@ func (r *grokQuotaAccountRepo) UpdateExtra(_ context.Context, id int64, updates 
 		r.updates = make(map[int64]map[string]any)
 placeholder
 	r.updates[id] = updates
+	if r.mockAccountRepoForPlatform != nil {
+		account := r.accountsByID[id]
+		if account == nil {
+			return nil
+	placeholder
+		if account.Extra == nil {
+			account.Extra = make(map[string]any)
+	placeholder
+		for key, value := range updates {
+			account.Extra[key] = value
+	placeholder
+placeholder
 	return nil
 placeholder
 
@@ -822,6 +834,53 @@ placeholder
 	eligible, reason := account.GrokMediaGenerationEligibility()
 	require.False(t, eligible)
 	require.Equal(t, "billing_forbidden", reason)
+placeholder
+
+func TestGrokQuotaServiceProbeMediaEligibility(t *testing.T) {
+	t.Run("positive paid evidence enables media", func(t *testing.T) {
+		usagePercent := 10.0
+		monthlyLimit := 15_000.0
+		account := healthyGrokQuotaOAuthAccount(60)
+		repo := &grokQuotaAccountRepo{mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{account.ID: accountplaceholder,
+	placeholderplaceholder
+		upstream := &grokHybridUpstream{weeklyUsagePercent: &usagePercent, monthlyLimitCents: &monthlyLimitplaceholder
+		svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), upstream, nil)
+
+		eligible, reason, err := svc.ProbeMediaEligibility(context.Background(), account.ID)
+
+	placeholder
+		require.True(t, eligible)
+		require.Equal(t, "eligible", reason)
+placeholder)
+
+	t.Run("successful empty billing identifies free account", func(t *testing.T) {
+		account := healthyGrokQuotaOAuthAccount(61)
+		repo := &grokQuotaAccountRepo{mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{account.ID: accountplaceholder,
+	placeholderplaceholder
+		svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), &grokHybridUpstream{placeholder, nil)
+
+		eligible, reason, err := svc.ProbeMediaEligibility(context.Background(), account.ID)
+
+	placeholder
+		require.False(t, eligible)
+		require.Equal(t, "billing_free_tier", reason)
+placeholder)
+
+	t.Run("forbidden billing is deterministic ineligibility", func(t *testing.T) {
+		account := healthyGrokQuotaOAuthAccount(62)
+		repo := &grokQuotaAccountRepo{mockAccountRepoForPlatform: &mockAccountRepoForPlatform{
+			accountsByID: map[int64]*Account{account.ID: accountplaceholder,
+	placeholderplaceholder
+		svc := NewGrokQuotaService(repo, nil, NewGrokTokenProvider(repo, nil), &grokHybridUpstream{billingStatus: http.StatusForbiddenplaceholder, nil)
+
+		eligible, reason, err := svc.ProbeMediaEligibility(context.Background(), account.ID)
+
+	placeholder
+		require.False(t, eligible)
+		require.Equal(t, "billing_forbidden", reason)
+placeholder)
 placeholder
 
 func TestPreferBillingObservationStatus(t *testing.T) {

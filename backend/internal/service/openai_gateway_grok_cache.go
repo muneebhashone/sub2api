@@ -296,6 +296,13 @@ placeholder
 	if !hasFunction {
 		return body, nil
 placeholder
+	// Only complement missing native search tools when the request already contains
+	// at least one search tool (native or function-form). Pure client function tools
+	// (e.g. view_image) must not trigger injection to avoid biasing model tool
+	// selection (#4486).
+	if !present["web_search"] && !present["x_search"] {
+		return body, nil
+placeholder
 	for _, toolType := range []string{"web_search", "x_search"placeholder {
 		if present[toolType] {
 			continue

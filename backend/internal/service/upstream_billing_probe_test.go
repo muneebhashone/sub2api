@@ -495,7 +495,7 @@ placeholder
 placeholder
 
 func TestUpstreamBillingProbeRetryAfterIsNotShortened(t *testing.T) {
-	delay := nextProbeDelay(30, 1, 48*time.Hour)
+	delay := nextProbeDelay(30, 48*time.Hour)
 	require.Equal(t, 48*time.Hour, delay)
 placeholder
 
@@ -510,11 +510,21 @@ placeholder"api_key": "sk-test", "base_url": "https://upstream.example"placehold
 placeholder
 	repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{account.ID: accountplaceholderplaceholder
 	svc := newUpstreamBillingProbeTestService(repo, &httpUpstreamRecorder{placeholder, &upstreamBillingProbeSettingRepo{placeholder)
+	fixedNow := time.Date(2026, time.July, 13, 2, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return fixedNow placeholder
 
 	snapshot, err := svc.ProbeAccount(context.Background(), account.ID)
 placeholder
 	require.Equal(t, UpstreamBillingProbeStatusFailed, snapshot.Status)
 	require.Equal(t, "empty_response", snapshot.LastError)
+	require.False(t, snapshot.NextProbeAt.Before(fixedNow.Add(24*time.Minute)))
+	require.False(t, snapshot.NextProbeAt.After(fixedNow.Add(36*time.Minute)))
+
+	snapshot, err = svc.ProbeAccount(context.Background(), account.ID)
+placeholder
+	require.Equal(t, 2, snapshot.FailureCount)
+	require.False(t, snapshot.NextProbeAt.Before(fixedNow.Add(24*time.Minute)))
+	require.False(t, snapshot.NextProbeAt.After(fixedNow.Add(36*time.Minute)))
 placeholder
 
 func TestUpstreamBillingProbeUnsupportedAndAccountToggle(t *testing.T) {
@@ -533,6 +543,8 @@ placeholder
 		Body:       io.NopCloser(strings.NewReader("not found")),
 placeholderplaceholder
 	svc := newUpstreamBillingProbeTestService(repo, upstream, &upstreamBillingProbeSettingRepo{placeholder)
+	fixedNow := time.Date(2026, time.July, 13, 2, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return fixedNow placeholder
 
 	require.NoError(t, svc.SetAccountEnabled(context.Background(), account.ID, true))
 	require.Equal(t, true, account.Extra[UpstreamBillingProbeEnabledExtraKey])
@@ -540,6 +552,14 @@ placeholderplaceholder
 placeholder
 	require.Equal(t, UpstreamBillingProbeStatusUnsupported, snapshot.Status)
 	require.Equal(t, "unsupported", snapshot.LastError)
+	require.False(t, snapshot.NextProbeAt.Before(fixedNow.Add(24*time.Minute)))
+	require.False(t, snapshot.NextProbeAt.After(fixedNow.Add(36*time.Minute)))
+
+	snapshot, err = svc.ProbeAccount(context.Background(), account.ID)
+placeholder
+	require.Equal(t, 2, snapshot.FailureCount)
+	require.False(t, snapshot.NextProbeAt.Before(fixedNow.Add(24*time.Minute)))
+	require.False(t, snapshot.NextProbeAt.After(fixedNow.Add(36*time.Minute)))
 
 	invalid := &Account{ID: 20, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
 	repo.accounts[invalid.ID] = invalid
