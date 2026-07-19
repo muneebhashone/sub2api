@@ -33,6 +33,7 @@ var grokChatResponsesBridgeTopLevelFields = map[string]struct{placeholder{
 	"tool_choice":           {placeholder,
 	"functions":             {placeholder,
 	"function_call":         {placeholder,
+	"parallel_tool_calls":   {placeholder,
 placeholder
 
 // grokChatResponsesBridgeEligibility deliberately accepts only request shapes
@@ -50,13 +51,22 @@ placeholder
 			return false, "unsupported_" + field
 	placeholder
 placeholder
-	for _, field := range []string{"tools", "functions"placeholder {
-		if raw, exists := root[field]; exists && !grokChatNullOrEmptyArray(raw) {
-			return false, "unsupported_" + field
+	if raw, exists := root["tools"]; exists {
+		if ok, reason := grokChatFunctionDeclarationsBridgeable(raw); !ok {
+			return false, reason
 	placeholder
 placeholder
-	if raw, exists := root["tool_choice"]; exists && !grokChatNullOrNone(raw) {
-		return false, "unsupported_tool_choice"
+	if raw, exists := root["functions"]; exists && !grokChatNullOrEmptyArray(raw) {
+		return false, "unsupported_functions"
+placeholder
+	if raw, exists := root["tool_choice"]; exists {
+		if ok, reason := grokChatToolChoiceBridgeable(raw); !ok {
+			return false, reason
+	placeholder
+		var choice string
+		if json.Unmarshal(raw, &choice) == nil && choice == "required" && !grokChatHasFunctionDeclarations(root) {
+			return false, "required_tool_choice_without_tools"
+	placeholder
 placeholder
 	if raw, exists := root["function_call"]; exists && !grokChatNullOrNone(raw) {
 		return false, "unsupported_function_call"
@@ -76,6 +86,12 @@ placeholder
 		var stream *bool
 		if json.Unmarshal(raw, &stream) != nil || stream == nil {
 			return false, "invalid_stream"
+	placeholder
+placeholder
+	if raw, ok := root["parallel_tool_calls"]; ok {
+		var parallelToolCalls *bool
+		if json.Unmarshal(raw, &parallelToolCalls) != nil || parallelToolCalls == nil {
+			return false, "invalid_parallel_tool_calls"
 	placeholder
 placeholder
 	if raw, ok := root["stream_options"]; ok {
@@ -128,40 +144,236 @@ placeholder
 		return false, "invalid_messages"
 placeholder
 	for _, message := range messages {
-		for field := range message {
-			if field != "role" && field != "content" {
-				return false, "unsafe_message_field_" + field
-		placeholder
-	placeholder
 		var role string
 		if raw, exists := message["role"]; !exists || json.Unmarshal(raw, &role) != nil {
 			return false, "invalid_message_role"
 	placeholder
 		switch role {
-		case "system", "user", "assistant":
+		case "system", "user":
+			if ok, reason := grokChatMessageFieldsBridgeable(message, "role", "content"); !ok {
+				return false, reason
+		placeholder
+			raw, exists := message["content"]
+			if !exists {
+				return false, "non_text_message_content"
+		placeholder
+			if ok, reason := grokChatRequiredMessageContentBridgeable(raw); !ok {
+				return false, reason
+		placeholder
+		case "assistant":
+			if ok, reason := grokChatMessageFieldsBridgeable(message, "role", "content", "tool_calls"); !ok {
+				return false, reason
+		placeholder
+			toolCallCount := 0
+			if raw, exists := message["tool_calls"]; exists {
+				var reason string
+				toolCallCount, reason = grokChatAssistantToolCallsBridgeable(raw)
+				if reason != "" {
+					return false, reason
+			placeholder
+		placeholder
+			raw, hasContent := message["content"]
+			if !hasContent || strings.TrimSpace(string(raw)) == "null" {
+				if toolCallCount == 0 {
+					return false, "non_text_message_content"
+			placeholder
+				continue
+		placeholder
+			var content string
+			if json.Unmarshal(raw, &content) == nil {
+				if strings.TrimSpace(content) == "" && toolCallCount == 0 {
+					return false, "empty_message_content"
+			placeholder
+				continue
+		placeholder
+			if ok, reason := grokChatStructuredContentBridgeable(raw); !ok {
+				return false, reason
+		placeholder
+		case "tool":
+			if ok, reason := grokChatMessageFieldsBridgeable(message, "role", "content", "tool_call_id"); !ok {
+				return false, reason
+		placeholder
+			var callID string
+			if raw, exists := message["tool_call_id"]; !exists || json.Unmarshal(raw, &callID) != nil || strings.TrimSpace(callID) == "" {
+				return false, "invalid_tool_call_id"
+		placeholder
+			var output string
+			if raw, exists := message["content"]; !exists || json.Unmarshal(raw, &output) != nil || output == "" {
+				return false, "invalid_tool_message_content"
+		placeholder
 		default:
 			return false, "unsupported_message_role_" + role
-	placeholder
-		raw, exists := message["content"]
-		if !exists {
-			return false, "non_text_message_content"
-	placeholder
-		var content string
-		if json.Unmarshal(raw, &content) == nil {
-			if strings.TrimSpace(content) == "" {
-				return false, "empty_message_content"
-		placeholder
-			continue
-	placeholder
-		// Structured content: only allow arrays whose parts are text or
-		// image_url. These are losslessly convertible to Responses input_text/
-		// input_image parts, so the bridge preserves Chat Completions semantics.
-		if ok, reason := grokChatStructuredContentBridgeable(raw); !ok {
-			return false, reason
 	placeholder
 placeholder
 
 	return true, ""
+placeholder
+
+func grokChatFunctionDeclarationsBridgeable(raw json.RawMessage) (bool, string) {
+	if strings.TrimSpace(string(raw)) == "null" {
+		return true, ""
+placeholder
+	var declarations []json.RawMessage
+	if json.Unmarshal(raw, &declarations) != nil {
+		return false, "invalid_tools"
+placeholder
+	for _, declaration := range declarations {
+		var tool map[string]json.RawMessage
+		if json.Unmarshal(declaration, &tool) != nil || tool == nil {
+			return false, "invalid_tool"
+	placeholder
+		for field := range tool {
+			if field != "type" && field != "function" {
+				return false, "unsafe_tool_field_" + field
+		placeholder
+	placeholder
+		var toolType string
+		if rawType, exists := tool["type"]; !exists || json.Unmarshal(rawType, &toolType) != nil || toolType != "function" {
+			return false, "unsupported_tool_type"
+	placeholder
+		functionRaw, exists := tool["function"]
+		if !exists {
+			return false, "invalid_tool_function"
+	placeholder
+
+		var function map[string]json.RawMessage
+		if json.Unmarshal(functionRaw, &function) != nil || function == nil {
+			return false, "invalid_tool_function"
+	placeholder
+		for field := range function {
+			switch field {
+			case "name", "description", "parameters", "strict":
+			default:
+				return false, "unsafe_tool_function_field_" + field
+		placeholder
+	placeholder
+		var name string
+		if rawName, exists := function["name"]; !exists || json.Unmarshal(rawName, &name) != nil || strings.TrimSpace(name) == "" {
+			return false, "invalid_tool_function_name"
+	placeholder
+		if rawDescription, exists := function["description"]; exists {
+			var description string
+			if json.Unmarshal(rawDescription, &description) != nil {
+				return false, "invalid_tool_function_description"
+		placeholder
+	placeholder
+		var parameters map[string]json.RawMessage
+		if rawParameters, exists := function["parameters"]; !exists || json.Unmarshal(rawParameters, &parameters) != nil || parameters == nil {
+			return false, "invalid_tool_function_parameters"
+	placeholder
+		if rawStrict, exists := function["strict"]; exists {
+			var strict bool
+			if json.Unmarshal(rawStrict, &strict) != nil {
+				return false, "invalid_tool_function_strict"
+		placeholder
+	placeholder
+placeholder
+	return true, ""
+placeholder
+
+func grokChatToolChoiceBridgeable(raw json.RawMessage) (bool, string) {
+	if strings.TrimSpace(string(raw)) == "null" {
+		return true, ""
+placeholder
+	var choice string
+	if json.Unmarshal(raw, &choice) != nil {
+		return false, "unsupported_tool_choice"
+placeholder
+	switch choice {
+	case "auto", "none", "required":
+		return true, ""
+	default:
+		return false, "unsupported_tool_choice"
+placeholder
+placeholder
+
+func grokChatHasFunctionDeclarations(root map[string]json.RawMessage) bool {
+	for _, field := range []string{"tools", "functions"placeholder {
+		raw, exists := root[field]
+		if !exists {
+			continue
+	placeholder
+		var declarations []json.RawMessage
+		if json.Unmarshal(raw, &declarations) == nil && len(declarations) > 0 {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func grokChatMessageFieldsBridgeable(message map[string]json.RawMessage, allowedFields ...string) (bool, string) {
+	allowed := make(map[string]struct{placeholder, len(allowedFields))
+	for _, field := range allowedFields {
+		allowed[field] = struct{placeholder{placeholder
+placeholder
+	for field := range message {
+		if _, ok := allowed[field]; !ok {
+			return false, "unsafe_message_field_" + field
+	placeholder
+placeholder
+	return true, ""
+placeholder
+
+func grokChatRequiredMessageContentBridgeable(raw json.RawMessage) (bool, string) {
+	var content string
+	if json.Unmarshal(raw, &content) == nil {
+		if strings.TrimSpace(content) == "" {
+			return false, "empty_message_content"
+	placeholder
+		return true, ""
+placeholder
+	// Structured content: only allow arrays whose parts are text or
+	// image_url. These are losslessly convertible to Responses input_text/
+	// input_image parts, so the bridge preserves Chat Completions semantics.
+	return grokChatStructuredContentBridgeable(raw)
+placeholder
+
+func grokChatAssistantToolCallsBridgeable(raw json.RawMessage) (int, string) {
+	if strings.TrimSpace(string(raw)) == "null" {
+		return 0, ""
+placeholder
+	var calls []map[string]json.RawMessage
+	if json.Unmarshal(raw, &calls) != nil {
+		return 0, "invalid_tool_calls"
+placeholder
+	for _, call := range calls {
+		if call == nil {
+			return 0, "invalid_tool_call"
+	placeholder
+		for field := range call {
+			switch field {
+			case "id", "type", "function":
+			default:
+				return 0, "unsafe_tool_call_field_" + field
+		placeholder
+	placeholder
+		var callID string
+		if rawID, exists := call["id"]; !exists || json.Unmarshal(rawID, &callID) != nil || strings.TrimSpace(callID) == "" {
+			return 0, "invalid_tool_call_id"
+	placeholder
+		var callType string
+		if rawType, exists := call["type"]; !exists || json.Unmarshal(rawType, &callType) != nil || callType != "function" {
+			return 0, "unsupported_tool_call_type"
+	placeholder
+		var function map[string]json.RawMessage
+		if rawFunction, exists := call["function"]; !exists || json.Unmarshal(rawFunction, &function) != nil || function == nil {
+			return 0, "invalid_tool_call_function"
+	placeholder
+		for field := range function {
+			if field != "name" && field != "arguments" {
+				return 0, "unsafe_tool_call_function_field_" + field
+		placeholder
+	placeholder
+		var name string
+		if rawName, exists := function["name"]; !exists || json.Unmarshal(rawName, &name) != nil || strings.TrimSpace(name) == "" {
+			return 0, "invalid_tool_call_function_name"
+	placeholder
+		var arguments string
+		if rawArguments, exists := function["arguments"]; !exists || json.Unmarshal(rawArguments, &arguments) != nil || !json.Valid([]byte(arguments)) {
+			return 0, "invalid_tool_call_arguments"
+	placeholder
+placeholder
+	return len(calls), ""
 placeholder
 
 func grokChatStructuredContentBridgeable(raw json.RawMessage) (bool, string) {
@@ -199,14 +411,6 @@ placeholder
 	return true, ""
 placeholder
 
-func grokChatNullOrEmptyArray(raw json.RawMessage) bool {
-	if strings.TrimSpace(string(raw)) == "null" {
-		return true
-placeholder
-	var values []json.RawMessage
-	return json.Unmarshal(raw, &values) == nil && len(values) == 0
-placeholder
-
 func grokChatNullOrNone(raw json.RawMessage) bool {
 	if strings.TrimSpace(string(raw)) == "null" {
 		return true
@@ -215,14 +419,30 @@ placeholder
 	return json.Unmarshal(raw, &value) == nil && strings.EqualFold(strings.TrimSpace(value), "none")
 placeholder
 
-func grokChatCacheIntentBody(body []byte) ([]byte, error) {
+func grokChatNullOrEmptyArray(raw json.RawMessage) bool {
+	if strings.TrimSpace(string(raw)) == "null" {
+		return true
+placeholder
+	var values []json.RawMessage
+	return json.Unmarshal(raw, &values) == nil && len(values) == 0
+placeholder
+
+func grokChatResponsesCacheIntentBody(body []byte) ([]byte, error) {
+	// An empty Chat tools array is omitted by the Responses converter. In that
+	// case auto/none is also a semantic no-op and must not suppress the normal
+	// tool-free cache route. Non-empty converted tools are always kept intact.
+	if gjson.GetBytes(body, "tools").Exists() {
+		return append([]byte(nil), body...), nil
+placeholder
+	choice := gjson.GetBytes(body, "tool_choice")
+	if !choice.Exists() || choice.Type != gjson.String || (choice.String() != "auto" && choice.String() != "none") {
+		return append([]byte(nil), body...), nil
+placeholder
 	var root map[string]json.RawMessage
 	if err := json.Unmarshal(body, &root); err != nil {
 		return nil, err
 placeholder
-	for _, field := range []string{"tools", "tool_choice", "functions", "function_call"placeholder {
-		delete(root, field)
-placeholder
+	delete(root, "tool_choice")
 	return json.Marshal(root)
 placeholder
 
@@ -277,17 +497,24 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("marshal grok responses bridge request: %w", err)
 placeholder
+	// Preserve the converted Responses intent before Grok capability
+	// sanitization. Cache routing must see the actual client function tools,
+	// not the nested Chat Completions declarations and not a tool-free copy.
+	intentBody, err := grokChatResponsesCacheIntentBody(responsesBody)
+	if err != nil {
+		return nil, fmt.Errorf("normalize grok responses bridge cache intent: %w", err)
+placeholder
 	responsesBody, err = patchGrokResponsesBody(responsesBody, upstreamModel)
 	if err != nil {
 		return nil, fmt.Errorf("patch grok responses bridge request: %w", err)
 placeholder
-	intentBody, err := grokChatCacheIntentBody(body)
-	if err != nil {
-		return nil, fmt.Errorf("normalize grok responses bridge tool intent: %w", err)
-placeholder
 	responsesBody, err = applyGrokResponsesCacheIdentity(responsesBody, intentBody, cacheIdentity, true)
 	if err != nil {
 		return nil, fmt.Errorf("apply grok responses bridge cache identity: %w", err)
+placeholder
+	responsesBody, err = applyGrokFreeRequestToolCacheRoute(c, responsesBody, intentBody, account, cacheIdentity)
+	if err != nil {
+		return nil, fmt.Errorf("apply grok responses bridge function-tool cache route: %w", err)
 placeholder
 
 	updatedBody, policyErr := s.applyOpenAIFastPolicyToBody(ctx, account, upstreamModel, responsesBody)
