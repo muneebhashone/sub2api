@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -325,7 +326,19 @@ placeholder{
 				a := healthyGrokOAuthGatewayTestAccount(9112, "access-token")
 				a.Extra = map[string]any{grokQuotaSnapshotExtraKey: map[string]any{
 					"headers_observed": true,
-					"tokens":           map[string]any{"limit": grokFreeRolling24hTokenLimitplaceholder,
+					"tokens":           map[string]any{"limit": xai.GrokFreeRolling24hTokenLimitplaceholder,
+			placeholderplaceholder
+				return a
+		placeholder(),
+			wantMix: true,
+	placeholder,
+		{
+			name: "legacy free rolling token quota",
+			account: func() *Account {
+				a := healthyGrokOAuthGatewayTestAccount(9113, "access-token")
+				a.Extra = map[string]any{grokQuotaSnapshotExtraKey: map[string]any{
+					"headers_observed": true,
+					"tokens":           map[string]any{"limit": int64(2_000_000)placeholder,
 			placeholderplaceholder
 				return a
 		placeholder(),
@@ -347,7 +360,7 @@ placeholder{
 					grokBillingExtraKey: map[string]any{"plan": "SuperGrok", "status_code": http.StatusOKplaceholder,
 					grokQuotaSnapshotExtraKey: map[string]any{
 						"headers_observed": true,
-						"tokens":           map[string]any{"limit": grokFreeRolling24hTokenLimitplaceholder,
+						"tokens":           map[string]any{"limit": int64(2_000_000)placeholder,
 				placeholder,
 			placeholder
 				return a

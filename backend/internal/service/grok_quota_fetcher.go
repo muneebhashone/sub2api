@@ -21,8 +21,9 @@ placeholder
 func (f *GrokQuotaFetcher) BuildUsageInfo(account *Account) *UsageInfo {
 	now := time.Now()
 	usage := &UsageInfo{
-		Source:    "passive",
-		UpdatedAt: &now,
+		Source:             "passive",
+		UpdatedAt:          &now,
+		GrokFreeTokenLimit: xai.GrokFreeRolling24hTokenLimit,
 placeholder
 	if account == nil {
 		usage.ErrorCode = "quota_unknown"
