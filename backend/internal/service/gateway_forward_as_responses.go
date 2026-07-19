@@ -285,7 +285,7 @@ placeholder
 				mergeAnthropicUsage(&usage, *event.Usage)
 		placeholder
 			if event.Delta != nil && event.Delta.StopReason != "" && finalResp != nil {
-				finalResp.StopReason = event.Delta.StopReason
+				finalResp.StopReason = apicompat.AnthropicStopReasonPtr(event.Delta.StopReason)
 		placeholder
 	placeholder
 
