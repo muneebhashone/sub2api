@@ -249,6 +249,117 @@ placeholder
 	require.Equal(t, "x_search", tools[2].Get("type").String())
 placeholder
 
+func TestGrokFreeClientToolCacheAccountOptIn(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9011, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: trueplaceholder
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"read_file","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeMessagesFunctionToolCacheRoute(body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 4)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "read_file", tools[1].Get("name").String())
+	require.Equal(t, "web_search", tools[2].Get("type").String())
+	require.Equal(t, "x_search", tools[3].Get("type").String())
+placeholder
+
+func TestGrokFreeClientToolCacheRequestOptIn(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9014, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	c := newGrokCacheTestContext(9014)
+	c.Request.Header.Set(grokClientToolCacheOptInHeader, "prefer-cache")
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeRequestToolCacheRoute(c, body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 3)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
+placeholder
+
+func TestGrokFreeRequestClientSearchFunctionRequiresOptIn(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9015, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	c := newGrokCacheTestContext(9015)
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"web_search","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+placeholder
+	require.JSONEq(t, string(body), string(patched))
+placeholder
+
+func TestGrokFreeRequestToolChoiceNoneUsesSafeCacheRoute(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9016, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	c := newGrokCacheTestContext(9016)
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"none"placeholder`)
+
+	patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+placeholder
+	tools := gjson.GetBytes(patched, "tools").Array()
+	require.Len(t, tools, 3)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
+	require.Equal(t, "none", gjson.GetBytes(patched, "tool_choice").String())
+placeholder
+
+func TestApplyGrokCacheIdentityRecognizesResponsesLiteAdditionalTools(t *testing.T) {
+	intentBody := []byte(`{"model":"grok","input":[{"type":"additional_tools","tools":[{"type":"function","name":"lookup","parameters":{"type":"object"placeholderplaceholder]placeholder,{"type":"message","role":"user","content":"hello"placeholder]placeholder`)
+	patchedBody := []byte(`{"model":"grok-4.5","tools":[{"type":"function","name":"lookup","parameters":{"type":"object"placeholderplaceholder],"input":[{"type":"message","role":"user","content":"hello"placeholder]placeholder`)
+
+	patched, err := applyGrokResponsesCacheIdentity(patchedBody, intentBody, "isolated-id", true)
+
+placeholder
+	tools := gjson.GetBytes(patched, "tools").Array()
+	require.Len(t, tools, 1)
+	require.Equal(t, "lookup", tools[0].Get("name").String())
+	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
+	require.Equal(t, "isolated-id", gjson.GetBytes(patched, "prompt_cache_key").String())
+placeholder
+
+func TestGrokFreeCacheRoutePreservesMixedSupportedToolsWithSearchIntent(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9012, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,{"type":"shell"placeholder,{"type":"web_search"placeholder],"tool_choice":"auto"placeholder`)
+
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeMessagesFunctionToolCacheRoute(body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 4)
+	require.Equal(t, "function", tools[0].Get("type").String())
+	require.Equal(t, "shell", tools[1].Get("type").String())
+	require.Equal(t, "web_search", tools[2].Get("type").String())
+	require.Equal(t, "x_search", tools[3].Get("type").String())
+placeholder
+
+func TestGrokClientToolCacheOptInDoesNotOverridePaidTier(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9013, "access-token")
+	account.Credentials["subscription_tier"] = "supergrok"
+	account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: trueplaceholder
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	patched, err := applyGrokFreeMessagesFunctionToolCacheRoute(body, body, account, "isolated-id")
+
+placeholder
+	require.JSONEq(t, string(body), string(patched))
+placeholder
+
 func TestApplyGrokCacheIdentityRequiresPatchedFunctionTools(t *testing.T) {
 	account := healthyGrokOAuthGatewayTestAccount(902, "access-token")
 	account.Credentials["subscription_tier"] = "free"
