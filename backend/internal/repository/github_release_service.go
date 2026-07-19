@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 type githubReleaseClient struct {
 	httpClient         *http.Client
 	downloadHTTPClient *http.Client
+	updateGitHubToken  string
 placeholder
 
 type githubReleaseClientError struct {
@@ -43,6 +45,8 @@ placeholder)
 	placeholder
 		sharedClient = &http.Client{Timeout: 30 * time.Secondplaceholder
 placeholder
+	apiClient := cloneHTTPClient(sharedClient)
+	apiClient.CheckRedirect = githubAPICheckRedirect(apiClient.CheckRedirect)
 
 	// 下载客户端需要更长的超时时间
 	downloadClient, err := httpclient.GetClient(httpclient.Options{
@@ -56,11 +60,48 @@ placeholder)
 	placeholder
 		downloadClient = &http.Client{Timeout: 10 * time.Minuteplaceholder
 placeholder
+	downloadClient = cloneHTTPClient(downloadClient)
 
 	return &githubReleaseClient{
-		httpClient:         sharedClient,
+		httpClient:         apiClient,
 		downloadHTTPClient: downloadClient,
+		updateGitHubToken:  os.Getenv("UPDATE_GITHUB_TOKEN"),
 placeholder
+placeholder
+
+func cloneHTTPClient(client *http.Client) *http.Client {
+	cloned := *client
+	return &cloned
+placeholder
+
+func isGitHubAPIURL(url *url.URL) bool {
+	return url != nil && strings.EqualFold(url.Scheme, "https") && url.User == nil &&
+		strings.EqualFold(url.Host, "api.github.com")
+placeholder
+
+func githubAPICheckRedirect(previous func(*http.Request, []*http.Request) error) func(*http.Request, []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		if !isGitHubAPIURL(req.URL) {
+			req.Header.Del("Authorization")
+	placeholder
+		if previous != nil {
+			return previous(req, via)
+	placeholder
+		return nil
+placeholder
+placeholder
+
+func (c *githubReleaseClient) newAPIRequest(ctx context.Context, url string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+placeholder
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "Sub2API-Updater")
+	if c.updateGitHubToken != "" && isGitHubAPIURL(req.URL) {
+		req.Header.Set("Authorization", "Bearer "+c.updateGitHubToken)
+placeholder
+	return req, nil
 placeholder
 
 func (c *githubReleaseClientError) FetchLatestRelease(ctx context.Context, repo string) (*service.GitHubRelease, error) {
@@ -82,12 +123,10 @@ placeholder
 func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo string) (*service.GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := c.newAPIRequest(ctx, url)
 	if err != nil {
 		return nil, err
 placeholder
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "Sub2API-Updater")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -116,12 +155,10 @@ placeholder
 placeholder
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=%d", repo, perPage)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := c.newAPIRequest(ctx, url)
 	if err != nil {
 		return nil, err
 placeholder
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "Sub2API-Updater")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
