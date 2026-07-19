@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"strconv"
 	"testing"
@@ -84,6 +85,58 @@ placeholder
 placeholder
 
 func (s *settingGetAllRepoStub) Delete(ctx context.Context, key string) error {
+	panic("unexpected Delete call")
+placeholder
+
+type forwardedIPMigrationRepoStub struct {
+	values         map[string]string
+	updates        map[string]string
+	getMultipleErr error
+	setMultipleErr error
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) Get(context.Context, string) (*Setting, error) {
+	panic("unexpected Get call")
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) GetValue(context.Context, string) (string, error) {
+	panic("unexpected GetValue call")
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) Set(context.Context, string, string) error {
+	panic("unexpected Set call")
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) GetMultiple(_ context.Context, keys []string) (map[string]string, error) {
+	if s.getMultipleErr != nil {
+		return nil, s.getMultipleErr
+placeholder
+	result := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if value, ok := s.values[key]; ok {
+			result[key] = value
+	placeholder
+placeholder
+	return result, nil
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) SetMultiple(_ context.Context, values map[string]string) error {
+	if s.setMultipleErr != nil {
+		return s.setMultipleErr
+placeholder
+	s.updates = make(map[string]string, len(values))
+	for key, value := range values {
+		s.values[key] = value
+		s.updates[key] = value
+placeholder
+	return nil
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) GetAll(context.Context) (map[string]string, error) {
+	panic("unexpected GetAll call")
+placeholder
+
+func (s *forwardedIPMigrationRepoStub) Delete(context.Context, string) error {
 	panic("unexpected Delete call")
 placeholder
 
@@ -517,6 +570,117 @@ func TestSettingService_ParseSettings_APIKeyACLTrustForwardedIPFallsBackToConfig
 	got := svc.parseSettings(map[string]string{placeholder)
 
 	require.True(t, got.APIKeyACLTrustForwardedIP)
+placeholder
+
+func TestSettingService_ParseSettings_APIKeyACLTrustForwardedIPUsesStoredValue(t *testing.T) {
+	cfg := &config.Config{placeholder
+	cfg.SetTrustForwardedIPForAPIKeyACL(true)
+	svc := NewSettingService(&settingUpdateRepoStub{placeholder, cfg)
+
+	got := svc.parseSettings(map[string]string{SettingKeyAPIKeyACLTrustForwardedIP: "false"placeholder)
+
+	require.False(t, got.APIKeyACLTrustForwardedIP)
+placeholder
+
+func TestSettingService_LoadAPIKeyACLTrustForwardedIPSettingMigration(t *testing.T) {
+	tests := []struct {
+		name                   string
+		values                 map[string]string
+		trustedProxiesSet      bool
+		configDefault          bool
+		wantEnabled            bool
+		wantForwardedIPUpdate  string
+		wantMigrationMarkerSet bool
+placeholder{
+		{
+			name:                   "missing setting follows configured default",
+			values:                 map[string]string{placeholder,
+			configDefault:          true,
+			wantEnabled:            true,
+			wantMigrationMarkerSet: true,
+	placeholder,
+		{
+			name:                   "legacy false without proxy config migrates to compatibility",
+			values:                 map[string]string{SettingKeyAPIKeyACLTrustForwardedIP: "false"placeholder,
+			wantEnabled:            true,
+			wantForwardedIPUpdate:  "true",
+			wantMigrationMarkerSet: true,
+	placeholder,
+		{
+			name:                   "legacy false with explicit proxy config stays secure",
+			values:                 map[string]string{SettingKeyAPIKeyACLTrustForwardedIP: "false"placeholder,
+			trustedProxiesSet:      true,
+			wantEnabled:            false,
+			wantMigrationMarkerSet: true,
+	placeholder,
+		{
+			name: "completed migration preserves later false choice",
+			values: map[string]string{
+				SettingKeyAPIKeyACLTrustForwardedIP: "false",
+				settingKeyForwardedClientIPModeV2:   "true",
+		placeholder,
+			wantEnabled: false,
+	placeholder,
+placeholder
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repo := &forwardedIPMigrationRepoStub{values: test.valuesplaceholder
+			cfg := &config.Config{Server: config.ServerConfig{TrustedProxiesConfigured: test.trustedProxiesSetplaceholderplaceholder
+			cfg.Security.TrustForwardedIPForAPIKeyACL = test.configDefault
+			svc := NewSettingService(repo, cfg)
+
+			require.NoError(t, svc.LoadAPIKeyACLTrustForwardedIPSetting(context.Background()))
+			require.Equal(t, test.wantEnabled, cfg.TrustForwardedIPForAPIKeyACL())
+			require.Equal(t, test.wantForwardedIPUpdate, repo.updates[SettingKeyAPIKeyACLTrustForwardedIP])
+			if test.wantMigrationMarkerSet {
+				require.Equal(t, "true", repo.updates[settingKeyForwardedClientIPModeV2])
+		placeholder else {
+				require.Nil(t, repo.updates)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestSettingService_LoadAPIKeyACLTrustForwardedIPSettingReadFailureFailsClosed(t *testing.T) {
+	repo := &forwardedIPMigrationRepoStub{
+		getMultipleErr: errors.New("database unavailable"),
+placeholder
+	cfg := &config.Config{placeholder
+	cfg.SetTrustForwardedIPForAPIKeyACL(true)
+	svc := NewSettingService(repo, cfg)
+
+	err := svc.LoadAPIKeyACLTrustForwardedIPSetting(context.Background())
+
+	require.ErrorContains(t, err, "get forwarded client ip settings")
+	require.False(t, cfg.TrustForwardedIPForAPIKeyACL())
+placeholder
+
+func TestSettingService_LoadAPIKeyACLTrustForwardedIPSettingWriteFailureUsesComputedMode(t *testing.T) {
+	tests := []struct {
+		name              string
+		trustedProxiesSet bool
+		wantEnabled       bool
+placeholder{
+		{name: "compatibility migration remains effective", wantEnabled: trueplaceholder,
+		{name: "explicit proxy policy remains secure", trustedProxiesSet: true, wantEnabled: falseplaceholder,
+placeholder
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repo := &forwardedIPMigrationRepoStub{
+				values:         map[string]string{SettingKeyAPIKeyACLTrustForwardedIP: "false"placeholder,
+				setMultipleErr: errors.New("database unavailable"),
+		placeholder
+			cfg := &config.Config{Server: config.ServerConfig{TrustedProxiesConfigured: test.trustedProxiesSetplaceholderplaceholder
+			svc := NewSettingService(repo, cfg)
+
+			err := svc.LoadAPIKeyACLTrustForwardedIPSetting(context.Background())
+
+			require.ErrorContains(t, err, "migrate forwarded client ip setting")
+			require.Equal(t, test.wantEnabled, cfg.TrustForwardedIPForAPIKeyACL())
+	placeholder)
+placeholder
 placeholder
 
 func TestSettingService_GetAntigravityUserAgentVersion_Precedence(t *testing.T) {
