@@ -665,7 +665,7 @@ placeholder
 				if strings.TrimRight(dataLine, "\r\n") == "." {
 					break
 			placeholder
-				message.WriteString(dataLine)
+				_, _ = message.WriteString(dataLine)
 		placeholder
 			s.messageMu.Lock()
 			s.messageBodies = append(s.messageBodies, message.String())
