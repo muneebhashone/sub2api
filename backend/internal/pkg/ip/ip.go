@@ -8,6 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const legacyForwardedIPTrustKey = "sub2api.legacy_forwarded_ip_trust"
+
+// SetLegacyForwardedIPTrust records whether raw forwarding headers override
+// Gin's server.trusted_proxies chain for this request.
+func SetLegacyForwardedIPTrust(c *gin.Context, enabled bool) {
+	if c != nil {
+		c.Set(legacyForwardedIPTrustKey, enabled)
+placeholder
+placeholder
+
+func requestUsesLegacyForwardedIPTrust(c *gin.Context) bool {
+	if c == nil {
+		return true
+placeholder
+	enabled, ok := c.Get(legacyForwardedIPTrustKey)
+	return !ok || enabled == true
+placeholder
+
 // GetClientIP resolves the client address using the legacy forwarding-header
 // precedence used before the trusted-proxy hardening. It remains the
 // compatibility path for request metadata and usage/error logs; security-
@@ -15,6 +33,9 @@ import (
 func GetClientIP(c *gin.Context) string {
 	if c == nil {
 		return ""
+placeholder
+	if !requestUsesLegacyForwardedIPTrust(c) {
+		return GetTrustedClientIP(c)
 placeholder
 
 	// Preserve the historical precedence used by existing reverse-proxy
@@ -66,9 +87,18 @@ placeholder
 placeholder
 
 // GetSecurityClientIP returns the address used by security-sensitive paths.
-// The legacy toggle remains in the signature for configuration/API
-// compatibility, but cannot make raw forwarding headers trustworthy by itself.
-func GetSecurityClientIP(c *gin.Context, _ bool) string {
+// When legacy forwarded-IP trust is enabled, raw forwarding headers take over
+// client-IP resolution. When disabled, Gin's server.trusted_proxies chain is
+// authoritative.
+func GetSecurityClientIP(c *gin.Context, trustForwarded bool) string {
+	if c != nil {
+		if requestTrust, ok := c.Get(legacyForwardedIPTrustKey); ok {
+			trustForwarded = requestTrust == true
+	placeholder
+placeholder
+	if trustForwarded {
+		return GetClientIP(c)
+placeholder
 	return GetTrustedClientIP(c)
 placeholder
 
