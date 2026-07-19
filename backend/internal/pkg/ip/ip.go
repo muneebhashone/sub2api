@@ -8,10 +8,51 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetClientIP resolves a client address only through Gin's configured trusted
-// proxy chain. Forwarding headers from a direct or untrusted peer are ignored.
+// GetClientIP resolves the client address using the legacy forwarding-header
+// precedence used before the trusted-proxy hardening. It remains the
+// compatibility path for request metadata and usage/error logs; security-
+// sensitive callers must use GetTrustedClientIP or GetSecurityClientIP.
 func GetClientIP(c *gin.Context) string {
-	return GetTrustedClientIP(c)
+	if c == nil {
+		return ""
+placeholder
+
+	// Preserve the historical precedence used by existing reverse-proxy
+	// deployments, while skipping an internal proxy address when a public XFF
+	// value is available. This covers Docker/Nginx setups that accidentally
+	// write the bridge address into X-Real-IP.
+	var fallback string
+	if forwarded := normalizeIP(c.GetHeader("CF-Connecting-IP")); forwarded != "" {
+		fallback = forwarded
+		if !isPrivateIP(forwarded) {
+			return forwarded
+	placeholder
+placeholder
+	if realIP := normalizeIP(c.GetHeader("X-Real-IP")); realIP != "" {
+		if fallback == "" {
+			fallback = realIP
+	placeholder
+		if !isPrivateIP(realIP) {
+			return realIP
+	placeholder
+placeholder
+	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		for _, candidate := range ips {
+			candidate = strings.TrimSpace(candidate)
+			if candidate != "" && !isPrivateIP(candidate) {
+				return normalizeIP(candidate)
+		placeholder
+	placeholder
+		if fallback == "" && len(ips) > 0 {
+			fallback = normalizeIP(strings.TrimSpace(ips[0]))
+	placeholder
+placeholder
+	if fallback != "" {
+		return fallback
+placeholder
+
+	return normalizeIP(c.ClientIP())
 placeholder
 
 // GetTrustedClientIP 从 Gin 的可信代理解析链提取客户端 IP。
@@ -24,9 +65,9 @@ placeholder
 	return normalizeIP(c.ClientIP())
 placeholder
 
-// GetSecurityClientIP returns the address resolved through Gin's configured
-// trusted-proxy chain. The legacy toggle is retained for configuration/API
-// compatibility, but never makes raw forwarding headers trustworthy by itself.
+// GetSecurityClientIP returns the address used by security-sensitive paths.
+// The legacy toggle remains in the signature for configuration/API
+// compatibility, but cannot make raw forwarding headers trustworthy by itself.
 func GetSecurityClientIP(c *gin.Context, _ bool) string {
 	return GetTrustedClientIP(c)
 placeholder
@@ -39,6 +80,27 @@ func normalizeIP(ip string) string {
 		return host
 placeholder
 	return ip
+placeholder
+
+// privateNets contains the private/loopback ranges skipped while selecting a
+// public address from a legacy X-Forwarded-For chain.
+var privateNets []*net.IPNet
+
+func init() {
+	for _, cidr := range []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"127.0.0.0/8",
+		"::1/128",
+		"fc00::/7",
+placeholder {
+		_, block, err := net.ParseCIDR(cidr)
+		if err != nil {
+			panic("invalid CIDR: " + cidr)
+	placeholder
+		privateNets = append(privateNets, block)
+placeholder
 placeholder
 
 // CompiledIPRules 表示预编译的 IP 匹配规则。
@@ -90,6 +152,19 @@ placeholder
 placeholder
 	for _, ruleIP := range rules.IPs {
 		if parsedIP.Equal(ruleIP) {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func isPrivateIP(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
+placeholder
+	for _, block := range privateNets {
+		if block.Contains(ip) {
 			return true
 	placeholder
 placeholder
