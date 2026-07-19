@@ -576,6 +576,14 @@ placeholder,
 			http.StatusOK: {placeholder,
 	placeholder,
 placeholder,
+	{
+		Target: "grok",
+		URL:    "https://api.x.ai/v1/models",
+		Method: http.MethodGet,
+		AllowedStatuses: map[int]struct{placeholder{
+			http.StatusUnauthorized: {placeholder,
+	placeholder,
+placeholder,
 placeholder
 
 const (
