@@ -14,23 +14,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSessionBindingContextDoesNotTrustHeadersWithoutTrustedProxy(t *testing.T) {
+func TestSessionBindingContextFollowsForwardedIPSwitch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	for _, tc := range []struct {
 		name           string
 		trustForwarded bool
+		trustedProxies []string
 		wantIP         string
 placeholder{
-		{name: "trust disabled records proxy address", trustForwarded: false, wantIP: "127.0.0.1"placeholder,
-		{name: "legacy trust toggle cannot bypass trusted proxies", trustForwarded: true, wantIP: "127.0.0.1"placeholder,
+		{name: "enabled switch takes over raw headers", trustForwarded: true, wantIP: "1.2.3.4"placeholder,
+		{name: "disabled switch ignores untrusted headers", trustForwarded: false, wantIP: "127.0.0.1"placeholder,
+		{name: "disabled switch uses configured Gin proxy", trustForwarded: false, trustedProxies: []string{"127.0.0.1"placeholder, wantIP: "1.2.3.4"placeholder,
 placeholder {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &config.Config{placeholder
 			cfg.SetTrustForwardedIPForAPIKeyACL(tc.trustForwarded)
 
 			r := gin.New()
-			require.NoError(t, r.SetTrustedProxies(nil))
+			require.NoError(t, r.SetTrustedProxies(tc.trustedProxies))
 			r.Use(SessionBindingContext(cfg))
 			r.GET("/t", func(c *gin.Context) {
 				binding := service.SessionBindingFromContext(c.Request.Context())
