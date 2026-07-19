@@ -167,6 +167,77 @@ placeholder
 	return accessToken, nil
 placeholder
 
+// GetAccessTokenForManualTest returns an access token for an admin-initiated
+// "test connection" probe. Unlike GetAccessToken it does not apply the
+// request-path scheduling eligibility gate (manual Schedulable switch,
+// rate-limit / overload / temp-unschedulable cooldowns): a manual test exists
+// precisely to check accounts in those states, matching how Codex/OpenAI
+// account tests read credentials regardless of scheduling state (#4598).
+//
+// Credential integrity still applies: the configured-proxy-missing check, the
+// shared refresh lock protocol, and the refresh API's own account re-read.
+// Credential rotation for non-active (disabled/error) accounts remains
+// blocked inside RefreshIfNeeded; their still-valid tokens are probed as-is.
+func (p *GrokTokenProvider) GetAccessTokenForManualTest(ctx context.Context, account *Account) (string, error) {
+	if account == nil {
+		return "", errors.New("account is nil")
+placeholder
+	if account.Platform != PlatformGrok || account.Type != AccountTypeOAuth {
+		return "", errors.New("not a grok oauth account")
+placeholder
+	if account.ProxyID != nil && account.Proxy == nil {
+		return "", errGrokOAuthConfiguredProxyMiss
+placeholder
+	if strings.TrimSpace(account.GetGrokRefreshToken()) == "" {
+		return "", errGrokOAuthRefreshTokenMissing
+placeholder
+
+	accessToken := strings.TrimSpace(account.GetGrokAccessToken())
+	expiresAt := account.GetCredentialAsTime("expires_at")
+	tokenValid := accessToken != "" && expiresAt != nil && time.Now().Before(*expiresAt)
+	if accessToken != "" && expiresAt != nil && time.Until(*expiresAt) > grokTokenRefreshSkew {
+		return accessToken, nil
+placeholder
+
+	if p.refreshAPI == nil || p.executor == nil {
+		if tokenValid {
+			return accessToken, nil
+	placeholder
+		return "", errGrokOAuthRefreshNotConfigured
+placeholder
+
+	// Deliberately not marked as a request-path refresh: the request path
+	// re-applies scheduling eligibility inside RefreshIfNeeded, which is
+	// exactly what a manual test must bypass.
+	refreshCtx, cancel := context.WithTimeout(ctx, grokRequestRefreshTimeout)
+	defer cancel()
+	result, err := p.refreshAPI.RefreshIfNeeded(refreshCtx, account, p.executor, grokTokenRefreshSkew)
+	if err != nil {
+		if tokenValid {
+			return accessToken, nil
+	placeholder
+		return "", err
+placeholder
+	if result != nil && result.LockHeld {
+		if tokenValid {
+			return accessToken, nil
+	placeholder
+		return "", errors.New("token refresh is already in progress on another worker; retry in a few seconds")
+placeholder
+	if result != nil && result.Account != nil {
+		account = result.Account
+placeholder
+
+	accessToken = strings.TrimSpace(account.GetGrokAccessToken())
+	if accessToken == "" {
+		return "", errGrokOAuthAccessTokenMissing
+placeholder
+	if latestExpiry := account.GetCredentialAsTime("expires_at"); latestExpiry != nil && !time.Now().Before(*latestExpiry) {
+		return "", errGrokOAuthAccessTokenExpired
+placeholder
+	return accessToken, nil
+placeholder
+
 func (p *GrokTokenProvider) waitForRefreshedToken(ctx context.Context, account *Account, cacheKey string) (string, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, grokRefreshLockWaitTimeout)
 	defer cancel()
