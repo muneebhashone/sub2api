@@ -279,6 +279,79 @@ placeholder
 	require.NotContains(t, string(upstream.lastBody), "Communicate with the user by streaming thinking")
 placeholder
 
+func forwardOAuthChatCompletionsForUpstreamBody(t *testing.T, body []byte) []byte {
+placeholder
+
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "x-request-id": []string{"rid_chat_system_promotion"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"type":"invalid_request_error","message":"stop before response parsing"placeholderplaceholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:          4,
+		Name:        "openai-oauth",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":       "oauth-token",
+			"chatgpt_account_id": "chatgpt-acc",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "gpt-5.4")
+placeholder
+	require.Nil(t, result)
+	require.NotEmpty(t, upstream.lastBody)
+	return upstream.lastBody
+placeholder
+
+func TestForwardAsChatCompletions_OAuthPromotesSystemMessageWithoutDuplication(t *testing.T) {
+	const systemPrompt = "Unique system prefix for token accounting."
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"system","content":"` + systemPrompt + `"placeholder,{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+
+	upstreamBody := forwardOAuthChatCompletionsForUpstreamBody(t, body)
+
+	require.Equal(t, systemPrompt, gjson.GetBytes(upstreamBody, "instructions").String())
+	require.Equal(t, int64(1), gjson.GetBytes(upstreamBody, "input.#").Int())
+	require.Equal(t, "user", gjson.GetBytes(upstreamBody, "input.0.role").String())
+	require.Equal(t, 1, strings.Count(string(upstreamBody), systemPrompt))
+placeholder
+
+func TestForwardAsChatCompletions_OAuthJsonObjectKeepsSystemMessageInInput(t *testing.T) {
+	const systemPrompt = "Return JSON only."
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"system","content":"` + systemPrompt + `"placeholder,{"role":"user","content":"symbol data"placeholder],"response_format":{"type":" JSON_OBJECT "placeholder,"stream":falseplaceholder`)
+
+	upstreamBody := forwardOAuthChatCompletionsForUpstreamBody(t, body)
+
+	require.Equal(t, systemPrompt, gjson.GetBytes(upstreamBody, "instructions").String())
+	require.Equal(t, int64(2), gjson.GetBytes(upstreamBody, "input.#").Int())
+	require.Equal(t, "developer", gjson.GetBytes(upstreamBody, "input.0.role").String())
+	require.Equal(t, systemPrompt, gjson.GetBytes(upstreamBody, "input.0.content").String())
+	require.Equal(t, 2, strings.Count(string(upstreamBody), systemPrompt))
+placeholder
+
+func TestForwardAsChatCompletions_OAuthKeepsMixedSystemContentInInput(t *testing.T) {
+	const systemPrompt = "Inspect this reference image."
+	body := []byte(`{"model":"gpt-5.4","messages":[{"role":"system","content":[{"type":"text","text":"` + systemPrompt + `"placeholder,{"type":"image_url","image_url":{"url":"https://example.com/reference.png"placeholderplaceholder]placeholder,{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+
+	upstreamBody := forwardOAuthChatCompletionsForUpstreamBody(t, body)
+
+	require.Equal(t, systemPrompt, gjson.GetBytes(upstreamBody, "instructions").String())
+	require.Equal(t, int64(2), gjson.GetBytes(upstreamBody, "input.#").Int())
+	require.Equal(t, "developer", gjson.GetBytes(upstreamBody, "input.0.role").String())
+	require.Equal(t, int64(2), gjson.GetBytes(upstreamBody, "input.0.content.#").Int())
+	require.Equal(t, "input_image", gjson.GetBytes(upstreamBody, "input.0.content.1.type").String())
+	require.Equal(t, "https://example.com/reference.png", gjson.GetBytes(upstreamBody, "input.0.content.1.image_url").String())
+placeholder
+
 func TestForwardAsChatCompletions_ClientDisconnectDrainsUpstreamUsage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
