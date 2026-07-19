@@ -286,6 +286,29 @@ const fallbackPlaceholders = [
   "{{report_typeplaceholderplaceholder",
   "{{report_start_timeplaceholderplaceholder",
   "{{report_end_timeplaceholderplaceholder",
+  "{{report_summary_displayplaceholderplaceholder",
+  "{{report_detail_displayplaceholderplaceholder",
+  "{{report_total_requestsplaceholderplaceholder",
+  "{{report_success_countplaceholderplaceholder",
+  "{{report_sla_error_countplaceholderplaceholder",
+  "{{report_business_limited_countplaceholderplaceholder",
+  "{{report_slaplaceholderplaceholder",
+  "{{report_error_rateplaceholderplaceholder",
+  "{{report_upstream_error_rateplaceholderplaceholder",
+  "{{report_upstream_error_count_excl_429_529placeholderplaceholder",
+  "{{report_upstream_429_countplaceholderplaceholder",
+  "{{report_upstream_529_countplaceholderplaceholder",
+  "{{report_latency_p50placeholderplaceholder",
+  "{{report_latency_p99placeholderplaceholder",
+  "{{report_ttft_p50placeholderplaceholder",
+  "{{report_ttft_p99placeholderplaceholder",
+  "{{report_tokensplaceholderplaceholder",
+  "{{report_qps_currentplaceholderplaceholder",
+  "{{report_qps_peakplaceholderplaceholder",
+  "{{report_qps_avgplaceholderplaceholder",
+  "{{report_tps_currentplaceholderplaceholder",
+  "{{report_tps_peakplaceholderplaceholder",
+  "{{report_tps_avgplaceholderplaceholder",
   "{{report_htmlplaceholderplaceholder",
 ];
 
@@ -374,7 +397,7 @@ const eventDisplayMeta: Record<string, EventDisplayMeta> = {
   placeholder,
   "ops.scheduled_report": {
     label: "运维定时报表",
-    timing: "运维日报、周报、错误摘要或账号健康报表到达配置的发送时间时发送。",
+    timing: "运维日报、周报、错误摘要或账号健康报表到达配置的发送时间时发送；日报和周报的完整指标均可在模板中编辑。",
     categoryLabel: "运维",
   placeholder,
 placeholder;
@@ -437,7 +460,7 @@ const eventDisplayMetaEn: Record<string, EventDisplayMeta> = {
   placeholder,
   "ops.scheduled_report": {
     label: "Ops Scheduled Report",
-    timing: "Sent when a configured daily, weekly, error digest, or account health report reaches its scheduled send time.",
+    timing: "Sent when a configured daily, weekly, error digest, or account health report reaches its scheduled send time. Every daily and weekly summary metric is editable in this template.",
     categoryLabel: "Ops",
   placeholder,
 placeholder;
@@ -505,7 +528,9 @@ const selectedEventDescription = computed(() => {
 placeholder);
 
 const placeholderList = computed(() => {
-  const combined = [...placeholders.value, ...fallbackPlaceholders];
+  const combined = placeholders.value.length
+    ? placeholders.value
+    : fallbackPlaceholders;
   return Array.from(
     new Set(
       combined
