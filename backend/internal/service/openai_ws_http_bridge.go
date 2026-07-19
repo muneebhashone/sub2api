@@ -230,6 +230,9 @@ placeholder
 	turnStart := time.Now()
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
+		if turn == 1 {
+			return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, err, true)
+	placeholder
 		safeErr := sanitizeUpstreamErrorMessage(err.Error())
 		_ = writeClientMessage(buildOpenAIWSHTTPBridgeErrorEvent(http.StatusBadGateway, "Upstream request failed"))
 		return nil, fmt.Errorf("upstream http bridge request failed: %s", safeErr)
@@ -238,15 +241,22 @@ placeholder
 
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, openAIWSHTTPBridgeErrorBodyLimitBytes))
-		if account.Platform == PlatformGrok {
-			s.handleGrokAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
-	placeholder else if shouldCooldownOpenAITransientUpstreamError(resp.StatusCode, respBody) {
-			canonicalModel := canonicalOpenAIAccountSchedulingModel(account, originalModel)
-			s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody, canonicalModel)
-	placeholder
 		upstreamMsg := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(respBody)))
 		if upstreamMsg == "" {
 			upstreamMsg = http.StatusText(resp.StatusCode)
+	placeholder
+		shouldFailover := s.shouldFailoverOpenAIUpstreamResponse(resp.StatusCode, upstreamMsg, respBody)
+		if account.Platform == PlatformGrok {
+			s.handleGrokAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+			if turn == 1 && shouldFailover {
+				return nil, newOpenAIUpstreamFailoverError(resp.StatusCode, resp.Header, respBody, upstreamMsg, false)
+		placeholder
+	placeholder else if turn == 1 && shouldFailover {
+			return nil, s.handleFailoverErrorResponsePassthrough(ctx, resp, c, account, body, respBody)
+	placeholder
+		if account.Platform != PlatformGrok && (shouldFailover || shouldCooldownOpenAITransientUpstreamError(resp.StatusCode, respBody)) {
+			canonicalModel := canonicalOpenAIAccountSchedulingModel(account, originalModel)
+			s.handleOpenAIAccountUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody, canonicalModel)
 	placeholder
 		_ = writeClientMessage(buildOpenAIWSHTTPBridgeErrorEvent(resp.StatusCode, upstreamMsg))
 		return nil, fmt.Errorf("upstream http bridge error: status=%d message=%s", resp.StatusCode, upstreamMsg)
@@ -372,6 +382,31 @@ placeholder
 	placeholder
 		replayCollector.AddEvent(eventType, upstreamMessage)
 
+		var upstreamEventErr error
+		if eventType == "error" {
+			errCodeRaw, errTypeRaw, errMsgRaw := parseOpenAIWSErrorEventFields(upstreamMessage)
+			errMessage := strings.TrimSpace(errMsgRaw)
+			if errMessage == "" {
+				errMessage = "upstream error event"
+		placeholder
+			statusCode := openAIWSErrorHTTPStatusFromRaw(errCodeRaw, errTypeRaw)
+			shouldFailover := s.shouldFailoverOpenAIUpstreamResponse(statusCode, errMessage, upstreamMessage)
+			if account.Platform == PlatformGrok {
+				s.handleGrokAccountUpstreamError(ctx, account, statusCode, resp.Header, upstreamMessage)
+		placeholder else if shouldFailover {
+				accountStatus := statusCode
+				if transientStatus := openAIWSPayloadTransientStatus(upstreamMessage); transientStatus != 0 {
+					accountStatus = transientStatus
+			placeholder
+				canonicalModel := canonicalOpenAIAccountSchedulingModel(account, originalModel)
+				s.handleOpenAIAccountUpstreamError(ctx, account, accountStatus, resp.Header, upstreamMessage, canonicalModel)
+		placeholder
+			if turn == 1 && !wroteDownstream && shouldFailover {
+				return nil, newOpenAIUpstreamFailoverError(statusCode, resp.Header, upstreamMessage, errMessage, false)
+		placeholder
+			upstreamEventErr = errors.New(errMessage)
+	placeholder
+
 		if !clientDisconnected {
 			if err := writeClientMessage(upstreamMessage); err != nil {
 				if isOpenAIWSClientDisconnectError(err) {
@@ -396,15 +431,8 @@ placeholder
 		placeholder
 	placeholder
 
-		if eventType == "error" {
-			s.handleOpenAIWSErrorEventTransientFailure(ctx, account, canonicalOpenAIAccountSchedulingModel(account, originalModel), resp.Header, upstreamMessage)
-			errCodeRaw, errTypeRaw, errMsgRaw := parseOpenAIWSErrorEventFields(upstreamMessage)
-			s.persistOpenAIWSRateLimitSignal(ctx, account, resp.Header, upstreamMessage, errCodeRaw, errTypeRaw, errMsgRaw)
-			errMessage := strings.TrimSpace(errMsgRaw)
-			if errMessage == "" {
-				errMessage = "upstream error event"
-		placeholder
-			return resultWithUsage(), errors.New(errMessage)
+		if upstreamEventErr != nil {
+			return resultWithUsage(), upstreamEventErr
 	placeholder
 		if isOpenAIWSTerminalEvent(eventType) {
 			upstreamTerminalEvent = s.handleOpenAIWSTerminalTransientFailure(ctx, account, canonicalOpenAIAccountSchedulingModel(account, originalModel), resp.Header, upstreamMessage)
@@ -432,12 +460,20 @@ placeholder
 	placeholder
 placeholder
 	if err := scanner.Err(); err != nil {
-		return resultWithUsage(), fmt.Errorf("read upstream http bridge stream: %w", err)
+		streamErr := fmt.Errorf("read upstream http bridge stream: %w", err)
+		if turn == 1 && !wroteDownstream {
+			return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, streamErr, true)
+	placeholder
+		return resultWithUsage(), streamErr
 placeholder
-	if sawDone && eventCount > 0 {
-		return resultWithUsage(), nil
+	terminalErr := errors.New("upstream http bridge stream ended before terminal event")
+	if sawDone {
+		terminalErr = errors.New("upstream http bridge stream sent [DONE] before terminal event")
 placeholder
-	return resultWithUsage(), errors.New("upstream http bridge stream ended before terminal event")
+	if turn == 1 && !wroteDownstream {
+		return nil, s.handleOpenAIUpstreamTransportError(ctx, c, account, terminalErr, true)
+placeholder
+	return resultWithUsage(), terminalErr
 placeholder
 
 func resolveGrokWSCacheIdentity(c *gin.Context, account *Account, payload []byte, originalModel string) (string, error) {
