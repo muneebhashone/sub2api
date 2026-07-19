@@ -127,6 +127,70 @@ placeholder
 	require.Equal(t, "fc_1", second["call_id"])
 placeholder
 
+func TestApplyCodexOAuthTransform_BoundsLongCallIDsAndPreservesPairing(t *testing.T) {
+	suffix := strings.Repeat("z", 62)
+	for _, tc := range []struct {
+		name         string
+		callID       string
+		outputCallID string
+placeholder{
+		{name: "non-native boundary id", callID: "call-" + strings.Repeat("x", 59), outputCallID: "call-" + strings.Repeat("x", 59)placeholder,
+		{name: "overlong fc id", callID: "fc_" + strings.Repeat("y", 62), outputCallID: "fc_" + strings.Repeat("y", 62)placeholder,
+		{name: "equivalent prefixes", callID: "call_" + suffix, outputCallID: "fc_" + suffixplaceholder,
+placeholder {
+		t.Run(tc.name, func(t *testing.T) {
+			reqBody := map[string]any{
+				"model": "gpt-5.2",
+				"input": []any{
+					map[string]any{"type": "function_call", "call_id": tc.callID, "name": "shell"placeholder,
+					map[string]any{"type": "function_call_output", "call_id": tc.outputCallID, "output": "done"placeholder,
+			placeholder,
+		placeholder
+
+			applyCodexOAuthTransform(reqBody, false, false)
+
+			input, ok := reqBody["input"].([]any)
+			require.True(t, ok)
+			call, ok := input[0].(map[string]any)
+			require.True(t, ok)
+			output, ok := input[1].(map[string]any)
+			require.True(t, ok)
+
+			fixedCallID, ok := call["call_id"].(string)
+			require.True(t, ok)
+			require.LessOrEqual(t, len(fixedCallID), codexCallIDMaxLength)
+			require.True(t, strings.HasPrefix(fixedCallID, codexCallIDPrefix))
+			require.Equal(t, fixedCallID, output["call_id"])
+			require.Equal(t, fixedCallID, normalizeCodexCallID(tc.callID))
+			require.Equal(t, fixedCallID, normalizeCodexCallID(tc.outputCallID))
+	placeholder)
+placeholder
+placeholder
+
+func TestApplyCodexOAuthTransform_PreservesLongCallIDsWhenRequested(t *testing.T) {
+	callID := "call-" + strings.Repeat("x", 70)
+	reqBody := map[string]any{
+		"model": "gpt-5.2",
+		"input": []any{
+			map[string]any{"type": "function_call", "call_id": callID, "name": "shell"placeholder,
+			map[string]any{"type": "function_call_output", "call_id": callID, "output": "done"placeholder,
+	placeholder,
+placeholder
+
+	applyCodexOAuthTransformWithOptions(reqBody, codexOAuthTransformOptions{
+		PreserveToolCallIDs: true,
+placeholder)
+
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
+	call, ok := input[0].(map[string]any)
+	require.True(t, ok)
+	output, ok := input[1].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, callID, call["call_id"])
+	require.Equal(t, callID, output["call_id"])
+placeholder
+
 func TestApplyCodexOAuthTransform_ToolSearchOutputPreservesCallID(t *testing.T) {
 	reqBody := map[string]any{
 		"model": "gpt-5.2",
