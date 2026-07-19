@@ -173,7 +173,23 @@ placeholder
 	if trimmed == "[DONE]" {
 		return true
 placeholder
-	switch gjson.Get(trimmed, "type").String() {
+	return openAIStreamEventTypeIsTerminal(gjson.Get(trimmed, "type").String())
+placeholder
+
+// openAIStreamEventIsTerminalWithType 复用已提取的 type，避免 SSE 热路径重复扫描 JSON。
+func openAIStreamEventIsTerminalWithType(data, eventType string) bool {
+	trimmed := strings.TrimSpace(data)
+	if trimmed == "" {
+		return false
+placeholder
+	if trimmed == "[DONE]" {
+		return true
+placeholder
+	return openAIStreamEventTypeIsTerminal(eventType)
+placeholder
+
+func openAIStreamEventTypeIsTerminal(eventType string) bool {
+	switch eventType {
 	case "response.completed", "response.done", "response.failed", "response.incomplete", "response.cancelled", "response.canceled":
 		return true
 	default:
