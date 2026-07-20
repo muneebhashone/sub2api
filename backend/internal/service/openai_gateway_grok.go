@@ -201,15 +201,125 @@ func isGrokInvalidEncryptedContentResponse(statusCode int, body []byte) bool {
 		return false
 placeholder
 
-	code := gjson.GetBytes(body, "code")
-	message := gjson.GetBytes(body, "error")
-	if code.Type != gjson.String || message.Type != gjson.String ||
-		!strings.EqualFold(strings.TrimSpace(code.String()), "invalid-argument") {
+	// xAI has used both flat and nested error envelopes:
+	//   {"code":"invalid-argument","error":"Could not decrypt the provided encrypted_content."placeholder
+	//   {"error":{"message":"Could not decrypt the provided encrypted_content."placeholderplaceholder
+	code := strings.TrimSpace(gjson.GetBytes(body, "code").String())
+	message := ""
+	errNode := gjson.GetBytes(body, "error")
+	switch {
+	case errNode.Type == gjson.String:
+		message = errNode.String()
+	case errNode.IsObject():
+		message = firstNonEmpty(errNode.Get("message").String(), errNode.Get("error").String())
+		if code == "" {
+			code = strings.TrimSpace(errNode.Get("code").String())
+	placeholder
+	default:
+		message = gjson.GetBytes(body, "message").String()
+placeholder
+	normalizedMessage := strings.ToLower(strings.TrimSpace(message))
+	if normalizedMessage == "" {
 		return false
 placeholder
 
-	normalizedMessage := strings.ToLower(message.String())
-	return strings.Contains(normalizedMessage, "decrypt") && strings.Contains(normalizedMessage, "encrypted_content")
+	if strings.EqualFold(code, "invalid_encrypted_content") {
+		return true
+placeholder
+	// Keep the official xAI flat-code gate so unrelated 400s are not retried.
+	if !strings.EqualFold(code, "invalid-argument") && code != "" {
+		return false
+placeholder
+	// Nested OpenAI-style envelopes may omit top-level code; require decrypt text.
+	if code == "" && !strings.Contains(normalizedMessage, "decrypt") {
+		return false
+placeholder
+	return strings.Contains(normalizedMessage, "encrypted_content") &&
+		(strings.Contains(normalizedMessage, "decrypt") ||
+			strings.Contains(normalizedMessage, "unmodified"))
+placeholder
+
+// requestHasGrokEncryptedReasoning reports whether the outbound Responses body
+// still carries reasoning.encrypted_content that can be stripped for retry.
+func requestHasGrokEncryptedReasoning(body []byte) bool {
+	input := gjson.GetBytes(body, "input")
+	if !input.Exists() {
+		return false
+placeholder
+	items := input.Array()
+	if input.IsObject() {
+		items = []gjson.Result{inputplaceholder
+placeholder
+	for _, item := range items {
+		if strings.TrimSpace(item.Get("type").String()) != "reasoning" {
+			continue
+	placeholder
+		enc := item.Get("encrypted_content")
+		if enc.Exists() && enc.Type != gjson.Null && strings.TrimSpace(enc.String()) != "" {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+type grokEncryptedContentStripRetriedKey struct{placeholder
+
+func markGrokEncryptedContentStripRetried(ctx context.Context) context.Context {
+	return context.WithValue(ctx, grokEncryptedContentStripRetriedKey{placeholder, true)
+placeholder
+
+func grokEncryptedContentStripRetried(ctx context.Context) bool {
+	v, _ := ctx.Value(grokEncryptedContentStripRetriedKey{placeholder).(bool)
+	return v
+placeholder
+
+// stripAnthropicThinkingSignatures removes thinking.signature from Claude
+// history so a different Grok OAuth account can accept multi-turn tool
+// continuations after decrypt failures. Returns ok=false when nothing changed.
+func stripAnthropicThinkingSignatures(body []byte) ([]byte, bool) {
+	if len(body) == 0 || !bytes.Contains(body, []byte(`"signature"`)) {
+		return body, false
+placeholder
+	var req map[string]any
+	if err := json.Unmarshal(body, &req); err != nil {
+		return body, false
+placeholder
+	messages, ok := req["messages"].([]any)
+	if !ok || len(messages) == 0 {
+		return body, false
+placeholder
+	changed := false
+	for _, rawMsg := range messages {
+		msg, ok := rawMsg.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		content, ok := msg["content"].([]any)
+		if !ok {
+			continue
+	placeholder
+		for _, rawBlock := range content {
+			block, ok := rawBlock.(map[string]any)
+			if !ok {
+				continue
+		placeholder
+			if typ, _ := block["type"].(string); typ != "thinking" {
+				continue
+		placeholder
+			if _, has := block["signature"]; has {
+				delete(block, "signature")
+				changed = true
+		placeholder
+	placeholder
+placeholder
+	if !changed {
+		return body, false
+placeholder
+	out, err := json.Marshal(req)
+	if err != nil {
+		return body, false
+placeholder
+	return out, true
 placeholder
 
 func trimGrokInvalidEncryptedContentRetryBody(body []byte) ([]byte, bool, error) {
