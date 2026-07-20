@@ -230,7 +230,7 @@ async function fetchAndRenderMarkdown(slug: string) {
       headers: authStore.token ? { Authorization: `Bearer ${authStore.tokenplaceholder` placeholder : {placeholder,
     placeholder)
     if (!resp.ok) {
-      renderedHtml.value = '<p class="text-red-500">Page not found</p>'
+      renderedHtml.value = `<p class="text-red-500">${t('common.pageNotFound')placeholder</p>`
       return
     placeholder
     let raw = await resp.text()
