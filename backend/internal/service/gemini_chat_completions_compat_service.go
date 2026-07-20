@@ -556,12 +556,13 @@ placeholder
 	if emitAnthropicEvent(&apicompat.AnthropicStreamEvent{
 		Type: "message_start",
 		Message: &apicompat.AnthropicResponse{
-			ID:      messageID,
-			Type:    "message",
-			Role:    "assistant",
-			Model:   originalModel,
-			Content: []apicompat.AnthropicContentBlock{placeholder,
-			Usage:   apicompat.AnthropicUsage{placeholder,
+			ID:         messageID,
+			Type:       "message",
+			Role:       "assistant",
+			Model:      originalModel,
+			Content:    []apicompat.AnthropicContentBlock{placeholder,
+			StopReason: nil, // JSON null
+			Usage:      apicompat.AnthropicUsage{placeholder,
 	placeholder,
 placeholder) {
 		return &geminiStreamResult{usage: &usage, firstTokenMs: firstTokenMsplaceholder, nil
