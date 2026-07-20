@@ -26,13 +26,13 @@
         </div>
         <div class="shrink-0 text-right">
           <div class="flex items-baseline gap-1">
-            <span class="text-xs text-gray-400 dark:text-dark-500">$</span>
+            <span class="text-xs text-gray-400 dark:text-dark-500">{{ planCurrencySymbol placeholderplaceholder</span>
             <span :class="['text-2xl font-extrabold tracking-tight', textClass]">{{ plan.price placeholderplaceholder</span>
             <span v-if="plan.currency" class="text-xs font-medium text-gray-400 dark:text-dark-500">{{ plan.currency placeholderplaceholder</span>
           </div>
           <span class="text-[11px] text-gray-400 dark:text-dark-500">/ {{ validitySuffix placeholderplaceholder</span>
           <div v-if="plan.original_price" class="mt-0.5 flex items-center justify-end gap-1.5">
-            <span class="text-xs text-gray-400 line-through dark:text-dark-500">${{ plan.original_price placeholderplaceholder<template v-if="plan.currency"> {{ plan.currency placeholderplaceholder</template></span>
+            <span class="text-xs text-gray-400 line-through dark:text-dark-500">{{ planCurrencySymbol placeholderplaceholder{{ plan.original_price placeholderplaceholder<template v-if="plan.currency"> {{ plan.currency placeholderplaceholder</template></span>
             <span :class="['rounded px-1 py-0.5 text-[10px] font-semibold', discountClass]">{{ discountText placeholderplaceholder</span>
           </div>
         </div>
@@ -106,6 +106,7 @@ import type { SubscriptionPlan placeholder from '@/types/payment'
 import type { UserSubscription placeholder from '@/types'
 import { useAppStore placeholder from '@/stores/app'
 import { hasPeakRate as groupHasPeakRate, formatPeakRateWindow, serverTimezoneLabel placeholder from '@/utils/peak-rate'
+import { currencySymbol placeholder from '@/components/payment/currency'
 import {
   platformAccentBarClass,
   platformBadgeLightClass,
@@ -148,6 +149,7 @@ const rateDisplay = computed(() => {
 placeholder)
 
 const appStore = useAppStore()
+const planCurrencySymbol = computed(() => currencySymbol(props.plan.currency || 'USD'))
 
 const hasPeakRate = computed(() => groupHasPeakRate(props.plan))
 
