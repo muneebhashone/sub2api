@@ -88,7 +88,7 @@ func TestAnthropicToResponsesResponse_CacheCreation(t *testing.T) {
 			CacheReadInputTokens:     4,
 			CacheCreationInputTokens: 6,
 	placeholder,
-		StopReason: "end_turn",
+		StopReason: AnthropicStopReasonPtr("end_turn"),
 placeholder
 
 	out := AnthropicToResponsesResponse(&resp)

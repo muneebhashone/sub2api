@@ -287,6 +287,150 @@ placeholder
 	require.Empty(t, token)
 placeholder
 
+// TestGrokTokenProviderManualTestBypassesSchedulingGate reproduces #4598:
+// admins must be able to run "test connection" against accounts that the
+// scheduler currently excludes (manual switch off, rate limited, overloaded,
+// temporarily cooled down). The production request path keeps rejecting them.
+func TestGrokTokenProviderManualTestBypassesSchedulingGate(t *testing.T) {
+	future := time.Now().Add(time.Hour)
+	tests := []struct {
+		name   string
+		mutate func(*Account)
+placeholder{
+		{name: "not schedulable", mutate: func(account *Account) { account.Schedulable = false placeholderplaceholder,
+		{name: "temporarily unschedulable", mutate: func(account *Account) { account.TempUnschedulableUntil = &future placeholderplaceholder,
+		{name: "rate limited", mutate: func(account *Account) { account.RateLimitResetAt = &future placeholderplaceholder,
+		{name: "overloaded", mutate: func(account *Account) { account.OverloadUntil = &future placeholderplaceholder,
+		{name: "disabled by error", mutate: func(account *Account) { account.Status = StatusError placeholderplaceholder,
+placeholder
+
+	for index, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := expiredGrokOAuthAccountForCredentialTest(int64(120 + index))
+			account.Credentials["access_token"] = "still-valid-token"
+			account.Credentials["expires_at"] = time.Now().Add(2 * grokTokenRefreshSkew).UTC().Format(time.RFC3339)
+			tt.mutate(account)
+			provider := NewGrokTokenProvider(&tokenRefreshAccountRepo{placeholder, &grokTokenCacheForProviderTest{placeholder)
+
+			// Production request path keeps excluding this account.
+			_, requestErr := provider.GetAccessToken(context.Background(), account)
+			require.ErrorIs(t, requestErr, errOAuthRefreshAccountStateChanged)
+
+			// Manual test path returns the valid credential for probing.
+			token, err := provider.GetAccessTokenForManualTest(context.Background(), account)
+		placeholder
+			require.Equal(t, "still-valid-token", token)
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokTokenProviderManualTestRefreshesExpiredTokenWhileUnschedulable(t *testing.T) {
+	t.Setenv(xai.EnvBaseURL, xai.DefaultCLIBaseURL)
+
+	expiredAt := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	account := &Account{
+		ID:          130,
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Schedulable: false,
+placeholder
+			"access_token":  "expired-access-token",
+			"refresh_token": "refresh-token",
+			"expires_at":    expiredAt,
+			"base_url":      xai.DefaultCLIBaseURL,
+			"client_id":     "client-id",
+	placeholder,
+placeholder
+	repo := &tokenRefreshAccountRepo{placeholder
+	repo.accountsByID = map[int64]*Account{130: accountplaceholder
+	cache := &grokTokenCacheForProviderTest{lockResult: trueplaceholder
+	oauthSvc := NewGrokOAuthService(nil, &grokOAuthClientStub{
+		refreshResponse: &xai.TokenResponse{
+			AccessToken: "manual-test-refreshed-token",
+			TokenType:   "Bearer",
+			ExpiresIn:   3600,
+	placeholder,
+placeholder)
+	defer oauthSvc.Stop()
+
+	provider := NewGrokTokenProvider(repo, cache)
+	provider.SetRefreshAPI(NewOAuthRefreshAPI(repo, cache), NewGrokTokenRefresher(oauthSvc))
+
+	token, err := provider.GetAccessTokenForManualTest(context.Background(), account)
+placeholder
+	require.Equal(t, "manual-test-refreshed-token", token)
+	require.Equal(t, 1, repo.updateCredentialsCalls)
+placeholder
+
+func TestGrokTokenProviderManualTestFallsBackToValidTokenOnRefreshFailure(t *testing.T) {
+	account := &Account{
+		ID:          131,
+		Platform:    PlatformGrok,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Schedulable: false,
+placeholder
+			"access_token":  "near-expiry-token",
+			"refresh_token": "refresh-token",
+			// Inside the refresh window but not expired yet.
+			"expires_at": time.Now().Add(10 * time.Minute).UTC().Format(time.RFC3339),
+	placeholder,
+placeholder
+	repo := &tokenRefreshAccountRepo{placeholder
+	repo.accountsByID = map[int64]*Account{131: accountplaceholder
+	cache := &grokTokenCacheForProviderTest{lockResult: trueplaceholder
+	provider := NewGrokTokenProvider(repo, cache)
+	provider.SetRefreshAPI(NewOAuthRefreshAPI(repo, cache), &tokenRefresherStub{
+		err: errors.New("upstream refresh unavailable"),
+placeholder)
+
+	token, err := provider.GetAccessTokenForManualTest(context.Background(), account)
+placeholder
+	require.Equal(t, "near-expiry-token", token)
+placeholder
+
+func TestGrokTokenProviderManualTestReportsRefreshFailureWhenTokenExpired(t *testing.T) {
+	account := expiredGrokOAuthAccountForCredentialTest(132)
+	account.Schedulable = false
+	repo := &tokenRefreshAccountRepo{placeholder
+	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
+	cache := &grokTokenCacheForProviderTest{lockResult: trueplaceholder
+	provider := NewGrokTokenProvider(repo, cache)
+	provider.SetRefreshAPI(NewOAuthRefreshAPI(repo, cache), &tokenRefresherStub{
+		err: errors.New("invalid_client: client credentials rejected"),
+placeholder)
+
+	token, err := provider.GetAccessTokenForManualTest(context.Background(), account)
+placeholder
+	require.Empty(t, token)
+	require.Contains(t, err.Error(), "invalid_client")
+placeholder
+
+func TestGrokTokenProviderManualTestLockHeldWithExpiredTokenReturnsSpecificError(t *testing.T) {
+	account := expiredGrokOAuthAccountForCredentialTest(133)
+	repo := &tokenRefreshAccountRepo{placeholder
+	repo.accountsByID = map[int64]*Account{account.ID: accountplaceholder
+	cache := &grokTokenCacheForProviderTest{lockResult: falseplaceholder
+	provider := NewGrokTokenProvider(repo, cache)
+	provider.SetRefreshAPI(NewOAuthRefreshAPI(repo, cache), &tokenRefresherStub{placeholder)
+
+	token, err := provider.GetAccessTokenForManualTest(context.Background(), account)
+placeholder
+	require.Empty(t, token)
+	require.Contains(t, err.Error(), "refresh is already in progress")
+placeholder
+
+func TestGrokTokenProviderManualTestRequiresRefreshToken(t *testing.T) {
+	account := expiredGrokOAuthAccountForCredentialTest(134)
+	delete(account.Credentials, "refresh_token")
+	provider := NewGrokTokenProvider(&tokenRefreshAccountRepo{placeholder, &grokTokenCacheForProviderTest{placeholder)
+
+	token, err := provider.GetAccessTokenForManualTest(context.Background(), account)
+	require.ErrorIs(t, err, errGrokOAuthRefreshTokenMissing)
+	require.Empty(t, token)
+placeholder
+
 func TestGrokTokenProviderRejectsIneligibleSelectedAccountBeforeWarmCache(t *testing.T) {
 	future := time.Now().Add(time.Hour)
 	tests := []struct {

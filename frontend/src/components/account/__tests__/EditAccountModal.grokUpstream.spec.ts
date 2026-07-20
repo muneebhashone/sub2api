@@ -67,7 +67,10 @@ const BaseDialogStub = defineComponent({
   template: '<div v-if="show"><slot /><slot name="footer" /></div>'
 placeholder)
 
-function buildGrokOAuthAccount(credentials: Record<string, unknown> = {placeholder) {
+function buildGrokOAuthAccount(
+  credentials: Record<string, unknown> = {placeholder,
+  extra: Record<string, unknown> = {placeholder
+) {
   return {
     id: 5,
     name: 'Grok OAuth',
@@ -80,7 +83,7 @@ function buildGrokOAuthAccount(credentials: Record<string, unknown> = {placehold
       ...credentials
     placeholder,
     credentials_status: { has_access_token: true, has_refresh_token: true placeholder,
-    extra: {placeholder,
+    extra,
     proxy_id: null,
     concurrency: 1,
     priority: 1,
@@ -224,5 +227,100 @@ describe('EditAccountModal Grok OAuth upstream config', () => {
       'x-grok-client-version': '0.2.93',
       'x-xai-token-auth': 'xai-grok-cli'
     placeholder)
+  placeholder)
+
+  it('shows the client-tool cache switch only for Grok OAuth accounts', () => {
+    const grokOAuthWrapper = mountModal(buildGrokOAuthAccount())
+    expect(grokOAuthWrapper.find('[data-testid="grok-client-tool-cache-toggle"]').exists()).toBe(true)
+
+    const grokAPIKeyWrapper = mountModal({
+      ...buildGrokOAuthAccount(),
+      type: 'apikey',
+      credentials: { api_key: 'xai-test', base_url: 'https://api.x.ai/v1' placeholder
+    placeholder)
+    expect(grokAPIKeyWrapper.find('[data-testid="grok-client-tool-cache-toggle"]').exists()).toBe(false)
+
+    const openAIOAuthWrapper = mountModal({
+      ...buildGrokOAuthAccount(),
+      platform: 'openai'
+    placeholder)
+    expect(openAIOAuthWrapper.find('[data-testid="grok-client-tool-cache-toggle"]').exists()).toBe(false)
+  placeholder)
+
+  it('loads and disables client-tool caching while preserving unrelated extra fields', async () => {
+    const account = buildGrokOAuthAccount({placeholder, {
+      grok_client_tool_cache_enabled: true,
+      custom_setting: 'keep-me'
+    placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+    const toggle = wrapper.get('[data-testid="grok-client-tool-cache-toggle"]')
+    expect(toggle.attributes('aria-checked')).toBe('true')
+
+    await toggle.trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+    await vi.waitFor(() => expect(updateAccountMock).toHaveBeenCalledTimes(1))
+
+    const payload = updateAccountMock.mock.calls[0]?.[1]
+    expect(payload?.extra?.custom_setting).toBe('keep-me')
+    expect(payload?.extra?.grok_client_tool_cache_enabled).toBe(false)
+  placeholder)
+
+  it('defaults client-tool caching on when the setting is missing and persists explicit true', async () => {
+    const account = buildGrokOAuthAccount({placeholder, { custom_setting: 'keep-me' placeholder)
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+    const toggle = wrapper.get('[data-testid="grok-client-tool-cache-toggle"]')
+    expect(toggle.attributes('aria-checked')).toBe('true')
+
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+    await vi.waitFor(() => expect(updateAccountMock).toHaveBeenCalledTimes(1))
+
+    const payload = updateAccountMock.mock.calls[0]?.[1]
+    expect(payload?.extra).toMatchObject({
+      grok_client_tool_cache_enabled: true,
+      custom_setting: 'keep-me'
+    placeholder)
+  placeholder)
+
+  it('keeps an explicit false opt-out when saving an untouched account', async () => {
+    const account = buildGrokOAuthAccount(
+      {placeholder,
+      {
+        grok_client_tool_cache_enabled: false,
+        custom_setting: 'keep-me'
+      placeholder
+    )
+    updateAccountMock.mockResolvedValue(account)
+
+    const wrapper = mountModal(account)
+    const toggle = wrapper.get('[data-testid="grok-client-tool-cache-toggle"]')
+    expect(toggle.attributes('aria-checked')).toBe('false')
+
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+    await vi.waitFor(() => expect(updateAccountMock).toHaveBeenCalledTimes(1))
+
+    const payload = updateAccountMock.mock.calls[0]?.[1]
+    expect(payload?.extra).toMatchObject({
+      grok_client_tool_cache_enabled: false,
+      custom_setting: 'keep-me'
+    placeholder)
+  placeholder)
+
+  it('shows malformed cache settings as disabled so the UI matches the fail-closed backend', () => {
+    const account = buildGrokOAuthAccount(
+      {placeholder,
+      {
+        grok_client_tool_cache_enabled: 'true',
+        custom_setting: 'keep-me'
+      placeholder
+    )
+
+    const wrapper = mountModal(account)
+    expect(
+      wrapper.get('[data-testid="grok-client-tool-cache-toggle"]').attributes('aria-checked')
+    ).toBe('false')
   placeholder)
 placeholder)

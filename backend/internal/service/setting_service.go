@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync/atomic"
@@ -216,21 +217,66 @@ func (s *SettingService) SetProxyRepository(repo ProxyRepository) {
 	s.proxyRepo = repo
 placeholder
 
-func (s *SettingService) LoadAPIKeyACLTrustForwardedIPSetting(ctx context.Context) error {
+func (s *SettingService) LoadForwardedClientIPSettings(ctx context.Context) error {
 	if s == nil || s.cfg == nil || s.settingRepo == nil {
 		return nil
 placeholder
-	value, err := s.settingRepo.GetValue(ctx, SettingKeyAPIKeyACLTrustForwardedIP)
+
+	values, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyAPIKeyACLTrustForwardedIP,
+		SettingKeyForwardedClientIPHeaders,
+		settingKeyForwardedClientIPModeV2,
+placeholder)
 	if err != nil {
-		if errors.Is(err, ErrSettingNotFound) {
-			s.cfg.SetTrustForwardedIPForAPIKeyACL(s.cfg.Security.TrustForwardedIPForAPIKeyACL)
-			return nil
-	placeholder
-		return fmt.Errorf("get api key acl forwarded ip setting: %w", err)
+		s.cfg.SetForwardedClientIPSettings(false, nil)
+		return fmt.Errorf("get forwarded client ip settings: %w", err)
 placeholder
-	enabled := value == "true"
-	s.cfg.SetTrustForwardedIPForAPIKeyACL(enabled)
-	return nil
+
+	enabled := s.cfg.Security.TrustForwardedIPForAPIKeyACL
+	headers := s.cfg.ForwardedClientIPSettings().Headers
+	storedValue, hasStoredValue := values[SettingKeyAPIKeyACLTrustForwardedIP]
+	if hasStoredValue {
+		enabled = storedValue == "true"
+placeholder
+
+	var headersErr error
+	if storedHeaders, ok := values[SettingKeyForwardedClientIPHeaders]; ok {
+		headers, headersErr = parseForwardedClientIPHeadersSetting(storedHeaders)
+		if headersErr != nil {
+			enabled = false
+			headers = []string{placeholder
+			headersErr = fmt.Errorf("load forwarded client ip headers: %w", headersErr)
+	placeholder
+placeholder
+
+	updates := make(map[string]string)
+	if _, hasStoredHeaders := values[SettingKeyForwardedClientIPHeaders]; !hasStoredHeaders {
+		headersJSON, marshalErr := json.Marshal(headers)
+		if marshalErr != nil {
+			headers = []string{placeholder
+			headersErr = errors.Join(headersErr, fmt.Errorf("marshal forwarded client ip headers: %w", marshalErr))
+			headersJSON = []byte("[]")
+	placeholder
+		updates[SettingKeyForwardedClientIPHeaders] = string(headersJSON)
+placeholder
+	if values[settingKeyForwardedClientIPModeV2] != "true" {
+		updates[settingKeyForwardedClientIPModeV2] = "true"
+		// Before this migration, new installations persisted false by default.
+		// Restore compatibility only when no trusted-proxy policy was configured.
+		if headersErr == nil && hasStoredValue && !enabled && !s.cfg.Server.TrustedProxiesConfigured {
+			enabled = true
+			updates[SettingKeyAPIKeyACLTrustForwardedIP] = "true"
+	placeholder
+placeholder
+	if len(updates) > 0 {
+		if err := s.settingRepo.SetMultiple(ctx, updates); err != nil {
+			s.cfg.SetForwardedClientIPSettings(enabled, headers)
+			return errors.Join(headersErr, fmt.Errorf("migrate forwarded client ip setting: %w", err))
+	placeholder
+placeholder
+
+	s.cfg.SetForwardedClientIPSettings(enabled, headers)
+	return headersErr
 placeholder
 
 // GetAllSettings 获取所有系统设置

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -219,7 +220,7 @@ placeholder
 	require.False(t, gjson.GetBytes(unscopedBody, "tool_choice").Exists())
 placeholder
 
-func TestApplyGrokCacheIdentityAppendsNativeToolsToResponseFunctions(t *testing.T) {
+func TestGrokFreeMessagesClientToolCacheDefaultsOnForKnownFree(t *testing.T) {
 	account := healthyGrokOAuthGatewayTestAccount(901, "access-token")
 	account.Credentials["subscription_tier"] = " FREE "
 	tests := []struct {
@@ -233,7 +234,6 @@ placeholder
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Pure client function tools without search → no native injection (#4486).
 			intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"lookup","description":"look up a value","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"save","parameters":{"type":"object"placeholderplaceholder]` + tt.toolChoiceJSON + `placeholder`)
 			body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
 		placeholder
@@ -242,12 +242,42 @@ placeholder
 		placeholder
 			require.Equal(t, "isolated-id", gjson.GetBytes(body, "prompt_cache_key").String())
 			tools := gjson.GetBytes(body, "tools").Array()
-			require.Len(t, tools, 2, "pure client functions should not get native search injected")
+			require.Len(t, tools, 4)
 			require.Equal(t, "function", tools[0].Get("type").String())
 			require.Equal(t, "lookup", tools[0].Get("name").String())
 			require.Equal(t, "function", tools[1].Get("type").String())
 			require.Equal(t, "save", tools[1].Get("name").String())
+			require.Equal(t, "web_search", tools[2].Get("type").String())
+			require.Equal(t, "x_search", tools[3].Get("type").String())
 			require.Equal(t, tt.wantChoice, gjson.GetBytes(body, "tool_choice").Exists())
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokFreeMessagesClientToolCacheDefaultsWithMissingAccountSetting(t *testing.T) {
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+	tests := []struct {
+		name  string
+		extra map[string]any
+placeholder{
+		{name: "nil extra"placeholder,
+		{name: "empty extra", extra: map[string]any{placeholderplaceholder,
+		{name: "unrelated extra", extra: map[string]any{"other_setting": trueplaceholderplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := healthyGrokOAuthGatewayTestAccount(90101, "access-token")
+			account.Credentials["subscription_tier"] = "free"
+			account.Extra = tt.extra
+
+			patched, err := applyGrokFreeMessagesFunctionToolCacheRoute(body, body, account, "isolated-id")
+
+		placeholder
+			tools := gjson.GetBytes(patched, "tools").Array()
+			require.Len(t, tools, 3)
+			require.Equal(t, "web_search", tools[1].Get("type").String())
+			require.Equal(t, "x_search", tools[2].Get("type").String())
 	placeholder)
 placeholder
 placeholder
@@ -271,6 +301,330 @@ placeholder
 	require.Equal(t, "x_search", tools[2].Get("type").String())
 placeholder
 
+func TestGrokFreeClientToolCacheAccountOptIn(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9011, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: trueplaceholder
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"read_file","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeMessagesFunctionToolCacheRoute(body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 4)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "read_file", tools[1].Get("name").String())
+	require.Equal(t, "web_search", tools[2].Get("type").String())
+	require.Equal(t, "x_search", tools[3].Get("type").String())
+placeholder
+
+func TestGrokFreeMessagesClientToolCacheAccountOptOut(t *testing.T) {
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+	tests := []struct {
+		name  string
+		value any
+placeholder{
+		{name: "explicit false", value: falseplaceholder,
+		{name: "string false is malformed", value: "false"placeholder,
+		{name: "numeric value is malformed", value: 1placeholder,
+		{name: "null value is malformed", value: nilplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := healthyGrokOAuthGatewayTestAccount(90111, "access-token")
+			account.Credentials["subscription_tier"] = "free"
+			account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: tt.valueplaceholder
+
+			patched, err := applyGrokFreeMessagesFunctionToolCacheRoute(body, body, account, "isolated-id")
+
+		placeholder
+			require.JSONEq(t, string(body), string(patched))
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokFreeClientToolCacheRequestOptInOverridesAccountOptOut(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9014, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: falseplaceholder
+	c := newGrokCacheTestContext(9014)
+	c.Request.Header.Set(grokClientToolCacheOptInHeader, "prefer-cache")
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeRequestToolCacheRoute(c, body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 3)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
+placeholder
+
+func TestGrokFreeChatRequestClientToolCacheDefaultsOnWithoutClientFingerprint(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(90140, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	c := newGrokCacheTestContext(90140)
+	c.Request.URL.Path = "/v1/chat/completions"
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+placeholder
+	tools := gjson.GetBytes(patched, "tools").Array()
+	require.Len(t, tools, 3)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
+placeholder
+
+func TestGrokFreeClientToolCacheClaudeDesktopResponsesAutoOptIn(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(90141, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"Read","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"Edit","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	for _, xApp := range []string{"cli", "cli-bg"placeholder {
+		t.Run(xApp, func(t *testing.T) {
+			c := newGrokCacheTestContext(90141)
+			// The desktop marker text is intentionally not required; CC Switch and
+			// Claude Desktop may change the descriptive User-Agent suffix.
+			c.Request.Header.Set("User-Agent", "claude-cli/2.1.215 (external, future-desktop, agent-sdk/0.3.215)")
+			c.Request.Header.Set("X-App", xApp)
+			c.Request.Header.Set("anthropic-client-platform", "desktop_app")
+			c.Request.Header.Set("X-Claude-Code-Session-Id", "desktop-session-1")
+
+			patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+		placeholder
+			tools := gjson.GetBytes(patched, "tools").Array()
+			require.Len(t, tools, 4)
+			require.Equal(t, "Read", tools[0].Get("name").String())
+			require.Equal(t, "Edit", tools[1].Get("name").String())
+			require.Equal(t, "web_search", tools[2].Get("type").String())
+			require.Equal(t, "x_search", tools[3].Get("type").String())
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokFreeClientToolCacheClaudeDesktopFingerprintRequiresAllSignals(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(90142, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: falseplaceholder
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"Read","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	tests := []struct {
+		name     string
+		path     string
+		ua       string
+		xApp     string
+		platform string
+		session  string
+placeholder{
+		{
+			name:     "chat path",
+			path:     "/v1/chat/completions",
+			ua:       "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			xApp:     "cli",
+			platform: "desktop_app",
+			session:  "desktop-session-1",
+	placeholder,
+		{
+			name:     "compact responses path",
+			path:     "/v1/responses/compact",
+			ua:       "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			xApp:     "cli",
+			platform: "desktop_app",
+			session:  "desktop-session-1",
+	placeholder,
+		{
+			name:     "non claude cli user agent",
+			path:     "/v1/responses",
+			ua:       "Mozilla/5.0 (claude-desktop-3p)",
+			xApp:     "cli",
+			platform: "desktop_app",
+			session:  "desktop-session-1",
+	placeholder,
+		{
+			name:     "missing x app",
+			path:     "/v1/responses",
+			ua:       "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			platform: "desktop_app",
+			session:  "desktop-session-1",
+	placeholder,
+		{
+			name:     "wrong x app",
+			path:     "/v1/responses",
+			ua:       "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			xApp:     "desktop",
+			platform: "desktop_app",
+			session:  "desktop-session-1",
+	placeholder,
+		{
+			name:    "missing client platform",
+			path:    "/v1/responses",
+			ua:      "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			xApp:    "cli",
+			session: "desktop-session-1",
+	placeholder,
+		{
+			name:     "wrong client platform",
+			path:     "/v1/responses",
+			ua:       "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			xApp:     "cli",
+			platform: "web",
+			session:  "desktop-session-1",
+	placeholder,
+		{
+			name:     "missing session header",
+			path:     "/v1/responses",
+			ua:       "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)",
+			xApp:     "cli",
+			platform: "desktop_app",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newGrokCacheTestContext(90142)
+			c.Request.URL.Path = tt.path
+			if tt.ua != "" {
+				c.Request.Header.Set("User-Agent", tt.ua)
+		placeholder
+			if tt.xApp != "" {
+				c.Request.Header.Set("X-App", tt.xApp)
+		placeholder
+			if tt.platform != "" {
+				c.Request.Header.Set("anthropic-client-platform", tt.platform)
+		placeholder
+			if tt.session != "" {
+				c.Request.Header.Set("X-Claude-Code-Session-Id", tt.session)
+		placeholder
+
+			patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+		placeholder
+			require.JSONEq(t, string(body), string(patched))
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokFreeClientToolCacheExplicitRequestOptOut(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(90144, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"Read","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	for _, value := range []string{"0", "false", "no", "off"placeholder {
+		t.Run(value, func(t *testing.T) {
+			c := newGrokCacheTestContext(90144)
+			c.Request.URL.Path = "/v1/chat/completions"
+			c.Request.Header.Set(grokClientToolCacheOptInHeader, value)
+
+			patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+		placeholder
+			require.JSONEq(t, string(body), string(patched))
+	placeholder)
+placeholder
+placeholder
+
+func TestGrokFreeClientToolCacheClaudeDesktopAutoOptInDoesNotOverridePaidTier(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(90143, "access-token")
+	account.Credentials["subscription_tier"] = "supergrok"
+	c := newGrokCacheTestContext(90143)
+	c.Request.Header.Set("User-Agent", "claude-cli/2.1.215 (external, claude-desktop-3p, agent-sdk/0.3.215)")
+	c.Request.Header.Set("X-App", "cli")
+	c.Request.Header.Set("anthropic-client-platform", "desktop_app")
+	c.Request.Header.Set("X-Claude-Code-Session-Id", "desktop-session-1")
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"Read","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+placeholder
+	require.JSONEq(t, string(body), string(patched))
+placeholder
+
+func TestGrokFreeRequestClientSearchFunctionUsesDefaultAccountPolicy(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9015, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	c := newGrokCacheTestContext(9015)
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,{"type":"function","name":"web_search","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+placeholder
+	tools := gjson.GetBytes(patched, "tools").Array()
+	require.Len(t, tools, 3)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
+placeholder
+
+func TestGrokFreeRequestToolChoiceNoneUsesSafeCacheRoute(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9016, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	c := newGrokCacheTestContext(9016)
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"none"placeholder`)
+
+	patched, err := applyGrokFreeRequestToolCacheRoute(c, body, body, account, "isolated-id")
+
+placeholder
+	tools := gjson.GetBytes(patched, "tools").Array()
+	require.Len(t, tools, 3)
+	require.Equal(t, "view_image", tools[0].Get("name").String())
+	require.Equal(t, "web_search", tools[1].Get("type").String())
+	require.Equal(t, "x_search", tools[2].Get("type").String())
+	require.Equal(t, "none", gjson.GetBytes(patched, "tool_choice").String())
+placeholder
+
+func TestApplyGrokCacheIdentityRecognizesResponsesLiteAdditionalTools(t *testing.T) {
+	intentBody := []byte(`{"model":"grok","input":[{"type":"additional_tools","tools":[{"type":"function","name":"lookup","parameters":{"type":"object"placeholderplaceholder]placeholder,{"type":"message","role":"user","content":"hello"placeholder]placeholder`)
+	patchedBody := []byte(`{"model":"grok-4.5","tools":[{"type":"function","name":"lookup","parameters":{"type":"object"placeholderplaceholder],"input":[{"type":"message","role":"user","content":"hello"placeholder]placeholder`)
+
+	patched, err := applyGrokResponsesCacheIdentity(patchedBody, intentBody, "isolated-id", true)
+
+placeholder
+	tools := gjson.GetBytes(patched, "tools").Array()
+	require.Len(t, tools, 1)
+	require.Equal(t, "lookup", tools[0].Get("name").String())
+	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
+	require.Equal(t, "isolated-id", gjson.GetBytes(patched, "prompt_cache_key").String())
+placeholder
+
+func TestGrokFreeCacheRoutePreservesMixedSupportedToolsWithSearchIntent(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9012, "access-token")
+	account.Credentials["subscription_tier"] = "free"
+	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,{"type":"shell"placeholder,{"type":"web_search"placeholder],"tool_choice":"auto"placeholder`)
+
+	body, err := applyGrokResponsesCacheIdentity(intentBody, intentBody, "isolated-id", true)
+placeholder
+	body, err = applyGrokFreeMessagesFunctionToolCacheRoute(body, intentBody, account, "isolated-id")
+placeholder
+
+	tools := gjson.GetBytes(body, "tools").Array()
+	require.Len(t, tools, 4)
+	require.Equal(t, "function", tools[0].Get("type").String())
+	require.Equal(t, "shell", tools[1].Get("type").String())
+	require.Equal(t, "web_search", tools[2].Get("type").String())
+	require.Equal(t, "x_search", tools[3].Get("type").String())
+placeholder
+
+func TestGrokClientToolCacheOptInDoesNotOverridePaidTier(t *testing.T) {
+	account := healthyGrokOAuthGatewayTestAccount(9013, "access-token")
+	account.Credentials["subscription_tier"] = "supergrok"
+	account.Extra = map[string]any{grokClientToolCacheOptInExtraKey: trueplaceholder
+	body := []byte(`{"model":"grok","tools":[{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder],"tool_choice":"auto"placeholder`)
+
+	patched, err := applyGrokFreeMessagesFunctionToolCacheRoute(body, body, account, "isolated-id")
+
+placeholder
+	require.JSONEq(t, string(body), string(patched))
+placeholder
+
 func TestApplyGrokCacheIdentityRequiresPatchedFunctionTools(t *testing.T) {
 	account := healthyGrokOAuthGatewayTestAccount(902, "access-token")
 	account.Credentials["subscription_tier"] = "free"
@@ -282,7 +636,7 @@ placeholder{
 		{name: "missing tools", patchedBody: `{"model":"grok-4.5"placeholder`placeholder,
 		{name: "empty tools", patchedBody: `{"model":"grok-4.5","tools":[]placeholder`placeholder,
 		{name: "native tools only", patchedBody: `{"model":"grok-4.5","tools":[{"type":"web_search"placeholder]placeholder`placeholder,
-		{name: "unexpected patched tool", patchedBody: `{"model":"grok-4.5","tools":[{"type":"function","name":"lookup"placeholder,{"type":"mcp","name":"server"placeholder]placeholder`placeholder,
+		{name: "unexpected patched tool", patchedBody: `{"model":"grok-4.5","tools":[{"type":"function","name":"lookup"placeholder,{"type":"namespace","name":"server"placeholder]placeholder`placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -302,8 +656,7 @@ placeholder
 placeholder
 
 func TestGrokFreeMessagesFunctionToolCacheRouteRequiresKnownFreeTier(t *testing.T) {
-	// Include web_search as function to trigger native tool injection (pure client
-	// functions no longer trigger injection after #4486 fix).
+	// Include web_search as a function to also cover its conversion to a native tool.
 	intentBody := []byte(`{"model":"grok","tools":[{"type":"function","name":"lookup"placeholder,{"type":"function","name":"web_search"placeholder],"tool_choice":"auto"placeholder`)
 	tests := []struct {
 		name    string
@@ -347,7 +700,19 @@ placeholder{
 				a := healthyGrokOAuthGatewayTestAccount(9112, "access-token")
 				a.Extra = map[string]any{grokQuotaSnapshotExtraKey: map[string]any{
 					"headers_observed": true,
-					"tokens":           map[string]any{"limit": grokFreeRolling24hTokenLimitplaceholder,
+					"tokens":           map[string]any{"limit": xai.GrokFreeRolling24hTokenLimitplaceholder,
+			placeholderplaceholder
+				return a
+		placeholder(),
+			wantMix: true,
+	placeholder,
+		{
+			name: "legacy free rolling token quota",
+			account: func() *Account {
+				a := healthyGrokOAuthGatewayTestAccount(9113, "access-token")
+				a.Extra = map[string]any{grokQuotaSnapshotExtraKey: map[string]any{
+					"headers_observed": true,
+					"tokens":           map[string]any{"limit": int64(2_000_000)placeholder,
 			placeholderplaceholder
 				return a
 		placeholder(),
@@ -369,7 +734,7 @@ placeholder{
 					grokBillingExtraKey: map[string]any{"plan": "SuperGrok", "status_code": http.StatusOKplaceholder,
 					grokQuotaSnapshotExtraKey: map[string]any{
 						"headers_observed": true,
-						"tokens":           map[string]any{"limit": grokFreeRolling24hTokenLimitplaceholder,
+						"tokens":           map[string]any{"limit": int64(2_000_000)placeholder,
 				placeholder,
 			placeholder
 				return a
