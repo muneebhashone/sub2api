@@ -138,6 +138,39 @@ placeholder))
 placeholder))
 placeholder
 
+func TestOpenAIResponsesRequiredCapability(t *testing.T) {
+	tests := []struct {
+		name        string
+		imageIntent bool
+		platform    string
+		want        service.OpenAIEndpointCapability
+placeholder{
+		{
+			name:        "OpenAI explicit image intent requires Responses",
+			imageIntent: true,
+			platform:    service.PlatformOpenAI,
+			want:        service.OpenAIEndpointCapabilityResponses,
+	placeholder,
+		{
+			name:        "Grok explicit image intent keeps chat capability",
+			imageIntent: true,
+			platform:    service.PlatformGrok,
+			want:        service.OpenAIEndpointCapabilityChatCompletions,
+	placeholder,
+		{
+			name:     "non-image intent keeps chat capability",
+			platform: service.PlatformOpenAI,
+			want:     service.OpenAIEndpointCapabilityChatCompletions,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, openAIResponsesRequiredCapability(tt.imageIntent, tt.platform))
+	placeholder)
+placeholder
+placeholder
+
 func TestResolveOpenAIMessagesMetadataSession_DoesNotDerivePromptCacheKey(t *testing.T) {
 	body := []byte(`{"model":"claude-sonnet-4-5","metadata":{"user_id":"claude-code-session"placeholder,"messages":[{"role":"user","content":"hello"placeholder]placeholder`)
 

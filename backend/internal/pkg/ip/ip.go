@@ -8,10 +8,138 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetClientIP resolves a client address only through Gin's configured trusted
-// proxy chain. Forwarding headers from a direct or untrusted peer are ignored.
+const forwardedIPSettingsKey = "sub2api.forwarded_ip_settings"
+
+type forwardedIPSettings struct {
+	trustForwarded bool
+	headers        []string
+placeholder
+
+// SetForwardedIPSettings snapshots the forwarded-IP mode and custom header list
+// for this request.
+func SetForwardedIPSettings(c *gin.Context, enabled bool, headers []string) {
+	if c == nil {
+		return
+placeholder
+	c.Set(forwardedIPSettingsKey, forwardedIPSettings{
+		trustForwarded: enabled,
+		headers:        append([]string(nil), headers...),
+placeholder)
+placeholder
+
+// SetLegacyForwardedIPTrust records whether raw forwarding headers override
+// Gin's server.trusted_proxies chain for this request.
+func SetLegacyForwardedIPTrust(c *gin.Context, enabled bool) {
+	SetForwardedIPSettings(c, enabled, nil)
+placeholder
+
+func requestForwardedIPSettings(c *gin.Context) (forwardedIPSettings, bool) {
+	if c == nil {
+		return forwardedIPSettings{placeholder, false
+placeholder
+	value, ok := c.Get(forwardedIPSettingsKey)
+	if !ok {
+		return forwardedIPSettings{placeholder, false
+placeholder
+	settings, ok := value.(forwardedIPSettings)
+	return settings, ok
+placeholder
+
+func requestUsesLegacyForwardedIPTrust(c *gin.Context) bool {
+	settings, ok := requestForwardedIPSettings(c)
+	return !ok || settings.trustForwarded
+placeholder
+
+// GetClientIP resolves the client address using the legacy forwarding-header
+// precedence used before the trusted-proxy hardening. It remains the
+// compatibility path for request metadata and usage/error logs; security-
+// sensitive callers must use GetTrustedClientIP or GetSecurityClientIP.
 func GetClientIP(c *gin.Context) string {
-	return GetTrustedClientIP(c)
+	if c == nil {
+		return ""
+placeholder
+	if !requestUsesLegacyForwardedIPTrust(c) {
+		return GetTrustedClientIP(c)
+placeholder
+
+	settings, _ := requestForwardedIPSettings(c)
+	customIP, customFallback := resolveCustomForwardedClientIP(c, settings.headers)
+	if customIP != "" {
+		return customIP
+placeholder
+
+	// Preserve the historical precedence used by existing reverse-proxy
+	// deployments, while skipping an internal proxy address when a public XFF
+	// value is available. This covers Docker/Nginx setups that accidentally
+	// write the bridge address into X-Real-IP.
+	legacyIP, legacyFallback := resolveLegacyForwardedHeaderIP(c)
+	if legacyIP != "" {
+		return legacyIP
+placeholder
+	if customFallback != "" {
+		return customFallback
+placeholder
+	if legacyFallback != "" {
+		return legacyFallback
+placeholder
+	return normalizeIP(c.ClientIP())
+placeholder
+
+func resolveCustomForwardedClientIP(c *gin.Context, headers []string) (string, string) {
+	if c == nil {
+		return "", ""
+placeholder
+	var fallback string
+	for _, header := range headers {
+		for _, value := range c.Request.Header.Values(header) {
+			for _, candidate := range strings.Split(value, ",") {
+				parsed := net.ParseIP(strings.TrimSpace(candidate))
+				if parsed == nil {
+					continue
+			placeholder
+				normalized := parsed.String()
+				if isPrivateIP(normalized) {
+					if fallback == "" {
+						fallback = normalized
+				placeholder
+					continue
+			placeholder
+				return normalized, fallback
+		placeholder
+	placeholder
+placeholder
+	return "", fallback
+placeholder
+
+func resolveLegacyForwardedHeaderIP(c *gin.Context) (string, string) {
+	var fallback string
+	if forwarded := normalizeIP(c.GetHeader("CF-Connecting-IP")); forwarded != "" {
+		fallback = forwarded
+		if !isPrivateIP(forwarded) {
+			return forwarded, fallback
+	placeholder
+placeholder
+	if realIP := normalizeIP(c.GetHeader("X-Real-IP")); realIP != "" {
+		if fallback == "" {
+			fallback = realIP
+	placeholder
+		if !isPrivateIP(realIP) {
+			return realIP, fallback
+	placeholder
+placeholder
+	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		for _, candidate := range ips {
+			candidate = strings.TrimSpace(candidate)
+			if candidate != "" && !isPrivateIP(candidate) {
+				return normalizeIP(candidate), fallback
+		placeholder
+	placeholder
+		if fallback == "" && len(ips) > 0 {
+			fallback = normalizeIP(strings.TrimSpace(ips[0]))
+	placeholder
+placeholder
+	return "", fallback
 placeholder
 
 // GetTrustedClientIP 从 Gin 的可信代理解析链提取客户端 IP。
@@ -24,10 +152,17 @@ placeholder
 	return normalizeIP(c.ClientIP())
 placeholder
 
-// GetSecurityClientIP returns the address resolved through Gin's configured
-// trusted-proxy chain. The legacy toggle is retained for configuration/API
-// compatibility, but never makes raw forwarding headers trustworthy by itself.
-func GetSecurityClientIP(c *gin.Context, _ bool) string {
+// GetSecurityClientIP returns the address used by security-sensitive paths.
+// When legacy forwarded-IP trust is enabled, raw forwarding headers take over
+// client-IP resolution. When disabled, Gin's server.trusted_proxies chain is
+// authoritative.
+func GetSecurityClientIP(c *gin.Context, trustForwarded bool) string {
+	if requestSettings, ok := requestForwardedIPSettings(c); ok {
+		trustForwarded = requestSettings.trustForwarded
+placeholder
+	if trustForwarded {
+		return GetClientIP(c)
+placeholder
 	return GetTrustedClientIP(c)
 placeholder
 
@@ -39,6 +174,27 @@ func normalizeIP(ip string) string {
 		return host
 placeholder
 	return ip
+placeholder
+
+// privateNets contains the private/loopback ranges skipped while selecting a
+// public address from a legacy X-Forwarded-For chain.
+var privateNets []*net.IPNet
+
+func init() {
+	for _, cidr := range []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"127.0.0.0/8",
+		"::1/128",
+		"fc00::/7",
+placeholder {
+		_, block, err := net.ParseCIDR(cidr)
+		if err != nil {
+			panic("invalid CIDR: " + cidr)
+	placeholder
+		privateNets = append(privateNets, block)
+placeholder
 placeholder
 
 // CompiledIPRules 表示预编译的 IP 匹配规则。
@@ -90,6 +246,19 @@ placeholder
 placeholder
 	for _, ruleIP := range rules.IPs {
 		if parsedIP.Equal(ruleIP) {
+			return true
+	placeholder
+placeholder
+	return false
+placeholder
+
+func isPrivateIP(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
+placeholder
+	for _, block := range privateNets {
+		if block.Contains(ip) {
 			return true
 	placeholder
 placeholder

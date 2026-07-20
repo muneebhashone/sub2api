@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -77,10 +79,39 @@ type codexTransformResult struct {
 placeholder
 
 type codexOAuthTransformOptions struct {
-	IsCodexCLI              bool
-	IsCompact               bool
-	SkipDefaultInstructions bool
-	PreserveToolCallIDs     bool
+	IsCodexCLI                          bool
+	IsCompact                           bool
+	SkipDefaultInstructions             bool
+	PreserveToolCallIDs                 bool
+	OmitPromotedSystemMessagesFromInput bool
+placeholder
+
+const (
+	codexCallIDMaxLength = 64
+	codexCallIDPrefix    = "fc_"
+)
+
+func normalizeCodexCallID(id string) string {
+	candidate := id
+	switch {
+	case id == "":
+		return ""
+	case strings.HasPrefix(id, "fc"):
+	case strings.HasPrefix(id, "call_"):
+		candidate = codexCallIDPrefix + strings.TrimPrefix(id, "call_")
+	default:
+		candidate = codexCallIDPrefix + id
+placeholder
+	if len(candidate) <= codexCallIDMaxLength {
+		return candidate
+placeholder
+	return compactCodexCallID(candidate)
+placeholder
+
+func compactCodexCallID(id string) string {
+	digest := sha256.Sum256([]byte("sub2api:codex-call-id:v1:" + id))
+	encoded := hex.EncodeToString(digest[:])
+	return codexCallIDPrefix + encoded[:codexCallIDMaxLength-len(codexCallIDPrefix)]
 placeholder
 
 const codexImageGenerationFunctionToolName = "image_gen.imagegen"
@@ -219,9 +250,11 @@ placeholder
 placeholder
 
 	// ChatGPT internal Codex endpoint does not accept role:"system".
-	// Keep the guidance in input as developer for Responses JSON mode, and
-	// also mirror it into instructions because Codex OAuth requires it.
-	if extractSystemMessagesFromInput(reqBody) {
+	// Mirror its text into instructions because Codex OAuth requires it. Some
+	// callers must also keep the guidance in input as developer (notably
+	// Responses JSON object mode), while Chat Completions compatibility can
+	// omit text-only messages after promoting them losslessly.
+	if extractSystemMessagesFromInput(reqBody, opts.OmitPromotedSystemMessagesFromInput) {
 		result.Modified = true
 placeholder
 
@@ -1097,31 +1130,46 @@ func extractTextFromContent(content any) string {
 placeholder
 placeholder
 
-// extractSystemMessagesFromInput scans input for role=="system", maps those
-// items to developer, and mirrors their text into reqBody["instructions"].
-// It preserves the input items so Responses JSON mode can still see JSON
-// instructions in input messages.
-func extractSystemMessagesFromInput(reqBody map[string]any) bool {
+// extractSystemMessagesFromInput scans input for role=="system" and mirrors
+// their text into reqBody["instructions"]. By default it maps those items to
+// developer so Responses JSON mode can still see JSON instructions in input.
+// When omitPromoted is true, text-only items are removed after their content is
+// losslessly promoted; mixed or malformed content is retained as developer.
+func extractSystemMessagesFromInput(reqBody map[string]any, omitPromoted bool) bool {
 	input, ok := reqBody["input"].([]any)
 	if !ok || len(input) == 0 {
 		return false
 placeholder
 
 	var systemTexts []string
+	filteredInput := make([]any, 0, len(input))
 	modified := false
 	for _, item := range input {
 		m, ok := item.(map[string]any)
-		if !ok {
+		if !ok || m["role"] != "system" {
+			filteredInput = append(filteredInput, item)
 			continue
 	placeholder
-		if role, _ := m["role"].(string); role != "system" {
-			continue
+
+		if omitPromoted {
+			if losslessText, lossless := extractLosslessTextFromContent(m["content"]); lossless {
+				if losslessText != "" {
+					systemTexts = append(systemTexts, losslessText)
+			placeholder
+				modified = true
+				continue
+		placeholder
 	placeholder
-		m["role"] = "developer"
-		modified = true
+
 		if text := extractTextFromContent(m["content"]); text != "" {
 			systemTexts = append(systemTexts, text)
 	placeholder
+		m["role"] = "developer"
+		filteredInput = append(filteredInput, item)
+		modified = true
+placeholder
+	if omitPromoted && len(filteredInput) != len(input) {
+		reqBody["input"] = filteredInput
 placeholder
 
 	if len(systemTexts) == 0 {
@@ -1135,6 +1183,35 @@ placeholder else {
 		reqBody["instructions"] = extracted
 placeholder
 	return true
+placeholder
+
+// extractLosslessTextFromContent returns text only when the entire content can
+// be represented by an instructions string without dropping non-text parts.
+func extractLosslessTextFromContent(content any) (string, bool) {
+	switch v := content.(type) {
+	case string:
+		return v, true
+	case []any:
+		var b strings.Builder
+		for _, part := range v {
+			m, ok := part.(map[string]any)
+			if !ok {
+				return "", false
+		placeholder
+			typeName, ok := m["type"].(string)
+			if !ok || (typeName != "text" && typeName != "input_text" && typeName != "output_text") {
+				return "", false
+		placeholder
+			text, ok := m["text"].(string)
+			if !ok {
+				return "", false
+		placeholder
+			_, _ = b.WriteString(text)
+	placeholder
+		return b.String(), true
+	default:
+		return "", false
+placeholder
 placeholder
 
 func extractPromptLikeInstructionsFromInput(reqBody map[string]any) string {
@@ -1334,13 +1411,7 @@ func filterCodexInputWithOptions(input []any, opts codexInputFilterOptions) []an
 			if opts.PreserveCallIDs {
 				return id
 		placeholder
-			if id == "" || strings.HasPrefix(id, "fc") {
-				return id
-		placeholder
-			if strings.HasPrefix(id, "call_") {
-				return "fc_" + strings.TrimPrefix(id, "call_")
-		placeholder
-			return "fc_" + id
+			return normalizeCodexCallID(id)
 	placeholder
 
 		if typ == "item_reference" {
