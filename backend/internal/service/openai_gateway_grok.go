@@ -56,6 +56,15 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	// OpenAI /responses/compact is not a native xAI endpoint. Convert it into a
+	// normal Grok Responses turn that asks for a structured summary, then map the
+	// reply back to an OpenAI compaction item on the way out.
+	if isOpenAIResponsesCompactPath(c) {
+		patchedBody, err = buildGrokCompactRequestBody(patchedBody)
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
 	// Derive the identity from the request xAI will actually see. This makes
 	// Codex Responses Lite additional_tools part of the stable tool prefix.
 	cacheIdentity := resolveGrokCacheIdentity(c, patchedBody, "", upstreamModel)
@@ -388,6 +397,10 @@ placeholder
 	placeholder
 placeholder
 	out, err = sanitizeGrokResponsesUnsupportedFields(out)
+	if err != nil {
+		return nil, err
+placeholder
+	out, err = convertOpenAICompactInputsForGrok(out)
 	if err != nil {
 		return nil, err
 placeholder

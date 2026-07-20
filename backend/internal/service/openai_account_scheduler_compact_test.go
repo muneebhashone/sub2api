@@ -170,6 +170,56 @@ placeholder
 	require.Equal(t, int64(71021), selection.Account.ID, "unknown account should be picked when no supported account available")
 placeholder
 
+// TestOpenAIGatewayService_SelectAccountWithScheduler_CompactAllowsGrok verifies
+// that OpenAI-compatible compact routing does not reject Grok accounts.
+func TestOpenAIGatewayService_SelectAccountWithScheduler_CompactAllowsGrok(t *testing.T) {
+	resetOpenAIAdvancedSchedulerSettingCacheForTest()
+
+	ctx := context.Background()
+	groupID := int64(91004)
+	accounts := []Account{
+		{
+			ID:          71030,
+			Platform:    PlatformGrok,
+			Type:        AccountTypeOAuth,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+	placeholder
+				"model_mapping": map[string]any{"grok-4.5": "grok-4.5"placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	cfg := &config.Config{placeholder
+	cfg.Gateway.Scheduling.LoadBatchEnabled = false
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: accountsplaceholder,
+		cache:              &schedulerTestGatewayCache{placeholder,
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
+placeholder
+
+	selection, _, err := svc.SelectAccountWithSchedulerForCapability(
+		ctx,
+		&groupID,
+		"",
+		"",
+		"grok-4.5",
+		nil,
+		OpenAIUpstreamTransportAny,
+		OpenAIEndpointCapabilityChatCompletions,
+		true,
+		false,
+		true,
+		PlatformGrok,
+	)
+placeholder
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, int64(71030), selection.Account.ID)
+placeholder
+
 // TestOpenAICompactSupportTier 验证 tier 分类逻辑。
 func TestOpenAICompactSupportTier(t *testing.T) {
 	tests := []struct {
@@ -179,6 +229,7 @@ func TestOpenAICompactSupportTier(t *testing.T) {
 placeholder{
 		{name: "nil", account: nil, want: 0placeholder,
 		{name: "non openai", account: &Account{Platform: PlatformAnthropicplaceholder, want: 0placeholder,
+		{name: "grok", account: &Account{Platform: PlatformGrokplaceholder, want: 2placeholder,
 		{name: "openai unknown", account: &Account{Platform: PlatformOpenAI, Extra: map[string]any{placeholderplaceholder, want: 1placeholder,
 		{name: "openai supported", account: &Account{Platform: PlatformOpenAI, Extra: map[string]any{"openai_compact_supported": trueplaceholderplaceholder, want: 2placeholder,
 		{name: "openai unsupported", account: &Account{Platform: PlatformOpenAI, Extra: map[string]any{"openai_compact_supported": falseplaceholderplaceholder, want: 0placeholder,
