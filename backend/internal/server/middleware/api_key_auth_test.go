@@ -863,7 +863,7 @@ placeholder)
 	require.Equal(t, service.OpsClientBusinessLimitedReasonAPIKeyGroupUnassigned, businessLimitedReason)
 placeholder
 
-func TestAPIKeyAuthIPRestrictionDoesNotTrustForwardedClientIPByDefault(t *testing.T) {
+func TestAPIKeyAuthIPRestrictionUsesTrustedPathWhenSwitchDisabled(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	user := &service.User{
@@ -893,6 +893,7 @@ placeholder
 placeholder
 
 	cfg := &config.Config{RunMode: config.RunModeSimpleplaceholder
+	cfg.SetTrustForwardedIPForAPIKeyACL(false)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, nil, nil, nil, cfg)
 	router := gin.New()
 	require.NoError(t, router.SetTrustedProxies(nil))
@@ -1003,7 +1004,7 @@ placeholder
 placeholder
 
 	cfg := &config.Config{RunMode: config.RunModeSimpleplaceholder
-	cfg.SetTrustForwardedIPForAPIKeyACL(true)
+	cfg.SetTrustForwardedIPForAPIKeyACL(false)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, nil, nil, nil, cfg)
 	router := gin.New()
 	require.NoError(t, router.SetTrustedProxies([]string{"9.9.9.9"placeholder))
@@ -1054,7 +1055,7 @@ placeholder
 placeholder
 
 	cfg := &config.Config{RunMode: config.RunModeSimpleplaceholder
-	cfg.SetTrustForwardedIPForAPIKeyACL(true)
+	cfg.SetTrustForwardedIPForAPIKeyACL(false)
 	apiKeyService := service.NewAPIKeyService(apiKeyRepo, nil, nil, nil, nil, nil, cfg)
 	router := gin.New()
 	require.NoError(t, router.SetTrustedProxies([]string{"9.9.9.9"placeholder))

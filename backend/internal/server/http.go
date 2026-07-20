@@ -47,18 +47,7 @@ placeholder
 
 	r := gin.New()
 	r.Use(middleware2.Recovery())
-	if len(cfg.Server.TrustedProxies) > 0 {
-		if err := r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
-			log.Printf("Failed to set trusted proxies: %v", err)
-	placeholder
-placeholder else {
-		if err := r.SetTrustedProxies(nil); err != nil {
-			log.Printf("Failed to disable trusted proxies: %v", err)
-	placeholder
-		if cfg.Server.Mode == "release" {
-			log.Printf("Warning: server.trusted_proxies is empty in release mode; client IP trust chain is disabled")
-	placeholder
-placeholder
+	configureTrustedProxies(r, cfg.Server)
 
 	// Wire up websearch Manager builder so it initializes on startup and rebuilds on config save.
 	settingService.SetWebSearchManagerBuilder(context.Background(), func(cfg *service.WebSearchEmulationConfig, proxyURLs map[int64]string) {
@@ -97,6 +86,25 @@ placeholder
 placeholder)
 
 	return SetupRouter(r, handlers, jwtAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, cfg, redisClient)
+placeholder
+
+func configureTrustedProxies(r *gin.Engine, cfg config.ServerConfig) {
+	if cfg.TrustedProxiesConfigured {
+		if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+			log.Printf("Failed to set trusted proxies: %v", err)
+			_ = r.SetTrustedProxies(nil)
+	placeholder
+		if len(cfg.TrustedProxies) == 0 && cfg.Mode == "release" {
+			log.Printf("Warning: server.trusted_proxies is explicitly empty; forwarded client IP trust is disabled")
+	placeholder
+placeholder else {
+		if err := r.SetTrustedProxies(nil); err != nil {
+			log.Printf("Failed to disable trusted proxies: %v", err)
+	placeholder
+		if cfg.Mode == "release" {
+			log.Printf("Warning: server.trusted_proxies is not configured; disabling the forwarded-IP compatibility switch will use direct peer addresses only")
+	placeholder
+placeholder
 placeholder
 
 // ProvideHTTPServer 提供 HTTP 服务器
