@@ -220,6 +220,40 @@ placeholder
 	require.True(t, HTTPUpstreamRedirectsDisabled(upstream.requests[1].Context()))
 placeholder
 
+func TestForwardGrokMediaContentFollowsAuthenticatedSub2APIRelay(t *testing.T) {
+	for _, statusURL := range []string{
+		`/v1/videos/task-1/content`,
+		`https://relay.example/v1/videos/task-1/content`,
+placeholder {
+		t.Run(statusURL, func(t *testing.T) {
+			upstream := &grokMediaContentUpstreamStub{
+				responses: []*http.Response{
+					grokMediaContentStatusResponse(`{"status":"completed","video":{"url":"` + statusURL + `"placeholderplaceholder`),
+					{
+						StatusCode: http.StatusOK,
+						Header:     http.Header{"Content-Type": []string{"video/mp4"placeholderplaceholder,
+						Body:       io.NopCloser(strings.NewReader("video-payload")),
+				placeholder,
+			placeholder,
+		placeholder
+			svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+			c, recorder := grokMediaContentTestContext(http.MethodGet, "https://api.example/v1/videos/task-1/content", nil)
+
+			_, err := svc.ForwardGrokMedia(
+				context.Background(), c, grokMediaContentTestAccount(),
+				GrokMediaEndpointVideoContent, "task-1", nil, "",
+			)
+
+		placeholder
+			require.Equal(t, http.StatusOK, recorder.Code)
+			require.Equal(t, "video-payload", recorder.Body.String())
+			require.Len(t, upstream.requests, 2)
+			require.Equal(t, "https://relay.example/v1/videos/task-1/content", upstream.requests[1].URL.String())
+			require.Equal(t, "Bearer upstream-key", upstream.requests[1].Header.Get("Authorization"))
+	placeholder)
+placeholder
+placeholder
+
 func TestForwardGrokMediaContentRejectsUntrustedSignedURL(t *testing.T) {
 	upstream := &grokMediaContentUpstreamStub{
 		responses: []*http.Response{
@@ -246,10 +280,19 @@ func TestGrokMediaSignedVideoContentURLRejectsDeceptiveOrigins(t *testing.T) {
 		"http://vidgen.x.ai/video.mp4",
 placeholder {
 		t.Run(rawURL, func(t *testing.T) {
-			_, err := grokMediaSignedVideoContentURL([]byte(`{"video":{"url":"` + rawURL + `"placeholderplaceholder`))
+			_, err := grokMediaSignedVideoContentURL([]byte(`{"video":{"url":"`+rawURL+`"placeholderplaceholder`), "task-1")
 			require.ErrorContains(t, err, "unsupported video content URL")
 	placeholder)
 placeholder
+placeholder
+
+func TestGrokMediaSignedVideoContentURLRejectsDifferentRelayTask(t *testing.T) {
+	_, err := grokMediaSignedVideoContentURL(
+		[]byte(`{"video":{"url":"/v1/videos/task-2/content"placeholderplaceholder`),
+		"task-1",
+	)
+
+	require.ErrorContains(t, err, "unsupported video content URL")
 placeholder
 
 func TestForwardGrokVideoStatusRewritesOnlyProtectedContentURL(t *testing.T) {
