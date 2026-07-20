@@ -351,7 +351,7 @@
                     : 'text-gray-700 dark:text-gray-300'
                 "
               >
-                {{ formatDateOnly(value) placeholderplaceholder
+                {{ formatDateTimeToMinute(value) placeholderplaceholder
               </span>
               <div v-if="getDaysRemaining(value) !== null" class="text-xs text-gray-500">
                 {{ getDaysRemaining(value) placeholderplaceholder {{ t('admin.subscriptions.daysRemaining') placeholderplaceholder
@@ -598,7 +598,7 @@
             <span class="font-medium text-gray-900 dark:text-white">
               {{
                 extendingSubscription.expires_at
-                  ? formatDateOnly(extendingSubscription.expires_at)
+                  ? formatDateTimeToMinute(extendingSubscription.expires_at)
                   : t('admin.subscriptions.noExpiration')
               placeholderplaceholder
             </span>
@@ -764,7 +764,7 @@ import { adminAPI placeholder from '@/api/admin'
 import type { UserSubscription, Group, GroupPlatform, SubscriptionType placeholder from '@/types'
 import type { SimpleUser placeholder from '@/api/admin/usage'
 import type { Column placeholder from '@/components/common/types'
-import { formatDateOnly placeholder from '@/utils/format'
+import { formatDateTimeToMinute placeholder from '@/utils/format'
 import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
