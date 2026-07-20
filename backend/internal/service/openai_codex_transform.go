@@ -1,6 +1,8 @@
 package service
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -82,6 +84,34 @@ type codexOAuthTransformOptions struct {
 	SkipDefaultInstructions             bool
 	PreserveToolCallIDs                 bool
 	OmitPromotedSystemMessagesFromInput bool
+placeholder
+
+const (
+	codexCallIDMaxLength = 64
+	codexCallIDPrefix    = "fc_"
+)
+
+func normalizeCodexCallID(id string) string {
+	candidate := id
+	switch {
+	case id == "":
+		return ""
+	case strings.HasPrefix(id, "fc"):
+	case strings.HasPrefix(id, "call_"):
+		candidate = codexCallIDPrefix + strings.TrimPrefix(id, "call_")
+	default:
+		candidate = codexCallIDPrefix + id
+placeholder
+	if len(candidate) <= codexCallIDMaxLength {
+		return candidate
+placeholder
+	return compactCodexCallID(candidate)
+placeholder
+
+func compactCodexCallID(id string) string {
+	digest := sha256.Sum256([]byte("sub2api:codex-call-id:v1:" + id))
+	encoded := hex.EncodeToString(digest[:])
+	return codexCallIDPrefix + encoded[:codexCallIDMaxLength-len(codexCallIDPrefix)]
 placeholder
 
 const codexImageGenerationFunctionToolName = "image_gen.imagegen"
@@ -1381,13 +1411,7 @@ func filterCodexInputWithOptions(input []any, opts codexInputFilterOptions) []an
 			if opts.PreserveCallIDs {
 				return id
 		placeholder
-			if id == "" || strings.HasPrefix(id, "fc") {
-				return id
-		placeholder
-			if strings.HasPrefix(id, "call_") {
-				return "fc_" + strings.TrimPrefix(id, "call_")
-		placeholder
-			return "fc_" + id
+			return normalizeCodexCallID(id)
 	placeholder
 
 		if typ == "item_reference" {
