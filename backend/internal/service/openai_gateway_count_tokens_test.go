@@ -236,6 +236,51 @@ placeholder
 placeholder
 placeholder
 
+func TestEstimateGrokCountTokens_AnthropicRequests(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+placeholder{
+		{
+			name: "simple message",
+			body: `{"model":"grok-4","messages":[{"role":"user","content":"hello world"placeholder]placeholder`,
+	placeholder,
+		{
+			name: "system blocks and tools",
+			body: `{
+				"model":"grok-4",
+				"system":[{"type":"text","text":"You are helpful."placeholder],
+				"messages":[{"role":"user","content":[{"type":"text","text":"look up the weather"placeholder]placeholder],
+				"tools":[{"name":"lookup_weather","description":"Look up weather","input_schema":{"type":"object","properties":{"city":{"type":"string"placeholderplaceholderplaceholderplaceholder],
+				"tool_choice":{"type":"auto"placeholder
+		placeholder`,
+	placeholder,
+		{
+			name: "empty conversation uses positive minimum",
+			body: `{"model":"grok-4","messages":[]placeholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := EstimateGrokCountTokens([]byte(tt.body))
+		placeholder
+			require.Positive(t, got)
+	placeholder)
+placeholder
+placeholder
+
+func TestEstimateGrokCountTokens_RejectsInvalidRequests(t *testing.T) {
+	for _, body := range []string{
+		`{`,
+		`{"messages":[{"role":"user","content":"hello"placeholder]placeholder`,
+		`{"model":"grok-4","messages":[{"role":"user","content":{"unexpected":trueplaceholderplaceholder]placeholder`,
+placeholder {
+		_, err := EstimateGrokCountTokens([]byte(body))
+		require.Error(t, err, "body=%s", body)
+placeholder
+placeholder
+
 func TestOpenAIInputTokensEncodingForModel(t *testing.T) {
 	cases := []struct {
 		model string

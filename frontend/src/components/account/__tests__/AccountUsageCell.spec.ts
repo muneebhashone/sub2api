@@ -705,11 +705,12 @@ placeholder)
 
   it.each([
     { tokens: 0, expected: 0, compact: '0' placeholder,
-    { tokens: 1_000_000, expected: 50, compact: '1.0M' placeholder,
-    { tokens: 2_000_000, expected: 100, compact: '2.0M' placeholder,
-    { tokens: 2_200_000, expected: 100, compact: '2.2M' placeholder
-  ])('Grok Free derives its 2M quota from local tokens: $tokens -> $expected%', async ({ tokens, expected, compact placeholder) => {
+    { tokens: 500_000, expected: 50, compact: '500.0K' placeholder,
+    { tokens: 1_000_000, expected: 100, compact: '1.0M' placeholder,
+    { tokens: 1_100_000, expected: 100, compact: '1.1M' placeholder
+  ])('Grok Free derives its 1M quota from local tokens: $tokens -> $expected%', async ({ tokens, expected, compact placeholder) => {
     getUsage.mockResolvedValue({
+      grok_free_token_limit: 1_000_000,
       grok_billing: {
         period_type: 'weekly',
         usage_percent: null,
@@ -723,7 +724,7 @@ placeholder)
         user_cost: 0
       placeholder,
       grok_request_quota: { limit: 100, remaining: 100 placeholder,
-      grok_token_quota: { limit: 2_000_000, remaining: 2_000_000 placeholder
+      grok_token_quota: { limit: 1_000_000, remaining: 1_000_000 placeholder
     placeholder)
 
     const wrapper = mount(AccountUsageCell, {
@@ -753,6 +754,7 @@ placeholder)
 
   it('Grok Free uses rolling 24h usage instead of today-only usage', async () => {
     getUsage.mockResolvedValue({
+      grok_free_token_limit: 1_000_000,
       grok_billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
       grok_local_usage: {
         requests: 2,
@@ -762,7 +764,7 @@ placeholder)
       placeholder,
       grok_local_usage_24h: {
         requests: 12,
-        tokens: 1_500_000,
+        tokens: 750_000,
         cost: 0,
         standard_cost: 0
       placeholder
@@ -793,7 +795,7 @@ placeholder)
     await flushPromises()
 
     expect(wrapper.text()).toContain('24h|75|admin.accounts.usageWindow.grokFreeQuota24hHint')
-    expect(wrapper.text()).toContain('1.5M')
+    expect(wrapper.text()).toContain('750.0K')
     expect(wrapper.text()).not.toContain('7d|')
     expect(wrapper.text()).not.toContain('200.0K')
     expect(wrapper.text()).not.toContain('250.0K')
@@ -801,6 +803,7 @@ placeholder)
 
   it('Grok Free does not substitute today stats when rolling 24h usage is unavailable', async () => {
     getUsage.mockResolvedValue({
+      grok_free_token_limit: 1_000_000,
       grok_billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
       grok_local_usage: {
         requests: 1,
@@ -921,8 +924,9 @@ placeholder)
     expect(wrapper.text()).not.toContain('2M|')
   placeholder)
 
-  it('Grok credential Free tier keeps the 2M fallback when billing is unavailable', async () => {
+  it('Grok credential Free tier keeps the 1M fallback when billing is unavailable', async () => {
     getUsage.mockResolvedValue({
+      grok_free_token_limit: 1_000_000,
       subscription_tier: 'FREE',
       grok_local_usage_24h: {
         requests: 3,
@@ -950,7 +954,7 @@ placeholder)
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain('24h|50')
+    expect(wrapper.text()).toContain('24h|100')
   placeholder)
 
   it('Grok paid manual probes keep the weekly/local summary when 24h usage is returned', async () => {
@@ -1165,6 +1169,7 @@ placeholder)
 
   it('Grok Free manual probes merge rolling 24h usage', async () => {
     getUsage.mockResolvedValue({
+      grok_free_token_limit: 1_000_000,
       subscription_tier: 'FREE',
       grok_quota_snapshot_state: 'no_headers'
     placeholder)
@@ -1185,7 +1190,7 @@ placeholder)
             template: `<button class="probe" @click="$emit('probed', {
               source: 'hybrid_probe',
               billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
-              local_usage_24h: { requests: 12, tokens: 1500000, cost: 0, standard_cost: 0 placeholder,
+              local_usage_24h: { requests: 12, tokens: 750000, cost: 0, standard_cost: 0 placeholder,
               headers_observed: false,
               reset_supported: false,
               fetched_at: 1
@@ -1199,7 +1204,7 @@ placeholder)
     await wrapper.get('.probe').trigger('click')
 
     expect(wrapper.text()).toContain('24h|75')
-    expect(wrapper.text()).toContain('1.5M')
+    expect(wrapper.text()).toContain('750.0K')
     expect(wrapper.text()).not.toContain('7d|')
   placeholder)
 

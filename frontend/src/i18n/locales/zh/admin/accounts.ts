@@ -351,7 +351,7 @@ export default {
         claude: 'Claude',
         grokRequests: '请求',
         grokTokens: 'Token',
-        grokFreeQuota24hHint: '按 sub2api 近 24 小时本地 Token 用量估算（上限 2M）',
+        grokFreeQuota24hHint: '按 sub2api 近 24 小时本地 Token 用量估算（上限 {limitplaceholder）',
         grokWeeklyUsage: '周额度已用 {percentplaceholder%',
         grokUnknown: 'Grok 配额需等待首次上游响应返回 xAI rate-limit 头后显示。',
         grokRetryAfter: '{timeplaceholder 后重试',
