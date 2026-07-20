@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch placeholder from 'vue'
+import { useMediaQuery placeholder from '@vueuse/core'
 import { useI18n placeholder from 'vue-i18n'
 import Select from '@/components/common/Select.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -20,6 +21,9 @@ const props = withDefaults(defineProps<Props>(), {
 placeholder)
 
 const { t placeholder = useI18n()
+
+// 与 DataTable 一致：< 768px 切换为卡片视图，避免宽表在移动端被截断。
+const isDesktopViewport = useMediaQuery('(min-width: 768px)')
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -211,7 +215,38 @@ placeholder
     <div v-else class="space-y-3">
       <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-dark-700">
         <div class="max-h-[420px] overflow-auto">
-          <table class="min-w-full text-left text-xs md:text-sm">
+          <div v-if="!isDesktopViewport" class="divide-y divide-gray-100 dark:divide-dark-800">
+            <div v-for="row in items" :key="row.model" class="space-y-2 p-3">
+              <div class="break-all text-xs font-medium text-gray-900 dark:text-gray-100">{{ row.model placeholderplaceholder</div>
+              <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('admin.ops.openaiTokenStats.table.requestCount') placeholderplaceholder</span>
+                  <span class="text-gray-700 dark:text-gray-200">{{ formatInt(row.request_count) placeholderplaceholder</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('admin.ops.openaiTokenStats.table.avgTokensPerSec') placeholderplaceholder</span>
+                  <span class="text-gray-700 dark:text-gray-200">{{ formatRate(row.avg_tokens_per_sec) placeholderplaceholder</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('admin.ops.openaiTokenStats.table.avgFirstTokenMs') placeholderplaceholder</span>
+                  <span class="text-gray-700 dark:text-gray-200">{{ formatRate(row.avg_first_token_ms) placeholderplaceholder</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('admin.ops.openaiTokenStats.table.totalOutputTokens') placeholderplaceholder</span>
+                  <span class="text-gray-700 dark:text-gray-200">{{ formatInt(row.total_output_tokens) placeholderplaceholder</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('admin.ops.openaiTokenStats.table.avgDurationMs') placeholderplaceholder</span>
+                  <span class="text-gray-700 dark:text-gray-200">{{ formatInt(row.avg_duration_ms) placeholderplaceholder</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-2">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('admin.ops.openaiTokenStats.table.requestsWithFirstToken') placeholderplaceholder</span>
+                  <span class="text-gray-700 dark:text-gray-200">{{ formatInt(row.requests_with_first_token) placeholderplaceholder</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <table v-else class="min-w-full text-left text-xs md:text-sm">
             <thead class="sticky top-0 z-10 bg-white dark:bg-dark-800">
               <tr class="border-b border-gray-200 text-gray-500 dark:border-dark-700 dark:text-gray-400">
                 <th class="px-2 py-2 font-semibold">{{ t('admin.ops.openaiTokenStats.table.model') placeholderplaceholder</th>
