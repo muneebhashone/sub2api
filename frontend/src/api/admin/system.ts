@@ -62,11 +62,21 @@ export async function getRollbackVersions(): Promise<{ versions: RollbackVersion
 placeholder
 
 /**
+ * In-place update/rollback downloads a full release binary from GitHub, which
+ * can take several minutes on slow links. The global 30s axios timeout would
+ * abort the request mid-download (#4504), so these calls wait as long as the
+ * backend allows (15 minutes server-side).
+ */
+const UPDATE_REQUEST_TIMEOUT_MS = 15 * 60 * 1000
+
+/**
  * Perform system update
  * Downloads and applies the latest version
  */
 export async function performUpdate(): Promise<UpdateResult> {
-  const { data placeholder = await apiClient.post<UpdateResult>('/admin/system/update')
+  const { data placeholder = await apiClient.post<UpdateResult>('/admin/system/update', undefined, {
+    timeout: UPDATE_REQUEST_TIMEOUT_MS
+  placeholder)
   return data
 placeholder
 
@@ -77,7 +87,8 @@ placeholder
 export async function rollback(version?: string): Promise<UpdateResult> {
   const { data placeholder = await apiClient.post<UpdateResult>(
     '/admin/system/rollback',
-    version ? { version placeholder : undefined
+    version ? { version placeholder : undefined,
+    { timeout: UPDATE_REQUEST_TIMEOUT_MS placeholder
   )
   return data
 placeholder
