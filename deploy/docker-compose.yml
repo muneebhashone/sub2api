@@ -70,6 +70,7 @@ services:
       # =======================================================================
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_USERNAME=${REDIS_USERNAME:-placeholder
       - REDIS_PASSWORD=${REDIS_PASSWORD:-placeholder
       - REDIS_DB=${REDIS_DB:-0placeholder
       - REDIS_POOL_SIZE=${REDIS_POOL_SIZE:-placeholder
