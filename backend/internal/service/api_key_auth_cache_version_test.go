@@ -42,18 +42,18 @@ placeholder
 placeholder
 placeholder
 
-func TestAPIKeyService_RejectsV17AuthSnapshotWithoutReasoningEffortMappings(t *testing.T) {
+func TestAPIKeyService_RejectsV15AuthSnapshotWithoutReasoningEffortPolicy(t *testing.T) {
 	svc := &APIKeyService{placeholder
 
 	apiKey, ok, err := svc.applyAuthCacheEntry("k-legacy-reasoning-mappings", &APIKeyAuthCacheEntry{
-		Snapshot: &APIKeyAuthSnapshot{Version: 17placeholder,
+		Snapshot: &APIKeyAuthSnapshot{Version: 15placeholder,
 placeholder)
 
 	if err != nil {
 		t.Fatalf("expected stale snapshot to be ignored without error, got %v", err)
 placeholder
 	if ok {
-		t.Fatal("expected v17 auth snapshot to be rejected after reasoning effort mappings were added")
+		t.Fatal("expected v15 auth snapshot to be rejected after reasoning effort policy was added")
 placeholder
 	if apiKey != nil {
 		t.Fatalf("expected no API key from stale snapshot, got %#v", apiKey)

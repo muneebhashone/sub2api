@@ -16,6 +16,7 @@ placeholder{
 		{name: "empty", in: "", want: ""placeholder,
 		{name: "separator", in: "x-high", want: "xhigh"placeholder,
 		{name: "max is distinct", in: "max", want: "max"placeholder,
+		{name: "none is unsupported", in: "none", want: ""placeholder,
 		{name: "invalid", in: "banana", want: ""placeholder,
 placeholder
 	for _, tt := range tests {
@@ -58,7 +59,7 @@ placeholder)
 	placeholder
 
 		_, err := NormalizeReasoningEffortMappings(PlatformOpenAI, []ReasoningEffortMapping{{From: "none", To: "low"placeholderplaceholder)
-		require.ErrorContains(t, err, "not supported for platform")
+		require.ErrorContains(t, err, "empty or unknown")
 
 		_, err = NormalizeReasoningEffortMappings(PlatformOpenAI, []ReasoningEffortMapping{{From: "ultra", To: "high"placeholderplaceholder)
 		require.ErrorContains(t, err, "empty or unknown")
@@ -96,6 +97,7 @@ placeholder{
 		{name: "normalizes request alias", body: `{"reasoning_effort":"x-high"placeholder`, max: "xhigh", path: "reasoning_effort", want: "xhigh", changed: trueplaceholder,
 		{name: "caps max below its distinct rank", body: `{"reasoning_effort":"max"placeholder`, max: "xhigh", path: "reasoning_effort", want: "xhigh", changed: trueplaceholder,
 		{name: "keeps xhigh below max", body: `{"reasoning_effort":"xhigh"placeholder`, max: "max", path: "reasoning_effort", want: "xhigh", changed: falseplaceholder,
+		{name: "ignores stale none ceiling", body: `{"reasoning_effort":"high"placeholder`, max: "none", path: "reasoning_effort", want: "high", changed: falseplaceholder,
 		{name: "caps both shapes", body: `{"reasoning":{"effort":"high"placeholder,"reasoning_effort":"xhigh"placeholder`, max: "low", path: "reasoning.effort", want: "low", changed: trueplaceholder,
 		{name: "maps before cap", body: `{"reasoning":{"effort":"MAX"placeholderplaceholder`, max: "medium", mappings: []ReasoningEffortMapping{{From: "max", To: "xhigh"placeholderplaceholder, path: "reasoning.effort", want: "medium", changed: trueplaceholder,
 		{name: "does not chain mappings", body: `{"reasoning_effort":"max"placeholder`, mappings: []ReasoningEffortMapping{{From: "max", To: "xhigh"placeholder, {From: "xhigh", To: "low"placeholderplaceholder, path: "reasoning_effort", want: "xhigh", changed: trueplaceholder,
