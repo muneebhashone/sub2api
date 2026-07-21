@@ -106,6 +106,7 @@ import type { SubscriptionPlan placeholder from '@/types/payment'
 import type { UserSubscription placeholder from '@/types'
 import { useAppStore placeholder from '@/stores/app'
 import { hasPeakRate as groupHasPeakRate, formatPeakRateWindow, serverTimezoneLabel placeholder from '@/utils/peak-rate'
+import { planValiditySuffix placeholder from './validity'
 import { currencySymbol placeholder from '@/components/payment/currency'
 import {
   platformAccentBarClass,
@@ -170,10 +171,5 @@ const modelScopeLabels = computed(() => {
   return scopes.map(s => MODEL_SCOPE_LABELS[s] || s)
 placeholder)
 
-const validitySuffix = computed(() => {
-  const u = props.plan.validity_unit || 'day'
-  if (u === 'month') return t('payment.perMonth')
-  if (u === 'year') return t('payment.perYear')
-  return `${props.plan.validity_daysplaceholder${t('payment.days')placeholder`
-placeholder)
+const validitySuffix = computed(() => planValiditySuffix(props.plan, t))
 </script>
