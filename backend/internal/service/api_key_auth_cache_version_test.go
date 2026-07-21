@@ -41,3 +41,21 @@ placeholder
 		t.Fatalf("expected no API key from stale snapshot, got %#v", apiKey)
 placeholder
 placeholder
+
+func TestAPIKeyService_RejectsV17AuthSnapshotWithoutReasoningEffortMappings(t *testing.T) {
+	svc := &APIKeyService{placeholder
+
+	apiKey, ok, err := svc.applyAuthCacheEntry("k-legacy-reasoning-mappings", &APIKeyAuthCacheEntry{
+		Snapshot: &APIKeyAuthSnapshot{Version: 17placeholder,
+placeholder)
+
+	if err != nil {
+		t.Fatalf("expected stale snapshot to be ignored without error, got %v", err)
+placeholder
+	if ok {
+		t.Fatal("expected v17 auth snapshot to be rejected after reasoning effort mappings were added")
+placeholder
+	if apiKey != nil {
+		t.Fatalf("expected no API key from stale snapshot, got %#v", apiKey)
+placeholder
+placeholder
