@@ -48,10 +48,10 @@ const (
 // 某些 AI API 专用代理只允许访问特定域名，因此需要多个备选
 var probeURLs = []struct {
 	url    string
-	parser string // "ip-api" or "httpbin"
+	parser string // "ip-api" or "ipify"
 placeholder{
 	{"http://ip-api.com/json/?lang=zh-CN", "ip-api"placeholder,
-	{"http://httpbin.org/ip", "httpbin"placeholder,
+	{"http://api64.ipify.org?format=json", "ipify"placeholder,
 placeholder
 
 type proxyProbeService struct {
@@ -119,8 +119,8 @@ placeholder
 	switch parser {
 	case "ip-api":
 		return s.parseIPAPI(body, latencyMs)
-	case "httpbin":
-		return s.parseHTTPBin(body, latencyMs)
+	case "ipify":
+		return s.parseIPify(body, latencyMs)
 	default:
 		return nil, latencyMs, fmt.Errorf("unknown parser: %s", parser)
 placeholder
@@ -165,18 +165,17 @@ placeholder
 placeholder, latencyMs, nil
 placeholder
 
-func (s *proxyProbeService) parseHTTPBin(body []byte, latencyMs int64) (*service.ProxyExitInfo, int64, error) {
-	// httpbin.org/ip 返回格式: {"origin": "1.2.3.4"placeholder
+func (s *proxyProbeService) parseIPify(body []byte, latencyMs int64) (*service.ProxyExitInfo, int64, error) {
 	var result struct {
-		Origin string `json:"origin"`
+		IP string `json:"ip"`
 placeholder
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, latencyMs, fmt.Errorf("failed to parse httpbin response: %w", err)
+		return nil, latencyMs, fmt.Errorf("failed to parse ipify response: %w", err)
 placeholder
-	if result.Origin == "" {
-		return nil, latencyMs, fmt.Errorf("httpbin: no IP found in response")
+	if result.IP == "" {
+		return nil, latencyMs, fmt.Errorf("ipify: no IP found in response")
 placeholder
 	return &service.ProxyExitInfo{
-		IP: result.Origin,
+		IP: result.IP,
 placeholder, latencyMs, nil
 placeholder
