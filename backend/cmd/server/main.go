@@ -183,7 +183,7 @@ placeholder()
 	defer cancel()
 
 	if err := app.Server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Printf("Server forced to shutdown: %v", err)
 placeholder
 
 	log.Println("Server exited")
