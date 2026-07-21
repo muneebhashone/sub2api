@@ -33,18 +33,17 @@ placeholder
 	return cache, mr
 placeholder
 
-func TestSchedulerCacheWriteAccountsSkipsUnencodableTimes(t *testing.T) {
+func TestSchedulerCacheWriteAccountIDsSkipsUnencodableTimes(t *testing.T) {
 	ctx := context.Background()
 	cache := newSchedulerCacheUnit(t)
 	invalidTime := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-	cacheable, err := cache.writeAccounts(ctx, []service.Account{
+	accountIDs, err := cache.writeAccountIDs(ctx, []service.Account{
 		{ID: 111, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKeyplaceholder,
 		{ID: 112, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey, ExpiresAt: &invalidTimeplaceholder,
 placeholder)
 placeholder
-	require.Len(t, cacheable, 1)
-	require.Equal(t, int64(111), cacheable[0].ID)
+	require.Equal(t, []int64{111placeholder, accountIDs)
 
 	cached, err := cache.GetAccount(ctx, 111)
 placeholder
@@ -142,6 +141,56 @@ placeholder
 	missing, err := cache.GetAccount(ctx, invalid.ID)
 placeholder
 	require.Nil(t, missing)
+placeholder
+
+func TestSchedulerCacheSetSnapshotMatchesIDPublishing(t *testing.T) {
+	ctx := context.Background()
+	cache, _ := newSchedulerCacheUnitWithRedis(t)
+	invalidTime := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	validOne := service.Account{
+		ID:          721,
+		Name:        "first",
+		Platform:    service.PlatformOpenAI,
+		Type:        service.AccountTypeOAuth,
+placeholder"model_mapping": map[string]any{"source": "target"placeholderplaceholder,
+		Extra:       map[string]any{"mixed_scheduling": trueplaceholder,
+		GroupIDs:    []int64{21placeholder,
+placeholder
+	validTwo := service.Account{ID: 722, Name: "second", Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKeyplaceholder
+	invalid := service.Account{ID: 799, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey, ExpiresAt: &invalidTimeplaceholder
+	accounts := []service.Account{validOne, invalid, validTwo, validOneplaceholder
+
+	normal := service.SchedulerBucket{GroupID: 21, Platform: service.PlatformOpenAI, Mode: service.SchedulerModeSingleplaceholder
+	normalToken, err := cache.CaptureBucketWriteToken(ctx, normal)
+placeholder
+	require.NoError(t, cache.SetSnapshot(ctx, normal, normalToken, accounts))
+
+	fullBefore, err := cache.rdb.Get(ctx, schedulerAccountKey("721")).Bytes()
+placeholder
+	metaBefore, err := cache.rdb.Get(ctx, schedulerAccountMetaKey("721")).Bytes()
+placeholder
+
+	idOnly := service.SchedulerBucket{GroupID: 21, Platform: service.PlatformOpenAI, Mode: service.SchedulerModeForcedplaceholder
+	idOnlyToken, err := cache.CaptureBucketWriteToken(ctx, idOnly)
+placeholder
+	accountIDs, err := cache.SetSnapshotAndReturnAccountIDs(ctx, idOnly, idOnlyToken, accounts)
+placeholder
+	require.Equal(t, []int64{721, 722, 721placeholder, accountIDs)
+
+	fullAfter, err := cache.rdb.Get(ctx, schedulerAccountKey("721")).Bytes()
+placeholder
+	metaAfter, err := cache.rdb.Get(ctx, schedulerAccountMetaKey("721")).Bytes()
+placeholder
+	require.Equal(t, fullBefore, fullAfter, "普通快照和 ID 发布必须写入相同完整账号 payload")
+	require.Equal(t, metaBefore, metaAfter, "普通快照和 ID 发布必须写入相同元数据 payload")
+
+	for _, bucket := range []service.SchedulerBucket{normal, idOnlyplaceholder {
+		version, err := cache.rdb.Get(ctx, schedulerBucketKey(schedulerActivePrefix, bucket)).Result()
+	placeholder
+		members, err := cache.rdb.ZRange(ctx, schedulerSnapshotKey(bucket, version), 0, -1).Result()
+	placeholder
+		require.Equal(t, []string{"722", "721"placeholder, members, bucket.String())
+placeholder
 placeholder
 
 func TestSchedulerCacheSnapshotAccountIDReuseKeepsEmptySnapshotSemantics(t *testing.T) {
@@ -558,7 +607,8 @@ func TestSchedulerCacheActivationIsFencedAfterRetire(t *testing.T) {
 placeholder
 	version, err := cache.allocateSnapshotVersion(ctx, bucket, token)
 placeholder
-	require.NoError(t, cache.writeSnapshotVersion(ctx, bucket, version, []service.Account{accountplaceholder))
+	_, err = cache.writeSnapshotVersionAndReturnAccountIDs(ctx, bucket, version, []service.Account{accountplaceholder)
+placeholder
 
 	// Deterministic race C: retirement and authoritative reopen both happen after
 	// INCR/write but before the old writer activates.
