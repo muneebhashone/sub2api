@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
+	"github.com/google/uuid"
 )
 
 // codexUpstreamMinVersion 上游 /backend-api/codex 接受的最低 version 头：
@@ -28,6 +29,15 @@ placeholder
 		h.Set("version", codexCLIVersion)
 placeholder
 	h.Set("OpenAI-Beta", "responses=experimental")
+placeholder
+
+// applyOpenAICodexProbeHeaders 为合成探测请求补齐 Codex 身份和引擎指纹。
+func applyOpenAICodexProbeHeaders(h http.Header) {
+	if h == nil {
+		return
+placeholder
+	ensureCodexIdentityHeaders(h)
+	h.Set("X-Codex-Window-ID", uuid.NewString())
 placeholder
 
 // enforceCodexIdentityHeaders 收口 OAuth（ChatGPT 内部接口）出站请求的客户端身份头。

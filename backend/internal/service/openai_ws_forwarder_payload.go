@@ -91,6 +91,11 @@ placeholder
 				headers.Add("x-codex-beta-features", value)
 		placeholder
 	placeholder
+		for _, name := range [...]string{"x-codex-window-id", "x-codex-installation-id"placeholder {
+			if value := c.Request.Header.Get(name); strings.TrimSpace(value) != "" {
+				headers.Set(name, value)
+		placeholder
+	placeholder
 placeholder
 	// OAuth 账号：将 apiKeyID 混入 session 标识符，防止跨用户会话碰撞。
 	if account != nil && account.Type == AccountTypeOAuth {

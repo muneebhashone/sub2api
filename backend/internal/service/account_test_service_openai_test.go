@@ -424,6 +424,37 @@ placeholder
 	require.Nil(t, account.RateLimitResetAt)
 placeholder
 
+func TestAccountTestService_OpenAIAPIKeyResponsesUsesCodexProbeHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx, _ := newTestContext()
+
+	resp := newJSONResponse(http.StatusOK, "")
+	resp.Body = io.NopCloser(strings.NewReader("data: {\"type\":\"response.completed\"placeholder\n\n"))
+	upstream := &queuedHTTPUpstream{responses: []*http.Response{respplaceholderplaceholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholderplaceholderplaceholder,
+placeholder
+	account := &Account{
+		ID:          95,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "sk-test",
+			"base_url": "https://compat-upstream.example/v1",
+	placeholder,
+		Extra: map[string]any{openai_compat.ExtraKeyResponsesSupported: trueplaceholder,
+placeholder
+
+	err := svc.testOpenAIAccountConnection(ctx, account, "gpt-5.4", "", "")
+placeholder
+	require.Len(t, upstream.requests, 1)
+	req := upstream.requests[0]
+	require.Equal(t, "https://compat-upstream.example/v1/responses", req.URL.String())
+	requireOpenAICodexProbeHeaders(t, req.Header)
+placeholder
+
 func TestAccountTestService_OpenAIAPIKeyResponsesUnsupportedUsesChatCompletionsPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	ctx, recorder := newTestContext()
