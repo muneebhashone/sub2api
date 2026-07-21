@@ -105,6 +105,29 @@ placeholder
 placeholder
 placeholder
 
+func TestWriteConfigFileIncludesRedisUsername(t *testing.T) {
+	t.Setenv("DATA_DIR", t.TempDir())
+
+	if err := writeConfigFile(&SetupConfig{
+		Redis: RedisConfig{
+			Host:     "redis",
+			Port:     6379,
+			Username: "app-user",
+	placeholder,
+placeholder); err != nil {
+		t.Fatalf("writeConfigFile() error = %v", err)
+placeholder
+
+	data, err := os.ReadFile(GetConfigFilePath())
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+placeholder
+
+	if !strings.Contains(string(data), "username: app-user") {
+		t.Fatalf("config missing Redis username, got:\n%s", string(data))
+placeholder
+placeholder
+
 func TestBuildDatabaseConnectionDSNsUsesPostgresForBootstrap(t *testing.T) {
 	cfg := &DatabaseConfig{
 		Host:     "db",
