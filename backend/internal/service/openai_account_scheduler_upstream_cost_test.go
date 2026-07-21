@@ -244,7 +244,7 @@ placeholderplaceholder
 placeholder
 	require.Nil(t, selection)
 	selection, _, _, _, err = scheduler.finishLoadBalanceSelectionFallback(
-		context.Background(), req, openAIAccountLoadSelectionAttempt{selectionOrder: selectionOrderplaceholder, budget,
+		context.Background(), req, openAIAccountLoadSelectionAttempt{selectionOrder: selectionOrderplaceholder, budget, openAISelectionFilterStats{placeholder,
 	)
 
 placeholder
