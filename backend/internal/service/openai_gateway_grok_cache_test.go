@@ -140,6 +140,124 @@ func TestResolveGrokCacheIdentityExplicitHeaderPriority(t *testing.T) {
 	require.Equal(t, want, got)
 placeholder
 
+func TestResolveGrokCacheIdentityIDEHeaderPriority(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"grok","prompt_cache_key":"body-key","input":"hi"placeholder`)
+	headers := []struct {
+		name  string
+		value string
+placeholder{
+		{name: openCodeSessionAffinityHeader, value: "opencode-affinity"placeholder,
+		{name: openCodeSessionIDHeader, value: "opencode-session-id"placeholder,
+		{name: openCodeNativeSessionHeader, value: "opencode-native-session"placeholder,
+		{name: codeBuddyConversationHeader, value: "codebuddy-conversation"placeholder,
+		{name: grokConversationIDHeader, value: "grok-conversation"placeholder,
+placeholder
+
+	c := newGrokCacheTestContext(402)
+	for _, header := range headers {
+		c.Request.Header.Set(header.name, header.value)
+placeholder
+	for _, header := range headers {
+		got := resolveGrokCacheIdentity(c, body, "explicit-argument", "grok-4.5")
+		onlyCurrent := newGrokCacheTestContext(402)
+		onlyCurrent.Request.Header.Set(header.name, header.value)
+		want := resolveGrokCacheIdentity(onlyCurrent, []byte(`{"model":"grok","input":"unrelated"placeholder`), "", "grok-4.5")
+		require.Equal(t, want, got, header.name)
+		c.Request.Header.Del(header.name)
+placeholder
+placeholder
+
+func TestExplicitGrokCacheSeedPriority(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c := newGrokCacheTestContext(403)
+	headers := []struct {
+		name  string
+		value string
+placeholder{
+		{name: claudeCodeSessionHeader, value: "claude-session"placeholder,
+		{name: "session_id", value: "generic-session"placeholder,
+		{name: "conversation_id", value: "generic-conversation"placeholder,
+		{name: openCodeSessionAffinityHeader, value: "opencode-affinity"placeholder,
+		{name: openCodeSessionIDHeader, value: "opencode-session-id"placeholder,
+		{name: openCodeNativeSessionHeader, value: "opencode-native-session"placeholder,
+		{name: codeBuddyConversationHeader, value: "codebuddy-conversation"placeholder,
+		{name: grokConversationIDHeader, value: "grok-conversation"placeholder,
+placeholder
+	for _, header := range headers {
+		c.Request.Header.Set(header.name, header.value)
+placeholder
+
+	body := []byte(`{"model":"grok","prompt_cache_key":"body-key","input":"hi"placeholder`)
+	for _, header := range headers {
+		require.Equal(t, header.value, explicitGrokCacheSeed(c, body, "explicit-argument"), header.name)
+		c.Request.Header.Del(header.name)
+placeholder
+	require.Equal(t, "body-key", explicitGrokCacheSeed(c, body, "explicit-argument"))
+	require.Equal(t, "explicit-argument", explicitGrokCacheSeed(c, []byte(`{"model":"grok"placeholder`), "explicit-argument"))
+placeholder
+
+func TestResolveGrokCacheIdentityIDEHeadersAreStableIsolatedAndOpaque(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	tests := []struct {
+		name   string
+		header string
+placeholder{
+		{name: "OpenCode affinity", header: openCodeSessionAffinityHeaderplaceholder,
+		{name: "OpenCode session ID", header: openCodeSessionIDHeaderplaceholder,
+		{name: "OpenCode native session", header: openCodeNativeSessionHeaderplaceholder,
+		{name: "CodeBuddy conversation", header: codeBuddyConversationHeaderplaceholder,
+placeholder
+
+	for index, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rawSession := "raw-ide-session-" + tt.name
+			apiKeyID := int64(800 + index)
+			c := newGrokCacheTestContext(apiKeyID)
+			c.Request.Header.Set(tt.header, rawSession)
+			firstBody := []byte(`{"model":"grok","prompt_cache_key":"turn-one-body-key","input":"first turn"placeholder`)
+			secondBody := []byte(`{"model":"grok","prompt_cache_key":"turn-two-body-key","input":"different second turn"placeholder`)
+
+			first := resolveGrokCacheIdentity(c, firstBody, "first-explicit-key", "grok-4.5")
+			second := resolveGrokCacheIdentity(c, secondBody, "second-explicit-key", "grok-4.5")
+			require.NotEmpty(t, first)
+			require.Equal(t, first, second)
+			require.NotEqual(t, rawSession, first)
+			require.NotContains(t, first, rawSession)
+
+			otherTenant := newGrokCacheTestContext(apiKeyID + 100)
+			otherTenant.Request.Header.Set(tt.header, rawSession)
+			require.NotEqual(t, first, resolveGrokCacheIdentity(otherTenant, firstBody, "", "grok-4.5"))
+			require.NotEqual(t, first, resolveGrokCacheIdentity(c, firstBody, "", "grok-4.3"))
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenCodeResponsesHeaderAndBodyCacheSignalsConverge(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const rawSession = "opencode-session-42"
+	c := newGrokCacheTestContext(901)
+	c.Request.Header.Set(openCodeSessionAffinityHeader, rawSession)
+	c.Request.Header.Set(openCodeSessionIDHeader, rawSession)
+	firstBody := []byte(`{"model":"grok","prompt_cache_key":"opencode-session-42","input":"first turn"placeholder`)
+	secondBody := []byte(`{"model":"grok","prompt_cache_key":"opencode-session-42","input":"different second turn"placeholder`)
+
+	first := resolveGrokCacheIdentity(c, firstBody, "", "grok-4.5")
+	second := resolveGrokCacheIdentity(c, secondBody, "", "grok-4.5")
+	bodyOnly := resolveGrokCacheIdentity(newGrokCacheTestContext(901), secondBody, "", "grok-4.5")
+	require.NotEmpty(t, first)
+	require.Equal(t, first, second)
+	require.Equal(t, first, bodyOnly)
+
+	patched, err := applyGrokResponsesCacheIdentity(secondBody, secondBody, second, false)
+placeholder
+	require.Equal(t, second, gjson.GetBytes(patched, "prompt_cache_key").String())
+	headers := make(http.Header)
+	applyGrokCacheHeaders(headers, second)
+	require.Equal(t, second, headers.Get(grokConversationIDHeader))
+	require.NotContains(t, string(patched), rawSession)
+placeholder
+
 func TestResolveGrokCacheIdentityPrefersClaudeCodeSession(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c := newGrokCacheTestContext(701)
