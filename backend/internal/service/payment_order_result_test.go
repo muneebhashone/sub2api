@@ -11,6 +11,59 @@ import (
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
+func TestShouldUseAlipayMobilePrecreate(t *testing.T) {
+	t.Parallel()
+
+	enabled := &PaymentConfig{AlipayMobilePrecreateDeepLink: trueplaceholder
+	officialAlipay := &payment.InstanceSelection{ProviderKey: payment.TypeAlipayplaceholder
+
+	tests := []struct {
+		name string
+		req  CreateOrderRequest
+		cfg  *PaymentConfig
+		sel  *payment.InstanceSelection
+		want bool
+placeholder{
+		{name: "mobile official alipay with switch", req: CreateOrderRequest{IsMobile: trueplaceholder, cfg: enabled, sel: officialAlipay, want: trueplaceholder,
+		{name: "desktop remains unchanged", req: CreateOrderRequest{IsMobile: falseplaceholder, cfg: enabled, sel: officialAlipay, want: falseplaceholder,
+		{name: "switch disabled keeps wap", req: CreateOrderRequest{IsMobile: trueplaceholder, cfg: &PaymentConfig{placeholder, sel: officialAlipay, want: falseplaceholder,
+		{name: "other provider remains unchanged", req: CreateOrderRequest{IsMobile: trueplaceholder, cfg: enabled, sel: &payment.InstanceSelection{ProviderKey: payment.TypeEasyPayplaceholder, want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := shouldUseAlipayMobilePrecreate(tt.req, tt.cfg, tt.sel); got != tt.want {
+				t.Fatalf("shouldUseAlipayMobilePrecreate() = %v, want %v", got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestIsOfficialAlipayProviderInstance(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		instance *dbent.PaymentProviderInstance
+		want     bool
+placeholder{
+		{name: "nil instance", instance: nil, want: falseplaceholder,
+		{name: "official alipay", instance: &dbent.PaymentProviderInstance{ProviderKey: payment.TypeAlipayplaceholder, want: trueplaceholder,
+		{name: "normalized official alipay", instance: &dbent.PaymentProviderInstance{ProviderKey: " ALIPAY "placeholder, want: trueplaceholder,
+		{name: "easypay alipay route", instance: &dbent.PaymentProviderInstance{ProviderKey: payment.TypeEasyPayplaceholder, want: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := isOfficialAlipayProviderInstance(tt.instance); got != tt.want {
+				t.Fatalf("isOfficialAlipayProviderInstance() = %v, want %v", got, tt.want)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func TestBuildCreateOrderResponseDefaultsToOrderCreated(t *testing.T) {
 	t.Parallel()
 

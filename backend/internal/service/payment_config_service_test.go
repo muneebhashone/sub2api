@@ -73,6 +73,20 @@ placeholder
 placeholder
 placeholder
 
+func TestAlipayMobilePrecreateEnvironmentOverride(t *testing.T) {
+	svc := &PaymentConfigService{placeholder
+
+	t.Setenv(SettingAlipayMobilePrecreateDeepLink, "true")
+	if !svc.parsePaymentConfig(map[string]string{SettingAlipayMobilePrecreateDeepLink: "false"placeholder).AlipayMobilePrecreateDeepLink {
+		t.Fatal("expected environment variable to enable mobile Alipay precreate")
+placeholder
+
+	t.Setenv(SettingAlipayMobilePrecreateDeepLink, "false")
+	if svc.parsePaymentConfig(map[string]string{SettingAlipayMobilePrecreateDeepLink: "true"placeholder).AlipayMobilePrecreateDeepLink {
+		t.Fatal("expected environment variable to disable mobile Alipay precreate")
+placeholder
+placeholder
+
 func TestParsePaymentConfig(t *testing.T) {
 	t.Parallel()
 
@@ -102,22 +116,26 @@ func TestParsePaymentConfig(t *testing.T) {
 		if len(cfg.EnabledTypes) != 0 {
 			t.Fatalf("expected empty EnabledTypes, got %v", cfg.EnabledTypes)
 	placeholder
+		if cfg.AlipayMobilePrecreateDeepLink {
+			t.Fatal("expected AlipayMobilePrecreateDeepLink=false by default")
+	placeholder
 placeholder)
 
 	t.Run("all values populated", func(t *testing.T) {
 		t.Parallel()
 		vals := map[string]string{
-			SettingPaymentEnabled:      "true",
-			SettingMinRechargeAmount:   "5.00",
-			SettingMaxRechargeAmount:   "1000.00",
-			SettingDailyRechargeLimit:  "5000.00",
-			SettingOrderTimeoutMinutes: "15",
-			SettingMaxPendingOrders:    "5",
-			SettingEnabledPaymentTypes: "alipay,wxpay,stripe",
-			SettingBalancePayDisabled:  "true",
-			SettingLoadBalanceStrategy: "least_amount",
-			SettingProductNamePrefix:   "PRE",
-			SettingProductNameSuffix:   "SUF",
+			SettingPaymentEnabled:                "true",
+			SettingMinRechargeAmount:             "5.00",
+			SettingMaxRechargeAmount:             "1000.00",
+			SettingDailyRechargeLimit:            "5000.00",
+			SettingOrderTimeoutMinutes:           "15",
+			SettingMaxPendingOrders:              "5",
+			SettingEnabledPaymentTypes:           "alipay,wxpay,stripe",
+			SettingBalancePayDisabled:            "true",
+			SettingLoadBalanceStrategy:           "least_amount",
+			SettingProductNamePrefix:             "PRE",
+			SettingProductNameSuffix:             "SUF",
+			SettingAlipayMobilePrecreateDeepLink: "true",
 	placeholder
 		cfg := svc.parsePaymentConfig(vals)
 
@@ -156,6 +174,9 @@ placeholder)
 	placeholder
 		if cfg.ProductNameSuffix != "SUF" {
 			t.Fatalf("ProductNameSuffix = %q, want %q", cfg.ProductNameSuffix, "SUF")
+	placeholder
+		if !cfg.AlipayMobilePrecreateDeepLink {
+			t.Fatal("expected AlipayMobilePrecreateDeepLink=true")
 	placeholder
 placeholder)
 
