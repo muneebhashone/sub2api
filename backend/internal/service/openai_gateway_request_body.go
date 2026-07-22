@@ -581,7 +581,7 @@ placeholder
 			text := inputResult.String()
 			var inputValue any
 			if strings.TrimSpace(text) != "" {
-				inputValue = []map[string]any{{
+				inputValue = []any{map[string]any{
 					"type": "message", "role": "user", "content": text,
 			placeholderplaceholder
 		placeholder else {
