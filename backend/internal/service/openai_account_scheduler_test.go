@@ -1441,6 +1441,40 @@ func TestOpenAIGatewayService_OpenAIAccountSchedulerMetrics_DisabledNoOp(t *test
 	require.Equal(t, OpenAIAccountSchedulerMetricsSnapshot{placeholder, snapshot)
 placeholder
 
+func TestOpenAIGatewayService_SelectAccountWithScheduler_SkipsQuarantinedSharedProxy(t *testing.T) {
+	resetOpenAIAdvancedSchedulerSettingCacheForTest()
+
+	proxyA := int64(4698)
+	proxyB := int64(4699)
+	accounts := []Account{
+		{ID: 469801, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0, ProxyID: &proxyAplaceholder,
+		{ID: 469802, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0, ProxyID: &proxyAplaceholder,
+		{ID: 469803, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 5, ProxyID: &proxyBplaceholder,
+placeholder
+	cfg := &config.Config{placeholder
+	cfg.Gateway.Scheduling.LoadBatchEnabled = false
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: accountsplaceholder,
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
+		openaiProxyStreamCircuit: newOpenAIProxyStreamCircuit(openAIProxyStreamCircuitSettings{
+			failureThreshold: 1,
+			failureWindow:    time.Minute,
+			quarantineTTL:    10 * time.Minute,
+			maxEntries:       16,
+	placeholder),
+placeholder
+	svc.openaiProxyStreamCircuit.recordFailure(proxyA, time.Now())
+
+	selection, _, err := svc.SelectAccountWithScheduler(
+		context.Background(), nil, "", "", "gpt-5.6-sol", nil, OpenAIUpstreamTransportAny, false,
+	)
+placeholder
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, int64(469803), selection.Account.ID)
+placeholder
+
 func TestOpenAIGatewayService_SelectAccountWithScheduler_SessionStickyRateLimitedAccountFallsBackToFreshCandidate(t *testing.T) {
 	ctx := context.Background()
 	groupID := int64(10101)

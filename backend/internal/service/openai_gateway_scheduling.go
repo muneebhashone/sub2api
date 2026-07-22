@@ -1241,6 +1241,9 @@ placeholder
 	if s.isOpenAIAccountRequestRuntimeBlocked(fresh, requestedModel) {
 		return nil
 placeholder
+	if s.isOpenAIProxyStreamQuarantined(fresh) {
+		return nil
+placeholder
 	return fresh
 placeholder
 
@@ -1270,6 +1273,9 @@ placeholder
 		if !parentHealthyForShadow(account, s.parentAccountLookup(ctx)) {
 			return nil
 	placeholder
+		if s.isOpenAIProxyStreamQuarantined(account) {
+			return nil
+	placeholder
 		return account
 placeholder
 
@@ -1287,6 +1293,9 @@ placeholder
 		return nil
 placeholder
 	if s.isOpenAIAccountRequestRuntimeBlocked(latest, requestedModel) {
+		return nil
+placeholder
+	if s.isOpenAIProxyStreamQuarantined(latest) {
 		return nil
 placeholder
 	return latest

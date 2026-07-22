@@ -314,6 +314,9 @@ placeholder
 			// EOF dispatches the final SSE event even without a trailing blank line.
 			completeGuardedEvent(true)
 	placeholder
+		if sawTerminalEvent && !sawFailedEvent {
+			s.clearOpenAIProxyStreamDisconnect(account)
+	placeholder
 		if !sawTerminalEvent && !openAIStreamClientOutputStarted(c, clientOutputStarted) && !eventShouldFlush {
 			return resultWithUsage(), s.newOpenAIStreamFailoverError(
 				c,
@@ -326,6 +329,9 @@ placeholder
 	placeholder
 		flushPending("Client disconnected during final flush, returning collected usage")
 		if !sawTerminalEvent {
+			if openAIStreamClientOutputStarted(c, clientOutputStarted) && !clientDisconnected {
+				s.recordOpenAIProxyStreamDisconnect(account, errors.New("stream ended before terminal event"), upstreamRequestID)
+		placeholder
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete: missing terminal event")
 	placeholder
 		if sawFailedEvent {
@@ -357,6 +363,7 @@ placeholder
 	placeholder
 		if sawTerminalEvent {
 			if !sawFailedEvent {
+				s.clearOpenAIProxyStreamDisconnect(account)
 				logger.LegacyPrintf("service.openai_gateway", "Upstream scan ended after terminal event: %v", scanErr)
 		placeholder
 			result, err := finalizeStream()
@@ -386,6 +393,7 @@ placeholder
 		if clientDisconnected {
 			return resultWithUsage(), fmt.Errorf("stream usage incomplete after disconnect: %w", scanErr), true
 	placeholder
+		s.recordOpenAIProxyStreamDisconnect(account, scanErr, upstreamRequestID)
 		sendErrorEvent("stream_read_error")
 		return resultWithUsage(), fmt.Errorf("stream read error: %w", scanErr), true
 placeholder
