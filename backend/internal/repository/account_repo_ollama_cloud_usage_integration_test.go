@@ -360,3 +360,56 @@ placeholder
 placeholder)
 	require.ErrorIs(t, err, service.ErrOllamaCloudUsageIdentityChanged)
 placeholder
+
+// 无变化的凭证持久化（如 CRS 同步重放同一凭证）不得触发任何 extra 清理；
+// 真实变化仍必须按旧语义清 openai 探测快照。
+func TestUpdateCredentialsUnchangedCredentialsPreserveManagedExtra(t *testing.T) {
+	ctx := context.Background()
+	tx := testEntTx(t)
+	repo := newAccountRepositoryWithSQL(tx.Client(), tx, nil)
+
+	probeAccount := mustCreateAccount(t, tx.Client(), &service.Account{
+		Name: "openai-probe-unchanged", Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey,
+placeholder"api_key": "sk-probe", "base_url": "https://relay.example.com/v1"placeholder,
+		Extra: map[string]any{
+			service.UpstreamBillingProbeEnabledExtraKey: true,
+			service.UpstreamBillingProbeExtraKey:        map[string]any{"status": "ok"placeholder,
+	placeholder,
+placeholder)
+	require.NoError(t, repo.UpdateCredentials(ctx, probeAccount.ID, map[string]any{
+		"api_key": "sk-probe", "base_url": "https://relay.example.com/v1",
+placeholder))
+	probeLoaded, err := repo.GetByID(ctx, probeAccount.ID)
+placeholder
+	require.Contains(t, probeLoaded.Extra, service.UpstreamBillingProbeExtraKey,
+		"unchanged credentials must not clear the probe snapshot")
+
+	now := time.Now().UTC()
+	ollamaAccount := mustCreateAccount(t, tx.Client(), &service.Account{
+		Name: "ollama-unchanged", Platform: service.PlatformAnthropic, Type: service.AccountTypeAPIKey,
+placeholder"api_key": "ollama-key", "base_url": "https://ollama.com"placeholder,
+		Extra: map[string]any{
+			service.OllamaCloudUsageSessionExtraKey:     "cipher:wos-session=fixture",
+			service.OllamaCloudUsageAutoRefreshExtraKey: true,
+			service.OllamaCloudUsageSnapshotExtraKey: map[string]any{
+				"status": service.OllamaCloudUsageStatusOK, "last_attempt_at": now, "next_refresh_at": now.Add(time.Hour),
+		placeholder,
+	placeholder,
+placeholder)
+	require.NoError(t, repo.UpdateCredentials(ctx, ollamaAccount.ID, map[string]any{
+		"api_key": "ollama-key", "base_url": "https://ollama.com",
+placeholder))
+	ollamaLoaded, err := repo.GetByID(ctx, ollamaAccount.ID)
+placeholder
+	require.Equal(t, "cipher:wos-session=fixture", ollamaLoaded.Extra[service.OllamaCloudUsageSessionExtraKey])
+	require.Equal(t, true, ollamaLoaded.Extra[service.OllamaCloudUsageAutoRefreshExtraKey])
+	require.Contains(t, ollamaLoaded.Extra, service.OllamaCloudUsageSnapshotExtraKey)
+
+	require.NoError(t, repo.UpdateCredentials(ctx, probeAccount.ID, map[string]any{
+		"api_key": "sk-probe", "base_url": "https://relay.example.org/v1",
+placeholder))
+	probeLoaded, err = repo.GetByID(ctx, probeAccount.ID)
+placeholder
+	require.NotContains(t, probeLoaded.Extra, service.UpstreamBillingProbeExtraKey,
+		"changed credentials must keep clearing the probe snapshot")
+placeholder

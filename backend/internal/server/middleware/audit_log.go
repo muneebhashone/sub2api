@@ -146,13 +146,14 @@ placeholder
 // auditBodyOmittedRoutes 请求体几乎整体由凭证构成的路由（如整块粘贴 auth JSON 的导入接口）。
 // 这类 body 的凭证内嵌在普通字符串值里，键级脱敏无法覆盖，整体不入库。
 var auditBodyOmittedRoutes = map[string]struct{placeholder{
-	"POST /api/v1/admin/accounts/import/codex-session":        {placeholder,
-	"PUT /api/v1/admin/prompt-audit/config":                   {placeholder,
-	"POST /api/v1/admin/prompt-audit/endpoints/probe":         {placeholder,
-	"DELETE /api/v1/admin/prompt-audit/events/:id":            {placeholder,
-	"POST /api/v1/admin/prompt-audit/events/batch-delete":     {placeholder,
-	"POST /api/v1/admin/prompt-audit/events/delete-preview":   {placeholder,
-	"POST /api/v1/admin/prompt-audit/events/delete-by-filter": {placeholder,
+	"POST /api/v1/admin/accounts/import/codex-session":          {placeholder,
+	"PUT /api/v1/admin/accounts/:id/ollama-cloud-usage/session": {placeholder,
+	"PUT /api/v1/admin/prompt-audit/config":                     {placeholder,
+	"POST /api/v1/admin/prompt-audit/endpoints/probe":           {placeholder,
+	"DELETE /api/v1/admin/prompt-audit/events/:id":              {placeholder,
+	"POST /api/v1/admin/prompt-audit/events/batch-delete":       {placeholder,
+	"POST /api/v1/admin/prompt-audit/events/delete-preview":     {placeholder,
+	"POST /api/v1/admin/prompt-audit/events/delete-by-filter":   {placeholder,
 placeholder
 
 // NewAuditLogMiddleware 创建审计中间件。
