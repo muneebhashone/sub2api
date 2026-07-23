@@ -1407,8 +1407,8 @@ const allColumns = computed(() => {
   if (!authStore.isSimpleMode) {
     c.push({ key: 'groups', label: t('admin.accounts.columns.groups'), sortable: false placeholder)
   placeholder
+  c.push({ key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false placeholder)
   c.push(
-    { key: 'usage', label: t('admin.accounts.columns.usageWindows'), sortable: false placeholder,
     { key: 'proxy', label: t('admin.accounts.columns.proxy'), sortable: false placeholder,
     { key: 'priority', label: t('admin.accounts.columns.priority'), sortable: true placeholder,
     { key: 'scheduler_score', label: t('admin.accounts.columns.schedulerScore'), sortable: false placeholder,

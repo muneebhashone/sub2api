@@ -22,7 +22,9 @@ import type {
   CheckMixedChannelRequest,
   CheckMixedChannelResponse,
   UpstreamBillingProbeResult,
-  UpstreamBillingProbeSettings
+  UpstreamBillingProbeSettings,
+  OllamaCloudUsageSettings,
+  OllamaCloudUsageState
 placeholder from '@/types'
 
 /**
@@ -882,6 +884,50 @@ export async function probeUpstreamBillingBatch(accountIds: number[]): Promise<U
   return data.results
 placeholder
 
+export async function getOllamaCloudUsageSettings(): Promise<OllamaCloudUsageSettings> {
+  const { data placeholder = await apiClient.get<OllamaCloudUsageSettings>('/admin/accounts/ollama-cloud-usage/settings')
+  return data
+placeholder
+
+export async function updateOllamaCloudUsageSettings(
+  settings: OllamaCloudUsageSettings
+): Promise<OllamaCloudUsageSettings> {
+  const { data placeholder = await apiClient.put<OllamaCloudUsageSettings>(
+    '/admin/accounts/ollama-cloud-usage/settings',
+    settings
+  )
+  return data
+placeholder
+
+export async function getOllamaCloudUsage(id: number): Promise<OllamaCloudUsageState> {
+  const { data placeholder = await apiClient.get<OllamaCloudUsageState>(`/admin/accounts/${idplaceholder/ollama-cloud-usage`)
+  return data
+placeholder
+
+export async function saveOllamaCloudUsageSession(id: number, session: string): Promise<OllamaCloudUsageState> {
+  const { data placeholder = await apiClient.put<OllamaCloudUsageState>(`/admin/accounts/${idplaceholder/ollama-cloud-usage/session`, {
+    session
+  placeholder)
+  return data
+placeholder
+
+export async function deleteOllamaCloudUsageSession(id: number): Promise<OllamaCloudUsageState> {
+  const { data placeholder = await apiClient.delete<OllamaCloudUsageState>(`/admin/accounts/${idplaceholder/ollama-cloud-usage/session`)
+  return data
+placeholder
+
+export async function setOllamaCloudUsageAutoRefresh(id: number, enabled: boolean): Promise<OllamaCloudUsageState> {
+  const { data placeholder = await apiClient.put<OllamaCloudUsageState>(`/admin/accounts/${idplaceholder/ollama-cloud-usage/auto-refresh`, {
+    enabled
+  placeholder)
+  return data
+placeholder
+
+export async function refreshOllamaCloudUsage(id: number): Promise<OllamaCloudUsageState> {
+  const { data placeholder = await apiClient.post<OllamaCloudUsageState>(`/admin/accounts/${idplaceholder/ollama-cloud-usage/refresh`)
+  return data
+placeholder
+
 export const accountsAPI = {
   list,
   listWithEtag,
@@ -933,7 +979,14 @@ export const accountsAPI = {
   updateUpstreamBillingProbeSettings,
   setUpstreamBillingProbeEnabled,
   probeUpstreamBilling,
-  probeUpstreamBillingBatch
+  probeUpstreamBillingBatch,
+  getOllamaCloudUsageSettings,
+  updateOllamaCloudUsageSettings,
+  getOllamaCloudUsage,
+  saveOllamaCloudUsageSession,
+  deleteOllamaCloudUsageSession,
+  setOllamaCloudUsageAutoRefresh,
+  refreshOllamaCloudUsage
 placeholder
 
 export default accountsAPI
