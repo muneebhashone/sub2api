@@ -315,7 +315,14 @@ placeholder
 placeholder
 
 	if req.Extra != nil {
-		account.Extra = *req.Extra
+		extra := make(map[string]any, len(*req.Extra))
+		for key, value := range *req.Extra {
+			extra[key] = value
+	placeholder
+		delete(extra, OllamaCloudUsageSessionExtraKey)
+		delete(extra, OllamaCloudUsageAutoRefreshExtraKey)
+		delete(extra, OllamaCloudUsageSnapshotExtraKey)
+		account.Extra = extra
 placeholder
 
 	if req.ProxyID != nil {

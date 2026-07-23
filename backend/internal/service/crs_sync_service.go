@@ -1160,21 +1160,39 @@ func reconcileCRSUpstreamBillingProbeExtra(
 	targetCredentials map[string]any,
 	extra map[string]any,
 ) {
-	delete(extra, UpstreamBillingProbeEnabledExtraKey)
-	delete(extra, UpstreamBillingProbeExtraKey)
+	for _, key := range []string{
+		UpstreamBillingProbeEnabledExtraKey,
+		UpstreamBillingProbeExtraKey,
+		OllamaCloudUsageSessionExtraKey,
+		OllamaCloudUsageAutoRefreshExtraKey,
+		OllamaCloudUsageSnapshotExtraKey,
+placeholder {
+		delete(extra, key)
+placeholder
 	if existing == nil {
 		return
 placeholder
-	if targetPlatform != PlatformOpenAI || targetType != AccountTypeAPIKey {
-		return
-placeholder
-	if enabled, ok := existing.Extra[UpstreamBillingProbeEnabledExtraKey]; ok {
-		extra[UpstreamBillingProbeEnabledExtraKey] = enabled
-placeholder
 	target := &Account{Platform: targetPlatform, Type: targetType, Credentials: targetCredentialsplaceholder
-	if reflect.DeepEqual(upstreamBillingProbeIdentity(existing), upstreamBillingProbeIdentity(target)) {
-		if snapshot, ok := existing.Extra[UpstreamBillingProbeExtraKey]; ok {
-			extra[UpstreamBillingProbeExtraKey] = snapshot
+	if targetPlatform == PlatformOpenAI && targetType == AccountTypeAPIKey {
+		if enabled, ok := existing.Extra[UpstreamBillingProbeEnabledExtraKey]; ok {
+			extra[UpstreamBillingProbeEnabledExtraKey] = enabled
+	placeholder
+		if reflect.DeepEqual(upstreamBillingProbeIdentity(existing), upstreamBillingProbeIdentity(target)) {
+			if snapshot, ok := existing.Extra[UpstreamBillingProbeExtraKey]; ok {
+				extra[UpstreamBillingProbeExtraKey] = snapshot
+		placeholder
+	placeholder
+placeholder
+	if IsOllamaCloudUsageAccount(existing) && IsOllamaCloudUsageAccount(target) &&
+		reflect.DeepEqual(ollamaCloudUsageIdentity(existing), ollamaCloudUsageIdentity(target)) {
+		if session, ok := existing.Extra[OllamaCloudUsageSessionExtraKey]; ok {
+			extra[OllamaCloudUsageSessionExtraKey] = session
+	placeholder
+		if enabled, ok := existing.Extra[OllamaCloudUsageAutoRefreshExtraKey]; ok {
+			extra[OllamaCloudUsageAutoRefreshExtraKey] = enabled
+	placeholder
+		if snapshot, ok := existing.Extra[OllamaCloudUsageSnapshotExtraKey]; ok {
+			extra[OllamaCloudUsageSnapshotExtraKey] = snapshot
 	placeholder
 placeholder
 placeholder
