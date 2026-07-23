@@ -1,0 +1,157 @@
+package service
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestGeminiResponseToChatCompletionsPreservesInlineData(t *testing.T) {
+	tests := []struct {
+		name  string
+		parts []any
+		want  string
+placeholder{
+		{
+			name: "image only",
+			parts: []any{
+				map[string]any{"inlineData": map[string]any{"mimeType": "image/png", "data": "aW1hZ2U="placeholderplaceholder,
+		placeholder,
+			want: "![image](data:image/png;base64,aW1hZ2U=)",
+	placeholder,
+		{
+			name: "text and image",
+			parts: []any{
+				map[string]any{"text": "rendered image:\n"placeholder,
+				map[string]any{"inlineData": map[string]any{"mimeType": "image/webp", "data": "d2VicA=="placeholderplaceholder,
+		placeholder,
+			want: "rendered image:\n![image](data:image/webp;base64,d2VicA==)",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			geminiResp := map[string]any{
+				"candidates": []any{map[string]any{
+					"content":      map[string]any{"parts": tt.partsplaceholder,
+					"finishReason": "STOP",
+		placeholder
+		placeholder
+			rawData, err := json.Marshal(geminiResp)
+		placeholder
+
+			got, _, err := geminiResponseToChatCompletions(geminiResp, "gemini-test", rawData, nil)
+		placeholder
+			require.Len(t, got.Choices, 1)
+
+			var content string
+			require.NoError(t, json.Unmarshal(got.Choices[0].Message.Content, &content))
+			require.Equal(t, tt.want, content)
+			require.Equal(t, "stop", got.Choices[0].FinishReason)
+	placeholder)
+placeholder
+placeholder
+
+func TestGeminiResponseToChatCompletionsOmitsInvalidInlineData(t *testing.T) {
+	tests := []struct {
+		name       string
+		inlineData map[string]any
+placeholder{
+		{
+			name:       "unsupported MIME type",
+			inlineData: map[string]any{"mimeType": "image/svg+xml", "data": "PHN2Zz48L3N2Zz4="placeholder,
+	placeholder,
+		{
+			name:       "malformed MIME type",
+			inlineData: map[string]any{"mimeType": "image/png; charset=utf-8", "data": "aW1hZ2U="placeholder,
+	placeholder,
+		{
+			name:       "malformed base64",
+			inlineData: map[string]any{"mimeType": "image/png", "data": "not-valid-base64!!!"placeholder,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			geminiResp := map[string]any{
+				"candidates": []any{map[string]any{
+					"content":      map[string]any{"parts": []any{map[string]any{"text": "before"placeholder, map[string]any{"inlineData": tt.inlineDataplaceholder, map[string]any{"text": "after"placeholderplaceholderplaceholder,
+					"finishReason": "STOP",
+		placeholder
+		placeholder
+			rawData, err := json.Marshal(geminiResp)
+		placeholder
+
+			got, _, err := geminiResponseToChatCompletions(geminiResp, "gemini-test", rawData, nil)
+		placeholder
+
+			var content string
+			require.NoError(t, json.Unmarshal(got.Choices[0].Message.Content, &content))
+			require.Equal(t, "beforeafter", content)
+	placeholder)
+placeholder
+placeholder
+
+func TestConvertGeminiToClaudeMessageOmitsInlineDataForAnthropicMessages(t *testing.T) {
+	geminiResp := map[string]any{
+		"candidates": []any{map[string]any{
+			"content": map[string]any{"parts": []any{
+				map[string]any{"text": "before"placeholder,
+				map[string]any{"inlineData": map[string]any{"mimeType": "image/png", "data": "aW1hZ2U="placeholderplaceholder,
+				map[string]any{"functionCall": map[string]any{"name": "get_weather", "args": map[string]any{"city": "Paris"placeholderplaceholderplaceholder,
+				map[string]any{"text": "after"placeholder,
+	placeholder
+			"finishReason": "STOP",
+placeholder
+placeholder
+	rawData, err := json.Marshal(geminiResp)
+placeholder
+
+	withInlineData, _ := convertGeminiToClaudeMessage(geminiResp, "gemini-test", rawData, true)
+	contentWithInlineData := withInlineData["content"].([]any)
+	require.Len(t, contentWithInlineData, 4)
+	require.Equal(t, map[string]any{"type": "text", "text": "before"placeholder, contentWithInlineData[0])
+	require.Equal(t, map[string]any{"type": "text", "text": "![image](data:image/png;base64,aW1hZ2U=)"placeholder, contentWithInlineData[1])
+	require.Equal(t, "tool_use", contentWithInlineData[2].(map[string]any)["type"])
+	require.Equal(t, "get_weather", contentWithInlineData[2].(map[string]any)["name"])
+	require.Equal(t, map[string]any{"type": "text", "text": "after"placeholder, contentWithInlineData[3])
+
+	withoutInlineData, _ := convertGeminiToClaudeMessage(geminiResp, "gemini-test", rawData, false)
+	contentWithoutInlineData := withoutInlineData["content"].([]any)
+	require.Len(t, contentWithoutInlineData, 3)
+	require.Equal(t, map[string]any{"type": "text", "text": "before"placeholder, contentWithoutInlineData[0])
+	require.Equal(t, "tool_use", contentWithoutInlineData[1].(map[string]any)["type"])
+	require.Equal(t, "get_weather", contentWithoutInlineData[1].(map[string]any)["name"])
+	require.Equal(t, map[string]any{"type": "text", "text": "after"placeholder, contentWithoutInlineData[2])
+placeholder
+
+func TestGeminiResponseToChatCompletionsRetainsTextAndToolBehavior(t *testing.T) {
+	geminiResp := map[string]any{
+		"candidates": []any{map[string]any{
+			"content": map[string]any{"parts": []any{
+				map[string]any{"text": "checking"placeholder,
+				map[string]any{"functionCall": map[string]any{
+					"name": "get_weather",
+					"args": map[string]any{"city": "Paris"placeholder,
+		placeholder
+	placeholder
+			"finishReason": "STOP",
+placeholder
+placeholder
+	rawData, err := json.Marshal(geminiResp)
+placeholder
+
+	got, _, err := geminiResponseToChatCompletions(geminiResp, "gemini-test", rawData, nil)
+placeholder
+	require.Len(t, got.Choices, 1)
+
+	choice := got.Choices[0]
+	var content string
+	require.NoError(t, json.Unmarshal(choice.Message.Content, &content))
+	require.Equal(t, "checking", content)
+	require.Equal(t, "tool_calls", choice.FinishReason)
+	require.Len(t, choice.Message.ToolCalls, 1)
+	require.Equal(t, "get_weather", choice.Message.ToolCalls[0].Function.Name)
+	require.JSONEq(t, `{"city":"Paris"placeholder`, choice.Message.ToolCalls[0].Function.Arguments)
+placeholder
