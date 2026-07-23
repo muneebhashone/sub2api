@@ -247,3 +247,17 @@ placeholder
 placeholder
 	return selectVisibleMethodInstanceByProviderKey(matching, providerKey), nil
 placeholder
+
+// UsesOfficialAlipayVisibleMethod reports whether the user-facing Alipay method
+// currently resolves to an enabled official Alipay provider instance.
+func (s *PaymentConfigService) UsesOfficialAlipayVisibleMethod(ctx context.Context) (bool, error) {
+	instance, err := s.resolveEnabledVisibleMethodInstance(ctx, payment.TypeAlipay)
+	if err != nil {
+		return false, err
+placeholder
+	return isOfficialAlipayProviderInstance(instance), nil
+placeholder
+
+func isOfficialAlipayProviderInstance(instance *dbent.PaymentProviderInstance) bool {
+	return instance != nil && strings.EqualFold(strings.TrimSpace(instance.ProviderKey), payment.TypeAlipay)
+placeholder

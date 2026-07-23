@@ -282,6 +282,90 @@ placeholder
 placeholder
 placeholder
 
+func TestCreatePaymentUsesPrecreateForMobileWhenEnabled(t *testing.T) {
+	origPreCreate := alipayTradePreCreate
+	origWapPay := alipayTradeWapPay
+	t.Cleanup(func() {
+		alipayTradePreCreate = origPreCreate
+		alipayTradeWapPay = origWapPay
+placeholder)
+
+	precreateCalls := 0
+	wapPayCalls := 0
+	alipayTradePreCreate = func(_ context.Context, _ *alipay.Client, param alipay.TradePreCreate) (*alipay.TradePreCreateRsp, error) {
+		precreateCalls++
+		if param.OutTradeNo != "sub2_mobile_precreate" {
+			t.Fatalf("out_trade_no = %q", param.OutTradeNo)
+	placeholder
+		if param.ProductCode != alipayProductCodePreCreate {
+			t.Fatalf("product_code = %q, want %q", param.ProductCode, alipayProductCodePreCreate)
+	placeholder
+		return &alipay.TradePreCreateRsp{
+			Error:  alipay.Error{Code: alipay.CodeSuccessplaceholder,
+			QRCode: "https://qr.alipay.example.com/mobile-dynamic-token",
+	placeholder, nil
+placeholder
+	alipayTradeWapPay = func(_ *alipay.Client, _ alipay.TradeWapPay) (*url.URL, error) {
+		wapPayCalls++
+		return url.Parse("https://openapi.alipay.com/gateway.do?wap-pay")
+placeholder
+
+	provider := &Alipay{client: &alipay.Client{placeholder, config: map[string]string{placeholderplaceholder
+	resp, err := provider.CreatePayment(context.Background(), payment.CreatePaymentRequest{
+		OrderID:               "sub2_mobile_precreate",
+		Amount:                "28.00",
+		Subject:               "Balance recharge",
+		IsMobile:              true,
+		AlipayMobilePrecreate: true,
+placeholder)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+	if precreateCalls != 1 || wapPayCalls != 0 {
+		t.Fatalf("precreate calls = %d, wap calls = %d; want 1, 0", precreateCalls, wapPayCalls)
+placeholder
+	if resp.QRCode != "https://qr.alipay.example.com/mobile-dynamic-token" || resp.PayURL != "" {
+		t.Fatalf("unexpected response: qr_code=%q pay_url=%q", resp.QRCode, resp.PayURL)
+placeholder
+placeholder
+
+func TestCreatePaymentKeepsWapPayForMobileWhenPrecreateDisabled(t *testing.T) {
+	origPreCreate := alipayTradePreCreate
+	origWapPay := alipayTradeWapPay
+	t.Cleanup(func() {
+		alipayTradePreCreate = origPreCreate
+		alipayTradeWapPay = origWapPay
+placeholder)
+
+	precreateCalls := 0
+	wapPayCalls := 0
+	alipayTradePreCreate = func(_ context.Context, _ *alipay.Client, _ alipay.TradePreCreate) (*alipay.TradePreCreateRsp, error) {
+		precreateCalls++
+		return nil, errors.New("unexpected precreate call")
+placeholder
+	alipayTradeWapPay = func(_ *alipay.Client, _ alipay.TradeWapPay) (*url.URL, error) {
+		wapPayCalls++
+		return url.Parse("https://openapi.alipay.com/gateway.do?wap-pay")
+placeholder
+
+	provider := &Alipay{client: &alipay.Client{placeholder, config: map[string]string{placeholderplaceholder
+	resp, err := provider.CreatePayment(context.Background(), payment.CreatePaymentRequest{
+		OrderID:  "sub2_mobile_wap",
+		Amount:   "18.00",
+		Subject:  "Balance recharge",
+		IsMobile: true,
+placeholder)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+placeholder
+	if precreateCalls != 0 || wapPayCalls != 1 {
+		t.Fatalf("precreate calls = %d, wap calls = %d; want 0, 1", precreateCalls, wapPayCalls)
+placeholder
+	if resp.PayURL == "" || resp.QRCode != "" {
+		t.Fatalf("unexpected response: qr_code=%q pay_url=%q", resp.QRCode, resp.PayURL)
+placeholder
+placeholder
+
 func TestCreateTradeUsesPrecreateForDesktopWhenAvailable(t *testing.T) {
 	origPreCreate := alipayTradePreCreate
 	origPagePay := alipayTradePagePay
