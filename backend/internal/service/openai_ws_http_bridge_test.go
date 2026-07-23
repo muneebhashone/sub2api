@@ -520,7 +520,7 @@ placeholder
 	require.Empty(t, upstream.lastReq.Header.Get(grokClientToolCacheOptInHeader))
 placeholder
 
-func TestProxyResponsesWebSocketFromClientForGrokUsesXAIHTTPBridge(t *testing.T) {
+func TestProxyResponsesWebSocketFromClientForGrokUsesXAIHTTPBridgeAndPreservesMappedModels(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	bridgeResponse := func(responseID, requestID string, cachedTokens int) *http.Response {
@@ -594,7 +594,14 @@ placeholder
 		ginCtx.Request = req
 		ginCtx.Set("api_key", &APIKey{ID: 7101placeholder)
 
-		errCh <- svc.ProxyResponsesWebSocketFromClient(r.Context(), ginCtx, conn, account, "access-token", firstMessage, nil)
+		errCh <- svc.ProxyResponsesWebSocketFromClient(r.Context(), ginCtx, conn, account, "access-token", firstMessage, &OpenAIWSIngressHooks{
+			MapRequestModel: func(_ int, originalModel string) (string, error) {
+				if originalModel == "channel-alias" {
+					return "grok-4.3", nil
+			placeholder
+				return originalModel, nil
+		placeholder,
+	placeholder)
 placeholder))
 	defer wsServer.Close()
 
@@ -626,7 +633,7 @@ placeholder
 	require.Equal(t, "resp_grok_ws_1", gjson.GetBytes(completed, "response.id").String())
 
 	writeCtx, cancelWrite = context.WithTimeout(context.Background(), 3*time.Second)
-	err = clientConn.Write(writeCtx, coderws.MessageText, []byte(`{"type":"response.create","generate":true,"model":"grok","stream":true,"previous_response_id":"resp_grok_ws_1","input":"second turn"placeholder`))
+	err = clientConn.Write(writeCtx, coderws.MessageText, []byte(`{"type":"response.create","generate":true,"model":"channel-alias","stream":true,"previous_response_id":"resp_grok_ws_1","input":"second turn"placeholder`))
 	cancelWrite()
 placeholder
 
@@ -637,6 +644,7 @@ placeholder
 	require.Equal(t, "response.output_text.delta", gjson.GetBytes(delta, "type").String())
 	require.Equal(t, "response.completed", gjson.GetBytes(completed, "type").String())
 	require.Equal(t, "resp_grok_ws_2", gjson.GetBytes(completed, "response.id").String())
+	require.Equal(t, "channel-alias", gjson.GetBytes(completed, "response.model").String())
 
 	writeCtx, cancelWrite = context.WithTimeout(context.Background(), 3*time.Second)
 	err = clientConn.Write(writeCtx, coderws.MessageText, []byte(`{"type":"response.create","generate":true,"model":"grok-4.3","stream":true,"previous_response_id":"resp_grok_ws_2","input":"third turn with a different model"placeholder`))
@@ -666,7 +674,7 @@ placeholder
 	require.Equal(t, "sub2api-grok/1.0", upstream.lastReq.Header.Get("User-Agent"))
 	require.Equal(t, grokCLIVersion, upstream.lastReq.Header.Get("X-Grok-Client-Version"))
 	require.Equal(t, "grok-4.5", gjson.GetBytes(upstream.bodies[0], "model").String())
-	require.Equal(t, "grok-4.5", gjson.GetBytes(upstream.bodies[1], "model").String())
+	require.Equal(t, "grok-4.3", gjson.GetBytes(upstream.bodies[1], "model").String())
 	require.Equal(t, "grok-4.3", gjson.GetBytes(upstream.bodies[2], "model").String())
 	require.NotEmpty(t, gjson.GetBytes(upstream.lastBody, "prompt_cache_key").String())
 	require.Equal(t, gjson.GetBytes(upstream.lastBody, "prompt_cache_key").String(), upstream.lastReq.Header.Get(grokConversationIDHeader))
@@ -677,9 +685,10 @@ placeholder
 	secondIdentity := gjson.GetBytes(upstream.bodies[1], "prompt_cache_key").String()
 	thirdIdentity := gjson.GetBytes(upstream.bodies[2], "prompt_cache_key").String()
 	require.NotEmpty(t, firstIdentity)
-	require.Equal(t, firstIdentity, secondIdentity)
+	require.NotEmpty(t, secondIdentity)
+	require.NotEqual(t, firstIdentity, secondIdentity)
 	require.NotEmpty(t, thirdIdentity)
-	require.NotEqual(t, firstIdentity, thirdIdentity)
+	require.Equal(t, secondIdentity, thirdIdentity)
 	require.Equal(t, firstIdentity, upstream.requests[0].Header.Get(grokConversationIDHeader))
 	require.Equal(t, secondIdentity, upstream.requests[1].Header.Get(grokConversationIDHeader))
 	require.Equal(t, thirdIdentity, upstream.requests[2].Header.Get(grokConversationIDHeader))

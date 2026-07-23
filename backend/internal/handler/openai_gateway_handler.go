@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -41,6 +42,49 @@ type OpenAIGatewayHandler struct {
 	imageLimiter               *imageConcurrencyLimiter
 	maxAccountSwitches         int
 	cfg                        *config.Config
+placeholder
+
+type openAIWSTurnChannelMappingSnapshot struct {
+	turn    int
+	mapping service.ChannelMappingResult
+placeholder
+
+var errOpenAIWSUnsupportedModelSwitch = errors.New("selected account does not support websocket model switch")
+
+func newOpenAIWSUnsupportedModelSwitchError(model string) error {
+	cause := fmt.Errorf("%w: model %q", errOpenAIWSUnsupportedModelSwitch, strings.TrimSpace(model))
+	return service.NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "model switch requires reconnect", cause)
+placeholder
+
+func shouldReportOpenAIWSProxyAccountFailure(err error) bool {
+	return err != nil && !errors.Is(err, errOpenAIWSUnsupportedModelSwitch)
+placeholder
+
+func openAIWSTurnBillingModel(result *service.OpenAIForwardResult, mapping service.ChannelMappingResult, requestedModel, upstreamModel string) string {
+	billingModel := ""
+	if result != nil {
+		billingModel = strings.TrimSpace(result.BillingModel)
+placeholder
+	if billingModel == "" {
+		billingModel = strings.TrimSpace(upstreamModel)
+placeholder
+	if billingModel == "" {
+		billingModel = strings.TrimSpace(requestedModel)
+placeholder
+
+	requestedModel = strings.TrimSpace(requestedModel)
+	switch mapping.BillingModelSource {
+	case service.BillingModelSourceRequested:
+		if requestedModel != "" {
+			billingModel = requestedModel
+	placeholder
+	case service.BillingModelSourceChannelMapped:
+		mappedModel := strings.TrimSpace(mapping.MappedModel)
+		if mappedModel != "" && mappedModel != requestedModel {
+			billingModel = mappedModel
+	placeholder
+placeholder
+	return billingModel
 placeholder
 
 type grokMediaEligibilityProber interface {
@@ -1519,7 +1563,7 @@ placeholder
 	previousResponseCanMove := !firstMessageToolCoverage.HasFunctionCallOutput || firstMessageToolCoverage.ContextCoversAllCallIDs
 	reqLog = reqLog.With(
 		zap.Bool("ws_ingress", true),
-		zap.String("model", reqModel),
+		zap.String("session_initial_model", reqModel),
 		zap.Bool("has_previous_response_id", previousResponseID != ""),
 		zap.String("previous_response_id_kind", previousResponseIDKind),
 	)
@@ -1771,6 +1815,10 @@ placeholder
 			reasoningEffortMappings = apiKey.Group.ReasoningEffortMappings
 	placeholder
 		var requestPayloadHash string
+		// Passthrough rejects overlapping response.create frames, so one immutable
+		// turn-tagged slot preserves the exact mapping used for the in-flight request.
+		var turnChannelMapping atomic.Pointer[openAIWSTurnChannelMappingSnapshot]
+		turnChannelMapping.Store(&openAIWSTurnChannelMappingSnapshot{turn: 1, mapping: channelMappingWSplaceholder)
 		hooks := &service.OpenAIWSIngressHooks{
 			InitialRequestModel:     reqModel,
 			MaxReasoningEffort:      maxReasoningEffort,
@@ -1794,6 +1842,22 @@ placeholder
 					return service.NewOpenAIWSClientCloseError(securityAuditWSCloseStatus(decision), securityAuditWSCloseReason(decision), nil)
 			placeholder
 				return nil
+		placeholder,
+			MapRequestModel: func(turn int, originalModel string) (string, error) {
+				model := strings.TrimSpace(originalModel)
+				if model == "" {
+					model = reqModel
+			placeholder
+				mapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(ctx, apiKey.GroupID, model)
+				mappedModelUnchanged := false
+				if previous := turnChannelMapping.Load(); previous != nil && previous.turn < turn {
+					mappedModelUnchanged = strings.TrimSpace(previous.mapping.MappedModel) == strings.TrimSpace(mapping.MappedModel)
+			placeholder
+				if turn > 1 && !mappedModelUnchanged && !account.IsModelSupported(model) && !account.IsModelSupported(mapping.MappedModel) {
+					return "", newOpenAIWSUnsupportedModelSwitchError(mapping.MappedModel)
+			placeholder
+				turnChannelMapping.Store(&openAIWSTurnChannelMappingSnapshot{turn: turn, mapping: mappingplaceholder)
+				return mapping.MappedModel, nil
 		placeholder,
 			BeforeTurn: func(turn int) error {
 				// turn==1 的会话屏蔽已由握手层检查覆盖；连接内 flag 只拦截后续 turn。
@@ -1836,7 +1900,27 @@ placeholder
 				// 届时 defer 已清除标记）。
 				defer clearCyberPolicyTurnState(c)
 				releaseTurnSlots()
-				h.recordCyberPolicyIfMarked(c, apiKey, account, subscription, reqModel, turnErr != nil, cyberBlockKey, clientRequestedUsageFields(c, channelMappingWS, reqModel, ""), requestPayloadHash)
+				turnRequestedModel := reqModel
+				turnUpstreamModel := ""
+				if result != nil && turn > 1 {
+					if model := strings.TrimSpace(result.Model); model != "" {
+						turnRequestedModel = model
+				placeholder
+			placeholder
+				if result != nil {
+					turnUpstreamModel = strings.TrimSpace(result.UpstreamModel)
+			placeholder
+				var turnMapping service.ChannelMappingResult
+				if snapshot := turnChannelMapping.Load(); snapshot != nil && snapshot.turn == turn {
+					turnMapping = snapshot.mapping
+			placeholder else {
+					turnMapping, _ = h.gatewayService.ResolveChannelMappingAndRestrict(ctx, apiKey.GroupID, turnRequestedModel)
+			placeholder
+				if turnUpstreamModel == "" {
+					turnUpstreamModel = turnRequestedModel
+			placeholder
+				turnUsageFields := turnMapping.ToUsageFields(turnRequestedModel, turnUpstreamModel)
+				h.recordCyberPolicyIfMarked(c, apiKey, account, subscription, turnRequestedModel, turnErr != nil, cyberBlockKey, turnUsageFields, requestPayloadHash)
 				if service.GetOpsCyberPolicy(c) != nil {
 					cyberBlockedThisConn = true
 			placeholder
@@ -1858,11 +1942,22 @@ placeholder
 				if result == nil {
 					return
 			placeholder
+				result.BillingModel = openAIWSTurnBillingModel(result, turnMapping, turnRequestedModel, turnUpstreamModel)
+				reqLog.Debug("openai.websocket_turn_billing",
+					zap.Int("turn", turn),
+					zap.String("turn_requested_model", turnRequestedModel),
+					zap.String("turn_upstream_model", turnUpstreamModel),
+					zap.String("billing_model", result.BillingModel),
+				)
 				// 排除 spark 影子:其 codex_* 仅由 QueryUsage(/wham/usage bengalfox)更新(外审第7轮 P1)。
 				if account.Type == service.AccountTypeOAuth && !account.IsShadow() {
 					h.gatewayService.UpdateCodexUsageSnapshotFromHeaders(ctx, account.ID, result.ResponseHeaders)
 			placeholder
-				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(reqModel), openAIForwardSucceededForScheduling(result), result.FirstTokenMs)
+				scheduleModel := turnUpstreamModel
+				if scheduleModel == "" {
+					scheduleModel = turnRequestedModel
+			placeholder
+				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, scheduleModel, openAIForwardSucceededForScheduling(result), result.FirstTokenMs)
 				inboundEndpoint := GetInboundEndpoint(c)
 				upstreamEndpoint := resolveOpenAIUpstreamEndpoint(c, account, result)
 				quotaPlatform := service.QuotaPlatform(c.Request.Context(), apiKey)
@@ -1883,7 +1978,7 @@ placeholder
 						APIKeyService:      h.apiKeyService,
 						QuotaPlatform:      quotaPlatform,
 						SessionID:          sessionID,
-						ChannelUsageFields: clientRequestedUsageFields(c, channelMappingWS, reqModel, result.UpstreamModel),
+						ChannelUsageFields: turnUsageFields,
 						CyberBlocked:       cyberBlocked,
 				placeholder); err != nil {
 						reqLog.Error("openai.websocket_record_usage_failed",
@@ -1896,11 +1991,7 @@ placeholder
 		placeholder,
 	placeholder
 
-		// 应用渠道模型映射到 WebSocket 首条消息
 		wsFirstMessage := firstMessage
-		if channelMappingWS.Mapped {
-			wsFirstMessage = h.gatewayService.ReplaceModelInBody(firstMessage, channelMappingWS.MappedModel)
-	placeholder
 		// 切组/会话失配防护：previous_response_id 未在当前分组命中粘连账号（StickyPreviousHit=false），
 		// 说明该会话链不属于本次调度到的账号，原样转发会触发上游会话链鉴权失败（“鉴权失败，请检查 API Key”）。
 		// 故剥离首包里的 previous_response_id，改用首包内 input 重建上下文；带 function_call_output 的
@@ -1944,7 +2035,9 @@ placeholder
 				return
 		placeholder
 
-			h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(reqModel), false, nil)
+			if shouldReportOpenAIWSProxyAccountFailure(err) {
+				h.gatewayService.ReportOpenAIAccountScheduleResult(account.ID, account.GetMappedModel(reqModel), false, nil)
+		placeholder
 			closeStatus, closeReason := summarizeWSCloseErrorForLog(err)
 			proxyFailedFields := []zap.Field{
 				zap.Int64("account_id", account.ID),
