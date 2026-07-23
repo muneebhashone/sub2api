@@ -793,6 +793,68 @@ placeholder
 		placeholder,
 	placeholder,
 placeholder
+	// CompositeModelRoutesColumns holds the columns for the "composite_model_routes" table.
+	CompositeModelRoutesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
+		{Name: "public_model", Type: field.TypeString, Size: 200placeholder,
+		{Name: "match_type", Type: field.TypeString, Size: 20, Default: "exact"placeholder,
+		{Name: "target_platform", Type: field.TypeString, Size: 50, Default: "openai"placeholder,
+		{Name: "upstream_model", Type: field.TypeString, Size: 200, Default: ""placeholder,
+		{Name: "endpoint", Type: field.TypeString, Size: 50, Default: "any"placeholder,
+		{Name: "priority", Type: field.TypeInt, Default: 100placeholder,
+		{Name: "enabled", Type: field.TypeBool, Default: trueplaceholder,
+		{Name: "notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"placeholderplaceholder,
+		{Name: "group_id", Type: field.TypeInt64placeholder,
+placeholder
+	// CompositeModelRoutesTable holds the schema information for the "composite_model_routes" table.
+	CompositeModelRoutesTable = &schema.Table{
+		Name:       "composite_model_routes",
+		Columns:    CompositeModelRoutesColumns,
+		PrimaryKey: []*schema.Column{CompositeModelRoutesColumns[0]placeholder,
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "composite_model_routes_groups_group",
+				Columns:    []*schema.Column{CompositeModelRoutesColumns[12]placeholder,
+				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
+				OnDelete:   schema.NoAction,
+		placeholder,
+	placeholder,
+		Indexes: []*schema.Index{
+			{
+				Name:    "compositemodelroute_group_id",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12]placeholder,
+		placeholder,
+			{
+				Name:    "compositemodelroute_group_id_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[10]placeholder,
+		placeholder,
+			{
+				Name:    "compositemodelroute_group_id_endpoint",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[8]placeholder,
+		placeholder,
+			{
+				Name:    "compositemodelroute_group_id_target_platform",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[6]placeholder,
+		placeholder,
+			{
+				Name:    "compositemodelroute_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[3]placeholder,
+		placeholder,
+			{
+				Name:    "compositemodelroute_priority",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[9]placeholder,
+		placeholder,
+	placeholder,
+placeholder
 	// ErrorPassthroughRulesColumns holds the columns for the "error_passthrough_rules" table.
 	ErrorPassthroughRulesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: trueplaceholder,
@@ -2014,6 +2076,7 @@ placeholder
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
 		ChannelMonitorRequestTemplatesTable,
+		CompositeModelRoutesTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
@@ -2096,6 +2159,10 @@ placeholder
 placeholder
 	ChannelMonitorRequestTemplatesTable.Annotation = &entsql.Annotation{
 		Table: "channel_monitor_request_templates",
+placeholder
+	CompositeModelRoutesTable.ForeignKeys[0].RefTable = GroupsTable
+	CompositeModelRoutesTable.Annotation = &entsql.Annotation{
+		Table: "composite_model_routes",
 placeholder
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",

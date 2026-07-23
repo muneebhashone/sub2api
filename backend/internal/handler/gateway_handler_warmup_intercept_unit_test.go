@@ -187,6 +187,7 @@ placeholder
 		nil, // tlsFPProfileService
 		nil, // channelService
 		nil, // resolver
+		nil, // compositeResolver
 		nil, // balanceNotifyService
 		nil, // userPlatformQuotaRepo
 	)
