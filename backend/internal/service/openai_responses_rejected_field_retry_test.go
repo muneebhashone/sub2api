@@ -114,10 +114,9 @@ placeholder
 	require.False(t, gjson.GetBytes(retryBody, "max_output_tokens").Exists())
 placeholder
 
-func TestOpenAIGatewayService_RetriesRejectedIndexedNamespaceField(t *testing.T) {
-	body := []byte(`{"model":"gpt-5.5","stream":false,"input":[{"type":"function_call","name":"first","namespace":"keep","arguments":"{placeholder"placeholder,{"type":"custom_tool_call","name":"second","namespace":"remove","input":"{placeholder"placeholder]placeholder`)
+func TestOpenAIGatewayService_APIKeyStripsAllIndexedNamespacesBeforeFirstForward(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","stream":false,"input":[{"type":"function_call","name":"first","namespace":"remove-first","arguments":"{placeholder"placeholder,{"type":"custom_tool_call","name":"second","namespace":"remove-second","input":"{placeholder"placeholder]placeholder`)
 	upstream := &httpUpstreamRecorder{responses: []*http.Response{
-		newOpenAIRejectedFieldTestResponse(http.StatusBadRequest, `{"error":{"code":"unknown_parameter","message":"Unknown parameter: 'input[1].namespace'.","param":"input[1].namespace","type":"invalid_request_error"placeholderplaceholder`),
 		newOpenAIRejectedFieldTestResponse(http.StatusOK, `{"output":[],"usage":{"input_tokens":1,"output_tokens":1,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholder`),
 placeholderplaceholder
 
@@ -130,34 +129,43 @@ placeholderplaceholder
 
 placeholder
 	require.NotNil(t, result)
-	require.Len(t, upstream.bodies, 2)
-	require.Equal(t, "keep", gjson.GetBytes(upstream.bodies[1], "input.0.namespace").String())
-	require.False(t, gjson.GetBytes(upstream.bodies[1], "input.1.namespace").Exists())
+	require.Len(t, upstream.bodies, 1)
+	require.False(t, gjson.GetBytes(upstream.bodies[0], "input.0.namespace").Exists())
+	require.False(t, gjson.GetBytes(upstream.bodies[0], "input.1.namespace").Exists())
 placeholder
 
-func TestOpenAIGatewayService_OAuthHTTPStripsInputNamespacesBeforeFirstForward(t *testing.T) {
-	for _, path := range []string{"/v1/responses", "/v1/responses/compact"placeholder {
-		t.Run(path, func(t *testing.T) {
-			body := []byte(`{"model":"gpt-5.5","stream":false,"instructions":"test","input":[{"type":"message","role":"user","namespace":"remove","content":[{"type":"input_text","text":"hello","namespace":"nested-keep"placeholder]placeholder]placeholder`)
-			upstream := &httpUpstreamRecorder{responses: []*http.Response{
-				newOpenAIRejectedFieldTestResponse(http.StatusOK, `{"id":"resp_namespace_ok","output":[],"usage":{"input_tokens":1,"output_tokens":1,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholder`),
-		placeholderplaceholder
-			c := newOpenAIRejectedFieldTestContext(body)
-			c.Request.URL.Path = path
+func TestOpenAIGatewayService_OpenAIHTTPStripsInputNamespacesBeforeFirstForward(t *testing.T) {
+	accounts := []struct {
+		name    string
+		account *Account
+placeholder{
+		{name: "oauth", account: newOpenAIOAuthNamespaceTestAccount()placeholder,
+		{name: "apikey", account: newOpenAIRejectedFieldTestAccount()placeholder,
+placeholder
+	for _, tt := range accounts {
+		for _, path := range []string{"/v1/responses", "/v1/responses/compact"placeholder {
+			t.Run(tt.name+path, func(t *testing.T) {
+				body := []byte(`{"model":"gpt-5.5","stream":false,"instructions":"test","input":[{"type":"message","role":"user","namespace":"remove","content":[{"type":"input_text","text":"hello","namespace":"nested-keep"placeholder]placeholder]placeholder`)
+				upstream := &httpUpstreamRecorder{responses: []*http.Response{
+					newOpenAIRejectedFieldTestResponse(http.StatusOK, `{"id":"resp_namespace_ok","output":[],"usage":{"input_tokens":1,"output_tokens":1,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholder`),
+			placeholderplaceholder
+				c := newOpenAIRejectedFieldTestContext(body)
+				c.Request.URL.Path = path
 
-			result, err := newOpenAIRejectedFieldTestService(upstream).Forward(
-				context.Background(),
-				c,
-				newOpenAIOAuthNamespaceTestAccount(),
-				body,
-			)
+				result, err := newOpenAIRejectedFieldTestService(upstream).Forward(
+					context.Background(),
+					c,
+					tt.account,
+					body,
+				)
 
-		placeholder
-			require.NotNil(t, result)
-			require.Len(t, upstream.bodies, 1, "namespace must be removed before the first upstream request")
-			require.False(t, gjson.GetBytes(upstream.bodies[0], "input.0.namespace").Exists())
-			require.Equal(t, "nested-keep", gjson.GetBytes(upstream.bodies[0], "input.0.content.0.namespace").String())
-	placeholder)
+			placeholder
+				require.NotNil(t, result)
+				require.Len(t, upstream.bodies, 1, "namespace must be removed before the first upstream request")
+				require.False(t, gjson.GetBytes(upstream.bodies[0], "input.0.namespace").Exists())
+				require.Equal(t, "nested-keep", gjson.GetBytes(upstream.bodies[0], "input.0.content.0.namespace").String())
+		placeholder)
+	placeholder
 placeholder
 placeholder
 
@@ -183,10 +191,9 @@ placeholder
 	require.Equal(t, "keep", gjson.GetBytes(upstream.bodies[1], "input.0.content.max_output_tokens").String())
 placeholder
 
-func TestOpenAIGatewayService_ComposesDistinctRejectedFieldRetries(t *testing.T) {
-	body := []byte(`{"model":"gpt-5.5","stream":false,"max_output_tokens":2048,"input":[{"type":"function_call","name":"first","namespace":"keep","arguments":"{placeholder"placeholder,{"type":"custom_tool_call","name":"second","namespace":"remove","input":"{placeholder"placeholder]placeholder`)
+func TestOpenAIGatewayService_ComposesProactiveNamespaceStripWithRejectedFieldRetry(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","stream":false,"max_output_tokens":2048,"input":[{"type":"function_call","name":"first","namespace":"remove-first","arguments":"{placeholder"placeholder,{"type":"custom_tool_call","name":"second","namespace":"remove-second","input":"{placeholder"placeholder]placeholder`)
 	upstream := &httpUpstreamRecorder{responses: []*http.Response{
-		newOpenAIRejectedFieldTestResponse(http.StatusBadRequest, `{"error":{"code":"unknown_parameter","message":"Unknown parameter: 'input[1].namespace'.","param":"input[1].namespace"placeholderplaceholder`),
 		newOpenAIRejectedFieldTestResponse(http.StatusBadRequest, `{"error":{"code":"unsupported_parameter","message":"Unsupported parameter: max_output_tokens","param":"max_output_tokens"placeholderplaceholder`),
 		newOpenAIRejectedFieldTestResponse(http.StatusOK, `{"output":[],"usage":{"input_tokens":1,"output_tokens":1,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholder`),
 placeholderplaceholder
@@ -200,12 +207,13 @@ placeholderplaceholder
 
 placeholder
 	require.NotNil(t, result)
-	require.Len(t, upstream.bodies, 3)
-	require.True(t, gjson.GetBytes(upstream.bodies[0], "input.1.namespace").Exists())
-	require.False(t, gjson.GetBytes(upstream.bodies[1], "input.1.namespace").Exists())
-	require.Equal(t, int64(2048), gjson.GetBytes(upstream.bodies[1], "max_output_tokens").Int())
-	require.False(t, gjson.GetBytes(upstream.bodies[2], "input.1.namespace").Exists())
-	require.False(t, gjson.GetBytes(upstream.bodies[2], "max_output_tokens").Exists())
+	require.Len(t, upstream.bodies, 2)
+	for _, forwardedBody := range upstream.bodies {
+		require.False(t, gjson.GetBytes(forwardedBody, "input.0.namespace").Exists())
+		require.False(t, gjson.GetBytes(forwardedBody, "input.1.namespace").Exists())
+placeholder
+	require.Equal(t, int64(2048), gjson.GetBytes(upstream.bodies[0], "max_output_tokens").Int())
+	require.False(t, gjson.GetBytes(upstream.bodies[1], "max_output_tokens").Exists())
 placeholder
 
 func newOpenAIRejectedFieldTestService(upstream *httpUpstreamRecorder) *OpenAIGatewayService {

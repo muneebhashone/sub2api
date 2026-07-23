@@ -37,6 +37,36 @@ placeholder
 placeholder
 placeholder
 
+func TestShouldStripOpenAIResponsesInputNamespaces(t *testing.T) {
+	oauth := &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
+	apiKey := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+	setupToken := &Account{Platform: PlatformOpenAI, Type: AccountTypeSetupTokenplaceholder
+	grokOAuth := &Account{Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+
+	tests := []struct {
+		name               string
+		account            *Account
+		transport          OpenAIUpstreamTransport
+		passthroughEnabled bool
+		want               bool
+placeholder{
+		{name: "oauth_http", account: oauth, transport: OpenAIUpstreamTransportHTTPSSE, want: trueplaceholder,
+		{name: "apikey_http", account: apiKey, transport: OpenAIUpstreamTransportHTTPSSE, want: trueplaceholder,
+		{name: "oauth_wsv2", account: oauth, transport: OpenAIUpstreamTransportResponsesWebsocketV2, want: falseplaceholder,
+		{name: "apikey_wsv2", account: apiKey, transport: OpenAIUpstreamTransportResponsesWebsocketV2, want: falseplaceholder,
+		{name: "oauth_wsv2_passthrough", account: oauth, transport: OpenAIUpstreamTransportResponsesWebsocketV2, passthroughEnabled: true, want: trueplaceholder,
+		{name: "apikey_wsv2_passthrough", account: apiKey, transport: OpenAIUpstreamTransportResponsesWebsocketV2, passthroughEnabled: true, want: trueplaceholder,
+		{name: "setup_token_http", account: setupToken, transport: OpenAIUpstreamTransportHTTPSSE, want: falseplaceholder,
+		{name: "grok_oauth_http", account: grokOAuth, transport: OpenAIUpstreamTransportHTTPSSE, want: falseplaceholder,
+		{name: "nil_account", account: nil, transport: OpenAIUpstreamTransportHTTPSSE, want: falseplaceholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, shouldStripOpenAIResponsesInputNamespaces(tt.account, tt.transport, tt.passthroughEnabled))
+	placeholder)
+placeholder
+placeholder
+
 func TestStripOpenAIResponsesInputNamespaces(t *testing.T) {
 	body := []byte(`{
 		"meta":9007199254740993,
