@@ -189,8 +189,8 @@ placeholder
 	placeholder
 placeholder
 
-	// 检查邮箱是否已存在
-	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
+	// 检查邮箱是否已存在（含 +别名 / Gmail 点号变体归一化，防止单个收件箱批量派生注册）
+	existsEmail, err := s.existsByEmailOrAlias(ctx, email)
 	if err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Database error checking email exists: %v", err)
 		return "", nil, ErrServiceUnavailable
@@ -296,8 +296,8 @@ placeholder
 		return err
 placeholder
 
-	// 检查邮箱是否已存在
-	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
+	// 检查邮箱是否已存在（含 +别名 / Gmail 点号变体归一化，防止单个收件箱批量派生注册）
+	existsEmail, err := s.existsByEmailOrAlias(ctx, email)
 	if err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Database error checking email exists: %v", err)
 		return ErrServiceUnavailable
@@ -337,8 +337,8 @@ placeholder
 		return nil, err
 placeholder
 
-	// 检查邮箱是否已存在
-	existsEmail, err := s.userRepo.ExistsByEmail(ctx, email)
+	// 检查邮箱是否已存在（含 +别名 / Gmail 点号变体归一化；在发信前拦截，避免批量脚本消耗发信配额）
+	existsEmail, err := s.existsByEmailOrAlias(ctx, email)
 	if err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Database error checking email exists: %v", err)
 		return nil, ErrServiceUnavailable
