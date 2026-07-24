@@ -209,6 +209,60 @@ placeholder
 	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
 placeholder
 
+func TestSanitizeGrokResponsesToolsKeepsToolChoiceOnlyWithSupportedTools(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		body           string
+		wantTools      bool
+		wantToolChoice bool
+placeholder{
+		{
+			name: "missing tools with string tool choice",
+			body: `{"input":"hello","tool_choice":"auto"placeholder`,
+	placeholder,
+		{
+			name: "missing tools with object tool choice",
+			body: `{"input":"hello","tool_choice":{"type":"function","name":"lookup"placeholderplaceholder`,
+	placeholder,
+		{
+			name:      "empty tools",
+			body:      `{"input":"hello","tools":[],"tool_choice":"auto"placeholder`,
+			wantTools: true,
+	placeholder,
+		{
+			name: "all tools unsupported",
+			body: `{"input":"hello","tools":[{"type":"namespace","name":"client_tools"placeholder],"tool_choice":"auto"placeholder`,
+	placeholder,
+		{
+			name:           "supported tool",
+			body:           `{"input":"hello","tools":[{"type":"function","name":"lookup"placeholder],"tool_choice":"auto"placeholder`,
+			wantTools:      true,
+			wantToolChoice: true,
+	placeholder,
+		{
+			name:           "malformed non-array tools remain untouched",
+			body:           `{"input":"hello","tools":{"type":"function","name":"lookup"placeholder,"tool_choice":"auto"placeholder`,
+			wantTools:      true,
+			wantToolChoice: true,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			patched, err := sanitizeGrokResponsesTools([]byte(tt.body))
+		placeholder
+			require.True(t, json.Valid(patched))
+			require.Equal(t, tt.wantTools, gjson.GetBytes(patched, "tools").Exists())
+			require.Equal(t, tt.wantToolChoice, gjson.GetBytes(patched, "tool_choice").Exists())
+			if tt.wantToolChoice {
+				require.Equal(t, "auto", gjson.GetBytes(patched, "tool_choice").String())
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func TestPatchGrokResponsesBodyPromotesCodexAdditionalTools(t *testing.T) {
 	t.Parallel()
 
