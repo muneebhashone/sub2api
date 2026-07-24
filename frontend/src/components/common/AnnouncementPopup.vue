@@ -90,6 +90,7 @@ import { marked placeholder from 'marked'
 import DOMPurify from 'dompurify'
 import { useAnnouncementStore placeholder from '@/stores/announcements'
 import { formatRelativeWithDateTime placeholder from '@/utils/format'
+import '@/styles/announcement-markdown.css'
 
 const { t placeholder = useI18n()
 const announcementStore = useAnnouncementStore()
