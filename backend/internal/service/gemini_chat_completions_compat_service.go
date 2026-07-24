@@ -231,7 +231,11 @@ placeholder
 				Kind:               "failover",
 				Message:            upstreamMsg,
 		placeholder)
-			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: evBodyplaceholder
+			return nil, &UpstreamFailoverError{
+				StatusCode:             resp.StatusCode,
+				ResponseBody:           evBody,
+				RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
+		placeholder
 	placeholder
 
 		return nil, s.writeGeminiChatCompletionsMappedError(c, account, resp.StatusCode, requestID, evBody)
