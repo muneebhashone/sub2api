@@ -13,18 +13,21 @@ import (
 )
 
 type userRepoStub struct {
-	user          *User
-	getErr        error
-	createErr     error
-	deleteErr     error
-	exists        bool
-	existsErr     error
-	nextID        int64
-	created       []*User
-	updated       []*User
-	deletedIDs    []int64
-	usersByEmail  map[string]*User
-	getByEmailErr error
+	user           *User
+	getErr         error
+	createErr      error
+	deleteErr      error
+	exists         bool
+	existsErr      error
+	aliasExists    bool
+	aliasErr       error
+	guardedCreates int
+	nextID         int64
+	created        []*User
+	updated        []*User
+	deletedIDs     []int64
+	usersByEmail   map[string]*User
+	getByEmailErr  error
 placeholder
 
 func (s *userRepoStub) Create(ctx context.Context, user *User) error {
@@ -41,6 +44,17 @@ placeholder
 	s.usersByEmail[user.Email] = user
 	s.user = user
 	return nil
+placeholder
+
+func (s *userRepoStub) CreateWithEmailAliasGuard(ctx context.Context, user *User) error {
+	s.guardedCreates++
+	if s.aliasErr != nil {
+		return s.aliasErr
+placeholder
+	if s.aliasExists {
+		return ErrEmailExists
+placeholder
+	return s.Create(ctx, user)
 placeholder
 
 func (s *userRepoStub) GetByID(ctx context.Context, id int64) (*User, error) {
@@ -142,6 +156,13 @@ func (s *userRepoStub) ExistsByEmail(ctx context.Context, email string) (bool, e
 		return false, s.existsErr
 placeholder
 	return s.exists, nil
+placeholder
+
+func (s *userRepoStub) ExistsByEmailAlias(ctx context.Context, email string) (bool, error) {
+	if s.aliasErr != nil {
+		return false, s.aliasErr
+placeholder
+	return s.aliasExists, nil
 placeholder
 
 func (s *userRepoStub) RemoveGroupFromAllowedGroups(ctx context.Context, groupID int64) (int64, error) {
