@@ -822,6 +822,20 @@ placeholder
 	return _u
 placeholder
 
+// SetAllowLive sets the "allow_live" field.
+func (_u *GroupUpdate) SetAllowLive(v bool) *GroupUpdate {
+	_u.mutation.SetAllowLive(v)
+	return _u
+placeholder
+
+// SetNillableAllowLive sets the "allow_live" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableAllowLive(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetAllowLive(*v)
+placeholder
+	return _u
+placeholder
+
 // SetRequireOauthOnly sets the "require_oauth_only" field.
 func (_u *GroupUpdate) SetRequireOauthOnly(v bool) *GroupUpdate {
 	_u.mutation.SetRequireOauthOnly(v)
@@ -1494,6 +1508,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AllowMessagesDispatch(); ok {
 		_spec.SetField(group.FieldAllowMessagesDispatch, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.AllowLive(); ok {
+		_spec.SetField(group.FieldAllowLive, field.TypeBool, value)
 placeholder
 	if value, ok := _u.mutation.RequireOauthOnly(); ok {
 		_spec.SetField(group.FieldRequireOauthOnly, field.TypeBool, value)
@@ -2627,6 +2644,20 @@ placeholder
 	return _u
 placeholder
 
+// SetAllowLive sets the "allow_live" field.
+func (_u *GroupUpdateOne) SetAllowLive(v bool) *GroupUpdateOne {
+	_u.mutation.SetAllowLive(v)
+	return _u
+placeholder
+
+// SetNillableAllowLive sets the "allow_live" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableAllowLive(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetAllowLive(*v)
+placeholder
+	return _u
+placeholder
+
 // SetRequireOauthOnly sets the "require_oauth_only" field.
 func (_u *GroupUpdateOne) SetRequireOauthOnly(v bool) *GroupUpdateOne {
 	_u.mutation.SetRequireOauthOnly(v)
@@ -3329,6 +3360,9 @@ placeholder
 placeholder
 	if value, ok := _u.mutation.AllowMessagesDispatch(); ok {
 		_spec.SetField(group.FieldAllowMessagesDispatch, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.AllowLive(); ok {
+		_spec.SetField(group.FieldAllowLive, field.TypeBool, value)
 placeholder
 	if value, ok := _u.mutation.RequireOauthOnly(); ok {
 		_spec.SetField(group.FieldRequireOauthOnly, field.TypeBool, value)

@@ -938,6 +938,7 @@ placeholder
 		{Name: "supported_model_scopes", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "sort_order", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "allow_messages_dispatch", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "allow_live", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "require_oauth_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "require_privacy_set", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "default_mapped_model", Type: field.TypeString, Size: 100, Default: ""placeholder,

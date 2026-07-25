@@ -607,6 +607,20 @@ placeholder
 	return _c
 placeholder
 
+// SetAllowLive sets the "allow_live" field.
+func (_c *GroupCreate) SetAllowLive(v bool) *GroupCreate {
+	_c.mutation.SetAllowLive(v)
+	return _c
+placeholder
+
+// SetNillableAllowLive sets the "allow_live" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableAllowLive(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetAllowLive(*v)
+placeholder
+	return _c
+placeholder
+
 // SetRequireOauthOnly sets the "require_oauth_only" field.
 func (_c *GroupCreate) SetRequireOauthOnly(v bool) *GroupCreate {
 	_c.mutation.SetRequireOauthOnly(v)
@@ -948,6 +962,10 @@ placeholder
 		v := group.DefaultAllowMessagesDispatch
 		_c.mutation.SetAllowMessagesDispatch(v)
 placeholder
+	if _, ok := _c.mutation.AllowLive(); !ok {
+		v := group.DefaultAllowLive
+		_c.mutation.SetAllowLive(v)
+placeholder
 	if _, ok := _c.mutation.RequireOauthOnly(); !ok {
 		v := group.DefaultRequireOauthOnly
 		_c.mutation.SetRequireOauthOnly(v)
@@ -1100,6 +1118,9 @@ placeholder
 placeholder
 	if _, ok := _c.mutation.AllowMessagesDispatch(); !ok {
 		return &ValidationError{Name: "allow_messages_dispatch", err: errors.New(`ent: missing required field "Group.allow_messages_dispatch"`)placeholder
+placeholder
+	if _, ok := _c.mutation.AllowLive(); !ok {
+		return &ValidationError{Name: "allow_live", err: errors.New(`ent: missing required field "Group.allow_live"`)placeholder
 placeholder
 	if _, ok := _c.mutation.RequireOauthOnly(); !ok {
 		return &ValidationError{Name: "require_oauth_only", err: errors.New(`ent: missing required field "Group.require_oauth_only"`)placeholder
@@ -1333,6 +1354,10 @@ placeholder
 	if value, ok := _c.mutation.AllowMessagesDispatch(); ok {
 		_spec.SetField(group.FieldAllowMessagesDispatch, field.TypeBool, value)
 		_node.AllowMessagesDispatch = value
+placeholder
+	if value, ok := _c.mutation.AllowLive(); ok {
+		_spec.SetField(group.FieldAllowLive, field.TypeBool, value)
+		_node.AllowLive = value
 placeholder
 	if value, ok := _c.mutation.RequireOauthOnly(); ok {
 		_spec.SetField(group.FieldRequireOauthOnly, field.TypeBool, value)
@@ -2221,6 +2246,18 @@ placeholder
 // UpdateAllowMessagesDispatch sets the "allow_messages_dispatch" field to the value that was provided on create.
 func (u *GroupUpsert) UpdateAllowMessagesDispatch() *GroupUpsert {
 	u.SetExcluded(group.FieldAllowMessagesDispatch)
+	return u
+placeholder
+
+// SetAllowLive sets the "allow_live" field.
+func (u *GroupUpsert) SetAllowLive(v bool) *GroupUpsert {
+	u.Set(group.FieldAllowLive, v)
+	return u
+placeholder
+
+// UpdateAllowLive sets the "allow_live" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateAllowLive() *GroupUpsert {
+	u.SetExcluded(group.FieldAllowLive)
 	return u
 placeholder
 
@@ -3190,6 +3227,20 @@ placeholder
 func (u *GroupUpsertOne) UpdateAllowMessagesDispatch() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateAllowMessagesDispatch()
+placeholder)
+placeholder
+
+// SetAllowLive sets the "allow_live" field.
+func (u *GroupUpsertOne) SetAllowLive(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAllowLive(v)
+placeholder)
+placeholder
+
+// UpdateAllowLive sets the "allow_live" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateAllowLive() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAllowLive()
 placeholder)
 placeholder
 
@@ -4342,6 +4393,20 @@ placeholder
 func (u *GroupUpsertBulk) UpdateAllowMessagesDispatch() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateAllowMessagesDispatch()
+placeholder)
+placeholder
+
+// SetAllowLive sets the "allow_live" field.
+func (u *GroupUpsertBulk) SetAllowLive(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAllowLive(v)
+placeholder)
+placeholder
+
+// UpdateAllowLive sets the "allow_live" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateAllowLive() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAllowLive()
 placeholder)
 placeholder
 

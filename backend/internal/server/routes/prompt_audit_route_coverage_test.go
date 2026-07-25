@@ -34,6 +34,8 @@ placeholder
 		"/chat/completions":         {"gateway_handler_chat_completions.go", "openai_chat_completions.go"placeholder,
 		"/embeddings":               {"openai_embeddings.go"placeholder,
 		"/alpha/search":             {"openai_alpha_search.go"placeholder,
+		"/live":                     {"openai_live.go"placeholder,
+		"/realtime/calls":           {"openai_live.go"placeholder,
 		"/images/generations":       {"openai_images.go", "grok_media.go"placeholder,
 		"/images/edits":             {"openai_images.go", "grok_media.go"placeholder,
 		"/images/generations/async": {"image_task_handler.go"placeholder,
