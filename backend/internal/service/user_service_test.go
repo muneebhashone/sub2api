@@ -90,7 +90,8 @@ func (m *mockUserSettingRepo) Delete(context.Context, string) error {
 	panic("unexpected Delete call")
 placeholder
 
-func (m *mockUserRepo) Create(context.Context, *User) error { return nil placeholder
+func (m *mockUserRepo) Create(context.Context, *User) error                    { return nil placeholder
+func (m *mockUserRepo) CreateWithEmailAliasGuard(context.Context, *User) error { return nil placeholder
 func (m *mockUserRepo) GetByID(ctx context.Context, _ int64) (*User, error) {
 	if m.getByIDErr != nil {
 		return nil, m.getByIDErr
@@ -202,6 +203,9 @@ placeholder
 placeholder
 func (m *mockUserRepo) UpdateConcurrency(context.Context, int64, int) error { return nil placeholder
 func (m *mockUserRepo) ExistsByEmail(context.Context, string) (bool, error) { return false, nil placeholder
+func (m *mockUserRepo) ExistsByEmailAlias(context.Context, string) (bool, error) {
+	return false, nil
+placeholder
 func (m *mockUserRepo) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {
 	return 0, nil
 placeholder

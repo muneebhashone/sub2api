@@ -35,6 +35,10 @@ type emailSyncRepoStub struct {
 	replaceErr   error
 placeholder
 
+func (s *emailSyncRepoStub) CreateWithEmailAliasGuard(ctx context.Context, user *User) error {
+	return s.Create(ctx, user)
+placeholder
+
 func (s *emailSyncRepoStub) Create(_ context.Context, user *User) error {
 	if s.nextID != 0 && user.ID == 0 {
 		user.ID = s.nextID
@@ -108,6 +112,10 @@ func (s *emailSyncRepoStub) DeductBalance(context.Context, int64, float64) error
 func (s *emailSyncRepoStub) UpdateConcurrency(context.Context, int64, int) error { return nil placeholder
 
 func (s *emailSyncRepoStub) ExistsByEmail(context.Context, string) (bool, error) { return false, nil placeholder
+
+func (s *emailSyncRepoStub) ExistsByEmailAlias(context.Context, string) (bool, error) {
+	return false, nil
+placeholder
 
 func (s *emailSyncRepoStub) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {
 	return 0, nil
