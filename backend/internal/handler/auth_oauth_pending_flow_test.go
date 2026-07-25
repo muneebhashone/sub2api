@@ -2978,6 +2978,17 @@ placeholder
 	return nil
 placeholder
 
+func (r *oauthPendingFlowUserRepo) CreateWithEmailAliasGuard(ctx context.Context, user *service.User) error {
+	aliasExists, err := r.ExistsByEmailAlias(ctx, user.Email)
+	if err != nil {
+		return err
+placeholder
+	if aliasExists {
+		return service.ErrEmailExists
+placeholder
+	return r.Create(ctx, user)
+placeholder
+
 func (r *oauthPendingFlowUserRepo) GetByID(ctx context.Context, id int64) (*service.User, error) {
 	entity, err := r.client.User.Get(ctx, id)
 	if err != nil {
@@ -3183,6 +3194,20 @@ placeholder
 func (r *oauthPendingFlowUserRepo) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	count, err := r.client.User.Query().Where(dbuser.EmailEQ(email)).Count(ctx)
 	return count > 0, err
+placeholder
+
+func (r *oauthPendingFlowUserRepo) ExistsByEmailAlias(ctx context.Context, email string) (bool, error) {
+	identity := service.NormalizeEmailForAliasDedup(email)
+	emails, err := r.client.User.Query().Select(dbuser.FieldEmail).Strings(ctx)
+	if err != nil {
+		return false, err
+placeholder
+	for _, stored := range emails {
+		if service.NormalizeEmailForAliasDedup(stored) == identity {
+			return true, nil
+	placeholder
+placeholder
+	return false, nil
 placeholder
 
 func (r *oauthPendingFlowUserRepo) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {

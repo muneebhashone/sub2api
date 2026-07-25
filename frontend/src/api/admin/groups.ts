@@ -16,6 +16,11 @@ import type {
   PaginatedResponse
 placeholder from '@/types'
 
+export interface LiveCapability {
+  supported: boolean
+  reason?: string
+placeholder
+
 /**
  * List all groups with pagination
  * @param page - Page number (default: 1)
@@ -79,6 +84,12 @@ placeholder
  */
 export async function getByPlatform(platform: GroupPlatform): Promise<AdminGroup[]> {
   return getAll(platform)
+placeholder
+
+/** 获取当前 Sub2API 服务端的 Live 运行环境能力。 */
+export async function getLiveCapability(): Promise<LiveCapability> {
+  const { data placeholder = await apiClient.get<LiveCapability>('/admin/groups/live-capability')
+  return data
 placeholder
 
 /**
@@ -467,6 +478,7 @@ export const groupsAPI = {
   getAll,
   getByPlatform,
   getAllIncludingInactive,
+  getLiveCapability,
   getById,
   getModelsListCandidates,
   create,

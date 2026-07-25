@@ -26,6 +26,9 @@ type userHandlerRepoStub struct {
 placeholder
 
 func (s *userHandlerRepoStub) Create(context.Context, *service.User) error { return nil placeholder
+func (s *userHandlerRepoStub) CreateWithEmailAliasGuard(context.Context, *service.User) error {
+	return nil
+placeholder
 func (s *userHandlerRepoStub) GetByID(context.Context, int64) (*service.User, error) {
 	cloned := *s.user
 	return &cloned, nil
@@ -97,6 +100,9 @@ func (s *userHandlerRepoStub) BatchUpdateLimits(context.Context, []int64, *int, 
 	return 0, nil
 placeholder
 func (s *userHandlerRepoStub) ExistsByEmail(context.Context, string) (bool, error) { return false, nil placeholder
+func (s *userHandlerRepoStub) ExistsByEmailAlias(context.Context, string) (bool, error) {
+	return false, nil
+placeholder
 func (s *userHandlerRepoStub) RemoveGroupFromAllowedGroups(context.Context, int64) (int64, error) {
 	return 0, nil
 placeholder
