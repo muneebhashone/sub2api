@@ -695,16 +695,24 @@ placeholder
 placeholder
 
 func (s *PricingService) buildModelLookupCandidates(modelLower string) []string {
-	// Prefer canonical model name first (this also improves billing compatibility with "models/xxx").
-	candidates := []string{
-		normalizeModelNameForPricing(modelLower),
+	rawCandidates := []string{
 		modelLower,
-placeholder
-	candidates = append(candidates,
 		strings.TrimPrefix(modelLower, "models/"),
 		lastSegment(modelLower),
 		lastSegment(strings.TrimPrefix(modelLower, "models/")),
-	)
+placeholder
+	normalized := normalizeModelNameForPricing(modelLower)
+
+	// A tier-specific entry should take precedence when the pricing catalog gains
+	// one later. Today Antigravity's Gemini 3.6 Flash tiers share the base rate,
+	// so the normalized base remains the fallback after the exact aliases.
+	candidates := rawCandidates
+	if normalizeGeminiThinkingTierAlias(lastSegment(modelLower)) != lastSegment(modelLower) {
+		candidates = append(candidates, normalized)
+placeholder else {
+		// Prefer canonical model names for all other aliases (including models/xxx).
+		candidates = append([]string{normalizedplaceholder, candidates...)
+placeholder
 
 	seen := make(map[string]struct{placeholder, len(candidates))
 	out := make([]string, 0, len(candidates))
@@ -751,6 +759,20 @@ placeholder
 			return "gpt-5.6-sol"
 	placeholder
 		return canonical
+placeholder
+	return normalizeGeminiThinkingTierAlias(model)
+placeholder
+
+// normalizeGeminiThinkingTierAlias maps Antigravity's Gemini 3.6 Flash
+// thinking-tier model IDs to the public base model. The tier controls reasoning
+// behavior, not the published token rate, so this keeps -high/-low/-medium and
+// -tiered requests on the same price card as gemini-3.6-flash.
+func normalizeGeminiThinkingTierAlias(model string) string {
+	const baseModel = "gemini-3.6-flash"
+	for _, tier := range []string{"-high", "-low", "-medium", "-tiered"placeholder {
+		if model == baseModel+tier {
+			return baseModel
+	placeholder
 placeholder
 	return model
 placeholder
