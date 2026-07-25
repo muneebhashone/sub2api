@@ -134,6 +134,10 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	attestation, attestationCiphertext, err := s.prepareLiveAttestation(ctx)
+	if err != nil {
+		return nil, err
+placeholder
 
 	excluded := make(map[int64]struct{placeholder)
 	var lastErr error
@@ -184,7 +188,7 @@ placeholder
 			return nil, ErrLiveConcurrencyFull
 	placeholder
 
-		created, createErr := s.createUpstreamLiveCall(ctx, account, request)
+		created, createErr := s.createUpstreamLiveCall(ctx, account, request, attestation)
 		selection.ReleaseFunc()
 		if createErr != nil {
 			s.releaseLiveLease(account.ID, identity.UserID, identity.APIKeyID, leaseID)
@@ -202,21 +206,22 @@ placeholder
 			model = "gpt-live"
 	placeholder
 		record := &LiveCallRecord{
-			CallID:          created.CallID,
-			CallHash:        hashLiveCallID(created.CallID),
-			AccountID:       account.ID,
-			APIKeyID:        identity.APIKeyID,
-			UserID:          identity.UserID,
-			GroupID:         liveGroupID(identity.GroupID),
-			SubscriptionID:  liveGroupID(identity.SubscriptionID),
-			LeaseID:         leaseID,
-			Model:           model,
-			CreatedAt:       now,
-			ExpiresAt:       now.Add(s.liveMaxSessionDuration()),
-			Controller:      LiveControllerPending,
-			UserAgent:       identity.UserAgent,
-			IPAddress:       identity.IPAddress,
-			InboundEndpoint: identity.InboundEndpoint,
+			CallID:                created.CallID,
+			CallHash:              hashLiveCallID(created.CallID),
+			AccountID:             account.ID,
+			APIKeyID:              identity.APIKeyID,
+			UserID:                identity.UserID,
+			GroupID:               liveGroupID(identity.GroupID),
+			SubscriptionID:        liveGroupID(identity.SubscriptionID),
+			LeaseID:               leaseID,
+			Model:                 model,
+			CreatedAt:             now,
+			ExpiresAt:             now.Add(s.liveMaxSessionDuration()),
+			Controller:            LiveControllerPending,
+			UserAgent:             identity.UserAgent,
+			IPAddress:             identity.IPAddress,
+			InboundEndpoint:       identity.InboundEndpoint,
+			AttestationCiphertext: attestationCiphertext,
 	placeholder
 		mappingTTL := s.liveMaxSessionDuration() + 5*time.Minute
 		if saveErr := store.SaveLiveCall(ctx, record, mappingTTL); saveErr != nil {
@@ -250,6 +255,7 @@ func (s *OpenAIGatewayService) createUpstreamLiveCall(
 	ctx context.Context,
 	account *Account,
 	request *LiveCallRequest,
+	attestation string,
 ) (*LiveCallCreated, error) {
 	token, _, err := s.GetAccessToken(ctx, account)
 	if err != nil {
@@ -288,6 +294,7 @@ placeholder
 placeholder
 	upstreamReq.Header.Set("Content-Type", "application/json")
 	upstreamReq.Header.Set("Accept", "application/sdp")
+	upstreamReq.Header.Set(liveAttestationHeader, attestation)
 	applyLiveUpstreamIdentityHeaders(upstreamReq.Header)
 
 	resp, err := s.httpUpstream.Do(upstreamReq, resolveAccountProxyURL(account), account.ID, account.Concurrency)
@@ -399,7 +406,11 @@ placeholder
 	headers.Del("OpenAI-Beta")
 placeholder
 
-func (s *OpenAIGatewayService) liveSidebandHeaders(ctx context.Context, account *Account) (http.Header, error) {
+func (s *OpenAIGatewayService) liveSidebandHeaders(
+	ctx context.Context,
+	account *Account,
+	record *LiveCallRecord,
+) (http.Header, error) {
 	token, _, err := s.GetAccessToken(ctx, account)
 	if err != nil {
 		return nil, err
@@ -411,6 +422,11 @@ placeholder
 	if err := resolveAndSetOpenAIChatGPTAccountHeaders(ctx, s.accountRepo, headers, account); err != nil {
 		return nil, err
 placeholder
+	attestation, err := s.decryptLiveAttestation(record)
+	if err != nil {
+		return nil, err
+placeholder
+	headers.Set(liveAttestationHeader, attestation)
 	applyLiveUpstreamIdentityHeaders(headers)
 	return headers, nil
 placeholder
@@ -423,7 +439,7 @@ placeholder
 	if account == nil || !account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityLive) {
 		return nil, ErrLiveUnavailable
 placeholder
-	headers, err := s.liveSidebandHeaders(ctx, account)
+	headers, err := s.liveSidebandHeaders(ctx, account, record)
 	if err != nil {
 		return nil, err
 placeholder

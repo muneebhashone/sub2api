@@ -21,6 +21,15 @@ type liveHTTPUpstreamStub struct {
 	body    []byte
 placeholder
 
+type liveAttestationStub struct {
+	header string
+	err    error
+placeholder
+
+func (s liveAttestationStub) Generate(context.Context) (string, error) {
+	return s.header, s.err
+placeholder
+
 func (s *liveHTTPUpstreamStub) Do(
 	request *http.Request,
 	_ string,
@@ -106,7 +115,7 @@ placeholder`)
 	created, err := service.createUpstreamLiveCall(context.Background(), account, &LiveCallRequest{
 		SDP:     "v=offer\r\n",
 		Session: session,
-placeholder)
+placeholder, `{"v":1,"s":0,"t":"v1.test"placeholder`)
 placeholder
 	require.Equal(t, "call_test", created.CallID)
 	require.Equal(t, []byte("v=0\r\n"), created.SDP)
@@ -121,11 +130,57 @@ placeholder
 	require.Equal(t, "Bearer test-access-token", upstream.request.Header.Get("Authorization"))
 	require.Equal(t, "acct_test", upstream.request.Header.Get("Chatgpt-Account-Id"))
 	require.Equal(t, "quicksilver=v2", upstream.request.Header.Get("OpenAI-Alpha"))
+	require.Equal(t, `{"v":1,"s":0,"t":"v1.test"placeholder`, upstream.request.Header.Get(liveAttestationHeader))
 	require.NotEmpty(t, upstream.request.Header.Get("Session-Id"))
 	require.NotEmpty(t, upstream.request.Header.Get("Thread-Id"))
 	require.Empty(t, upstream.request.Header.Get("OpenAI-Beta"))
 	require.Equal(t, HTTPUpstreamProfileOpenAI, HTTPUpstreamProfileFromContext(upstream.request.Context()))
 	require.True(t, HTTPUpstreamRedirectsDisabled(upstream.request.Context()))
+placeholder
+
+func TestLiveAttestationCipherRoundTripAndRejectsOtherInstanceKey(t *testing.T) {
+	first := newLiveAttestationCipher(&config.Config{
+		JWT: config.JWTConfig{Secret: "first-live-secret"placeholder,
+placeholder)
+	second := newLiveAttestationCipher(&config.Config{
+		JWT: config.JWTConfig{Secret: "second-live-secret"placeholder,
+placeholder)
+	require.NotNil(t, first)
+	require.NotNil(t, second)
+
+	ciphertext, err := first.Encrypt(`{"v":1,"s":0,"t":"v1.opaque"placeholder`)
+placeholder
+	require.NotContains(t, ciphertext, "opaque")
+
+	plaintext, err := first.Decrypt(ciphertext)
+placeholder
+	require.Equal(t, `{"v":1,"s":0,"t":"v1.opaque"placeholder`, plaintext)
+
+	_, err = second.Decrypt(ciphertext)
+placeholder
+placeholder
+
+func TestPrepareLiveAttestationEncryptsHeaderAndReturnsExplicitProviderError(t *testing.T) {
+	cipher := newLiveAttestationCipher(&config.Config{
+		JWT: config.JWTConfig{Secret: "live-attestation-test-secret"placeholder,
+placeholder)
+	service := &OpenAIGatewayService{
+		liveAttestation:       liveAttestationStub{header: `{"v":1,"s":0,"t":"v1.test"placeholder`placeholder,
+		liveAttestationCipher: cipher,
+placeholder
+	header, ciphertext, err := service.prepareLiveAttestation(context.Background())
+placeholder
+	require.Equal(t, `{"v":1,"s":0,"t":"v1.test"placeholder`, header)
+	require.NotContains(t, ciphertext, "v1.test")
+	decrypted, err := cipher.Decrypt(ciphertext)
+placeholder
+	require.Equal(t, header, decrypted)
+
+	service.liveAttestation = liveAttestationStub{err: errors.New("macOS app missing")placeholder
+	_, _, err = service.prepareLiveAttestation(context.Background())
+	var unavailable *LiveAttestationUnavailableError
+	require.ErrorAs(t, err, &unavailable)
+	require.Contains(t, unavailable.Error(), "macOS app missing")
 placeholder
 
 func TestLiveMaxSessionDurationDefaultsAndOverrides(t *testing.T) {
