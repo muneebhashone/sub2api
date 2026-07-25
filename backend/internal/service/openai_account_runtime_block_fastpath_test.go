@@ -142,6 +142,89 @@ placeholder
 	require.False(t, gateway.isOpenAIAccountRequestRuntimeBlocked(account, "gpt-5.5"))
 placeholder
 
+func TestOpenAIPoolModeRetryable5xx_DoesNotCreateModelTransientBlock(t *testing.T) {
+	repo := &errorPolicyRepoStub{placeholder
+	rateLimitService := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	gateway := &OpenAIGatewayService{rateLimitService: rateLimitServiceplaceholder
+	account := &Account{
+		ID:       47,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"pool_mode":                    true,
+			"pool_mode_retry_status_codes": []any{float64(524)placeholder,
+	placeholder,
+placeholder
+
+	for i := 0; i < 2; i++ {
+		shouldDisable := gateway.handleOpenAIAccountUpstreamError(
+			context.Background(),
+			account,
+			524,
+			http.Header{placeholder,
+			[]byte(`{"error":{"message":"upstream timeout"placeholderplaceholder`),
+			"gpt-5.4",
+		)
+		require.False(t, shouldDisable)
+placeholder
+
+	require.False(t, gateway.isOpenAIAccountRequestRuntimeBlocked(account, "gpt-5.4"))
+placeholder
+
+func TestOpenAIPoolModeNonRetryable5xx_StillCreatesModelTransientBlock(t *testing.T) {
+	repo := &errorPolicyRepoStub{placeholder
+	rateLimitService := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	gateway := &OpenAIGatewayService{rateLimitService: rateLimitServiceplaceholder
+	account := &Account{
+		ID:       48,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"pool_mode":                    true,
+			"pool_mode_retry_status_codes": []any{float64(http.StatusGatewayTimeout)placeholder,
+	placeholder,
+placeholder
+
+	for i := 0; i < 2; i++ {
+		shouldDisable := gateway.handleOpenAIAccountUpstreamError(
+			context.Background(),
+			account,
+			http.StatusServiceUnavailable,
+			http.Header{placeholder,
+			[]byte(`{"error":{"message":"upstream unavailable"placeholderplaceholder`),
+			"gpt-5.4",
+		)
+		require.False(t, shouldDisable)
+placeholder
+
+	require.True(t, gateway.isOpenAIAccountRequestRuntimeBlocked(account, "gpt-5.4"))
+placeholder
+
+func TestOpenAINonPoolAPIKey5xx_StillCreatesModelTransientBlock(t *testing.T) {
+	repo := &errorPolicyRepoStub{placeholder
+	rateLimitService := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	gateway := &OpenAIGatewayService{rateLimitService: rateLimitServiceplaceholder
+	account := &Account{
+		ID:       49,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+
+	for i := 0; i < 2; i++ {
+		shouldDisable := gateway.handleOpenAIAccountUpstreamError(
+			context.Background(),
+			account,
+			http.StatusGatewayTimeout,
+			http.Header{placeholder,
+			[]byte(`{"error":{"message":"upstream timeout"placeholderplaceholder`),
+			"gpt-5.4",
+		)
+		require.False(t, shouldDisable)
+placeholder
+
+	require.True(t, gateway.isOpenAIAccountRequestRuntimeBlocked(account, "gpt-5.4"))
+placeholder
+
 func TestOpenAIModelNotFound_DoesNotRuntimeBlockWholeAccount(t *testing.T) {
 	repo := &modelNotFoundAccountRepoStub{placeholder
 	svc := &OpenAIGatewayService{

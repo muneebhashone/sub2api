@@ -96,6 +96,7 @@ placeholder
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
 			sqlmock.AnyArg(), // account_stats_cost
+			sqlmock.AnyArg(), // session_id
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"placeholder).AddRow(int64(99), createdAt))
@@ -185,6 +186,7 @@ placeholder
 			sqlmock.AnyArg(), // billing_tier
 			sqlmock.AnyArg(), // billing_mode
 			sqlmock.AnyArg(), // account_stats_cost
+			sqlmock.AnyArg(), // session_id
 			createdAt,
 		).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"placeholder).AddRow(int64(100), createdAt))
@@ -826,6 +828,7 @@ func TestScanUsageLogRequestTypeAndLegacyFallback(t *testing.T) {
 			sql.NullString{placeholder,
 			sql.NullString{placeholder,
 			sql.NullFloat64{placeholder,
+			sql.NullString{placeholder,
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -900,6 +903,7 @@ placeholder)
 			sql.NullString{placeholder,  // billing_tier
 			sql.NullString{placeholder,  // billing_mode
 			sql.NullFloat64{placeholder, // account_stats_cost
+			sql.NullString{placeholder,  // session_id
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -957,6 +961,7 @@ placeholder)
 			sql.NullString{placeholder,  // billing_tier
 			sql.NullString{placeholder,  // billing_mode
 			sql.NullFloat64{placeholder, // account_stats_cost
+			sql.NullString{placeholder,  // session_id
 			now,
 	placeholderplaceholder)
 	placeholder
@@ -1014,6 +1019,7 @@ placeholder)
 			sql.NullString{placeholder,  // billing_tier
 			sql.NullString{placeholder,  // billing_mode
 			sql.NullFloat64{placeholder, // account_stats_cost
+			sql.NullString{placeholder,  // session_id
 			now,
 	placeholderplaceholder)
 	placeholder

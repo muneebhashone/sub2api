@@ -91,7 +91,12 @@ placeholder
 	if shouldDisable && !modelTempMatched {
 		s.BlockAccountScheduling(account, time.Time{placeholder, "upstream_disable")
 placeholder
-	if !shouldDisable && account.Platform == PlatformOpenAI && account.Type == AccountTypeAPIKey && shouldCooldownOpenAITransientUpstreamError(statusCode, responseBody) {
+	// Pool-mode retryable upstream errors are already bounded by the request-local
+	// same-account retry budget. Recording the generic account+model transient
+	// cooldown here would block the next approved retry before that budget is used.
+	poolModeRetryable := account.IsPoolMode() && account.IsPoolModeRetryableStatus(statusCode)
+	if !shouldDisable && account.Platform == PlatformOpenAI && account.Type == AccountTypeAPIKey &&
+		shouldCooldownOpenAITransientUpstreamError(statusCode, responseBody) && !poolModeRetryable {
 		model := ""
 		if len(canonicalModel) > 0 {
 			model = canonicalModel[0]
