@@ -1023,7 +1023,10 @@ placeholder
 
 export interface OllamaCloudUsageSettings {
   enabled: boolean
+  /** Max wait while model requests keep arriving (minutes). */
   interval_minutes: number
+  /** Trailing quiet period after the latest model request (minutes). */
+  debounce_minutes: number
 placeholder
 
 export interface Account {

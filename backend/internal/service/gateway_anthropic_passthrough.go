@@ -114,6 +114,9 @@ placeholder
 			if resp != nil && resp.Body != nil {
 				_ = resp.Body.Close()
 		placeholder
+			if !errors.Is(err, context.Canceled) {
+				scheduleOllamaCloudUsageActivity(s.deferredService, account)
+		placeholder
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
 			setOpsUpstreamError(c, 0, safeErr, "")
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
