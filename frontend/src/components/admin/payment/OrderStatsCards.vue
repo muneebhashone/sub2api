@@ -8,7 +8,9 @@
         </div>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('payment.admin.todayRevenue') placeholderplaceholder</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">${{ formatMoney(stats.today_amount) placeholderplaceholder</p>
+          <p v-for="[currency, amount] in sortedAmounts(stats.today_amount)" :key="currency" class="text-xl font-bold text-gray-900 dark:text-white">
+            {{ formatMoney(currency, amount) placeholderplaceholder
+          </p>
           <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ stats.today_count placeholderplaceholder {{ t('payment.admin.orders') placeholderplaceholder
           </p>
@@ -24,7 +26,9 @@
         </div>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('payment.admin.totalRevenue') placeholderplaceholder</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">${{ formatMoney(stats.total_amount) placeholderplaceholder</p>
+          <p v-for="[currency, amount] in sortedAmounts(stats.total_amount)" :key="currency" class="text-xl font-bold text-gray-900 dark:text-white">
+            {{ formatMoney(currency, amount) placeholderplaceholder
+          </p>
           <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ stats.total_count placeholderplaceholder {{ t('payment.admin.orders') placeholderplaceholder
           </p>
@@ -53,7 +57,9 @@
         </div>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('payment.admin.avgAmount') placeholderplaceholder</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white">${{ formatMoney(stats.avg_amount) placeholderplaceholder</p>
+          <p v-for="[currency, amount] in sortedAmounts(stats.avg_amount)" :key="currency" class="text-xl font-bold text-gray-900 dark:text-white">
+            {{ formatMoney(currency, amount) placeholderplaceholder
+          </p>
         </div>
       </div>
     </div>
@@ -63,7 +69,7 @@
 <script setup lang="ts">
 import { useI18n placeholder from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
-import type { DashboardStats placeholder from '@/types/payment'
+import type { CurrencyAmounts, DashboardStats placeholder from '@/types/payment'
 
 const { t placeholder = useI18n()
 
@@ -71,7 +77,11 @@ defineProps<{
   stats: DashboardStats
 placeholder>()
 
-function formatMoney(value: number): string {
-  return value.toFixed(2)
+function sortedAmounts(amounts: CurrencyAmounts): [string, number][] {
+  return Object.entries(amounts).sort(([left], [right]) => left.localeCompare(right))
+placeholder
+
+function formatMoney(currency: string, amount: number): string {
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency placeholder).format(amount)
 placeholder
 </script>
