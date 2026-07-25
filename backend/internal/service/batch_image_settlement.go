@@ -277,6 +277,7 @@ placeholder
 		RequestType:           RequestTypeSync,
 		BillingMode:           &billingMode,
 		ImageSize:             &imageSize,
+		SessionID:             job.SessionID,
 		CreatedAt:             createdAt,
 placeholder
 	writeUsageLogBestEffort(ctx, s.UsageLogRepo, usageLog, "service.batch_image_settlement")
