@@ -317,10 +317,14 @@ placeholder
 
 	err = settingsService.SetOllamaCloudUsageSettings(context.Background(), &OllamaCloudUsageSettings{Enabled: true, IntervalMinutes: 14, DebounceMinutes: 1placeholder)
 placeholder
-	err = settingsService.SetOllamaCloudUsageSettings(context.Background(), &OllamaCloudUsageSettings{Enabled: true, IntervalMinutes: 90, DebounceMinutes: 0placeholder)
-placeholder
 	err = settingsService.SetOllamaCloudUsageSettings(context.Background(), &OllamaCloudUsageSettings{Enabled: true, IntervalMinutes: 90, DebounceMinutes: 61placeholder)
 placeholder
+	// DebounceMinutes=0 (legacy omit) defaults to 1 on write.
+	err = settingsService.SetOllamaCloudUsageSettings(context.Background(), &OllamaCloudUsageSettings{Enabled: true, IntervalMinutes: 90, DebounceMinutes: 0placeholder)
+placeholder
+	settings, err = settingsService.GetOllamaCloudUsageSettings(context.Background())
+placeholder
+	require.Equal(t, 1, settings.DebounceMinutes)
 	err = settingsService.SetOllamaCloudUsageSettings(context.Background(), &OllamaCloudUsageSettings{Enabled: true, IntervalMinutes: 90, DebounceMinutes: 2placeholder)
 placeholder
 	settings, err = settingsService.GetOllamaCloudUsageSettings(context.Background())
