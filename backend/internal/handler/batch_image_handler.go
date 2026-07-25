@@ -42,6 +42,9 @@ placeholder
 	if !h.checkSecurityAuditBeforeSubmit(c, &req) {
 		return
 placeholder
+	if sessionID := service.ExtractClientSessionID(c); sessionID != "" {
+		req.SessionID = &sessionID
+placeholder
 	got, err := h.service.Submit(c.Request.Context(), owner, req, c.GetHeader("Idempotency-Key"))
 	if err != nil {
 		batchImageError(c, err)
