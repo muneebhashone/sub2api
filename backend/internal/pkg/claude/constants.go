@@ -148,6 +148,12 @@ placeholder,
 		CreatedAt:   "2026-05-29T00:00:00Z",
 placeholder,
 	{
+		ID:          "claude-opus-5",
+		Type:        "model",
+		DisplayName: "Claude Opus 5",
+		CreatedAt:   "2026-07-25T00:00:00Z",
+placeholder,
+	{
 		ID:          "claude-sonnet-5",
 		Type:        "model",
 		DisplayName: "Claude Sonnet 5",
