@@ -124,6 +124,11 @@ placeholder)
 		return err
 placeholder
 
+	// Transport attempt reached the network path; count as Ollama Cloud activity.
+	if s != nil {
+		scheduleOllamaCloudUsageActivity(s.deferredService, account)
+placeholder
+
 	if classifyOpenAITransportError(err).Persistent {
 		s.tempUnscheduleOpenAITransportError(ctx, account, safeErr)
 placeholder
