@@ -1623,3 +1623,114 @@ placeholder
 	require.True(t, result.clientDisconnect)
 	require.Equal(t, 8, result.usage.InputTokens)
 placeholder
+
+func TestGatewayService_AnthropicAPIKeyPassthrough_TransportErrorRecordsOllamaActivity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	deferred := NewDeferredService(nil, nil, time.Second)
+	upstream := &anthropicHTTPUpstreamRecorder{err: errors.New("dial tcp timeout")placeholder
+	svc := &GatewayService{
+		cfg: &config.Config{
+			Security: config.SecurityConfig{
+				URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholder,
+		placeholder,
+	placeholder,
+		httpUpstream:    upstream,
+		deferredService: deferred,
+placeholder
+
+	ollama := &Account{
+		ID: 601, Name: "ollama-anthropic", Platform: PlatformAnthropic, Type: AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder"api_key": "k-ollama", "base_url": "https://ollama.com"placeholder,
+		Extra:       map[string]any{"anthropic_passthrough": trueplaceholder,
+		Status:      StatusActive, Schedulable: true,
+placeholder
+	other := newAnthropicAPIKeyAccountForTest()
+	other.ID = 602
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	_, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, ollama, []byte(`{"model":"x"placeholder`), "x", "x", false, time.Now())
+placeholder
+
+	rec2 := httptest.NewRecorder()
+	c2, _ := gin.CreateTestContext(rec2)
+	c2.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	_, err = svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c2, other, []byte(`{"model":"x"placeholder`), "x", "x", false, time.Now())
+placeholder
+
+	_, ok := deferred.lastUsedUpdates.Load(int64(601))
+	require.True(t, ok, "Anthropic passthrough transport error on Ollama account must record activity")
+	_, ok = deferred.lastUsedUpdates.Load(int64(602))
+	require.False(t, ok, "non-Ollama Anthropic passthrough transport error must not record Ollama activity")
+placeholder
+
+func TestGatewayService_AnthropicAPIKeyPassthrough_ContextCanceledSkipsOllamaActivity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	deferred := NewDeferredService(nil, nil, time.Second)
+	upstream := &anthropicHTTPUpstreamRecorder{err: context.Canceledplaceholder
+	svc := &GatewayService{
+		cfg: &config.Config{
+			Security: config.SecurityConfig{
+				URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholder,
+		placeholder,
+	placeholder,
+		httpUpstream:    upstream,
+		deferredService: deferred,
+placeholder
+	ollama := &Account{
+		ID: 603, Name: "ollama-canceled", Platform: PlatformAnthropic, Type: AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder"api_key": "k-ollama", "base_url": "https://ollama.com"placeholder,
+		Extra:       map[string]any{"anthropic_passthrough": trueplaceholder,
+		Status:      StatusActive, Schedulable: true,
+placeholder
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	_, err := svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, ollama, []byte(`{"model":"x"placeholder`), "x", "x", false, time.Now())
+
+placeholder
+	_, ok := deferred.lastUsedUpdates.Load(int64(603))
+	require.False(t, ok, "context.Canceled on Anthropic passthrough must not count as Ollama activity")
+placeholder
+
+func TestGatewayService_AnthropicAPIKeyPassthrough_Non2xxRecordsOllamaActivity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	deferred := NewDeferredService(nil, nil, time.Second)
+	// 400 is non-retryable / non-failover for default API-key accounts, so it reaches handleErrorResponse.
+	upstream := &anthropicHTTPUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+			Body:       io.NopCloser(strings.NewReader(`{"type":"error","error":{"type":"invalid_request_error","message":"bad"placeholderplaceholder`)),
+	placeholder,
+placeholder
+	svc := &GatewayService{
+		cfg: &config.Config{
+			Security: config.SecurityConfig{
+				URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholder,
+		placeholder,
+	placeholder,
+		httpUpstream:     upstream,
+		deferredService:  deferred,
+		rateLimitService: &RateLimitService{placeholder,
+placeholder
+	ollama := &Account{
+		ID: 604, Name: "ollama-400", Platform: PlatformAnthropic, Type: AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder"api_key": "k-ollama", "base_url": "https://ollama.com"placeholder,
+		Extra:       map[string]any{"anthropic_passthrough": trueplaceholder,
+		Status:      StatusActive, Schedulable: true,
+placeholder
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	_, _ = svc.forwardAnthropicAPIKeyPassthrough(context.Background(), c, ollama, []byte(`{"model":"x"placeholder`), "x", "x", false, time.Now())
+
+	_, ok := deferred.lastUsedUpdates.Load(int64(604))
+	require.True(t, ok, "Anthropic passthrough non-2xx on Ollama account must record activity via handleErrorResponse")
+placeholder
