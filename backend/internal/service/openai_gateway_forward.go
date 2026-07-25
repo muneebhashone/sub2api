@@ -72,6 +72,16 @@ placeholder
 			return nil, err
 	placeholder
 placeholder
+	if shouldStripOpenAIResponsesInputNamespaces(account, wsDecision.Transport, passthroughEnabled) {
+		body, err = stripOpenAIResponsesInputNamespaces(body)
+		if err != nil {
+			setOpsUpstreamError(c, http.StatusBadRequest, err.Error(), "")
+			c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{
+				"type": "invalid_request_error", "message": err.Error(), "param": "input",
+		placeholderplaceholder)
+			return nil, err
+	placeholder
+placeholder
 
 	originalBody := body
 	requestView := newOpenAIRequestView(body)
