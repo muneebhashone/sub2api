@@ -58,13 +58,20 @@ placeholder
 placeholder
 placeholder
 
-func (p *darwinProvider) Generate(ctx context.Context) (string, error) {
+func (p *darwinProvider) Check(ctx context.Context) error {
+	checkCtx, cancel := context.WithTimeout(ctx, attestationTimeout)
+	defer cancel()
+	_, _, _, err := p.resolveRuntime(checkCtx)
+	return err
+placeholder
+
+func (p *darwinProvider) resolveRuntime(ctx context.Context) (string, string, string, error) {
 	if runtime.GOARCH != "arm64" {
-		return "", errors.New("Live attestation currently requires Apple Silicon; Intel macOS is not supported")
+		return "", "", "", errors.New("live attestation currently requires Apple Silicon; Intel macOS is not supported")
 placeholder
 	appPath, err := p.findApplication()
 	if err != nil {
-		return "", err
+		return "", "", "", err
 placeholder
 	resourcesPath := filepath.Join(appPath, "Contents", "Resources")
 	nodePath := filepath.Join(resourcesPath, "cua_node", "bin", "node")
@@ -74,13 +81,20 @@ placeholder
 		modulePath: "DeviceCheck native module",
 placeholder {
 		if info, statErr := os.Stat(filePath); statErr != nil || info.IsDir() {
-			return "", fmt.Errorf("%w: ChatGPT app is missing its %s", ErrChatGPTAppMissing, label)
+			return "", "", "", fmt.Errorf("%w: ChatGPT app is missing its %s", ErrChatGPTAppMissing, label)
 	placeholder
 placeholder
+	bundleID, err := readBundleIdentifier(ctx, appPath)
+	if err != nil {
+		return "", "", "", err
+placeholder
+	return nodePath, modulePath, bundleID, nil
+placeholder
 
+func (p *darwinProvider) Generate(ctx context.Context) (string, error) {
 	runCtx, cancel := context.WithTimeout(ctx, attestationTimeout)
 	defer cancel()
-	bundleID, err := readBundleIdentifier(runCtx, appPath)
+	nodePath, modulePath, bundleID, err := p.resolveRuntime(runCtx)
 	if err != nil {
 		return "", err
 placeholder

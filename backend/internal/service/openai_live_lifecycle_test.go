@@ -371,7 +371,7 @@ placeholder
 			proxyResult <- err
 			return
 	placeholder
-		defer downstream.CloseNow()
+		defer func() { _ = downstream.CloseNow() placeholder()
 		proxyResult <- service.ProxyLiveSideband(request.Context(), record, downstream)
 placeholder))
 	defer server.Close()
@@ -382,7 +382,7 @@ placeholder))
 		nil,
 	)
 placeholder
-	defer client.CloseNow()
+	defer func() { _ = client.CloseNow() placeholder()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

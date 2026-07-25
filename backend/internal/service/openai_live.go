@@ -511,7 +511,7 @@ placeholder
 		go s.observeLiveCall(record.CallHash)
 		return err
 placeholder
-	defer upstream.Close()
+	defer func() { _ = upstream.Close() placeholder()
 	downstream.SetReadLimit(openAIWSMessageReadLimitBytes)
 
 	proxyCtx, cancel := context.WithCancel(ctx)

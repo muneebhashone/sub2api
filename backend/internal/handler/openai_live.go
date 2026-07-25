@@ -220,7 +220,7 @@ placeholder)
 	if err != nil {
 		return
 placeholder
-	defer downstream.CloseNow()
+	defer func() { _ = downstream.CloseNow() placeholder()
 	if err := h.gatewayService.ProxyLiveSideband(c.Request.Context(), record, downstream); err != nil {
 		_ = downstream.Close(coderws.StatusInternalError, "live sideband closed")
 		return

@@ -1408,7 +1408,7 @@
             placeholderplaceholder</label>
             <button
               type="button"
-              @click="createForm.allow_live = !createForm.allow_live"
+              @click="toggleLive('create')"
               class="relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
               :class="
                 createForm.allow_live
@@ -2959,7 +2959,7 @@
             placeholderplaceholder</label>
             <button
               type="button"
-              @click="editForm.allow_live = !editForm.allow_live"
+              @click="toggleLive('edit')"
               class="relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
               :class="
                 editForm.allow_live
@@ -3560,6 +3560,17 @@
       :danger="true"
       @confirm="confirmDelete"
       @cancel="showDeleteDialog = false"
+    />
+
+    <ConfirmDialog
+      :show="showUnsupportedLiveConfirm"
+      :title="t('admin.groups.openaiLive.unsupportedTitle')"
+      :message="t('admin.groups.openaiLive.unsupportedMessage')"
+      :confirm-text="t('admin.groups.openaiLive.enableAnyway')"
+      :cancel-text="t('common.cancel')"
+      :danger="true"
+      @confirm="confirmUnsupportedLive"
+      @cancel="cancelUnsupportedLive"
     />
 
     <!-- Sort Order Modal -->
@@ -4499,6 +4510,15 @@ let abortController: AbortController | null = null;
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
+const pendingLiveForm = ref<"create" | "edit" | null>(null);
+const showUnsupportedLiveConfirm = computed(
+  () => pendingLiveForm.value !== null,
+);
+const liveCapability = ref<{ supported: boolean; reason?: string placeholder | null>(null);
+let liveCapabilityRequest: Promise<{
+  supported: boolean;
+  reason?: string;
+placeholder> | null = null;
 const showSortModal = ref(false);
 const submitting = ref(false);
 const sortSubmitting = ref(false);
@@ -5148,6 +5168,44 @@ const deleteConfirmMessage = computed(() => {
   placeholder
   return t("admin.groups.deleteConfirm", { name: deletingGroup.value.name placeholder);
 placeholder);
+
+const loadLiveCapability = async () => {
+  if (liveCapability.value) return liveCapability.value;
+  if (!liveCapabilityRequest) {
+    liveCapabilityRequest = adminAPI.groups
+      .getLiveCapability()
+      .catch(() => ({ supported: false placeholder))
+      .finally(() => {
+        liveCapabilityRequest = null;
+      placeholder);
+  placeholder
+  liveCapability.value = await liveCapabilityRequest;
+  return liveCapability.value ?? { supported: false placeholder;
+placeholder;
+
+const toggleLive = async (target: "create" | "edit") => {
+  const form = target === "create" ? createForm : editForm;
+  if (form.allow_live) {
+    form.allow_live = false;
+    return;
+  placeholder
+  const capability = await loadLiveCapability();
+  if (capability.supported) {
+    form.allow_live = true;
+    return;
+  placeholder
+  pendingLiveForm.value = target;
+placeholder;
+
+const confirmUnsupportedLive = () => {
+  if (pendingLiveForm.value === "create") createForm.allow_live = true;
+  if (pendingLiveForm.value === "edit") editForm.allow_live = true;
+  pendingLiveForm.value = null;
+placeholder;
+
+const cancelUnsupportedLive = () => {
+  pendingLiveForm.value = null;
+placeholder;
 
 const loadGroups = async () => {
   if (abortController) {
@@ -6159,6 +6217,7 @@ placeholder;
 
 onMounted(() => {
   loadGroups();
+  void loadLiveCapability();
   loadModelsListCandidates("create", 0, createForm.platform);
   document.addEventListener("click", handleClickOutside);
 placeholder);

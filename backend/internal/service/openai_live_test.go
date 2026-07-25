@@ -26,6 +26,10 @@ type liveAttestationStub struct {
 	err    error
 placeholder
 
+func (s liveAttestationStub) Check(context.Context) error {
+	return s.err
+placeholder
+
 func (s liveAttestationStub) Generate(context.Context) (string, error) {
 	return s.header, s.err
 placeholder
