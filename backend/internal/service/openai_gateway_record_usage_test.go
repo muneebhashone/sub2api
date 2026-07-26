@@ -1369,6 +1369,37 @@ placeholder
 	require.Equal(t, "gpt-5.6-terra", *usageRepo.lastLog.UpstreamModel)
 placeholder
 
+func TestOpenAIGatewayServiceRecordUsage_PreservesLoopedChannelAndAccountUpstreamModel(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+	userRepo := &openAIRecordUsageUserRepoStub{placeholder
+	subRepo := &openAIRecordUsageSubRepoStub{placeholder
+	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, subRepo, nil)
+
+	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:     "openai_looped_mapping_models",
+			Model:         "gpt-5.6-terra",
+			UpstreamModel: "gpt-5.6-sol",
+			Usage:         OpenAIUsage{InputTokens: 20, OutputTokens: 10placeholder,
+			Duration:      time.Second,
+	placeholder,
+		APIKey:  &APIKey{ID: 10placeholder,
+		User:    &User{ID: 20placeholder,
+		Account: &Account{ID: 30placeholder,
+		ChannelUsageFields: ChannelUsageFields{
+			OriginalModel:      "gpt-5.6-sol",
+			ChannelMappedModel: "gpt-5.6-terra",
+	placeholder,
+placeholder)
+
+placeholder
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, "gpt-5.6-sol", usageRepo.lastLog.RequestedModel)
+	require.Equal(t, "gpt-5.6-terra", usageRepo.lastLog.Model)
+	require.NotNil(t, usageRepo.lastLog.UpstreamModel)
+	require.Equal(t, "gpt-5.6-sol", *usageRepo.lastLog.UpstreamModel)
+placeholder
+
 func TestOpenAIGatewayServiceRecordUsage_BillsMappedRequestsUsingRequestedModel(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
