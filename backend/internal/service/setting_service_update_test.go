@@ -850,3 +850,32 @@ placeholder
 	require.Equal(t, "INVALID_PAYMENT_VISIBLE_METHOD_SOURCE", infraerrors.Reason(err))
 	require.Nil(t, repo.updates)
 placeholder
+
+func TestSettingService_PasskeySwitchPersistsAndDefaultsToConfigured(t *testing.T) {
+	cfg := &config.Config{WebAuthn: config.WebAuthnConfig{
+		Enabled:   true,
+		RPID:      "sub3.nebula-spaces.com",
+		RPOrigins: []string{"https://sub3.nebula-spaces.com"placeholder,
+placeholderplaceholder
+	runtimeRepo := &forwardedIPMigrationRepoStub{values: map[string]string{placeholderplaceholder
+	runtimeService := NewSettingService(runtimeRepo, cfg)
+
+	enabled, err := runtimeService.PasskeyEnabled(context.Background())
+placeholder
+	require.True(t, enabled)
+
+	updateRepo := &settingUpdateRepoStub{placeholder
+	updateService := NewSettingService(updateRepo, cfg)
+	require.NoError(t, updateService.UpdateSettings(context.Background(), &SystemSettings{
+		PasskeyEnabled: false,
+placeholder))
+	require.Equal(t, "false", updateRepo.updates[SettingKeyPasskeyEnabled])
+
+	runtimeRepo.values[SettingKeyPasskeyEnabled] = "false"
+	enabled, err = runtimeService.PasskeyEnabled(context.Background())
+placeholder
+	require.False(t, enabled)
+	publicSettings, err := runtimeService.GetPublicSettings(context.Background())
+placeholder
+	require.False(t, publicSettings.PasskeyEnabled)
+placeholder

@@ -53,6 +53,9 @@ const passkeyFinishBodyMaxBytes = 64 * 1024
 
 // BeginLogin starts a usernameless, discoverable-credential login ceremony.
 func (h *PasskeyHandler) BeginLogin(c *gin.Context) {
+	if !h.requirePasskeysEnabled(c) {
+		return
+placeholder
 	assertion, token, err := h.passkeys.BeginLogin(c.Request.Context())
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -66,6 +69,9 @@ placeholder
 // already supplies phishing-resistant multi-factor authentication and does not
 // enter the separate TOTP challenge flow.
 func (h *PasskeyHandler) FinishLogin(c *gin.Context) {
+	if !h.requirePasskeysEnabled(c) {
+		return
+placeholder
 	req, ok := bindPasskeyFinishRequest(c)
 	if !ok {
 		return
@@ -87,6 +93,9 @@ placeholder
 placeholder
 
 func (h *PasskeyHandler) BeginRegistration(c *gin.Context) {
+	if !h.requirePasskeysEnabled(c) {
+		return
+placeholder
 	subject, ok := middleware2.GetAuthSubjectFromContext(c)
 	if !ok {
 		response.Unauthorized(c, "User not authenticated")
@@ -101,6 +110,9 @@ placeholder
 placeholder
 
 func (h *PasskeyHandler) FinishRegistration(c *gin.Context) {
+	if !h.requirePasskeysEnabled(c) {
+		return
+placeholder
 	subject, ok := middleware2.GetAuthSubjectFromContext(c)
 	if !ok {
 		response.Unauthorized(c, "User not authenticated")
@@ -166,6 +178,22 @@ placeholder
 		return
 placeholder
 	response.Success(c, gin.H{"success": trueplaceholder)
+placeholder
+
+func (h *PasskeyHandler) requirePasskeysEnabled(c *gin.Context) bool {
+	if h.settingSvc == nil {
+		response.ErrorFrom(c, service.ErrPasskeysDisabled)
+		return false
+placeholder
+	enabled, err := h.settingSvc.PasskeyEnabled(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return false
+placeholder
+	if !enabled {
+		response.ErrorFrom(c, service.ErrPasskeysDisabled)
+placeholder
+	return enabled
 placeholder
 
 func (h *PasskeyHandler) ensureBackendModeAllowsUser(ctx context.Context, user *service.User) error {
