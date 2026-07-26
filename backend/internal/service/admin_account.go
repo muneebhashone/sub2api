@@ -455,6 +455,7 @@ placeholder
 func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]any) (*Account, error) {
 	// Probe/session state is system-managed. New accounts always start with automatic refresh disabled.
 	delete(accountExtra, UpstreamBillingProbeEnabledExtraKey)
+	delete(accountExtra, UpstreamBillingRateSyncEnabledExtraKey)
 	delete(accountExtra, UpstreamBillingProbeExtraKey)
 	delete(accountExtra, OllamaCloudUsageSessionExtraKey)
 	delete(accountExtra, OllamaCloudUsageAutoRefreshExtraKey)
@@ -594,10 +595,6 @@ placeholder
 	return account, nil
 placeholder
 
-type accountProbeEnabledAtomicUpdater interface {
-	UpdateWithUpstreamBillingProbeEnabled(context.Context, *Account, bool) error
-placeholder
-
 func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *UpdateAccountInput) (*Account, error) {
 	account, err := s.accountRepo.GetByID(ctx, id)
 	if err != nil {
@@ -667,7 +664,8 @@ placeholder else if len(input.Credentials) > 0 {
 placeholder
 	// Extra 使用 map：需要区分“未提供(nil)”与“显式清空({placeholder)”。
 	// 关闭配额限制时前端会删除 quota_* 键并提交 extra:{placeholder，此时也必须落库。
-	var requestedProbeEnabledUpdate *bool
+	requestedProbeEnabledUpdate := input.ProbeEnabled
+	requestedRateSyncEnabledUpdate := input.RateSyncEnabled
 	if input.Extra != nil {
 		requestedProbeEnabled, hasRequestedProbeEnabled := normalizedExtra[UpstreamBillingProbeEnabledExtraKey]
 		if hasRequestedProbeEnabled {
@@ -675,9 +673,13 @@ placeholder
 			if !ok {
 				return nil, infraerrors.BadRequest("INVALID_UPSTREAM_BILLING_PROBE_ENABLED", "upstream_billing_probe_enabled must be a boolean")
 		placeholder
+			if requestedProbeEnabledUpdate != nil && *requestedProbeEnabledUpdate != enabled {
+				return nil, infraerrors.BadRequest("CONFLICTING_UPSTREAM_BILLING_PROBE_ENABLED", "conflicting upstream_billing_probe_enabled values")
+		placeholder
 			requestedProbeEnabledUpdate = &enabled
 	placeholder
 		delete(normalizedExtra, UpstreamBillingProbeEnabledExtraKey)
+		delete(normalizedExtra, UpstreamBillingRateSyncEnabledExtraKey)
 		delete(normalizedExtra, UpstreamBillingProbeExtraKey)
 		delete(normalizedExtra, OllamaCloudUsageSessionExtraKey)
 		delete(normalizedExtra, OllamaCloudUsageAutoRefreshExtraKey)
@@ -691,6 +693,7 @@ placeholder
 			"quota_weekly_start",
 			grokBillingExtraKey,
 			UpstreamBillingProbeEnabledExtraKey,
+			UpstreamBillingRateSyncEnabledExtraKey,
 			UpstreamBillingProbeExtraKey,
 			OllamaCloudUsageSessionExtraKey,
 			OllamaCloudUsageAutoRefreshExtraKey,
@@ -698,13 +701,6 @@ placeholder
 	placeholder {
 			if v, ok := account.Extra[key]; ok {
 				normalizedExtra[key] = v
-		placeholder
-	placeholder
-		if hasRequestedProbeEnabled {
-			if isUpstreamBillingProbeAccount(account) {
-				normalizedExtra[UpstreamBillingProbeEnabledExtraKey] = requestedProbeEnabled
-		placeholder else {
-				delete(normalizedExtra, UpstreamBillingProbeEnabledExtraKey)
 		placeholder
 	placeholder
 		account.Extra = normalizedExtra
@@ -726,6 +722,35 @@ placeholder
 		ComputeQuotaResetAt(account.Extra)
 		NormalizeFixedQuotaWindows(account.Extra)
 placeholder
+	if requestedRateSyncEnabledUpdate != nil && *requestedRateSyncEnabledUpdate {
+		if requestedProbeEnabledUpdate != nil && !*requestedProbeEnabledUpdate {
+			return nil, infraerrors.BadRequest(
+				"UPSTREAM_BILLING_RATE_SYNC_REQUIRES_PROBE",
+				"upstream billing rate sync requires upstream billing probe",
+			)
+	placeholder
+		enabled := true
+		requestedProbeEnabledUpdate = &enabled
+placeholder
+	if requestedProbeEnabledUpdate != nil && !*requestedProbeEnabledUpdate {
+		disabled := false
+		requestedRateSyncEnabledUpdate = &disabled
+placeholder
+	if (requestedProbeEnabledUpdate != nil && *requestedProbeEnabledUpdate) ||
+		(requestedRateSyncEnabledUpdate != nil && *requestedRateSyncEnabledUpdate) {
+		if !isUpstreamBillingProbeAccount(account) {
+			return nil, ErrUpstreamBillingProbeAccountInvalid
+	placeholder
+placeholder
+	if account.Extra == nil && (requestedProbeEnabledUpdate != nil || requestedRateSyncEnabledUpdate != nil) {
+		account.Extra = make(map[string]any)
+placeholder
+	if requestedProbeEnabledUpdate != nil {
+		account.Extra[UpstreamBillingProbeEnabledExtraKey] = *requestedProbeEnabledUpdate
+placeholder
+	if requestedRateSyncEnabledUpdate != nil {
+		account.Extra[UpstreamBillingRateSyncEnabledExtraKey] = *requestedRateSyncEnabledUpdate
+placeholder
 	// 影子代理恒继承母账号(由 propagateProxyToShadows 同步),不接受独立编辑——外审 B/P1;
 	// 否则要等母账号下次改 proxy 才被覆盖,期间影子会出现"有时继承、有时独立"的漂移。
 	if input.ProxyID != nil && !account.IsCredentialShadow() {
@@ -741,6 +766,7 @@ placeholder
 		delete(account.Extra, UpstreamBillingProbeExtraKey)
 		if !isUpstreamBillingProbeAccount(account) {
 			delete(account.Extra, UpstreamBillingProbeEnabledExtraKey)
+			delete(account.Extra, UpstreamBillingRateSyncEnabledExtraKey)
 	placeholder
 placeholder
 	if account.Extra != nil {
@@ -806,23 +832,40 @@ placeholder
 	placeholder
 placeholder
 
-	probeEnabledAppliedAtomically := false
-	if requestedProbeEnabledUpdate != nil && isUpstreamBillingProbeAccount(account) {
-		if updater, ok := s.accountRepo.(accountProbeEnabledAtomicUpdater); ok {
-			if err := updater.UpdateWithUpstreamBillingProbeEnabled(ctx, account, *requestedProbeEnabledUpdate); err != nil {
-				return nil, err
-		placeholder
-			probeEnabledAppliedAtomically = true
-	placeholder
+	billingSettingsAppliedAtomically := false
+	updater := s.accountBillingRepo
+	if updater == nil {
+		// Unit tests and narrow internal callers may construct adminServiceImpl
+		// directly; production wiring requires this capability through
+		// AdminAccountRepository.
+		updater, _ = s.accountRepo.(AccountBillingSettingsRepository)
 placeholder
-	if !probeEnabledAppliedAtomically {
+	if updater != nil {
+		if err := updater.UpdateWithAccountBillingSettings(
+			ctx,
+			account,
+			requestedProbeEnabledUpdate,
+			requestedRateSyncEnabledUpdate,
+			input.RateMultiplier,
+		); err != nil {
+			return nil, err
+	placeholder
+		billingSettingsAppliedAtomically = true
+placeholder
+	if !billingSettingsAppliedAtomically {
 		if err := s.accountRepo.Update(ctx, account); err != nil {
 			return nil, err
 	placeholder
-		if requestedProbeEnabledUpdate != nil && isUpstreamBillingProbeAccount(account) {
-			if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{
-				UpstreamBillingProbeEnabledExtraKey: *requestedProbeEnabledUpdate,
-		placeholder); err != nil {
+		if (requestedProbeEnabledUpdate != nil || requestedRateSyncEnabledUpdate != nil) &&
+			isUpstreamBillingProbeAccount(account) {
+			settings := make(map[string]any, 2)
+			if requestedProbeEnabledUpdate != nil {
+				settings[UpstreamBillingProbeEnabledExtraKey] = *requestedProbeEnabledUpdate
+		placeholder
+			if requestedRateSyncEnabledUpdate != nil {
+				settings[UpstreamBillingRateSyncEnabledExtraKey] = *requestedRateSyncEnabledUpdate
+		placeholder
+			if err := s.accountRepo.UpdateExtra(ctx, account.ID, settings); err != nil {
 				return nil, err
 		placeholder
 	placeholder
@@ -854,6 +897,9 @@ placeholder
 // UpdateAccountExtra 仅对 Extra JSONB 做 key 级合并，避免覆盖其它运行态键
 // （如 model_rate_limits / passive_usage_* 等）。
 func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
+	delete(updates, UpstreamBillingProbeEnabledExtraKey)
+	delete(updates, UpstreamBillingRateSyncEnabledExtraKey)
+	delete(updates, UpstreamBillingProbeExtraKey)
 	delete(updates, OllamaCloudUsageSessionExtraKey)
 	delete(updates, OllamaCloudUsageAutoRefreshExtraKey)
 	delete(updates, OllamaCloudUsageSnapshotExtraKey)
@@ -877,6 +923,7 @@ placeholder
 func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error) {
 	// Managed probe/session state may only enter through dedicated typed endpoints.
 	delete(input.Extra, UpstreamBillingProbeEnabledExtraKey)
+	delete(input.Extra, UpstreamBillingRateSyncEnabledExtraKey)
 	delete(input.Extra, UpstreamBillingProbeExtraKey)
 	delete(input.Extra, OllamaCloudUsageSessionExtraKey)
 	delete(input.Extra, OllamaCloudUsageAutoRefreshExtraKey)
@@ -910,7 +957,7 @@ placeholder
 
 	// 预取所有目标账号，供凭据守卫/代理守卫/混合渠道检查共用，避免多次 DB 查询。
 	var cachedTargets []*Account
-	if len(input.Credentials) > 0 || input.ProxyID != nil || needMixedChannelCheck || hasLongContextBillingUpdate || input.ProbeEnabled != nil {
+	if len(input.Credentials) > 0 || input.ProxyID != nil || needMixedChannelCheck || hasLongContextBillingUpdate || input.ProbeEnabled != nil || input.RateMultiplier != nil {
 		loaded, err := s.accountRepo.GetByIDs(ctx, input.AccountIDs)
 		if err != nil {
 			return nil, err
@@ -996,6 +1043,21 @@ placeholder
 		if *input.RateMultiplier < 0 {
 			return nil, errors.New("rate_multiplier must be >= 0")
 	placeholder
+		syncEnabledCount := 0
+		for _, account := range cachedTargets {
+			if account == nil || account.Extra == nil {
+				continue
+		placeholder
+			enabled, _ := account.Extra[UpstreamBillingRateSyncEnabledExtraKey].(bool)
+			if enabled {
+				syncEnabledCount++
+		placeholder
+	placeholder
+		if syncEnabledCount > 0 {
+			return nil, ErrUpstreamBillingRateSyncBulkConflict.WithMetadata(map[string]string{
+				"count": strconv.Itoa(syncEnabledCount),
+		placeholder)
+	placeholder
 placeholder
 
 	// 校验并规范化请求头覆写配置（批量路径为 JSONB 顶层 key 合并，直接校验增量即可）
@@ -1014,6 +1076,9 @@ placeholder
 			repoUpdates.Extra = make(map[string]any)
 	placeholder
 		repoUpdates.Extra[UpstreamBillingProbeEnabledExtraKey] = *input.ProbeEnabled
+		if !*input.ProbeEnabled {
+			repoUpdates.Extra[UpstreamBillingRateSyncEnabledExtraKey] = false
+	placeholder
 placeholder
 	if updatesUpstreamBillingProbeIdentity(input.Credentials) || input.ProxyID != nil {
 		if repoUpdates.Extra == nil {

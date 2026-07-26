@@ -88,6 +88,7 @@ import { computed placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import HelpTooltip from '@/components/common/HelpTooltip.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { formatMultiplier placeholder from '@/utils/formatters'
 import type { Account, UpstreamBillingProbeSnapshot placeholder from '@/types'
 
 const props = withDefaults(defineProps<{
@@ -191,7 +192,7 @@ placeholder)
 const effectiveRate = computed(() => {
   if (!validTimestamps.value || stale.value || !['ok', 'failed'].includes(snapshot.value?.status ?? '')) return '-'
   const value = currentEffectiveRate.value
-  return value == null ? '-' : `${Number(value.toPrecision(12))placeholderx`
+  return value == null ? '-' : `${formatMultiplier(value)placeholderx`
 placeholder)
 const statusLabel = computed(() => {
   if (!snapshot.value) return t('admin.accounts.upstreamBilling.notProbed')
