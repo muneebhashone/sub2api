@@ -23,7 +23,6 @@ placeholder{
 		{"kimi-coding", "kimi-coding-v2", ThinkingProtocolPassbackRequiredplaceholder,
 		{"kimi-k2-thinking", "kimi-k2-thinking", ThinkingProtocolPassbackRequiredplaceholder,
 		{"kimi-k3 platform", "kimi-k3", ThinkingProtocolPassbackRequiredplaceholder,
-		{"kimi-k3 anthropic 1m", "kimi-k3[1m]", ThinkingProtocolPassbackRequiredplaceholder,
 		{"kimi code bare k3", "k3", ThinkingProtocolPassbackRequiredplaceholder,
 		{"kimi code bare k3-256k", "k3-256k", ThinkingProtocolPassbackRequiredplaceholder,
 		{"moonshot-v1", "moonshot-v1-32k", ThinkingProtocolPassbackRequiredplaceholder,
