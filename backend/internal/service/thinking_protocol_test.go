@@ -22,6 +22,10 @@ placeholder{
 		{"deepseek-r2-thinking", "deepseek-r2-thinking", ThinkingProtocolPassbackRequiredplaceholder,
 		{"kimi-coding", "kimi-coding-v2", ThinkingProtocolPassbackRequiredplaceholder,
 		{"kimi-k2-thinking", "kimi-k2-thinking", ThinkingProtocolPassbackRequiredplaceholder,
+		{"kimi-k3 platform", "kimi-k3", ThinkingProtocolPassbackRequiredplaceholder,
+		{"kimi-k3 anthropic 1m", "kimi-k3[1m]", ThinkingProtocolPassbackRequiredplaceholder,
+		{"kimi code bare k3", "k3", ThinkingProtocolPassbackRequiredplaceholder,
+		{"kimi code bare k3-256k", "k3-256k", ThinkingProtocolPassbackRequiredplaceholder,
 		{"moonshot-v1", "moonshot-v1-32k", ThinkingProtocolPassbackRequiredplaceholder,
 		{"glm-5.1", "glm-5.1", ThinkingProtocolPassbackRequiredplaceholder,
 		{"qwen-2 thinking variant", "qwen-2-72b-thinking", ThinkingProtocolPassbackRequiredplaceholder,
@@ -44,6 +48,8 @@ placeholder{
 		{"qwen3 non-thinking", "qwen3-32b", ThinkingProtocolUnknownplaceholder,
 		{"qwen2 non-thinking", "qwen-2-72b", ThinkingProtocolUnknownplaceholder,
 		{"random vendor", "yi-large", ThinkingProtocolUnknownplaceholder,
+		// 相似但未知的 k3 型号：不得因含 k3 被宽泛匹配为 passback-required
+		{"k3-like unknown", "foo-k3-bar", ThinkingProtocolUnknownplaceholder,
 		// MiniMax 非 M 系列（如 abab、speech 等其他产品线）—— unknown
 		{"minimax abab non-M", "abab6.5-chat", ThinkingProtocolUnknownplaceholder,
 		// Doubao 走 OpenAI 协议，不属于本网关 Anthropic 路径——归 unknown
