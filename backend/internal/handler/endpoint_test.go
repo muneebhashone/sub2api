@@ -146,6 +146,40 @@ placeholder
 placeholder
 placeholder
 
+func TestShouldUseAntigravityCompat(t *testing.T) {
+	tests := []struct {
+		name    string
+		account *service.Account
+		want    bool
+placeholder{
+		{"oauth", &service.Account{Platform: service.PlatformAntigravity, Type: service.AccountTypeOAuthplaceholder, trueplaceholder,
+		{"setup token", &service.Account{Platform: service.PlatformAntigravity, Type: service.AccountTypeSetupTokenplaceholder, falseplaceholder,
+		{"upstream", &service.Account{Platform: service.PlatformAntigravity, Type: service.AccountTypeUpstreamplaceholder, falseplaceholder,
+		{"api key", &service.Account{Platform: service.PlatformAntigravity, Type: service.AccountTypeAPIKeyplaceholder, falseplaceholder,
+		{"anthropic oauth", &service.Account{Platform: service.PlatformAnthropic, Type: service.AccountTypeOAuthplaceholder, falseplaceholder,
+		{"nil", nil, falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, shouldUseAntigravityCompat(tt.account))
+	placeholder)
+placeholder
+placeholder
+
+func TestGetUpstreamEndpointPrefersRuntimeOverride(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, EndpointChatCompletions, nil)
+	c.Set(ctxKeyInboundEndpoint, EndpointChatCompletions)
+
+	setActualUpstreamEndpoint(c, EndpointAntigravityGenerateContent)
+	require.Equal(t, EndpointAntigravityGenerateContent, GetUpstreamEndpoint(c, service.PlatformAntigravity))
+
+	setActualUpstreamEndpoint(c, "")
+	require.Equal(t, EndpointMessages, GetUpstreamEndpoint(c, service.PlatformAntigravity))
+placeholder
+
 func TestResolveOpenAIUpstreamEndpointPrefersForwardResult(t *testing.T) {
 	tests := []struct {
 		name            string

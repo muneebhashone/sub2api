@@ -228,7 +228,21 @@ placeholder
 		if channelMapping.Mapped {
 			forwardBody = h.gatewayService.ReplaceModelInBody(body, channelMapping.MappedModel)
 	placeholder
-		result, err := h.gatewayService.ForwardAsResponses(requestCtx, c, account, forwardBody, parsedReq)
+		var result *service.ForwardResult
+		setActualUpstreamEndpoint(c, "")
+		if shouldUseAntigravityCompat(account) {
+			if h.antigravityGatewayService == nil {
+				h.responsesErrorResponse(c, http.StatusBadGateway, "upstream_error", "Antigravity compatibility service is not configured")
+				if accountReleaseFunc != nil {
+					accountReleaseFunc()
+			placeholder
+				return
+		placeholder
+			setActualUpstreamEndpoint(c, EndpointAntigravityGenerateContent)
+			result, err = h.antigravityGatewayService.ForwardAsResponses(requestCtx, c, account, forwardBody, parsedReq)
+	placeholder else {
+			result, err = h.gatewayService.ForwardAsResponses(requestCtx, c, account, forwardBody, parsedReq)
+	placeholder
 
 		if accountReleaseFunc != nil {
 			accountReleaseFunc()
