@@ -204,6 +204,8 @@ placeholder
 
 	setOpsRequestContext(c, modelName, stream)
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(stream, false)))
+	pricingCtx, pricingAt := service.WithGatewayTokenRequestPricing(c.Request.Context())
+	c.Request = c.Request.WithContext(pricingCtx)
 
 	if decision := h.checkSecurityAudit(c, reqLog, apiKey, authSubject, service.ContentModerationProtocolGemini, modelName, body); decision != nil && !decision.AllowNextStage {
 		googleSecurityAuditError(c, decision)
@@ -353,6 +355,7 @@ placeholder
 
 	// 判断是否真的绑定了粘性会话：有 sessionKey 且已经绑定到某个账号
 	hasBoundSession := sessionKey != "" && sessionBoundAccountID > 0
+	profitStickyAccountID := sessionBoundAccountID
 	cleanedForUnknownBinding := false
 
 	fs := NewFailoverState(h.maxAccountSwitchesGemini, hasBoundSession)
@@ -466,9 +469,20 @@ placeholder
 				geminiConcurrency.DecrementAccountWaitCount(c.Request.Context(), account.ID)
 				accountWaitCounted = false
 		placeholder
-			if err := h.gatewayService.BindStickySession(c.Request.Context(), apiKey.GroupID, sessionKey, account.ID); err != nil {
-				reqLog.Warn("gemini.bind_sticky_session_failed", zap.Int64("account_id", account.ID), zap.Error(err))
+	placeholder
+		latest, vetoed, reason := h.gatewayService.GatewayProfitControlVetoLatest(c.Request.Context(), account)
+		if vetoed {
+			if accountReleaseFunc != nil {
+				accountReleaseFunc()
 		placeholder
+			reqLog.Debug("gemini.account_slot_profit_vetoed", zap.Int64("account_id", account.ID), zap.String("reason", reason))
+			fs.FailedAccountIDs[account.ID] = struct{placeholder{placeholder
+			continue
+	placeholder
+		account = latest
+		selection.Account = latest
+		if err := h.gatewayService.BindStickySessionAfterProfitAdmission(c.Request.Context(), apiKey.GroupID, sessionKey, account.ID, profitStickyAccountID); err != nil {
+			reqLog.Warn("gemini.bind_sticky_session_after_profit_admission_failed", zap.Int64("account_id", account.ID), zap.Error(err))
 	placeholder
 		// 账号槽位/等待计数需要在超时或断开时安全回收
 		accountReleaseFunc = wrapReleaseOnDone(c.Request.Context(), accountReleaseFunc)
@@ -553,6 +567,7 @@ placeholder
 				User:                  apiKey.User,
 				Account:               account,
 				Subscription:          subscription,
+				PricingAt:             pricingAt,
 				InboundEndpoint:       inboundEndpoint,
 				UpstreamEndpoint:      upstreamEndpoint,
 				UserAgent:             userAgent,

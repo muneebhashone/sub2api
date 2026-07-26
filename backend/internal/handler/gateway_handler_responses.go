@@ -90,9 +90,13 @@ placeholder
 	setOpsRequestContext(c, reqModel, reqStream)
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(reqStream, false)))
 	requestCtx := c.Request.Context()
+	pricingAt := time.Time{placeholder
 	if service.IsImageGenerationIntentForPlatform("/v1/responses", reqModel, body, openAICompatibleRequestPlatform(c.Request.Context(), apiKey)) {
 		requestCtx = service.WithOpenAIImageGenerationIntent(requestCtx)
+placeholder else {
+		requestCtx, pricingAt = service.WithGatewayTokenRequestPricing(requestCtx)
 placeholder
+	c.Request = c.Request.WithContext(requestCtx)
 
 	// 解析渠道级模型映射
 	channelMapping, _ := h.gatewayService.ResolveChannelMappingAndRestrict(requestCtx, apiKey.GroupID, reqModel)
@@ -157,6 +161,7 @@ placeholder
 		APIKeyID:  apiKey.ID,
 placeholder
 	sessionHash := h.gatewayService.GenerateSessionHash(parsedReq)
+	sessionBoundAccountID, _ := h.gatewayService.GetCachedSessionAccountID(requestCtx, apiKey.GroupID, sessionHash)
 
 	// 3. Account selection + failover loop
 	fs := NewFailoverState(h.maxAccountSwitches, false)
@@ -219,6 +224,20 @@ placeholder
 				h.handleConcurrencyError(c, err, "account", streamStarted)
 				return
 		placeholder
+	placeholder
+		latest, vetoed, reason := h.gatewayService.GatewayProfitControlVetoLatest(requestCtx, account)
+		if vetoed {
+			if accountReleaseFunc != nil {
+				accountReleaseFunc()
+		placeholder
+			reqLog.Debug("gateway.responses.account_slot_profit_vetoed", zap.Int64("account_id", account.ID), zap.String("reason", reason))
+			fs.FailedAccountIDs[account.ID] = struct{placeholder{placeholder
+			continue
+	placeholder
+		account = latest
+		selection.Account = latest
+		if err := h.gatewayService.BindStickySessionAfterProfitAdmission(requestCtx, apiKey.GroupID, sessionHash, account.ID, sessionBoundAccountID); err != nil {
+			reqLog.Warn("gateway.responses.bind_sticky_session_after_profit_admission_failed", zap.Int64("account_id", account.ID), zap.Error(err))
 	placeholder
 		accountReleaseFunc = wrapReleaseOnDone(c.Request.Context(), accountReleaseFunc)
 
@@ -299,6 +318,7 @@ placeholder
 				User:               apiKey.User,
 				Account:            account,
 				Subscription:       subscription,
+				PricingAt:          pricingAt,
 				InboundEndpoint:    inboundEndpoint,
 				UpstreamEndpoint:   upstreamEndpoint,
 				UserAgent:          userAgent,
