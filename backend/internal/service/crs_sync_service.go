@@ -1173,7 +1173,7 @@ placeholder
 		return
 placeholder
 	target := &Account{Platform: targetPlatform, Type: targetType, Credentials: targetCredentialsplaceholder
-	if targetPlatform == PlatformOpenAI && targetType == AccountTypeAPIKey {
+	if IsUpstreamBillingProbeIdentity(targetPlatform, targetType) {
 		if enabled, ok := existing.Extra[UpstreamBillingProbeEnabledExtraKey]; ok {
 			extra[UpstreamBillingProbeEnabledExtraKey] = enabled
 	placeholder
