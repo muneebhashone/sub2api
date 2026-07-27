@@ -523,5 +523,7 @@ const setUserKeyword = (email: string) => {
   showUserDropdown.value = false
 placeholder
 
-defineExpose({ setUserKeyword placeholder)
+const getUserSearchRevision = () => userSearchSequence
+
+defineExpose({ getUserSearchRevision, setUserKeyword placeholder)
 </script>

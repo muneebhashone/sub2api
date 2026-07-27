@@ -40,8 +40,8 @@ func TestResolveModelDimensionExpression(t *testing.T) {
 		want      string
 placeholder{
 		{usagestats.ModelSourceRequested, "COALESCE(NULLIF(TRIM(requested_model), ''), model)"placeholder,
-		{usagestats.ModelSourceUpstream, "COALESCE(NULLIF(TRIM(upstream_model), ''), COALESCE(NULLIF(TRIM(requested_model), ''), model))"placeholder,
-		{usagestats.ModelSourceMapping, "(COALESCE(NULLIF(TRIM(requested_model), ''), model) || ' -> ' || COALESCE(NULLIF(TRIM(upstream_model), ''), COALESCE(NULLIF(TRIM(requested_model), ''), model)))"placeholder,
+		{usagestats.ModelSourceUpstream, "COALESCE(NULLIF(TRIM(upstream_model), ''), model)"placeholder,
+		{usagestats.ModelSourceMapping, "(COALESCE(NULLIF(TRIM(requested_model), ''), model) || ' -> ' || COALESCE(NULLIF(TRIM(upstream_model), ''), model))"placeholder,
 		{"", "COALESCE(NULLIF(TRIM(requested_model), ''), model)"placeholder,
 		{"invalid", "COALESCE(NULLIF(TRIM(requested_model), ''), model)"placeholder,
 placeholder

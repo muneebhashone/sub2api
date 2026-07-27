@@ -54,22 +54,27 @@ placeholder
 placeholder
 
 func computeBasicStats(st *DashboardStats, orders []*dbent.PaymentOrder, todayStart time.Time) {
-	var totalAmount, todayAmount float64
+	st.TotalAmount = make(CurrencyAmounts)
+	st.TodayAmount = make(CurrencyAmounts)
+	st.AvgAmount = make(CurrencyAmounts)
+	currencyCounts := make(map[string]int)
 	var todayCount int
 	for _, o := range orders {
-		totalAmount += o.PayAmount
+		currency := PaymentOrderCurrency(o)
+		st.TotalAmount[currency] += o.PayAmount
+		currencyCounts[currency]++
 		if o.PaidAt != nil && !o.PaidAt.Before(todayStart) {
-			todayAmount += o.PayAmount
+			st.TodayAmount[currency] += o.PayAmount
 			todayCount++
 	placeholder
 placeholder
-	st.TotalAmount = math.Round(totalAmount*100) / 100
-	st.TodayAmount = math.Round(todayAmount*100) / 100
 	st.TotalCount = len(orders)
 	st.TodayCount = todayCount
-	if st.TotalCount > 0 {
-		st.AvgAmount = math.Round(totalAmount/float64(st.TotalCount)*100) / 100
+	for currency, totalAmount := range st.TotalAmount {
+		st.AvgAmount[currency] = roundAmount(totalAmount / float64(currencyCounts[currency]))
 placeholder
+	roundCurrencyAmounts(st.TotalAmount)
+	roundCurrencyAmounts(st.TodayAmount)
 placeholder
 
 func buildDailySeries(orders []*dbent.PaymentOrder, since time.Time, days int) []DailyStats {
@@ -81,20 +86,20 @@ func buildDailySeries(orders []*dbent.PaymentOrder, since time.Time, days int) [
 		date := o.PaidAt.Format("2006-01-02")
 		ds, ok := dailyMap[date]
 		if !ok {
-			ds = &DailyStats{Date: dateplaceholder
+			ds = &DailyStats{Date: date, Amount: make(CurrencyAmounts)placeholder
 			dailyMap[date] = ds
 	placeholder
-		ds.Amount += o.PayAmount
+		ds.Amount[PaymentOrderCurrency(o)] += o.PayAmount
 		ds.Count++
 placeholder
 	series := make([]DailyStats, 0, days)
 	for i := 0; i < days; i++ {
 		date := since.AddDate(0, 0, i+1).Format("2006-01-02")
 		if ds, ok := dailyMap[date]; ok {
-			ds.Amount = math.Round(ds.Amount*100) / 100
+			roundCurrencyAmounts(ds.Amount)
 			series = append(series, *ds)
 	placeholder else {
-			series = append(series, DailyStats{Date: dateplaceholder)
+			series = append(series, DailyStats{Date: date, Amount: make(CurrencyAmounts)placeholder)
 	placeholder
 placeholder
 	return series
@@ -105,47 +110,69 @@ func buildMethodDistribution(orders []*dbent.PaymentOrder) []PaymentMethodStat {
 	for _, o := range orders {
 		ms, ok := methodMap[o.PaymentType]
 		if !ok {
-			ms = &PaymentMethodStat{Type: o.PaymentTypeplaceholder
+			ms = &PaymentMethodStat{Type: o.PaymentType, Amount: make(CurrencyAmounts)placeholder
 			methodMap[o.PaymentType] = ms
 	placeholder
-		ms.Amount += o.PayAmount
+		ms.Amount[PaymentOrderCurrency(o)] += o.PayAmount
 		ms.Count++
 placeholder
 	methods := make([]PaymentMethodStat, 0, len(methodMap))
 	for _, ms := range methodMap {
-		ms.Amount = math.Round(ms.Amount*100) / 100
+		roundCurrencyAmounts(ms.Amount)
 		methods = append(methods, *ms)
 placeholder
+	sort.Slice(methods, func(i, j int) bool {
+		return methods[i].Type < methods[j].Type
+placeholder)
 	return methods
 placeholder
 
-func buildTopUsers(orders []*dbent.PaymentOrder) []TopUserStat {
-	userMap := make(map[int64]*TopUserStat)
+func buildTopUsers(orders []*dbent.PaymentOrder) TopUsersByCurrency {
+	userMap := make(map[string]map[int64]*TopUserStat)
 	for _, o := range orders {
-		us, ok := userMap[o.UserID]
+		currency := PaymentOrderCurrency(o)
+		users, ok := userMap[currency]
+		if !ok {
+			users = make(map[int64]*TopUserStat)
+			userMap[currency] = users
+	placeholder
+		us, ok := users[o.UserID]
 		if !ok {
 			us = &TopUserStat{UserID: o.UserID, Email: o.UserEmailplaceholder
-			userMap[o.UserID] = us
+			users[o.UserID] = us
 	placeholder
 		us.Amount += o.PayAmount
 placeholder
-	userList := make([]*TopUserStat, 0, len(userMap))
-	for _, us := range userMap {
-		us.Amount = math.Round(us.Amount*100) / 100
-		userList = append(userList, us)
-placeholder
-	sort.Slice(userList, func(i, j int) bool {
-		return userList[i].Amount > userList[j].Amount
-placeholder)
-	limit := topUsersLimit
-	if len(userList) < limit {
-		limit = len(userList)
-placeholder
-	result := make([]TopUserStat, 0, limit)
-	for i := 0; i < limit; i++ {
-		result = append(result, *userList[i])
+	result := make(TopUsersByCurrency, len(userMap))
+	for currency, users := range userMap {
+		userList := make([]*TopUserStat, 0, len(users))
+		for _, us := range users {
+			us.Amount = roundAmount(us.Amount)
+			userList = append(userList, us)
+	placeholder
+		sort.Slice(userList, func(i, j int) bool {
+			return userList[i].Amount > userList[j].Amount
+	placeholder)
+		limit := topUsersLimit
+		if len(userList) < limit {
+			limit = len(userList)
+	placeholder
+		result[currency] = make([]TopUserStat, 0, limit)
+		for i := 0; i < limit; i++ {
+			result[currency] = append(result[currency], *userList[i])
+	placeholder
 placeholder
 	return result
+placeholder
+
+func roundCurrencyAmounts(amounts CurrencyAmounts) {
+	for currency, amount := range amounts {
+		amounts[currency] = roundAmount(amount)
+placeholder
+placeholder
+
+func roundAmount(amount float64) float64 {
+	return math.Round(amount*100) / 100
 placeholder
 
 // --- Audit Logs ---
