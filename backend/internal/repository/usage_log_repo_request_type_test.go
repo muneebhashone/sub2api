@@ -374,6 +374,23 @@ placeholder
 	require.NoError(t, mock.ExpectationsWereMet())
 placeholder
 
+func TestUsageLogRepositoryListWithFiltersRequestID(t *testing.T) {
+	db, mock := newSQLMock(t)
+	repo := &usageLogRepository{sql: dbplaceholder
+
+	filters := usagestats.UsageLogFilters{RequestID: " req-0123 "placeholder
+
+	mock.ExpectQuery("SELECT .* FROM usage_logs WHERE request_id = \\$1 ORDER BY id DESC LIMIT \\$2 OFFSET \\$3").
+		WithArgs("req-0123", 21, 0).
+		WillReturnRows(sqlmock.NewRows([]string{"id"placeholder))
+
+	logs, page, err := repo.ListWithFilters(context.Background(), pagination.PaginationParams{Page: 1, PageSize: 20placeholder, filters)
+placeholder
+	require.Empty(t, logs)
+	require.NotNil(t, page)
+	require.NoError(t, mock.ExpectationsWereMet())
+placeholder
+
 func TestUsageLogRepositoryListWithFiltersRequestedModelSource(t *testing.T) {
 	db, mock := newSQLMock(t)
 	repo := &usageLogRepository{sql: dbplaceholder
