@@ -170,6 +170,74 @@ placeholder
 	require.Contains(t, out, "data: [DONE]")
 placeholder
 
+func TestGeminiForwardAsChatCompletions_FunctionNamedWebSearchStaysClientSide(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	httpStub := &geminiCompatHTTPUpstreamStub{
+		response: &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+			Body: io.NopCloser(strings.NewReader(
+				`{"candidates":[{"content":{"parts":[{"text":"hello"placeholder]placeholder,"finishReason":"STOP"placeholder],"usageMetadata":{"promptTokenCount":2,"candidatesTokenCount":1placeholderplaceholder`,
+			)),
+	placeholder,
+placeholder
+	svc := &GeminiMessagesCompatService{
+		httpUpstream: httpStub,
+		cfg:          &config.Config{placeholder,
+placeholder
+	account := &Account{
+		ID:       103,
+placeholder
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key": "gemini-api-key",
+	placeholder,
+		Concurrency: 1,
+placeholder
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	body := []byte(`{
+		"model":"gemini-3.6-flash-high",
+		"messages":[{"role":"user","content":"search and read"placeholder],
+		"tools":[
+			{"type":"function","function":{"name":"web_search","description":"Search through the Hermes client","parameters":{"type":"object","properties":{"query":{"type":"string"placeholderplaceholder,"required":["query"]placeholderplaceholderplaceholder,
+			{"type":"function","function":{"name":"read_file","description":"Read a local file","parameters":{"type":"object","properties":{"path":{"type":"string"placeholderplaceholder,"required":["path"]placeholderplaceholderplaceholder
+		]
+placeholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NotNil(t, httpStub.lastReq)
+
+	postedBody, err := io.ReadAll(httpStub.lastReq.Body)
+placeholder
+
+	var posted map[string]any
+	require.NoError(t, json.Unmarshal(postedBody, &posted))
+	tools, ok := posted["tools"].([]any)
+	require.True(t, ok)
+	require.Len(t, tools, 1, "Chat Completions function tools must not be promoted to Gemini built-ins by name")
+
+	functionTool, ok := tools[0].(map[string]any)
+	require.True(t, ok)
+	functionDecls, ok := functionTool["functionDeclarations"].([]any)
+	require.True(t, ok)
+	require.Len(t, functionDecls, 2)
+	webSearchDecl, ok := functionDecls[0].(map[string]any)
+	require.True(t, ok)
+	readFileDecl, ok := functionDecls[1].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "web_search", webSearchDecl["name"])
+	require.Equal(t, "read_file", readFileDecl["name"])
+	require.NotContains(t, functionTool, "googleSearch")
+	require.NotContains(t, functionTool, "google_search")
+placeholder
+
 // TestConvertClaudeToolsToGeminiTools_CustomType 测试custom类型工具转换
 func TestConvertClaudeToolsToGeminiTools_CustomType(t *testing.T) {
 	tests := []struct {
