@@ -33,6 +33,7 @@ func newAuthRoutesTestRouter(redisClient *redis.Client) *gin.Engine {
 	placeholder),
 		redisClient,
 		nil,
+		nil,
 	)
 
 	return router
