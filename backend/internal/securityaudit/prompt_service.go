@@ -166,7 +166,7 @@ placeholder
 	return s.evaluator.Evaluate(ctx, cfg, snapshot)
 placeholder
 
-func (s *PromptService) GetConfig() PublicConfig { return s.config.Public() placeholder
+func (s *PromptService) GetConfig() (PublicConfig, error) { return s.config.Public() placeholder
 
 func (s *PromptService) SaveConfig(ctx context.Context, req UpdateConfigRequest, actorID int64) (PublicConfig, error) {
 	return s.config.Save(ctx, req, actorID)

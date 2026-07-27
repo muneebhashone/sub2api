@@ -48,7 +48,7 @@ placeholder
 	return s.cfg.EffectiveMode()
 placeholder
 func (s *fakeConfigStore) BlockingActivationDegraded() bool { return false placeholder
-func (s *fakeConfigStore) Public() PublicConfig             { return PublicConfig{placeholder placeholder
+func (s *fakeConfigStore) Public() (PublicConfig, error)    { return PublicConfig{placeholder, nil placeholder
 func (s *fakeConfigStore) Save(context.Context, UpdateConfigRequest, int64) (PublicConfig, error) {
 	return PublicConfig{placeholder, nil
 placeholder
