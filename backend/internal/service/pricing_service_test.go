@@ -454,6 +454,83 @@ placeholder
 	require.InDelta(t, 1.5e-5, got.OutputCostPerToken, 1e-12)
 placeholder
 
+func TestPricingService_Gemini36FlashThinkingTiersUseBasePricing(t *testing.T) {
+	basePricing := &LiteLLMModelPricing{
+		InputCostPerToken:       1.5e-6,
+		OutputCostPerToken:      7.5e-6,
+		CacheReadInputTokenCost: 0.15e-6,
+placeholder
+	svc := &PricingService{pricingData: map[string]*LiteLLMModelPricing{
+		"gemini-3.6-flash": basePricing,
+placeholderplaceholder
+
+	for _, model := range []string{
+		"gemini-3.6-flash",
+		"gemini-3.6-flash-high",
+		"gemini-3.6-flash-low",
+		"gemini-3.6-flash-medium",
+		"gemini-3.6-flash-tiered",
+placeholder {
+		t.Run(model, func(t *testing.T) {
+			require.Same(t, basePricing, svc.GetModelPricing(model))
+	placeholder)
+placeholder
+placeholder
+
+func TestPricingService_Gemini36FlashTierSpecificPricingTakesPrecedence(t *testing.T) {
+	basePricing := &LiteLLMModelPricing{InputCostPerToken: placeholder
+	tierPricing := &LiteLLMModelPricing{InputCostPerToken: 2e-6placeholder
+	svc := &PricingService{pricingData: map[string]*LiteLLMModelPricing{
+		"gemini-3.6-flash":     basePricing,
+		"gemini-3.6-flash-low": tierPricing,
+placeholderplaceholder
+
+	require.Same(t, tierPricing, svc.GetModelPricing("models/gemini-3.6-flash-low"))
+placeholder
+
+func TestBillingService_Gemini36FlashThinkingTierFallbacksAreBillable(t *testing.T) {
+	svc := NewBillingService(&config.Config{placeholder, nil)
+	tokens := UsageTokens{InputTokens: 1_000_000, OutputTokens: 1_000_000, CacheReadTokens: 1_000_000placeholder
+
+	for _, model := range []string{
+		"gemini-3.6-flash",
+		"gemini-3.6-flash-high",
+		"gemini-3.6-flash-low",
+		"gemini-3.6-flash-medium",
+		"gemini-3.6-flash-tiered",
+placeholder {
+		t.Run(model, func(t *testing.T) {
+			cost, err := svc.CalculateCost(model, tokens, 1)
+		placeholder
+			require.InDelta(t, 1.5, cost.InputCost, 1e-12)
+			require.InDelta(t, 7.5, cost.OutputCost, 1e-12)
+			require.InDelta(t, 0.15, cost.CacheReadCost, 1e-12)
+			require.InDelta(t, 9.15, cost.TotalCost, 1e-12)
+	placeholder)
+placeholder
+placeholder
+
+func TestDefaultPricingIncludesGemini36FlashRates(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "resources", "model-pricing", "model_prices_and_context_window.json"))
+placeholder
+
+	pricingSvc := &PricingService{placeholder
+	pricingData, err := pricingSvc.parsePricingData(data)
+placeholder
+	pricingSvc.pricingData = pricingData
+	billingSvc := NewBillingService(&config.Config{placeholder, pricingSvc)
+
+	for _, model := range []string{"gemini-3.6-flash", "gemini-3.6-flash-low", "gemini-3.6-flash-high"placeholder {
+		t.Run(model, func(t *testing.T) {
+			pricing, err := billingSvc.GetModelPricing(model)
+		placeholder
+			require.InDelta(t, 1.5e-6, pricing.InputPricePerToken, 1e-12)
+			require.InDelta(t, 7.5e-6, pricing.OutputPricePerToken, 1e-12)
+			require.InDelta(t, 0.15e-6, pricing.CacheReadPricePerToken, 1e-12)
+	placeholder)
+placeholder
+placeholder
+
 func TestDefaultPricingIncludesCodexAutoReview(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "resources", "model-pricing", "model_prices_and_context_window.json"))
 placeholder
