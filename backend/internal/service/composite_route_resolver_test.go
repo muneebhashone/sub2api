@@ -107,6 +107,63 @@ placeholder
 	require.Equal(t, int64(2), decision.Route.ID)
 placeholder
 
+// TestCompositeRouteResolverPrefixEmptyUpstreamPassesThroughRequestedModel 验证：
+// 前缀匹配路由留空 upstream_model 时，转发的是具体请求模型（各自原样），而不是
+// 塌缩成 public_model。这是「留空 = 透传原始模型」语义的核心场景。
+func TestCompositeRouteResolverPrefixEmptyUpstreamPassesThroughRequestedModel(t *testing.T) {
+	resolver := NewCompositeRouteResolver(compositeRouteRepoStub{
+		routes: []CompositeModelRoute{
+			{
+				ID:             1,
+				GroupID:        7,
+				PublicModel:    "deepseek-v4",
+				MatchType:      CompositeRouteMatchPrefix,
+				TargetPlatform: PlatformOpenAI,
+				UpstreamModel:  "", // 留空 = 透传
+				Endpoint:       CompositeRouteEndpointAny,
+				Priority:       100,
+				Enabled:        true,
+		placeholder,
+	placeholder,
+placeholder)
+
+	for _, model := range []string{"deepseek-v4-flash", "deepseek-v4-pro", "deepseek-v4"placeholder {
+		decision, err := resolver.Resolve(context.Background(), 7, model, CompositeRouteEndpointChatCompletions)
+	placeholder
+		require.True(t, decision.Matched, "model %q should match prefix route", model)
+		require.Equal(t, CompositeRouteSourceExplicit, decision.Source)
+		require.Equal(t, PlatformOpenAI, decision.TargetPlatform)
+		require.Equal(t, model, decision.UpstreamModel, "model %q should pass through verbatim", model)
+placeholder
+placeholder
+
+// TestCompositeRouteResolverPrefixExplicitUpstreamStillFixed 验证：前缀匹配路由显式
+// 填写 upstream_model 时，所有命中请求仍转发同一个固定上游模型（行为不变）。
+func TestCompositeRouteResolverPrefixExplicitUpstreamStillFixed(t *testing.T) {
+	resolver := NewCompositeRouteResolver(compositeRouteRepoStub{
+		routes: []CompositeModelRoute{
+			{
+				ID:             1,
+				GroupID:        7,
+				PublicModel:    "deepseek-v4",
+				MatchType:      CompositeRouteMatchPrefix,
+				TargetPlatform: PlatformOpenAI,
+				UpstreamModel:  "deepseek-chat",
+				Endpoint:       CompositeRouteEndpointAny,
+				Priority:       100,
+				Enabled:        true,
+		placeholder,
+	placeholder,
+placeholder)
+
+	for _, model := range []string{"deepseek-v4-flash", "deepseek-v4-pro"placeholder {
+		decision, err := resolver.Resolve(context.Background(), 7, model, CompositeRouteEndpointChatCompletions)
+	placeholder
+		require.True(t, decision.Matched)
+		require.Equal(t, "deepseek-chat", decision.UpstreamModel)
+placeholder
+placeholder
+
 func TestCompositeRouteResolverIgnoresDisabledRoutesAndFallsBackToDetector(t *testing.T) {
 	resolver := NewCompositeRouteResolver(compositeRouteRepoStub{
 		routes: []CompositeModelRoute{

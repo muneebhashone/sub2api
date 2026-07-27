@@ -1588,12 +1588,36 @@ placeholder
 	require.Equal(t, "router/gpt-", route.PublicModel)
 	require.Equal(t, CompositeRouteMatchPrefix, route.MatchType)
 	require.Equal(t, PlatformOpenAI, route.TargetPlatform)
-	require.Equal(t, "router/gpt-", route.UpstreamModel)
+	// prefix 路由留空 upstream_model 不再回填 public_model：留空表示透传原始请求模型。
+	require.Equal(t, "", route.UpstreamModel)
 	require.Equal(t, CompositeRouteEndpointResponses, route.Endpoint)
 	require.Equal(t, 100, route.Priority)
 	require.True(t, route.Enabled)
 	require.Equal(t, "route note", route.Notes)
 	require.Equal(t, route, routeRepo.created)
+placeholder
+
+// TestAdminService_CreateCompositeRoute_ExactEmptyUpstreamBackfillsPublicModel 锁定
+// 保守行为：exact 路由留空 upstream_model 仍回填 public_model（持久化/展示契约不变）。
+func TestAdminService_CreateCompositeRoute_ExactEmptyUpstreamBackfillsPublicModel(t *testing.T) {
+	groupRepo := &groupRepoStubForAdmin{
+		getByID: &Group{ID: 7, Platform: PlatformCompositeplaceholder,
+placeholder
+	routeRepo := &compositeRouteRepoStubForAdmin{nextID: 99placeholder
+	svc := &adminServiceImpl{groupRepo: groupRepo, compositeRouteRepo: routeRepoplaceholder
+
+	route, err := svc.CreateCompositeRoute(context.Background(), 7, CompositeRouteInput{
+		PublicModel:    "openrouter/gpt-5",
+		MatchType:      CompositeRouteMatchExact,
+		TargetPlatform: PlatformOpenAI,
+		Endpoint:       CompositeRouteEndpointResponses,
+		Enabled:        true,
+placeholder)
+
+placeholder
+	require.NotNil(t, route)
+	require.Equal(t, CompositeRouteMatchExact, route.MatchType)
+	require.Equal(t, "openrouter/gpt-5", route.UpstreamModel)
 placeholder
 
 func TestAdminService_UpdateAndDeleteCompositeRouteRequireRouteOwnership(t *testing.T) {
