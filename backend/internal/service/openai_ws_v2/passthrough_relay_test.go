@@ -472,6 +472,56 @@ placeholder)
 	require.Equal(t, 5, result.Usage.OutputTokens)
 placeholder
 
+func TestRelay_OnTurnComplete_UsesCurrentResponseCreateModel(t *testing.T) {
+	t.Parallel()
+
+	clientConn := newPassthroughTestFrameConn(nil, false)
+	upstreamConn := newPassthroughTestFrameConn(nil, false)
+	firstPayload := []byte(`{"type":"response.create","model":"gpt-5.6-sol","input":[]placeholder`)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	turns := make(chan RelayTurnResult, 2)
+	done := make(chan struct{placeholder)
+	go func() {
+		defer close(done)
+		_, _ = Relay(ctx, clientConn, upstreamConn, firstPayload, RelayOptions{
+			OnTurnComplete: func(turn RelayTurnResult) {
+				turns <- turn
+		placeholder,
+	placeholder)
+placeholder()
+
+	upstreamConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.completed","response":{"id":"resp_sol","usage":{"input_tokens":2,"output_tokens":1placeholderplaceholderplaceholder`),
+placeholder
+	firstTurn := <-turns
+	require.Equal(t, "gpt-5.6-sol", firstTurn.RequestModel)
+
+	clientConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.create","model":"gpt-5.6-terra","input":[]placeholder`),
+placeholder
+	require.Eventually(t, func() bool {
+		return len(upstreamConn.Writes()) == 2
+placeholder, time.Second, 10*time.Millisecond)
+	upstreamConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.completed","response":{"id":"resp_terra","usage":{"input_tokens":3,"output_tokens":1placeholderplaceholderplaceholder`),
+placeholder
+	secondTurn := <-turns
+	require.Equal(t, "gpt-5.6-terra", secondTurn.RequestModel)
+
+	_ = clientConn.Close()
+	_ = upstreamConn.Close()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("relay did not stop after client close")
+placeholder
+placeholder
+
 func TestRelay_OnTurnComplete_ProvidesTurnMetrics(t *testing.T) {
 	t.Parallel()
 
