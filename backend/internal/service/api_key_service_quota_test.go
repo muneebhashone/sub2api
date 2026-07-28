@@ -95,7 +95,7 @@ placeholder
 func (s *quotaBaseAPIKeyRepoStub) GetByKeyForAuth(context.Context, string) (*APIKey, error) {
 	panic("unexpected GetByKeyForAuth call")
 placeholder
-func (s *quotaBaseAPIKeyRepoStub) Update(context.Context, *APIKey) error {
+func (s *quotaBaseAPIKeyRepoStub) Update(context.Context, *APIKey, APIKeyUpdateFields) error {
 	panic("unexpected Update call")
 placeholder
 func (s *quotaBaseAPIKeyRepoStub) Delete(context.Context, int64) error {

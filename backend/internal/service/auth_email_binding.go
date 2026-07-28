@@ -79,7 +79,7 @@ placeholder
 
 	currentUser.Email = normalizedEmail
 	currentUser.PasswordHash = hashedPassword
-	if err := s.userRepo.Update(ctx, currentUser); err != nil {
+	if err := s.userRepo.Update(ctx, currentUser, UserUpdateFields{Email: true, PasswordHash: trueplaceholder); err != nil {
 		if errors.Is(err, ErrEmailExists) {
 			return nil, ErrEmailExists
 	placeholder

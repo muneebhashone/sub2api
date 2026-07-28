@@ -205,8 +205,12 @@ placeholder
 	return out, nil
 placeholder
 
-func (r *userRepository) Update(ctx context.Context, userIn *service.User) error {
+func (r *userRepository) Update(ctx context.Context, userIn *service.User, fields service.UserUpdateFields) error {
 	if userIn == nil {
+		return nil
+placeholder
+	// 空掩码代表调用方不改任何列，直接返回，避免产生一次无意义的整行写。
+	if fields.IsEmpty() {
 		return nil
 placeholder
 
@@ -231,19 +235,23 @@ placeholder else {
 	placeholder
 placeholder
 
-	releaseEmailLock, err := lockRepositoryScopedKeys(
-		txCtx,
-		txClient,
-		txAwareSQLExecutor(txCtx, r.sql, r.client),
-		normalizedEmailUniquenessLockKey(userIn.Email),
-	)
-	if err != nil {
-		return err
-placeholder
-	defer releaseEmailLock()
+	// 邮箱唯一性锁与查重只在本次确实要改邮箱时才做：不改邮箱的更新既不需要
+	// 串行化，也不该因为快照里的旧邮箱已被他人占用而报 ErrEmailExists。
+	if fields.Email {
+		releaseEmailLock, err := lockRepositoryScopedKeys(
+			txCtx,
+			txClient,
+			txAwareSQLExecutor(txCtx, r.sql, r.client),
+			normalizedEmailUniquenessLockKey(userIn.Email),
+		)
+		if err != nil {
+			return err
+	placeholder
+		defer releaseEmailLock()
 
-	if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, userIn.ID, userIn.Email); err != nil {
-		return err
+		if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, userIn.ID, userIn.Email); err != nil {
+			return err
+	placeholder
 placeholder
 
 	existing, err := clientFromContext(txCtx, txClient).User.Get(txCtx, userIn.ID)
@@ -252,41 +260,64 @@ placeholder
 placeholder
 	oldEmail := existing.Email
 
-	updateOp := txClient.User.UpdateOneID(userIn.ID).
-		SetEmail(userIn.Email).
-		SetUsername(userIn.Username).
-		SetNotes(userIn.Notes).
-		SetPasswordHash(userIn.PasswordHash).
-		SetRole(userIn.Role).
-		SetBalance(userIn.Balance).
-		SetConcurrency(userIn.Concurrency).
-		SetStatus(userIn.Status).
-		SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
-		SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
-		SetNillableBalanceNotifyThreshold(userIn.BalanceNotifyThreshold).
-		SetBalanceNotifyExtraEmails(marshalExtraEmails(userIn.BalanceNotifyExtraEmails)).
-		SetTotalRecharged(userIn.TotalRecharged).
-		SetRpmLimit(userIn.RPMLimit)
-	if userIn.SignupSource != "" {
+	updateOp := txClient.User.UpdateOneID(userIn.ID)
+	if fields.Email {
+		updateOp = updateOp.SetEmail(userIn.Email)
+placeholder
+	if fields.Username {
+		updateOp = updateOp.SetUsername(userIn.Username)
+placeholder
+	if fields.Notes {
+		updateOp = updateOp.SetNotes(userIn.Notes)
+placeholder
+	if fields.PasswordHash {
+		updateOp = updateOp.SetPasswordHash(userIn.PasswordHash)
+placeholder
+	if fields.Role {
+		updateOp = updateOp.SetRole(userIn.Role)
+placeholder
+	if fields.Concurrency {
+		updateOp = updateOp.SetConcurrency(userIn.Concurrency)
+placeholder
+	if fields.RPMLimit {
+		updateOp = updateOp.SetRpmLimit(userIn.RPMLimit)
+placeholder
+	if fields.Status {
+		updateOp = updateOp.SetStatus(userIn.Status)
+placeholder
+	if fields.BalanceNotifySettings {
+		updateOp = updateOp.
+			SetBalanceNotifyEnabled(userIn.BalanceNotifyEnabled).
+			SetBalanceNotifyThresholdType(userIn.BalanceNotifyThresholdType).
+			SetNillableBalanceNotifyThreshold(userIn.BalanceNotifyThreshold)
+		if userIn.BalanceNotifyThreshold == nil {
+			updateOp = updateOp.ClearBalanceNotifyThreshold()
+	placeholder
+placeholder
+	if fields.BalanceNotifyExtraEmails {
+		updateOp = updateOp.SetBalanceNotifyExtraEmails(marshalExtraEmails(userIn.BalanceNotifyExtraEmails))
+placeholder
+	if fields.SignupSource && userIn.SignupSource != "" {
 		updateOp = updateOp.SetSignupSource(userIn.SignupSource)
 placeholder
-	if userIn.LastLoginAt != nil {
+	if fields.LastLoginAt && userIn.LastLoginAt != nil {
 		updateOp = updateOp.SetLastLoginAt(*userIn.LastLoginAt)
 placeholder
-	if userIn.LastActiveAt != nil {
+	if fields.LastActiveAt && userIn.LastActiveAt != nil {
 		updateOp = updateOp.SetLastActiveAt(*userIn.LastActiveAt)
-placeholder
-	if userIn.BalanceNotifyThreshold == nil {
-		updateOp = updateOp.ClearBalanceNotifyThreshold()
 placeholder
 	updated, err := updateOp.Save(txCtx)
 	if err != nil {
 		return translatePersistenceError(err, service.ErrUserNotFound, service.ErrEmailExists)
 placeholder
 
-	if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
-		return err
+	if fields.AllowedGroups {
+		if err := r.syncUserAllowedGroupsWithClient(txCtx, txClient, updated.ID, userIn.AllowedGroups); err != nil {
+			return err
+	placeholder
 placeholder
+	// 始终以库中的邮箱为准补齐 email 身份：未改邮箱时 updated.Email == oldEmail，
+	// 这里退化为幂等的身份补写，与改邮箱前的行为一致。
 	if err := replaceEmailAuthIdentityWithClient(txCtx, txClient, updated.ID, oldEmail, updated.Email, "user_repo_update"); err != nil {
 		return err
 placeholder
@@ -826,6 +857,106 @@ placeholder
 		return service.ErrUserNotFound
 placeholder
 	return nil
+placeholder
+
+// AdjustBalance 原子地把 delta 累加到余额上，结果为负时整条语句不生效。
+// 相比"读余额 → 算新值 → 整行写回"，这里把读与写压进同一条 UPDATE，
+// 并发的计费扣款不会被旧快照覆盖。
+func (r *userRepository) AdjustBalance(ctx context.Context, id int64, delta float64) (service.BalanceChange, error) {
+	const updateSQL = `
+		UPDATE users
+		SET balance = balance + $1, updated_at = NOW()
+		WHERE id = $2 AND deleted_at IS NULL AND balance + $1 >= 0
+		RETURNING balance - $1, balance
+	`
+	change, ok, err := scanBalanceChange(ctx, clientFromContext(ctx, r.client), updateSQL, delta, id)
+	if err != nil {
+		return service.BalanceChange{placeholder, err
+placeholder
+	if ok {
+		return change, nil
+placeholder
+
+	// 0 行既可能是用户不存在，也可能是余额不足以承受这次扣减，需要区分。
+	current, err := r.currentBalance(ctx, id)
+	if err != nil {
+		return service.BalanceChange{placeholder, err
+placeholder
+	return service.BalanceChange{Old: current, New: current + deltaplaceholder, service.ErrBalanceNegative
+placeholder
+
+// SetBalance 原子地把余额置为 value，并返回变更前后的值。
+func (r *userRepository) SetBalance(ctx context.Context, id int64, value float64) (service.BalanceChange, error) {
+	if value < 0 {
+		// 连同当前余额一起返回，便于上层给出可读的错误信息。
+		current, err := r.currentBalance(ctx, id)
+		if err != nil {
+			return service.BalanceChange{placeholder, err
+	placeholder
+		return service.BalanceChange{Old: current, New: valueplaceholder, service.ErrBalanceNegative
+placeholder
+	const updateSQL = `
+		UPDATE users AS u
+		SET balance = $1, updated_at = NOW()
+		FROM (SELECT id, balance FROM users WHERE id = $2 AND deleted_at IS NULL) AS prev
+		WHERE u.id = prev.id AND u.deleted_at IS NULL
+		RETURNING prev.balance, u.balance
+	`
+	change, ok, err := scanBalanceChange(ctx, clientFromContext(ctx, r.client), updateSQL, value, id)
+	if err != nil {
+		return service.BalanceChange{placeholder, err
+placeholder
+	if !ok {
+		return service.BalanceChange{placeholder, service.ErrUserNotFound
+placeholder
+	return change, nil
+placeholder
+
+// currentBalance 读取用户当前余额，用户不存在时返回 ErrUserNotFound。
+func (r *userRepository) currentBalance(ctx context.Context, id int64) (balance float64, err error) {
+	rows, err := clientFromContext(ctx, r.client).QueryContext(ctx,
+		`SELECT balance FROM users WHERE id = $1 AND deleted_at IS NULL`, id)
+	if err != nil {
+		return 0, err
+placeholder
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+	placeholder
+placeholder()
+	if !rows.Next() {
+		if rowsErr := rows.Err(); rowsErr != nil {
+			return 0, rowsErr
+	placeholder
+		return 0, service.ErrUserNotFound
+placeholder
+	if err := rows.Scan(&balance); err != nil {
+		return 0, err
+placeholder
+	return balance, rows.Err()
+placeholder
+
+// scanBalanceChange 执行一条 RETURNING 旧余额、新余额的语句。ok 为 false 表示语句未命中任何行。
+func scanBalanceChange(ctx context.Context, client *dbent.Client, query string, args ...any) (change service.BalanceChange, ok bool, err error) {
+	rows, err := client.QueryContext(ctx, query, args...)
+	if err != nil {
+		return service.BalanceChange{placeholder, false, err
+placeholder
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+	placeholder
+placeholder()
+	if !rows.Next() {
+		if rowsErr := rows.Err(); rowsErr != nil {
+			return service.BalanceChange{placeholder, false, rowsErr
+	placeholder
+		return service.BalanceChange{placeholder, false, nil
+placeholder
+	if err := rows.Scan(&change.Old, &change.New); err != nil {
+		return service.BalanceChange{placeholder, false, err
+placeholder
+	return change, true, rows.Err()
 placeholder
 
 func (r *userRepository) UpdateConcurrency(ctx context.Context, id int64, amount int) error {

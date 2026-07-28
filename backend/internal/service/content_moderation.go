@@ -1297,7 +1297,7 @@ placeholder
 placeholder
 	if user.Status != StatusActive {
 		user.Status = StatusActive
-		if err := s.userRepo.Update(ctx, user); err != nil {
+		if err := s.userRepo.Update(ctx, user, UserUpdateFields{Status: trueplaceholder); err != nil {
 			return nil, fmt.Errorf("update content moderation unban user: %w", err)
 	placeholder
 placeholder
@@ -1832,7 +1832,7 @@ placeholder
 	placeholder
 		if user.Status != StatusDisabled {
 			user.Status = StatusDisabled
-			if err := s.userRepo.Update(ctx, user); err != nil {
+			if err := s.userRepo.Update(ctx, user, UserUpdateFields{Status: trueplaceholder); err != nil {
 				slog.Warn("content_moderation.ban_update_user_failed", "user_id", *log.UserID, "error", err)
 				return false
 		placeholder

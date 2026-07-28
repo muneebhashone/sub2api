@@ -36,6 +36,7 @@ type mockUserRepo struct {
 	updateLastActiveAt      []time.Time
 	updateFn                func(ctx context.Context, user *User) error
 	updateCalls             int
+	updateFields            []UserUpdateFields
 	upsertAvatarFn          func(ctx context.Context, userID int64, input UpsertUserAvatarInput) (*UserAvatar, error)
 	upsertAvatarArgs        []UpsertUserAvatarInput
 	deleteAvatarFn          func(ctx context.Context, userID int64) error
@@ -108,8 +109,9 @@ placeholder
 placeholder
 func (m *mockUserRepo) GetByEmail(context.Context, string) (*User, error) { return &User{placeholder, nil placeholder
 func (m *mockUserRepo) GetFirstAdmin(context.Context) (*User, error)      { return &User{placeholder, nil placeholder
-func (m *mockUserRepo) Update(ctx context.Context, user *User) error {
+func (m *mockUserRepo) Update(ctx context.Context, user *User, fields UserUpdateFields) error {
 	m.updateCalls++
+	m.updateFields = append(m.updateFields, fields)
 	if m.updateFn != nil {
 		return m.updateFn(ctx, user)
 placeholder
@@ -200,6 +202,14 @@ func (m *mockUserRepo) DeductBalance(ctx context.Context, id int64, amount float
 		return m.deductBalanceFn(ctx, id, amount)
 placeholder
 	return nil
+placeholder
+
+func (m *mockUserRepo) AdjustBalance(ctx context.Context, id int64, delta float64) (BalanceChange, error) {
+	panic("unexpected AdjustBalance call")
+placeholder
+
+func (m *mockUserRepo) SetBalance(ctx context.Context, id int64, value float64) (BalanceChange, error) {
+	panic("unexpected SetBalance call")
 placeholder
 func (m *mockUserRepo) UpdateConcurrency(context.Context, int64, int) error { return nil placeholder
 func (m *mockUserRepo) ExistsByEmail(context.Context, string) (bool, error) { return false, nil placeholder
