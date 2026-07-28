@@ -495,9 +495,79 @@ placeholder
 	if got, want := string(manifest.Body), `{"models":[{"slug":"gpt-5.6"placeholder,{"slug":"gpt-5.6-codex"placeholder]placeholder`; got != want {
 		t.Errorf("converted body: got %q, want %q", got, want)
 placeholder
-	if manifest.ETag != `W/"openai-list"` {
-		t.Errorf("etag not passed through: got %q", manifest.ETag)
+	require.Equal(t, codexModelsManifestBodyETag(manifest.Body), manifest.ETag)
+	require.Equal(t, `W/"openai-list"`, manifest.upstreamETag)
 placeholder
+
+func TestAdjustAPIKeyCodexModelsManifest(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+placeholder{
+		{
+			name: "affected models disable responses lite and preserve unknown fields",
+			body: `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":true,"unknown_model":{"enabled":trueplaceholderplaceholder,{"slug":"gpt-5.6-terra","use_responses_lite":trueplaceholder,{"slug":"gpt-5.6-luna","use_responses_lite":trueplaceholder],"unknown_top":{"version":1placeholderplaceholder`,
+			want: `{"models":[{"slug":"gpt-5.6-sol","unknown_model":{"enabled":trueplaceholder,"use_responses_lite":falseplaceholder,{"slug":"gpt-5.6-terra","use_responses_lite":falseplaceholder,{"slug":"gpt-5.6-luna","use_responses_lite":falseplaceholder],"unknown_top":{"version":1placeholderplaceholder`,
+	placeholder,
+		{
+			name: "unaffected model unchanged",
+			body: ` {"models":[{"slug":"gpt-5.6-codex","use_responses_lite":trueplaceholder]placeholder `,
+			want: ` {"models":[{"slug":"gpt-5.6-codex","use_responses_lite":trueplaceholder]placeholder `,
+	placeholder,
+		{
+			name: "false missing and alternate entries unchanged",
+			body: `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":falseplaceholder,{"slug":"gpt-5.6-terra"placeholder,null,"gpt-5.6-luna",{"slug":17,"use_responses_lite":trueplaceholder]placeholder`,
+			want: `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":falseplaceholder,{"slug":"gpt-5.6-terra"placeholder,null,"gpt-5.6-luna",{"slug":17,"use_responses_lite":trueplaceholder]placeholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := adjustAPIKeyCodexModelsManifest([]byte(tt.body))
+		placeholder
+			require.Equal(t, tt.want, string(got))
+	placeholder)
+placeholder
+placeholder
+
+func TestFetchCodexModelsManifestAPIKeyDisablesResponsesLiteForAffectedModels(t *testing.T) {
+	const upstreamBody = `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":trueplaceholder,{"slug":"gpt-5.6-codex","use_responses_lite":trueplaceholder],"metadata":{"version":1placeholderplaceholder`
+	upstream := &codexModelsHTTPUpstreamStub{do: func(_ *http.Request, _ string, _ int64, _ int) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Etag": []string{`"upstream-strong"`placeholderplaceholder,
+			Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+	placeholder, nil
+placeholderplaceholder
+
+	s := newCodexModelsAPIKeyTestService(upstream)
+	manifest, err := s.FetchCodexModelsManifest(context.Background(), newCodexModelsAPIKeyTestAccount("https://upstream.example"), "0.145.0", "")
+placeholder
+	require.JSONEq(t, `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":falseplaceholder,{"slug":"gpt-5.6-codex","use_responses_lite":trueplaceholder],"metadata":{"version":1placeholderplaceholder`, string(manifest.Body))
+	require.Equal(t, codexModelsManifestBodyETag(manifest.Body), manifest.ETag)
+	require.Equal(t, `"upstream-strong"`, manifest.upstreamETag)
+
+	notModified, err := s.FetchCodexModelsManifest(context.Background(), newCodexModelsAPIKeyTestAccount("https://upstream.example"), "0.145.0", manifest.ETag)
+placeholder
+	require.True(t, notModified.NotModified)
+	require.Equal(t, manifest.ETag, notModified.ETag)
+placeholder
+
+func TestFetchCodexModelsManifestOAuthPreservesResponsesLite(t *testing.T) {
+	const manifestBody = ` {"models":[{"slug":"gpt-5.6-sol","use_responses_lite":trueplaceholder]placeholder `
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(manifestBody))
+placeholder))
+	defer server.Close()
+	original := chatgptCodexModelsURL
+	chatgptCodexModelsURL = server.URL
+	defer func() { chatgptCodexModelsURL = original placeholder()
+
+	s := &OpenAIGatewayService{placeholder
+	manifest, err := s.FetchCodexModelsManifest(context.Background(), newCodexModelsTestAccount(), "0.145.0", "")
+placeholder
+	require.Equal(t, manifestBody, string(manifest.Body))
 placeholder
 
 func TestConvertOpenAIModelListToCodexManifest(t *testing.T) {
@@ -995,19 +1065,19 @@ func TestFetchCodexModelsManifestAPIKeyRevalidatesStaleETag(t *testing.T) {
 		call := calls.Add(1)
 		if call == 1 {
 			header := make(http.Header)
-			header.Set("ETag", `W/"cached"`)
+			header.Set("ETag", `"upstream-cached"`)
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Header:     header,
-				Body:       io.NopCloser(strings.NewReader(`{"models":[{"slug":"cached"placeholder]placeholder`)),
+				Body:       io.NopCloser(strings.NewReader(`{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":trueplaceholder]placeholder`)),
 		placeholder, nil
 	placeholder
-		if got := req.Header.Get("If-None-Match"); got != `W/"cached"` {
+		if got := req.Header.Get("If-None-Match"); got != `"upstream-cached"` {
 			t.Errorf("background revalidation If-None-Match: got %q", got)
 	placeholder
 		close(refreshDone)
 		header := make(http.Header)
-		header.Set("ETag", `W/"cached"`)
+		header.Set("ETag", `"upstream-cached"`)
 		return &http.Response{StatusCode: http.StatusNotModified, Header: header, Body: http.NoBodyplaceholder, nil
 placeholderplaceholder
 	s := newCodexModelsAPIKeyTestService(upstream)
@@ -1026,7 +1096,7 @@ placeholder
 	if err != nil {
 		t.Fatalf("stale fetch returned error: %v", err)
 placeholder
-	if got := string(manifest.Body); got != `{"models":[{"slug":"cached"placeholder]placeholder` {
+	if got := string(manifest.Body); got != `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":falseplaceholder]placeholder` {
 		t.Fatalf("stale body: got %q", got)
 placeholder
 	select {
@@ -1052,7 +1122,7 @@ placeholder
 		time.Sleep(10 * time.Millisecond)
 placeholder
 	manifest, err = s.FetchCodexModelsManifest(context.Background(), account, "0.144.0", "")
-	if err != nil || string(manifest.Body) != `{"models":[{"slug":"cached"placeholder]placeholder` {
+	if err != nil || string(manifest.Body) != `{"models":[{"slug":"gpt-5.6-sol","use_responses_lite":falseplaceholder]placeholder` {
 		t.Fatalf("renewed cached manifest: body=%q err=%v", manifest.Body, err)
 placeholder
 	if got := calls.Load(); got != 2 {
