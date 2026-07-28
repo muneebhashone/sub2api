@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/redis/go-redis/v9"
@@ -29,6 +30,10 @@ type ConfigManager struct {
 	redis     *redis.Client
 	encryptor SecretEncryptor
 	clock     Clock
+	// encryptionKeyConfigured mirrors cfg.Totp.EncryptionKeyConfigured. With an
+	// auto-generated (per-boot) key, newly saved endpoint tokens would become
+	// undecryptable after the next restart, so Save rejects them (issue #4887).
+	encryptionKeyConfigured bool
 
 	snapshot atomic.Pointer[activeConfigSnapshot]
 	expected atomic.Int64
@@ -53,8 +58,11 @@ type ConfigManager struct {
 	wg          sync.WaitGroup
 placeholder
 
-func NewConfigManager(db *sql.DB, settings service.SettingRepository, redisClient *redis.Client, encryptor service.SecretEncryptor) *ConfigManager {
-	return &ConfigManager{db: db, settings: settings, redis: redisClient, encryptor: encryptor, clock: realClock{placeholderplaceholder
+func NewConfigManager(db *sql.DB, settings service.SettingRepository, redisClient *redis.Client, encryptor service.SecretEncryptor, cfg *config.Config) *ConfigManager {
+	return &ConfigManager{
+		db: db, settings: settings, redis: redisClient, encryptor: encryptor, clock: realClock{placeholder,
+		encryptionKeyConfigured: cfg != nil && cfg.Totp.EncryptionKeyConfigured,
+placeholder
 placeholder
 
 func (m *ConfigManager) Start(ctx context.Context) error {
@@ -125,13 +133,43 @@ placeholder
 		return err
 placeholder
 	now := m.clock.Now()
+	previous := m.snapshot.Load()
 	m.snapshot.Store(&activeConfigSnapshot{storage: cloneStorageConfig(storage), active: cloneActiveConfig(active), loadedAt: nowplaceholder)
 	m.configUntrusted.Store(false)
 	m.clearLoadError()
+	m.logInvalidTokenEndpoints(previous, active)
 	LogInfo(EventConfigLoaded, map[string]any{
 		"config_version": storage.ConfigVersion, "status": "loaded",
 placeholder)
 	return nil
+placeholder
+
+// logInvalidTokenEndpoints warns once per change (not on every 5s refresh)
+// when stored endpoint tokens cannot be decrypted with the current key.
+func (m *ConfigManager) logInvalidTokenEndpoints(previous *activeConfigSnapshot, active ActiveConfig) {
+	invalid := active.InvalidTokenEndpointIDs()
+	if len(invalid) == 0 {
+		return
+placeholder
+	if previous != nil {
+		prior := previous.active.InvalidTokenEndpointIDs()
+		if len(prior) == len(invalid) {
+			same := true
+			for i := range invalid {
+				if prior[i] != invalid[i] {
+					same = false
+					break
+			placeholder
+		placeholder
+			if same && previous.active.ConfigVersion == active.ConfigVersion {
+				return
+		placeholder
+	placeholder
+placeholder
+	LogWarn(EventConfigTokenInvalid, map[string]any{
+		"config_version": active.ConfigVersion, "status": "degraded",
+		"error_code": "endpoint_token_undecryptable", "guard_endpoint_id": strings.Join(invalid, ","),
+placeholder)
 placeholder
 
 func (m *ConfigManager) Active() (ActiveConfig, bool) {
@@ -202,7 +240,7 @@ placeholder
 	if snapshot == nil {
 		return PublicConfig{placeholder, infraerrors.ServiceUnavailable(ErrorCodeConfigUnavailable, "提示词审计配置暂不可用")
 placeholder
-	return PublicFromStorage(cloneStorageConfig(snapshot.storage), snapshot.active.RiskControlEnabled), nil
+	return PublicFromStorage(cloneStorageConfig(snapshot.storage), snapshot.active.RiskControlEnabled, snapshot.active.InvalidTokenEndpointIDs()), nil
 placeholder
 
 func (m *ConfigManager) Save(ctx context.Context, req UpdateConfigRequest, actorID int64) (PublicConfig, error) {
@@ -268,11 +306,13 @@ placeholder
 placeholder
 	m.expected.Store(next.ConfigVersion)
 	m.expectedBlocking.Store(active.RiskControlEnabled && next.Enabled && next.BlockingEnabled)
+	previous := m.snapshot.Load()
 	m.snapshot.Store(&activeConfigSnapshot{storage: cloneStorageConfig(next), active: cloneActiveConfig(active), loadedAt: m.clock.Now()placeholder)
 	// A successful admin save installs a trustworthy snapshot; clear any prior
 	// fail-closed degradation so disabling audit actually takes effect.
 	m.configUntrusted.Store(false)
 	m.clearLoadError()
+	m.logInvalidTokenEndpoints(previous, active)
 	LogInfo(EventConfigUpdated, map[string]any{
 		"config_version": next.ConfigVersion, "status": "updated",
 placeholder)
@@ -283,7 +323,7 @@ placeholder)
 		placeholder)
 	placeholder
 placeholder
-	return PublicFromStorage(next, active.RiskControlEnabled), nil
+	return PublicFromStorage(next, active.RiskControlEnabled, active.InvalidTokenEndpointIDs()), nil
 placeholder
 
 func (m *ConfigManager) buildNextStorage(current storageConfig, req UpdateConfigRequest, actorID int64) (storageConfig, error) {
@@ -317,6 +357,10 @@ placeholder
 		case endpoint.ClearToken:
 			stored.TokenCiphertext = ""
 		case strings.TrimSpace(endpoint.Token) != "":
+			if !m.encryptionKeyConfigured {
+				return storageConfig{placeholder, infraerrors.BadRequest(ErrorCodeEncryptionKeyRequired,
+					"未配置固定加密密钥，审计节点 Token 将在服务重启后失效。请先设置 TOTP_ENCRYPTION_KEY 环境变量（64 位十六进制）并重启服务")
+		placeholder
 			ciphertext, err := m.encryptor.Encrypt(strings.TrimSpace(endpoint.Token))
 			if err != nil {
 				return storageConfig{placeholder, fmt.Errorf("encrypt prompt audit endpoint token: %w", err)
