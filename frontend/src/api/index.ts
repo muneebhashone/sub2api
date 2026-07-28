@@ -19,6 +19,7 @@ export { userGroupsAPI placeholder from './groups'
 export { userChannelsAPI placeholder from './channels'
 export * as batchImageAPI from './batchImage'
 export { totpAPI placeholder from './totp'
+export { passkeyAPI, type PasskeyCredentialSummary placeholder from './passkey'
 export { default as announcementsAPI placeholder from './announcements'
 export { channelMonitorUserAPI placeholder from './channelMonitor'
 

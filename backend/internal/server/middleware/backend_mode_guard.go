@@ -29,7 +29,14 @@ placeholder
 
 func backendModeAllowsAuthPath(path string) bool {
 	path = strings.ToLower(strings.TrimSpace(path))
-	for _, suffix := range []string{"/auth/login", "/auth/login/2fa", "/auth/logout", "/auth/refresh"placeholder {
+	for _, suffix := range []string{
+		"/auth/login",
+		"/auth/login/2fa",
+		"/auth/passkey/login/begin",
+		"/auth/passkey/login/finish",
+		"/auth/logout",
+		"/auth/refresh",
+placeholder {
 		if strings.HasSuffix(path, suffix) {
 			return true
 	placeholder
