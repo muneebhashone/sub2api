@@ -151,9 +151,24 @@ placeholder
 	return nil
 placeholder
 
+// verifyPasskeyPassword gates credential enrollment and revocation with the
+// account password so a hijacked session cannot silently add or remove
+// passkeys. The password is used instead of TOTP step-up so the guard also
+// works on deployments without a TOTP encryption key configured.
+func verifyPasskeyPassword(user *User, password string) error {
+	if password == "" {
+		return ErrPasswordRequired
+placeholder
+	if user == nil || !user.CheckPassword(password) {
+		return ErrPasswordIncorrect
+placeholder
+	return nil
+placeholder
+
 func (s *PasskeyService) BeginRegistration(
 	ctx context.Context,
 	userID int64,
+	password string,
 ) (creation *protocol.CredentialCreation, sessionToken string, err error) {
 	if err = s.requireEnabled(); err != nil {
 		return nil, "", err
@@ -164,6 +179,9 @@ placeholder
 placeholder
 	if !user.IsActive() {
 		return nil, "", ErrUserNotActive
+placeholder
+	if err = verifyPasskeyPassword(user, password); err != nil {
+		return nil, "", err
 placeholder
 
 	candidate := make([]byte, 32)
@@ -330,8 +348,15 @@ placeholder
 	return s.repo.Rename(ctx, userID, credentialID, normalizePasskeyName(name))
 placeholder
 
-func (s *PasskeyService) Delete(ctx context.Context, userID, credentialID int64) error {
+func (s *PasskeyService) Delete(ctx context.Context, userID, credentialID int64, password string) error {
 	if err := s.requireEnabled(); err != nil {
+		return err
+placeholder
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+placeholder
+	if err = verifyPasskeyPassword(user, password); err != nil {
 		return err
 placeholder
 	return s.repo.Delete(ctx, userID, credentialID)
