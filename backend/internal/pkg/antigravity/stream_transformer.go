@@ -195,7 +195,7 @@ placeholder
 		responseID = v1Resp.Response.ResponseID
 placeholder
 	if responseID == "" {
-		responseID = "msg_" + generateRandomID()
+		responseID = generateAnthropicMsgID()
 placeholder
 
 	var usageValue any = usage
