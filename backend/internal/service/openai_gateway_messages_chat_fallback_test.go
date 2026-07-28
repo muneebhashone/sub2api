@@ -45,6 +45,75 @@ placeholder
 
 func (r *errTailReader) Close() error { return nil placeholder
 
+func TestForwardAsAnthropic_ForceChatCompletionsPreservesFinalModelReasoningEffort(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name       string
+		model      string
+		mapped     string
+		effortJSON string
+		wantEffort string
+placeholder{
+		{
+			name:       "GPT56 max",
+			model:      "luna",
+			mapped:     "gpt-5.6-luna",
+			effortJSON: `,"output_config":{"effort":"max"placeholder`,
+			wantEffort: "max",
+	placeholder,
+		{
+			name:       "old model max",
+			model:      "gpt-5.5",
+			mapped:     "gpt-5.5",
+			effortJSON: `,"output_config":{"effort":"max"placeholder`,
+			wantEffort: "xhigh",
+	placeholder,
+		{
+			name:       "high remains high",
+			model:      "gpt-5.6-luna",
+			mapped:     "gpt-5.6-luna",
+			effortJSON: `,"output_config":{"effort":"high"placeholder`,
+			wantEffort: "high",
+	placeholder,
+		{
+			name:       "omitted defaults medium",
+			model:      "gpt-5.6-luna",
+			mapped:     "gpt-5.6-luna",
+			wantEffort: "medium",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			body := `{"model":"` + tt.model + `","max_tokens":16,"messages":[{"role":"user","content":"hello"placeholder]` + tt.effortJSON + `,"stream":falseplaceholder`
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader([]byte(body)))
+			c.Request.Header.Set("Content-Type", "application/json")
+
+			upstream := &httpUpstreamRecorder{resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+				Body: io.NopCloser(strings.NewReader(
+					`{"id":"chatcmpl_effort","object":"chat.completion","model":"` + tt.mapped + `","choices":[{"index":0,"message":{"role":"assistant","content":"ok"placeholder,"finish_reason":"stop"placeholder],"usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5placeholderplaceholder`,
+				)),
+		placeholderplaceholder
+			account := forceChatMessagesFallbackAccount()
+			account.Credentials["model_mapping"] = map[string]any{tt.model: tt.mappedplaceholder
+
+			svc := &OpenAIGatewayService{cfg: rawChatCompletionsTestConfig(), httpUpstream: upstreamplaceholder
+			result, err := svc.ForwardAsAnthropic(context.Background(), c, account, []byte(body), "", "")
+		placeholder
+			require.NotNil(t, result)
+			require.Equal(t, tt.mapped, gjson.GetBytes(upstream.lastBody, "model").String())
+			require.Equal(t, tt.wantEffort, gjson.GetBytes(upstream.lastBody, "reasoning_effort").String())
+			require.NotNil(t, result.ReasoningEffort)
+			require.Equal(t, tt.wantEffort, *result.ReasoningEffort)
+	placeholder)
+placeholder
+placeholder
+
 func TestForwardAsAnthropic_ForceChatCompletionsNonStreaming(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
