@@ -2,6 +2,7 @@ package setup
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,103 @@ placeholder)
 			t.Fatalf("setupDefaultAdminConcurrency()=%d, want %d", got, defaultUserConcurrency)
 	placeholder
 placeholder)
+placeholder
+
+func TestNeedsSetupSkipsWhenSkipSetupIsEnabled(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+placeholder{
+		{name: "true", value: "true"placeholder,
+		{name: "one", value: "1"placeholder,
+		{name: "yes", value: "yes"placeholder,
+		{name: "trimmed mixed case true", value: "  TrUe  "placeholder,
+		{name: "trimmed mixed case yes", value: "  YeS  "placeholder,
+placeholder
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DATA_DIR", t.TempDir())
+			t.Setenv("SKIP_SETUP", tc.value)
+
+			if NeedsSetup() {
+				t.Fatalf("NeedsSetup() = true, want false when SKIP_SETUP is enabled")
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestNeedsSetupFallsBackToFileDetectionWhenSkipSetupIsDisabled(t *testing.T) {
+	tests := []struct {
+		name         string
+		skipSetupSet bool
+		skipSetup    string
+		markerFile   string
+		want         bool
+placeholder{
+		{
+			name: "unset without installation files",
+			want: true,
+	placeholder,
+		{
+			name:         "false without installation files",
+			skipSetupSet: true,
+			skipSetup:    " false ",
+			want:         true,
+	placeholder,
+		{
+			name:         "invalid value without installation files",
+			skipSetupSet: true,
+			skipSetup:    "enabled",
+			want:         true,
+	placeholder,
+		{
+			name:         "config file exists",
+			skipSetupSet: true,
+			skipSetup:    "false",
+			markerFile:   ConfigFileName,
+			want:         false,
+	placeholder,
+		{
+			name:         "install lock file exists",
+			skipSetupSet: true,
+			skipSetup:    "invalid",
+			markerFile:   InstallLockFile,
+			want:         false,
+	placeholder,
+placeholder
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dataDir := t.TempDir()
+			t.Setenv("DATA_DIR", dataDir)
+			if tc.skipSetupSet {
+				t.Setenv("SKIP_SETUP", tc.skipSetup)
+		placeholder else {
+				originalValue, wasSet := os.LookupEnv("SKIP_SETUP")
+				if err := os.Unsetenv("SKIP_SETUP"); err != nil {
+					t.Fatalf("Unsetenv(SKIP_SETUP) error = %v", err)
+			placeholder
+				t.Cleanup(func() {
+					if wasSet {
+						_ = os.Setenv("SKIP_SETUP", originalValue)
+						return
+				placeholder
+					_ = os.Unsetenv("SKIP_SETUP")
+			placeholder)
+		placeholder
+
+			if tc.markerFile != "" {
+				if err := os.WriteFile(filepath.Join(dataDir, tc.markerFile), nil, 0o600); err != nil {
+					t.Fatalf("WriteFile(%s) error = %v", tc.markerFile, err)
+			placeholder
+		placeholder
+
+			if got := NeedsSetup(); got != tc.want {
+				t.Fatalf("NeedsSetup() = %v, want %v", got, tc.want)
+		placeholder
+	placeholder)
+placeholder
 placeholder
 
 func TestSetupMigrationTimeout(t *testing.T) {
