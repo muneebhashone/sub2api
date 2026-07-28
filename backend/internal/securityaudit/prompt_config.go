@@ -90,6 +90,11 @@ type ActiveEndpoint struct {
 	TimeoutMS  int
 	InputLimit int
 	Enabled    bool
+	// TokenInvalid marks an endpoint whose persisted token ciphertext cannot be
+	// decrypted with the current encryption key (key changed or auto-generated
+	// on restart). The endpoint is kept visible for admins but excluded from
+	// runtime use until the token is re-entered or cleared (issue #4887).
+	TokenInvalid bool
 placeholder
 
 type ActiveConfig struct {
@@ -365,7 +370,23 @@ placeholder
 	return result
 placeholder
 
-func PublicFromStorage(cfg storageConfig, riskControlEnabled bool) PublicConfig {
+// InvalidTokenEndpointIDs lists endpoints whose stored token could not be
+// decrypted with the current encryption key.
+func (cfg ActiveConfig) InvalidTokenEndpointIDs() []string {
+	ids := make([]string, 0)
+	for _, ep := range cfg.Endpoints {
+		if ep.TokenInvalid {
+			ids = append(ids, ep.ID)
+	placeholder
+placeholder
+	return ids
+placeholder
+
+func PublicFromStorage(cfg storageConfig, riskControlEnabled bool, invalidTokenEndpointIDs []string) PublicConfig {
+	invalid := make(map[string]struct{placeholder, len(invalidTokenEndpointIDs))
+	for _, id := range invalidTokenEndpointIDs {
+		invalid[id] = struct{placeholder{placeholder
+placeholder
 	scanners := append([]string{placeholder, cfg.Scanners...)
 	groupIDs := append([]int64{placeholder, cfg.GroupIDs...)
 	endpoints := make([]PublicEndpoint, 0, len(cfg.Endpoints))
@@ -374,6 +395,9 @@ func PublicFromStorage(cfg storageConfig, riskControlEnabled bool) PublicConfig 
 		status := "missing"
 		if hasToken {
 			status = "configured"
+			if _, ok := invalid[ep.ID]; ok {
+				status = "invalid"
+		placeholder
 	placeholder
 		endpoints = append(endpoints, PublicEndpoint{
 			ID: ep.ID, Name: ep.Name, Protocol: ep.Protocol, BaseURL: ep.BaseURL,
@@ -402,19 +426,27 @@ func ActiveFromStorage(cfg storageConfig, riskControlEnabled bool, encryptor Sec
 placeholder
 	for _, ep := range cfg.Endpoints {
 		token := ""
+		tokenInvalid := false
 		if ep.TokenCiphertext != "" {
 			if encryptor == nil {
 				return ActiveConfig{placeholder, fmt.Errorf("prompt audit secret encryptor unavailable")
 		placeholder
 			plain, err := encryptor.Decrypt(ep.TokenCiphertext)
 			if err != nil {
-				return ActiveConfig{placeholder, fmt.Errorf("decrypt prompt audit endpoint token %q: %w", ep.ID, err)
+				// An undecryptable token (encryption key changed or regenerated)
+				// must not take the whole config down: admins would otherwise be
+				// locked out of the real config version and unable to recover
+				// (issue #4887). Keep the ciphertext persisted, but exclude the
+				// endpoint from runtime use until the token is re-entered.
+				tokenInvalid = true
+		placeholder else {
+				token = plain
 		placeholder
-			token = plain
 	placeholder
 		active.Endpoints = append(active.Endpoints, ActiveEndpoint{
 			ID: ep.ID, Name: ep.Name, Protocol: ep.Protocol, BaseURL: ep.BaseURL, Model: ep.Model,
-			Token: token, TimeoutMS: ep.TimeoutMS, InputLimit: ep.InputLimit, Enabled: ep.Enabled,
+			Token: token, TimeoutMS: ep.TimeoutMS, InputLimit: ep.InputLimit,
+			Enabled: ep.Enabled && !tokenInvalid, TokenInvalid: tokenInvalid,
 	placeholder)
 placeholder
 	return active, nil
