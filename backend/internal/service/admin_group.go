@@ -1078,7 +1078,7 @@ placeholder else {
 			if addErr := s.userRepo.AddGroupToAllowedGroups(opCtx, apiKey.UserID, gid); addErr != nil {
 				return nil, fmt.Errorf("add group to user allowed groups: %w", addErr)
 		placeholder
-			if err := s.apiKeyRepo.Update(opCtx, apiKey); err != nil {
+			if err := s.apiKeyRepo.Update(opCtx, apiKey, APIKeyUpdateFields{GroupID: trueplaceholder); err != nil {
 				return nil, fmt.Errorf("update api key: %w", err)
 		placeholder
 			if tx != nil {
@@ -1102,7 +1102,7 @@ placeholder else {
 placeholder
 
 	// 非专属分组 / 解绑：无需事务，单步更新即可
-	if err := s.apiKeyRepo.Update(ctx, apiKey); err != nil {
+	if err := s.apiKeyRepo.Update(ctx, apiKey, APIKeyUpdateFields{GroupID: trueplaceholder); err != nil {
 		return nil, fmt.Errorf("update api key: %w", err)
 placeholder
 
@@ -1127,7 +1127,7 @@ placeholder
 	apiKey.Window5hStart = nil
 	apiKey.Window1dStart = nil
 	apiKey.Window7dStart = nil
-	if err := s.apiKeyRepo.Update(ctx, apiKey); err != nil {
+	if err := s.apiKeyRepo.Update(ctx, apiKey, APIKeyUpdateFields{RateLimitUsage: trueplaceholder); err != nil {
 		return nil, fmt.Errorf("reset api key rate limit usage: %w", err)
 placeholder
 	if s.authCacheInvalidator != nil {

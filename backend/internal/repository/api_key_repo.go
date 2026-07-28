@@ -222,7 +222,12 @@ placeholder
 	return apiKeyEntityToService(m), nil
 placeholder
 
-func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey) error {
+func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey, fields service.APIKeyUpdateFields) error {
+	// 空掩码代表调用方不改任何列，直接返回，避免产生一次无意义的整行写。
+	if fields.IsEmpty() {
+		return nil
+placeholder
+
 	// 使用原子操作：将软删除检查与更新合并到同一语句，避免竞态条件。
 	// 之前的实现先检查 Exist 再 UpdateOneID，若在两步之间发生软删除，
 	// 则会更新已删除的记录。
@@ -232,57 +237,77 @@ func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey) erro
 	now := time.Now()
 	builder := client.APIKey.Update().
 		Where(apikey.IDEQ(key.ID), apikey.DeletedAtIsNil()).
-		SetName(key.Name).
-		SetStatus(key.Status).
-		SetQuota(key.Quota).
-		SetQuotaUsed(key.QuotaUsed).
-		SetRateLimit5h(key.RateLimit5h).
-		SetRateLimit1d(key.RateLimit1d).
-		SetRateLimit7d(key.RateLimit7d).
-		SetUsage5h(key.Usage5h).
-		SetUsage1d(key.Usage1d).
-		SetUsage7d(key.Usage7d).
 		SetUpdatedAt(now)
-	if key.GroupID != nil {
-		builder.SetGroupID(*key.GroupID)
-placeholder else {
-		builder.ClearGroupID()
+	if fields.Name {
+		builder.SetName(key.Name)
+placeholder
+	if fields.Status {
+		builder.SetStatus(key.Status)
+placeholder
+	if fields.Quota {
+		builder.SetQuota(key.Quota)
+placeholder
+	if fields.QuotaUsed {
+		builder.SetQuotaUsed(key.QuotaUsed)
+placeholder
+	if fields.RateLimits {
+		builder.
+			SetRateLimit5h(key.RateLimit5h).
+			SetRateLimit1d(key.RateLimit1d).
+			SetRateLimit7d(key.RateLimit7d)
+placeholder
+	if fields.RateLimitUsage {
+		builder.
+			SetUsage5h(key.Usage5h).
+			SetUsage1d(key.Usage1d).
+			SetUsage7d(key.Usage7d)
+
+		// Rate limit window start times
+		if key.Window5hStart != nil {
+			builder.SetWindow5hStart(*key.Window5hStart)
+	placeholder else {
+			builder.ClearWindow5hStart()
+	placeholder
+		if key.Window1dStart != nil {
+			builder.SetWindow1dStart(*key.Window1dStart)
+	placeholder else {
+			builder.ClearWindow1dStart()
+	placeholder
+		if key.Window7dStart != nil {
+			builder.SetWindow7dStart(*key.Window7dStart)
+	placeholder else {
+			builder.ClearWindow7dStart()
+	placeholder
+placeholder
+	if fields.GroupID {
+		if key.GroupID != nil {
+			builder.SetGroupID(*key.GroupID)
+	placeholder else {
+			builder.ClearGroupID()
+	placeholder
 placeholder
 
 	// Expiration time
-	if key.ExpiresAt != nil {
-		builder.SetExpiresAt(*key.ExpiresAt)
-placeholder else {
-		builder.ClearExpiresAt()
-placeholder
-
-	// Rate limit window start times
-	if key.Window5hStart != nil {
-		builder.SetWindow5hStart(*key.Window5hStart)
-placeholder else {
-		builder.ClearWindow5hStart()
-placeholder
-	if key.Window1dStart != nil {
-		builder.SetWindow1dStart(*key.Window1dStart)
-placeholder else {
-		builder.ClearWindow1dStart()
-placeholder
-	if key.Window7dStart != nil {
-		builder.SetWindow7dStart(*key.Window7dStart)
-placeholder else {
-		builder.ClearWindow7dStart()
+	if fields.ExpiresAt {
+		if key.ExpiresAt != nil {
+			builder.SetExpiresAt(*key.ExpiresAt)
+	placeholder else {
+			builder.ClearExpiresAt()
+	placeholder
 placeholder
 
 	// IP 限制字段
-	if len(key.IPWhitelist) > 0 {
-		builder.SetIPWhitelist(key.IPWhitelist)
-placeholder else {
-		builder.ClearIPWhitelist()
-placeholder
-	if len(key.IPBlacklist) > 0 {
-		builder.SetIPBlacklist(key.IPBlacklist)
-placeholder else {
-		builder.ClearIPBlacklist()
+	if fields.IPRules {
+		if len(key.IPWhitelist) > 0 {
+			builder.SetIPWhitelist(key.IPWhitelist)
+	placeholder else {
+			builder.ClearIPWhitelist()
+	placeholder
+		if len(key.IPBlacklist) > 0 {
+			builder.SetIPBlacklist(key.IPBlacklist)
+	placeholder else {
+			builder.ClearIPBlacklist()
+	placeholder
 placeholder
 
 	affected, err := builder.Save(ctx)

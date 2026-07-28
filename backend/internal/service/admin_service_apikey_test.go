@@ -45,7 +45,9 @@ placeholder
 func (s *userRepoStubForGroupUpdate) GetFirstAdmin(context.Context) (*User, error) {
 	panic("unexpected")
 placeholder
-func (s *userRepoStubForGroupUpdate) Update(context.Context, *User) error { panic("unexpected") placeholder
+func (s *userRepoStubForGroupUpdate) Update(context.Context, *User, UserUpdateFields) error {
+	panic("unexpected")
+placeholder
 func (s *userRepoStubForGroupUpdate) Delete(context.Context, int64) error { panic("unexpected") placeholder
 func (s *userRepoStubForGroupUpdate) GetUserAvatar(context.Context, int64) (*UserAvatar, error) {
 	panic("unexpected")
@@ -67,6 +69,14 @@ func (s *userRepoStubForGroupUpdate) UpdateBalance(context.Context, int64, float
 placeholder
 func (s *userRepoStubForGroupUpdate) DeductBalance(context.Context, int64, float64) error {
 	panic("unexpected")
+placeholder
+
+func (s *userRepoStubForGroupUpdate) AdjustBalance(ctx context.Context, id int64, delta float64) (BalanceChange, error) {
+	panic("unexpected AdjustBalance call")
+placeholder
+
+func (s *userRepoStubForGroupUpdate) SetBalance(ctx context.Context, id int64, value float64) (BalanceChange, error) {
+	panic("unexpected SetBalance call")
 placeholder
 func (s *userRepoStubForGroupUpdate) UpdateConcurrency(context.Context, int64, int) error {
 	panic("unexpected")
@@ -134,7 +144,7 @@ placeholder
 	clone := *s.key
 	return &clone, nil
 placeholder
-func (s *apiKeyRepoStubForGroupUpdate) Update(_ context.Context, key *APIKey) error {
+func (s *apiKeyRepoStubForGroupUpdate) Update(_ context.Context, key *APIKey, _ APIKeyUpdateFields) error {
 	if s.updateErr != nil {
 		return s.updateErr
 placeholder
