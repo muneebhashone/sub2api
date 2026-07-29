@@ -159,7 +159,7 @@ func TestApplyToolsLastCacheBreakpoint_StripsDeferredToolCacheControl(t *testing
 placeholder
 
 func TestApplyToolsLastCacheBreakpoint_SkipsDeferredFinalTool(t *testing.T) {
-	body := []byte(`{"tools":[{"name":"a","input_schema":{placeholderplaceholder,{"name":"b","custom":{"defer_loading":trueplaceholderplaceholder]placeholder`)
+	body := []byte(`{"tools":[{"name":"a","input_schema":{placeholderplaceholder,{"name":"b","defer_loading":trueplaceholder]placeholder`)
 	out := applyToolsLastCacheBreakpoint(body)
 
 	require.Equal(t, "ephemeral", gjson.GetBytes(out, "tools.0.cache_control.type").String())
@@ -168,11 +168,12 @@ func TestApplyToolsLastCacheBreakpoint_SkipsDeferredFinalTool(t *testing.T) {
 placeholder
 
 func TestApplyToolsLastCacheBreakpoint_OnlyLiteralTrueIsDeferred(t *testing.T) {
-	body := []byte(`{"tools":[{"name":"true","custom":{"defer_loading":trueplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"false","custom":{"defer_loading":falseplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"string","custom":{"defer_loading":"true"placeholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"number","custom":{"defer_loading":1placeholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"object","custom":{"defer_loading":{placeholderplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder]placeholder`)
+	body := []byte(`{"tools":[{"name":"custom-true","custom":{"defer_loading":trueplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"top-level-true","defer_loading":true,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"false","defer_loading":false,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"string","defer_loading":"true","cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"number","defer_loading":1,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"object","defer_loading":{placeholder,"cache_control":{"type":"ephemeral"placeholderplaceholder]placeholder`)
 	out := stripDeferredToolCacheControl(body)
 
 	require.False(t, gjson.GetBytes(out, "tools.0.cache_control").Exists())
-	for idx := 1; idx < 5; idx++ {
+	require.False(t, gjson.GetBytes(out, "tools.1.cache_control").Exists())
+	for idx := 2; idx < 6; idx++ {
 		require.Equal(t, "ephemeral", gjson.GetBytes(out, fmt.Sprintf("tools.%d.cache_control.type", idx)).String())
 placeholder
 placeholder

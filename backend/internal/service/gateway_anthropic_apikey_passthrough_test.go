@@ -776,21 +776,23 @@ func TestGatewayService_AnthropicAPIKeyPassthrough_StripsDeferredToolCacheContro
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 	svc := &GatewayService{cfg: &config.Config{Security: config.SecurityConfig{URLAllowlist: config.URLAllowlistConfig{Enabled: falseplaceholderplaceholderplaceholderplaceholder
 	account := &Account{Platform: PlatformAnthropic, Type: AccountTypeAPIKeyplaceholder
-	body := []byte(`{"tools":[{"name":"deferred","custom":{"defer_loading":trueplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"ordinary","custom":{"defer_loading":falseplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"malformed","custom":{"defer_loading":"true"placeholder,"cache_control":{"type":"ephemeral"placeholderplaceholder]placeholder`)
+	body := []byte(`{"tools":[{"name":"deferred","custom":{"defer_loading":trueplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"top-level-deferred","defer_loading":true,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"ordinary","defer_loading":false,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"malformed","defer_loading":"true","cache_control":{"type":"ephemeral"placeholderplaceholder]placeholder`)
 
 	_, wireBody, err := svc.buildUpstreamRequestAnthropicAPIKeyPassthrough(context.Background(), c, account, body, "k")
 placeholder
 	require.False(t, gjson.GetBytes(wireBody, "tools.0.cache_control").Exists())
-	require.True(t, gjson.GetBytes(wireBody, "tools.1.cache_control").Exists())
+	require.False(t, gjson.GetBytes(wireBody, "tools.1.cache_control").Exists())
 	require.True(t, gjson.GetBytes(wireBody, "tools.2.cache_control").Exists())
+	require.True(t, gjson.GetBytes(wireBody, "tools.3.cache_control").Exists())
 
 	countReq, err := svc.buildCountTokensRequestAnthropicAPIKeyPassthrough(context.Background(), c, account, body, "k")
 placeholder
 	countBody, err := io.ReadAll(countReq.Body)
 placeholder
 	require.False(t, gjson.GetBytes(countBody, "tools.0.cache_control").Exists())
-	require.True(t, gjson.GetBytes(countBody, "tools.1.cache_control").Exists())
+	require.False(t, gjson.GetBytes(countBody, "tools.1.cache_control").Exists())
 	require.True(t, gjson.GetBytes(countBody, "tools.2.cache_control").Exists())
+	require.True(t, gjson.GetBytes(countBody, "tools.3.cache_control").Exists())
 placeholder
 
 func TestGatewayService_AnthropicOAuth_NotAffectedByAPIKeyPassthroughToggle(t *testing.T) {
