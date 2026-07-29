@@ -36,9 +36,7 @@ placeholder
 func TestExtractImagesUpstreamError_IncompleteContentFilterNotRetryable(t *testing.T) {
 	body := "data: {\"type\":\"response.incomplete\",\"response\":{\"id\":\"r\",\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"content_filter\"placeholderplaceholderplaceholder\n\n"
 	got := extractOpenAIImagesUpstreamError([]byte(body))
-	if got == nil {
-		t.Fatal("content_filter incomplete should produce error")
-placeholder
+	require.NotNil(t, got)
 	if got.StatusCode != http.StatusBadRequest {
 		t.Fatalf("content_filter should be 400 (non-retryable), got %d", got.StatusCode)
 placeholder
