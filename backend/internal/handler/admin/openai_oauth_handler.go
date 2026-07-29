@@ -1,6 +1,9 @@
 package admin
 
 import (
+	"context"
+	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +20,33 @@ import (
 type OpenAIOAuthHandler struct {
 	openaiOAuthService *service.OpenAIOAuthService
 	adminService       service.AdminService
-	quotaService       *service.OpenAIQuotaService
+	quotaService       openAIQuotaService
+	rateLimitService   openAIAccountStateRecoverer
+placeholder
+
+type openAIQuotaService interface {
+	QueryUsage(ctx context.Context, accountID int64) (*service.OpenAIQuotaUsage, error)
+	CacheResetCreditsSnapshot(ctx context.Context, accountID int64, credits *service.OpenAIRateLimitResetCredits) error
+	ResetCredit(ctx context.Context, accountID int64) (*service.OpenAIQuotaResetResult, error)
+placeholder
+
+type openAIAccountStateRecoverer interface {
+	RecoverAccountState(ctx context.Context, accountID int64, options service.AccountRecoveryOptions) (*service.SuccessfulTestRecoveryResult, error)
+placeholder
+
+const (
+	openAIQuotaResetWarningCacheRefreshFailed    = "reset_credit_cache_refresh_failed"
+	openAIQuotaResetWarningAccountRecoveryFailed = "account_state_recovery_failed"
+	openAIQuotaResetWarningAccountRefreshFailed  = "account_state_refresh_failed"
+)
+
+type openAIQuotaResetResponse struct {
+	service.OpenAIQuotaResetResult
+	Quota                 *service.OpenAIQuotaUsage `json:"quota,omitempty"`
+	Account               *dto.Account              `json:"account,omitempty"`
+	CacheRefreshed        bool                      `json:"cache_refreshed"`
+	AccountStateRecovered bool                      `json:"account_state_recovered"`
+	WarningCode           string                    `json:"warning_code,omitempty"`
 placeholder
 
 func oauthPlatformFromPath(c *gin.Context) string {
@@ -29,11 +58,13 @@ func NewOpenAIOAuthHandler(
 	openaiOAuthService *service.OpenAIOAuthService,
 	adminService service.AdminService,
 	quotaService *service.OpenAIQuotaService,
+	rateLimitService *service.RateLimitService,
 ) *OpenAIOAuthHandler {
 	return &OpenAIOAuthHandler{
 		openaiOAuthService: openaiOAuthService,
 		adminService:       adminService,
 		quotaService:       quotaService,
+		rateLimitService:   rateLimitService,
 placeholder
 placeholder
 
@@ -420,7 +451,19 @@ placeholder
 		response.BadRequest(c, "openai quota service is not enabled")
 		return
 placeholder
+	persistResetCredits := false
+	if raw, ok := c.GetQuery("persist_reset_credits"); ok {
+		persistResetCredits, err = strconv.ParseBool(raw)
+		if err != nil {
+			response.BadRequest(c, "Invalid persist_reset_credits value")
+			return
+	placeholder
+placeholder
+
 	usage, err := h.quotaService.QueryUsage(c.Request.Context(), accountID)
+	if err == nil && persistResetCredits {
+		err = h.quotaService.CacheResetCreditsSnapshot(c.Request.Context(), accountID, usage.RateLimitResetCredits)
+placeholder
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -482,5 +525,50 @@ placeholder
 		response.ErrorFrom(c, err)
 		return
 placeholder
-	response.Success(c, result)
+	if result == nil {
+		response.Error(c, http.StatusInternalServerError, "openai quota reset returned an empty result")
+		return
+placeholder
+
+	resetResponse := openAIQuotaResetResponse{OpenAIQuotaResetResult: *resultplaceholder
+	usage, err := h.quotaService.QueryUsage(c.Request.Context(), accountID)
+	if err != nil {
+		slog.Warn("openai_quota_reset_cache_refresh_failed", "account_id", accountID, "error", err)
+		resetResponse.WarningCode = openAIQuotaResetWarningCacheRefreshFailed
+		response.Success(c, resetResponse)
+		return
+placeholder
+	if err := h.quotaService.CacheResetCreditsSnapshot(c.Request.Context(), accountID, usage.RateLimitResetCredits); err != nil {
+		slog.Warn("openai_quota_reset_cache_refresh_failed", "account_id", accountID, "error", err)
+		resetResponse.WarningCode = openAIQuotaResetWarningCacheRefreshFailed
+		response.Success(c, resetResponse)
+		return
+placeholder
+	resetResponse.Quota = usage
+	resetResponse.CacheRefreshed = true
+
+	if h.rateLimitService == nil {
+		resetResponse.WarningCode = openAIQuotaResetWarningAccountRecoveryFailed
+		response.Success(c, resetResponse)
+		return
+placeholder
+	if _, err := h.rateLimitService.RecoverAccountState(c.Request.Context(), accountID, service.AccountRecoveryOptions{
+		InvalidateToken: true,
+placeholder); err != nil {
+		slog.Warn("openai_quota_reset_account_recovery_failed", "account_id", accountID, "error", err)
+		resetResponse.WarningCode = openAIQuotaResetWarningAccountRecoveryFailed
+		response.Success(c, resetResponse)
+		return
+placeholder
+	resetResponse.AccountStateRecovered = true
+
+	account, err := h.adminService.GetAccount(c.Request.Context(), accountID)
+	if err != nil {
+		slog.Warn("openai_quota_reset_account_refresh_failed", "account_id", accountID, "error", err)
+		resetResponse.WarningCode = openAIQuotaResetWarningAccountRefreshFailed
+		response.Success(c, resetResponse)
+		return
+placeholder
+	resetResponse.Account = dto.AccountFromService(account)
+	response.Success(c, resetResponse)
 placeholder

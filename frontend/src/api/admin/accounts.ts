@@ -834,13 +834,26 @@ export interface OpenAIQuotaResetResult {
   code: string
   credit?: OpenAIQuotaResetCredit | null
   windows_reset: number
+  quota?: OpenAIQuotaUsage | null
+  account?: Account | null
+  cache_refreshed: boolean
+  account_state_recovered: boolean
+  warning_code?:
+    | 'reset_credit_cache_refresh_failed'
+    | 'account_state_recovery_failed'
+    | 'account_state_refresh_failed'
 placeholder
 
 /**
  * Query OpenAI/Codex rate-limit usage for an OAuth account.
  */
-export async function queryOpenAIQuota(id: number): Promise<OpenAIQuotaUsage> {
-  const { data placeholder = await apiClient.get<OpenAIQuotaUsage>(`/admin/openai/accounts/${idplaceholder/quota`)
+export async function queryOpenAIQuota(
+  id: number,
+  options?: { persistResetCredits?: boolean placeholder
+): Promise<OpenAIQuotaUsage> {
+  const { data placeholder = await apiClient.get<OpenAIQuotaUsage>(`/admin/openai/accounts/${idplaceholder/quota`, {
+    params: options?.persistResetCredits === true ? { persist_reset_credits: true placeholder : undefined
+  placeholder)
   return data
 placeholder
 
