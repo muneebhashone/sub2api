@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 type accountUsageCodexProbeRepo struct {
@@ -216,9 +218,7 @@ func TestBuildCodexUsageProgressFromExtra_ZerosExpiredWindow(t *testing.T) {
 			"codex_5h_reset_at":     "2026-03-16T10:00:00Z", // 2h ago
 	placeholder
 		progress := buildCodexUsageProgressFromExtra(extra, "5h", now)
-		if progress == nil {
-			t.Fatal("expected non-nil progress")
-	placeholder
+		require.NotNil(t, progress)
 		if progress.Utilization != 0 {
 			t.Fatalf("expected Utilization=0 for expired window, got %v", progress.Utilization)
 	placeholder
@@ -234,9 +234,7 @@ placeholder)
 			"codex_5h_reset_at":     resetAt,
 	placeholder
 		progress := buildCodexUsageProgressFromExtra(extra, "5h", now)
-		if progress == nil {
-			t.Fatal("expected non-nil progress")
-	placeholder
+		require.NotNil(t, progress)
 		if progress.Utilization != 42.0 {
 			t.Fatalf("expected Utilization=42, got %v", progress.Utilization)
 	placeholder
@@ -248,9 +246,7 @@ placeholder)
 			"codex_7d_reset_at":     "2026-03-15T00:00:00Z", // yesterday
 	placeholder
 		progress := buildCodexUsageProgressFromExtra(extra, "7d", now)
-		if progress == nil {
-			t.Fatal("expected non-nil progress")
-	placeholder
+		require.NotNil(t, progress)
 		if progress.Utilization != 0 {
 			t.Fatalf("expected Utilization=0 for expired 7d window, got %v", progress.Utilization)
 	placeholder
