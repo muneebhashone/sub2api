@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
@@ -133,6 +134,139 @@ placeholder
 	placeholder,
 placeholder)
 	require.True(t, ok)
+placeholder
+
+func TestClaudeCodeValidator_SecurityMonitorWithoutBillingBlock(t *testing.T) {
+	monitorPrompt, err := os.ReadFile("testdata/security_monitor_system_prompt.txt")
+placeholder
+
+	validHeaders := map[string]string{
+		"User-Agent":        "claude-cli/2.1.220 (external, cli)",
+		"X-App":             "cli",
+		"anthropic-beta":    "claude-code-20250219",
+		"anthropic-version": "2023-06-01",
+placeholder
+	validBody := func(prompt string) map[string]any {
+		return map[string]any{
+			"model": "placeholder",
+			"system": []any{
+				map[string]any{"type": "text", "text": promptplaceholder,
+		placeholder,
+			"metadata": map[string]any{"user_id": claudeCodeMetadataUserIDJSONplaceholder,
+	placeholder
+placeholder
+
+	tests := []struct {
+		name       string
+		headers    map[string]string
+		body       map[string]any
+		wantAccept bool
+placeholder{
+		{
+			name:       "official classifier request",
+			headers:    validHeaders,
+			body:       validBody(string(monitorPrompt)),
+			wantAccept: true,
+	placeholder,
+		{
+			name: "non-Claude user agent",
+			headers: map[string]string{
+				"User-Agent":        "curl/8.0.0",
+				"X-App":             "cli",
+				"anthropic-beta":    "claude-code-20250219",
+				"anthropic-version": "2023-06-01",
+		placeholder,
+			body: validBody(string(monitorPrompt)),
+	placeholder,
+		{
+			name: "missing X-App",
+			headers: map[string]string{
+				"User-Agent":        validHeaders["User-Agent"],
+				"anthropic-beta":    validHeaders["anthropic-beta"],
+				"anthropic-version": validHeaders["anthropic-version"],
+		placeholder,
+			body: validBody(string(monitorPrompt)),
+	placeholder,
+		{
+			name: "missing anthropic-beta",
+			headers: map[string]string{
+				"User-Agent":        validHeaders["User-Agent"],
+				"X-App":             validHeaders["X-App"],
+				"anthropic-version": validHeaders["anthropic-version"],
+		placeholder,
+			body: validBody(string(monitorPrompt)),
+	placeholder,
+		{
+			name: "missing anthropic-version",
+			headers: map[string]string{
+				"User-Agent":     validHeaders["User-Agent"],
+				"X-App":          validHeaders["X-App"],
+				"anthropic-beta": validHeaders["anthropic-beta"],
+		placeholder,
+			body: validBody(string(monitorPrompt)),
+	placeholder,
+		{
+			name:    "missing metadata",
+			headers: validHeaders,
+			body: map[string]any{
+				"model":  "placeholder",
+				"system": []any{map[string]any{"type": "text", "text": string(monitorPrompt)placeholderplaceholder,
+		placeholder,
+	placeholder,
+		{
+			name:    "invalid metadata user ID",
+			headers: validHeaders,
+			body: func() map[string]any {
+				body := validBody(string(monitorPrompt))
+				body["metadata"] = map[string]any{"user_id": "invalid"placeholder
+				return body
+		placeholder(),
+	placeholder,
+		{
+			name:       "unrelated prompt",
+			headers:    validHeaders,
+			body:       validBody("You are a different security classifier for coding agents."),
+			wantAccept: false,
+	placeholder,
+		{
+			name:       "opening sentence alone",
+			headers:    validHeaders,
+			body:       validBody(claudeCodeSecurityMonitorPromptPrefix),
+			wantAccept: false,
+	placeholder,
+		{
+			name:    "opening sentence plus arbitrary altered suffix",
+			headers: validHeaders,
+			body: validBody(claudeCodeSecurityMonitorPromptPrefix + "\n\n" +
+				strings.Repeat("This is arbitrary altered classifier content. ", 300)),
+			wantAccept: false,
+	placeholder,
+		{
+			name:    "multiple system entries without billing block",
+			headers: validHeaders,
+			body: func() map[string]any {
+				body := validBody(string(monitorPrompt))
+				body["system"] = append(body["system"].([]any), map[string]any{
+					"type": "text",
+					"text": "Additional unrelated system content.",
+			placeholder)
+				return body
+		placeholder(),
+			wantAccept: false,
+	placeholder,
+placeholder
+
+	validator := NewClaudeCodeValidator()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "http://example.com/v1/messages", nil)
+			for name, value := range tt.headers {
+				req.Header.Set(name, value)
+		placeholder
+
+			require.Equal(t, tt.wantAccept, validator.Validate(req, tt.body))
+	placeholder)
+placeholder
 placeholder
 
 func TestClaudeCodeValidator_BillingBlockVSCodeEntrypointRecognized(t *testing.T) {
