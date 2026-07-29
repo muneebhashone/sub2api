@@ -464,6 +464,9 @@ placeholder
 	if isOpenAIRequestBodyTooLargeError(statusCode, "", responseBody) {
 		return true
 placeholder
+	if account != nil && account.IsPoolMode() && account.IsPoolModeRetryableStatus(statusCode) {
+		return true
+placeholder
 	switch statusCode {
 	case http.StatusTooManyRequests, 529:
 		return true
