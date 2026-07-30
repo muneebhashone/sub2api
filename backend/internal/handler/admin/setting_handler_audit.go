@@ -299,6 +299,9 @@ placeholder
 	if before.HomeContent != after.HomeContent {
 		changed = append(changed, "home_content")
 placeholder
+	if before.CompactHomeEnabled != after.CompactHomeEnabled {
+		changed = append(changed, "compact_home_enabled")
+placeholder
 	if before.HideCcsImportButton != after.HideCcsImportButton {
 		changed = append(changed, "hide_ccs_import_button")
 placeholder

@@ -228,6 +228,16 @@ placeholder
 	return nil, ErrGroupNotFound
 placeholder
 
+func TestSettingService_UpdateSettings_PersistsCompactHomeEnabled(t *testing.T) {
+	repo := &settingUpdateRepoStub{placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{CompactHomeEnabled: trueplaceholder)
+
+placeholder
+	require.Equal(t, "true", repo.updates[SettingKeyCompactHomeEnabled])
+placeholder
+
 func TestSettingService_UpdateSettings_DefaultSubscriptions_ValidGroup(t *testing.T) {
 	repo := &settingUpdateRepoStub{placeholder
 	groupReader := &defaultSubGroupReaderStub{

@@ -64,6 +64,18 @@ placeholder
 placeholder
 placeholder
 
+func TestDiffSettings_DetectsCompactHomeChange(t *testing.T) {
+	changed := diffSettings(
+		&service.SystemSettings{placeholder,
+		&service.SystemSettings{CompactHomeEnabled: trueplaceholder,
+		nil,
+		nil,
+		UpdateSettingsRequest{placeholder,
+	)
+
+	require.Contains(t, changed, service.SettingKeyCompactHomeEnabled)
+placeholder
+
 func TestEqualNullableFloat(t *testing.T) {
 	five := 5.0
 	five2 := 5.0
