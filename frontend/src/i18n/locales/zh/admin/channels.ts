@@ -623,7 +623,9 @@ export default {
       quotaEndsInMinutes: '额度将在 {minutesplaceholder 分钟后结束',
       quotaEndsInHoursMinutes: '额度将在 {hoursplaceholder 小时 {minutesplaceholder 分钟后结束',
       quotaEndsInDaysHours: '额度将在 {daysplaceholder 天 {hoursplaceholder 小时后结束',
-      daysRemaining: '天剩余',
+      daysRemaining: '剩余 {daysplaceholder 天',
+      hoursMinutesRemaining: '剩余 {hoursplaceholder 小时 {minutesplaceholder 分钟',
+      minutesRemaining: '剩余 {minutesplaceholder 分钟',
       remainingDays: '剩余天数',
       noExpiration: '无过期时间',
       status: {
