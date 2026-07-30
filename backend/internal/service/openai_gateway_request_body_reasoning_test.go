@@ -99,6 +99,47 @@ placeholder
 	assert.False(t, changed)
 placeholder
 
+func TestTrimOpenAIEncryptedReasoningItems_Compaction(t *testing.T) {
+	tests := []struct {
+		name      string
+		itemType  string
+		encrypted bool
+		changed   bool
+placeholder{
+		{name: "compaction", itemType: "compaction", encrypted: true, changed: trueplaceholder,
+		{name: "compaction summary", itemType: "compaction_summary", encrypted: true, changed: trueplaceholder,
+		{name: "unencrypted compaction", itemType: "compaction", encrypted: false, changed: falseplaceholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			item := map[string]any{"type": tt.itemType, "id": "cmp_stale"placeholder
+			if tt.encrypted {
+				item["encrypted_content"] = "gAAA"
+		placeholder
+			reqBody := map[string]any{"input": []any{
+				item,
+				map[string]any{"type": "message", "content": "hi"placeholder,
+		placeholderplaceholder
+
+			changed := trimOpenAIEncryptedReasoningItems(reqBody)
+			assert.Equal(t, tt.changed, changed)
+			input, ok := reqBody["input"].([]any)
+			require.True(t, ok)
+			require.NotEmpty(t, input)
+			first, ok := input[0].(map[string]any)
+			require.True(t, ok)
+			if tt.changed {
+				require.Len(t, input, 1)
+				assert.Equal(t, "message", first["type"])
+				return
+		placeholder
+			require.Len(t, input, 2)
+			assert.Equal(t, tt.itemType, first["type"])
+	placeholder)
+placeholder
+placeholder
+
 func TestSanitizeOpenAICrossModeFailoverReasoning_DropsWholeEncryptedItem(t *testing.T) {
 	body := []byte(`{"model":"gpt-5.1","input":[` +
 		`{"type":"message","role":"user","content":"hi"placeholder,` +
