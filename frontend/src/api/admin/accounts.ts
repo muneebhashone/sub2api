@@ -715,6 +715,8 @@ export interface BatchOperationResult {
   total: number
   success: number
   failed: number
+  success_ids?: number[]
+  failed_ids?: number[]
   errors?: Array<{ account_id: number; error: string placeholder>
   warnings?: Array<{ account_id: number; warning: string placeholder>
 placeholder
@@ -726,6 +728,16 @@ placeholder
  */
 export async function revertProxyFallback(id: number): Promise<{ message: string placeholder> {
   const { data placeholder = await apiClient.post<{ message: string placeholder>(`/admin/accounts/${idplaceholder/revert-proxy-fallback`)
+  return data
+placeholder
+
+/**
+ * Delete multiple accounts with bounded server-side concurrency.
+ */
+export async function batchDelete(accountIds: number[]): Promise<BatchOperationResult> {
+  const { data placeholder = await apiClient.post<BatchOperationResult>('/admin/accounts/batch-delete', {
+    account_ids: accountIds
+  placeholder)
   return data
 placeholder
 
@@ -968,6 +980,7 @@ export const accountsAPI = {
   importCodexSession,
   createOpenAICodexPAT,
   getAntigravityDefaultModelMapping,
+  batchDelete,
   batchClearError,
   batchRefresh,
   setPrivacy,
