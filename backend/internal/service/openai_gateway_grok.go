@@ -179,11 +179,12 @@ placeholder
 	var firstTokenMs *int
 	responseID := ""
 	if reqStream {
+		maxLineSize := defaultMaxLineSize
+		if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
+			maxLineSize = s.cfg.Gateway.MaxLineSize
+	placeholder
+		resp.Body = newGrokResponsesBillingPingFilterBody(resp.Body, account, maxLineSize)
 		if hasGrokResponsesClientToolMapping(clientToolMapping) {
-			maxLineSize := defaultMaxLineSize
-			if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
-				maxLineSize = s.cfg.Gateway.MaxLineSize
-		placeholder
 			resp.Body = newGrokResponsesClientToolStreamBody(resp.Body, clientToolMapping, maxLineSize)
 	placeholder
 		streamResult, err := s.handleStreamingResponse(ctx, resp, c, account, startTime, originalModel, upstreamModel)
