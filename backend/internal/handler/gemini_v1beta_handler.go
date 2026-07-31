@@ -98,6 +98,12 @@ placeholder
 		googleError(c, http.StatusBadRequest, "Missing model in URL")
 		return
 placeholder
+	// 模型名会被拼进上游 URL 的 path，先在入口校验片段合规性，
+	// 见 service/upstream_path_guard.go。
+	if !service.IsSafeGeminiModelPathSegment(modelName) {
+		googleError(c, http.StatusBadRequest, "Invalid model in URL")
+		return
+placeholder
 	if resolvedModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context()); ok && strings.TrimSpace(resolvedModel) != "" {
 		modelName = strings.TrimSpace(resolvedModel)
 placeholder
@@ -167,6 +173,12 @@ placeholder
 	modelName, action, err := parseGeminiModelAction(strings.TrimPrefix(c.Param("modelAction"), "/"))
 	if err != nil {
 		googleError(c, http.StatusNotFound, err.Error())
+		return
+placeholder
+	// URL 里的模型名最终会被拼进上游 /v1beta/models/{modelplaceholder:{actionplaceholder，
+	// 先在入口校验片段合规性，见 service/upstream_path_guard.go。
+	if !service.IsSafeGeminiModelPathSegment(modelName) {
+		googleError(c, http.StatusBadRequest, "Invalid model in URL")
 		return
 placeholder
 	if resolvedModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context()); ok && strings.TrimSpace(resolvedModel) != "" {

@@ -1209,8 +1209,10 @@ placeholder
 placeholder
 
 	// Use streamGenerateContent for real-time feedback
-	fullURL := fmt.Sprintf("%s/v1beta/models/%s:streamGenerateContent?alt=sse",
-		strings.TrimRight(normalizedBaseURL, "/"), modelID)
+	fullURL, err := buildGeminiAIStudioModelActionURL(normalizedBaseURL, modelID, "streamGenerateContent", true)
+	if err != nil {
+		return nil, err
+placeholder
 
 	req, err := http.NewRequestWithContext(ctx, "POST", fullURL, bytes.NewReader(payload))
 	if err != nil {
@@ -1246,7 +1248,10 @@ placeholder
 		if err != nil {
 			return nil, err
 	placeholder
-		fullURL := fmt.Sprintf("%s/v1beta/models/%s:streamGenerateContent?alt=sse", strings.TrimRight(normalizedBaseURL, "/"), modelID)
+		fullURL, err := buildGeminiAIStudioModelActionURL(normalizedBaseURL, modelID, "streamGenerateContent", true)
+		if err != nil {
+			return nil, err
+	placeholder
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullURL, bytes.NewReader(payload))
 		if err != nil {
