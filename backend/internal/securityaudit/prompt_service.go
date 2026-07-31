@@ -156,7 +156,7 @@ placeholder
 	if cfg.EffectiveMode() != ModeBlocking || !cfg.IncludesGroup(req.GroupID) {
 		return &PromptDecision{Kind: DecisionAllow, AllowNextStage: trueplaceholder, nil
 placeholder
-	snapshot, err := ExtractPromptSnapshot(req)
+	snapshot, err := ExtractBlockingPromptSnapshot(req, cfg.BlockingLatestTurnOnly)
 	if errors.Is(err, ErrNoPromptText) {
 		return &PromptDecision{Kind: DecisionAllow, AllowNextStage: trueplaceholder, nil
 placeholder

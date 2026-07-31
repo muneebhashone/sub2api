@@ -32,6 +32,7 @@ func TestDefaultConfigIsOff(t *testing.T) {
 	storage, err := ParseStorageConfig("")
 placeholder
 	require.False(t, storage.Enabled)
+	require.False(t, storage.BlockingLatestTurnOnly)
 	active, err := ActiveFromStorage(storage, true, prefixEncryptor{placeholder)
 placeholder
 	require.Equal(t, ModeOff, active.EffectiveMode())
@@ -40,6 +41,28 @@ placeholder
 placeholder
 	require.Contains(t, string(publicJSON), `"group_ids":[]`)
 	require.Contains(t, string(publicJSON), `"endpoints":[]`)
+placeholder
+
+func TestBlockingLatestTurnOnlyConfigRoundTrip(t *testing.T) {
+	manager := &ConfigManager{encryptor: prefixEncryptor{placeholder, encryptionKeyConfigured: trueplaceholder
+	request := UpdateConfigRequest{
+		ExpectedConfigVersion: 1, Enabled: true, BlockingEnabled: true, BlockingLatestTurnOnly: true,
+		Strategy: "priority", WorkerCount: 1, QueueCapacity: 10, Scanners: []string{"pii"placeholder, AllGroups: true,
+		Endpoints: []UpdateEndpoint{{
+			ID: "guard-1", Name: "Guard", Protocol: "openai_compatible", BaseURL: "http://127.0.0.1:8080",
+			Model: DefaultGuardModel, TimeoutMS: 1000, InputLimit: 1000, Enabled: true,
+placeholder
+placeholder
+	next, err := manager.buildNextStorage(DefaultStorageConfig(), request, 9)
+placeholder
+	require.True(t, next.BlockingLatestTurnOnly)
+	require.Contains(t, changeSummary(next), `"blocking_latest_turn_only":true`)
+
+	active, err := ActiveFromStorage(next, true, prefixEncryptor{placeholder)
+placeholder
+	require.True(t, active.BlockingLatestTurnOnly)
+	public := PublicFromStorage(next, true, nil)
+	require.True(t, public.BlockingLatestTurnOnly)
 placeholder
 
 func TestConfigRejectsBlockingWithoutAudit(t *testing.T) {
