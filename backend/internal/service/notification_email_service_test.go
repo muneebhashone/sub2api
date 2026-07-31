@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"io"
+	"mime/quotedprintable"
 	"net"
+	"net/mail"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -596,6 +599,21 @@ func (s *notificationEmailTestSMTPServer) lastMessage() string {
 		return ""
 placeholder
 	return s.messageBodies[len(s.messageBodies)-1]
+placeholder
+
+func (s *notificationEmailTestSMTPServer) lastMessageBody(t *testing.T) string {
+placeholder
+
+	message, err := mail.ReadMessage(strings.NewReader(s.lastMessage()))
+placeholder
+
+	bodyReader := io.Reader(message.Body)
+	if strings.EqualFold(message.Header.Get("Content-Transfer-Encoding"), "quoted-printable") {
+		bodyReader = quotedprintable.NewReader(message.Body)
+placeholder
+	body, err := io.ReadAll(bodyReader)
+placeholder
+	return string(body)
 placeholder
 
 func (s *notificationEmailTestSMTPServer) close() {
