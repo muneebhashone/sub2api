@@ -327,6 +327,14 @@ placeholder
 			"expires_at":    now.Add(30 * time.Minute).Format(time.RFC3339),
 	placeholder,
 placeholder)
+	unschedulable := mustCreateAccount(s.T(), s.client, &service.Account{
+		Name:        "grok-oauth-unschedulable-excluded",
+		Platform:    service.PlatformGrok,
+		Type:        service.AccountTypeOAuth,
+		Status:      service.StatusActive,
+placeholder"refresh_token": "refresh-unschedulable"placeholder,
+placeholder)
+	s.Require().NoError(s.client.Account.UpdateOneID(unschedulable.ID).SetSchedulable(false).Exec(s.ctx))
 	mustCreateAccount(s.T(), s.client, &service.Account{
 		Name:     "grok-api-key-excluded",
 		Platform: service.PlatformGrok,
@@ -386,6 +394,7 @@ placeholder
 	first := firstPage.Accounts
 	s.Require().Len(first, 2)
 	s.Require().Equal([]int64{valid1.ID, valid2.IDplaceholder, []int64{first[0].ID, first[1].IDplaceholder)
+	s.Require().NotContains([]int64{first[0].ID, first[1].IDplaceholder, unschedulable.ID)
 
 	options.AfterID = first[len(first)-1].ID
 	secondPage, err := s.repo.ListOAuthRefreshCandidatePage(s.ctx, options)
