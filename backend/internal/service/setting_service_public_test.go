@@ -78,6 +78,25 @@ placeholder
 	require.Equal(t, []int{20, 50, 100placeholder, settings.TablePageSizeOptions)
 placeholder
 
+func TestSettingService_GetPublicSettings_ExposesCompactHomeEnabled(t *testing.T) {
+	repo := &settingPublicRepoStub{
+		values: map[string]string{
+			SettingKeyCompactHomeEnabled: "true",
+	placeholder,
+placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+
+placeholder
+	require.True(t, settings.CompactHomeEnabled)
+
+	missingSettings, err := NewSettingService(&settingPublicRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{placeholder).
+		GetPublicSettings(context.Background())
+placeholder
+	require.False(t, missingSettings.CompactHomeEnabled)
+placeholder
+
 func TestSettingService_GetPublicSettings_ExposesForceEmailOnThirdPartySignup(t *testing.T) {
 	repo := &settingPublicRepoStub{
 		values: map[string]string{
