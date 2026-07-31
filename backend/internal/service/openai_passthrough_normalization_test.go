@@ -85,3 +85,20 @@ placeholder
 	require.Len(t, input.Array(), 1)
 	require.Equal(t, "message", input.Array()[0].Get("type").String())
 placeholder
+
+func TestDetectOpenAIPassthroughInstructionsRejectReason(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		body string
+		want string
+placeholder{
+		{name: "missing is optional", body: `{"model":"gpt-5.1-codex"placeholder`, want: ""placeholder,
+		{name: "non string remains rejected", body: `{"instructions":{"text":"invalid"placeholderplaceholder`, want: "instructions_not_string"placeholder,
+		{name: "empty remains rejected", body: `{"instructions":"  "placeholder`, want: "instructions_empty"placeholder,
+		{name: "non empty remains accepted", body: `{"instructions":"client guidance"placeholder`, want: ""placeholder,
+placeholder {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, detectOpenAIPassthroughInstructionsRejectReason("gpt-5.1-codex", []byte(tt.body)))
+	placeholder)
+placeholder
+placeholder
