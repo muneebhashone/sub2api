@@ -531,7 +531,7 @@ placeholder
 placeholder
 placeholder
 
-func TestDefaultPricingIncludesCodexAutoReview(t *testing.T) {
+func TestDefaultPricingUsesReducedCodexAutoReviewRates(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "resources", "model-pricing", "model_prices_and_context_window.json"))
 placeholder
 
@@ -542,9 +542,12 @@ placeholder
 
 	got := svc.GetModelPricing("codex-auto-review")
 	require.NotNil(t, got)
-	require.InDelta(t, 5e-6, got.InputCostPerToken, 1e-12)
-	require.InDelta(t, 3e-5, got.OutputCostPerToken, 1e-12)
-	require.InDelta(t, 5e-7, got.CacheReadInputTokenCost, 1e-12)
+	require.InDelta(t, 0.2e-6, got.InputCostPerToken, 1e-12)
+	require.InDelta(t, 0.4e-6, got.InputCostPerTokenPriority, 1e-12)
+	require.InDelta(t, 1.2e-6, got.OutputCostPerToken, 1e-12)
+	require.InDelta(t, 2.4e-6, got.OutputCostPerTokenPriority, 1e-12)
+	require.InDelta(t, 0.02e-6, got.CacheReadInputTokenCost, 1e-12)
+	require.InDelta(t, 0.04e-6, got.CacheReadInputTokenCostPriority, 1e-12)
 placeholder
 
 func TestGetModelPricing_Gpt54MiniUsesDedicatedStaticFallbackWhenRemoteMissing(t *testing.T) {
