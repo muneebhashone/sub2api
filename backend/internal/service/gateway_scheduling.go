@@ -1453,12 +1453,12 @@ func (s *GatewayService) newSelectionResult(ctx context.Context, account *Accoun
 	if err != nil {
 		return nil, err
 placeholder
-	return &AccountSelectionResult{
+	return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 		Account:     hydrated,
 		Acquired:    acquired,
 		ReleaseFunc: release,
 		WaitPlan:    waitPlan,
-placeholder, nil
+placeholder), nil
 placeholder
 
 // filterByMinPriority 过滤出优先级最小的账号集合

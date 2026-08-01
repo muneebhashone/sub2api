@@ -512,11 +512,11 @@ placeholder
 	result, acquireErr := s.service.tryAcquireAccountSlot(ctx, accountID, account.Concurrency)
 	if acquireErr == nil && result != nil && result.Acquired {
 		_ = s.service.refreshStickySessionTTL(ctx, req.GroupID, sessionHash, s.service.openAIWSSessionStickyTTL())
-		return &AccountSelectionResult{
+		return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 			Account:     account,
 			Acquired:    true,
 			ReleaseFunc: result.ReleaseFunc,
-	placeholder, false, nil
+	placeholder), false, nil
 placeholder
 
 	cfg := s.service.schedulingConfig()
@@ -532,7 +532,7 @@ placeholder
 			)
 			return nil, true, nil
 	placeholder
-		return &AccountSelectionResult{
+		return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 			Account: account,
 			WaitPlan: &AccountWaitPlan{
 				AccountID:      accountID,
@@ -540,7 +540,7 @@ placeholder
 				Timeout:        cfg.StickySessionWaitTimeout,
 				MaxWaiting:     cfg.StickySessionMaxWaiting,
 		placeholder,
-	placeholder, false, nil
+	placeholder), false, nil
 placeholder
 	return nil, false, nil
 placeholder
@@ -1170,11 +1170,11 @@ placeholder
 		if req.SessionHash != "" && !req.PreserveStickyBinding {
 			_ = s.service.bindOpenAIStickySessionDuringSelection(ctx, req.GroupID, req.SessionHash, fresh.ID)
 	placeholder
-		return &AccountSelectionResult{
+		return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 			Account:     fresh,
 			Acquired:    true,
 			ReleaseFunc: result.ReleaseFunc,
-	placeholder, compactBlocked, nil
+	placeholder), compactBlocked, nil
 placeholder
 	return nil, compactBlocked, nil
 placeholder
@@ -1249,15 +1249,15 @@ placeholder
 			if req.SessionHash != "" && !req.PreserveStickyBinding {
 				_ = s.service.bindOpenAIStickySessionDuringSelection(ctx, req.GroupID, req.SessionHash, account.ID)
 		placeholder
-			return &AccountSelectionResult{
+			return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 				Account:     account,
 				Acquired:    true,
 				ReleaseFunc: result.ReleaseFunc,
-		placeholder, nil
+		placeholder), nil
 	placeholder
 		if s.service.concurrencyService != nil {
 			cfg := s.service.schedulingConfig()
-			return &AccountSelectionResult{
+			return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 				Account: account,
 				WaitPlan: &AccountWaitPlan{
 					AccountID:      account.ID,
@@ -1265,7 +1265,7 @@ placeholder
 					Timeout:        cfg.StickySessionWaitTimeout,
 					MaxWaiting:     cfg.StickySessionMaxWaiting,
 			placeholder,
-		placeholder, nil
+		placeholder), nil
 	placeholder
 placeholder
 	return nil, nil
@@ -1622,7 +1622,7 @@ placeholder
 				compactBlocked = true
 				continue
 		placeholder
-			return &AccountSelectionResult{
+			return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 				Account: fresh,
 				WaitPlan: &AccountWaitPlan{
 					AccountID:      fresh.ID,
@@ -1630,7 +1630,7 @@ placeholder
 					Timeout:        cfg.FallbackWaitTimeout,
 					MaxWaiting:     cfg.FallbackMaxWaiting,
 			placeholder,
-		placeholder, candidateCount, topK, loadSkew, nil
+		placeholder), candidateCount, topK, loadSkew, nil
 	placeholder
 placeholder
 

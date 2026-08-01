@@ -70,7 +70,10 @@ placeholder
 		ProfitMinMargin:      0.5,
 placeholder
 	base := context.WithValue(context.Background(), ctxkey.Group, group)
-	ctx, pricingAt := gw.WithOpenAIRequestPricingContext(base, &groupID, suppress)
+	if suppress {
+		base = service.WithOpenAIProfitControlSuppressed(base)
+placeholder
+	ctx, pricingAt := gw.WithOpenAIRequestPricingContext(base, &groupID)
 	require.False(t, pricingAt.IsZero())
 	return ctx
 placeholder

@@ -415,16 +415,16 @@ placeholder
 			responseID,
 			store.BindResponseAccount(ctx, derefGroupID(groupID), responseID, accountID, s.openAIWSResponseStickyTTL()),
 		)
-		return &AccountSelectionResult{
+		return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 			Account:     account,
 			Acquired:    true,
 			ReleaseFunc: result.ReleaseFunc,
-	placeholder, nil
+	placeholder), nil
 placeholder
 
 	cfg := s.schedulingConfig()
 	if s.concurrencyService != nil {
-		return &AccountSelectionResult{
+		return attachSelectionProfitGate(ctx, &AccountSelectionResult{
 			Account: account,
 			WaitPlan: &AccountWaitPlan{
 				AccountID:      accountID,
@@ -432,7 +432,7 @@ placeholder
 				Timeout:        cfg.StickySessionWaitTimeout,
 				MaxWaiting:     cfg.StickySessionMaxWaiting,
 		placeholder,
-	placeholder, nil
+	placeholder), nil
 placeholder
 	return nil, nil
 placeholder
