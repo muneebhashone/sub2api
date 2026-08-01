@@ -1531,6 +1531,141 @@ placeholder
 	response.Success(c, gin.H{"message": "reverted"placeholder)
 placeholder
 
+// BatchDelete handles deleting multiple accounts with bounded concurrency.
+// POST /api/v1/admin/accounts/batch-delete
+func (h *AccountHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		AccountIDs []int64 `json:"account_ids"`
+placeholder
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	accountIDs := normalizeInt64IDList(req.AccountIDs)
+	if len(accountIDs) == 0 {
+		response.BadRequest(c, "account_ids is required")
+		return
+placeholder
+
+	accounts, err := h.adminService.GetAccountsByIDs(c.Request.Context(), accountIDs)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	type deleteError struct {
+		AccountID int64  `json:"account_id"`
+		Error     string `json:"error"`
+placeholder
+
+	requestedIDs := make(map[int64]struct{placeholder, len(accountIDs))
+	for _, accountID := range accountIDs {
+		requestedIDs[accountID] = struct{placeholder{placeholder
+placeholder
+	accountsByID := make(map[int64]*service.Account, len(accounts))
+	for _, account := range accounts {
+		if account != nil {
+			accountsByID[account.ID] = account
+	placeholder
+placeholder
+
+	rootIDs := make([]int64, 0, len(accountIDs))
+	dependentIDs := make(map[int64][]int64)
+	failedIDs := make([]int64, 0)
+	errorsByAccount := make([]deleteError, 0)
+	for _, accountID := range accountIDs {
+		account := accountsByID[accountID]
+		if account == nil {
+			failedIDs = append(failedIDs, accountID)
+			errorsByAccount = append(errorsByAccount, deleteError{
+				AccountID: accountID,
+				Error:     "account not found",
+		placeholder)
+			continue
+	placeholder
+
+		rootID := accountID
+		visited := map[int64]struct{placeholder{accountID: {placeholderplaceholder
+		for {
+			current := accountsByID[rootID]
+			if current == nil || current.ParentAccountID == nil {
+				break
+		placeholder
+			parentID := *current.ParentAccountID
+			if _, selected := requestedIDs[parentID]; !selected {
+				break
+		placeholder
+			if _, exists := accountsByID[parentID]; !exists {
+				break
+		placeholder
+			if _, cyclic := visited[parentID]; cyclic {
+				rootID = accountID
+				break
+		placeholder
+			visited[parentID] = struct{placeholder{placeholder
+			rootID = parentID
+	placeholder
+
+		if rootID != accountID {
+			dependentIDs[rootID] = append(dependentIDs[rootID], accountID)
+			continue
+	placeholder
+		rootIDs = append(rootIDs, accountID)
+placeholder
+
+	const maxConcurrency = 5
+	g, gctx := errgroup.WithContext(c.Request.Context())
+	g.SetLimit(maxConcurrency)
+
+	var mu sync.Mutex
+	successIDs := make([]int64, 0, len(accountIDs))
+
+	// Every worker returns nil so one account failure does not cancel the remaining deletions.
+	for _, id := range rootIDs {
+		accountID := id
+		g.Go(func() error {
+			err := h.adminService.DeleteAccount(gctx, accountID)
+
+			mu.Lock()
+			defer mu.Unlock()
+			affectedIDs := append([]int64{accountIDplaceholder, dependentIDs[accountID]...)
+			if err != nil {
+				for _, affectedID := range affectedIDs {
+					failedIDs = append(failedIDs, affectedID)
+					errorsByAccount = append(errorsByAccount, deleteError{
+						AccountID: affectedID,
+						Error:     err.Error(),
+				placeholder)
+			placeholder
+				return nil
+		placeholder
+			successIDs = append(successIDs, affectedIDs...)
+			return nil
+	placeholder)
+placeholder
+
+	if err := g.Wait(); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	sort.Slice(successIDs, func(i, j int) bool { return successIDs[i] < successIDs[j] placeholder)
+	sort.Slice(failedIDs, func(i, j int) bool { return failedIDs[i] < failedIDs[j] placeholder)
+	sort.Slice(errorsByAccount, func(i, j int) bool {
+		return errorsByAccount[i].AccountID < errorsByAccount[j].AccountID
+placeholder)
+
+	response.Success(c, gin.H{
+		"total":       len(accountIDs),
+		"success":     len(successIDs),
+		"failed":      len(failedIDs),
+		"success_ids": successIDs,
+		"failed_ids":  failedIDs,
+		"errors":      errorsByAccount,
+placeholder)
+placeholder
+
 // BatchClearError handles batch clearing account errors
 // POST /api/v1/admin/accounts/batch-clear-error
 func (h *AccountHandler) BatchClearError(c *gin.Context) {
