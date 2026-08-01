@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"strings"
+
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tidwall/gjson"
 )
 
 func ensureCompositeTargetPlatform(c *gin.Context, apiKey *service.APIKey, model string) {
@@ -54,4 +57,43 @@ placeholder
 		return ""
 placeholder
 	return apiKey.Group.Platform
+placeholder
+
+func openAIReasoningEffortPolicyForRequest(c *gin.Context, apiKey *service.APIKey) (string, []service.ReasoningEffortMapping, bool) {
+	if apiKey == nil || apiKey.Group == nil {
+		return "", nil, false
+placeholder
+	if apiKey.Group.Platform != service.PlatformOpenAI && apiKey.Group.Platform != service.PlatformComposite {
+		return "", nil, false
+placeholder
+	if effectiveAPIKeyPlatform(c, apiKey) != service.PlatformOpenAI {
+		return "", nil, false
+placeholder
+	return apiKey.Group.MaxReasoningEffort, apiKey.Group.ReasoningEffortMappings, true
+placeholder
+
+func applyOpenAIReasoningEffortPolicyForRequest(c *gin.Context, apiKey *service.APIKey, body []byte) ([]byte, bool) {
+	maxEffort, mappings, ok := openAIReasoningEffortPolicyForRequest(c, apiKey)
+	if !ok {
+		return body, false
+placeholder
+	return service.ApplyOpenAIReasoningEffortPolicy(body, maxEffort, mappings)
+placeholder
+
+func bindOpenAIReasoningEffortPolicyForMessagesRequest(c *gin.Context, apiKey *service.APIKey, body []byte) {
+	if c == nil || c.Request == nil {
+		return
+placeholder
+	// The Messages bridge synthesizes a default OpenAI effort when
+	// output_config.effort is omitted. Bind the group policy only for an
+	// explicit client value so the ceiling does not alter that default.
+	effort := gjson.GetBytes(body, "output_config.effort")
+	if !effort.Exists() || effort.Type != gjson.String || strings.TrimSpace(effort.String()) == "" {
+		return
+placeholder
+	maxEffort, mappings, ok := openAIReasoningEffortPolicyForRequest(c, apiKey)
+	if !ok {
+		return
+placeholder
+	c.Request = c.Request.WithContext(service.WithOpenAIReasoningEffortPolicy(c.Request.Context(), maxEffort, mappings))
 placeholder

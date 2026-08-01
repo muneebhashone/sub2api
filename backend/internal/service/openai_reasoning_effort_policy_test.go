@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,15 +29,17 @@ placeholder
 
 func TestNormalizeReasoningEffortMappings(t *testing.T) {
 	t.Run("canonicalizes fixed OpenAI values", func(t *testing.T) {
-		got, err := NormalizeReasoningEffortMappings(PlatformOpenAI, []ReasoningEffortMapping{
-			{From: " MAX ", To: " x-high "placeholder,
-			{From: "minimal", To: "high"placeholder,
-	placeholder)
+		for _, platform := range []string{PlatformOpenAI, PlatformCompositeplaceholder {
+			got, err := NormalizeReasoningEffortMappings(platform, []ReasoningEffortMapping{
+				{From: " MAX ", To: " x-high "placeholder,
+				{From: "minimal", To: "high"placeholder,
+		placeholder)
+		placeholder
+			require.Equal(t, []ReasoningEffortMapping{
+				{From: "max", To: "xhigh"placeholder,
+				{From: "minimal", To: "high"placeholder,
+		placeholder, got)
 	placeholder
-		require.Equal(t, []ReasoningEffortMapping{
-			{From: "max", To: "xhigh"placeholder,
-			{From: "minimal", To: "high"placeholder,
-	placeholder, got)
 placeholder)
 
 	t.Run("rejects empty values", func(t *testing.T) {
@@ -55,7 +58,7 @@ placeholder)
 	t.Run("rejects mappings for non OpenAI platforms", func(t *testing.T) {
 		for _, platform := range []string{PlatformAnthropic, PlatformGemini, PlatformAntigravity, PlatformGrokplaceholder {
 			_, err := NormalizeReasoningEffortMappings(platform, []ReasoningEffortMapping{{From: "low", To: "high"placeholderplaceholder)
-			require.ErrorContains(t, err, "only supported for platform \"openai\"")
+			require.ErrorContains(t, err, "only supported for platforms \"openai\" and \"composite\"")
 	placeholder
 
 		_, err := NormalizeReasoningEffortMappings(PlatformOpenAI, []ReasoningEffortMapping{{From: "none", To: "low"placeholderplaceholder)
@@ -70,14 +73,32 @@ func TestNormalizeMaxReasoningEffortForPlatform(t *testing.T) {
 	value, err := normalizeMaxReasoningEffortForPlatform(PlatformOpenAI, "max")
 placeholder
 	require.Equal(t, "max", value)
+	value, err = normalizeMaxReasoningEffortForPlatform(PlatformComposite, "max")
+placeholder
+	require.Equal(t, "max", value)
 
 	for _, platform := range []string{PlatformAnthropic, PlatformGemini, PlatformAntigravity, PlatformGrokplaceholder {
 		_, err = normalizeMaxReasoningEffortForPlatform(platform, "low")
-		require.ErrorContains(t, err, "only supported for platform \"openai\"")
+		require.ErrorContains(t, err, "only supported for platforms \"openai\" and \"composite\"")
 placeholder
 
 	_, err = normalizeMaxReasoningEffortForPlatform(PlatformOpenAI, "none")
 	require.ErrorContains(t, err, "not supported")
+placeholder
+
+func TestOpenAIReasoningEffortPolicyContext(t *testing.T) {
+	body := []byte(`{"reasoning":{"effort":"max"placeholderplaceholder`)
+
+	unbound, changed := ApplyOpenAIReasoningEffortPolicyFromContext(context.Background(), body)
+	require.False(t, changed)
+	require.Equal(t, body, unbound)
+
+	mappings := []ReasoningEffortMapping{{From: "max", To: "xhigh"placeholderplaceholder
+	ctx := WithOpenAIReasoningEffortPolicy(context.Background(), "medium", mappings)
+	mappings[0].To = "low"
+	got, changed := ApplyOpenAIReasoningEffortPolicyFromContext(ctx, body)
+	require.True(t, changed)
+	require.Equal(t, "medium", gjson.GetBytes(got, "reasoning.effort").String())
 placeholder
 
 func TestApplyOpenAIReasoningEffortPolicy(t *testing.T) {
