@@ -104,6 +104,102 @@ placeholder
 placeholder
 placeholder
 
+func probeBoolPtr(value bool) *bool {
+	return &value
+placeholder
+
+// The probe switch drives the rate-sync switch and never the other way round:
+// syncing depends on probing, so a row where sync is on but the probe key is
+// missing must lose the sync flag instead of silently gaining periodic
+// outbound calls on the next unrelated edit.
+func TestLockAndMergeAccountProbeExtraNeverInfersProbeFromRateSync(t *testing.T) {
+	tests := []struct {
+		name                 string
+		databaseEnabled      any
+		databaseRateSync     any
+		explicitProbeEnabled *bool
+		explicitRateSync     *bool
+		wantEnabled          any
+		wantRateSync         any
+placeholder{
+		{
+			name:             "sync on with missing probe key zeroes sync and keeps probing off",
+			databaseEnabled:  nil,
+			databaseRateSync: []byte(`true`),
+			wantEnabled:      nil,
+			wantRateSync:     false,
+	placeholder,
+		{
+			name:             "sync on with probe off zeroes sync",
+			databaseEnabled:  []byte(`false`),
+			databaseRateSync: []byte(`true`),
+			wantEnabled:      false,
+			wantRateSync:     false,
+	placeholder,
+		{
+			name:             "both on in database stay on",
+			databaseEnabled:  []byte(`true`),
+			databaseRateSync: []byte(`true`),
+			wantEnabled:      true,
+			wantRateSync:     true,
+	placeholder,
+		{
+			name:                 "admin enabling both explicitly still turns probing on",
+			databaseEnabled:      nil,
+			databaseRateSync:     nil,
+			explicitProbeEnabled: probeBoolPtr(true),
+			explicitRateSync:     probeBoolPtr(true),
+			wantEnabled:          true,
+			wantRateSync:         true,
+	placeholder,
+		{
+			name:                 "explicit probe disable clears sync",
+			databaseEnabled:      []byte(`true`),
+			databaseRateSync:     []byte(`true`),
+			explicitProbeEnabled: probeBoolPtr(false),
+			wantEnabled:          false,
+			wantRateSync:         false,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+		placeholder
+			t.Cleanup(func() { _ = db.Close() placeholder)
+			client := dbent.NewClient(dbent.Driver(entsql.OpenDB(dialect.Postgres, db)))
+			t.Cleanup(func() { _ = client.Close() placeholder)
+
+			mock.ExpectQuery(`(?s)`+regexp.QuoteMeta("SELECT")+`.*`+regexp.QuoteMeta("FOR NO KEY UPDATE")).
+				WithArgs(int64(31), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test"placeholder`, nil).
+				WillReturnRows(sqlmock.NewRows([]string{"identity_unchanged", "ollama_group_unchanged", "ollama_proxy_unchanged", "enabled", "rate_sync_enabled", "snapshot", "ollama_session", "ollama_auto", "ollama_snapshot"placeholder).
+					AddRow(true, false, true, tt.databaseEnabled, tt.databaseRateSync, nil, nil, nil, nil))
+
+			account := &service.Account{
+				ID:          31,
+				Platform:    service.PlatformOpenAI,
+				Type:        service.AccountTypeAPIKey,
+		placeholder"api_key": "sk-test"placeholder,
+		placeholder
+			got, err := lockAndMergeAccountProbeExtra(
+				context.Background(), client, account, tt.explicitProbeEnabled, tt.explicitRateSync,
+			)
+		placeholder
+			if tt.wantEnabled == nil {
+				require.NotContains(t, got, service.UpstreamBillingProbeEnabledExtraKey)
+		placeholder else {
+				require.Equal(t, tt.wantEnabled, got[service.UpstreamBillingProbeEnabledExtraKey])
+		placeholder
+			if tt.wantRateSync == nil {
+				require.NotContains(t, got, service.UpstreamBillingRateSyncEnabledExtraKey)
+		placeholder else {
+				require.Equal(t, tt.wantRateSync, got[service.UpstreamBillingRateSyncEnabledExtraKey])
+		placeholder
+			require.NoError(t, mock.ExpectationsWereMet())
+	placeholder)
+placeholder
+placeholder
+
 func TestLockAndMergeAccountProbeExtraProtectsOllamaManagedFields(t *testing.T) {
 	for _, identityUnchanged := range []bool{true, falseplaceholder {
 		t.Run(map[bool]string{true: "same identity keeps snapshot", false: "changed identity clears snapshot"placeholder[identityUnchanged], func(t *testing.T) {
@@ -265,7 +361,7 @@ placeholder
 	require.NoError(t, mock.ExpectationsWereMet())
 placeholder
 
-func TestUpdateWithUpstreamBillingProbeEnabledRollsBackWhenOutboxFails(t *testing.T) {
+func TestUpdateWithAccountBillingSettingsRollsBackWhenOutboxFails(t *testing.T) {
 	db, mock, err := sqlmock.New()
 placeholder
 	t.Cleanup(func() { _ = db.Close() placeholder)
@@ -301,7 +397,8 @@ placeholder"api_key": "sk-test"placeholder,
 		Schedulable: true,
 placeholder
 
-	err = repo.UpdateWithUpstreamBillingProbeEnabled(context.Background(), account, false)
+	probeDisabled := false
+	err = repo.UpdateWithAccountBillingSettings(context.Background(), account, &probeDisabled, nil, nil)
 
 	require.EqualError(t, err, "outbox failed")
 	require.Equal(t, false, account.Extra[service.UpstreamBillingProbeEnabledExtraKey])
