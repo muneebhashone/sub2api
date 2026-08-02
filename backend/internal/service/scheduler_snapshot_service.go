@@ -213,15 +213,24 @@ func (s *SchedulerSnapshotService) ListSchedulableAccounts(ctx context.Context, 
 	bucket := s.bucketFor(groupID, platform, mode)
 	var writeToken SchedulerBucketWriteToken
 	canPublish := false
+	if err := ctx.Err(); err != nil {
+		return nil, useMixed, err
+placeholder
 
 	if s.cache != nil {
 		cached, hit, err := s.cache.GetSnapshot(ctx, bucket)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, useMixed, ctxErr
+	placeholder
 		if err != nil {
 			logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] cache read failed: bucket=%s err=%v", bucket.String(), err)
 	placeholder else if hit {
 			return derefAccounts(cached), useMixed, nil
 	placeholder
 		token, err := s.cache.CaptureBucketWriteToken(ctx, bucket)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, useMixed, ctxErr
+	placeholder
 		if err != nil {
 			if errors.Is(err, ErrSchedulerBucketRetired) || errors.Is(err, ErrSchedulerBucketWriteFenced) {
 				slog.Debug("[Scheduler] cache publish fenced", "bucket", bucket.String())
@@ -245,6 +254,9 @@ placeholder
 	if err != nil {
 		return nil, useMixed, err
 placeholder
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, useMixed, ctxErr
+placeholder
 
 	if s.cache != nil && canPublish {
 		if err := s.cache.SetSnapshot(fallbackCtx, bucket, writeToken, accounts); err != nil {
@@ -263,8 +275,14 @@ func (s *SchedulerSnapshotService) GetAccount(ctx context.Context, accountID int
 	if accountID <= 0 {
 		return nil, nil
 placeholder
+	if err := ctx.Err(); err != nil {
+		return nil, err
+placeholder
 	if s.cache != nil {
 		account, err := s.cache.GetAccount(ctx, accountID)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+	placeholder
 		if err != nil {
 			logger.LegacyPrintf("service.scheduler_snapshot", "[Scheduler] account cache read failed: id=%d err=%v", accountID, err)
 	placeholder else if account != nil {
