@@ -786,6 +786,8 @@ placeholder
 placeholder, s.billingDeps(), s.usageBillingRepo)
 
 	if billingErr != nil {
+		usageLog.ActualCost = 0
+		writeUsageLogBestEffort(ctx, s.usageLogRepo, usageLog, "service.gateway")
 		return billingErr
 placeholder
 	writeUsageLogBestEffort(ctx, s.usageLogRepo, usageLog, "service.gateway")
