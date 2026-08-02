@@ -947,6 +947,9 @@ placeholder
 		{Name: "rpm_limit", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "max_reasoning_effort", Type: field.TypeString, Size: 20, Default: ""placeholder,
 		{Name: "reasoning_effort_mappings", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "profit_control_enabled", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "profit_min_margin", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
+		{Name: "profit_safety_buffer", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{

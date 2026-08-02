@@ -345,6 +345,53 @@ placeholder
 	require.InDelta(t, expectedActual, userRepo.lastAmount, 1e-12)
 placeholder
 
+func TestGatewayServiceRecordUsage_UsesExplicitPricingAtForPeakRate(t *testing.T) {
+	for _, platform := range []string{PlatformAnthropic, PlatformGemini, PlatformGrok, PlatformAntigravityplaceholder {
+		t.Run(platform, func(t *testing.T) {
+			groupID := int64(903)
+			usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+			userRepo := &openAIRecordUsageUserRepoStub{placeholder
+			svc := newGatewayRecordUsageServiceForTest(usageRepo, userRepo, &openAIRecordUsageSubRepoStub{placeholder)
+			svc.resolver = newOpenAITokenImageChannelPricingResolverForTest(t, groupID, "gemini-image")
+
+			pricingAt := time.Date(2026, time.January, 1, 0, 30, 0, 0, time.UTC)
+			err := svc.RecordUsage(context.Background(), &RecordUsageInput{
+				Result: &ForwardResult{
+					RequestID:  "gateway_explicit_pricing_at_" + platform,
+					Model:      "gemini-image",
+					ImageCount: 1,
+					Usage: ClaudeUsage{
+						InputTokens:       1000,
+						OutputTokens:      600,
+						ImageOutputTokens: 100,
+				placeholder,
+			placeholder,
+				APIKey: &APIKey{
+					ID:      803,
+					GroupID: i64p(groupID),
+					Group: &Group{
+						ID:                 groupID,
+						Platform:           platform,
+						RateMultiplier:     1.0,
+						SubscriptionType:   SubscriptionTypeSubscription,
+						PeakRateEnabled:    true,
+						PeakStart:          "00:00",
+						PeakEnd:            "01:00",
+						PeakRateMultiplier: 3.0,
+				placeholder,
+			placeholder,
+				User:      &User{ID: 603placeholder,
+				Account:   &Account{ID: 703, Platform: platformplaceholder,
+				PricingAt: pricingAt,
+		placeholder)
+
+		placeholder
+			require.NotNil(t, usageRepo.lastLog)
+			require.Equal(t, 3.0, usageRepo.lastLog.RateMultiplier)
+	placeholder)
+placeholder
+placeholder
+
 func TestGatewayServiceRecordUsage_UsageLogWriteErrorDoesNotSkipBilling(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: false, err: MarkUsageLogCreateNotPersisted(context.Canceled)placeholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
