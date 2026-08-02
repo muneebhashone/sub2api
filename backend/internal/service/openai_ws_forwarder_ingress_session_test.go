@@ -18,6 +18,80 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type openAIWSLeaseLossAfterReadConn struct {
+	*openAIWSCaptureConn
+	cancel context.CancelCauseFunc
+	once   sync.Once
+placeholder
+
+func (c *openAIWSLeaseLossAfterReadConn) ReadMessage(ctx context.Context) ([]byte, error) {
+	message, err := c.openAIWSCaptureConn.ReadMessage(ctx)
+	if err == nil {
+		c.once.Do(func() {
+			c.cancel(ErrOpenAIWSIngressLeaseLost)
+	placeholder)
+placeholder
+	return message, err
+placeholder
+
+type openAIWSSingleConnDialer struct {
+	conn openAIWSClientConn
+placeholder
+
+func (d *openAIWSSingleConnDialer) Dial(
+	ctx context.Context,
+	wsURL string,
+	headers http.Header,
+	proxyURL string,
+) (openAIWSClientConn, int, http.Header, error) {
+	return d.conn, 0, nil, nil
+placeholder
+
+func TestOpenAIWSDownstreamWriteContext_CancellationOwnership(t *testing.T) {
+	t.Run("pre-canceled ordinary context is canceled before return", func(t *testing.T) {
+		controlCtx, cancelControl := context.WithCancelCause(context.Background())
+		cancelControl(context.Canceled)
+
+		writeCtx, cancelWrite := newOpenAIWSDownstreamWriteContext(controlCtx, nil, time.Second)
+		defer cancelWrite()
+		require.ErrorIs(t, writeCtx.Err(), context.Canceled)
+placeholder)
+
+	t.Run("lease loss keeps current write alive", func(t *testing.T) {
+		lifecycleCtx, cancelLifecycle := context.WithCancelCause(context.Background())
+		controlCtx, cancelControl := context.WithCancelCause(lifecycleCtx)
+		hooks := &OpenAIWSIngressHooks{ClientLifecycleContext: lifecycleCtxplaceholder
+		writeCtx, cancelWrite := newOpenAIWSDownstreamWriteContext(controlCtx, hooks, time.Second)
+		defer cancelWrite()
+
+		cancelControl(ErrOpenAIWSIngressLeaseLost)
+		select {
+		case <-writeCtx.Done():
+			t.Fatalf("lease loss unexpectedly canceled downstream write: %v", writeCtx.Err())
+		case <-time.After(20 * time.Millisecond):
+	placeholder
+
+		clientDisconnected := errors.New("client disconnected")
+		cancelLifecycle(clientDisconnected)
+		<-writeCtx.Done()
+		require.ErrorIs(t, context.Cause(writeCtx), clientDisconnected)
+placeholder)
+
+	t.Run("ordinary cancellation is direct and preserves cause", func(t *testing.T) {
+		lifecycleCtx, cancelLifecycle := context.WithCancelCause(context.Background())
+		controlCtx, cancelControl := context.WithCancelCause(lifecycleCtx)
+		defer cancelControl(context.Canceled)
+		hooks := &OpenAIWSIngressHooks{ClientLifecycleContext: lifecycleCtxplaceholder
+		writeCtx, cancelWrite := newOpenAIWSDownstreamWriteContext(controlCtx, hooks, time.Second)
+		defer cancelWrite()
+
+		serverShutdown := errors.New("server shutdown")
+		cancelLifecycle(serverShutdown)
+		require.ErrorIs(t, writeCtx.Err(), context.Canceled)
+		require.ErrorIs(t, context.Cause(writeCtx), serverShutdown)
+placeholder)
+placeholder
+
 func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_KeepLeaseAcrossTurns(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -167,6 +241,137 @@ placeholder
 	require.Equal(t, int64(1), metrics.AcquireTotal, "同一 ingress 会话多 turn 应只获取一次上游 lease")
 	require.Equal(t, 1, captureDialer.DialCount(), "同一 ingress 会话应保持同一上游连接")
 	require.Len(t, captureConn.writes, 2, "应向同一上游连接发送两轮 response.create")
+placeholder
+
+func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_LeaseLossSendsRetryClose(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{placeholder
+	cfg.Security.URLAllowlist.Enabled = false
+	cfg.Security.URLAllowlist.AllowInsecureHTTP = true
+	cfg.Gateway.OpenAIWS.Enabled = true
+	cfg.Gateway.OpenAIWS.APIKeyEnabled = true
+	cfg.Gateway.OpenAIWS.ResponsesWebsocketsV2 = true
+	cfg.Gateway.OpenAIWS.MaxConnsPerAccount = 1
+	cfg.Gateway.OpenAIWS.MinIdlePerAccount = 0
+	cfg.Gateway.OpenAIWS.MaxIdlePerAccount = 1
+	cfg.Gateway.OpenAIWS.QueueLimitPerConn = 8
+	cfg.Gateway.OpenAIWS.DialTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.ReadTimeoutSeconds = 3
+	cfg.Gateway.OpenAIWS.WriteTimeoutSeconds = 3
+
+	lifecycleCtx, cancelLifecycle := context.WithCancelCause(context.Background())
+	defer cancelLifecycle(context.Canceled)
+	controlCtx, cancelControl := context.WithCancelCause(lifecycleCtx)
+	upstreamConn := &openAIWSLeaseLossAfterReadConn{
+		openAIWSCaptureConn: &openAIWSCaptureConn{events: [][]byte{
+			[]byte(`{"type":"response.completed","response":{"id":"resp_lease_loss","model":"gpt-5.1","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+placeholder
+		cancel: cancelControl,
+placeholder
+	pool := newOpenAIWSConnPool(cfg)
+	pool.setClientDialerForTest(&openAIWSSingleConnDialer{conn: upstreamConnplaceholder)
+	defer pool.Close()
+
+	svc := &OpenAIGatewayService{
+		cfg:              cfg,
+		httpUpstream:     &httpUpstreamRecorder{placeholder,
+		cache:            &stubGatewayCache{placeholder,
+		openaiWSResolver: NewOpenAIWSProtocolResolver(cfg),
+		toolCorrector:    NewCodexToolCorrector(),
+		openaiWSPool:     pool,
+placeholder
+	account := &Account{
+		ID:          118,
+		Name:        "openai-ingress-lease-loss",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder"api_key": "sk-test"placeholder,
+		Extra:       map[string]any{"responses_websockets_v2_enabled": trueplaceholder,
+placeholder
+
+	serverErrCh := make(chan error, 1)
+	wsServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := coderws.Accept(w, r, &coderws.AcceptOptions{CompressionMode: coderws.CompressionContextTakeoverplaceholder)
+		if err != nil {
+			serverErrCh <- err
+			return
+	placeholder
+		defer func() {
+			_ = conn.CloseNow()
+	placeholder()
+
+		rec := httptest.NewRecorder()
+		ginCtx, _ := gin.CreateTestContext(rec)
+		req := r.Clone(controlCtx)
+		req.Header = req.Header.Clone()
+		req.Header.Set("User-Agent", "unit-test-agent/1.0")
+		ginCtx.Request = req
+
+		readCtx, cancelRead := context.WithTimeout(r.Context(), 3*time.Second)
+		msgType, firstMessage, readErr := conn.Read(readCtx)
+		cancelRead()
+		if readErr != nil {
+			serverErrCh <- readErr
+			return
+	placeholder
+		if msgType != coderws.MessageText && msgType != coderws.MessageBinary {
+			serverErrCh <- errors.New("unsupported websocket client message type")
+			return
+	placeholder
+
+		serverErrCh <- svc.ProxyResponsesWebSocketFromClient(
+			controlCtx,
+			ginCtx,
+			conn,
+			account,
+			"sk-test",
+			firstMessage,
+			&OpenAIWSIngressHooks{ClientLifecycleContext: lifecycleCtxplaceholder,
+		)
+placeholder))
+	defer wsServer.Close()
+
+	dialCtx, cancelDial := context.WithTimeout(context.Background(), 3*time.Second)
+	clientConn, _, err := coderws.Dial(dialCtx, "ws"+strings.TrimPrefix(wsServer.URL, "http"), nil)
+	cancelDial()
+placeholder
+	defer func() {
+		_ = clientConn.CloseNow()
+placeholder()
+
+	writeCtx, cancelWrite := context.WithTimeout(context.Background(), 3*time.Second)
+	err = clientConn.Write(writeCtx, coderws.MessageText, []byte(`{"type":"response.create","model":"gpt-5.1","stream":falseplaceholder`))
+	cancelWrite()
+placeholder
+
+	readCtx, cancelRead := context.WithTimeout(context.Background(), 3*time.Second)
+	msgType, event, err := clientConn.Read(readCtx)
+	cancelRead()
+placeholder
+	require.Equal(t, coderws.MessageText, msgType)
+	require.Equal(t, "response.completed", gjson.GetBytes(event, "type").String())
+
+	closeReadCtx, cancelCloseRead := context.WithTimeout(context.Background(), 3*time.Second)
+	_, _, err = clientConn.Read(closeReadCtx)
+	cancelCloseRead()
+	var closeErr coderws.CloseError
+	require.ErrorAs(t, err, &closeErr)
+	require.Equal(t, coderws.StatusTryAgainLater, closeErr.Code)
+	require.Equal(t, "websocket ingress capacity lease lost; please reconnect", closeErr.Reason)
+
+	select {
+	case serverErr := <-serverErrCh:
+		var clientCloseErr *OpenAIWSClientCloseError
+		require.ErrorAs(t, serverErr, &clientCloseErr)
+		require.Equal(t, coderws.StatusTryAgainLater, clientCloseErr.StatusCode())
+		require.ErrorIs(t, serverErr, ErrOpenAIWSIngressLeaseLost)
+	case <-time.After(3 * time.Second):
+		t.Fatal("ingress lease-loss reader did not exit")
+placeholder
 placeholder
 
 func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_IdleTimeoutReleasesStoreDisabledSession(t *testing.T) {
