@@ -250,7 +250,7 @@ export default {
         enabled: 'On',
         disabled: 'Off',
         probeFailed: 'Failed to probe upstream rate',
-        noEligibleAccounts: 'Select OpenAI API key accounts',
+        noEligibleAccounts: 'Select API key accounts',
         batchLimit: 'A batch can probe at most 20 accounts',
         batchCompleted: 'Probed {countplaceholder account(s)',
         batchPartial: 'Probe partially completed: {successplaceholder succeeded, {failedplaceholder failed'
