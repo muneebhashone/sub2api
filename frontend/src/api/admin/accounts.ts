@@ -844,24 +844,41 @@ export interface OpenAIQuotaResetResult {
     | 'account_state_refresh_failed'
 placeholder
 
+/** Usage payload plus whether the reset-credit snapshot was persisted. */
+export interface OpenAIQuotaRefreshResult extends OpenAIQuotaUsage {
+  cache_persisted: boolean
+placeholder
+
 /**
- * Query OpenAI/Codex rate-limit usage for an OAuth account.
+ * Query the upstream quota AND persist the reset-credit snapshot on the account
+ * so the card can be rehydrated without an upstream round-trip. It is a POST
+ * because it writes account state (and must therefore be audited).
+ *
+ * The read-only `GET /admin/openai/accounts/:id/quota` endpoint still exists for
+ * API consumers; the panel always wants the snapshot persisted, so it has no
+ * client binding here.
  */
-export async function queryOpenAIQuota(
-  id: number,
-  options?: { persistResetCredits?: boolean placeholder
-): Promise<OpenAIQuotaUsage> {
-  const { data placeholder = await apiClient.get<OpenAIQuotaUsage>(`/admin/openai/accounts/${idplaceholder/quota`, {
-    params: options?.persistResetCredits === true ? { persist_reset_credits: true placeholder : undefined
-  placeholder)
+export async function refreshOpenAIQuota(id: number): Promise<OpenAIQuotaRefreshResult> {
+  const { data placeholder = await apiClient.post<OpenAIQuotaRefreshResult>(
+    `/admin/openai/accounts/${idplaceholder/quota/refresh`
+  )
   return data
 placeholder
 
 /**
  * Consume one rate-limit-reset credit for an OpenAI/Codex OAuth account.
+ *
+ * The credit is non-refundable and the endpoint chains an upstream reset with an
+ * upstream re-query, so it needs a larger budget than the default client
+ * timeout: aborting locally would report a successful consumption as a failure
+ * and invite a retry that spends a second credit.
  */
 export async function resetOpenAIQuota(id: number): Promise<OpenAIQuotaResetResult> {
-  const { data placeholder = await apiClient.post<OpenAIQuotaResetResult>(`/admin/openai/accounts/${idplaceholder/reset-quota`)
+  const { data placeholder = await apiClient.post<OpenAIQuotaResetResult>(
+    `/admin/openai/accounts/${idplaceholder/reset-quota`,
+    undefined,
+    { timeout: 90_000 placeholder
+  )
   return data
 placeholder
 
@@ -998,7 +1015,7 @@ export const accountsAPI = {
   batchRefresh,
   setPrivacy,
   revertProxyFallback,
-  queryOpenAIQuota,
+  refreshOpenAIQuota,
   resetOpenAIQuota,
   createSparkShadow,
   getUpstreamBillingProbeSettings,

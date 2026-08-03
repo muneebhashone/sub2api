@@ -605,6 +605,10 @@ placeholder
 	require.Equal(t, 1, usage.RateLimitResetCredits.AvailableCount)
 	require.Equal(t, 1, detailCalls)
 	require.Empty(t, usage.RateLimitResetCredits.Credits)
+
+	// A count without expiration details must not be persisted (the reader could
+	// never age it out), and the previous snapshot must survive untouched.
+	require.Error(t, svc.CacheResetCreditsSnapshot(ctx, 100, usage.RateLimitResetCredits))
 	require.Empty(t, repo.extraUpdates)
 placeholder
 
@@ -627,6 +631,27 @@ placeholder)
 		err := svc.CacheResetCreditsSnapshot(ctx, 100, &OpenAIRateLimitResetCredits{AvailableCount: 1placeholder)
 
 	placeholder
+		require.Empty(t, repo.extraUpdates)
+placeholder)
+
+	t.Run("empty expiration list with a positive count preserves the cache", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+
+		err := svc.CacheResetCreditsSnapshot(ctx, 100, &OpenAIRateLimitResetCredits{
+			AvailableCount: 2,
+			Credits:        []OpenAIRateLimitResetCreditDetail{placeholder,
+	placeholder)
+
+	placeholder
+		require.Empty(t, repo.extraUpdates)
+placeholder)
+
+	t.Run("nil snapshot preserves the cache", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+
+		require.Error(t, svc.CacheResetCreditsSnapshot(ctx, 100, nil))
 		require.Empty(t, repo.extraUpdates)
 placeholder)
 
