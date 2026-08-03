@@ -14,7 +14,7 @@ import type {
   SendVerifyCodeRequest,
   SendVerifyCodeResponse,
   PublicSettings,
-  TencentCaptchaRequestProof,
+  ActionCaptchaRequestProof,
   TotpLoginResponse,
   TotpLogin2FARequest
 placeholder from '@/types'
@@ -51,7 +51,7 @@ placeholder
 
 export async function startOAuthLogin(
   request: OAuthLoginStart,
-  proof: TencentCaptchaRequestProof
+  proof: ActionCaptchaRequestProof
 ): Promise<OAuthLoginStartResponse> {
   const { data placeholder = await apiClient.post<OAuthLoginStartResponse>(
     `/auth/oauth/${request.providerplaceholder/start`,
