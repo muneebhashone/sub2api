@@ -230,6 +230,7 @@ placeholder
 		Amount:        stripe.Int64(amountInMinorUnit),
 		Reason:        stripe.String(string(stripe.RefundReasonRequestedByCustomer)),
 placeholder
+	params.SetIdempotencyKey(fmt.Sprintf("re-%s-%d", req.OrderID, amountInMinorUnit))
 	params.Context = ctx
 
 	r, err := s.sc.V1Refunds.Create(ctx, params)
