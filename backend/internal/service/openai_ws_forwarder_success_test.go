@@ -846,6 +846,75 @@ placeholder
 placeholder
 placeholder
 
+// 账号级自定义 UA 是管理员的显式配置，WS 握手与 HTTP 出站必须一视同仁地生效——
+// 否则同一个账号在两种传输上以不同身份出站。指纹保留、版本段重建、originator 配套。
+func TestOpenAIGatewayService_Forward_WSv2_OAuthHonorsAccountUserAgent(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses", nil)
+	c.Request.Header.Set("User-Agent", "luna/1.0.0")
+
+	cfg := &config.Config{placeholder
+	cfg.Security.URLAllowlist.Enabled = false
+	cfg.Security.URLAllowlist.AllowInsecureHTTP = true
+	cfg.Gateway.OpenAIWS.Enabled = true
+	cfg.Gateway.OpenAIWS.OAuthEnabled = true
+	cfg.Gateway.OpenAIWS.APIKeyEnabled = true
+	cfg.Gateway.OpenAIWS.ResponsesWebsocketsV2 = true
+	cfg.Gateway.OpenAIWS.AllowStoreRecovery = false
+	cfg.Gateway.OpenAIWS.MaxConnsPerAccount = 1
+	cfg.Gateway.OpenAIWS.MinIdlePerAccount = 0
+	cfg.Gateway.OpenAIWS.MaxIdlePerAccount = 1
+
+	captureConn := &openAIWSCaptureConn{
+		events: [][]byte{
+			[]byte(`{"type":"response.completed","response":{"id":"resp_oauth_account_ua","model":"gpt-5.1","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+	placeholder,
+placeholder
+	captureDialer := &openAIWSCaptureDialer{conn: captureConnplaceholder
+	pool := newOpenAIWSConnPool(cfg)
+	pool.setClientDialerForTest(captureDialer)
+
+	svc := &OpenAIGatewayService{
+		cfg:              cfg,
+		httpUpstream:     &httpUpstreamRecorder{placeholder,
+		cache:            &stubGatewayCache{placeholder,
+		openaiWSResolver: NewOpenAIWSProtocolResolver(cfg),
+		toolCorrector:    NewCodexToolCorrector(),
+		openaiWSPool:     pool,
+placeholder
+	account := &Account{
+		ID:          130,
+		Name:        "openai-oauth-custom-ua",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+placeholder
+			"access_token": "oauth-token-1",
+			// 填写于某个历史版本的账号级 UA：指纹要保留，版本段不能被逐字沿用。
+			"user_agent": "codex-tui/0.125.0 (Mac OS X 15.1.0; arm64) iTerm.app",
+	placeholder,
+		Extra: map[string]any{
+			"responses_websockets_v2_enabled": true,
+	placeholder,
+placeholder
+
+	body := []byte(`{"model":"gpt-5.1","stream":false,"input":[{"type":"input_text","text":"hello"placeholder]placeholder`)
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, "codex-tui", captureDialer.lastHeaders.Get("originator"))
+	require.Equal(t,
+		"codex-tui/"+codexCLIVersion+" (Mac OS X 15.1.0; arm64) iTerm.app",
+		captureDialer.lastHeaders.Get("user-agent"),
+	)
+	require.Equal(t, codexCLIVersion, captureDialer.lastHeaders.Get("version"))
+placeholder
+
 func TestOpenAIGatewayService_Forward_WSv2_HeaderSessionFallbackFromPromptCacheKey(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
