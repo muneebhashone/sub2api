@@ -122,6 +122,43 @@ func TestGrokContentPolicy403DoesNotMutateOrFailover(t *testing.T) {
 	require.Zero(t, repo.tempUnschedCalls)
 placeholder
 
+func TestGrokNonFailoverDoesNotApplyGenericTempUnschedulablePolicy(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{
+		accountRepo:      repo,
+		rateLimitService: NewRateLimitService(repo, nil, nil, nil, nil),
+placeholder
+	account := &Account{
+		ID:       5099,
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder
+			"temp_unschedulable_enabled": true,
+			"temp_unschedulable_rules": []any{map[string]any{
+				"error_code":       float64(http.StatusForbidden),
+				"keywords":         []any{"text is sensitive"placeholder,
+				"duration_minutes": float64(1),
+	placeholder
+	placeholder,
+placeholder
+	body := []byte(`{"error":{"code":"new_sensitive","message":"text is sensitive"placeholderplaceholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	resp := &http.Response{StatusCode: http.StatusForbidden, Header: http.Header{placeholderplaceholder
+
+	got := svc.failoverOpenAIUpstreamHTTPError(
+		context.Background(), c, account, resp, body, "text is sensitive", "",
+	)
+
+	require.Nil(t, got)
+	require.Zero(t, repo.tempUnschedCalls)
+	require.Zero(t, repo.rateLimitedCalls)
+	require.Zero(t, repo.updateCalls)
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
 func TestGrokContentPolicy403SharedErrorFallbackDoesNotMutate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	body := []byte(`{"error":{"code":"content_filter","message":"prohibited content"placeholderplaceholder`)
