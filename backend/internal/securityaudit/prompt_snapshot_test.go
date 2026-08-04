@@ -336,6 +336,38 @@ placeholder
 placeholder
 placeholder
 
+func TestContentTextsIncludesSupportedTextTypes(t *testing.T) {
+	value := []any{
+		map[string]any{"type": "text", "text": "plain text"placeholder,
+		map[string]any{"type": "input_text", "text": "input text"placeholder,
+		map[string]any{"type": "output_text", "text": "output text"placeholder,
+		map[string]any{"type": "image_url", "text": "ignored text"placeholder,
+placeholder
+
+	require.Equal(t, []string{"plain text", "input text", "output text"placeholder, contentTexts(value))
+placeholder
+
+func TestResponsesOutputTextIncludedInFullAndLatestTurnSnapshots(t *testing.T) {
+	body := []byte(`{"input":[
+		{"type":"message","role":"user","content":[{"type":"input_text","text":"earlier user input"placeholder]placeholder,
+		{"type":"message","role":"assistant","status":"completed","content":[{"type":"output_text","annotations":[],"text":"captured previous assistant output"placeholder]placeholder,
+		{"type":"message","role":"user","content":[{"type":"input_text","text":"captured latest user input"placeholder]placeholder
+	]placeholder`)
+
+	req := Request{Protocol: "openai_responses", Body: bodyplaceholder
+	full, err := ExtractPromptSnapshot(req)
+placeholder
+	require.Contains(t, full.ScanText, "captured previous assistant output")
+	require.Contains(t, full.FullPrompt, "captured previous assistant output")
+	require.Equal(t, 3, full.MessageCount)
+
+	latestTurn, err := ExtractBlockingPromptSnapshot(req, true)
+placeholder
+	require.Equal(t, "captured latest user input"+promptAuditPrioritySeparator+"captured previous assistant output", latestTurn.ScanText)
+	require.Equal(t, 2, latestTurn.MessageCount)
+	require.NotContains(t, latestTurn.ScanText, "earlier user input")
+placeholder
+
 func TestBlockingPromptSnapshotPreservesFullScopeByDefaultAndWithoutUserInput(t *testing.T) {
 	req := Request{Protocol: "openai_chat_completions", Body: []byte(`{"messages":[{"role":"system","content":"system instruction"placeholder,{"role":"user","content":"older user input"placeholder,{"role":"assistant","content":"previous output"placeholder,{"role":"user","content":"latest user input"placeholder]placeholder`)placeholder
 	full, err := ExtractPromptSnapshot(req)

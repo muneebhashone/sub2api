@@ -419,7 +419,7 @@ func contentTexts(value any) []string {
 				continue
 		placeholder
 			typeName := strings.ToLower(stringValue(object["type"]))
-			if typeName != "" && typeName != "text" && typeName != "input_text" {
+			if typeName != "" && typeName != "text" && typeName != "input_text" && typeName != "output_text" {
 				continue
 		placeholder
 			if text := stringValue(object["text"]); text != "" {
