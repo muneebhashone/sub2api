@@ -150,11 +150,11 @@ placeholder, "203.0.113.10")
 	require.Zero(t, verifier.calls)
 placeholder
 
-func TestVerifyTencentCaptchaIfEnabledVerifiesTencentProof(t *testing.T) {
+func TestVerifyActionCaptchaIfEnabledVerifiesTencentProof(t *testing.T) {
 	verifier := &tencentCaptchaVerifierStub{response: &TencentCaptchaVerifyResponse{CaptchaCode: 1placeholderplaceholder
 	svc := newAuthServiceForCaptchaTest(tencentCaptchaSettings(), false, nil, verifier)
 
-	err := svc.VerifyTencentCaptchaIfEnabled(context.Background(), CaptchaProof{
+	err := svc.VerifyActionCaptchaIfEnabled(context.Background(), CaptchaProof{
 		TencentTicket:  "ticket",
 		TencentRandstr: "@rand",
 placeholder, "203.0.113.10")
@@ -164,7 +164,7 @@ placeholder
 	require.Equal(t, TencentCaptchaProof{Ticket: "ticket", Randstr: "@rand"placeholder, verifier.proof)
 placeholder
 
-func TestVerifyTencentCaptchaIfEnabledDoesNotExpandTurnstileCoverage(t *testing.T) {
+func TestVerifyActionCaptchaIfEnabledDoesNotExpandTurnstileCoverage(t *testing.T) {
 	settings := map[string]string{
 		SettingKeyTurnstileEnabled:   "true",
 		SettingKeyTurnstileSecretKey: "turnstile-secret",
@@ -172,17 +172,17 @@ placeholder
 	turnstileVerifier := &turnstileVerifierSpy{placeholder
 	svc := newAuthServiceForCaptchaTest(settings, false, turnstileVerifier, nil)
 
-	err := svc.VerifyTencentCaptchaIfEnabled(context.Background(), CaptchaProof{placeholder, "203.0.113.10")
+	err := svc.VerifyActionCaptchaIfEnabled(context.Background(), CaptchaProof{placeholder, "203.0.113.10")
 
 placeholder
 	require.Zero(t, turnstileVerifier.called)
 placeholder
 
-func TestVerifyTencentCaptchaIfEnabledFailsClosedOnSettingReadError(t *testing.T) {
+func TestVerifyActionCaptchaIfEnabledFailsClosedOnSettingReadError(t *testing.T) {
 	repo := &settingRepoStub{err: errors.New("settings unavailable")placeholder
 	svc := newAuthServiceForCaptchaRepoTest(repo, false, &turnstileVerifierSpy{placeholder, &tencentCaptchaVerifierStub{placeholder)
 
-	err := svc.VerifyTencentCaptchaIfEnabled(context.Background(), CaptchaProof{placeholder, "203.0.113.10")
+	err := svc.VerifyActionCaptchaIfEnabled(context.Background(), CaptchaProof{placeholder, "203.0.113.10")
 
 	require.ErrorIs(t, err, ErrServiceUnavailable)
 placeholder

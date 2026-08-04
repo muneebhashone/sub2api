@@ -11,6 +11,8 @@ import (
 )
 
 type oauthStartCaptchaRequest struct {
+	// TurnstileToken 承载阿里云验证码的 captchaVerifyParam（复用既有请求字段名）
+	TurnstileToken        string `json:"turnstile_token"`
 	TencentCaptchaTicket  string `json:"tencent_captcha_ticket"`
 	TencentCaptchaRandstr string `json:"tencent_captcha_randstr"`
 placeholder
@@ -19,7 +21,7 @@ type oauthStartResponse struct {
 	AuthorizeURL string `json:"authorize_url"`
 placeholder
 
-func (h *AuthHandler) requireTencentCaptchaForOAuthLoginStart(c *gin.Context) bool {
+func (h *AuthHandler) requireActionCaptchaForOAuthLoginStart(c *gin.Context) bool {
 	if strings.HasSuffix(strings.TrimRight(c.Request.URL.Path, "/"), "/bind/start") {
 		return true
 placeholder
@@ -28,7 +30,8 @@ placeholder
 	if c.Request.Method == http.MethodPost {
 		_ = c.ShouldBindJSON(&req)
 placeholder
-	if err := h.authService.VerifyTencentCaptchaIfEnabled(c.Request.Context(), service.CaptchaProof{
+	if err := h.authService.VerifyActionCaptchaIfEnabled(c.Request.Context(), service.CaptchaProof{
+		TurnstileToken: req.TurnstileToken,
 		TencentTicket:  req.TencentCaptchaTicket,
 		TencentRandstr: req.TencentCaptchaRandstr,
 placeholder, ip.GetClientIP(c)); err != nil {

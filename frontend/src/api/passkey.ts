@@ -1,5 +1,5 @@
 import { apiClient placeholder from './client'
-import type { AuthResponse, TencentCaptchaRequestProof placeholder from '@/types'
+import type { ActionCaptchaRequestProof, AuthResponse placeholder from '@/types'
 
 export interface PasskeyCredentialSummary {
   id: number
@@ -104,7 +104,7 @@ function serializeAssertionCredential(credential: PublicKeyCredential): Record<s
   placeholder
 placeholder
 
-async function login(proof?: TencentCaptchaRequestProof): Promise<AuthResponse> {
+async function login(proof?: ActionCaptchaRequestProof): Promise<AuthResponse> {
   requirePasskeySupport()
   const { data: begin placeholder = proof
     ? await apiClient.post<CeremonyOptionsResponse>('/auth/passkey/login/begin', proof)

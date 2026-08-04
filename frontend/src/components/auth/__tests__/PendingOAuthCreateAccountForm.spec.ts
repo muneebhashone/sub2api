@@ -9,7 +9,7 @@ const sendPendingOAuthVerifyCode = vi.fn()
 const getPublicSettings = vi.fn()
 const showError = vi.fn()
 const turnstileReset = vi.fn()
-const verifyTencent = vi.fn()
+const verifyAction = vi.fn()
 
 vi.mock('vue-i18n', async () => {
   const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
@@ -44,7 +44,7 @@ describe('PendingOAuthCreateAccountForm', () => {
     getPublicSettings.mockReset()
     showError.mockReset()
     turnstileReset.mockReset()
-    verifyTencent.mockReset()
+    verifyAction.mockReset()
     getPublicSettings.mockResolvedValue({
       turnstile_enabled: false,
       turnstile_site_key: ''
@@ -60,12 +60,12 @@ describe('PendingOAuthCreateAccountForm', () => {
       tencent_captcha_app_id: 'tencent-app-id'
     placeholder)
     sendPendingOAuthVerifyCode.mockResolvedValue({ countdown: 0 placeholder)
-    verifyTencent
-      .mockResolvedValueOnce({ ticket: 'ticket-1', randstr: '@rand-1' placeholder)
-      .mockResolvedValueOnce({ ticket: 'ticket-2', randstr: '@rand-2' placeholder)
+    verifyAction
+      .mockResolvedValueOnce({ token: 'ticket-1', randstr: '@rand-1' placeholder)
+      .mockResolvedValueOnce({ token: 'ticket-2', randstr: '@rand-2' placeholder)
     const CaptchaChallengeStub = defineComponent({
       setup(_, { expose placeholder) {
-        expose({ verifyTencent, reset: turnstileReset placeholder)
+        expose({ verifyAction, reset: turnstileReset placeholder)
         return () => h('div')
       placeholder
     placeholder)
@@ -89,7 +89,7 @@ describe('PendingOAuthCreateAccountForm', () => {
     await wrapper.get('[data-testid="oidc-create-account-submit"]').trigger('click')
     await flushPromises()
 
-    expect(verifyTencent).toHaveBeenCalledTimes(2)
+    expect(verifyAction).toHaveBeenCalledTimes(2)
     expect(sendPendingOAuthVerifyCode).toHaveBeenCalledWith({
       email: 'user@example.com',
       tencent_captcha_ticket: 'ticket-1',
