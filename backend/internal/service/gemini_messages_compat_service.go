@@ -581,6 +581,7 @@ placeholder
 placeholder
 
 func (s *GeminiMessagesCompatService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*ForwardResult, error) {
+	beginUpstreamResponseModelObservation(c)
 	startTime := time.Now()
 
 	var req struct {
@@ -1072,6 +1073,7 @@ placeholder else {
 				return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to read upstream stream")
 		placeholder
 			collectedBytes, _ := json.Marshal(collected)
+			upstreamResponseModelObserverFromContext(c).ObserveGemini(collectedBytes)
 			claudeResp, usageObj2 := convertGeminiToClaudeMessage(collected, originalModel, collectedBytes, false)
 			c.JSON(http.StatusOK, claudeResp)
 			usage = usageObj2
@@ -1095,16 +1097,18 @@ placeholder
 placeholder
 
 	return &ForwardResult{
-		RequestID:      requestID,
-		Usage:          *usage,
-		Model:          originalModel,
-		UpstreamModel:  mappedModel,
-		Stream:         req.Stream,
-		Duration:       time.Since(startTime),
-		FirstTokenMs:   firstTokenMs,
-		ImageCount:     imageCount,
-		ImageSize:      imageSize,
-		ImageInputSize: imageInputSize,
+		RequestID:                     requestID,
+		Usage:                         *usage,
+		Model:                         originalModel,
+		UpstreamModel:                 mappedModel,
+		UpstreamResponseModel:         observedUpstreamResponseModel(c),
+		UpstreamResponseModelConflict: observedUpstreamResponseModelConflict(c),
+		Stream:                        req.Stream,
+		Duration:                      time.Since(startTime),
+		FirstTokenMs:                  firstTokenMs,
+		ImageCount:                    imageCount,
+		ImageSize:                     imageSize,
+		ImageInputSize:                imageInputSize,
 placeholder, nil
 placeholder
 
@@ -1117,6 +1121,7 @@ placeholder
 placeholder
 
 func (s *GeminiMessagesCompatService) ForwardNative(ctx context.Context, c *gin.Context, account *Account, originalModel string, action string, stream bool, body []byte) (*ForwardResult, error) {
+	beginUpstreamResponseModelObservation(c)
 	startTime := time.Now()
 
 	if strings.TrimSpace(originalModel) == "" {
@@ -1603,6 +1608,7 @@ placeholder else {
 				return nil, s.writeGoogleError(c, http.StatusBadGateway, "Failed to read upstream stream")
 		placeholder
 			b, _ := json.Marshal(collected)
+			upstreamResponseModelObserverFromContext(c).ObserveGemini(b)
 			c.Data(http.StatusOK, "application/json", b)
 			usage = usageObj
 	placeholder else {
@@ -1627,16 +1633,18 @@ placeholder
 placeholder
 
 	return &ForwardResult{
-		RequestID:      requestID,
-		Usage:          *usage,
-		Model:          originalModel,
-		UpstreamModel:  mappedModel,
-		Stream:         stream,
-		Duration:       time.Since(startTime),
-		FirstTokenMs:   firstTokenMs,
-		ImageCount:     imageCount,
-		ImageSize:      imageSize,
-		ImageInputSize: imageInputSize,
+		RequestID:                     requestID,
+		Usage:                         *usage,
+		Model:                         originalModel,
+		UpstreamModel:                 mappedModel,
+		UpstreamResponseModel:         observedUpstreamResponseModel(c),
+		UpstreamResponseModelConflict: observedUpstreamResponseModelConflict(c),
+		Stream:                        stream,
+		Duration:                      time.Since(startTime),
+		FirstTokenMs:                  firstTokenMs,
+		ImageCount:                    imageCount,
+		ImageSize:                     imageSize,
+		ImageInputSize:                imageInputSize,
 placeholder, nil
 placeholder
 
@@ -1999,6 +2007,11 @@ placeholder
 	if err != nil {
 		return nil, s.writeClaudeError(c, http.StatusBadGateway, "upstream_error", "Failed to parse upstream response")
 placeholder
+	observer := upstreamResponseModelObserverFromContext(c)
+	if observer == nil {
+		observer = beginUpstreamResponseModelObservation(c)
+placeholder
+	observer.ObserveGemini(unwrappedBody)
 
 	var geminiResp map[string]any
 	if err := json.Unmarshal(unwrappedBody, &geminiResp); err != nil {
@@ -2082,6 +2095,11 @@ placeholder
 		if err != nil {
 			continue
 	placeholder
+		observer := upstreamResponseModelObserverFromContext(c)
+		if observer == nil {
+			observer = beginUpstreamResponseModelObservation(c)
+	placeholder
+		observer.ObserveGemini(unwrappedBytes)
 
 		var geminiResp map[string]any
 		if err := json.Unmarshal(unwrappedBytes, &geminiResp); err != nil {
@@ -2583,6 +2601,11 @@ placeholder
 			respBody = unwrappedBody
 	placeholder
 placeholder
+	observer := upstreamResponseModelObserverFromContext(c)
+	if observer == nil {
+		observer = beginUpstreamResponseModelObservation(c)
+placeholder
+	observer.ObserveGemini(respBody)
 
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 
@@ -2631,6 +2654,10 @@ placeholder
 
 	reader := bufio.NewReader(resp.Body)
 	usage := &ClaudeUsage{placeholder
+	observer := upstreamResponseModelObserverFromContext(c)
+	if observer == nil {
+		observer = beginUpstreamResponseModelObservation(c)
+placeholder
 	var firstTokenMs *int
 
 	for {
@@ -2661,6 +2688,7 @@ placeholder
 					if u := extractGeminiUsage(rawBytes); u != nil {
 						usage = u
 				placeholder
+					observer.ObserveGemini(rawBytes)
 
 					if firstTokenMs == nil {
 						ms := int(time.Since(startTime).Milliseconds())
