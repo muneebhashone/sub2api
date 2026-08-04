@@ -96,6 +96,9 @@ placeholder
 // WeChatOAuthStart starts the WeChat OAuth login flow and stores the short-lived
 // browser cookies required by the rebuild pending-auth bridge.
 func (h *AuthHandler) WeChatOAuthStart(c *gin.Context) {
+	if !h.requireTencentCaptchaForOAuthLoginStart(c) {
+		return
+placeholder
 	cfg, err := h.getWeChatOAuthConfig(c.Request.Context(), c.Query("mode"), c)
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -145,7 +148,7 @@ placeholder
 		return
 placeholder
 
-	c.Redirect(http.StatusFound, authURL)
+	respondOAuthStart(c, authURL)
 placeholder
 
 // WeChatOAuthCallback exchanges the code with WeChat, resolves openid/unionid,

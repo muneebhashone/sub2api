@@ -1,3 +1,4 @@
+import { defineComponent, h placeholder from 'vue'
 import { flushPromises, mount placeholder from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi placeholder from 'vitest'
 import EmailVerifyView from '@/views/auth/EmailVerifyView.vue'
@@ -16,6 +17,8 @@ const {
   persistOAuthTokenContextMock,
   apiClientPostMock,
   authStoreState,
+  createTurnstileResetMock,
+  verifyTencentMock,
 placeholder = vi.hoisted(() => ({
   pushMock: vi.fn(),
   showSuccessMock: vi.fn(),
@@ -29,6 +32,8 @@ placeholder = vi.hoisted(() => ({
   sendPendingOAuthVerifyCodeMock: vi.fn(),
   persistOAuthTokenContextMock: vi.fn(),
   apiClientPostMock: vi.fn(),
+  createTurnstileResetMock: vi.fn(),
+  verifyTencentMock: vi.fn(),
   authStoreState: {
     pendingAuthSession: null as null | {
       token: string
@@ -110,6 +115,8 @@ describe('EmailVerifyView', () => {
     sendPendingOAuthVerifyCodeMock.mockReset()
     persistOAuthTokenContextMock.mockReset()
     apiClientPostMock.mockReset()
+    createTurnstileResetMock.mockReset()
+    verifyTencentMock.mockReset()
     authStoreState.pendingAuthSession = null
     sessionStorage.clear()
     localStorage.clear()
@@ -123,6 +130,67 @@ describe('EmailVerifyView', () => {
     sendVerifyCodeMock.mockResolvedValue({ countdown: 60 placeholder)
     sendPendingOAuthVerifyCodeMock.mockResolvedValue({ countdown: 60 placeholder)
     setTokenMock.mockResolvedValue({placeholder)
+  placeholder)
+
+  it('acquires a fresh Tencent proof for each resend action', async () => {
+    getPublicSettingsMock.mockResolvedValue({
+      turnstile_enabled: false,
+      turnstile_site_key: '',
+      tencent_captcha_enabled: true,
+      tencent_captcha_app_id: 'tencent-app-id',
+      site_name: 'Sub2API',
+      registration_email_suffix_whitelist: [],
+    placeholder)
+    sendVerifyCodeMock.mockResolvedValue({ countdown: 0 placeholder)
+    verifyTencentMock
+      .mockResolvedValueOnce({ ticket: 'ticket-1', randstr: '@rand-1' placeholder)
+      .mockResolvedValueOnce({ ticket: 'ticket-2', randstr: '@rand-2' placeholder)
+    sessionStorage.setItem(
+      'register_data',
+      JSON.stringify({
+        email: 'fresh@example.com',
+        password: 'secret-123',
+        tencent_captcha_ticket: 'initial-ticket',
+        tencent_captcha_randstr: '@initial-rand',
+      placeholder)
+    )
+
+    const CaptchaChallengeStub = defineComponent({
+      setup(_, { expose placeholder) {
+        expose({ verifyTencent: verifyTencentMock, reset: createTurnstileResetMock placeholder)
+        return () => h('div')
+      placeholder,
+    placeholder)
+    const wrapper = mount(EmailVerifyView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /><slot name="footer" /></div>' placeholder,
+          Icon: true,
+          TurnstileWidget: CaptchaChallengeStub,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+    const resendButton = () => wrapper.findAll('button').find((button) =>
+      button.text().includes('auth.clickToResend')
+    )!
+
+    await resendButton().trigger('click')
+    await flushPromises()
+    await resendButton().trigger('click')
+    await flushPromises()
+
+    expect(verifyTencentMock).toHaveBeenCalledTimes(2)
+    expect(sendVerifyCodeMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      tencent_captcha_ticket: 'ticket-1',
+      tencent_captcha_randstr: '@rand-1',
+    placeholder))
+    expect(sendVerifyCodeMock).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      tencent_captcha_ticket: 'ticket-2',
+      tencent_captcha_randstr: '@rand-2',
+    placeholder))
   placeholder)
 
   it('uses the pending oauth verify-code endpoint when register data carries a pending auth session', async () => {
@@ -158,6 +226,44 @@ describe('EmailVerifyView', () => {
       pending_auth_token: 'pending-token-1',
     placeholder)
     expect(sendVerifyCodeMock).not.toHaveBeenCalled()
+  placeholder)
+
+  it('requires a fresh captcha proof after the initial send-code request fails', async () => {
+    getPublicSettingsMock.mockResolvedValue({
+      turnstile_enabled: true,
+      turnstile_site_key: 'site-key',
+      site_name: 'Sub2API',
+      registration_email_suffix_whitelist: [],
+    placeholder)
+    sendVerifyCodeMock.mockRejectedValue(new Error('send failed'))
+    sessionStorage.setItem(
+      'register_data',
+      JSON.stringify({
+        email: 'fresh@example.com',
+        password: 'secret-123',
+        turnstile_token: 'initial-proof',
+      placeholder)
+    )
+
+    const wrapper = mount(EmailVerifyView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /><slot name="footer" /></div>' placeholder,
+          Icon: true,
+          TurnstileWidget: {
+            template: '<button data-testid="resend-captcha" @click="$emit(\'verify\', \'fresh-proof\')">verify</button>',
+          placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(sendVerifyCodeMock).toHaveBeenCalledWith(expect.objectContaining({
+      turnstile_token: 'initial-proof',
+    placeholder))
+    expect(wrapper.find('[data-testid="resend-captcha"]').exists()).toBe(true)
   placeholder)
 
   it('skips the registration email suffix whitelist for pending oauth verification', async () => {
@@ -350,6 +456,135 @@ describe('EmailVerifyView', () => {
     expect(registerMock).not.toHaveBeenCalled()
   placeholder)
 
+  it('requires and submits a fresh turnstile token for pending oauth account creation', async () => {
+    authStoreState.pendingAuthSession = {
+      token: 'pending-token-3',
+      token_field: 'pending_auth_token',
+      provider: 'oidc',
+      redirect: '/profile',
+    placeholder
+    getPublicSettingsMock.mockResolvedValue({
+      turnstile_enabled: true,
+      turnstile_site_key: 'site-key',
+      site_name: 'Sub2API',
+      registration_email_suffix_whitelist: ['allowed.com'],
+    placeholder)
+    sessionStorage.setItem(
+      'register_data',
+      JSON.stringify({
+        email: 'fresh@example.com',
+        password: 'secret-123',
+        turnstile_token: 'send-code-token',
+      placeholder)
+    )
+    apiClientPostMock.mockResolvedValue({
+      data: {
+        access_token: 'oauth-access-token',
+        refresh_token: 'oauth-refresh-token',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      placeholder,
+    placeholder)
+
+    const wrapper = mount(EmailVerifyView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /><slot name="footer" /></div>' placeholder,
+          Icon: true,
+          TurnstileWidget: {
+            template: '<button data-testid="create-turnstile" @click="$emit(\'verify\', \'create-token\')">verify</button>',
+            methods: {
+              reset: createTurnstileResetMock,
+            placeholder,
+          placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    expect(sendPendingOAuthVerifyCodeMock).toHaveBeenCalledWith({
+      email: 'fresh@example.com',
+      pending_auth_token: 'pending-token-3',
+      turnstile_token: 'send-code-token',
+    placeholder)
+
+    await wrapper.get('#code').setValue('123456')
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-testid="create-turnstile"]').trigger('click')
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(apiClientPostMock).toHaveBeenCalledWith('/auth/oauth/pending/create-account', {
+      email: 'fresh@example.com',
+      password: 'secret-123',
+      verify_code: '123456',
+      turnstile_token: 'create-token',
+    placeholder)
+    expect(setTokenMock).toHaveBeenCalledWith('oauth-access-token')
+  placeholder)
+
+  it('resets the pending oauth create-account turnstile after submit failure', async () => {
+    authStoreState.pendingAuthSession = {
+      token: 'pending-token-4',
+      token_field: 'pending_auth_token',
+      provider: 'oidc',
+      redirect: '/profile',
+    placeholder
+    getPublicSettingsMock.mockResolvedValue({
+      turnstile_enabled: true,
+      turnstile_site_key: 'site-key',
+      site_name: 'Sub2API',
+      registration_email_suffix_whitelist: ['allowed.com'],
+    placeholder)
+    sessionStorage.setItem(
+      'register_data',
+      JSON.stringify({
+        email: 'fresh@example.com',
+        password: 'secret-123',
+        turnstile_token: 'send-code-token',
+      placeholder)
+    )
+    apiClientPostMock.mockRejectedValue(new Error('invalid verify code'))
+
+    const wrapper = mount(EmailVerifyView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /><slot name="footer" /></div>' placeholder,
+          Icon: true,
+          TurnstileWidget: {
+            template: '<button data-testid="create-turnstile" @click="$emit(\'verify\', \'create-token\')">verify</button>',
+            methods: {
+              reset: createTurnstileResetMock,
+            placeholder,
+          placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+    await wrapper.get('#code').setValue('123456')
+    await wrapper.get('[data-testid="create-turnstile"]').trigger('click')
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(apiClientPostMock).toHaveBeenCalledWith('/auth/oauth/pending/create-account', {
+      email: 'fresh@example.com',
+      password: 'secret-123',
+      verify_code: '123456',
+      turnstile_token: 'create-token',
+    placeholder)
+    expect(createTurnstileResetMock).toHaveBeenCalled()
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+  placeholder)
+
   it('returns to the oauth callback flow when pending account creation becomes bind-login', async () => {
     authStoreState.pendingAuthSession = {
       token: '',
@@ -447,10 +682,70 @@ describe('EmailVerifyView', () => {
       password: 'secret-456',
       verify_code: '654321',
       turnstile_token: undefined,
+      tencent_captcha_ticket: undefined,
+      tencent_captcha_randstr: undefined,
       promo_code: 'PROMO',
       invitation_code: 'INVITE',
     placeholder)
     expect(apiClientPostMock).not.toHaveBeenCalled()
     expect(pushMock).toHaveBeenCalledWith('/dashboard')
+  placeholder)
+
+  it('does not require another Tencent proof for final email registration', async () => {
+    getPublicSettingsMock.mockResolvedValue({
+      turnstile_enabled: false,
+      turnstile_site_key: '',
+      tencent_captcha_enabled: true,
+      tencent_captcha_app_id: 'tencent-app-id',
+      site_name: 'Sub2API',
+      registration_email_suffix_whitelist: [],
+    placeholder)
+    sessionStorage.setItem(
+      'register_data',
+      JSON.stringify({
+        email: 'normal@example.com',
+        password: 'secret-456',
+        tencent_captcha_ticket: 'send-code-ticket',
+        tencent_captcha_randstr: '@send-code-rand',
+      placeholder)
+    )
+    registerMock.mockResolvedValue({placeholder)
+
+    const wrapper = mount(EmailVerifyView, {
+      global: {
+        stubs: {
+          AuthLayout: { template: '<div><slot /><slot name="footer" /></div>' placeholder,
+          Icon: true,
+          TurnstileWidget: {
+            template: '<span />',
+            methods: {
+              reset: createTurnstileResetMock,
+            placeholder,
+          placeholder,
+          transition: false,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+    expect(sendVerifyCodeMock).toHaveBeenCalledWith(expect.objectContaining({
+      tencent_captcha_ticket: 'send-code-ticket',
+      tencent_captcha_randstr: '@send-code-rand',
+    placeholder))
+    expect(JSON.parse(sessionStorage.getItem('register_data') || '{placeholder')).toEqual({
+      email: 'normal@example.com',
+      password: 'secret-456',
+    placeholder)
+
+    await wrapper.get('#code').setValue('654321')
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(registerMock).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'normal@example.com',
+      verify_code: '654321',
+      tencent_captcha_ticket: undefined,
+      tencent_captcha_randstr: undefined,
+    placeholder))
   placeholder)
 placeholder)

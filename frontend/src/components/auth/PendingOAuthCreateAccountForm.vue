@@ -16,10 +16,14 @@
       :placeholder="t('auth.passwordPlaceholder')"
       :disabled="isSubmitting"
     />
-    <div v-if="emailVerifyEnabled && turnstileEnabled && turnstileSiteKey" class="space-y-2">
+    <div v-if="captchaEnabled" class="space-y-2">
       <TurnstileWidget
         ref="turnstileRef"
         :site-key="turnstileSiteKey"
+        :turnstile-enabled="turnstileEnabled"
+        :turnstile-site-key="turnstileSiteKey"
+        :tencent-enabled="tencentCaptchaEnabled"
+        :tencent-app-id="tencentCaptchaAppId"
         @verify="onTurnstileVerify"
         @expire="onTurnstileExpire"
         @error="onTurnstileError"
@@ -88,9 +92,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch placeholder from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
-import TurnstileWidget from '@/components/TurnstileWidget.vue'
+import TurnstileWidget from '@/components/CaptchaChallenge.vue'
 import { getPublicSettings, sendPendingOAuthVerifyCode placeholder from '@/api/auth'
 import { useAppStore placeholder from '@/stores'
 
@@ -98,6 +102,9 @@ export type PendingOAuthCreateAccountPayload = {
   email: string
   password: string
   verifyCode: string
+  turnstileToken?: string
+  tencentCaptchaTicket?: string
+  tencentCaptchaRandstr?: string
   invitationCode?: string
 placeholder
 
@@ -128,8 +135,16 @@ const invitationCodeEnabled = ref(false)
 const emailVerifyEnabled = ref(true)
 const turnstileEnabled = ref(false)
 const turnstileSiteKey = ref('')
+const tencentCaptchaEnabled = ref(false)
+const tencentCaptchaAppId = ref('')
 const turnstileToken = ref('')
+const tencentCaptchaRandstr = ref('')
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
+const captchaEnabled = computed(
+  () =>
+    (turnstileEnabled.value && Boolean(turnstileSiteKey.value)) ||
+    (tencentCaptchaEnabled.value && Boolean(tencentCaptchaAppId.value))
+)
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
@@ -152,6 +167,9 @@ watch(
   value => {
     if (value) {
       appStore.showError(value)
+      if (captchaEnabled.value) {
+        resetTurnstile()
+      placeholder
     placeholder
   placeholder
 )
@@ -189,22 +207,37 @@ placeholder
 
 function resetTurnstile() {
   turnstileToken.value = ''
+  tencentCaptchaRandstr.value = ''
   turnstileRef.value?.reset()
 placeholder
 
-function onTurnstileVerify(token: string) {
+function onTurnstileVerify(token: string, randstr = '') {
   turnstileToken.value = token
+  tencentCaptchaRandstr.value = randstr
   sendCodeError.value = ''
 placeholder
 
 function onTurnstileExpire() {
   turnstileToken.value = ''
+  tencentCaptchaRandstr.value = ''
   sendCodeError.value = t('auth.turnstileExpired')
 placeholder
 
 function onTurnstileError() {
   turnstileToken.value = ''
+  tencentCaptchaRandstr.value = ''
   sendCodeError.value = t('auth.turnstileFailed')
+placeholder
+
+async function acquireTencentProof(): Promise<boolean> {
+  if (!tencentCaptchaEnabled.value) return true
+
+  const proof = await turnstileRef.value?.verifyTencent()
+  if (!proof) return false
+
+  turnstileToken.value = proof.ticket
+  tencentCaptchaRandstr.value = proof.randstr
+  return true
 placeholder
 
 async function handleSendCode() {
@@ -218,6 +251,10 @@ async function handleSendCode() {
     return
   placeholder
 
+  if (!(await acquireTencentProof())) {
+    return
+  placeholder
+
   isSendingCode.value = true
   sendCodeError.value = ''
   sendCodeSuccess.value = false
@@ -225,23 +262,29 @@ async function handleSendCode() {
   try {
     const response = await sendPendingOAuthVerifyCode({
       email: trimmedEmail,
-      turnstile_token: turnstileEnabled.value ? turnstileToken.value : undefined
+      turnstile_token: turnstileEnabled.value ? turnstileToken.value : undefined,
+      tencent_captcha_ticket: tencentCaptchaEnabled.value ? turnstileToken.value : undefined,
+      tencent_captcha_randstr: tencentCaptchaEnabled.value ? tencentCaptchaRandstr.value : undefined
     placeholder)
     sendCodeSuccess.value = true
     startCountdown(response.countdown)
-    if (turnstileEnabled.value) {
-      resetTurnstile()
-    placeholder
   placeholder catch (error: unknown) {
     sendCodeError.value = getRequestErrorMessage(error, t('auth.sendCodeFailed'))
   placeholder finally {
+    if (captchaEnabled.value) {
+      resetTurnstile()
+    placeholder
     isSendingCode.value = false
   placeholder
 placeholder
 
-function handleSubmit() {
+async function handleSubmit() {
   const trimmedEmail = email.value.trim()
   if (!trimmedEmail || password.value.length < 6) {
+    return
+  placeholder
+
+  if (!(await acquireTencentProof())) {
     return
   placeholder
 
@@ -249,8 +292,19 @@ function handleSubmit() {
     email: trimmedEmail,
     password: password.value,
     verifyCode: emailVerifyEnabled.value ? verifyCode.value.trim() : '',
+    ...(turnstileEnabled.value && turnstileToken.value ? { turnstileToken: turnstileToken.value placeholder : {placeholder),
+    ...(tencentCaptchaEnabled.value && turnstileToken.value
+      ? {
+          tencentCaptchaTicket: turnstileToken.value,
+          tencentCaptchaRandstr: tencentCaptchaRandstr.value
+        placeholder
+      : {placeholder),
     invitationCode: invitationCode.value.trim() || undefined
   placeholder)
+
+  if (tencentCaptchaEnabled.value) {
+    resetTurnstile()
+  placeholder
 placeholder
 
 function emitSwitchToBind() {
@@ -264,11 +318,15 @@ onMounted(async () => {
     emailVerifyEnabled.value = settings.email_verify_enabled !== false
     turnstileEnabled.value = settings.turnstile_enabled === true
     turnstileSiteKey.value = settings.turnstile_site_key || ''
+    tencentCaptchaEnabled.value = settings.tencent_captcha_enabled === true
+    tencentCaptchaAppId.value = settings.tencent_captcha_app_id || ''
   placeholder catch {
     invitationCodeEnabled.value = false
     emailVerifyEnabled.value = true
     turnstileEnabled.value = false
     turnstileSiteKey.value = ''
+    tencentCaptchaEnabled.value = false
+    tencentCaptchaAppId.value = ''
   placeholder
 placeholder)
 

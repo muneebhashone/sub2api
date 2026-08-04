@@ -14,6 +14,7 @@ import type {
   SendVerifyCodeRequest,
   SendVerifyCodeResponse,
   PublicSettings,
+  TencentCaptchaRequestProof,
   TotpLoginResponse,
   TotpLogin2FARequest
 placeholder from '@/types'
@@ -22,6 +23,43 @@ placeholder from '@/types'
  * Login response type - can be either full auth or 2FA required
  */
 export type LoginResponse = AuthResponse | TotpLoginResponse
+
+export type OAuthLoginProvider =
+  | 'github'
+  | 'google'
+  | 'linuxdo'
+  | 'dingtalk'
+  | 'wechat'
+  | 'oidc'
+
+export interface OAuthLoginStart {
+  provider: OAuthLoginProvider
+  params: Record<string, string>
+placeholder
+
+export interface OAuthLoginStartResponse {
+  authorize_url: string
+placeholder
+
+export function buildOAuthLoginStartURL(request: OAuthLoginStart): string {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
+  const normalized = apiBase.replace(/\/$/, '')
+  const query = new URLSearchParams(request.params).toString()
+  const path = `${normalizedplaceholder/auth/oauth/${request.providerplaceholder/start`
+  return query ? `${pathplaceholder?${queryplaceholder` : path
+placeholder
+
+export async function startOAuthLogin(
+  request: OAuthLoginStart,
+  proof: TencentCaptchaRequestProof
+): Promise<OAuthLoginStartResponse> {
+  const { data placeholder = await apiClient.post<OAuthLoginStartResponse>(
+    `/auth/oauth/${request.providerplaceholder/start`,
+    proof,
+    { params: request.params placeholder
+  )
+  return data
+placeholder
 
 /**
  * Type guard to check if login response requires 2FA
@@ -493,6 +531,8 @@ placeholder
 export interface ForgotPasswordRequest {
   email: string
   turnstile_token?: string
+  tencent_captcha_ticket?: string
+  tencent_captcha_randstr?: string
 placeholder
 
 /**
