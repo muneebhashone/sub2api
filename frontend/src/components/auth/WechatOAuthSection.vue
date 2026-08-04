@@ -31,7 +31,7 @@
 import { computed, onMounted placeholder from 'vue'
 import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
-import { resolveWeChatOAuthStart placeholder from '@/api/auth'
+import { resolveWeChatOAuthStart, type OAuthLoginStart placeholder from '@/api/auth'
 import { useAppStore placeholder from '@/stores'
 import { resolveAffiliateReferralCode, storeOAuthAffiliateCode placeholder from '@/utils/oauthAffiliate'
 
@@ -42,6 +42,9 @@ const props = withDefaults(defineProps<{
 placeholder>(), {
   showDivider: true,
 placeholder)
+const emit = defineEmits<{
+  start: [request: OAuthLoginStart]
+placeholder>()
 
 const appStore = useAppStore()
 const route = useRoute()
@@ -87,10 +90,10 @@ function startLogin(): void {
   placeholder
   const redirectTo = (route.query.redirect as string) || '/dashboard'
   storeOAuthAffiliateCode(resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code))
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
-  const normalized = apiBase.replace(/\/$/, '')
   const mode = resolvedStart.value.mode
-  const startURL = `${normalizedplaceholder/auth/oauth/wechat/start?mode=${modeplaceholder&redirect=${encodeURIComponent(redirectTo)placeholder`
-  window.location.href = startURL
+  emit('start', {
+    provider: 'wechat',
+    params: { mode, redirect: redirectTo placeholder
+  placeholder)
 placeholder
 </script>

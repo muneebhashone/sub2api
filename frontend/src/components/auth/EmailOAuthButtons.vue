@@ -31,6 +31,7 @@ import { useRoute placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import GitHubMark from './GitHubMark.vue'
 import GoogleMark from './GoogleMark.vue'
+import type { OAuthLoginStart placeholder from '@/api/auth'
 import { resolveAffiliateReferralCode, storeOAuthAffiliateCode placeholder from '@/utils/oauthAffiliate'
 
 type EmailOAuthProvider = 'github' | 'google'
@@ -45,6 +46,9 @@ const props = withDefaults(defineProps<{
 placeholder>(), {
   showDivider: true
 placeholder)
+const emit = defineEmits<{
+  start: [request: OAuthLoginStart]
+placeholder>()
 
 const route = useRoute()
 const { t placeholder = useI18n()
@@ -75,13 +79,10 @@ function startLogin(provider: EmailOAuthProvider): void {
   const affiliateCode = resolveAffiliateReferralCode(props.affCode, route.query.aff, route.query.aff_code)
   storeOAuthAffiliateCode(affiliateCode)
   window.sessionStorage.setItem(EMAIL_OAUTH_PENDING_PROVIDER_KEY, provider)
-  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api/v1'
-  const normalized = apiBase.replace(/\/$/, '')
-  const params = new URLSearchParams({ redirect: redirectTo placeholder)
+  const params: Record<string, string> = { redirect: redirectTo placeholder
   if (affiliateCode) {
-    params.set('aff_code', affiliateCode)
+    params.aff_code = affiliateCode
   placeholder
-  const startURL = `${normalizedplaceholder/auth/oauth/${providerplaceholder/start?${params.toString()placeholder`
-  window.location.href = startURL
+  emit('start', { provider, params placeholder)
 placeholder
 </script>

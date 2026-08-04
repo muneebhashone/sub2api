@@ -97,6 +97,7 @@ describe('passkey api', () => {
 
     await passkeyAPI.login()
 
+    expect(post).toHaveBeenNthCalledWith(1, '/auth/passkey/login/begin')
     const request = credentialGet.mock.calls[0][0] as CredentialRequestOptions
     expect(Array.from(new Uint8Array(request.publicKey!.challenge))).toEqual([1, 2, 3])
     expect(request.publicKey!.userVerification).toBe('required')
@@ -117,6 +118,38 @@ describe('passkey api', () => {
         placeholder
       placeholder
     placeholder)
+  placeholder)
+
+  it('sends Tencent captcha proof only with the passkey begin request', async () => {
+    post
+      .mockResolvedValueOnce({
+        data: {
+          session_token: 'one-time-session',
+          options: {
+            publicKey: {
+              challenge: 'AQID',
+              rpId: 'sub2api.example.com',
+              userVerification: 'required'
+            placeholder
+          placeholder
+        placeholder
+      placeholder)
+      .mockResolvedValueOnce({ data: { access_token: 'access', token_type: 'Bearer', user: { id: 1 placeholder placeholder placeholder)
+    credentialGet.mockResolvedValue(new FakePublicKeyCredential())
+
+    await passkeyAPI.login({
+      tencent_captcha_ticket: 'ticket-value',
+      tencent_captcha_randstr: '@rand-value'
+    placeholder)
+
+    expect(post).toHaveBeenNthCalledWith(1, '/auth/passkey/login/begin', {
+      tencent_captcha_ticket: 'ticket-value',
+      tencent_captcha_randstr: '@rand-value'
+    placeholder)
+    expect(post.mock.calls[1][1]).not.toEqual(expect.objectContaining({
+      tencent_captcha_ticket: expect.anything(),
+      tencent_captcha_randstr: expect.anything()
+    placeholder))
   placeholder)
 
   it('sends the account password when beginning registration', async () => {

@@ -82,6 +82,38 @@ placeholder
 	require.True(t, resp.Data.ForceEmailOnThirdPartySignup)
 placeholder
 
+func TestSettingHandler_GetPublicSettings_ExposesTencentCaptchaConfiguration(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	repo := &settingHandlerPublicRepoStub{
+		values: map[string]string{
+			service.SettingKeyTencentCaptchaEnabled: "true",
+			service.SettingKeyTencentCaptchaAppID:   "123456789",
+	placeholder,
+placeholder
+	h := NewSettingHandler(service.NewSettingService(repo, &config.Config{placeholder), "test-version")
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/settings/public", nil)
+
+	h.GetPublicSettings(c)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			TencentCaptchaEnabled bool   `json:"tencent_captcha_enabled"`
+			TencentCaptchaAppID   string `json:"tencent_captcha_app_id"`
+	placeholder `json:"data"`
+placeholder
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &resp))
+	require.Equal(t, 0, resp.Code)
+	require.True(t, resp.Data.TencentCaptchaEnabled)
+	require.Equal(t, "123456789", resp.Data.TencentCaptchaAppID)
+placeholder
+
 func TestSettingHandler_GetPublicSettings_ExposesWeChatOAuthModeCapabilities(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	h := NewSettingHandler(service.NewSettingService(&settingHandlerPublicRepoStub{
