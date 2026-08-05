@@ -431,7 +431,8 @@ placeholder
 	if parsedUsage, ok := extractOpenAIUsageFromJSONBytes(respBody); ok {
 		usage = parsedUsage
 placeholder
-	if account != nil && account.Platform == PlatformGrok && !hasBillableOpenAIUsage(usage) {
+	responseModel := gjson.GetBytes(respBody, "model").String()
+	if requiresBillableGrokChatUsage(account, originalModel, billingModel, upstreamModel, responseModel) && !hasBillableOpenAIUsage(usage) {
 		return nil, s.newOpenAIStreamFailoverError(
 			c,
 			account,
