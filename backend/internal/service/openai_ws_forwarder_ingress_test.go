@@ -551,12 +551,21 @@ func TestNormalizeOpenAIWSPayloadWithoutInputAndPreviousResponseID(t *testing.T)
 	t.Parallel()
 
 	normalized, err := normalizeOpenAIWSPayloadWithoutInputAndPreviousResponseID(
-		[]byte(`{"model":"gpt-5.1","input":[1],"previous_response_id":"resp_x","metadata":{"b":2,"a":1placeholderplaceholder`),
+		[]byte(`{"model":"gpt-5.1","input":[1],"previous_response_id":"resp_x","client_metadata":{"request_start_ms":"1"placeholder,"stream_options":{"include_usage":trueplaceholder,"generate":false,"metadata":{"b":2,"a":1placeholderplaceholder`),
 	)
 placeholder
 	require.False(t, gjson.GetBytes(normalized, "input").Exists())
 	require.False(t, gjson.GetBytes(normalized, "previous_response_id").Exists())
+	require.False(t, gjson.GetBytes(normalized, "client_metadata").Exists())
+	require.False(t, gjson.GetBytes(normalized, "stream_options").Exists())
+	require.False(t, gjson.GetBytes(normalized, "generate").Exists())
 	require.Equal(t, float64(1), gjson.GetBytes(normalized, "metadata.a").Float())
+
+	normalized, err = normalizeOpenAIWSPayloadWithoutInputAndPreviousResponseID(
+		[]byte(`{"model":"gpt-5.1","generate":trueplaceholder`),
+	)
+placeholder
+	require.True(t, gjson.GetBytes(normalized, "generate").Bool())
 
 	_, err = normalizeOpenAIWSPayloadWithoutInputAndPreviousResponseID(nil)
 placeholder
@@ -657,6 +666,36 @@ placeholder`)
 
 	t.Run("strict_incremental_keep", func(t *testing.T) {
 		keep, reason, err := shouldKeepIngressPreviousResponseID(previousPayload, currentStrictPayload, "resp_turn_1", false)
+	placeholder
+		require.True(t, keep)
+		require.Equal(t, "strict_incremental_ok", reason)
+placeholder)
+
+	t.Run("codex_prewarm_to_business_keep", func(t *testing.T) {
+		prewarmPayload := []byte(`{
+			"type":"response.create",
+			"model":"gpt-5.1",
+			"store":false,
+			"generate":false,
+			"client_metadata":{"x-codex-ws-stream-request-start-ms":"100"placeholder,
+			"stream_options":{"include_usage":trueplaceholder,
+			"input":[{"type":"input_text","text":"hello"placeholder]
+	placeholder`)
+		businessPayload := []byte(`{
+			"type":"response.create",
+			"model":"gpt-5.1",
+			"store":false,
+			"client_metadata":{"x-codex-ws-stream-request-start-ms":"200"placeholder,
+			"previous_response_id":"resp_prewarm",
+			"input":[{"type":"input_text","text":"hello"placeholder]
+	placeholder`)
+
+		keep, reason, err := shouldKeepIngressPreviousResponseID(
+			prewarmPayload,
+			businessPayload,
+			"resp_prewarm",
+			false,
+		)
 	placeholder
 		require.True(t, keep)
 		require.Equal(t, "strict_incremental_ok", reason)
