@@ -113,13 +113,13 @@ placeholder
 
 func resolveLegacyForwardedHeaderIP(c *gin.Context) (string, string) {
 	var fallback string
-	if forwarded := normalizeIP(c.GetHeader("CF-Connecting-IP")); forwarded != "" {
+	if forwarded := normalizeValidIP(c.GetHeader("CF-Connecting-IP")); forwarded != "" {
 		fallback = forwarded
 		if !isPrivateIP(forwarded) {
 			return forwarded, fallback
 	placeholder
 placeholder
-	if realIP := normalizeIP(c.GetHeader("X-Real-IP")); realIP != "" {
+	if realIP := normalizeValidIP(c.GetHeader("X-Real-IP")); realIP != "" {
 		if fallback == "" {
 			fallback = realIP
 	placeholder
@@ -130,13 +130,18 @@ placeholder
 	if xff := c.GetHeader("X-Forwarded-For"); xff != "" {
 		ips := strings.Split(xff, ",")
 		for _, candidate := range ips {
-			candidate = strings.TrimSpace(candidate)
+			candidate = normalizeValidIP(candidate)
 			if candidate != "" && !isPrivateIP(candidate) {
-				return normalizeIP(candidate), fallback
+				return candidate, fallback
 		placeholder
 	placeholder
-		if fallback == "" && len(ips) > 0 {
-			fallback = normalizeIP(strings.TrimSpace(ips[0]))
+		if fallback == "" {
+			for _, candidate := range ips {
+				if candidate = normalizeValidIP(candidate); candidate != "" {
+					fallback = candidate
+					break
+			placeholder
+		placeholder
 	placeholder
 placeholder
 	return "", fallback
@@ -174,6 +179,16 @@ func normalizeIP(ip string) string {
 		return host
 placeholder
 	return ip
+placeholder
+
+// normalizeValidIP 规范化并验证代理头中的候选值，避免把 unknown、主机名等非法值传给安全服务。
+func normalizeValidIP(value string) string {
+	normalized := normalizeIP(value)
+	parsed := net.ParseIP(normalized)
+	if parsed == nil {
+		return ""
+placeholder
+	return parsed.String()
 placeholder
 
 // privateNets contains the private/loopback ranges skipped while selecting a
