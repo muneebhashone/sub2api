@@ -31,6 +31,10 @@ const (
 	TencentCaptchaGlobalCDNDomain = "https://global.turing.captcha.gtimg.com"
 	// TencentCaptchaPrehandleDomain 是天御 SDK 动态预处理脚本与预处理接口主机。
 	TencentCaptchaPrehandleDomain = "https://www.tycaptcha.com"
+	// TencentCaptchaJQueryDomain 是国内站入口脚本动态加载的 jQuery CDN 主机。
+	TencentCaptchaJQueryDomain = "https://cloudcache.tencentcs.com"
+	// TencentCaptchaRceDomain 是国际站风控校验接口主机。
+	TencentCaptchaRceDomain = "https://rce.tencentrio.com"
 	// TencentCaptchaWorkerSource 是天御国际站创建验证码 Web Worker 时使用的来源。
 	TencentCaptchaWorkerSource = "blob:"
 	// StripeDomain is the domain for Stripe.js SDK
@@ -57,8 +61,10 @@ placeholder{
 	{"script-src", TencentCaptchaGlobalDomainplaceholder,
 	{"script-src", TencentCaptchaGlobalCDNDomainplaceholder,
 	{"script-src", TencentCaptchaPrehandleDomainplaceholder,
+	{"script-src", TencentCaptchaJQueryDomainplaceholder,
 	{"connect-src", TencentCaptchaDomainplaceholder,
 	{"connect-src", TencentCaptchaPrehandleDomainplaceholder,
+	{"connect-src", TencentCaptchaRceDomainplaceholder,
 	{"frame-src", TencentCaptchaGlobalDomainplaceholder,
 	{"frame-src", TencentCaptchaPrehandleDomainplaceholder,
 	{"worker-src", TencentCaptchaWorkerSourceplaceholder,
