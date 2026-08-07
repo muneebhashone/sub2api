@@ -293,9 +293,13 @@ placeholder
 	if cacheKey == "" || accountID <= 0 {
 		return fmt.Errorf("grok video request binding is invalid")
 placeholder
-	ttl := openaiStickySessionTTL
+	// Video jobs may complete well after WS sticky TTL (default 1h). Bind at least
+	// as long as the pending-billing snapshot so late status/content polls resolve.
+	ttl := grokVideoPendingBillingTTL(s.cfg)
 	if s.cfg != nil && s.cfg.Gateway.OpenAIWS.StickySessionTTLSeconds > 0 {
-		ttl = time.Duration(s.cfg.Gateway.OpenAIWS.StickySessionTTLSeconds) * time.Second
+		if sticky := time.Duration(s.cfg.Gateway.OpenAIWS.StickySessionTTLSeconds) * time.Second; sticky > ttl {
+			ttl = sticky
+	placeholder
 placeholder
 	return s.cache.SetSessionAccountID(ctx, derefGroupID(groupID), cacheKey, accountID, ttl)
 placeholder
@@ -419,6 +423,36 @@ placeholder
 	return s.cache.ClaimGrokVideoBilled(ctx, key, grokVideoBilledClaimTTL(s.cfg))
 placeholder
 
+// ReleaseGrokVideoBilling clears a claim after a failed durable RecordUsage so a
+// later status/content poll can retry billing.
+func (s *OpenAIGatewayService) ReleaseGrokVideoBilling(
+	ctx context.Context,
+	requestID string,
+	userID, apiKeyID int64,
+) error {
+	if s == nil || s.cache == nil {
+		return fmt.Errorf("grok video billing claim cache is unavailable")
+placeholder
+	key := grokVideoPendingBillingKey(requestID, userID, apiKeyID)
+	if key == "" {
+		return fmt.Errorf("grok video billing claim key is invalid")
+placeholder
+	return s.cache.ReleaseGrokVideoBilled(ctx, key)
+placeholder
+
+// StableGrokVideoBillingRequestID is the durable usage_logs / dedup key for one
+// async video task (not the per-poll gateway request id).
+func StableGrokVideoBillingRequestID(taskRequestID string) string {
+	taskRequestID = strings.TrimSpace(taskRequestID)
+	if taskRequestID == "" {
+		return ""
+placeholder
+	if strings.HasPrefix(taskRequestID, "grok-video:") {
+		return taskRequestID
+placeholder
+	return "grok-video:" + taskRequestID
+placeholder
+
 // Official xAI async video status success shape (docs.x.ai Video Generation):
 //
 //	{"status":"done","model":"grok-imagine-video-1.5","video":{"url":"...","duration":8,"respect_moderation":trueplaceholderplaceholder
@@ -524,8 +558,6 @@ placeholder
 		VideoCount:           1,
 		VideoResolution:      resolution,
 		VideoDurationSeconds: durationSeconds,
-		// Keep legacy media-unit counter for existing usage displays.
-		ImageCount: 1,
 placeholder
 placeholder
 
@@ -793,11 +825,24 @@ placeholder
 	if err := writeGrokMediaContentResponse(c, contentResp); err != nil {
 		return nil, err
 placeholder
-	return &OpenAIForwardResult{
+	// Content download is an alternate completion observation: when status body is
+	// official done+video.url, attach billable units so the handler can claim once
+	// (same path as status polling). Pending snapshot is merged in the handler.
+	result := &OpenAIForwardResult{
 		RequestID:       contentRequestID,
 		ResponseHeaders: contentResp.Header.Clone(),
 		Duration:        time.Since(startTime),
-placeholder, nil
+placeholder
+	if billed := ExtractGrokVideoBillingFromStatusBody(statusBody, nil, requestID); billed != nil {
+		result.ResponseID = firstNonEmpty(billed.ResponseID, strings.TrimSpace(requestID))
+		result.Model = billed.Model
+		result.BillingModel = billed.BillingModel
+		result.UpstreamModel = billed.UpstreamModel
+		result.VideoCount = billed.VideoCount
+		result.VideoResolution = billed.VideoResolution
+		result.VideoDurationSeconds = billed.VideoDurationSeconds
+placeholder
+	return result, nil
 placeholder
 
 func grokMediaSignedVideoContentURL(body []byte, requestID string) (string, error) {
@@ -1045,7 +1090,6 @@ func grokMediaUsageFromResponse(endpoint GrokMediaEndpoint, requestInfo GrokMedi
 				meta.VideoCount = billed.VideoCount
 				meta.VideoResolution = billed.VideoResolution
 				meta.VideoDurationSeconds = billed.VideoDurationSeconds
-				meta.ImageCount = billed.ImageCount
 		placeholder
 	placeholder
 placeholder
