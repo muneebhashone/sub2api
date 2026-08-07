@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +25,8 @@ type resetQuotaUserSubRepoStub struct {
 	resetDailyErr      error
 	resetWeeklyErr     error
 	resetMonthlyErr    error
-	windowStart        time.Time
+	dailyStart         time.Time
+	periodicStart      time.Time
 placeholder
 
 func (r *resetQuotaUserSubRepoStub) GetByID(_ context.Context, id int64) (*UserSubscription, error) {
@@ -35,11 +37,12 @@ placeholder
 	return &cp, nil
 placeholder
 
-func (r *resetQuotaUserSubRepoStub) ResetUsageWindows(_ context.Context, _ int64, resetDaily, resetWeekly, resetMonthly bool, windowStart time.Time) error {
+func (r *resetQuotaUserSubRepoStub) ResetUsageWindows(_ context.Context, _ int64, resetDaily, resetWeekly, resetMonthly bool, dailyStart, periodicStart time.Time) error {
 	r.resetDailyCalled = resetDaily
 	r.resetWeeklyCalled = resetWeekly
 	r.resetMonthlyCalled = resetMonthly
-	r.windowStart = windowStart
+	r.dailyStart = dailyStart
+	r.periodicStart = periodicStart
 	if resetDaily && r.resetDailyErr != nil {
 		return r.resetDailyErr
 placeholder
@@ -54,15 +57,15 @@ placeholder
 placeholder
 	if resetDaily {
 		r.sub.DailyUsageUSD = 0
-		r.sub.DailyWindowStart = &windowStart
+		r.sub.DailyWindowStart = &dailyStart
 placeholder
 	if resetWeekly {
 		r.sub.WeeklyUsageUSD = 0
-		r.sub.WeeklyWindowStart = &windowStart
+		r.sub.WeeklyWindowStart = &periodicStart
 placeholder
 	if resetMonthly {
 		r.sub.MonthlyUsageUSD = 0
-		r.sub.MonthlyWindowStart = &windowStart
+		r.sub.MonthlyWindowStart = &periodicStart
 placeholder
 	return nil
 placeholder
@@ -105,8 +108,10 @@ placeholder
 	require.True(t, stub.resetDailyCalled, "应调用 ResetDailyUsage")
 	require.True(t, stub.resetWeeklyCalled, "应调用 ResetWeeklyUsage")
 	require.False(t, stub.resetMonthlyCalled, "不应调用 ResetMonthlyUsage")
-	require.Equal(t, resetAt, stub.windowStart)
-	require.Equal(t, resetAt, *result.DailyWindowStart)
+	// 手动重置后日窗口锚定当天 0 点（保持 0 点刷新节奏），周窗口锚定重置时刻。
+	require.Equal(t, timezone.StartOfDay(resetAt), stub.dailyStart)
+	require.Equal(t, resetAt, stub.periodicStart)
+	require.Equal(t, timezone.StartOfDay(resetAt), *result.DailyWindowStart)
 	require.Equal(t, resetAt, *result.WeeklyWindowStart)
 placeholder
 
