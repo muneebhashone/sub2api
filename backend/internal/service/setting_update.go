@@ -411,9 +411,11 @@ placeholder
 
 	// Channel monitor feature switch
 	updates[SettingKeyChannelMonitorEnabled] = strconv.FormatBool(settings.ChannelMonitorEnabled)
+	updates[SettingKeyChannelMonitorMode] = normalizeChannelMonitorMode(settings.ChannelMonitorMode)
 	if v := clampChannelMonitorInterval(settings.ChannelMonitorDefaultIntervalSeconds); v > 0 {
 		updates[SettingKeyChannelMonitorDefaultIntervalSeconds] = strconv.Itoa(v)
 placeholder
+	updates[SettingKeyChannelMonitorHideThroughput] = strconv.FormatBool(settings.ChannelMonitorHideThroughput)
 
 	// Available channels feature switch
 	updates[SettingKeyAvailableChannelsEnabled] = strconv.FormatBool(settings.AvailableChannelsEnabled)
@@ -681,6 +683,7 @@ placeholder
 	if s.onUpdate != nil {
 		s.onUpdate() // Invalidate cache after settings update
 placeholder
+	s.notifyChannelMonitorRuntimeListeners()
 placeholder
 
 func (s *SettingService) defaultRewriteMessageCacheControl() bool {
