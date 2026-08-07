@@ -1216,6 +1216,51 @@ placeholder
 	require.Equal(t, 10, result.VideoDurationSeconds)
 placeholder
 
+func TestForwardGrokMediaVideoGenerationReturnsTaskIDAsResponseID(t *testing.T) {
+	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	body := []byte(`{"model":"grok-imagine-video","prompt":"waves"placeholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos/generations", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	account := &Account{
+		ID:          63,
+		Name:        "grok",
+		Platform:    PlatformGrok,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":  "api-key",
+			"base_url": "https://xai.test/v1",
+	placeholder,
+placeholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"task_id":"video-task-123"placeholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{httpUpstream: upstreamplaceholder
+
+	result, err := svc.ForwardGrokMedia(context.Background(), c, account, GrokMediaEndpointVideosGenerations, "", body, "application/json")
+placeholder
+	require.Equal(t, "video-task-123", result.ResponseID)
+placeholder
+
+func TestExtractGrokMediaVideoRequestIDPreservesExistingPrecedence(t *testing.T) {
+	body := []byte(`{
+		"request_id":"request-id",
+		"id":"id",
+		"task_id":"task-id",
+		"data":{"request_id":"data-request-id","id":"data-id","task_id":"data-task-id"placeholder,
+		"video":{"request_id":"video-request-id","id":"video-id","task_id":"video-task-id"placeholder
+placeholder`)
+
+	require.Equal(t, "request-id", extractGrokMediaVideoRequestID(body))
+placeholder
+
 func TestForwardGrokMediaVideoGenerationPreservesImageToVideoModel(t *testing.T) {
 	t.Setenv(xai.EnvAllowUnsafeURLOverrides, "true")
 	gin.SetMode(gin.TestMode)
