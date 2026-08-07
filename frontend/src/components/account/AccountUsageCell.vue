@@ -394,6 +394,29 @@
           color="indigo"
         />
         <UsageProgressBar
+          v-if="grokMonthlyBillingBar"
+          label="30d"
+          :utilization="grokMonthlyBillingBar.utilization"
+          :resets-at="grokMonthlyBillingBar.resetsAt"
+          :show-now-when-idle="true"
+          color="indigo"
+        />
+        <div
+          v-if="grokBillingMoneySummary"
+          class="flex flex-wrap items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400"
+        >
+          <span :title="t('admin.accounts.usageWindow.grokMonthlyLimit')">
+            {{ t('admin.accounts.usageWindow.grokUsed') placeholderplaceholder
+            {{ grokBillingMoneySummary.used placeholderplaceholder/{{ grokBillingMoneySummary.limit placeholderplaceholder
+          </span>
+          <span
+            v-if="grokBillingMoneySummary.usedPercent != null"
+            class="rounded bg-gray-100 px-1 py-0.5 dark:bg-gray-800"
+          >
+            {{ grokBillingMoneySummary.usedPercent placeholderplaceholder%
+          </span>
+        </div>
+        <UsageProgressBar
           v-if="!grokWeeklyBillingBar && !grokIsFree && grokRequestQuotaBar"
           :label="t('admin.accounts.usageWindow.grokRequests')"
           :utilization="grokRequestQuotaBar.utilization"
@@ -652,16 +675,25 @@ const props = withDefaults(
     todayStats?: WindowStats | null
     todayStatsLoading?: boolean
     manualRefreshToken?: number
+    batchedUsage?: AccountUsageInfo | null
+    batchedUsageError?: string | null
+    batchedUsageLoading?: boolean
+    requestBatchedUsage?: ((account: Account, options?: { force?: boolean placeholder) => void) | null
   placeholder>(),
   {
     todayStats: null,
     todayStatsLoading: false,
-    manualRefreshToken: 0
+    manualRefreshToken: 0,
+    batchedUsage: null,
+    batchedUsageError: null,
+    batchedUsageLoading: false,
+    requestBatchedUsage: null
   placeholder
 )
 
 const emit = defineEmits<{
   'account-updated': [account: Account]
+  'usage-loaded': [usage: AccountUsageInfo]
 placeholder>()
 
 const { t placeholder = useI18n()
@@ -674,6 +706,9 @@ const loading = ref(false)
 const activeQueryLoading = ref(false)
 const error = ref<string | null>(null)
 const usageInfo = ref<AccountUsageInfo | null>(null)
+watch(usageInfo, (usage) => {
+  if (usage) emit('usage-loaded', usage)
+placeholder)
 const suppressOpenAIUsageRefreshUntil = ref(0)
 const rootRef = ref<HTMLElement | null>(null)
 const isDesktopViewport = ref(
@@ -712,6 +747,8 @@ const shouldFetchUsage = computed(() => {
   placeholder
   return false
 placeholder)
+
+const isBatchManaged = computed(() => typeof props.requestBatchedUsage === 'function')
 
 const showGeminiTodayStats = computed(() => {
   return props.account.platform === 'gemini' && props.account.type === 'service_account'
@@ -1094,6 +1131,58 @@ const grokWeeklyBillingBar = computed((): GrokQuotaBarInfo | null => {
     resetsAt: billing.period_end || null
   placeholder
 placeholder)
+// Monthly used/limit % from billing probe (used_percent or derived from cents).
+const grokMonthlyBillingBar = computed((): GrokQuotaBarInfo | null => {
+  const billing = grokBilling.value
+  if (!billing) return null
+  let utilization: number | null = null
+  if (billing.used_percent != null && Number.isFinite(billing.used_percent)) {
+    utilization = billing.used_percent
+  placeholder else if (
+    billing.monthly_limit_cents != null &&
+    billing.monthly_limit_cents > 0 &&
+    billing.used_cents != null
+  ) {
+    utilization = (billing.used_cents / billing.monthly_limit_cents) * 100
+  placeholder
+  if (utilization == null) return null
+  // Avoid duplicating the weekly bar when period_type is weekly-only without monthly.
+  if (billing.period_type?.toLowerCase() === 'weekly' && billing.monthly_limit_cents == null) {
+    return null
+  placeholder
+  return {
+    utilization: Math.min(100, Math.max(0, utilization)),
+    resetsAt: billing.billing_period_end || billing.period_end || null
+  placeholder
+placeholder)
+const formatGrokMoneyFromCents = (cents?: number | null) => {
+  if (cents == null || Number.isNaN(cents)) return '0'
+  const dollars = cents / 100
+  if (dollars >= 1000) return formatCompactNumber(dollars)
+  if (dollars >= 100) return dollars.toFixed(0)
+  if (dollars >= 10) return dollars.toFixed(1)
+  return dollars.toFixed(2)
+placeholder
+// Absolute monthly used/limit derived from cents fields already on GrokBillingSummary.
+// (personal-dev has separate prepaid/on_demand fields; HEAD only has cents.)
+const grokBillingMoneySummary = computed(() => {
+  const billing = grokBilling.value
+  if (!billing) return null
+  const limit = billing.monthly_limit_cents
+  const used = billing.used_cents
+  if ((limit == null || limit <= 0) && (used == null || used <= 0)) return null
+  let usedPercent: number | null = null
+  if (billing.used_percent != null && Number.isFinite(billing.used_percent)) {
+    usedPercent = Math.round(Math.min(100, Math.max(0, billing.used_percent)))
+  placeholder else if (limit != null && limit > 0 && used != null) {
+    usedPercent = Math.round(Math.min(100, Math.max(0, (used / limit) * 100)))
+  placeholder
+  return {
+    used: formatGrokMoneyFromCents(used ?? 0),
+    limit: formatGrokMoneyFromCents(limit ?? 0),
+    usedPercent
+  placeholder
+placeholder)
 const grokPlanLabelIsFree = (value: string) => value.includes('free') || value.includes('basic')
 const grokPlanLabelIsPaid = (value: string) => {
   return value !== '' && !grokPlanLabelIsFree(value) && !value.includes('unknown')
@@ -1136,7 +1225,16 @@ const grokFreeTokenBar = computed(() => {
 placeholder)
 const grokQuotaUnknown = computed(() => {
   if (props.account.platform !== 'grok') return false
-  if (grokBilling.value || grokFreeTokenBar.value || grokRequestQuotaBar.value || grokTokenQuotaBar.value) return false
+  if (
+    grokBilling.value ||
+    grokBillingMoneySummary.value ||
+    grokMonthlyBillingBar.value ||
+    grokFreeTokenBar.value ||
+    grokRequestQuotaBar.value ||
+    grokTokenQuotaBar.value
+  ) {
+    return false
+  placeholder
   return usageInfo.value?.grok_quota_snapshot_state !== 'observed'
 placeholder)
 const grokQuotaUnknownLabel = computed(() => {
@@ -1273,8 +1371,24 @@ const isAnthropicOAuthOrSetupToken = computed(() => {
   return props.account.platform === 'anthropic' && (props.account.type === 'oauth' || props.account.type === 'setup-token')
 placeholder)
 
+const requestParentBatchUsage = (options?: { force?: boolean placeholder) => {
+  if (!isBatchManaged.value || !shouldFetchUsage.value) return
+  props.requestBatchedUsage?.(props.account, options)
+placeholder
+
+const syncManagedUsageState = () => {
+  if (!isBatchManaged.value) return
+  usageInfo.value = props.batchedUsage ?? null
+  error.value = props.batchedUsageError ?? null
+  loading.value = props.batchedUsageLoading === true
+placeholder
+
 const loadUsage = async (options?: { source?: 'passive' | 'active'; bypassCache?: boolean placeholder) => {
   if (!shouldFetchUsage.value) return
+  if (isBatchManaged.value) {
+    requestParentBatchUsage({ force: options?.bypassCache === true placeholder)
+    return
+  placeholder
 
   // Check cache
   if (!options?.bypassCache) {
@@ -1529,16 +1643,59 @@ onMounted(() => {
     placeholder
   placeholder
 
+  if (isBatchManaged.value) {
+    syncManagedUsageState()
+    requestParentBatchUsage()
+    return
+  placeholder
+
   if (!shouldAutoLoadUsageOnMount.value) return
   const source = isAnthropicOAuthOrSetupToken.value ? 'passive' : undefined
   requestAutoLoad(source)
 placeholder)
+
+watch(
+  () => [props.batchedUsage, props.batchedUsageError, props.batchedUsageLoading, isBatchManaged.value] as const,
+  () => {
+    syncManagedUsageState()
+  placeholder,
+  { immediate: true, deep: true placeholder
+)
+
+watch(isBatchManaged, (managed, wasManaged) => {
+  if (managed && !wasManaged) {
+    syncManagedUsageState()
+    requestParentBatchUsage()
+  placeholder
+placeholder)
+
+watch(
+  () => [props.account.id, props.account.platform, props.account.type, isBatchManaged.value] as const,
+  ([accountID, platform, accountType, managed], [previousAccountID, previousPlatform, previousAccountType]) => {
+    if (
+      accountID === previousAccountID &&
+      platform === previousPlatform &&
+      accountType === previousAccountType
+    ) {
+      return
+    placeholder
+    if (!managed || !shouldFetchUsage.value) return
+    syncManagedUsageState()
+    requestParentBatchUsage()
+  placeholder,
+  { flush: 'post' placeholder
+)
 
 watch(openAIUsageRefreshKey, (nextKey, prevKey) => {
   if (!prevKey || nextKey === prevKey) return
   if (props.account.platform !== 'openai' || props.account.type !== 'oauth') return
   if (Date.now() < suppressOpenAIUsageRefreshUntil.value) {
     suppressOpenAIUsageRefreshUntil.value = 0
+    return
+  placeholder
+
+  if (isBatchManaged.value) {
+    requestParentBatchUsage({ force: true placeholder)
     return
   placeholder
 
@@ -1551,6 +1708,11 @@ watch(
   (nextToken, prevToken) => {
     if (nextToken === prevToken) return
     if (!shouldFetchUsage.value) return
+
+    if (isBatchManaged.value) {
+      requestParentBatchUsage({ force: true placeholder)
+      return
+    placeholder
 
     const source = isAnthropicOAuthOrSetupToken.value ? 'passive' : undefined
     _usageCache.delete(props.account.id)

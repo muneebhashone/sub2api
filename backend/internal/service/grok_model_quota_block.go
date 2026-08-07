@@ -87,7 +87,8 @@ func filterGrokModelQuotaBlockedAccounts(accounts []Account, model string, now t
 placeholder
 	out := make([]Account, 0, len(accounts))
 	for i := range accounts {
-		if isGrokModelQuotaBlocked(accounts[i].ID, model, now) {
+		upstreamModel := canonicalOpenAIAccountSchedulingModel(&accounts[i], model)
+		if isGrokModelQuotaBlocked(accounts[i].ID, upstreamModel, now) {
 			continue
 	placeholder
 		out = append(out, accounts[i])

@@ -26,6 +26,21 @@ placeholder
 	require.Equal(t, id+1, filtered[0].ID)
 placeholder
 
+func TestGrokModelQuotaBlockFiltersMappedUpstreamModel(t *testing.T) {
+	id := time.Now().UnixNano()%1_000_000 + 7000
+	markGrokModelQuotaBlock(id, "grok-4.5", time.Now().Add(time.Hour))
+	account := Account{
+		ID:       id,
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder
+			"model_mapping": map[string]any{"gpt-*": "grok-4.5"placeholder,
+	placeholder,
+placeholder
+
+	require.Empty(t, filterGrokModelQuotaBlockedAccounts([]Account{accountplaceholder, "gpt-5", time.Now()))
+placeholder
+
 func TestIsGrokModelSpecificFreeUsage(t *testing.T) {
 	require.True(t, isGrokModelSpecificFreeUsage(
 		"you've used all the included free usage for model grok-4.5", "grok-4.5"))

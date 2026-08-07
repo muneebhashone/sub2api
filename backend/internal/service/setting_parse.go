@@ -941,6 +941,14 @@ placeholder
 			result.DefaultPlatformQuotas = parsed
 	placeholder
 placeholder
+	result.AccountSchedulingThresholds = defaultAccountSchedulingThresholds()
+	if raw := strings.TrimSpace(settings[SettingKeyAccountSchedulingThresholds]); raw != "" {
+		if thresholds, err := parseAccountSchedulingThresholdsSetting(raw); err != nil {
+			slog.Warn("[Setting] parseSettings: unmarshal account_scheduling_thresholds failed", "error", err)
+	placeholder else {
+			result.AccountSchedulingThresholds = thresholds
+	placeholder
+placeholder
 
 	result.AllowUserViewErrorRequests = settings[SettingKeyAllowUserViewErrorRequests] == "true" // default false
 

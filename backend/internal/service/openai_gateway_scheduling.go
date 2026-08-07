@@ -1258,7 +1258,10 @@ func (s *OpenAIGatewayService) listSchedulableAccounts(ctx context.Context, grou
 	platform = normalizeOpenAICompatiblePlatform(platform)
 	if s.schedulerSnapshot != nil {
 		accounts, _, err := s.schedulerSnapshot.ListSchedulableAccounts(ctx, groupID, platform, false)
-		return accounts, err
+		if err != nil {
+			return accounts, err
+	placeholder
+		return s.filterOpenAIAccountsBySchedulingThreshold(ctx, accounts), nil
 placeholder
 	var accounts []Account
 	var err error
@@ -1272,7 +1275,7 @@ placeholder
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
 placeholder
-	return accounts, nil
+	return s.filterOpenAIAccountsBySchedulingThreshold(ctx, accounts), nil
 placeholder
 
 func (s *OpenAIGatewayService) tryAcquireAccountSlot(ctx context.Context, accountID int64, maxConcurrency int) (*AcquireResult, error) {
@@ -1306,6 +1309,9 @@ placeholder
 	if s.isOpenAIAccountRequestRuntimeBlocked(fresh, requestedModel) {
 		return nil
 placeholder
+	if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, fresh) {
+		return nil
+placeholder
 	if s.isOpenAIProxyStreamQuarantined(ctx, fresh) {
 		return nil
 placeholder
@@ -1335,6 +1341,9 @@ placeholder
 		if !isOpenAICompatibleAccountEligibleForRequest(ctx, account, platform, requestedModel, requireCompact, requiredCapability) {
 			return nil
 	placeholder
+		if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, account) {
+			return nil
+	placeholder
 		if !parentHealthyForShadow(account, s.parentAccountLookup(ctx)) {
 			return nil
 	placeholder
@@ -1358,6 +1367,9 @@ placeholder
 		return nil
 placeholder
 	if s.isOpenAIAccountRequestRuntimeBlocked(latest, requestedModel) {
+		return nil
+placeholder
+	if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, latest) {
 		return nil
 placeholder
 	if s.isOpenAIProxyStreamQuarantined(ctx, latest) {
@@ -1386,7 +1398,32 @@ placeholder
 	if err != nil || account == nil {
 		return account, err
 placeholder
+	if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, account) {
+		return nil, nil
+placeholder
 	return account, nil
+placeholder
+
+func (s *OpenAIGatewayService) filterOpenAIAccountsBySchedulingThreshold(ctx context.Context, accounts []Account) []Account {
+	if len(accounts) == 0 {
+		return accounts
+placeholder
+
+	filtered := make([]Account, 0, len(accounts))
+	for i := range accounts {
+		if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, &accounts[i]) {
+			continue
+	placeholder
+		filtered = append(filtered, accounts[i])
+placeholder
+	return filtered
+placeholder
+
+func (s *OpenAIGatewayService) isOpenAIAccountBlockedBySchedulingThreshold(ctx context.Context, account *Account) bool {
+	if s == nil || s.rateLimitService == nil || account == nil {
+		return false
+placeholder
+	return s.rateLimitService.ApplyAccountSchedulingThreshold(ctx, account)
 placeholder
 
 func (s *OpenAIGatewayService) hydrateSelectedAccount(ctx context.Context, account *Account) (*Account, error) {

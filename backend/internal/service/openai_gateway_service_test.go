@@ -68,6 +68,29 @@ placeholder
 	return nil, errors.New("account not found")
 placeholder
 
+func (r stubOpenAIAccountRepo) GetByIDs(ctx context.Context, ids []int64) ([]*Account, error) {
+	if len(ids) == 0 {
+		return []*Account{placeholder, nil
+placeholder
+	index := make(map[int64]*Account, len(r.accounts))
+	for i := range r.accounts {
+		account := &r.accounts[i]
+		index[account.ID] = account
+placeholder
+	out := make([]*Account, 0, len(ids))
+	seen := make(map[int64]struct{placeholder, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+	placeholder
+		seen[id] = struct{placeholder{placeholder
+		if account, ok := index[id]; ok {
+			out = append(out, account)
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
 func (r stubOpenAIAccountRepo) ListSchedulableByGroupIDAndPlatform(ctx context.Context, groupID int64, platform string) ([]Account, error) {
 	var result []Account
 	for _, acc := range r.accounts {
