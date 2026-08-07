@@ -134,7 +134,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	platformCounts := map[string]int64{placeholder
 	type modelValue struct {
 		platform string
@@ -602,7 +602,7 @@ func (r *channelMonitorV2Repository) listActiveGroupIDs(ctx context.Context) ([]
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	ids := []int64{placeholder
 	for rows.Next() {
 		var id int64
@@ -623,7 +623,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	for rows.Next() {
 		var id int64
 		var name, platform string
@@ -646,7 +646,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	counts := map[string]int64{placeholder
 	var total int64
 	ignoredSet := service.ChannelMonitorV2IgnoredCategorySet(cfg)
@@ -760,7 +760,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	out := map[string][]service.ChannelMonitorV2ErrorDetail{placeholder
 	for rows.Next() {
 		var platform, model, errorType, owner, source, message string
@@ -830,7 +830,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	type userMeta struct{ email, username string placeholder
 	meta := map[int64]userMeta{placeholder
 	accs := map[int64]*metricAccumulator{placeholder
@@ -923,7 +923,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	facts := []channelMonitorV2Fact{placeholder
 	for rows.Next() {
 		var bucket time.Time
@@ -964,7 +964,7 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	out := []channelMonitorV2Histogram{placeholder
 	for rows.Next() {
 		var bucket time.Time
@@ -1379,7 +1379,7 @@ placeholder
 	if err != nil {
 		return byBucket, 0, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	for rows.Next() {
 		var bucket time.Time
 		var platform, model string
@@ -1422,7 +1422,7 @@ placeholder
 	if err != nil {
 		return byPM, 0, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	for rows.Next() {
 		var platform, model string
 		var count int64
@@ -1475,7 +1475,7 @@ placeholder
 	if err != nil {
 		return byDimBucket, byDim, err
 placeholder
-	defer rows.Close()
+	defer func() { _ = rows.Close() placeholder()
 	for rows.Next() {
 		var bucket time.Time
 		var platform, model string

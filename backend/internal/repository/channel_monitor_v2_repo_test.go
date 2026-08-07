@@ -261,5 +261,3 @@ placeholder
 	require.Equal(t, []int64{3, 4placeholder, configuredChannelMonitorV2GroupIDs(catalog, cfg))
 	require.Equal(t, []int64{3placeholder, configuredChannelMonitorV2GroupIDs(filter, cfg))
 placeholder
-
-
