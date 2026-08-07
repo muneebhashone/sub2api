@@ -13,6 +13,7 @@ import (
 )
 
 func TestGrokMediaGenerationEligibility(t *testing.T) {
+	weeklyUsagePercent := 12.5
 	forbiddenBilling := &xai.BillingSummary{
 		StatusCode:        http.StatusForbidden,
 		WeeklyStatusCode:  http.StatusForbidden,
@@ -20,6 +21,7 @@ func TestGrokMediaGenerationEligibility(t *testing.T) {
 placeholder
 	weeklyAllowance := &xai.BillingSummary{
 		PeriodType:       "weekly",
+		UsagePercent:     &weeklyUsagePercent,
 		StatusCode:       http.StatusOK,
 		WeeklyStatusCode: http.StatusOK,
 placeholder
@@ -43,12 +45,12 @@ placeholder{
 		{name: "nil account", account: nil, want: false, wantReason: "not_grok"placeholder,
 		{name: "non grok account", account: &Account{Platform: PlatformOpenAIplaceholder, want: false, wantReason: "not_grok"placeholder,
 		{name: "non oauth grok account stays eligible", account: &Account{Platform: PlatformGrok, Type: AccountTypeAPIKeyplaceholder, want: true, wantReason: "non_oauth"placeholder,
-		{name: "unobserved oauth preserves legacy routing", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder, want: true, wantReason: "billing_unobserved"placeholder,
-		{name: "weekly allowance is not treated as weekly subscription", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: weeklyAllowanceplaceholderplaceholder, want: true, wantReason: "eligible"placeholder,
+		{name: "unobserved oauth fails closed", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder, want: false, wantReason: "billing_unobserved"placeholder,
+		{name: "weekly paid usage is eligible without inferring from period type", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: weeklyAllowanceplaceholderplaceholder, want: true, wantReason: "eligible"placeholder,
 		{name: "billing forbidden is rejected", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: forbiddenBillingplaceholderplaceholder, want: false, wantReason: "billing_forbidden"placeholder,
 		{name: "weekly billing forbidden is rejected after partial success", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: weeklyForbiddenplaceholderplaceholder, want: false, wantReason: "billing_forbidden"placeholder,
 		{name: "monthly billing forbidden is rejected after partial success", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: monthlyForbiddenplaceholderplaceholder, want: false, wantReason: "billing_forbidden"placeholder,
-		{name: "malformed billing observation preserves legacy routing", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: make(chan int)placeholderplaceholder, want: true, wantReason: "billing_unobserved"placeholder,
+		{name: "malformed billing observation fails closed", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{grokBillingExtraKey: make(chan int)placeholderplaceholder, want: false, wantReason: "billing_unobserved"placeholder,
 		{name: "malformed override falls back to observations", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{GrokMediaEligibleExtraKey: "false", grokBillingExtraKey: weeklyAllowanceplaceholderplaceholder, want: true, wantReason: "eligible"placeholder,
 		{name: "explicit disable wins", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{GrokMediaEligibleExtraKey: falseplaceholderplaceholder, want: false, wantReason: "override_disabled"placeholder,
 		{name: "explicit enable wins over forbidden probe", account: &Account{Platform: PlatformGrok, Type: AccountTypeOAuth, Extra: map[string]any{GrokMediaEligibleExtraKey: true, grokBillingExtraKey: forbiddenBillingplaceholderplaceholder, want: true, wantReason: "override_enabled"placeholder,
@@ -61,6 +63,24 @@ placeholder
 			require.Equal(t, tt.wantReason, reason)
 	placeholder)
 placeholder
+placeholder
+
+func TestGrokMediaCapabilityKeepsOnlyUnobservedOAuthAsProbeCandidate(t *testing.T) {
+	unobserved := &Account{Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	eligible, reason := unobserved.GrokMediaGenerationEligibility()
+	require.False(t, eligible)
+	require.Equal(t, "billing_unobserved", reason)
+	require.True(t, unobserved.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityGrokMediaGeneration))
+
+	inconclusive := &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+		Extra: map[string]any{grokBillingExtraKey: &xai.BillingSummary{
+			StatusCode: http.StatusOK,
+			Partial:    true,
+placeholder
+placeholder
+	require.False(t, inconclusive.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityGrokMediaGeneration))
 placeholder
 
 func TestGrokMediaCapabilityFiltersOnlyGeneration(t *testing.T) {
