@@ -130,12 +130,18 @@
         :show-help="isAnthropic"
         :show-proxy-warning="isAnthropic"
         :show-cookie-option="isAnthropic"
+        :show-refresh-token-option="isOpenAI || isAntigravity || isGrok"
+        :show-sso-option="isGrok"
+        :show-email-password-option="isGrok"
         :allow-multiple="false"
         :method-label="t('admin.accounts.inputMethod')"
         :platform="isOpenAI ? 'openai' : isGemini ? 'gemini' : isAntigravity ? 'antigravity' : isGrok ? 'grok' : 'anthropic'"
         :show-project-id="isGemini && geminiOAuthType === 'code_assist'"
         @generate-url="handleGenerateUrl"
         @cookie-auth="handleCookieAuth"
+        @validate-refresh-token="handleGrokValidateRefreshToken"
+        @import-sso="handleGrokImportSSO"
+        @authorize-password="handleGrokAuthorizePassword"
       />
 
     </div>
@@ -279,10 +285,20 @@ const currentError = computed(() => {
   return claudeOAuth.error.value
 placeholder)
 
-// Computed
+// Computed — footer "complete auth" only for code-exchange flows, not SSO/password/RT.
 const isManualInputMethod = computed(() => {
-  // OpenAI/Gemini/Antigravity always use manual input (no cookie auth option)
-  return isOpenAILike.value || isGemini.value || isAntigravity.value || isGrok.value || oauthFlowRef.value?.inputMethod === 'manual'
+  const method = oauthFlowRef.value?.inputMethod
+  if (method === 'sso_cookie' || method === 'email_password' || method === 'refresh_token') {
+    return false
+  placeholder
+  // OpenAI/Gemini/Antigravity/Grok use manual code paste by default (no cookie auth)
+  return (
+    isOpenAILike.value ||
+    isGemini.value ||
+    isAntigravity.value ||
+    isGrok.value ||
+    method === 'manual'
+  )
 placeholder)
 
 const canExchangeCode = computed(() => {
@@ -572,6 +588,113 @@ const handleCookieAuth = async (sessionKey: string) => {
       error.response?.data?.detail || t('admin.accounts.oauth.cookieAuthFailed')
   placeholder finally {
     claudeOAuth.loading.value = false
+  placeholder
+placeholder
+
+/** Apply Grok Build OAuth tokens onto the existing account (never store password/SSO). */
+const applyGrokReauthTokenInfo = async (tokenInfo: {
+  access_token?: string
+  refresh_token?: string
+  email?: string
+  [key: string]: unknown
+placeholder) => {
+  if (!props.account) return
+  const credentials = grokOAuth.buildCredentials(tokenInfo as any)
+  const extra = grokOAuth.buildExtraInfo(tokenInfo as any)
+  const updatedAccount = await adminAPI.accounts.applyOAuthCredentials(props.account.id, {
+    type: 'oauth',
+    credentials,
+    extra
+  placeholder)
+  appStore.showSuccess(t('admin.accounts.reAuthorizedSuccess'))
+  emit('reauthorized', updatedAccount)
+  handleClose()
+placeholder
+
+/** Re-auth with a single SSO cookie → Build OAuth (not batch create). */
+const handleGrokImportSSO = async (ssoInput: string) => {
+  if (!props.account || !isGrok.value) return
+  const ssoToken = ssoInput
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)[0]
+  if (!ssoToken) return
+
+  grokOAuth.loading.value = true
+  grokOAuth.error.value = ''
+  try {
+    const tokenInfo = await grokOAuth.validateSSOToken(ssoToken, props.account.proxy_id)
+    if (!tokenInfo) return
+    await applyGrokReauthTokenInfo(tokenInfo)
+  placeholder catch (error: any) {
+    grokOAuth.error.value =
+      error.response?.data?.detail ||
+      error.message ||
+      t('admin.accounts.oauth.grok.failedToValidateSSO', 'Failed to validate Grok SSO')
+    appStore.showError(grokOAuth.error.value)
+  placeholder finally {
+    grokOAuth.loading.value = false
+  placeholder
+placeholder
+
+/** Re-auth with email----password (single line; password never persisted). */
+const handleGrokAuthorizePassword = async (emailPasswordInput: string) => {
+  if (!props.account || !isGrok.value) return
+  const line = emailPasswordInput
+    .split('\n')
+    .map((item) => item.trim())
+    .find((item) => item.includes('----'))
+  if (!line) {
+    grokOAuth.error.value = t(
+      'admin.accounts.oauth.grok.pleaseEnterPassword',
+      'Please enter email----password'
+    )
+    return
+  placeholder
+
+  grokOAuth.loading.value = true
+  grokOAuth.error.value = ''
+  try {
+    const tokenInfo = await grokOAuth.authorizePassword(line, props.account.proxy_id)
+    if (!tokenInfo) return
+    await applyGrokReauthTokenInfo(tokenInfo)
+  placeholder catch (error: any) {
+    grokOAuth.error.value =
+      error.response?.data?.detail ||
+      error.message ||
+      t('admin.accounts.oauth.grok.failedToAuthorizePassword', 'Password authorization failed')
+    appStore.showError(grokOAuth.error.value)
+  placeholder finally {
+    grokOAuth.loading.value = false
+  placeholder
+placeholder
+
+/** Re-auth with a single refresh token. */
+const handleGrokValidateRefreshToken = async (refreshTokenInput: string) => {
+  if (!props.account || !isGrok.value) return
+  const refreshToken = refreshTokenInput
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)[0]
+  if (!refreshToken) {
+    grokOAuth.error.value = t('admin.accounts.oauth.grok.pleaseEnterRefreshToken')
+    return
+  placeholder
+
+  grokOAuth.loading.value = true
+  grokOAuth.error.value = ''
+  try {
+    const tokenInfo = await grokOAuth.validateRefreshToken(refreshToken, props.account.proxy_id)
+    if (!tokenInfo) return
+    await applyGrokReauthTokenInfo(tokenInfo)
+  placeholder catch (error: any) {
+    grokOAuth.error.value =
+      error.response?.data?.detail ||
+      error.message ||
+      t('admin.accounts.oauth.grok.failedToValidateRT')
+    appStore.showError(grokOAuth.error.value)
+  placeholder finally {
+    grokOAuth.loading.value = false
   placeholder
 placeholder
 </script>
