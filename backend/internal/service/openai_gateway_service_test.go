@@ -664,6 +664,16 @@ placeholder
 	return nil
 placeholder
 
+func (c *stubGatewayCache) SetGrokVideoPendingBilling(_ context.Context, _ string, _ []byte, _ time.Duration) error {
+	return nil
+placeholder
+func (c *stubGatewayCache) GetGrokVideoPendingBilling(_ context.Context, _ string) ([]byte, error) {
+	return nil, nil
+placeholder
+func (c *stubGatewayCache) ClaimGrokVideoBilled(_ context.Context, _ string, _ time.Duration) (bool, error) {
+	return true, nil
+placeholder
+
 func TestOpenAISelectAccountWithLoadAwareness_FiltersUnschedulable(t *testing.T) {
 	now := time.Now()
 	resetAt := now.Add(10 * time.Minute)

@@ -182,6 +182,16 @@ placeholder
 	return nil
 placeholder
 
+func (c *schedulerTestGatewayCache) SetGrokVideoPendingBilling(_ context.Context, _ string, _ []byte, _ time.Duration) error {
+	return nil
+placeholder
+func (c *schedulerTestGatewayCache) GetGrokVideoPendingBilling(_ context.Context, _ string) ([]byte, error) {
+	return nil, nil
+placeholder
+func (c *schedulerTestGatewayCache) ClaimGrokVideoBilled(_ context.Context, _ string, _ time.Duration) (bool, error) {
+	return true, nil
+placeholder
+
 func newSchedulerTestOpenAIWSV2Config() *config.Config {
 	cfg := &config.Config{placeholder
 	cfg.Gateway.OpenAIWS.Enabled = true
