@@ -1248,6 +1248,12 @@ placeholder
 		if req.RequireCompact && openAICompactSupportTier(account) == 0 {
 			continue
 	placeholder
+		// Keep weighted sticky fallback subject to the same free-tier gate as the
+		// normal and sticky selection paths. Otherwise an over-quota free account
+		// could be reintroduced after the primary candidate pass.
+		if len(s.filterGrokFreeQuotaAccounts(ctx, []Account{*accountplaceholder)) == 0 {
+			continue
+	placeholder
 		result, acquireErr := s.service.tryAcquireAccountSlot(ctx, account.ID, account.Concurrency)
 		if acquireErr != nil {
 			return nil, acquireErr
