@@ -213,6 +213,20 @@ placeholder
 
 func grokOAuthHasExplicitEntitlementDenial(body string) bool {
 	lower := strings.ToLower(body)
+	// Billing exhaustion is recoverable. xAI may include a generic
+	// access_denied code alongside the quota message, so it must win over the
+	// entitlement marker during token refresh.
+	for _, phrase := range []string{
+		"spending limit",
+		"run out of credits",
+		"out of credits",
+		"credits exhausted",
+		"included free usage",
+placeholder {
+		if strings.Contains(lower, phrase) {
+			return false
+	placeholder
+placeholder
 	compact := strings.NewReplacer(" ", "", "\n", "", "\r", "", "\t", "").Replace(lower)
 	for _, field := range []string{"error", "code", "reason"placeholder {
 		for _, value := range []string{"access_denied", "entitlement_denied", "subscription_required", "no_active_subscription"placeholder {
