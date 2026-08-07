@@ -18,13 +18,17 @@ func CanonicalGrokImagineVideoPriceFamily(model string) string {
 	if model == "" {
 		return ""
 placeholder
-	// Prefer shared xAI helper when available.
+	// Prefer shared xAI helper for known aliases. Keep future native Imagine
+	// models distinct so operators can assign them independent prices.
 	if c := xai.CanonicalImagineVideoModel(model); c != "" {
-		switch {
-		case strings.HasPrefix(c, "grok-imagine-video-1.5"):
+		switch c {
+		case xai.DefaultImagineVideo15Model:
 			return VideoPriceFamilyGrokImagineVideo15
-		case strings.HasPrefix(c, "grok-imagine-video"):
+		case xai.DefaultImagineVideoModel:
 			return VideoPriceFamilyGrokImagineVideo
+	placeholder
+		if strings.HasPrefix(c, "grok-imagine-video-") {
+			return c
 	placeholder
 placeholder
 	m := strings.ToLower(strings.TrimSpace(model))
@@ -38,8 +42,8 @@ placeholder
 	case m == "grok-imagine-video-1.5" || m == "grok-imagine-video-1.5-preview" ||
 		m == "grok-video-1.5" || strings.Contains(m, "video-1.5"):
 		return VideoPriceFamilyGrokImagineVideo15
-	case m == "grok-imagine-video" || m == "grok-video" || m == "grok-video-latest" ||
-		strings.HasPrefix(m, "grok-imagine-video") || strings.HasPrefix(m, "grok-video"):
+	case m == "grok-imagine-video" || m == "grok-imagine-video-preview" ||
+		m == "grok-video" || m == "grok-video-latest":
 		return VideoPriceFamilyGrokImagineVideo
 	default:
 		return ""
@@ -111,16 +115,6 @@ placeholder
 	if price, ok := tierPrices[tier]; ok {
 		p := price
 		return &p
-placeholder
-	for _, candidate := range []string{
-		VideoBillingResolution1080P,
-		VideoBillingResolution720P,
-		VideoBillingResolution480P,
-placeholder {
-		if price, ok := tierPrices[candidate]; ok {
-			p := price
-			return &p
-	placeholder
 placeholder
 	return nil
 placeholder
