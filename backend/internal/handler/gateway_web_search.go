@@ -82,121 +82,87 @@ placeholder
 placeholder
 
 	failedAccounts := make(map[int64]struct{placeholder)
-	selected, err := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), groupID, "", xai.DefaultTextModel, failedAccounts, "", 0)
-	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{
-			"type":    "scheduling_error",
-			"message": err.Error(),
-	placeholderplaceholder)
+	var account *service.Account
+	var accountReleaseFunc func()
+	var nativeResp *websearch.SearchResponse
+	var providerName string
+	var err error
+
+	// Acquire + release holder for the whole handler (including failover retries).
+	defer func() {
+		if accountReleaseFunc != nil {
+			accountReleaseFunc()
+	placeholder
+placeholder()
+
+	// First attempt + up to 3 failover accounts (max 4 total).
+	for attempt := 0; attempt < 4; attempt++ {
+		selected, selectErr := h.gatewayService.SelectAccountWithLoadAwareness(
+			c.Request.Context(), groupID, "", xai.DefaultTextModel, failedAccounts, "", 0,
+		)
+		if selectErr != nil {
+			if attempt == 0 {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{
+					"type":    "scheduling_error",
+					"message": selectErr.Error(),
+			placeholderplaceholder)
+				return
+		placeholder
+			break
+	placeholder
+		if selected == nil || selected.Account == nil {
+			if attempt == 0 {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{
+					"type":    "scheduling_error",
+					"message": "No available accounts",
+			placeholderplaceholder)
+				return
+		placeholder
+			break
+	placeholder
+
+		release, acquireOK, acquireErr := h.acquireWebSearchAccountSlot(c, selected)
+		if !acquireOK {
+			// First hop: surface concurrency errors; later hops try another account.
+			if attempt == 0 && acquireErr != nil {
+				h.handleConcurrencyError(c, acquireErr, "account", false)
+				return
+		placeholder
+			failedAccounts[selected.Account.ID] = struct{placeholder{placeholder
+			continue
+	placeholder
+		account = selected.Account
+		accountReleaseFunc = release
+
+		nativeResp, providerName, err = h.doGrokNativeWebSearch(c.Request.Context(), c, account, req.Query, req.MaxResults)
+		if err == nil {
+			break
+	placeholder
+		var failoverErr *service.UpstreamFailoverError
+		if !errors.As(err, &failoverErr) || !failoverErr.ShouldRetryNextAccount() {
+			break
+	placeholder
+		failedAccounts[account.ID] = struct{placeholder{placeholder
+		if accountReleaseFunc != nil {
+			accountReleaseFunc()
+			accountReleaseFunc = nil
+	placeholder
+		account = nil
+placeholder
+	if err != nil || nativeResp == nil {
+		msg := "web search failed"
+		if err != nil {
+			msg = err.Error()
+	placeholder
+		c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"type": "web_search_error", "message": msgplaceholderplaceholder)
 		return
 placeholder
-	if selected == nil || selected.Account == nil {
+	if account == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{
 			"type":    "scheduling_error",
 			"message": "No available accounts",
 	placeholderplaceholder)
 		return
-placeholder
-	account := selected.Account
-	accountReleaseFunc := selected.ReleaseFunc
-	if !selected.Acquired {
-		if selected.WaitPlan == nil || h.concurrencyHelper == nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{
-				"type":    "scheduling_error",
-				"message": "No available accounts",
-		placeholderplaceholder)
-			return
-	placeholder
-		accountWaitCounted := false
-		canWait, waitErr := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selected.WaitPlan.MaxWaiting)
-		if waitErr != nil {
-			logger.L().Warn("gateway.web_search.account_wait_counter_increment_failed",
-				zap.Int64("account_id", account.ID),
-				zap.Error(waitErr),
-			)
-	placeholder else if !canWait {
-			c.JSON(http.StatusTooManyRequests, gin.H{"error": gin.H{
-				"type":    "rate_limit_error",
-				"message": "Too many pending requests, please retry later",
-		placeholderplaceholder)
-			return
-	placeholder else {
-			accountWaitCounted = true
-	placeholder
-		releaseWait := func() {
-			if accountWaitCounted {
-				h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
-				accountWaitCounted = false
-		placeholder
-	placeholder
-		streamStarted := false
-		release, acquireErr := h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
-			c,
-			account.ID,
-			selected.WaitPlan.MaxConcurrency,
-			selected.WaitPlan.Timeout,
-			false,
-			&streamStarted,
-		)
-		releaseWait()
-		if acquireErr != nil {
-			h.handleConcurrencyError(c, acquireErr, "account", streamStarted)
-			return
-	placeholder
-		accountReleaseFunc = release
-placeholder
-	if accountReleaseFunc != nil {
-		defer func() {
-			if accountReleaseFunc != nil {
-				accountReleaseFunc()
-		placeholder
-	placeholder()
-placeholder
-
-	// Scheduling is 100% the same as other requests:
-	// SelectAccountWithLoadAwareness handles load balancing, rate limits, failover, sticky sessions, concurrency, proxies etc.
-	// Downstream rate limiting, billing etc. can be wired the same way.
-
-	// Use Grok *native* web search via the selected Grok account + responses API + web_search tool.
-	// This ensures results come from Grok's own search (not third-party emulation like Tavily/Brave).
-	// Output is normalized to the same unified format for clients/agents/MCP.
-
-	nativeResp, providerName, err := h.doGrokNativeWebSearch(c.Request.Context(), c, account, req.Query, req.MaxResults)
-	if err != nil {
-		var failoverErr *service.UpstreamFailoverError
-		if errors.As(err, &failoverErr) && failoverErr.ShouldRetryNextAccount() {
-			failedAccounts[account.ID] = struct{placeholder{placeholder
-			if accountReleaseFunc != nil {
-				accountReleaseFunc()
-				accountReleaseFunc = nil
-		placeholder
-			for attempt := 1; attempt < 4; attempt++ {
-				selected, selectErr := h.gatewayService.SelectAccountWithLoadAwareness(c.Request.Context(), groupID, "", xai.DefaultTextModel, failedAccounts, "", 0)
-				if selectErr != nil || selected == nil || selected.Account == nil {
-					break
-			placeholder
-				account = selected.Account
-				if selected.Acquired {
-					accountReleaseFunc = selected.ReleaseFunc
-			placeholder else {
-					break
-			placeholder
-				nativeResp, providerName, err = h.doGrokNativeWebSearch(c.Request.Context(), c, account, req.Query, req.MaxResults)
-				if err == nil {
-					break
-			placeholder
-				if !errors.As(err, &failoverErr) || !failoverErr.ShouldRetryNextAccount() {
-					break
-			placeholder
-				failedAccounts[account.ID] = struct{placeholder{placeholder
-				accountReleaseFunc()
-				accountReleaseFunc = nil
-		placeholder
-	placeholder
-		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": gin.H{"type": "web_search_error", "message": err.Error()placeholderplaceholder)
-			return
-	placeholder
 placeholder
 
 	userAgent := c.GetHeader("User-Agent")
@@ -249,6 +215,59 @@ placeholder)
 		"provider":    providerName,
 		"max_results": req.MaxResults,
 placeholder)
+placeholder
+
+// acquireWebSearchAccountSlot resolves an immediate slot or WaitPlan wait.
+// On failure returns (nil, false, err); err is non-nil for concurrency acquire
+// failures so the first hop can map them to HTTP. Wait-queue full returns
+// (nil, false, nil) so failover can try another account.
+func (h *GatewayHandler) acquireWebSearchAccountSlot(
+	c *gin.Context,
+	selected *service.AccountSelectionResult,
+) (release func(), ok bool, acquireErr error) {
+	if selected == nil || selected.Account == nil {
+		return nil, false, nil
+placeholder
+	if selected.Acquired {
+		return selected.ReleaseFunc, true, nil
+placeholder
+	if selected.WaitPlan == nil || h.concurrencyHelper == nil {
+		return nil, false, nil
+placeholder
+	account := selected.Account
+	accountWaitCounted := false
+	canWait, waitErr := h.concurrencyHelper.IncrementAccountWaitCount(c.Request.Context(), account.ID, selected.WaitPlan.MaxWaiting)
+	if waitErr != nil {
+		logger.L().Warn("gateway.web_search.account_wait_counter_increment_failed",
+			zap.Int64("account_id", account.ID),
+			zap.Error(waitErr),
+		)
+		// Best-effort wait without counter (same as first-hop legacy path).
+placeholder else if !canWait {
+		return nil, false, nil
+placeholder else {
+		accountWaitCounted = true
+placeholder
+	releaseWait := func() {
+		if accountWaitCounted {
+			h.concurrencyHelper.DecrementAccountWaitCount(c.Request.Context(), account.ID)
+			accountWaitCounted = false
+	placeholder
+placeholder
+	streamStarted := false
+	slotRelease, err := h.concurrencyHelper.AcquireAccountSlotWithWaitTimeout(
+		c,
+		account.ID,
+		selected.WaitPlan.MaxConcurrency,
+		selected.WaitPlan.Timeout,
+		false,
+		&streamStarted,
+	)
+	releaseWait()
+	if err != nil {
+		return nil, false, err
+placeholder
+	return slotRelease, true, nil
 placeholder
 
 // doGrokNativeWebSearch executes web search using the Grok account's native capability

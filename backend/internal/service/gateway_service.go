@@ -1278,7 +1278,11 @@ placeholder
 placeholder
 	token, _, err := s.GetAccessToken(ctx, account)
 	if err != nil {
-		return nil, fmt.Errorf("get grok token: %w", err)
+		// Credential/token failures should try the next Grok account in the pool.
+		return nil, &UpstreamFailoverError{
+			StatusCode: http.StatusUnauthorized,
+			Reason:     GatewayFailureReason("grok_search_token"),
+	placeholder
 placeholder
 	targetURL, err := buildGrokResponsesURL(account, nil)
 	if err != nil {
@@ -1312,7 +1316,10 @@ placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 	respBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if readErr != nil {
-		return nil, fmt.Errorf("read grok native search response: %w", readErr)
+		return nil, &UpstreamFailoverError{
+			StatusCode: http.StatusBadGateway,
+			Reason:     GatewayFailureReason("grok_search_read"),
+	placeholder
 placeholder
 	if resp.StatusCode >= 400 {
 		msg := string(respBytes)

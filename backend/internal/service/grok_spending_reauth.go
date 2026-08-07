@@ -48,6 +48,7 @@ placeholder
 	_ = repo.UpdateExtra(stateCtx, accountID, map[string]any{
 		"grok_needs_reauth":        false,
 		"grok_needs_reauth_reason": "",
+		"grok_needs_reauth_at":     "",
 placeholder)
 placeholder
 

@@ -24,32 +24,54 @@ func countGrokNativeSearchCallsFromSSEBody(body string) int {
 	if strings.TrimSpace(body) == "" {
 		return 0
 placeholder
-	total := 0
 	seen := make(map[string]struct{placeholder)
+	total := 0
 	forEachOpenAISSEDataPayload(body, func(data []byte) {
-		n, keys := countGrokNativeSearchCallsInSSEDataWithKeys(data)
-		if n <= 0 {
-			return
-	placeholder
-		// Dedup stream item.added / item.done for the same call id.
-		if len(keys) == 0 {
-			total += n
-			return
-	placeholder
-		for _, k := range keys {
-			if _, ok := seen[k]; ok {
-				continue
-		placeholder
-			seen[k] = struct{placeholder{placeholder
-			total++
-	placeholder
+		total += countGrokNativeSearchCallsInSSEDataDedup(data, seen)
 placeholder)
 	return total
 placeholder
 
+// countGrokNativeSearchCallsInSSEData counts search tool calls in one SSE
+// payload without cross-event dedup. Prefer countGrokNativeSearchCallsInSSEDataDedup
+// for live streams so item.done + response.completed do not double-bill.
 func countGrokNativeSearchCallsInSSEData(data []byte) int {
 	n, _ := countGrokNativeSearchCallsInSSEDataWithKeys(data)
 	return n
+placeholder
+
+// countGrokNativeSearchCallsInSSEDataDedup increments only unseen call ids.
+// Callers must reuse the same seen map for the full stream lifetime.
+func countGrokNativeSearchCallsInSSEDataDedup(data []byte, seen map[string]struct{placeholder) int {
+	if seen == nil {
+		return countGrokNativeSearchCallsInSSEData(data)
+placeholder
+	n, keys := countGrokNativeSearchCallsInSSEDataWithKeys(data)
+	if n <= 0 {
+		return 0
+placeholder
+	// No stable id: fall back to raw count once (cannot dedup across events).
+	if len(keys) == 0 {
+		return n
+placeholder
+	// Intra-event + cross-event dedup by call_id/id.
+	added := 0
+	local := make(map[string]struct{placeholder, len(keys))
+	for _, k := range keys {
+		if k == "" {
+			continue
+	placeholder
+		if _, ok := local[k]; ok {
+			continue
+	placeholder
+		local[k] = struct{placeholder{placeholder
+		if _, ok := seen[k]; ok {
+			continue
+	placeholder
+		seen[k] = struct{placeholder{placeholder
+		added++
+placeholder
+	return added
 placeholder
 
 func countGrokNativeSearchCallsInSSEDataWithKeys(data []byte) (int, []string) {
