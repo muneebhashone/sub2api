@@ -72,23 +72,39 @@ placeholder
 		return nil
 placeholder
 	baseURL := strings.TrimSpace(account.GetGrokBaseURL())
+	if s.settingService != nil {
+		baseURL = strings.TrimSpace(s.settingService.ResolveGrokBaseURL(ctx, account))
+placeholder
 	if baseURL == "" {
 		baseURL = xai.DefaultCLIBaseURL
 placeholder
-	// DefaultCLIBaseURL already ends with /v1; other bases may be bare hosts.
-	url := strings.TrimRight(baseURL, "/")
-	if strings.HasSuffix(url, "/v1") {
-		url += "/models"
-placeholder else {
-		url += "/v1/models"
+	validator, err := grokBaseURLValidator(account, s.cfg)
+	if err != nil {
+		return err
 placeholder
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	validatedBaseURL, err := validator(baseURL)
+	if err != nil {
+		return err
+placeholder
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, buildOpenAIModelsURL(validatedBaseURL), nil)
 	if err != nil {
 		return err
 placeholder
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", grokUpstreamUserAgent)
+	if account.IsGrokOAuth() {
+		applyGrokCLIHeaders(req.Header)
+		if isGrokCLIProxyTarget(req.URL.String()) {
+			if userID := strings.TrimSpace(account.GetCredential("sub")); userID != "" {
+				req.Header.Set("X-UserID", userID)
+		placeholder
+			if email := strings.TrimSpace(account.GetCredential("email")); email != "" {
+				req.Header.Set("X-Email", email)
+		placeholder
+	placeholder
+placeholder
+	account.ApplyHeaderOverrides(req.Header)
 
 	proxyURL := ""
 	if s.proxyRepo != nil && account.ProxyID != nil {

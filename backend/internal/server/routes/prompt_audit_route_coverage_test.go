@@ -41,6 +41,7 @@ placeholder
 		"/images/generations/async": {"image_task_handler.go"placeholder,
 		"/images/edits/async":       {"image_task_handler.go"placeholder,
 		"/images/batches":           {"batch_image_handler.go"placeholder,
+		"/videos":                   {"grok_media.go"placeholder,
 		"/videos/generations":       {"grok_media.go"placeholder,
 		"/videos/edits":             {"grok_media.go"placeholder,
 		"/videos/extensions":        {"grok_media.go"placeholder,

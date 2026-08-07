@@ -19,6 +19,18 @@ func TestCountGrokNativeSearchCallsFromJSONBytes(t *testing.T) {
 	require.Equal(t, 3, countGrokNativeSearchCallsFromJSONBytes(body))
 placeholder
 
+func TestCountGrokNativeSearchCallsFromJSONBytes_PrefersNestedResponse(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"output":[{"type":"web_search_call","id":"duplicate"placeholder],"response":{"output":[{"type":"web_search_call","id":"duplicate"placeholder,{"type":"x_search_call","id":"xs1"placeholder]placeholderplaceholder`)
+	require.Equal(t, 2, countGrokNativeSearchCallsFromJSONBytes(body))
+placeholder
+
+func TestCountGrokNativeSearchCallsFromJSONBytes_FallsBackWhenNestedOutputNull(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"output":[{"type":"web_search_call","id":"ws1"placeholder],"response":{"output":nullplaceholderplaceholder`)
+	require.Equal(t, 1, countGrokNativeSearchCallsFromJSONBytes(body))
+placeholder
+
 func TestCountGrokNativeSearchCallsFromSSEBodyDedups(t *testing.T) {
 	t.Parallel()
 	sse := stringsJoin(
@@ -50,6 +62,17 @@ func TestCountGrokNativeSearchCallsInSSEDataDedup_NoIDStillDedups(t *testing.T) 
 	done := []byte(`{"type":"response.output_item.done","item":{"type":"web_search_call"placeholderplaceholder`)
 	completed := []byte(`{"type":"response.completed","response":{"output":[{"type":"web_search_call"placeholder]placeholderplaceholder`)
 	require.Equal(t, 1, countGrokNativeSearchCallsInSSEDataDedup(done, seen))
+	require.Equal(t, 0, countGrokNativeSearchCallsInSSEDataDedup(completed, seen))
+placeholder
+
+func TestCountGrokNativeSearchCallsInSSEDataDedup_MultipleNoIDCalls(t *testing.T) {
+	t.Parallel()
+	seen := make(map[string]struct{placeholder)
+	firstDone := []byte(`{"type":"response.output_item.done","item":{"type":"web_search_call"placeholderplaceholder`)
+	secondDone := []byte(`{"type":"response.output_item.done","item":{"type":"web_search_call"placeholderplaceholder`)
+	completed := []byte(`{"type":"response.completed","response":{"output":[{"type":"web_search_call"placeholder,{"type":"web_search_call"placeholder]placeholderplaceholder`)
+	require.Equal(t, 1, countGrokNativeSearchCallsInSSEDataDedup(firstDone, seen))
+	require.Equal(t, 1, countGrokNativeSearchCallsInSSEDataDedup(secondDone, seen))
 	require.Equal(t, 0, countGrokNativeSearchCallsInSSEDataDedup(completed, seen))
 placeholder
 

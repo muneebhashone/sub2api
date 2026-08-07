@@ -49,6 +49,10 @@ placeholder
 	if strings.TrimSpace(upstreamModel) == "" {
 		upstreamModel = grokDefaultResponsesModel
 placeholder
+	// Account mappings are optional. Canonicalize client aliases even when the
+	// account has no model_mapping, matching the Chat Completions path and xAI's
+	// actual Responses model IDs.
+	upstreamModel = xai.ResolveGrokTextResponsesModelID(upstreamModel, grokDefaultResponsesModel)
 	if isGrokImageGenerationModel(upstreamModel) {
 		return nil, fmt.Errorf("model %s is an image model and is not available on the Responses endpoint; use /v1/images/generations instead", upstreamModel)
 placeholder
@@ -101,7 +105,7 @@ placeholder
 	upstreamStart := time.Now()
 	var resp *http.Response
 	for attempt := 0; ; attempt++ {
-		upstreamReq, buildErr := buildGrokResponsesRequest(upstreamCtx, c, account, patchedBody, token, cacheIdentity, s.cfg)
+		upstreamReq, buildErr := buildGrokResponsesRequest(upstreamCtx, c, account, patchedBody, token, cacheIdentity, s.cfg, s.settingService)
 		if buildErr != nil {
 			return nil, buildErr
 	placeholder
@@ -437,7 +441,13 @@ func patchGrokResponsesBodyBase(body []byte, upstreamModel string) ([]byte, erro
 	if !json.Valid(body) {
 		return nil, fmt.Errorf("invalid json request body")
 placeholder
-	out, err := sjson.SetBytes(body, "model", upstreamModel)
+	// sjson may reuse the input backing array; keep the caller's request bytes
+	// unchanged because the same body can be inspected for billing/retry paths.
+	out, err := sjson.SetBytes(append([]byte(nil), body...), "model", upstreamModel)
+	if err != nil {
+		return nil, err
+placeholder
+	out, err = normalizeGrokResponsesReasoningEffort(out, upstreamModel)
 	if err != nil {
 		return nil, err
 placeholder
@@ -455,6 +465,16 @@ placeholder
 placeholder
 	if strings.EqualFold(upstreamModel, "grok-4.5") {
 		for _, unsupportedField := range []string{"presence_penalty", "presencePenalty", "frequency_penalty", "frequencyPenalty", "stop"placeholder {
+			if gjson.GetBytes(out, unsupportedField).Exists() {
+				out, err = sjson.DeleteBytes(out, unsupportedField)
+				if err != nil {
+					return nil, err
+			placeholder
+		placeholder
+	placeholder
+placeholder
+	if grokModelRejectsLogprobs(upstreamModel) {
+		for _, unsupportedField := range []string{"logprobs", "top_logprobs"placeholder {
 			if gjson.GetBytes(out, unsupportedField).Exists() {
 				out, err = sjson.DeleteBytes(out, unsupportedField)
 				if err != nil {
@@ -486,6 +506,17 @@ placeholder
 	return out, nil
 placeholder
 
+// xAI's Grok 4.20 family and newer models do not support OpenAI's logprobs
+// fields. Remove them before egress instead of forwarding a request the
+// upstream rejects. Older Grok models retain the fields for compatibility.
+func grokModelRejectsLogprobs(model string) bool {
+	model = strings.ToLower(strings.TrimSpace(model))
+	if slash := strings.LastIndex(model, "/"); slash >= 0 {
+		model = strings.TrimSpace(model[slash+1:])
+placeholder
+	return strings.HasPrefix(model, "grok-4.20")
+placeholder
+
 func sanitizeGrokResponsesModelCapabilities(body []byte, upstreamModel string) ([]byte, error) {
 	if !grokModelRejectsReasoningEffort(upstreamModel) {
 		return body, nil
@@ -512,6 +543,98 @@ func grokModelRejectsReasoningEffort(model string) bool {
 placeholder
 	switch model {
 	case "grok-composer", "grok-composer-2.5-fast", "composer-2.5":
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
+func normalizeGrokResponsesReasoningEffort(body []byte, upstreamModel string) ([]byte, error) {
+	supportsEffort := grokSupportsReasoningEffort(upstreamModel)
+	out := body
+	var err error
+	for _, field := range []string{"reasoning.effort", "reasoning_effort"placeholder {
+		value := gjson.GetBytes(out, field)
+		if !value.Exists() {
+			continue
+	placeholder
+		normalized, keep := normalizeGrokReasoningEffortValue(value.String())
+		if !supportsEffort || !keep {
+			out, err = sjson.DeleteBytes(out, field)
+	placeholder else {
+			out, err = sjson.SetBytes(out, field, normalized)
+	placeholder
+		if err != nil {
+			return nil, fmt.Errorf("normalize Grok reasoning field %s: %w", field, err)
+	placeholder
+placeholder
+	if camel := gjson.GetBytes(out, "reasoningEffort"); camel.Exists() {
+		normalized, keep := normalizeGrokReasoningEffortValue(camel.String())
+		out, err = sjson.DeleteBytes(out, "reasoningEffort")
+		if err != nil {
+			return nil, fmt.Errorf("remove Grok reasoningEffort: %w", err)
+	placeholder
+		if supportsEffort && keep && !gjson.GetBytes(out, "reasoning_effort").Exists() {
+			out, err = sjson.SetBytes(out, "reasoning_effort", normalized)
+			if err != nil {
+				return nil, fmt.Errorf("set Grok reasoning_effort: %w", err)
+		placeholder
+	placeholder
+placeholder
+	if reasoning := gjson.GetBytes(out, "reasoning"); reasoning.Exists() && reasoning.IsObject() && len(reasoning.Map()) == 0 {
+		out, err = sjson.DeleteBytes(out, "reasoning")
+		if err != nil {
+			return nil, fmt.Errorf("remove empty Grok reasoning: %w", err)
+	placeholder
+placeholder
+	return out, nil
+placeholder
+
+func normalizeGrokChatReasoningEffort(body []byte, upstreamModel string) ([]byte, error) {
+	raw := strings.TrimSpace(gjson.GetBytes(body, "reasoning_effort").String())
+	if raw == "" {
+		raw = strings.TrimSpace(gjson.GetBytes(body, "reasoningEffort").String())
+placeholder
+	normalized, keep := normalizeGrokReasoningEffortValue(raw)
+	keep = keep && grokSupportsReasoningEffort(upstreamModel)
+	out := body
+	var err error
+	if gjson.GetBytes(out, "reasoningEffort").Exists() {
+		out, err = sjson.DeleteBytes(out, "reasoningEffort")
+		if err != nil {
+			return nil, err
+	placeholder
+placeholder
+	if !keep {
+		if gjson.GetBytes(out, "reasoning_effort").Exists() {
+			out, err = sjson.DeleteBytes(out, "reasoning_effort")
+	placeholder
+		return out, err
+placeholder
+	out, err = sjson.SetBytes(out, "reasoning_effort", normalized)
+	return out, err
+placeholder
+
+func normalizeGrokReasoningEffortValue(raw string) (string, bool) {
+	value := strings.NewReplacer("-", "", "_", "", " ", "").Replace(strings.ToLower(strings.TrimSpace(raw)))
+	switch value {
+	case "none", "low", "medium", "high":
+		return value, true
+	case "minimal":
+		return "low", true
+	case "xhigh", "extrahigh", "max", "ultra":
+		return "high", true
+	default:
+		return "", false
+placeholder
+placeholder
+
+func grokSupportsReasoningEffort(model string) bool {
+	model = strings.ToLower(xai.StripGrokProviderPrefix(strings.TrimSpace(model)))
+	switch model {
+	case xai.DefaultTextModel, "grok-4.5-latest", "grok-4.3", "grok-4.3-latest",
+		"grok-3-mini", "grok-3-mini-fast", "grok-4.20-0309-reasoning",
+		"grok-4.20-reasoning", "grok-4.20-multi-agent-0309":
 		return true
 	default:
 		return false
@@ -703,15 +826,30 @@ placeholder
 
 	rawTools := tools.Array()
 	filteredTools := make([]json.RawMessage, 0, len(rawTools))
+	toolsChanged := false
 	for _, tool := range rawTools {
 		toolType := strings.TrimSpace(tool.Get("type").String())
 		if _, ok := grokResponsesSupportedToolTypes[toolType]; ok {
-			filteredTools = append(filteredTools, json.RawMessage(tool.Raw))
+			raw := json.RawMessage(tool.Raw)
+			if toolType == "function" && (!tool.Get("parameters").Exists() || tool.Get("parameters").Type == gjson.Null) {
+				var payload map[string]any
+				if err := json.Unmarshal(raw, &payload); err != nil {
+					return nil, err
+			placeholder
+				payload["parameters"] = map[string]any{"type": "object", "properties": map[string]any{placeholderplaceholder
+				encoded, err := json.Marshal(payload)
+				if err != nil {
+					return nil, err
+			placeholder
+				raw = encoded
+				toolsChanged = true
+		placeholder
+			filteredTools = append(filteredTools, raw)
 	placeholder
 placeholder
 
 	var err error
-	if len(filteredTools) != len(rawTools) {
+	if len(filteredTools) != len(rawTools) || toolsChanged {
 		if len(filteredTools) == 0 {
 			body, err = sjson.DeleteBytes(body, "tools")
 	placeholder else {
@@ -919,7 +1057,7 @@ placeholder
 	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
 	// Image-description probes are auxiliary requests, not conversation turns.
 	// Do not bind them to the caller's Grok prompt-cache identity.
-	upstreamReq, err := buildGrokResponsesRequest(upstreamCtx, c, account, body, token, "", s.cfg)
+	upstreamReq, err := buildGrokResponsesRequest(upstreamCtx, c, account, body, token, "", s.cfg, s.settingService)
 	releaseUpstreamCtx()
 	if err != nil {
 		return "", OpenAIUsage{placeholder, fmt.Errorf("build grok composer image bridge request: %w", err)
@@ -1089,8 +1227,8 @@ placeholder
 	dst.ImageOutputTokens += usage.ImageOutputTokens
 placeholder
 
-func buildGrokResponsesRequest(ctx context.Context, c *gin.Context, account *Account, body []byte, token, cacheIdentity string, cfg *config.Config) (*http.Request, error) {
-	targetURL, err := buildGrokResponsesURL(account, cfg)
+func buildGrokResponsesRequest(ctx context.Context, c *gin.Context, account *Account, body []byte, token, cacheIdentity string, cfg *config.Config, settings ...*SettingService) (*http.Request, error) {
+	targetURL, err := buildGrokResponsesURL(account, cfg, settings...)
 	if err != nil {
 		return nil, err
 placeholder
@@ -1505,8 +1643,24 @@ placeholder
 	if decision.ShouldCooldown && decision.Class != GrokFailureNone && decision.Class != GrokFailureRateLimit {
 		if account.IsPoolMode() {
 			// Allow configured temp rules (403) below; skip default body cools.
-	placeholder else if s.applyGrokUpstreamFailureDecision(ctx, account, decision) {
-			return
+	placeholder else {
+			// A free-tier exhaustion message describes a rolling usage window. Use
+			// an upstream absolute reset (or Retry-After) when available; otherwise
+			// apply only a short probe cooldown. Never start a fabricated 24h window
+			// at the instant this error was received.
+			if decision.Class == GrokFailureFreeUsage {
+				if resetAt, limited := grokRateLimitResetAtForAccount(account, parseGrokQuotaSnapshot(headers, statusCode, now), now); limited && resetAt.After(now) {
+					if decision.Model != "" && isGrokModelSpecificFreeUsage(strings.ToLower(decision.Reason), decision.Model) {
+						markGrokModelQuotaBlock(account.ID, decision.Model, resetAt)
+						return
+				placeholder
+					s.rateLimitGrok(ctx, account, resetAt)
+					return
+			placeholder
+		placeholder
+			if s.applyGrokUpstreamFailureDecision(ctx, account, decision) {
+				return
+		placeholder
 	placeholder
 placeholder
 
@@ -1526,7 +1680,7 @@ placeholder
 	case http.StatusForbidden:
 		// Spending-limit already handled by body classifier when phrasing matches.
 		if isGrokSpendingLimitError(responseBody) {
-			s.markGrokSpendingLimitReauth(ctx, account)
+			s.rateLimitGrok(ctx, account, grokSpendingLimitResetAt(account, time.Now()))
 			return
 	placeholder
 		s.tempUnscheduleGrok(ctx, account, 30*time.Minute, "grok access or entitlement denied")

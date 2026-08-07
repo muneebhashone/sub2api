@@ -207,7 +207,7 @@ placeholder
 			releaseUpstreamCtx()
 			return nil, fmt.Errorf("apply grok Free function-tool cache route: %w", err)
 	placeholder
-		upstreamReq, err = buildGrokResponsesRequest(upstreamCtx, c, account, body, token, grokCacheIdentity, s.cfg)
+		upstreamReq, err = buildGrokResponsesRequest(upstreamCtx, c, account, body, token, grokCacheIdentity, s.cfg, s.settingService)
 placeholder else {
 		upstreamReq, err = s.buildUpstreamRequestOpenAIPassthrough(upstreamCtx, c, account, body, token)
 placeholder

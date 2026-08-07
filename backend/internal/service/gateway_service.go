@@ -1284,7 +1284,7 @@ placeholder
 			Reason:     GatewayFailureReason("grok_search_token"),
 	placeholder
 placeholder
-	targetURL, err := buildGrokResponsesURL(account, nil)
+	targetURL, err := buildGrokResponsesURL(account, nil, s.settingService)
 	if err != nil {
 		return nil, err
 placeholder
