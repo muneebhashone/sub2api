@@ -435,6 +435,16 @@ placeholder
 			return s.calculateOpenAIVideoCost(ctx, billingModel, apiKey, result, videoMultiplier), nil
 	placeholder
 placeholder
+	if result != nil && result.SearchCount > 0 {
+		// Grok native web_search / tool search: group search_price_per_1k when set.
+		price := groupSearchPricePer1kFromAPIKey(apiKey)
+		return s.billingService.CalculateSearchCost(result.SearchCount, price, webSearchMultiplier), nil
+placeholder
+	if result != nil && result.AudioUsage != nil {
+		cfg := groupAudioPriceConfigFromAPIKey(apiKey)
+		return s.billingService.CalculateAudioCost(result.AudioUsage.Mode, result.AudioUsage.DurationOrUnits, cfg, webSearchMultiplier), nil
+placeholder
+
 	if result != nil && result.ImageCount > 0 {
 		// 渠道定价为 token 计费时走 token 路径，否则走图片计费
 		if resolved := s.resolveOpenAIChannelPricing(ctx, billingModel, apiKey); resolved == nil || resolved.Mode != BillingModeToken {

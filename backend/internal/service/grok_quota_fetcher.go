@@ -36,6 +36,7 @@ placeholder
 	activeProbeClearsForbidden := newerSuccessfulGrokActiveProbeClearsBillingForbidden(billing, snapshot)
 	if billing != nil {
 		usage.GrokBilling = billing
+		applyGrokBillingProgressWindows(usage, billing, now)
 		if billing.Plan != "" {
 			usage.SubscriptionTier = billing.Plan
 			usage.SubscriptionTierRaw = billing.Plan
@@ -58,6 +59,14 @@ placeholder
 			usage.ErrorCode = "forbidden"
 		case 429:
 			usage.ErrorCode = "rate_limited"
+	placeholder
+		// Official weekly/monthly progress clears the "unknown until headers" state.
+		if usage.ErrorCode == "quota_unknown" && (usage.SevenDay != nil || usage.ThirtyDay != nil) {
+			usage.ErrorCode = ""
+			if strings.Contains(strings.ToLower(usage.Error), "unknown until") ||
+				strings.Contains(strings.ToLower(usage.Error), "no xai quota headers") {
+				usage.Error = ""
+		placeholder
 	placeholder
 placeholder
 
@@ -244,5 +253,50 @@ placeholder
 			return nil, err
 	placeholder
 		return &out, nil
+placeholder
+placeholder
+
+// applyGrokBillingProgressWindows fills official weekly (seven_day) and monthly
+// (thirty_day) UsageProgress from a billing probe summary.
+func applyGrokBillingProgressWindows(usage *UsageInfo, billing *xai.BillingSummary, now time.Time) {
+	if usage == nil || billing == nil {
+		return
+placeholder
+	if billing.UsagePercent != nil {
+		seven := &UsageProgress{Utilization: *billing.UsagePercentplaceholder
+		if end, err := parseTime(strings.TrimSpace(billing.PeriodEnd)); err == nil {
+			seven.ResetsAt = &end
+			if sec := int(end.Sub(now).Seconds()); sec > 0 {
+				seven.RemainingSeconds = sec
+		placeholder
+	placeholder
+		if usage.SevenDay != nil {
+			seven.WindowStats = usage.SevenDay.WindowStats
+	placeholder
+		usage.SevenDay = seven
+placeholder
+	var monthlyUtil *float64
+	if billing.UsedPercent != nil {
+		monthlyUtil = billing.UsedPercent
+placeholder else if billing.MonthlyLimitCents != nil && *billing.MonthlyLimitCents > 0 && billing.UsedCents != nil {
+		v := (*billing.UsedCents / *billing.MonthlyLimitCents) * 100
+		monthlyUtil = &v
+placeholder
+	if monthlyUtil != nil {
+		thirty := &UsageProgress{Utilization: *monthlyUtilplaceholder
+		endRaw := strings.TrimSpace(billing.BillingPeriodEnd)
+		if endRaw == "" && billing.PeriodType == "monthly" {
+			endRaw = strings.TrimSpace(billing.PeriodEnd)
+	placeholder
+		if end, err := parseTime(endRaw); err == nil {
+			thirty.ResetsAt = &end
+			if sec := int(end.Sub(now).Seconds()); sec > 0 {
+				thirty.RemainingSeconds = sec
+		placeholder
+	placeholder
+		if usage.ThirtyDay != nil {
+			thirty.WindowStats = usage.ThirtyDay.WindowStats
+	placeholder
+		usage.ThirtyDay = thirty
 placeholder
 placeholder

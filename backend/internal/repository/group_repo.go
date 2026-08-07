@@ -84,6 +84,7 @@ placeholder
 		SetNillableVideoPrice1080p(groupIn.VideoPrice1080P).
 		SetVideoModelPrices(service.NormalizeVideoModelPrices(groupIn.VideoModelPrices)).
 		SetNillableWebSearchPricePerCall(groupIn.WebSearchPricePerCall).
+		SetNillableSearchPricePer1k(groupIn.SearchPricePer1k).
 		SetNillableAudioRealtimePricePerMin(groupIn.AudioRealtimePricePerMin).
 		SetNillableAudioTtsPricePerMillionChars(groupIn.AudioTTSPricePerMillionChars).
 		SetNillableAudioSttPricePerHour(groupIn.AudioSTTPricePerHour).
@@ -331,6 +332,11 @@ placeholder
 		builder = builder.SetWebSearchPricePerCall(*groupIn.WebSearchPricePerCall)
 placeholder else {
 		builder = builder.ClearWebSearchPricePerCall()
+placeholder
+	if groupIn.SearchPricePer1k != nil {
+		builder = builder.SetSearchPricePer1k(*groupIn.SearchPricePer1k)
+placeholder else {
+		builder = builder.ClearSearchPricePer1k()
 placeholder
 	if groupIn.AudioRealtimePricePerMin != nil {
 		builder = builder.SetAudioRealtimePricePerMin(*groupIn.AudioRealtimePricePerMin)

@@ -12,6 +12,7 @@ import (
 
 	coderws "github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
+	"github.com/tidwall/gjson"
 )
 
 // supportedGrokVoiceHTTPEndpoints are xAI Voice HTTP paths we forward as-is.
@@ -80,11 +81,13 @@ placeholder
 		return nil, err
 placeholder
 	writeGrokMediaResponse(c, resp, data, s.responseHeaderFilter)
+	audioUsage := estimateGrokVoiceAudioUsage(endpoint, body, contentType, data, time.Since(started))
 	return &OpenAIForwardResult{
 		RequestID:     firstNonEmpty(resp.Header.Get("x-request-id"), resp.Header.Get("xai-request-id")),
 		Model:         endpoint,
 		UpstreamModel: endpoint,
 		Duration:      time.Since(started),
+		AudioUsage:    audioUsage,
 placeholder, nil
 placeholder
 
@@ -169,4 +172,59 @@ placeholder()
 placeholder()
 
 	return <-errCh
+placeholder
+
+// estimateGrokVoiceAudioUsage derives billing units from the request/response.
+// TTS: million characters of input text; STT: hours approximated from request body size
+// when duration is unknown; custom-voices: no units (nil).
+func estimateGrokVoiceAudioUsage(endpoint string, reqBody []byte, contentType string, respBody []byte, elapsed time.Duration) *AudioUsage {
+	switch strings.TrimSpace(endpoint) {
+	case "tts":
+		// Prefer JSON "input" / "text" fields; fallback to raw body length.
+		chars := 0
+		if gjson.ValidBytes(reqBody) {
+			for _, key := range []string{"input", "text", "prompt"placeholder {
+				if s := strings.TrimSpace(gjson.GetBytes(reqBody, key).String()); s != "" {
+					chars = len([]rune(s))
+					break
+			placeholder
+		placeholder
+	placeholder
+		if chars <= 0 {
+			chars = len(reqBody)
+	placeholder
+		if chars <= 0 {
+			return nil
+	placeholder
+		return &AudioUsage{Mode: "tts", DurationOrUnits: float64(chars) / 1_000_000.0placeholder
+	case "stt":
+		// Prefer explicit duration_seconds; else estimate from elapsed with a floor.
+		secs := 0.0
+		if gjson.ValidBytes(reqBody) {
+			if v := gjson.GetBytes(reqBody, "duration_seconds"); v.Exists() {
+				secs = v.Float()
+		placeholder
+	placeholder
+		if secs <= 0 {
+			secs = elapsed.Seconds()
+	placeholder
+		if secs <= 0 {
+			// Multipart audio size heuristic: ~16KB/s for compressed speech.
+			if len(reqBody) > 0 {
+				secs = float64(len(reqBody)) / 16000.0
+		placeholder
+	placeholder
+		if secs <= 0 {
+			return nil
+	placeholder
+		return &AudioUsage{Mode: "stt", DurationOrUnits: secs / 3600.0placeholder
+	case "realtime":
+		mins := elapsed.Minutes()
+		if mins <= 0 {
+			return nil
+	placeholder
+		return &AudioUsage{Mode: "realtime", DurationOrUnits: minsplaceholder
+	default:
+		return nil
+placeholder
 placeholder

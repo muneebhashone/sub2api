@@ -37,3 +37,22 @@ func webSearchPricePerCallFromAPIKey(apiKey *APIKey) *float64 {
 placeholder
 	return apiKey.Group.WebSearchPricePerCall
 placeholder
+
+func groupSearchPricePer1kFromAPIKey(apiKey *APIKey) *float64 {
+	if apiKey == nil || apiKey.Group == nil {
+		return nil
+placeholder
+	return apiKey.Group.GetSearchPricePer1k()
+placeholder
+
+func groupAudioPriceConfigFromAPIKey(apiKey *APIKey) *audioPriceConfig {
+	if apiKey == nil || apiKey.Group == nil {
+		return nil
+placeholder
+	g := apiKey.Group
+	return &audioPriceConfig{
+		RealtimePerMin: g.AudioRealtimePricePerMin,
+		TTSPerMChars:   g.AudioTTSPricePerMillionChars,
+		STTPerHour:     g.AudioSTTPricePerHour,
+placeholder
+placeholder
