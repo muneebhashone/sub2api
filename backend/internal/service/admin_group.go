@@ -476,6 +476,7 @@ placeholder
 		VideoPrice480P:                  videoPrice480P,
 		VideoPrice720P:                  videoPrice720P,
 		VideoPrice1080P:                 videoPrice1080P,
+		VideoModelPrices:                NormalizeVideoModelPrices(input.VideoModelPrices),
 		WebSearchPricePerCall:           webSearchPricePerCall,
 		ClaudeCodeOnly:                  input.ClaudeCodeOnly,
 		FallbackGroupID:                 input.FallbackGroupID,
@@ -754,6 +755,10 @@ placeholder
 placeholder
 	if input.VideoPrice1080P != nil {
 		group.VideoPrice1080P = normalizePrice(input.VideoPrice1080P)
+placeholder
+	// nil = leave unchanged; empty map = clear per-model prices.
+	if input.VideoModelPrices != nil {
+		group.VideoModelPrices = NormalizeVideoModelPrices(input.VideoModelPrices)
 placeholder
 	if input.WebSearchPricePerCall != nil {
 		group.WebSearchPricePerCall = normalizePrice(input.WebSearchPricePerCall)

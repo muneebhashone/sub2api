@@ -417,7 +417,7 @@ placeholder
 				)
 		placeholder
 	placeholder
-		if shouldRecordGrokMediaUsage(endpoint, requestModel) {
+		if shouldRecordGrokMediaUsage(endpoint, requestModel, result) {
 			recordGrokMediaUsage(c, h, reqLog, apiKey, subject, subscription, account, result, requestModel, body, requestID)
 	placeholder
 		reqLog.Debug("grok_media.request_completed",
@@ -459,8 +459,20 @@ placeholder
 	return account.GetMappedModel(routingModel)
 placeholder
 
-func shouldRecordGrokMediaUsage(endpoint service.GrokMediaEndpoint, requestModel string) bool {
-	return endpoint.IsGenerationRequest() && strings.TrimSpace(requestModel) != ""
+// shouldRecordGrokMediaUsage gates usage writes for Grok media generation only.
+// Status/content polls, empty model, and failed generations with zero billable
+// image/video units never bill.
+func shouldRecordGrokMediaUsage(endpoint service.GrokMediaEndpoint, requestModel string, result *service.OpenAIForwardResult) bool {
+	if !endpoint.IsGenerationRequest() || strings.TrimSpace(requestModel) == "" {
+		return false
+placeholder
+	if result == nil {
+		return false
+placeholder
+	if result.VideoCount > 0 {
+		return true
+placeholder
+	return result.ImageCount > 0
 placeholder
 
 func recordGrokMediaUsage(
