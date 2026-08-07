@@ -76,6 +76,11 @@ type openAIWSAcquireRequest struct {
 	ForcePreferredConn bool
 placeholder
 
+type openAIWSHandshakeCompatibilityKey struct {
+	betaFeatures string
+	routingHint  string
+placeholder
+
 type openAIWSConnLease struct {
 	pool      *openAIWSConnPool
 	accountID int64
@@ -240,8 +245,8 @@ type openAIWSConn struct {
 	id string
 	ws openAIWSClientConn
 
-	handshakeHeaders http.Header
-	betaFeatures     string
+	handshakeHeaders       http.Header
+	handshakeCompatibility openAIWSHandshakeCompatibilityKey
 
 	leaseCh   chan struct{placeholder
 	closedCh  chan struct{placeholder
@@ -525,8 +530,8 @@ placeholder
 	return strings.TrimSpace(c.handshakeHeaders.Get(strings.TrimSpace(name)))
 placeholder
 
-func (c *openAIWSConn) matchesBetaFeatures(betaFeatures string) bool {
-	return c != nil && c.betaFeatures == betaFeatures
+func (c *openAIWSConn) matchesHandshakeCompatibility(compatibility openAIWSHandshakeCompatibilityKey) bool {
+	return c != nil && c.handshakeCompatibility == compatibility
 placeholder
 
 func (c *openAIWSConn) isPrewarmed() bool {
@@ -838,7 +843,7 @@ placeholder
 
 retryAcquire:
 	accountID := req.Account.ID
-	betaFeatures := normalizeOpenAIWSBetaFeatures(req.Headers)
+	compatibility := normalizeOpenAIWSHandshakeCompatibility(req.Headers)
 	effectiveMaxConns := p.effectiveMaxConnsByAccount(req.Account)
 	if effectiveMaxConns <= 0 {
 		return nil, errOpenAIWSConnQueueFull
@@ -866,7 +871,7 @@ placeholder
 				return nil, errOpenAIWSPreferredConnUnavailable
 		placeholder
 			preferredConn, ok := ap.conns[preferredConnID]
-			if !ok || !preferredConn.matchesBetaFeatures(betaFeatures) {
+			if !ok || !preferredConn.matchesHandshakeCompatibility(compatibility) {
 				p.recordConnPickDuration(time.Since(pickStartedAt))
 				ap.mu.Unlock()
 				closeOpenAIWSConns(evicted)
@@ -947,7 +952,7 @@ placeholder
 	placeholder
 
 		if preferredConnID != "" {
-			if conn, ok := ap.conns[preferredConnID]; ok && conn.matchesBetaFeatures(betaFeatures) && conn.tryAcquire() {
+			if conn, ok := ap.conns[preferredConnID]; ok && conn.matchesHandshakeCompatibility(compatibility) && conn.tryAcquire() {
 				connPick := time.Since(pickStartedAt)
 				p.recordConnPickDuration(connPick)
 				ap.mu.Unlock()
@@ -969,7 +974,7 @@ placeholder
 		placeholder
 	placeholder
 
-		best := p.pickLeastBusyConnLocked(ap, "", betaFeatures)
+		best := p.pickLeastBusyConnLocked(ap, "", compatibility)
 		if best != nil && best.tryAcquire() {
 			connPick := time.Since(pickStartedAt)
 			p.recordConnPickDuration(connPick)
@@ -991,7 +996,7 @@ placeholder
 			return lease, nil
 	placeholder
 		for _, conn := range ap.conns {
-			if conn == nil || conn == best || !conn.matchesBetaFeatures(betaFeatures) {
+			if conn == nil || conn == best || !conn.matchesHandshakeCompatibility(compatibility) {
 				continue
 		placeholder
 			if conn.tryAcquire() {
@@ -1018,8 +1023,8 @@ placeholder
 placeholder
 
 	if !req.ForceNewConn && len(ap.conns)+ap.creating >= effectiveMaxConns {
-		compatible := p.pickLeastBusyConnLocked(ap, "", betaFeatures)
-		if idle := p.pickOldestIdleConnWithDifferentBetaFeaturesLocked(ap, betaFeatures); idle != nil {
+		compatible := p.pickLeastBusyConnLocked(ap, "", compatibility)
+		if idle := p.pickOldestIdleConnWithDifferentHandshakeCompatibilityLocked(ap, compatibility); idle != nil {
 			delete(ap.conns, idle.id)
 			evicted = append(evicted, idle)
 			p.metrics.scaleDownTotal.Add(1)
@@ -1100,7 +1105,7 @@ placeholder
 		return nil, errOpenAIWSConnQueueFull
 placeholder
 
-	target := p.pickLeastBusyConnLocked(ap, req.PreferredConnID, betaFeatures)
+	target := p.pickLeastBusyConnLocked(ap, req.PreferredConnID, compatibility)
 	connPick := time.Since(pickStartedAt)
 	p.recordConnPickDuration(connPick)
 	if target == nil {
@@ -1173,13 +1178,16 @@ placeholder
 	return oldest
 placeholder
 
-func (p *openAIWSConnPool) pickOldestIdleConnWithDifferentBetaFeaturesLocked(ap *openAIWSAccountPool, betaFeatures string) *openAIWSConn {
+func (p *openAIWSConnPool) pickOldestIdleConnWithDifferentHandshakeCompatibilityLocked(
+	ap *openAIWSAccountPool,
+	compatibility openAIWSHandshakeCompatibilityKey,
+) *openAIWSConn {
 	if ap == nil || len(ap.conns) == 0 {
 		return nil
 placeholder
 	var oldest *openAIWSConn
 	for _, conn := range ap.conns {
-		if conn == nil || conn.matchesBetaFeatures(betaFeatures) || conn.isLeased() || conn.waiters.Load() > 0 || p.isConnPinnedLocked(ap, conn.id) {
+		if conn == nil || conn.matchesHandshakeCompatibility(compatibility) || conn.isLeased() || conn.waiters.Load() > 0 || p.isConnPinnedLocked(ap, conn.id) {
 			continue
 	placeholder
 		if oldest == nil || conn.lastUsedAt().Before(oldest.lastUsedAt()) {
@@ -1330,13 +1338,17 @@ placeholder
 	return evicted
 placeholder
 
-func (p *openAIWSConnPool) pickLeastBusyConnLocked(ap *openAIWSAccountPool, preferredConnID, betaFeatures string) *openAIWSConn {
+func (p *openAIWSConnPool) pickLeastBusyConnLocked(
+	ap *openAIWSAccountPool,
+	preferredConnID string,
+	compatibility openAIWSHandshakeCompatibilityKey,
+) *openAIWSConn {
 	if ap == nil || len(ap.conns) == 0 {
 		return nil
 placeholder
 	preferredConnID = stringsTrim(preferredConnID)
 	if preferredConnID != "" {
-		if conn, ok := ap.conns[preferredConnID]; ok && conn.matchesBetaFeatures(betaFeatures) {
+		if conn, ok := ap.conns[preferredConnID]; ok && conn.matchesHandshakeCompatibility(compatibility) {
 			return conn
 	placeholder
 placeholder
@@ -1344,7 +1356,7 @@ placeholder
 	var bestWaiters int32
 	var bestLastUsed time.Time
 	for _, conn := range ap.conns {
-		if conn == nil || !conn.matchesBetaFeatures(betaFeatures) {
+		if conn == nil || !conn.matchesHandshakeCompatibility(compatibility) {
 			continue
 	placeholder
 		waiters := conn.waiters.Load()
@@ -1676,7 +1688,7 @@ placeholder
 placeholder
 	id := p.nextConnID(req.Account.ID)
 	pooledConn := newOpenAIWSConn(id, req.Account.ID, conn, handshakeHeaders)
-	pooledConn.betaFeatures = normalizeOpenAIWSBetaFeatures(req.Headers)
+	pooledConn.handshakeCompatibility = normalizeOpenAIWSHandshakeCompatibility(req.Headers)
 	return pooledConn, nil
 placeholder
 
@@ -1878,6 +1890,13 @@ placeholder
 placeholder
 	sort.Strings(normalized)
 	return strings.Join(normalized, ",")
+placeholder
+
+func normalizeOpenAIWSHandshakeCompatibility(headers http.Header) openAIWSHandshakeCompatibilityKey {
+	return openAIWSHandshakeCompatibilityKey{
+		betaFeatures: normalizeOpenAIWSBetaFeatures(headers),
+		routingHint:  strings.TrimSpace(headers.Get(openAICodexRoutingHintHeader)),
+placeholder
 placeholder
 
 func cloneHeader(src http.Header) http.Header {
