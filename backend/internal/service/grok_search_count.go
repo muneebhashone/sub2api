@@ -42,6 +42,10 @@ placeholder
 
 // countGrokNativeSearchCallsInSSEDataDedup increments only unseen call ids.
 // Callers must reuse the same seen map for the full stream lifetime.
+//
+// When call_id/id is missing, a synthetic key is built from item type + name so
+// item.done + response.completed for the same tool still count once (never fall
+// back to raw multi-event n, which ~2× overbills).
 func countGrokNativeSearchCallsInSSEDataDedup(data []byte, seen map[string]struct{placeholder) int {
 	if seen == nil {
 		return countGrokNativeSearchCallsInSSEData(data)
@@ -50,11 +54,15 @@ placeholder
 	if n <= 0 {
 		return 0
 placeholder
-	// No stable id: fall back to raw count once (cannot dedup across events).
-	if len(keys) == 0 {
-		return n
+	// Prefer stable ids; fill gaps with synthetic keys so we never raw-add n.
+	if len(keys) < n {
+		// Rebuild keys for every item so unkeyed items still get a fingerprint.
+		keys = collectGrokNativeSearchCallKeys(data)
 placeholder
-	// Intra-event + cross-event dedup by call_id/id.
+	if len(keys) == 0 {
+		// True empty — should not happen when n>0; fail-closed to 0 extra bill.
+		return 0
+placeholder
 	added := 0
 	local := make(map[string]struct{placeholder, len(keys))
 	for _, k := range keys {
@@ -72,6 +80,54 @@ placeholder
 		added++
 placeholder
 	return added
+placeholder
+
+func collectGrokNativeSearchCallKeys(data []byte) []string {
+	if len(data) == 0 || !gjson.ValidBytes(data) {
+		return nil
+placeholder
+	eventType := strings.TrimSpace(gjson.GetBytes(data, "type").String())
+	switch eventType {
+	case "response.output_item.done", "response.completed", "response.done", "":
+	default:
+		if eventType != "" {
+			return nil
+	placeholder
+placeholder
+	var keys []string
+	consider := func(item gjson.Result) {
+		if !isGrokNativeSearchOutputItem(item) {
+			return
+	placeholder
+		key := firstNonEmpty(
+			strings.TrimSpace(item.Get("call_id").String()),
+			strings.TrimSpace(item.Get("id").String()),
+			strings.TrimSpace(item.Get("item.call_id").String()),
+			strings.TrimSpace(item.Get("item.id").String()),
+		)
+		if key == "" {
+			// Synthetic fingerprint: type + name is stable across done/completed
+			// for the same tool invocation when upstream omits call_id.
+			key = "synth:" + strings.ToLower(strings.TrimSpace(item.Get("type").String())) +
+				":" + strings.ToLower(strings.TrimSpace(item.Get("name").String()))
+	placeholder
+		keys = append(keys, key)
+placeholder
+	if item := gjson.GetBytes(data, "item"); item.Exists() {
+		consider(item)
+placeholder
+	gjson.GetBytes(data, "response.output").ForEach(func(_, item gjson.Result) bool {
+		consider(item)
+		return true
+placeholder)
+	gjson.GetBytes(data, "output").ForEach(func(_, item gjson.Result) bool {
+		consider(item)
+		return true
+placeholder)
+	if len(keys) == 0 && isGrokNativeSearchOutputItem(gjson.ParseBytes(data)) {
+		consider(gjson.ParseBytes(data))
+placeholder
+	return keys
 placeholder
 
 func countGrokNativeSearchCallsInSSEDataWithKeys(data []byte) (int, []string) {

@@ -186,6 +186,9 @@ placeholder
 	var usage *OpenAIUsage
 	var firstTokenMs *int
 	responseID := ""
+	searchCount := 0
+	imageCount := 0
+	var imageOutputSizes []string
 	if reqStream {
 		maxLineSize := defaultMaxLineSize
 		if s.cfg != nil && s.cfg.Gateway.MaxLineSize > 0 {
@@ -202,6 +205,9 @@ placeholder
 		usage = streamResult.usage
 		firstTokenMs = streamResult.firstTokenMs
 		responseID = strings.TrimSpace(streamResult.responseID)
+		searchCount = streamResult.searchCount
+		imageCount = streamResult.imageCount
+		imageOutputSizes = streamResult.imageOutputSizes
 placeholder else {
 		nonStreamResult, err := s.handleNonStreamingResponse(ctx, resp, c, account, originalModel, upstreamModel)
 		if err != nil {
@@ -209,13 +215,16 @@ placeholder else {
 	placeholder
 		usage = nonStreamResult.usage
 		responseID = strings.TrimSpace(nonStreamResult.responseID)
+		searchCount = nonStreamResult.searchCount
+		imageCount = nonStreamResult.imageCount
+		imageOutputSizes = nonStreamResult.imageOutputSizes
 placeholder
 
 	if usage == nil {
 		usage = &OpenAIUsage{placeholder
 placeholder
 	reasoningEffort := extractOpenAIReasoningEffortFromBody(patchedBody, originalModel)
-	return &OpenAIForwardResult{
+	result := &OpenAIForwardResult{
 		RequestID:       firstNonEmpty(resp.Header.Get("x-request-id"), resp.Header.Get("xai-request-id")),
 		ResponseID:      responseID,
 		Usage:           *usage,
@@ -227,7 +236,17 @@ placeholder
 		ResponseHeaders: resp.Header.Clone(),
 		Duration:        time.Since(startTime),
 		FirstTokenMs:    firstTokenMs,
-placeholder, nil
+placeholder
+	// Propagate search/image counters from the shared Responses handler — without
+	// this, stream/JSON counting runs but search_price_per_1k / image bills never apply.
+	if searchCount > 0 {
+		result.SearchCount = searchCount
+placeholder
+	if imageCount > 0 {
+		result.ImageCount = imageCount
+		result.ImageOutputSizes = imageOutputSizes
+placeholder
+	return result, nil
 placeholder
 
 func isGrokInvalidEncryptedContentResponse(statusCode int, body []byte) bool {

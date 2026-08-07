@@ -43,6 +43,16 @@ func TestCountGrokNativeSearchCallsInSSEDataDedup_LiveStreamPath(t *testing.T) {
 	require.Equal(t, 2, countGrokNativeSearchCallsInSSEData(completed))
 placeholder
 
+func TestCountGrokNativeSearchCallsInSSEDataDedup_NoIDStillDedups(t *testing.T) {
+	t.Parallel()
+	// Upstream sometimes omits call_id/id; synthetic keys must still prevent 2×.
+	seen := make(map[string]struct{placeholder)
+	done := []byte(`{"type":"response.output_item.done","item":{"type":"web_search_call"placeholderplaceholder`)
+	completed := []byte(`{"type":"response.completed","response":{"output":[{"type":"web_search_call"placeholder]placeholderplaceholder`)
+	require.Equal(t, 1, countGrokNativeSearchCallsInSSEDataDedup(done, seen))
+	require.Equal(t, 0, countGrokNativeSearchCallsInSSEDataDedup(completed, seen))
+placeholder
+
 func stringsJoin(lines ...string) string {
 	out := ""
 	for _, l := range lines {
