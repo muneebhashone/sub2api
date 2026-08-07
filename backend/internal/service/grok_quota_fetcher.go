@@ -124,6 +124,12 @@ placeholder
 			usage.ErrorCode = "rate_limited"
 	placeholder
 placeholder
+	if accountGrokNeedsReauth(account) {
+		usage.NeedsReauth = true
+		if usage.ErrorCode == "" {
+			usage.ErrorCode = "spending_limit"
+	placeholder
+placeholder
 	applyGrokCredentialUsageFallback(usage, account)
 	if activeProbeClearsForbidden && strings.TrimSpace(snapshot.EntitlementStatus) == "" &&
 		strings.EqualFold(strings.TrimSpace(usage.GrokEntitlementStatus), "forbidden") {
