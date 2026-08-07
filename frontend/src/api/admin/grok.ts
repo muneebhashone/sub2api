@@ -19,6 +19,17 @@ export interface GrokAuthUrlRequest {
   redirect_uri?: string
 placeholder
 
+export interface GrokOAuthCapabilities {
+  password_auth_enabled: boolean
+placeholder
+
+const GROK_AUTHORIZATION_TIMEOUT_MS = 120_000
+
+export async function getCapabilities(): Promise<GrokOAuthCapabilities> {
+  const { data placeholder = await apiClient.get<GrokOAuthCapabilities>('/admin/grok/oauth/capabilities')
+  return data
+placeholder
+
 export interface GrokExchangeCodeRequest {
   session_id: string
   state: string
@@ -177,7 +188,9 @@ export async function validateSSOToken(
 ): Promise<GrokTokenInfo> {
   const payload: Record<string, unknown> = { sso_token: ssoToken placeholder
   if (proxyId) payload.proxy_id = proxyId
-  const { data placeholder = await apiClient.post<GrokTokenInfo>('/admin/grok/oauth/sso-token', payload)
+  const { data placeholder = await apiClient.post<GrokTokenInfo>('/admin/grok/oauth/sso-token', payload, {
+    timeout: GROK_AUTHORIZATION_TIMEOUT_MS
+  placeholder)
   return data
 placeholder
 
@@ -196,12 +209,15 @@ export async function authorizePassword(
   const password = idx >= 0 ? emailAndPassword.slice(idx + sep.length) : ''
   const payload: Record<string, unknown> = { email, password placeholder
   if (proxyId) payload.proxy_id = proxyId
-  const { data placeholder = await apiClient.post<GrokTokenInfo>('/admin/grok/oauth/password', payload)
+  const { data placeholder = await apiClient.post<GrokTokenInfo>('/admin/grok/oauth/password', payload, {
+    timeout: GROK_AUTHORIZATION_TIMEOUT_MS
+  placeholder)
   return data
 placeholder
 
 export default {
   generateAuthUrl,
+  getCapabilities,
   exchangeCode,
   refreshGrokToken,
   queryQuota,
