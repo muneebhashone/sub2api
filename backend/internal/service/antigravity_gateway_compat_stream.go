@@ -301,6 +301,7 @@ placeholder
 				return s.handleAntigravityCompatReadError(c, session, event.err, maxLineSize, prefix)
 		placeholder
 			resetAntigravityCompatTimer(timeoutTimer, timeout)
+			s.observeAntigravityGeminiSSELine(c, event.line)
 			session.consume(event.line)
 
 		case <-timeoutCh:

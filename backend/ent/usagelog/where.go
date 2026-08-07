@@ -90,6 +90,16 @@ func UpstreamModel(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldUpstreamModel, v))
 placeholder
 
+// UpstreamResponseModel applies equality check predicate on the "upstream_response_model" field. It's identical to UpstreamResponseModelEQ.
+func UpstreamResponseModel(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamModelMismatch applies equality check predicate on the "upstream_model_mismatch" field. It's identical to UpstreamModelMismatchEQ.
+func UpstreamModelMismatch(v bool) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldUpstreamModelMismatch, v))
+placeholder
+
 // ChannelID applies equality check predicate on the "channel_id" field. It's identical to ChannelIDEQ.
 func ChannelID(v int64) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldChannelID, v))
@@ -613,6 +623,101 @@ placeholder
 // UpstreamModelContainsFold applies the ContainsFold predicate on the "upstream_model" field.
 func UpstreamModelContainsFold(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldContainsFold(FieldUpstreamModel, v))
+placeholder
+
+// UpstreamResponseModelEQ applies the EQ predicate on the "upstream_response_model" field.
+func UpstreamResponseModelEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelNEQ applies the NEQ predicate on the "upstream_response_model" field.
+func UpstreamResponseModelNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelIn applies the In predicate on the "upstream_response_model" field.
+func UpstreamResponseModelIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldUpstreamResponseModel, vs...))
+placeholder
+
+// UpstreamResponseModelNotIn applies the NotIn predicate on the "upstream_response_model" field.
+func UpstreamResponseModelNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldUpstreamResponseModel, vs...))
+placeholder
+
+// UpstreamResponseModelGT applies the GT predicate on the "upstream_response_model" field.
+func UpstreamResponseModelGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelGTE applies the GTE predicate on the "upstream_response_model" field.
+func UpstreamResponseModelGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelLT applies the LT predicate on the "upstream_response_model" field.
+func UpstreamResponseModelLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelLTE applies the LTE predicate on the "upstream_response_model" field.
+func UpstreamResponseModelLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelContains applies the Contains predicate on the "upstream_response_model" field.
+func UpstreamResponseModelContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelHasPrefix applies the HasPrefix predicate on the "upstream_response_model" field.
+func UpstreamResponseModelHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelHasSuffix applies the HasSuffix predicate on the "upstream_response_model" field.
+func UpstreamResponseModelHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelIsNil applies the IsNil predicate on the "upstream_response_model" field.
+func UpstreamResponseModelIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldUpstreamResponseModel))
+placeholder
+
+// UpstreamResponseModelNotNil applies the NotNil predicate on the "upstream_response_model" field.
+func UpstreamResponseModelNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldUpstreamResponseModel))
+placeholder
+
+// UpstreamResponseModelEqualFold applies the EqualFold predicate on the "upstream_response_model" field.
+func UpstreamResponseModelEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamResponseModelContainsFold applies the ContainsFold predicate on the "upstream_response_model" field.
+func UpstreamResponseModelContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldUpstreamResponseModel, v))
+placeholder
+
+// UpstreamModelMismatchEQ applies the EQ predicate on the "upstream_model_mismatch" field.
+func UpstreamModelMismatchEQ(v bool) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldUpstreamModelMismatch, v))
+placeholder
+
+// UpstreamModelMismatchNEQ applies the NEQ predicate on the "upstream_model_mismatch" field.
+func UpstreamModelMismatchNEQ(v bool) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldUpstreamModelMismatch, v))
+placeholder
+
+// UpstreamModelMismatchIsNil applies the IsNil predicate on the "upstream_model_mismatch" field.
+func UpstreamModelMismatchIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldUpstreamModelMismatch))
+placeholder
+
+// UpstreamModelMismatchNotNil applies the NotNil predicate on the "upstream_model_mismatch" field.
+func UpstreamModelMismatchNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldUpstreamModelMismatch))
 placeholder
 
 // ChannelIDEQ applies the EQ predicate on the "channel_id" field.
