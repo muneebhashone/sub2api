@@ -286,7 +286,7 @@ func grokThresholdCandidates(account *Account) []*accountSchedulingThresholdCand
 	if account == nil {
 		return nil
 placeholder
-	return []*accountSchedulingThresholdCandidate{
+	candidates := []*accountSchedulingThresholdCandidate{
 		{
 			window:      "quota",
 			scope:       "grok",
@@ -294,6 +294,37 @@ placeholder
 			until:       parseSchedulingResetAt(account.Extra["grok_sched_reset_at"]),
 	placeholder,
 placeholder
+	// Official billing windows (weekly credits / monthly used%) from probe snapshot.
+	// Complements header-based grok_sched_* so paid SuperGrok accounts can auto-pause
+	// when request/token headers are sparse but billing % is high.
+	if billing, err := grokBillingSnapshotFromExtra(account.Extra); err == nil && billing != nil {
+		if billing.UsagePercent != nil {
+			candidates = append(candidates, &accountSchedulingThresholdCandidate{
+				window:      "seven_day",
+				scope:       "grok_billing",
+				usedPercent: *billing.UsagePercent,
+				until:       parseSchedulingResetAt(firstNonEmpty(billing.PeriodEnd, billing.BillingPeriodEnd)),
+		placeholder)
+	placeholder
+		monthlyUtil := 0.0
+		hasMonthly := false
+		if billing.UsedPercent != nil {
+			monthlyUtil = *billing.UsedPercent
+			hasMonthly = true
+	placeholder else if billing.MonthlyLimitCents != nil && *billing.MonthlyLimitCents > 0 && billing.UsedCents != nil {
+			monthlyUtil = (*billing.UsedCents / *billing.MonthlyLimitCents) * 100
+			hasMonthly = true
+	placeholder
+		if hasMonthly {
+			candidates = append(candidates, &accountSchedulingThresholdCandidate{
+				window:      "thirty_day",
+				scope:       "grok_billing",
+				usedPercent: monthlyUtil,
+				until:       parseSchedulingResetAt(firstNonEmpty(billing.BillingPeriodEnd, billing.PeriodEnd)),
+		placeholder)
+	placeholder
+placeholder
+	return candidates
 placeholder
 
 func pickLatestResetSchedulingCandidate(candidates []*accountSchedulingThresholdCandidate, threshold int, now time.Time) *accountSchedulingThresholdCandidate {
