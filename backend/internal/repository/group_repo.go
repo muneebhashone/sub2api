@@ -84,6 +84,9 @@ placeholder
 		SetNillableVideoPrice1080p(groupIn.VideoPrice1080P).
 		SetVideoModelPrices(service.NormalizeVideoModelPrices(groupIn.VideoModelPrices)).
 		SetNillableWebSearchPricePerCall(groupIn.WebSearchPricePerCall).
+		SetNillableAudioRealtimePricePerMin(groupIn.AudioRealtimePricePerMin).
+		SetNillableAudioTtsPricePerMillionChars(groupIn.AudioTTSPricePerMillionChars).
+		SetNillableAudioSttPricePerHour(groupIn.AudioSTTPricePerHour).
 		SetDefaultValidityDays(groupIn.DefaultValidityDays).
 		SetClaudeCodeOnly(groupIn.ClaudeCodeOnly).
 		SetNillableFallbackGroupID(groupIn.FallbackGroupID).
@@ -328,6 +331,21 @@ placeholder
 		builder = builder.SetWebSearchPricePerCall(*groupIn.WebSearchPricePerCall)
 placeholder else {
 		builder = builder.ClearWebSearchPricePerCall()
+placeholder
+	if groupIn.AudioRealtimePricePerMin != nil {
+		builder = builder.SetAudioRealtimePricePerMin(*groupIn.AudioRealtimePricePerMin)
+placeholder else {
+		builder = builder.ClearAudioRealtimePricePerMin()
+placeholder
+	if groupIn.AudioTTSPricePerMillionChars != nil {
+		builder = builder.SetAudioTtsPricePerMillionChars(*groupIn.AudioTTSPricePerMillionChars)
+placeholder else {
+		builder = builder.ClearAudioTtsPricePerMillionChars()
+placeholder
+	if groupIn.AudioSTTPricePerHour != nil {
+		builder = builder.SetAudioSttPricePerHour(*groupIn.AudioSTTPricePerHour)
+placeholder else {
+		builder = builder.ClearAudioSttPricePerHour()
 placeholder
 
 	// 处理 FallbackGroupID：nil 时清除，否则设置

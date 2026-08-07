@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
@@ -121,4 +122,35 @@ placeholder
 	default:
 		return "", fmt.Errorf("unsupported grok media endpoint: %s", endpoint)
 placeholder
+placeholder
+
+// buildGrokVoiceURL returns the official xAI Voice API endpoint.
+// Voice HTTP (/tts, /stt, /custom-voices) and WS (/realtime) are only exposed
+// by api.x.ai — the CLI chat proxy does not implement them. When the account
+// base_url points at the CLI proxy (or is empty), fall back to DefaultBaseURL.
+func buildGrokVoiceURL(account *Account, cfg *config.Config, endpoint string) (string, error) {
+	validator, err := grokBaseURLValidator(account, cfg)
+	if err != nil {
+		return "", err
+placeholder
+	base := ""
+	if account != nil {
+		base = account.GetGrokMediaBaseURL()
+placeholder
+	if strings.TrimSpace(base) == "" || isGrokCLIProxyBaseURL(base) {
+		base = xai.DefaultBaseURL
+placeholder
+	validated, err := validator(base)
+	if err != nil {
+		return "", err
+placeholder
+	ep := strings.Trim(strings.TrimSpace(endpoint), "/")
+	if ep == "" {
+		return "", fmt.Errorf("voice endpoint is required")
+placeholder
+	return strings.TrimRight(validated, "/") + "/" + ep, nil
+placeholder
+
+func isGrokCLIProxyBaseURL(raw string) bool {
+	return isGrokCLIProxyTarget(raw)
 placeholder
