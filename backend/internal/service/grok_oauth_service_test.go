@@ -110,6 +110,19 @@ placeholder
 	require.True(t, ok)
 placeholder
 
+func TestGrokOAuthServiceExternalFlowsRejectMissingClient(t *testing.T) {
+	svc := NewGrokOAuthService(nil, nil)
+	defer svc.Stop()
+
+	_, err := svc.RefreshToken(context.Background(), "refresh-token", "", "")
+placeholder
+	require.Contains(t, err.Error(), "GROK_OAUTH_CLIENT_NOT_CONFIGURED")
+
+	_, err = svc.ValidateSSOToken(context.Background(), "sso-token", nil)
+placeholder
+	require.Contains(t, err.Error(), "GROK_OAUTH_CLIENT_NOT_CONFIGURED")
+placeholder
+
 func TestGrokOAuthServiceBuildAccountCredentialsDefaultsToSubscriptionProxy(t *testing.T) {
 	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{placeholder)
 	defer svc.Stop()
