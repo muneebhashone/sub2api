@@ -1059,7 +1059,6 @@ placeholder
 			req.Header.Del("OpenAI-Beta")
 			req.Header.Del("originator")
 	placeholder else {
-			req.Header.Set("OpenAI-Beta", "responses=experimental")
 			req.Header.Set("originator", resolveOpenAIUpstreamOriginator(c, isCodexCLI))
 	placeholder
 		apiKeyID := getAPIKeyIDFromContext(c)
