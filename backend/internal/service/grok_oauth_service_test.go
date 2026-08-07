@@ -59,7 +59,7 @@ placeholder
 	require.Equal(t, "client-id", info.ClientID)
 placeholder
 
-func TestGrokOAuthServiceExchangeCodeRequiresStateForCallbackURLAndConsumesSession(t *testing.T) {
+func TestGrokOAuthServiceExchangeCodeConsumesOnlyAfterValidation(t *testing.T) {
 	client := &grokOAuthClientStub{placeholder
 	svc := NewGrokOAuthService(nil, client)
 	defer svc.Stop()
@@ -81,8 +81,33 @@ placeholder
 		State:     auth.State,
 placeholder)
 placeholder
+	require.Equal(t, 1, client.exchangeCalls)
+
+	_, err = svc.ExchangeCode(context.Background(), &GrokExchangeCodeInput{
+		SessionID: auth.SessionID,
+		Code:      "replayed-code",
+		State:     auth.State,
+placeholder)
+placeholder
 	require.Contains(t, err.Error(), "GROK_OAUTH_SESSION_NOT_FOUND")
-	require.Zero(t, client.exchangeCalls)
+	require.Equal(t, 1, client.exchangeCalls)
+placeholder
+
+func TestGrokOAuthServiceExchangeCodeRejectsMissingClientWithoutConsumingSession(t *testing.T) {
+	svc := NewGrokOAuthService(nil, nil)
+	defer svc.Stop()
+	auth, err := svc.GenerateAuthURL(context.Background(), nil, "")
+placeholder
+
+	_, err = svc.ExchangeCode(context.Background(), &GrokExchangeCodeInput{
+		SessionID: auth.SessionID,
+		Code:      "code",
+		State:     auth.State,
+placeholder)
+placeholder
+	require.Contains(t, err.Error(), "GROK_OAUTH_CLIENT_NOT_CONFIGURED")
+	_, ok := svc.sessionStore.Get(auth.SessionID)
+	require.True(t, ok)
 placeholder
 
 func TestGrokOAuthServiceBuildAccountCredentialsDefaultsToSubscriptionProxy(t *testing.T) {
