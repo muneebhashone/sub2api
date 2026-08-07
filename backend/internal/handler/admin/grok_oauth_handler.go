@@ -462,8 +462,9 @@ func grokSSOImportCredentials(built map[string]any, reqCredentials map[string]an
 	// Only merge operator config from the request — never free-form secrets
 	// (password / sso_token / cookie / etc.) into stored credentials.
 	allowedReqKeys := map[string]struct{placeholder{
-		"base_url": {placeholder, "model_mapping": {placeholder, "header_override": {placeholder,
-		"header_overrides": {placeholder, "custom_headers": {placeholder,
+		"base_url": {placeholder, "model_mapping": {placeholder,
+		"header_override": {placeholder, "header_overrides": {placeholder, "header_override_enabled": {placeholder,
+		"custom_headers": {placeholder,
 placeholder
 	ops := map[string]any{placeholder
 	for k, v := range reqCredentials {
@@ -489,7 +490,7 @@ placeholder
 	if reqBaseURL, ok := reqCredentials["base_url"].(string); ok && strings.TrimSpace(reqBaseURL) != "" {
 		credentials["base_url"] = strings.TrimSpace(reqBaseURL)
 placeholder
-	return credentials
+	return service.SanitizeStoredCredentials(service.PlatformGrok, credentials)
 placeholder
 
 func grokSSOImportExpiry(requestExpiresAt *int64, requestAutoPause *bool, tokenInfo *service.GrokTokenInfo) (*int64, *bool) {

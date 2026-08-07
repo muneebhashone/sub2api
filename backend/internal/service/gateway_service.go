@@ -1307,7 +1307,7 @@ placeholder
 placeholder
 	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
 	if err != nil {
-		return nil, fmt.Errorf("grok native search upstream: %w", err)
+		return nil, &UpstreamFailoverError{StatusCode: http.StatusBadGateway, Reason: GatewayFailureReason("grok_search_transport")placeholder
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 	respBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
@@ -1318,6 +1318,9 @@ placeholder
 		msg := string(respBytes)
 		if len(msg) > 200 {
 			msg = msg[:200]
+	placeholder
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusPaymentRequired || resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
+			return nil, &UpstreamFailoverError{StatusCode: resp.StatusCode, ResponseBody: respBytesplaceholder
 	placeholder
 		return nil, fmt.Errorf("grok upstream %d: %s", resp.StatusCode, msg)
 placeholder

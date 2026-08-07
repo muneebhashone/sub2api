@@ -92,11 +92,13 @@ placeholder
 	elapsed := time.Since(started)
 	if proxyErr != nil {
 		reqLog.Info("grok_realtime.proxy_failed", zap.Error(proxyErr))
-		_ = conn.Close(coderws.StatusInternalError, "upstream realtime websocket failed")
-		// Do not bill failed realtime sessions (avoids charging idle/error wall-clock).
-		return
+		if !isExpectedGrokRealtimeClose(proxyErr) {
+			_ = conn.Close(coderws.StatusInternalError, "upstream realtime websocket failed")
+			return
+	placeholder
 placeholder
-	// Bill successful realtime sessions by elapsed minutes when group price is set.
+	// A relay normally returns a close error when either side closes normally.
+	// Those sessions still consumed upstream audio time and must be billed.
 	if elapsed > 0 {
 		result := &service.OpenAIForwardResult{
 			Model:      model,
@@ -104,6 +106,19 @@ placeholder
 			AudioUsage: &service.AudioUsage{Mode: "realtime", DurationOrUnits: elapsed.Minutes()placeholder,
 	placeholder
 		h.recordGrokVoiceUsage(c, apiKey, selection.Account, subscription, "realtime", nil, result)
+placeholder
+placeholder
+
+func isExpectedGrokRealtimeClose(err error) bool {
+	if err == nil {
+		return true
+placeholder
+	switch coderws.CloseStatus(err) {
+	case coderws.StatusNormalClosure, coderws.StatusGoingAway,
+		coderws.StatusNoStatusRcvd, coderws.StatusAbnormalClosure:
+		return true
+	default:
+		return false
 placeholder
 placeholder
 

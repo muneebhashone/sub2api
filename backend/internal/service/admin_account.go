@@ -495,6 +495,8 @@ placeholder
 	if err := NormalizeHeaderOverrideCredentials(input.Credentials); err != nil {
 		return nil, err
 placeholder
+	// Never persist ephemeral SSO/password secrets after OAuth conversion.
+	input.Credentials = SanitizeStoredCredentials(input.Platform, input.Credentials)
 
 	account, err := buildAccountForCreate(input, accountExtra)
 	if err != nil {
@@ -605,6 +607,8 @@ placeholder else if len(input.Credentials) > 0 {
 		if err := NormalizeHeaderOverrideCredentials(account.Credentials); err != nil {
 			return nil, err
 	placeholder
+		// Strip SSO/password residue that must never sit next to OAuth tokens.
+		account.Credentials = SanitizeStoredCredentials(account.Platform, account.Credentials)
 placeholder
 	// Extra 使用 map：需要区分“未提供(nil)”与“显式清空({placeholder)”。
 	// 关闭配额限制时前端会删除 quota_* 键并提交 extra:{placeholder，此时也必须落库。
@@ -1014,6 +1018,11 @@ placeholder
 	// 校验并规范化请求头覆写配置（批量路径为 JSONB 顶层 key 合并，直接校验增量即可）
 	if err := NormalizeHeaderOverrideCredentials(input.Credentials); err != nil {
 		return nil, err
+placeholder
+	// Bulk may mix platforms; always drop ephemeral SSO/password keys (cookie
+	// only when platform is known Grok — empty platform still strips password/*).
+	if input.Credentials != nil {
+		input.Credentials = SanitizeStoredCredentials("", input.Credentials)
 placeholder
 
 	// Prepare bulk updates for columns and JSONB fields.
