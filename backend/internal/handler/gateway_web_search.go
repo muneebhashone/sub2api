@@ -71,6 +71,31 @@ placeholder
 		return
 placeholder
 
+	subject, _ := middleware2.GetAuthSubjectFromContext(c)
+	reqLog := requestLogger(c, "handler.gateway.web_search")
+	// Audit user search query before upstream Grok web_search traffic.
+	auditBody, _ := json.Marshal(map[string]any{
+		"messages": []map[string]any{{
+			"role": "user", "content": req.Query,
+placeholder
+placeholder)
+	if decision := h.checkSecurityAudit(c, reqLog, apiKey, subject, service.ContentModerationProtocolOpenAIChat, xai.DefaultTextModel, auditBody); decision != nil && !decision.AllowNextStage {
+		status := decision.HTTPStatus
+		if status == 0 {
+			status = http.StatusForbidden
+	placeholder
+		code := decision.ErrorCode
+		if code == "" {
+			code = "content_policy_violation"
+	placeholder
+		msg := decision.ClientMessage
+		if msg == "" {
+			msg = "Request blocked by content policy"
+	placeholder
+		c.JSON(status, gin.H{"error": gin.H{"type": code, "message": msgplaceholderplaceholder)
+		return
+placeholder
+
 	// Use exactly the same scheduling as other requests (SelectAccountWithLoadAwareness handles load, rate limit, sticky, etc.)
 	groupID := apiKey.GroupID
 	if groupID == nil {
@@ -174,11 +199,13 @@ placeholder
 	// Request IDs are billing idempotency keys, so they must be unique per invocation.
 	// Query/IP/UA hashes would collapse repeated identical searches into one charge.
 	searchRequestID := "web_search:" + uuid.NewString()
-	if apiKey.Group != nil && (apiKey.Group.GetSearchPricePer1k() == nil || *apiKey.Group.GetSearchPricePer1k() <= 0) {
-		logger.L().With(
-			zap.String("component", "handler.gateway.web_search"),
-			zap.Int64("group_id", apiKey.Group.ID),
-		).Warn("gateway.web_search.search_price_per_1k_unset_free")
+	if apiKey.Group != nil {
+		if p := apiKey.Group.GetSearchPricePer1k(); p != nil && *p == 0 {
+			logger.L().With(
+				zap.String("component", "handler.gateway.web_search"),
+				zap.Int64("group_id", apiKey.Group.ID),
+			).Info("gateway.web_search.search_price_per_1k_explicit_free")
+	placeholder
 placeholder
 	h.submitMandatoryUsageRecordTask(c.Request.Context(), func(ctx context.Context) {
 		if err := h.gatewayService.RecordUsage(ctx, &service.RecordUsageInput{
