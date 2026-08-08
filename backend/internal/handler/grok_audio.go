@@ -279,7 +279,13 @@ placeholder)
 placeholder
 
 func readGrokVoiceGatewayBody(c *gin.Context) ([]byte, error) {
-	if c == nil || c.Request == nil || c.Request.Body == nil {
+	if c == nil || c.Request == nil {
+		return nil, errors.New("request body is required")
+placeholder
+	if c.Request.Body == nil {
+		if c.Request.Method == http.MethodGet || c.Request.Method == http.MethodDelete {
+			return nil, nil
+	placeholder
 		return nil, errors.New("request body is required")
 placeholder
 	return io.ReadAll(c.Request.Body)

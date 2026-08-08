@@ -42,6 +42,16 @@ func TestBuildGrokVoiceURL_RequiresEndpoint(t *testing.T) {
 placeholder
 placeholder
 
+func TestBuildGrokVoiceURL_EncodesCustomVoicePathSegments(t *testing.T) {
+	account := &Account{Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	got, err := buildGrokVoiceURL(account, nil, "custom-voices/nlbqfwie/audio")
+placeholder
+	require.Equal(t, xai.DefaultBaseURL+"/custom-voices/nlbqfwie/audio", got)
+
+	_, err = buildGrokVoiceURL(account, nil, "custom-voices/../audio")
+placeholder
+placeholder
+
 func TestForwardGrokVoice_RejectsNonGrok(t *testing.T) {
 	svc := &OpenAIGatewayService{placeholder
 	_, err := svc.ForwardGrokVoice(context.Background(), nil, &Account{Platform: PlatformOpenAIplaceholder, "tts", []byte(`{placeholder`), "application/json")

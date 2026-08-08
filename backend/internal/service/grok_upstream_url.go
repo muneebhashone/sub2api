@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -164,7 +165,15 @@ placeholder
 	if ep == "" {
 		return "", fmt.Errorf("voice endpoint is required")
 placeholder
-	return strings.TrimRight(validated, "/") + "/" + ep, nil
+	parts := strings.Split(ep, "/")
+	encoded := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if strings.TrimSpace(part) == "" || part == "." || part == ".." {
+			return "", fmt.Errorf("invalid voice endpoint path")
+	placeholder
+		encoded = append(encoded, url.PathEscape(part))
+placeholder
+	return strings.TrimRight(validated, "/") + "/" + strings.Join(encoded, "/"), nil
 placeholder
 
 func isGrokCLIProxyBaseURL(raw string) bool {
