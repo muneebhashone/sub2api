@@ -70,7 +70,7 @@ func TestAccountGrokNeedsReauth(t *testing.T) {
 placeholder))
 	require.True(t, accountGrokNeedsReauth(&Account{
 		Status:       StatusError,
-		ErrorMessage: grokSpendingLimitErrorMessage,
+		ErrorMessage: "Grok spending limit reached; reauthorize or wait for billing reset",
 placeholder))
 placeholder
 

@@ -81,7 +81,7 @@ placeholder
 	if err != nil {
 		return
 placeholder
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() placeholder()
 
 	model := c.Query("model")
 	if strings.TrimSpace(model) == "" {

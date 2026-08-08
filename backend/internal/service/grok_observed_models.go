@@ -119,7 +119,7 @@ placeholder
 	if err != nil {
 		return err
 placeholder
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() placeholder()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return err
