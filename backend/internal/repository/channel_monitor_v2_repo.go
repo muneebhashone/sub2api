@@ -1019,6 +1019,7 @@ placeholder
 	if !wm.HasData || wm.DataThrough.IsZero() || wm.LastSuccessfulAt.IsZero() {
 		return &service.ChannelMonitorV2Coverage{
 			RequestedStart:        filter.Start,
+			RequestedEnd:          filter.End,
 			CoverageStart:         filter.End,
 			DataThrough:           filter.Start,
 			ComputedAt:            time.Time{placeholder,
@@ -1053,6 +1054,7 @@ placeholder
 	// minute-level lag would otherwise always show "partial historical coverage".
 	return &service.ChannelMonitorV2Coverage{
 		RequestedStart:        filter.Start,
+		RequestedEnd:          filter.End,
 		CoverageStart:         coverageStart,
 		DataThrough:           through,
 		ComputedAt:            computedAt,
