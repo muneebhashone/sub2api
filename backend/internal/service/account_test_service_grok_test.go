@@ -502,10 +502,10 @@ placeholder
 	require.Contains(t, rec.Body.String(), `"type":"test_complete"`)
 placeholder
 
-func TestAccountTestService_GrokVideoZDRUploadURLRequiredCountsAsConnectivityOK(t *testing.T) {
+func TestAccountTestService_GrokVideoUpstreamErrorIsNotMaskedAsSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	account := &Account{
-		ID: 21, Name: "grok-oauth-video-zdr", Platform: PlatformGrok,
+		ID: 21, Name: "grok-oauth-video-err", Platform: PlatformGrok,
 		Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Concurrency: 1,
 placeholder
 			"access_token":  "grok-access-token",
@@ -518,7 +518,7 @@ placeholder
 		StatusCode: http.StatusBadRequest,
 		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
 		Body: io.NopCloser(strings.NewReader(
-			`{"code":"invalid-argument","error":"Zero Data Retention teams must provide output.upload_url for video generation."placeholder`,
+			`{"code":"invalid-argument","error":"bad video request"placeholder`,
 		)),
 placeholderplaceholder
 	svc := &AccountTestService{
@@ -534,12 +534,9 @@ placeholder
 
 placeholder
 	require.Equal(t, "https://api.x.ai/v1/videos/generations", upstream.lastReq.URL.String())
-	require.Contains(t, rec.Body.String(), "NO VIDEO GENERATED")
-	require.Contains(t, rec.Body.String(), "output.upload_url")
-	require.Contains(t, rec.Body.String(), "Connectivity OK")
-	require.Contains(t, rec.Body.String(), `"type":"test_complete"`)
-	require.Contains(t, rec.Body.String(), `"success":true`)
-	require.NotContains(t, rec.Body.String(), `"type":"error"`)
+	require.Contains(t, rec.Body.String(), `"type":"error"`)
+	require.Contains(t, rec.Body.String(), "Grok videos API returned 400")
+	require.NotContains(t, rec.Body.String(), `"success":true`)
 placeholder
 
 type grokRealtimeTestConn struct {
