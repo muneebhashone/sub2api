@@ -304,7 +304,7 @@ placeholder
 	return appendGrokFreeCacheNativeToolsWithPolicy(body, allowPureClientTools, allowFunctionSearch)
 placeholder
 
-// isKnownGrokFreeAccount matches personal-dev free-tier recognition used for
+// isKnownGrokFreeAccount recognizes free-tier Grok accounts, used for
 // Free cache routing / media free_tier blocks (broader than soft-gate).
 // Soft-gate uses isExplicitGrokFreeOAuthAccount (exact "free" only).
 func isKnownGrokFreeAccount(account *Account) bool {
@@ -322,7 +322,7 @@ placeholder
 				paidSignal = true
 		placeholder
 	placeholder
-		// personal-dev: usage % or monthly dollar cap is paid evidence.
+		// Usage % or a monthly dollar cap is evidence of a paid plan.
 		if billing.UsagePercent != nil || billing.UsedPercent != nil ||
 			(billing.MonthlyLimitCents != nil && *billing.MonthlyLimitCents > 0) {
 			paidSignal = true
@@ -347,7 +347,7 @@ placeholder
 			inferredFreeSignal = true
 	placeholder
 placeholder
-	// personal-dev: only credentials subscription_tier (not plan_type / extra keys).
+	// Only credentials subscription_tier is authoritative here (not plan_type / extra keys).
 	if tier := strings.TrimSpace(account.GetCredential("subscription_tier")); tier != "" {
 		if isGrokFreeSubscriptionTier(tier) {
 			freeSignal = true
