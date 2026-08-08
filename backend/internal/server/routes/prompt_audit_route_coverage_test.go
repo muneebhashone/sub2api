@@ -46,8 +46,8 @@ placeholder
 		"/videos/edits":             {"grok_media.go"placeholder,
 		"/videos/extensions":        {"grok_media.go"placeholder,
 		"/models/*modelAction":      {"gemini_v1beta_handler.go"placeholder,
-		"/tts":                       {"grok_audio.go"placeholder,
-		"/web_search":                {"gateway_web_search.go"placeholder,
+		"/tts":                      {"grok_audio.go"placeholder,
+		"/web_search":               {"gateway_web_search.go"placeholder,
 placeholder
 	excluded := map[string]string{
 		"/messages/count_tokens":     "tokenization only; it does not execute a model request",
