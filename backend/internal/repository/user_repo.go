@@ -43,16 +43,27 @@ func newUserRepositoryWithSQL(client *dbent.Client, sqlq sqlExecutor) *userRepos
 placeholder
 
 func (r *userRepository) Create(ctx context.Context, userIn *service.User) error {
-	return r.create(ctx, userIn, false)
+	return r.create(ctx, userIn, false, "")
 placeholder
 
 // CreateWithEmailAliasGuard 见 service.UserRepository：在邮箱唯一性锁内复查收件箱身份，
 // 供注册路径使用。
 func (r *userRepository) CreateWithEmailAliasGuard(ctx context.Context, userIn *service.User) error {
-	return r.create(ctx, userIn, true)
+	return r.create(ctx, userIn, true, "")
 placeholder
 
-func (r *userRepository) create(ctx context.Context, userIn *service.User, guardEmailAlias bool) error {
+// CountUsersByEmailDomain 统计指定可注册主域名及其子域名下的未删除用户。
+func (r *userRepository) CountUsersByEmailDomain(ctx context.Context, domain string) (int, error) {
+	return countUsersByEmailDomainWithClient(ctx, clientFromContext(ctx, r.client), domain)
+placeholder
+
+// CreateWithEmailAliasGuardAndDomainLimit 串行化非白名单域名的注册请求，
+// 并在用户写入的同一事务内复查域名额度。
+func (r *userRepository) CreateWithEmailAliasGuardAndDomainLimit(ctx context.Context, userIn *service.User, domain string) error {
+	return r.create(ctx, userIn, true, normalizeEmailDomain(domain))
+placeholder
+
+func (r *userRepository) create(ctx context.Context, userIn *service.User, guardEmailAlias bool, domainLimit string) error {
 	if userIn == nil {
 		return nil
 placeholder
@@ -84,6 +95,9 @@ placeholder
 		// 别名变体的字面量不同，唯一索引无法兜底；用收件箱身份锁把同一收件箱的并发注册串行化。
 		lockKeys = append(lockKeys, emailAliasUniquenessLockKey(userIn.Email))
 placeholder
+	if domainLimit != "" {
+		lockKeys = append(lockKeys, registrationEmailDomainLockKey(domainLimit))
+placeholder
 	releaseEmailLock, err := lockRepositoryScopedKeys(
 		txCtx,
 		txClient,
@@ -94,6 +108,16 @@ placeholder
 		return err
 placeholder
 	defer releaseEmailLock()
+
+	if domainLimit != "" {
+		count, err := countUsersByEmailDomainWithClient(txCtx, txClient, domainLimit)
+		if err != nil {
+			return err
+	placeholder
+		if count > 0 {
+			return service.ErrEmailDomainRegistrationLimit
+	placeholder
+placeholder
 
 	if err := ensureNormalizedEmailAvailableWithClient(txCtx, txClient, 0, userIn.Email); err != nil {
 		return err
@@ -1230,6 +1254,48 @@ func normalizedEmailUniquenessLockKey(email string) string {
 		return ""
 placeholder
 	return "users:normalized-email:" + normalized
+placeholder
+
+func registrationEmailDomainLockKey(domain string) string {
+	domain = normalizeEmailDomain(domain)
+	if domain == "" {
+		return ""
+placeholder
+	return "users:registration-email-domain:" + domain
+placeholder
+
+func normalizeEmailDomain(domain string) string {
+	return service.NormalizeRegistrationEmailDomain(domain)
+placeholder
+
+func countUsersByEmailDomainWithClient(ctx context.Context, client *dbent.Client, domain string) (int, error) {
+	client = clientFromContext(ctx, client)
+	domain = normalizeEmailDomain(domain)
+	if client == nil || domain == "" {
+		return 0, nil
+placeholder
+	return client.User.Query().Where(userEmailDomainPredicate(domain)).Count(ctx)
+placeholder
+
+func userEmailDomainPredicate(domain string) predicate.User {
+	domain = normalizeEmailDomain(domain)
+	escapedDomain := escapeLikeWildcards(domain)
+	exactPattern := "%@" + escapedDomain
+	subdomainPattern := "%@%." + escapedDomain
+	return predicate.User(func(s *entsql.Selector) {
+		s.Where(entsql.P(func(b *entsql.Builder) {
+			b.WriteString("(RTRIM(LOWER(TRIM(").
+				Ident(s.C(dbuser.FieldEmail)).
+				WriteString(")), '.') LIKE ").
+				Arg(exactPattern).
+				WriteString(` ESCAPE '\' OR RTRIM(LOWER(TRIM(`).
+				Ident(s.C(dbuser.FieldEmail)).
+				WriteString(")), '.') LIKE ").
+				Arg(subdomainPattern).
+				WriteString(` ESCAPE '\'`).
+				WriteString(")")
+	placeholder))
+placeholder)
 placeholder
 
 // emailAliasUniquenessLockKey 按收件箱身份（而非邮箱字面量）加锁，使同一收件箱的不同

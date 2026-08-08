@@ -195,18 +195,14 @@ import {
 placeholder from '@/api/auth'
 import { apiClient placeholder from '@/api/client'
 import { buildAuthErrorMessage placeholder from '@/utils/authError'
-import {
-  formatRegistrationEmailSuffixWhitelistForMessage,
-  isRegistrationEmailSuffixAllowed,
-  normalizeRegistrationEmailSuffixWhitelist
-placeholder from '@/utils/registrationEmailPolicy'
+import { extractApiErrorCode placeholder from '@/utils/apiError'
 import {
   clearAllAffiliateReferralCodes,
   loadAffiliateReferralCode,
   oauthAffiliatePayload
 placeholder from '@/utils/oauthAffiliate'
 
-const { t, locale placeholder = useI18n()
+const { t placeholder = useI18n()
 
 // ==================== Router & Stores ====================
 
@@ -270,7 +266,6 @@ const aliyunCaptchaSceneId = ref<string>('')
 const aliyunCaptchaPrefix = ref<string>('')
 const aliyunCaptchaRegion = ref<string>('cn')
 const siteName = ref<string>('Sub2API')
-const registrationEmailSuffixWhitelist = ref<string[]>([])
 
 // Turnstile for resend
 const turnstileRef = ref<InstanceType<typeof TurnstileWidget> | null>(null)
@@ -370,9 +365,6 @@ onMounted(async () => {
     aliyunCaptchaPrefix.value = settings.aliyun_captcha_prefix || ''
     aliyunCaptchaRegion.value = settings.aliyun_captcha_region || 'cn'
     siteName.value = settings.site_name || 'Sub2API'
-    registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
-      settings.registration_email_suffix_whitelist || []
-    )
   placeholder catch (error) {
     console.error('Failed to load public settings:', error)
   placeholder
@@ -481,10 +473,6 @@ function isPendingOAuthFlow(): boolean {
   return Boolean(pendingProvider.value.trim())
 placeholder
 
-function shouldBypassRegistrationEmailPolicy(): boolean {
-  return isPendingOAuthFlow() || Boolean(pendingAuthToken.value.trim())
-placeholder
-
 function resolvePendingOAuthCallbackRoute(provider: string): string {
   switch (provider.trim().toLowerCase()) {
     case 'linuxdo':
@@ -526,12 +514,6 @@ async function sendCode(): Promise<void> {
   let captchaProofUsed = false
 
   try {
-    if (!shouldBypassRegistrationEmailPolicy() && !isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
-      errorMessage.value = buildEmailSuffixNotAllowedMessage()
-      appStore.showError(errorMessage.value)
-      return
-    placeholder
-
     const requestPayload = {
       email: email.value,
       [pendingAuthTokenField.value]: pendingAuthToken.value || undefined,
@@ -575,9 +557,7 @@ async function sendCode(): Promise<void> {
 
     showResendTurnstile.value = false
   placeholder catch (error: unknown) {
-    errorMessage.value = buildAuthErrorMessage(error, {
-      fallback: t('auth.sendCodeFailed')
-    placeholder)
+    errorMessage.value = buildRegistrationErrorMessage(error, t('auth.sendCodeFailed'))
 
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -652,12 +632,6 @@ async function handleVerify(): Promise<void> {
   errorMessage.value = ''
 
   if (!validateForm()) {
-    return
-  placeholder
-
-  if (!shouldBypassRegistrationEmailPolicy() && !isRegistrationEmailSuffixAllowed(email.value, registrationEmailSuffixWhitelist.value)) {
-    errorMessage.value = buildEmailSuffixNotAllowedMessage()
-    appStore.showError(errorMessage.value)
     return
   placeholder
 
@@ -740,9 +714,7 @@ async function handleVerify(): Promise<void> {
     // Redirect to dashboard
     await router.push(pendingRedirect.value || '/dashboard')
   placeholder catch (error: unknown) {
-    errorMessage.value = buildAuthErrorMessage(error, {
-      fallback: t('auth.verifyFailed')
-    placeholder)
+    errorMessage.value = buildRegistrationErrorMessage(error, t('auth.verifyFailed'))
 
     appStore.showError(errorMessage.value)
   placeholder finally {
@@ -763,20 +735,11 @@ function handleBack(): void {
   router.push('/register')
 placeholder
 
-function buildEmailSuffixNotAllowedMessage(): string {
-  const normalizedWhitelist = normalizeRegistrationEmailSuffixWhitelist(
-    registrationEmailSuffixWhitelist.value
-  )
-  if (normalizedWhitelist.length === 0) {
-    return t('auth.emailSuffixNotAllowed')
+function buildRegistrationErrorMessage(error: unknown, fallback: string): string {
+  if (extractApiErrorCode(error) === 'EMAIL_DOMAIN_REGISTRATION_LIMIT') {
+    return t('auth.emailDomainRegistrationLimit')
   placeholder
-  const separator = String(locale.value || '').toLowerCase().startsWith('zh') ? '、' : ', '
-  return t('auth.emailSuffixNotAllowedWithAllowed', {
-    suffixes: formatRegistrationEmailSuffixWhitelistForMessage(normalizedWhitelist, {
-      separator,
-      more: (count) => t('auth.emailSuffixAllowedMore', { count placeholder)
-    placeholder)
-  placeholder)
+  return buildAuthErrorMessage(error, { fallback placeholder)
 placeholder
 </script>
 
