@@ -33,6 +33,9 @@ vi.mock('vue-i18n', async () => {
         if (key === 'admin.accounts.imageReceived' && params?.count) {
           return `received-${params.countplaceholder`
         placeholder
+        if (key === 'admin.accounts.imagePreviewAlt' && params?.index) {
+          return `test-image-${params.indexplaceholder`
+        placeholder
         return messages[key] || key
       placeholder
     placeholder)
