@@ -1626,6 +1626,8 @@ placeholder
 		{Name: "model", Type: field.TypeString, Size: 100placeholder,
 		{Name: "requested_model", Type: field.TypeString, Nullable: true, Size: 100placeholder,
 		{Name: "upstream_model", Type: field.TypeString, Nullable: true, Size: 100placeholder,
+		{Name: "upstream_response_model", Type: field.TypeString, Nullable: true, Size: 200placeholder,
+		{Name: "upstream_model_mismatch", Type: field.TypeBool, Nullable: trueplaceholder,
 		{Name: "channel_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "model_mapping_chain", Type: field.TypeString, Nullable: true, Size: 500placeholder,
 		{Name: "billing_tier", Type: field.TypeString, Nullable: true, Size: 50placeholder,
@@ -1676,31 +1678,31 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[41]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[43]placeholder,
 				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[42]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[44]placeholder,
 				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[43]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[45]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[44]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[46]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[45]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[47]placeholder,
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -1709,32 +1711,32 @@ placeholder
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[44]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[46]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[41]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[43]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[42]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[44]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[43]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[45]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[45]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[47]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[42]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_model",
@@ -1754,17 +1756,17 @@ placeholder
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[44], UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[46], UsageLogsColumns[42]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[41], UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[43], UsageLogsColumns[42]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[43], UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[45], UsageLogsColumns[42]placeholder,
 		placeholder,
 	placeholder,
 placeholder

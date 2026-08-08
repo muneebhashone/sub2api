@@ -457,6 +457,60 @@ func TestRelayTurnTimingHelpersCoverage(t *testing.T) {
 	require.False(t, ok)
 placeholder
 
+func TestObserveUpstreamMessage_ResponseModelIsTurnLocalAndTerminalWins(t *testing.T) {
+	t.Parallel()
+
+	state := &relayState{requestModel: "gpt-5.6-sol"placeholder
+	startAt := time.Unix(0, 0)
+	now := startAt
+	nowFn := func() time.Time {
+		now = now.Add(5 * time.Millisecond)
+		return now
+placeholder
+
+	created := observeUpstreamMessage(
+		state,
+		[]byte(`{"type":"response.created","response":{"id":"resp_1","model":"gpt-5.5"placeholderplaceholder`),
+		startAt,
+		nowFn,
+		nil,
+	)
+	require.False(t, created.terminal)
+
+	completed := observeUpstreamMessage(
+		state,
+		[]byte(`{"type":"response.completed","response":{"id":"resp_1","model":"gpt-5.4","usage":{"input_tokens":1,"output_tokens":2placeholderplaceholderplaceholder`),
+		startAt,
+		nowFn,
+		nil,
+	)
+	require.True(t, completed.terminal)
+	require.Equal(t, "gpt-5.4", completed.responseModel)
+	require.True(t, completed.responseConflict)
+
+	var firstTurn RelayTurnResult
+	emitTurnComplete(func(turn RelayTurnResult) { firstTurn = turn placeholder, state, completed)
+	require.Equal(t, "gpt-5.4", firstTurn.ResponseModel)
+	require.True(t, firstTurn.ResponseModelConflict)
+
+	observeUpstreamMessage(
+		state,
+		[]byte(`{"type":"response.created","response":{"id":"resp_2","model":"gpt-5.3"placeholderplaceholder`),
+		startAt,
+		nowFn,
+		nil,
+	)
+	second := observeUpstreamMessage(
+		state,
+		[]byte(`{"type":"response.completed","response":{"id":"resp_2","model":"GPT-5.3","usage":{"input_tokens":3,"output_tokens":4placeholderplaceholderplaceholder`),
+		startAt,
+		nowFn,
+		nil,
+	)
+	require.Equal(t, "GPT-5.3", second.responseModel)
+	require.False(t, second.responseConflict, "the previous turn must not contaminate this turn")
+placeholder
+
 func TestObserveUpstreamMessage_ResponseIDFallbackPolicy(t *testing.T) {
 	t.Parallel()
 

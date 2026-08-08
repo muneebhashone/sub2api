@@ -308,6 +308,7 @@ placeholder
 		"tools",
 		"parallel_tool_calls",
 		"reasoning",
+		"service_tier",
 		"text",
 		"previous_response_id",
 placeholder {
