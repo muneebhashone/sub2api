@@ -41,6 +41,9 @@ placeholder
 	if !equalStringSlice(before.RegistrationEmailSuffixWhitelist, after.RegistrationEmailSuffixWhitelist) {
 		changed = append(changed, "registration_email_suffix_whitelist")
 placeholder
+	if before.RegistrationEmailDomainQuotaEnabled != after.RegistrationEmailDomainQuotaEnabled {
+		changed = append(changed, "registration_email_domain_quota_enabled")
+placeholder
 	if before.PromoCodeEnabled != after.PromoCodeEnabled {
 		changed = append(changed, "promo_code_enabled")
 placeholder
