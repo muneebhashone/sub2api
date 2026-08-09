@@ -67,6 +67,56 @@ func TestObserveOpenAISSEBodyIgnoresMalformedPayload(t *testing.T) {
 	require.False(t, observer.Conflict())
 placeholder
 
+func TestObserveAntigravityGeminiSSELineReadsWrapperModelWithoutUnwrap(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		want    string
+placeholder{
+		{
+			name:    "top-level sibling",
+			payload: `{"modelVersion":"gemini-3-pro","response":{"candidates":[]placeholderplaceholder`,
+			want:    "gemini-3-pro",
+	placeholder,
+		{
+			name:    "single wrapper",
+			payload: `{"response":{"modelVersion":"gemini-3-pro","candidates":[]placeholderplaceholder`,
+			want:    "gemini-3-pro",
+	placeholder,
+		{
+			name:    "nested response after one wrapper",
+			payload: `{"response":{"response":{"modelVersion":"gemini-3-pro","candidates":[]placeholderplaceholderplaceholder`,
+			want:    "gemini-3-pro",
+	placeholder,
+		{
+			name:    "outer declaration takes precedence",
+			payload: `{"modelVersion":"gemini-outer","response":{"modelVersion":"gemini-inner","candidates":[]placeholderplaceholder`,
+			want:    "gemini-outer",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			c, _ := gin.CreateTestContext(nil)
+			beginUpstreamResponseModelObservation(c)
+
+			svc := &AntigravityGatewayService{placeholder
+			svc.observeAntigravityGeminiSSELine(c, "data: "+tt.payload)
+
+			require.Equal(t, tt.want, observedUpstreamResponseModel(c))
+			require.False(t, observedUpstreamResponseModelConflict(c))
+	placeholder)
+placeholder
+placeholder
+
+func TestUpstreamResponseModelObserverRejectsMalformedJSONWithModelField(t *testing.T) {
+	observer := &upstreamResponseModelObserver{placeholder
+	observer.ObserveOpenAI([]byte(`{"response":{"model":"gpt-5.4"placeholder`), "response.completed")
+
+	require.Empty(t, observer.Model())
+placeholder
+
 func TestUpstreamResponseModelObserverBoundsUntrustedModelName(t *testing.T) {
 	observer := &upstreamResponseModelObserver{placeholder
 	observer.Observe("  "+strings.Repeat("模", upstreamResponseModelMaxLength+1)+"  ", false)
