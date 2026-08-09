@@ -91,7 +91,7 @@ placeholder
 		MarkOpsClientBusinessLimited(c, OpsClientBusinessLimitedReasonLocalFeatureGate)
 		return nil, s.writeGoogleError(c, http.StatusForbidden, fmt.Sprintf("model %s not in whitelist", originalModel))
 placeholder
-	billingModel := mappedModel
+	forwardedModel := mappedModel
 
 	// 获取 access_token
 	if s.tokenProvider == nil {
@@ -204,7 +204,7 @@ placeholder()
 						if err == nil && fallbackResp.StatusCode < 400 {
 							_ = resp.Body.Close()
 							resp = fallbackResp
-							billingModel = fallbackModel
+							forwardedModel = fallbackModel
 					placeholder else if fallbackResp != nil {
 							_ = fallbackResp.Body.Close()
 					placeholder
@@ -436,7 +436,7 @@ placeholder
 		RequestID:                     requestID,
 		Usage:                         *usage,
 		Model:                         originalModel,
-		UpstreamModel:                 billingModel,
+		UpstreamModel:                 forwardedModel,
 		UpstreamResponseModel:         observedUpstreamResponseModel(c),
 		UpstreamResponseModelConflict: observedUpstreamResponseModelConflict(c),
 		Stream:                        stream,
