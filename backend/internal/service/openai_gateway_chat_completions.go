@@ -483,7 +483,7 @@ placeholder
 	c.Writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	c.JSON(http.StatusOK, chatResp)
 
-	return &OpenAIForwardResult{
+	result := &OpenAIForwardResult{
 		RequestID:                     requestID,
 		Usage:                         usage,
 		Model:                         originalModel,
@@ -493,7 +493,16 @@ placeholder
 		UpstreamResponseModelConflict: observedUpstreamResponseModelConflict(c),
 		Stream:                        false,
 		Duration:                      time.Since(startTime),
-placeholder, nil
+placeholder
+	// Grok chat bridge: bill native search tools found in the terminal Responses body.
+	if account != nil && account.IsGrok() && finalResponse != nil {
+		if body, err := json.Marshal(finalResponse); err == nil {
+			if n := countGrokNativeSearchCallsFromJSONBytes(body); n > 0 {
+				result.SearchCount = n
+		placeholder
+	placeholder
+placeholder
+	return result, nil
 placeholder
 
 // handleChatStreamingResponse reads Responses SSE events from upstream,
@@ -526,6 +535,10 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 	refusalDetector := newOpenAIChatSilentRefusalDetector(requestBodyLen)
 	var streamFailoverErr *UpstreamFailoverError
 	var streamNonFailoverErr error
+	// Grok chat bridge reuses Responses SSE; count native search tools for surcharge.
+	searchCount := 0
+	streamSearchSeen := make(map[string]struct{placeholder)
+	countSearch := account != nil && account.IsGrok()
 	observer := upstreamResponseModelObserverFromContext(c)
 	if observer == nil {
 		observer = beginUpstreamResponseModelObservation(c)
@@ -548,7 +561,7 @@ placeholder
 placeholder
 
 	resultWithUsage := func() *OpenAIForwardResult {
-		return &OpenAIForwardResult{
+		out := &OpenAIForwardResult{
 			RequestID:                     requestID,
 			Usage:                         usage,
 			Model:                         originalModel,
@@ -560,6 +573,10 @@ placeholder
 			Duration:                      time.Since(startTime),
 			FirstTokenMs:                  firstTokenMs,
 	placeholder
+		if searchCount > 0 {
+			out.SearchCount = searchCount
+	placeholder
+		return out
 placeholder
 
 	processDataLine := func(payload string) bool {
@@ -567,6 +584,9 @@ placeholder
 			firstChunk = false
 			ms := int(time.Since(startTime).Milliseconds())
 			firstTokenMs = &ms
+	placeholder
+		if countSearch {
+			searchCount += countGrokNativeSearchCallsInSSEDataDedup([]byte(payload), streamSearchSeen)
 	placeholder
 
 		var event apicompat.ResponsesStreamEvent

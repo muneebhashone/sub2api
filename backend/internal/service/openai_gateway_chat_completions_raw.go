@@ -144,6 +144,10 @@ placeholder
 		if err != nil {
 			return nil, fmt.Errorf("remove Responses-only Grok prompt cache key: %w", err)
 	placeholder
+		upstreamBody, err = normalizeGrokChatReasoningEffort(upstreamBody, upstreamModel)
+		if err != nil {
+			return nil, fmt.Errorf("normalize Grok chat reasoning effort: %w", err)
+	placeholder
 placeholder
 
 	logger.L().Debug("openai chat_completions raw: forwarding without protocol conversion",
@@ -225,7 +229,7 @@ placeholder
 
 func (s *OpenAIGatewayService) rawChatCompletionsURL(account *Account) (string, error) {
 	if account.Platform == PlatformGrok {
-		targetURL, err := buildGrokChatCompletionsURL(account, s.cfg)
+		targetURL, err := buildGrokChatCompletionsURL(account, s.cfg, s.settingService)
 		if err != nil {
 			return "", fmt.Errorf("invalid grok base_url: %w", err)
 	placeholder

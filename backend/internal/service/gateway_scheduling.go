@@ -961,6 +961,10 @@ func (s *GatewayService) listSchedulableAccounts(ctx context.Context, groupID *i
 	if s.schedulerSnapshot != nil {
 		accounts, useMixed, err := s.schedulerSnapshot.ListSchedulableAccounts(ctx, groupID, platform, hasForcePlatform)
 		if err == nil {
+			accounts = s.filterAccountsBySchedulingThreshold(ctx, accounts)
+			if platform == PlatformGrok || strings.EqualFold(platform, PlatformGrok) {
+				accounts = s.filterGrokFreeQuotaAccountsForGateway(ctx, accounts)
+		placeholder
 			slog.Debug("account_scheduling_list_snapshot",
 				"group_id", derefGroupID(groupID),
 				"platform", platform,
@@ -1022,7 +1026,7 @@ placeholder
 					"tls_fingerprint", acc.IsTLSFingerprintEnabled())
 		placeholder
 	placeholder
-		return filtered, useMixed, nil
+		return s.filterAccountsBySchedulingThreshold(ctx, filtered), useMixed, nil
 placeholder
 
 	var accounts []Account
@@ -1056,6 +1060,10 @@ placeholder
 				"status", acc.Status,
 				"tls_fingerprint", acc.IsTLSFingerprintEnabled())
 	placeholder
+placeholder
+	accounts = s.filterAccountsBySchedulingThreshold(ctx, accounts)
+	if platform == PlatformGrok || strings.EqualFold(platform, PlatformGrok) {
+		accounts = s.filterGrokFreeQuotaAccountsForGateway(ctx, accounts)
 placeholder
 	return accounts, useMixed, nil
 placeholder
@@ -1428,10 +1436,50 @@ placeholder
 placeholder
 
 func (s *GatewayService) getSchedulableAccount(ctx context.Context, accountID int64) (*Account, error) {
+	var (
+		account *Account
+		err     error
+	)
 	if s.schedulerSnapshot != nil {
-		return s.schedulerSnapshot.GetAccount(ctx, accountID)
+		account, err = s.schedulerSnapshot.GetAccount(ctx, accountID)
+placeholder else {
+		account, err = s.accountRepo.GetByID(ctx, accountID)
 placeholder
-	return s.accountRepo.GetByID(ctx, accountID)
+	if err != nil || account == nil {
+		return account, err
+placeholder
+	if s.isAccountBlockedBySchedulingThreshold(ctx, account) {
+		return nil, nil
+placeholder
+	// Sticky / non-list selection must honor free soft-gate (same as listSchedulableAccounts).
+	if account.IsGrok() {
+		if gated := s.filterGrokFreeQuotaAccountsForGateway(ctx, []Account{*accountplaceholder); len(gated) == 0 {
+			return nil, nil
+	placeholder
+placeholder
+	return account, nil
+placeholder
+
+func (s *GatewayService) filterAccountsBySchedulingThreshold(ctx context.Context, accounts []Account) []Account {
+	if len(accounts) == 0 {
+		return accounts
+placeholder
+
+	filtered := make([]Account, 0, len(accounts))
+	for i := range accounts {
+		if s.isAccountBlockedBySchedulingThreshold(ctx, &accounts[i]) {
+			continue
+	placeholder
+		filtered = append(filtered, accounts[i])
+placeholder
+	return filtered
+placeholder
+
+func (s *GatewayService) isAccountBlockedBySchedulingThreshold(ctx context.Context, account *Account) bool {
+	if s == nil || s.rateLimitService == nil || account == nil {
+		return false
+placeholder
+	return s.rateLimitService.ApplyAccountSchedulingThreshold(ctx, account)
 placeholder
 
 func (s *GatewayService) hydrateSelectedAccount(ctx context.Context, account *Account) (*Account, error) {

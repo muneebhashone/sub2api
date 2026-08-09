@@ -3212,6 +3212,7 @@
         :show-agent-identity-option="form.platform === 'openai'"
         :show-codex-pat-option="form.platform === 'openai'"
         :show-sso-option="form.platform === 'grok'"
+        :show-email-password-option="false"
         :show-manual-option="true"
         :initial-input-method="'manual'"
         :platform="form.platform"
@@ -3224,6 +3225,7 @@
         @import-codex-session="handleOpenAIImportCodexSession"
         @import-codex-pat="handleOpenAIImportCodexPAT"
         @import-sso="handleGrokImportSSO"
+        @authorize-password="handleGrokAuthorizePassword"
       />
 
     </div>
@@ -3314,8 +3316,8 @@
   <BaseDialog
     :show="showGeminiHelpDialog"
     :title="t('admin.accounts.gemini.helpDialog.title')"
+    width="wide"
     @close="showGeminiHelpDialog = false"
-    max-width="max-w-3xl"
   >
     <div class="space-y-6">
       <!-- Setup Guide Section -->
@@ -5471,6 +5473,116 @@ const handleGrokImportSSO = async (ssoInput: string) => {
   placeholder catch (error: any) {
     grokOAuth.error.value = error.response?.data?.detail || error.message || t('admin.accounts.oauth.grok.failedToConvertSSO')
     appStore.showError(grokOAuth.error.value)
+  placeholder finally {
+    grokOAuth.loading.value = false
+  placeholder
+placeholder
+
+/**
+ * Grok password login: each line is email----password.
+ * Password is only used for the authorize API call; buildCredentials never stores it.
+ */
+const handleGrokAuthorizePassword = async (emailPasswordInput: string) => {
+  if (!emailPasswordInput.trim()) return
+  if (!validateGrokOAuthUpstreamConfig()) return
+
+  const lines = emailPasswordInput
+    .split('\n')
+    // Keep the password portion byte-for-byte; trim is only for determining
+    // whether this textarea line is blank.
+    .filter((line) => line.trim() && line.includes('----'))
+
+  if (lines.length === 0) {
+    grokOAuth.error.value = t(
+      'admin.accounts.oauth.grok.pleaseEnterPassword',
+      'Please enter email----password (one per line)'
+    )
+    return
+  placeholder
+
+  grokOAuth.loading.value = true
+  grokOAuth.error.value = ''
+
+  let successCount = 0
+  let failedCount = 0
+  const errors: string[] = []
+
+  try {
+    for (let i = 0; i < lines.length; i++) {
+      try {
+        const tokenInfo = await grokOAuth.authorizePassword(lines[i], form.proxy_id)
+        if (!tokenInfo) {
+          failedCount++
+          errors.push(`#${i + 1placeholder: ${grokOAuth.error.value || 'Authorization failed'placeholder`)
+          grokOAuth.error.value = ''
+          continue
+        placeholder
+
+        const credentials = grokOAuth.buildCredentials(tokenInfo)
+        applyGrokOAuthUpstreamConfig(credentials)
+        const extra = grokOAuth.buildExtraInfo(tokenInfo)
+        const accountName =
+          lines.length > 1
+            ? `${form.name || tokenInfo.email || 'Grok OAuth Account'placeholder #${i + 1placeholder`
+            : form.name || tokenInfo.email || 'Grok OAuth Account'
+
+        const modelMapping = buildModelMappingObject(
+          modelRestrictionMode.value,
+          allowedModels.value,
+          modelMappings.value
+        )
+        if (modelMapping) {
+          credentials.model_mapping = modelMapping
+        placeholder
+        if (!applyTempUnschedConfig(credentials)) {
+          return
+        placeholder
+
+        await adminAPI.accounts.create({
+          name: accountName,
+          notes: form.notes,
+          platform: 'grok',
+          type: 'oauth',
+          credentials,
+          extra,
+          proxy_id: form.proxy_id,
+          concurrency: form.concurrency,
+          load_factor: form.load_factor ?? undefined,
+          priority: form.priority,
+          rate_multiplier: form.rate_multiplier,
+          group_ids: form.group_ids,
+          expires_at: form.expires_at,
+          auto_pause_on_expired: autoPauseOnExpired.value
+        placeholder)
+        successCount++
+      placeholder catch (error: any) {
+        failedCount++
+        const errMsg = error.response?.data?.detail || error.message || 'Unknown error'
+        errors.push(`#${i + 1placeholder: ${errMsgplaceholder`)
+      placeholder
+    placeholder
+
+    if (successCount > 0 && failedCount === 0) {
+      appStore.showSuccess(
+        lines.length > 1
+          ? t('admin.accounts.oauth.batchSuccess', { count: successCount placeholder)
+          : t('admin.accounts.accountCreated')
+      )
+      emit('created')
+      handleClose()
+    placeholder else if (successCount > 0) {
+      appStore.showWarning(
+        t('admin.accounts.oauth.batchPartialSuccess', {
+          success: successCount,
+          failed: failedCount
+        placeholder)
+      )
+      grokOAuth.error.value = errors.join('\n')
+      emit('created')
+    placeholder else {
+      grokOAuth.error.value = errors.join('\n')
+      appStore.showError(t('admin.accounts.oauth.batchFailed'))
+    placeholder
   placeholder finally {
     grokOAuth.loading.value = false
   placeholder

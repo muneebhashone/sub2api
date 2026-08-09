@@ -75,6 +75,12 @@ placeholder
 // with Grok's native conversation header only for requests authenticated to a
 // Grok group. This keeps an unrelated x-grok-conv-id header from changing
 // scheduling or upstream session behavior for non-Grok groups.
+//
+// For Grok groups only, previous_response_id is a last-resort sticky seed so
+// multi-turn Responses chains stay on the same OAuth account when no explicit
+// session/conversation/prompt_cache_key is present. Non-Grok groups omit this
+// so HTTP OpenAI paths that delete previous_response_id before upstream are
+// unchanged.
 func explicitOpenAIRequestSessionID(c *gin.Context, body []byte) string {
 	if c == nil {
 		return ""
@@ -87,7 +93,25 @@ placeholder
 	if sessionID == "" && len(body) > 0 {
 		sessionID = strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String())
 placeholder
+	if sessionID == "" && isGrokRequestContext(c) && len(body) > 0 {
+		sessionID = grokPreviousResponseSessionSeed(body)
+placeholder
 	return sessionID
+placeholder
+
+// grokPreviousResponseSessionSeed returns a stable sticky seed from a Responses
+// previous_response_id. Only resp_* response ids are accepted; message ids and
+// unknown shapes must not pin sticky routing or prompt-cache identity.
+func grokPreviousResponseSessionSeed(body []byte) string {
+	id := strings.TrimSpace(gjson.GetBytes(body, "previous_response_id").String())
+	if id == "" {
+		return ""
+placeholder
+	if ClassifyOpenAIPreviousResponseIDKind(id) != OpenAIPreviousResponseIDKindResponseID {
+		return ""
+placeholder
+	// Namespace so content-derived seeds never collide with response ids.
+	return "grok-prev-resp:" + id
 placeholder
 
 // GenerateExplicitSessionHash generates a sticky-session hash only from explicit
@@ -114,6 +138,13 @@ placeholder
 //  5. Header: x-grok-conv-id (Grok groups only)
 //  6. Body:   prompt_cache_key
 //  7. Body:   content-based fallback (model + system + tools + first user message)
+//
+// Grok sticky affinity is intentionally separate from the upstream
+// prompt_cache_key identity (resolveGrokCacheIdentity): sticky pins an OAuth
+// account for multi-turn routing, while the cache identity is tenant+model
+// isolated for xAI server-side prompt cache. For Grok groups we scope the
+// sticky seed with the client-requested model so switching models does not
+// inherit a stale account binding (grok2api affinityKey pattern).
 func (s *OpenAIGatewayService) GenerateSessionHash(c *gin.Context, body []byte) string {
 	if c == nil {
 		return ""
@@ -127,9 +158,30 @@ placeholder
 		return ""
 placeholder
 
+	if isGrokRequestContext(c) {
+		sessionID = grokStickyAffinitySeed(sessionID, body)
+placeholder
+
 	currentHash, legacyHash := deriveOpenAISessionHashes(sessionID)
 	attachOpenAILegacySessionHashToGin(c, legacyHash)
 	return currentHash
+placeholder
+
+// grokStickyAffinitySeed scopes sticky routing by model without changing the
+// upstream prompt_cache_key written by applyGrokResponsesCacheIdentity.
+func grokStickyAffinitySeed(sessionID string, body []byte) string {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return ""
+placeholder
+	model := ""
+	if len(body) > 0 {
+		model = strings.ToLower(strings.TrimSpace(gjson.GetBytes(body, "model").String()))
+placeholder
+	if model == "" {
+		return "grok-affinity:v1:" + sessionID
+placeholder
+	return "grok-affinity:v1:" + model + ":" + sessionID
 placeholder
 
 // GenerateSessionHashWithFallback 先按常规信号生成会话哈希；
@@ -1206,7 +1258,14 @@ func (s *OpenAIGatewayService) listSchedulableAccounts(ctx context.Context, grou
 	platform = normalizeOpenAICompatiblePlatform(platform)
 	if s.schedulerSnapshot != nil {
 		accounts, _, err := s.schedulerSnapshot.ListSchedulableAccounts(ctx, groupID, platform, false)
-		return accounts, err
+		if err != nil {
+			return accounts, err
+	placeholder
+		accounts = s.filterOpenAIAccountsBySchedulingThreshold(ctx, accounts)
+		if platform == PlatformGrok {
+			accounts = s.filterGrokFreeQuotaAccountsForOpenAI(ctx, accounts)
+	placeholder
+		return accounts, nil
 placeholder
 	var accounts []Account
 	var err error
@@ -1219,6 +1278,10 @@ placeholder else {
 placeholder
 	if err != nil {
 		return nil, fmt.Errorf("query accounts failed: %w", err)
+placeholder
+	accounts = s.filterOpenAIAccountsBySchedulingThreshold(ctx, accounts)
+	if platform == PlatformGrok {
+		accounts = s.filterGrokFreeQuotaAccountsForOpenAI(ctx, accounts)
 placeholder
 	return accounts, nil
 placeholder
@@ -1254,6 +1317,9 @@ placeholder
 	if s.isOpenAIAccountRequestRuntimeBlocked(fresh, requestedModel) {
 		return nil
 placeholder
+	if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, fresh) {
+		return nil
+placeholder
 	if s.isOpenAIProxyStreamQuarantined(ctx, fresh) {
 		return nil
 placeholder
@@ -1283,6 +1349,9 @@ placeholder
 		if !isOpenAICompatibleAccountEligibleForRequest(ctx, account, platform, requestedModel, requireCompact, requiredCapability) {
 			return nil
 	placeholder
+		if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, account) {
+			return nil
+	placeholder
 		if !parentHealthyForShadow(account, s.parentAccountLookup(ctx)) {
 			return nil
 	placeholder
@@ -1306,6 +1375,9 @@ placeholder
 		return nil
 placeholder
 	if s.isOpenAIAccountRequestRuntimeBlocked(latest, requestedModel) {
+		return nil
+placeholder
+	if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, latest) {
 		return nil
 placeholder
 	if s.isOpenAIProxyStreamQuarantined(ctx, latest) {
@@ -1334,7 +1406,47 @@ placeholder
 	if err != nil || account == nil {
 		return account, err
 placeholder
+	if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, account) {
+		return nil, nil
+placeholder
+	// Legacy sticky (advanced scheduler off) must still free-gate Grok OAuth.
+	if account.IsGrok() {
+		if gated := s.filterGrokFreeQuotaAccountsForOpenAI(ctx, []Account{*accountplaceholder); len(gated) == 0 {
+			return nil, nil
+	placeholder
+placeholder
 	return account, nil
+placeholder
+
+// filterGrokFreeQuotaAccountsForOpenAI applies the same local free soft-gate as
+// GatewayService / advanced scheduler, for OpenAI-compatible legacy selection.
+func (s *OpenAIGatewayService) filterGrokFreeQuotaAccountsForOpenAI(ctx context.Context, accounts []Account) []Account {
+	if s == nil {
+		return accounts
+placeholder
+	return filterGrokFreeQuotaAccountsCore(ctx, s.cfg, s.usageLogRepo, &openaiGrokFreeQuotaGateCache, accounts)
+placeholder
+
+func (s *OpenAIGatewayService) filterOpenAIAccountsBySchedulingThreshold(ctx context.Context, accounts []Account) []Account {
+	if len(accounts) == 0 {
+		return accounts
+placeholder
+
+	filtered := make([]Account, 0, len(accounts))
+	for i := range accounts {
+		if s.isOpenAIAccountBlockedBySchedulingThreshold(ctx, &accounts[i]) {
+			continue
+	placeholder
+		filtered = append(filtered, accounts[i])
+placeholder
+	return filtered
+placeholder
+
+func (s *OpenAIGatewayService) isOpenAIAccountBlockedBySchedulingThreshold(ctx context.Context, account *Account) bool {
+	if s == nil || s.rateLimitService == nil || account == nil {
+		return false
+placeholder
+	return s.rateLimitService.ApplyAccountSchedulingThreshold(ctx, account)
 placeholder
 
 func (s *OpenAIGatewayService) hydrateSelectedAccount(ctx context.Context, account *Account) (*Account, error) {

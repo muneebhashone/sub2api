@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -41,13 +42,13 @@ placeholder{
 			want:     true,
 	placeholder,
 		{
-			name:     "video generation records usage",
+			name:     "video generation defers usage until status",
 			endpoint: service.GrokMediaEndpointVideosGenerations,
 			model:    "grok-imagine-video-1.5",
-			want:     true,
+			want:     false,
 	placeholder,
 		{
-			name:     "video status skips empty model usage",
+			name:     "video status skips immediate helper (status path claims separately)",
 			endpoint: service.GrokMediaEndpointVideoStatus,
 			model:    "",
 			want:     false,
@@ -68,7 +69,18 @@ placeholder
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, shouldRecordGrokMediaUsage(tt.endpoint, tt.model))
+			// Nil result must never bill.
+			require.False(t, shouldRecordGrokMediaUsage(tt.endpoint, tt.model, nil))
+			// Immediate helper only bills image generation (async video bills on status).
+			result := &service.OpenAIForwardResult{ImageCount: 1, VideoCount: 0placeholder
+			if tt.endpoint.IsGenerationRequest() && !isGrokVideoCreateEndpoint(tt.endpoint) && strings.TrimSpace(tt.model) != "" {
+				require.Equal(t, tt.want, shouldRecordGrokMediaUsage(tt.endpoint, tt.model, result))
+		placeholder else {
+				require.False(t, shouldRecordGrokMediaUsage(tt.endpoint, tt.model, result))
+		placeholder
+			// Zero billable units never bill even for generation + model.
+			empty := &service.OpenAIForwardResult{placeholder
+			require.False(t, shouldRecordGrokMediaUsage(tt.endpoint, tt.model, empty))
 	placeholder)
 placeholder
 placeholder

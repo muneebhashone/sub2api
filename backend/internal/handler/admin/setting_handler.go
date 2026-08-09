@@ -372,6 +372,10 @@ placeholder
 		ChannelMonitorEnabled:                settings.ChannelMonitorEnabled,
 		ChannelMonitorDefaultIntervalSeconds: settings.ChannelMonitorDefaultIntervalSeconds,
 
+		GrokDefaultTextModel:           settings.GrokDefaultTextModel,
+		GrokCrossClientModelMapEnabled: settings.GrokCrossClientModelMapEnabled,
+		GrokDefaultBaseURLMode:         settings.GrokDefaultBaseURLMode,
+
 		AvailableChannelsEnabled: settings.AvailableChannelsEnabled,
 
 		ModelPlazaEnabled:     settings.ModelPlazaEnabled,
@@ -380,7 +384,8 @@ placeholder
 
 		AffiliateEnabled: settings.AffiliateEnabled,
 
-		AllowUserViewErrorRequests: settings.AllowUserViewErrorRequests,
+		AccountSchedulingThresholds: settings.AccountSchedulingThresholds,
+		AllowUserViewErrorRequests:  settings.AllowUserViewErrorRequests,
 placeholder
 
 	// OpenAI fast policy (stored under a dedicated setting key)

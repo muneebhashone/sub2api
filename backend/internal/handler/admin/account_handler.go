@@ -1065,6 +1065,10 @@ type TestAccountRequest struct {
 	ModelID string `json:"model_id"`
 	Prompt  string `json:"prompt"`
 	Mode    string `json:"mode"`
+	// Optional media for Grok (and future) real generation tests.
+	// ImageDataURL / AudioDataURL are data:<mime>;base64,... payloads.
+	ImageDataURL string `json:"image_data_url"`
+	AudioDataURL string `json:"audio_data_url"`
 placeholder
 
 type SyncFromCRSRequest struct {
@@ -1094,8 +1098,13 @@ placeholder
 	// Allow empty body, model_id is optional
 	_ = c.ShouldBindJSON(&req)
 
+	opts := service.AccountTestOptions{
+		ImageDataURL: req.ImageDataURL,
+		AudioDataURL: req.AudioDataURL,
+placeholder
+
 	// Use AccountTestService to test the account with SSE streaming
-	if err := h.accountTestService.TestAccountConnection(c, accountID, req.ModelID, req.Prompt, req.Mode); err != nil {
+	if err := h.accountTestService.TestAccountConnection(c, accountID, req.ModelID, req.Prompt, req.Mode, opts); err != nil {
 		// Error already sent via SSE, just log
 		return
 placeholder
@@ -1415,6 +1424,9 @@ placeholder
 		return
 placeholder
 
+	// Drop SSO/password residue; re-auth must leave only OAuth tokens on disk.
+	req.Credentials = service.SanitizeStoredCredentials(existing.Platform, req.Credentials)
+
 	updatedAccount, err := h.adminService.UpdateAccount(ctx, accountID, &service.UpdateAccountInput{
 		Type:        req.Type,
 		Credentials: req.Credentials,
@@ -1438,6 +1450,20 @@ placeholder
 				"account_id", accountID,
 				"extra_keys", extraKeys,
 				"err", extraErr,
+			)
+	placeholder
+placeholder
+
+	// Successful re-auth clears the soft spending-limit reauth flag for Grok.
+	if existing.Platform == service.PlatformGrok {
+		if clearErr := h.adminService.UpdateAccountExtra(ctx, accountID, map[string]any{
+			"grok_needs_reauth":        false,
+			"grok_needs_reauth_reason": "",
+			"grok_needs_reauth_at":     "",
+	placeholder); clearErr != nil {
+			slog.Warn("apply_oauth_credentials.clear_grok_reauth_failed",
+				"account_id", accountID,
+				"err", clearErr,
 			)
 	placeholder
 placeholder
@@ -2422,6 +2448,11 @@ type BatchTodayStatsRequest struct {
 	AccountIDs []int64 `json:"account_ids" binding:"required"`
 placeholder
 
+type BatchUsageRequest struct {
+	AccountIDs []int64 `json:"account_ids" binding:"required"`
+	Force      bool    `json:"force"`
+placeholder
+
 // GetBatchTodayStats 批量获取多个账号的今日统计。
 // POST /api/v1/admin/accounts/today-stats/batch
 func (h *AccountHandler) GetBatchTodayStats(c *gin.Context) {
@@ -2466,6 +2497,36 @@ placeholder
 placeholder
 	c.Header("X-Snapshot-Cache", "miss")
 	response.Success(c, payload)
+placeholder
+
+// GetBatchUsage 批量获取多个账号的 current usage。
+// POST /api/v1/admin/accounts/usage/batch
+func (h *AccountHandler) GetBatchUsage(c *gin.Context) {
+	var req BatchUsageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	accountIDs := normalizeInt64IDList(req.AccountIDs)
+	if len(accountIDs) == 0 {
+		response.Success(c, gin.H{
+			"usage":  map[string]any{placeholder,
+			"errors": map[string]string{placeholder,
+	placeholder)
+		return
+placeholder
+
+	usageByAccount, errorsByAccount, err := h.accountUsageService.GetUsageBatch(c.Request.Context(), accountIDs, req.Force)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{
+		"usage":  usageByAccount,
+		"errors": errorsByAccount,
+placeholder)
 placeholder
 
 // SetSchedulableRequest represents the request body for setting schedulable status

@@ -415,6 +415,15 @@ placeholder
 		updates[SettingKeyChannelMonitorDefaultIntervalSeconds] = strconv.Itoa(v)
 placeholder
 
+	// Grok model mapping policy
+	if v := strings.TrimSpace(settings.GrokDefaultTextModel); v != "" {
+		updates[SettingKeyGrokDefaultTextModel] = v
+placeholder else {
+		updates[SettingKeyGrokDefaultTextModel] = "grok-4.5"
+placeholder
+	updates[SettingKeyGrokCrossClientModelMapEnabled] = strconv.FormatBool(settings.GrokCrossClientModelMapEnabled)
+	updates[SettingKeyGrokDefaultBaseURLMode] = normalizeGrokDefaultBaseURLMode(settings.GrokDefaultBaseURLMode)
+
 	// Available channels feature switch
 	updates[SettingKeyAvailableChannelsEnabled] = strconv.FormatBool(settings.AvailableChannelsEnabled)
 
@@ -511,10 +520,86 @@ placeholder
 	placeholder
 		updates[SettingKeyDefaultPlatformQuotas] = string(blob)
 placeholder
+	if settings.AccountSchedulingThresholds != nil {
+		normalized, err := validateAndNormalizeAccountSchedulingThresholds(settings.AccountSchedulingThresholds)
+		if err != nil {
+			return nil, err
+	placeholder
+		blob, err := json.Marshal(normalized)
+		if err != nil {
+			return nil, fmt.Errorf("marshal account scheduling thresholds: %w", err)
+	placeholder
+		updates[SettingKeyAccountSchedulingThresholds] = string(blob)
+placeholder
 
 	updates[SettingKeyAllowUserViewErrorRequests] = strconv.FormatBool(settings.AllowUserViewErrorRequests)
 
 	return updates, nil
+placeholder
+
+func defaultAccountSchedulingThresholds() map[string]int {
+	return map[string]int{
+		PlatformOpenAI:    100,
+		PlatformAnthropic: 100,
+		PlatformGrok:      100,
+placeholder
+placeholder
+
+func validateAndNormalizeAccountSchedulingThresholds(input map[string]int) (map[string]int, error) {
+	normalized := defaultAccountSchedulingThresholds()
+	for platform, value := range input {
+		allowed := false
+		for _, item := range AllowedSchedulingThresholdPlatforms {
+			if item == platform {
+				allowed = true
+				break
+		placeholder
+	placeholder
+		if !allowed {
+			return nil, infraerrors.BadRequest("INVALID_ACCOUNT_SCHEDULING_THRESHOLDS", fmt.Sprintf("unknown platform %q", platform))
+	placeholder
+		if value < 1 || value > 100 {
+			return nil, infraerrors.BadRequest("INVALID_ACCOUNT_SCHEDULING_THRESHOLDS", "platform scheduling threshold must be between 1 and 100")
+	placeholder
+		normalized[platform] = value
+placeholder
+	return normalized, nil
+placeholder
+
+func parseAccountSchedulingThresholdsSetting(raw string) (map[string]int, error) {
+	thresholds := defaultAccountSchedulingThresholds()
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return thresholds, nil
+placeholder
+	parsed := map[string]int{placeholder
+	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+		return thresholds, err
+placeholder
+	for _, platform := range AllowedSchedulingThresholdPlatforms {
+		if value, ok := parsed[platform]; ok {
+			thresholds[platform] = boundedIntOrDefault(value, 1, 100, 100)
+	placeholder
+placeholder
+	return thresholds, nil
+placeholder
+
+func boundedIntOrDefault(value, minValue, maxValue, defaultValue int) int {
+	if value < minValue || value > maxValue {
+		return defaultValue
+placeholder
+	return value
+placeholder
+
+func cloneAccountSchedulingThresholds(input map[string]int) map[string]int {
+	if len(input) == 0 {
+		return defaultAccountSchedulingThresholds()
+placeholder
+	cloned := make(map[string]int, len(input))
+	for key, value := range input {
+		cloned[key] = value
+placeholder
+	return cloned
 placeholder
 
 // validateDefaultPlatformQuotaMap 校验 platform quota map 的合法性：
@@ -671,6 +756,20 @@ placeholder)
 			settings:  cached.settings,
 			expiresAt: 0,
 	placeholder)
+placeholder
+	accountSchedulingThresholdsSF.Forget(SettingKeyAccountSchedulingThresholds)
+	if settings.AccountSchedulingThresholds != nil {
+		normalizedThresholds, err := validateAndNormalizeAccountSchedulingThresholds(settings.AccountSchedulingThresholds)
+		if err != nil {
+			normalizedThresholds = defaultAccountSchedulingThresholds()
+	placeholder
+		accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{
+			thresholds: cloneAccountSchedulingThresholds(normalizedThresholds),
+			expiresAt:  time.Now().Add(accountSchedulingThresholdsCacheTTL).UnixNano(),
+	placeholder)
+placeholder else {
+		// Partial/omitted payload: clear cache so the next hot-path read reloads from DB.
+		accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{placeholder)
 placeholder
 	if s.cfg != nil {
 		s.cfg.SetForwardedClientIPSettings(settings.APIKeyACLTrustForwardedIP, settings.ForwardedClientIPHeaders)

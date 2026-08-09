@@ -6,7 +6,30 @@ import (
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 )
+
+func TestGrokAccountModelMappingCacheInvalidatesWithRuntimeSettings(t *testing.T) {
+	original := xai.RuntimeModelMappingOptions()
+	t.Cleanup(func() { xai.SetRuntimeModelMappingOptions(original) placeholder)
+	account := &Account{Platform: PlatformGrok, Credentials: map[string]any{placeholderplaceholder
+
+	xai.SetRuntimeModelMappingOptions(xai.ModelMappingOptions{placeholder)
+	requireMappedModel(t, account, "claude-sonnet-4-5", "claude-sonnet-4-5")
+
+	xai.SetRuntimeModelMappingOptions(xai.ModelMappingOptions{
+		DefaultText:          "grok-build-0.1",
+		EnableCrossClientMap: true,
+placeholder)
+	requireMappedModel(t, account, "claude-sonnet-4-5", "grok-build-0.1")
+placeholder
+
+func requireMappedModel(t *testing.T, account *Account, requested, expected string) {
+placeholder
+	if actual := account.GetMappedModel(requested); actual != expected {
+		t.Fatalf("GetMappedModel(%q) = %q, want %q", requested, actual, expected)
+placeholder
+placeholder
 
 func TestMatchWildcard(t *testing.T) {
 	tests := []struct {
