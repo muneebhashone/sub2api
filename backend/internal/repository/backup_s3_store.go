@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"time"
 
@@ -57,6 +58,34 @@ placeholder)
 		return 0, fmt.Errorf("S3 PutObject: %w", err)
 placeholder
 	return int64(len(data)), nil
+placeholder
+
+func (s *S3BackupStore) UploadFile(ctx context.Context, key string, filePath string, contentType string) (int64, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("open upload file: %w", err)
+placeholder
+	defer func() { _ = file.Close() placeholder()
+
+	info, err := file.Stat()
+	if err != nil {
+		return 0, fmt.Errorf("stat upload file: %w", err)
+placeholder
+	sizeBytes := info.Size()
+
+	finish := servertiming.ObserveDependency(ctx, "s3")
+	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        &s.bucket,
+		Key:           &key,
+		Body:          file,
+		ContentLength: &sizeBytes,
+		ContentType:   &contentType,
+placeholder)
+	finish()
+	if err != nil {
+		return 0, fmt.Errorf("S3 PutObject file: %w", err)
+placeholder
+	return sizeBytes, nil
 placeholder
 
 func (s *S3BackupStore) Download(ctx context.Context, key string) (io.ReadCloser, error) {
