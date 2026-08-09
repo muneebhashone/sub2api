@@ -66,6 +66,18 @@ placeholder)
 	require.Equal(t, "new@example.com", repo.values[service.SettingKeySMTPFrom])
 placeholder
 
+func TestUpdateSettingsGrokDefaultBaseURLModeIsWritable(t *testing.T) {
+	h, repo := newStepUpSwitchTestHandler(t, map[string]string{
+		service.SettingKeyGrokDefaultBaseURLMode: service.GrokDefaultBaseURLModeCLI,
+placeholder)
+
+	rec := doUpdateSettings(t, h, map[string]any{
+		"grok_default_base_url_mode": service.GrokDefaultBaseURLModeEUWest1,
+placeholder, nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, service.GrokDefaultBaseURLModeEUWest1, repo.values[service.SettingKeyGrokDefaultBaseURLMode])
+placeholder
+
 func TestUpdateSettingsRejectsTwoCaptchaProviders(t *testing.T) {
 	h, _ := newStepUpSwitchTestHandler(t, map[string]string{
 		service.SettingKeyTurnstileEnabled:   "true",

@@ -193,7 +193,11 @@ placeholder
 		if err != nil {
 			return nil, newUpstreamModelSyncConfigError("Invalid Grok base URL", err)
 	placeholder
-		validatedBaseURL, err := validator(account.GetGrokBaseURL())
+		baseURL := account.GetGrokBaseURL()
+		if s.settingService != nil {
+			baseURL = s.settingService.ResolveGrokBaseURL(ctx, account)
+	placeholder
+		validatedBaseURL, err := validator(baseURL)
 		if err != nil {
 			return nil, newUpstreamModelSyncConfigError("Invalid Grok base URL", err)
 	placeholder

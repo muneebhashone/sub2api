@@ -193,6 +193,20 @@ placeholder
 	return nil
 placeholder
 
+func (c *openAIWSStateStoreTimeoutProbeCache) SetGrokVideoPendingBilling(_ context.Context, _ string, _ []byte, _ time.Duration) error {
+	return nil
+placeholder
+func (c *openAIWSStateStoreTimeoutProbeCache) GetGrokVideoPendingBilling(_ context.Context, _ string) ([]byte, error) {
+	return nil, nil
+placeholder
+func (c *openAIWSStateStoreTimeoutProbeCache) ClaimGrokVideoBilled(_ context.Context, _ string, _ time.Duration) (bool, error) {
+	return true, nil
+placeholder
+
+func (c *openAIWSStateStoreTimeoutProbeCache) ReleaseGrokVideoBilled(_ context.Context, _ string) error {
+	return nil
+placeholder
+
 func TestOpenAIWSStateStore_RedisOpsUseShortTimeout(t *testing.T) {
 	probe := &openAIWSStateStoreTimeoutProbeCache{placeholder
 	store := NewOpenAIWSStateStore(probe)

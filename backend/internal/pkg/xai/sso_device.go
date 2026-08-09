@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"sort"
 	"strconv"
@@ -25,6 +26,7 @@ const (
 	SSOConversionTimeout = 90 * time.Second
 
 	ssoMaxAuthBody     = 2 << 20
+	ssoMaxTokenLength  = 16 << 10
 	ssoDefaultUA       = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 	ssoDefaultTokenTTL = 6 * time.Hour
 )
@@ -51,7 +53,7 @@ placeholder
 type ssoDeviceFlow struct {
 	client    SSODeviceHTTPClient
 	userAgent string
-	cookies   map[string]string
+	cookieJar http.CookieJar
 	sleep     func(context.Context, time.Duration) error
 placeholder
 
@@ -80,11 +82,16 @@ placeholder
 	if sleep == nil {
 		sleep = sleepContext
 placeholder
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+placeholder
+	seedSSOCookies(jar, ssoToken)
 
 	flow := &ssoDeviceFlow{
 		client:    client,
 		userAgent: userAgent,
-		cookies:   map[string]string{"sso": ssoToken, "sso-rw": ssoTokenplaceholder,
+		cookieJar: jar,
 		sleep:     sleep,
 placeholder
 	return flow.convert(ctx)
@@ -253,7 +260,7 @@ placeholder
 		request.Header.Set("Accept", "application/json, text/html;q=0.9, */*;q=0.8")
 		request.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 		request.Header.Set("User-Agent", f.userAgent)
-		if cookie := f.cookieHeader(); cookie != "" {
+		if cookie := f.cookieHeader(request.URL); cookie != "" {
 			request.Header.Set("Cookie", cookie)
 	placeholder
 		if currentForm != nil {
@@ -264,7 +271,7 @@ placeholder
 		if err != nil {
 			return 0, currentURL, nil, err
 	placeholder
-		f.captureCookies(response)
+		f.captureCookies(request.URL, response)
 		data, readErr := io.ReadAll(io.LimitReader(response.Body, ssoMaxAuthBody+1))
 		_ = response.Body.Close()
 		if readErr != nil {
@@ -298,30 +305,49 @@ placeholder
 	return 0, currentURL, nil, errors.New("xAI OAuth redirected too many times")
 placeholder
 
-func (f *ssoDeviceFlow) captureCookies(response *http.Response) {
+func seedSSOCookies(jar http.CookieJar, token string) {
+	if jar == nil {
+		return
+placeholder
+	for _, rawURL := range []string{SSOAccountsURL, OAuthIssuer + "/"placeholder {
+		target, err := url.Parse(rawURL)
+		if err != nil {
+			continue
+	placeholder
+		jar.SetCookies(target, []*http.Cookie{
+			{Name: "sso", Value: token, Path: "/", Secure: true, HttpOnly: trueplaceholder,
+			{Name: "sso-rw", Value: token, Path: "/", Secure: true, HttpOnly: trueplaceholder,
+	placeholder)
+placeholder
+placeholder
+
+func (f *ssoDeviceFlow) captureCookies(requestURL *url.URL, response *http.Response) {
+	if f == nil || f.cookieJar == nil || requestURL == nil || response == nil {
+		return
+placeholder
+	cookies := make([]*http.Cookie, 0)
 	for _, cookie := range response.Cookies() {
 		name := strings.TrimSpace(cookie.Name)
 		value := strings.TrimSpace(cookie.Value)
 		if name == "" || len(name) > 128 || len(value) > 16384 || strings.ContainsAny(name+value, "\r\n\x00") {
 			continue
 	placeholder
-		if cookie.MaxAge < 0 {
-			delete(f.cookies, name)
-			continue
-	placeholder
-		f.cookies[name] = value
+		cookie.Name = name
+		cookie.Value = value
+		cookies = append(cookies, cookie)
 placeholder
+	f.cookieJar.SetCookies(requestURL, cookies)
 placeholder
 
-func (f *ssoDeviceFlow) cookieHeader() string {
-	keys := make([]string, 0, len(f.cookies))
-	for key := range f.cookies {
-		keys = append(keys, key)
+func (f *ssoDeviceFlow) cookieHeader(requestURL *url.URL) string {
+	if f == nil || f.cookieJar == nil || requestURL == nil {
+		return ""
 placeholder
-	sort.Strings(keys)
-	parts := make([]string, 0, len(keys))
-	for _, key := range keys {
-		parts = append(parts, key+"="+f.cookies[key])
+	cookies := f.cookieJar.Cookies(requestURL)
+	sort.Slice(cookies, func(i, j int) bool { return cookies[i].Name < cookies[j].Name placeholder)
+	parts := make([]string, 0, len(cookies))
+	for _, cookie := range cookies {
+		parts = append(parts, cookie.Name+"="+cookie.Value)
 placeholder
 	return strings.Join(parts, "; ")
 placeholder
@@ -363,7 +389,11 @@ placeholder
 placeholder
 
 func sanitizeSSOToken(value string) string {
-	return strings.NewReplacer("\r", "", "\n", "", "\x00", "").Replace(strings.TrimSpace(value))
+	value = strings.NewReplacer("\r", "", "\n", "", "\x00", "").Replace(strings.TrimSpace(value))
+	if len(value) > ssoMaxTokenLength {
+		return ""
+placeholder
+	return value
 placeholder
 
 func DecodeJWTClaims(token string) map[string]any {
