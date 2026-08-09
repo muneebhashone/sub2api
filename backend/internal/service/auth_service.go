@@ -1207,6 +1207,7 @@ placeholder
 placeholder
 
 // validateRegistrationEmailQuota 保留白名单为空时的全放行行为；配置白名单后，
+// 非白名单域名默认直接拒绝（严格白名单模式）；仅当域名限量注册开关开启时，
 // 非白名单域名每个最多允许一个账户。
 func (s *AuthService) validateRegistrationEmailQuota(ctx context.Context, email string) error {
 	if s.settingService == nil {
@@ -1215,6 +1216,9 @@ placeholder
 	whitelist := s.settingService.GetRegistrationEmailSuffixWhitelist(ctx)
 	if !IsRegistrationEmailSuffixLimited(email, whitelist) {
 		return nil
+placeholder
+	if !s.settingService.IsRegistrationEmailDomainQuotaEnabled(ctx) {
+		return buildEmailSuffixNotAllowedError(whitelist)
 placeholder
 
 	domain := RegistrationEmailDomain(email)
@@ -1252,6 +1256,10 @@ placeholder
 	domain := RegistrationEmailDomain(user.Email)
 	if !IsRegistrationEmailSuffixLimited(user.Email, whitelist) {
 		return s.userRepo.CreateWithEmailAliasGuard(ctx, user)
+placeholder
+	// 开关关闭时非白名单域名在校验阶段已被拒绝；此处兜底防御设置竞态变更。
+	if s.settingService == nil || !s.settingService.IsRegistrationEmailDomainQuotaEnabled(ctx) {
+		return buildEmailSuffixNotAllowedError(whitelist)
 placeholder
 	if domain == "" {
 		return buildEmailSuffixNotAllowedError(whitelist)
