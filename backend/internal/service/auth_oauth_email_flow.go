@@ -42,6 +42,9 @@ placeholder
 	if s == nil || s.emailService == nil {
 		return nil, ErrServiceUnavailable
 placeholder
+	if err := s.validateRegistrationEmailQuota(ctx, email); err != nil {
+		return nil, err
+placeholder
 
 	siteName := "Sub2API"
 	if s.settingService != nil {
@@ -118,10 +121,6 @@ placeholder
 	if isReservedEmail(email) {
 		return nil, nil, ErrEmailReserved
 placeholder
-	if err := s.validateRegistrationEmailPolicy(ctx, email); err != nil {
-		slog.Error("oauth email register: policy rejected", "email", email, "error", err.Error())
-		return nil, nil, err
-placeholder
 	if err := s.VerifyOAuthEmailCode(ctx, email, verifyCode); err != nil {
 		slog.Error("oauth email register: verify code failed", "email", email, "error", err.Error())
 		return nil, nil, err
@@ -140,6 +139,10 @@ placeholder
 placeholder
 	if existsEmail {
 		return nil, nil, ErrEmailExists
+placeholder
+	if err := s.validateRegistrationEmailQuota(ctx, email); err != nil {
+		slog.Error("oauth email register: policy rejected", "email", email, "error", err.Error())
+		return nil, nil, err
 placeholder
 
 	hashedPassword, err := s.HashPassword(password)
@@ -160,12 +163,16 @@ placeholder
 		SignupSource: signupSource,
 placeholder
 
-	if err := s.userRepo.CreateWithEmailAliasGuard(ctx, user); err != nil {
-		if errors.Is(err, ErrEmailExists) {
+	if err := s.createUserWithRegistrationEmailGuard(ctx, user); err != nil {
+		switch {
+		case errors.Is(err, ErrEmailExists):
 			return nil, nil, ErrEmailExists
+		case errors.Is(err, ErrEmailDomainRegistrationLimit):
+			return nil, nil, ErrEmailDomainRegistrationLimit
+		default:
+			slog.Error("oauth email register: userRepo.Create failed", "email", email, "signup_source", signupSource, "error", err.Error())
+			return nil, nil, ErrServiceUnavailable
 	placeholder
-		slog.Error("oauth email register: userRepo.Create failed", "email", email, "signup_source", signupSource, "error", err.Error())
-		return nil, nil, ErrServiceUnavailable
 placeholder
 
 	tokenPair, err := s.GenerateTokenPair(ctx, user, "")
@@ -202,9 +209,6 @@ placeholder
 	if isReservedEmail(email) {
 		return nil, nil, ErrEmailReserved
 placeholder
-	if err := s.validateRegistrationEmailPolicy(ctx, email); err != nil {
-		return nil, nil, err
-placeholder
 	if strings.TrimSpace(password) == "" {
 		return nil, nil, infraerrors.BadRequest("PASSWORD_REQUIRED", "password is required")
 placeholder
@@ -219,6 +223,9 @@ placeholder
 placeholder
 	if existsEmail {
 		return nil, nil, ErrEmailExists
+placeholder
+	if err := s.validateRegistrationEmailQuota(ctx, email); err != nil {
+		return nil, nil, err
 placeholder
 
 	hashedPassword, err := s.HashPassword(password)
@@ -243,11 +250,15 @@ placeholder
 		SignupSource: signupSource,
 placeholder
 
-	if err := s.userRepo.CreateWithEmailAliasGuard(ctx, user); err != nil {
-		if errors.Is(err, ErrEmailExists) {
+	if err := s.createUserWithRegistrationEmailGuard(ctx, user); err != nil {
+		switch {
+		case errors.Is(err, ErrEmailExists):
 			return nil, nil, ErrEmailExists
+		case errors.Is(err, ErrEmailDomainRegistrationLimit):
+			return nil, nil, ErrEmailDomainRegistrationLimit
+		default:
+			return nil, nil, ErrServiceUnavailable
 	placeholder
-		return nil, nil, ErrServiceUnavailable
 placeholder
 
 	tokenPair, err := s.GenerateTokenPair(ctx, user, "")

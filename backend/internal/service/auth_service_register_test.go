@@ -414,20 +414,51 @@ placeholder, nil, nil)
 placeholder
 
 func TestAuthService_Register_EmailSuffixNotAllowed(t *testing.T) {
-	repo := &userRepoStub{placeholder
+	repo := &userRepoStub{domainCounts: map[string]int{"other.com": 1placeholderplaceholder
 	service := newAuthService(repo, map[string]string{
 		SettingKeyRegistrationEnabled:              "true",
 		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com","@company.com"]`,
 placeholder, nil, nil)
 
 	_, _, err := service.Register(context.Background(), "user@other.com", "password")
-	require.ErrorIs(t, err, ErrEmailSuffixNotAllowed)
+	require.ErrorIs(t, err, ErrEmailDomainRegistrationLimit)
 	appErr := infraerrors.FromError(err)
-	require.Contains(t, appErr.Message, "@example.com")
-	require.Contains(t, appErr.Message, "@company.com")
-	require.Equal(t, "EMAIL_SUFFIX_NOT_ALLOWED", appErr.Reason)
-	require.Equal(t, "2", appErr.Metadata["allowed_suffix_count"])
-	require.Equal(t, "@example.com,@company.com", appErr.Metadata["allowed_suffixes"])
+	require.Equal(t, "EMAIL_DOMAIN_REGISTRATION_LIMIT", appErr.Reason)
+	require.Contains(t, appErr.Message, "mainstream email")
+placeholder
+
+func TestAuthService_Register_NonWhitelistDomainAllowsFirstAccount(t *testing.T) {
+	repo := &userRepoStub{nextID: 9, domainCounts: map[string]int{"custom.example": 0placeholderplaceholder
+	svc := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com"]`,
+placeholder, nil, nil)
+
+	_, user, err := svc.Register(context.Background(), "first@custom.example", "password")
+placeholder
+	require.Equal(t, int64(9), user.ID)
+placeholder
+
+func TestAuthService_Register_NonWhitelistDomainRejectsSecondAccount(t *testing.T) {
+	repo := &userRepoStub{domainCounts: map[string]int{"custom.example": 1placeholderplaceholder
+	svc := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com"]`,
+placeholder, nil, nil)
+
+	_, _, err := svc.Register(context.Background(), "second@sub.custom.example", "password")
+	require.ErrorIs(t, err, ErrEmailDomainRegistrationLimit)
+placeholder
+
+func TestAuthService_Register_EmptyWhitelistAllowsAllDomains(t *testing.T) {
+	repo := &userRepoStub{nextID: 10placeholder
+	svc := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `[]`,
+placeholder, nil, nil)
+
+	_, _, err := svc.Register(context.Background(), "any@custom.example", "password")
+placeholder
 placeholder
 
 func TestAuthService_Register_EmailSuffixAllowed(t *testing.T) {
@@ -444,18 +475,38 @@ placeholder
 placeholder
 
 func TestAuthService_SendVerifyCode_EmailSuffixNotAllowed(t *testing.T) {
-	repo := &userRepoStub{placeholder
+	repo := &userRepoStub{domainCounts: map[string]int{"other.com": 1placeholderplaceholder
 	service := newAuthService(repo, map[string]string{
 		SettingKeyRegistrationEnabled:              "true",
 		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com","@company.com"]`,
 placeholder, nil, nil)
 
 	err := service.SendVerifyCode(context.Background(), "user@other.com")
-	require.ErrorIs(t, err, ErrEmailSuffixNotAllowed)
+	require.ErrorIs(t, err, ErrEmailDomainRegistrationLimit)
 	appErr := infraerrors.FromError(err)
-	require.Contains(t, appErr.Message, "@example.com")
-	require.Contains(t, appErr.Message, "@company.com")
-	require.Equal(t, "2", appErr.Metadata["allowed_suffix_count"])
+	require.Equal(t, "EMAIL_DOMAIN_REGISTRATION_LIMIT", appErr.Reason)
+placeholder
+
+func TestAuthService_SendVerifyCode_NonWhitelistDomainLimit(t *testing.T) {
+	repo := &userRepoStub{domainCounts: map[string]int{"custom.example": 1placeholderplaceholder
+	svc := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com"]`,
+placeholder, nil, nil)
+
+	err := svc.SendVerifyCode(context.Background(), "user@custom.example")
+	require.ErrorIs(t, err, ErrEmailDomainRegistrationLimit)
+placeholder
+
+func TestAuthService_SendVerifyCodeAsync_NonWhitelistDomainLimit(t *testing.T) {
+	repo := &userRepoStub{domainCounts: map[string]int{"custom.example": 1placeholderplaceholder
+	svc := newAuthService(repo, map[string]string{
+		SettingKeyRegistrationEnabled:              "true",
+		SettingKeyRegistrationEmailSuffixWhitelist: `["@example.com"]`,
+placeholder, nil, nil)
+
+	_, err := svc.SendVerifyCodeAsync(context.Background(), "user@custom.example")
+	require.ErrorIs(t, err, ErrEmailDomainRegistrationLimit)
 placeholder
 
 func TestAuthService_Register_CreateError(t *testing.T) {
