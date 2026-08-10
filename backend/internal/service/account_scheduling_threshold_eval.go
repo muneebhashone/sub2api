@@ -245,7 +245,7 @@ placeholder
 placeholder
 	return &accountSchedulingThresholdCandidate{
 		window:      window,
-		usedPercent: utilizationAsPercent(usedPercent),
+		usedPercent: schedulingPercentValue(usedPercent),
 		until:       parseSchedulingResetAt(extra[resetAtKey]),
 placeholder
 placeholder
