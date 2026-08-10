@@ -57,23 +57,6 @@ placeholder
 	return out, nil
 placeholder
 
-func TestContentModerationCheck_LoadRuntimeSnapshotFailureBlocks(t *testing.T) {
-	svc := &ContentModerationService{
-		settingRepo: &contentModerationTestSettingRepo{err: fmt.Errorf("settings unavailable")placeholder,
-		repo:        &contentModerationTestRepo{placeholder,
-placeholder
-
-	decision, err := svc.Check(context.Background(), ContentModerationCheckInput{UserID: 1placeholder)
-
-placeholder
-	require.False(t, decision.Allowed)
-	require.True(t, decision.Blocked)
-	require.False(t, decision.Flagged)
-	require.Equal(t, ContentModerationActionError, decision.Action)
-	require.Equal(t, "风控系统暂时不可用，请稍后重试", decision.Message)
-	require.Equal(t, http.StatusInternalServerError, decision.StatusCode)
-placeholder
-
 func (r *contentModerationTestSettingRepo) SetMultiple(ctx context.Context, settings map[string]string) error {
 	if r.values == nil {
 		r.values = map[string]string{placeholder

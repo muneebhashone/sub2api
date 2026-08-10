@@ -415,4 +415,69 @@ describe('admin RiskControlView', () => {
       'overflow-y-auto',
     ]))
   placeholder)
+
+  // 防"开关静默失效"：后端返回的 fail_closed_on_error 必须回填到表单，并在保存时
+  // 原样回传，否则运维打开的开关会被下一次保存悄悄清掉。
+  it('round-trips fail_closed_on_error between load and save', async () => {
+    getConfig.mockResolvedValue({ ...baseConfig(), fail_closed_on_error: true placeholder)
+
+    const wrapper = mount(RiskControlView, {
+      global: {
+        stubs: {
+          AppLayout: AppLayoutStub,
+          BaseDialog: BaseDialogStub,
+          Icon: true,
+          Select: true,
+          Toggle: true,
+          Pagination: true,
+          ModelWhitelistSelector: ModelWhitelistSelectorStub,
+          ProxySelector: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    await findButtonByText(wrapper, 'admin.riskControl.openSettings').trigger('click')
+    await findButtonByText(wrapper, 'admin.riskControl.saveConfig').trigger('click')
+    await flushPromises()
+
+    expect(updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+      fail_closed_on_error: true,
+    placeholder))
+    expect(showError).not.toHaveBeenCalled()
+  placeholder)
+
+  it('defaults fail_closed_on_error to false when the backend omits it', async () => {
+    const { fail_closed_on_error: _omitted, ...withoutSwitch placeholder = {
+      ...baseConfig(),
+      fail_closed_on_error: false,
+    placeholder
+    getConfig.mockResolvedValue(withoutSwitch)
+
+    const wrapper = mount(RiskControlView, {
+      global: {
+        stubs: {
+          AppLayout: AppLayoutStub,
+          BaseDialog: BaseDialogStub,
+          Icon: true,
+          Select: true,
+          Toggle: true,
+          Pagination: true,
+          ModelWhitelistSelector: ModelWhitelistSelectorStub,
+          ProxySelector: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    await flushPromises()
+
+    await findButtonByText(wrapper, 'admin.riskControl.openSettings').trigger('click')
+    await findButtonByText(wrapper, 'admin.riskControl.saveConfig').trigger('click')
+    await flushPromises()
+
+    expect(updateConfig).toHaveBeenCalledWith(expect.objectContaining({
+      fail_closed_on_error: false,
+    placeholder))
+  placeholder)
 placeholder)
