@@ -831,7 +831,14 @@ placeholder
 			"endpoint", input.Endpoint,
 			"protocol", input.Protocol,
 			"error", err)
-		return allow, nil
+		return &ContentModerationDecision{
+			Allowed:    false,
+			Blocked:    true,
+			Flagged:    false,
+			Message:    "风控系统暂时不可用，请稍后重试",
+			StatusCode: http.StatusInternalServerError,
+			Action:     ContentModerationActionError,
+	placeholder, nil
 placeholder
 	if !runtimeSnapshot.riskControlEnabled {
 		slog.Info("content_moderation.skip_feature_disabled",
