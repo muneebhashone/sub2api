@@ -1114,6 +1114,13 @@ placeholder
 
 		raw, err := s.settingRepo.GetValue(dbCtx, SettingKeyAccountSchedulingThresholds)
 		if err != nil {
+			if errors.Is(err, ErrSettingNotFound) {
+				accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{
+					thresholds: cloneAccountSchedulingThresholds(thresholds),
+					expiresAt:  time.Now().Add(accountSchedulingThresholdsCacheTTL).UnixNano(),
+			placeholder)
+				return cloneAccountSchedulingThresholds(thresholds), nil
+		placeholder
 			slog.Warn("failed to get account scheduling thresholds, falling back to defaults", "error", err)
 			accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{
 				thresholds: cloneAccountSchedulingThresholds(thresholds),
