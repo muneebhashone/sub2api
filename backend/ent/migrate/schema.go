@@ -928,7 +928,12 @@ placeholder
 		{Name: "video_price_480p", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "video_price_720p", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "video_price_1080p", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "video_model_prices", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
 		{Name: "web_search_price_per_call", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "search_price_per_1k", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "audio_realtime_price_per_min", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "audio_tts_price_per_million_chars", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
+		{Name: "audio_stt_price_per_hour", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"placeholderplaceholder,
 		{Name: "claude_code_only", Type: field.TypeBool, Default: falseplaceholder,
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "fallback_group_id_on_invalid_request", Type: field.TypeInt64, Nullable: trueplaceholder,
@@ -947,6 +952,9 @@ placeholder
 		{Name: "rpm_limit", Type: field.TypeInt, Default: 0placeholder,
 		{Name: "max_reasoning_effort", Type: field.TypeString, Size: 20, Default: ""placeholder,
 		{Name: "reasoning_effort_mappings", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"placeholderplaceholder,
+		{Name: "profit_control_enabled", Type: field.TypeBool, Default: falseplaceholder,
+		{Name: "profit_min_margin", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
+		{Name: "profit_safety_buffer", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(10,4)"placeholderplaceholder,
 placeholder
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
@@ -982,7 +990,7 @@ placeholder
 			{
 				Name:    "group_sort_order",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[42]placeholder,
+				Columns: []*schema.Column{GroupsColumns[47]placeholder,
 		placeholder,
 			{
 				Name:    "idx_groups_duplicate_operation_id_active",
@@ -1618,6 +1626,8 @@ placeholder
 		{Name: "model", Type: field.TypeString, Size: 100placeholder,
 		{Name: "requested_model", Type: field.TypeString, Nullable: true, Size: 100placeholder,
 		{Name: "upstream_model", Type: field.TypeString, Nullable: true, Size: 100placeholder,
+		{Name: "upstream_response_model", Type: field.TypeString, Nullable: true, Size: 200placeholder,
+		{Name: "upstream_model_mismatch", Type: field.TypeBool, Nullable: trueplaceholder,
 		{Name: "channel_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "model_mapping_chain", Type: field.TypeString, Nullable: true, Size: 500placeholder,
 		{Name: "billing_tier", Type: field.TypeString, Nullable: true, Size: 50placeholder,
@@ -1668,31 +1678,31 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[41]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[43]placeholder,
 				RefColumns: []*schema.Column{APIKeysColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[42]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[44]placeholder,
 				RefColumns: []*schema.Column{AccountsColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[43]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[45]placeholder,
 				RefColumns: []*schema.Column{GroupsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[44]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[46]placeholder,
 				RefColumns: []*schema.Column{UsersColumns[0]placeholder,
 				OnDelete:   schema.NoAction,
 		placeholder,
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[45]placeholder,
+				Columns:    []*schema.Column{UsageLogsColumns[47]placeholder,
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -1701,32 +1711,32 @@ placeholder
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[44]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[46]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[41]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[43]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[42]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[44]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[43]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[45]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[45]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[47]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[42]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_model",
@@ -1746,17 +1756,17 @@ placeholder
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[44], UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[46], UsageLogsColumns[42]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[41], UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[43], UsageLogsColumns[42]placeholder,
 		placeholder,
 			{
 				Name:    "usagelog_group_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[43], UsageLogsColumns[40]placeholder,
+				Columns: []*schema.Column{UsageLogsColumns[45], UsageLogsColumns[42]placeholder,
 		placeholder,
 	placeholder,
 placeholder

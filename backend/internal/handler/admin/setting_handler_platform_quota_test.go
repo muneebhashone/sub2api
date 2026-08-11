@@ -64,6 +64,35 @@ placeholder
 placeholder
 placeholder
 
+func TestSettingsAuditRequestDoesNotInheritStoredTencentSecrets(t *testing.T) {
+	req := UpdateSettingsRequest{
+		TencentCaptchaAppSecretKey:   "  ",
+		TencentCaptchaCloudSecretID:  "\t",
+		TencentCaptchaCloudSecretKey: "\n",
+placeholder
+
+	auditReq := settingsAuditRequest(req)
+	req.TencentCaptchaAppSecretKey = "stored-app-secret"
+	req.TencentCaptchaCloudSecretID = "stored-secret-id"
+	req.TencentCaptchaCloudSecretKey = "stored-secret-key"
+
+	require.Empty(t, auditReq.TencentCaptchaAppSecretKey)
+	require.Empty(t, auditReq.TencentCaptchaCloudSecretID)
+	require.Empty(t, auditReq.TencentCaptchaCloudSecretKey)
+placeholder
+
+func TestDiffSettings_DetectsCompactHomeChange(t *testing.T) {
+	changed := diffSettings(
+		&service.SystemSettings{placeholder,
+		&service.SystemSettings{CompactHomeEnabled: trueplaceholder,
+		nil,
+		nil,
+		UpdateSettingsRequest{placeholder,
+	)
+
+	require.Contains(t, changed, service.SettingKeyCompactHomeEnabled)
+placeholder
+
 func TestEqualNullableFloat(t *testing.T) {
 	five := 5.0
 	five2 := 5.0

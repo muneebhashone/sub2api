@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -120,6 +121,127 @@ placeholder
 	require.True(t, gjson.GetBytes(upstream.lastBody, "stream_options.include_usage").Bool())
 	require.Contains(t, rec.Body.String(), `"usage"`)
 	require.Contains(t, rec.Body.String(), "data: [DONE]")
+placeholder
+
+func TestForwardAsChatCompletions_OpenAICompatibleGrokRawMissingUsageFailsBeforeWrite(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"grok-4.5","messages":[{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"placeholder,
+			"X-Request-Id": []string{"rid-openai-compat-grok-no-usage"placeholder,
+	placeholder,
+		Body: io.NopCloser(strings.NewReader(
+			`{"id":"resp_missing_usage","object":"chat.completion","model":"grok-4.5","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder]placeholder`,
+		)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
+placeholder
+	account := rawChatCompletionsTestAccount()
+	account.Name = "openai-compatible-grok"
+	account.Extra = map[string]any{openai_compat.ExtraKeyResponsesSupported: falseplaceholder
+
+	result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "")
+
+	require.Nil(t, result)
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.False(t, c.Writer.Written(), "unbilled Grok content must not be returned by an OpenAI-compatible account")
+	require.Empty(t, recorder.Body.String())
+placeholder
+
+func TestForwardAsChatCompletions_OpenAICompatibleRawUsageGuard(t *testing.T) {
+	tests := []struct {
+		name             string
+		model            string
+		upstreamResponse string
+		modelMapping     map[string]any
+		wantGuarded      bool
+placeholder{
+		{
+			name:             "Grok response without usage",
+			model:            "grok-4.5",
+			upstreamResponse: `{"id":"resp_missing","object":"chat.completion","model":"grok-4.5","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder]placeholder`,
+			wantGuarded:      true,
+	placeholder,
+		{
+			name:             "namespaced Grok response without usage",
+			model:            "x-ai/grok-4.5",
+			upstreamResponse: `{"id":"resp_namespaced","object":"chat.completion","model":"x-ai/grok-4.5","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder]placeholder`,
+			wantGuarded:      true,
+	placeholder,
+		{
+			name:             "Grok response with aggregate usage passes",
+			model:            "grok-4.5",
+			upstreamResponse: `{"id":"resp_usage","object":"chat.completion","model":"grok-4.5","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder],"usage":{"prompt_tokens":9,"completion_tokens":3,"total_tokens":12placeholderplaceholder`,
+			wantGuarded:      false,
+	placeholder,
+		{
+			name:             "Grok alias mapped to non-Grok remains unchanged",
+			model:            "grok-alias",
+			upstreamResponse: `{"id":"resp_mapped","object":"chat.completion","model":"gpt-5.4","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder]placeholder`,
+			modelMapping:     map[string]any{"grok-alias": "gpt-5.4"placeholder,
+			wantGuarded:      false,
+	placeholder,
+		{
+			name:             "Grok response with detail-only usage",
+			model:            "grok-4.5",
+			upstreamResponse: `{"id":"resp_detail_only","object":"chat.completion","model":"grok-4.5","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder],"usage":{"input_tokens_details":{"text_tokens":9,"image_tokens":2placeholder,"output_tokens_details":{"image_tokens":1placeholderplaceholderplaceholder`,
+			wantGuarded:      true,
+	placeholder,
+		{
+			name:             "non-Grok response without usage remains unchanged",
+			model:            "gpt-5.4",
+			upstreamResponse: `{"id":"resp_openai","object":"chat.completion","model":"gpt-5.4","choices":[{"index":0,"message":{"role":"assistant","content":"hello"placeholder,"finish_reason":"stop"placeholder]placeholder`,
+			wantGuarded:      false,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			body := []byte(`{"model":"` + tt.model + `","messages":[{"role":"user","content":"hello"placeholder],"stream":falseplaceholder`)
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
+
+			upstream := &httpUpstreamRecorder{resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"placeholder, "X-Request-Id": []string{"rid-openai-compatible"placeholderplaceholder,
+				Body:       io.NopCloser(strings.NewReader(tt.upstreamResponse)),
+		placeholderplaceholder
+			svc := &OpenAIGatewayService{cfg: rawChatCompletionsTestConfig(), httpUpstream: upstreamplaceholder
+			account := rawChatCompletionsTestAccount()
+			account.Name = "openai-compatible"
+			account.Extra = map[string]any{openai_compat.ExtraKeyResponsesSupported: falseplaceholder
+			if tt.modelMapping != nil {
+				account.Credentials["model_mapping"] = tt.modelMapping
+		placeholder
+
+			result, err := svc.ForwardAsChatCompletions(context.Background(), c, account, body, "", "")
+
+			if !tt.wantGuarded {
+			placeholder
+				require.NotNil(t, result)
+				require.True(t, c.Writer.Written())
+				return
+		placeholder
+			require.Nil(t, result)
+			var failoverErr *UpstreamFailoverError
+			require.ErrorAs(t, err, &failoverErr)
+			require.Equal(t, http.StatusBadGateway, failoverErr.StatusCode)
+			require.Equal(t, "grok_missing_usage", gjson.GetBytes(failoverErr.ResponseBody, "error.code").String())
+			require.False(t, c.Writer.Written(), "unbilled Grok content must not be returned")
+	placeholder)
+placeholder
 placeholder
 
 func TestForwardAsRawChatCompletions_PreservesMappedGPT56MaxEffort(t *testing.T) {
@@ -638,7 +760,7 @@ placeholder
 	svc := &OpenAIGatewayService{cfg: rawChatCompletionsTestConfig()placeholder
 	svc.cfg.Gateway.UpstreamResponseReadMaxBytes = 3
 
-	result, err := svc.bufferRawChatCompletions(c, resp, "gpt-5.4", "gpt-5.4", "gpt-5.4", nil, nil, time.Now())
+	result, err := svc.bufferRawChatCompletions(c, resp, rawChatCompletionsTestAccount(), "gpt-5.4", "gpt-5.4", "gpt-5.4", nil, nil, time.Now())
 	require.ErrorIs(t, err, ErrUpstreamResponseBodyTooLarge)
 	require.Nil(t, result)
 	require.Equal(t, http.StatusBadGateway, rec.Code)

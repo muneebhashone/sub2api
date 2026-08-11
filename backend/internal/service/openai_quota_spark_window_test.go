@@ -27,7 +27,9 @@ import (
 // stubQuotaAccountRepo 是多账号 AccountRepository stub，仅实现 GetByID。
 type stubQuotaAccountRepo struct {
 	AccountRepository
-	accounts map[int64]*Account
+	accounts       map[int64]*Account
+	extraUpdates   map[int64]map[string]any
+	extraUpdateErr error
 placeholder
 
 func (r *stubQuotaAccountRepo) GetByID(_ context.Context, id int64) (*Account, error) {
@@ -44,6 +46,17 @@ func (r *stubQuotaAccountRepo) UpdateCredentials(_ context.Context, id int64, cr
 		return fmt.Errorf("account %d not found", id)
 placeholder
 	acc.Credentials = credentials
+	return nil
+placeholder
+
+func (r *stubQuotaAccountRepo) UpdateExtra(_ context.Context, id int64, updates map[string]any) error {
+	if r.extraUpdateErr != nil {
+		return r.extraUpdateErr
+placeholder
+	if r.extraUpdates == nil {
+		r.extraUpdates = make(map[int64]map[string]any)
+placeholder
+	r.extraUpdates[id] = updates
 	return nil
 placeholder
 
@@ -535,6 +548,14 @@ placeholder
 		{ExpiresAt: "2026-07-03T04:05:06Z"placeholder,
 		{ExpiresAt: "2026-07-04T04:05:06Z"placeholder,
 placeholder, usage.RateLimitResetCredits.Credits)
+	require.NoError(t, svc.CacheResetCreditsSnapshot(ctx, 100, usage.RateLimitResetCredits))
+	require.Equal(t, &OpenAIRateLimitResetCredits{
+		AvailableCount: 2,
+		Credits: []OpenAIRateLimitResetCreditDetail{
+			{ExpiresAt: "2026-07-03T04:05:06Z"placeholder,
+			{ExpiresAt: "2026-07-04T04:05:06Z"placeholder,
+	placeholder,
+placeholder, repo.extraUpdates[100][openaiQuotaResetCreditsKey])
 
 	encoded, err := json.Marshal(usage)
 placeholder
@@ -584,6 +605,67 @@ placeholder
 	require.Equal(t, 1, usage.RateLimitResetCredits.AvailableCount)
 	require.Equal(t, 1, detailCalls)
 	require.Empty(t, usage.RateLimitResetCredits.Credits)
+
+	// A count without expiration details must not be persisted (the reader could
+	// never age it out), and the previous snapshot must survive untouched.
+	require.Error(t, svc.CacheResetCreditsSnapshot(ctx, 100, usage.RateLimitResetCredits))
+	require.Empty(t, repo.extraUpdates)
+placeholder
+
+func TestCacheResetCreditsSnapshot(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("zero count allows an empty expiration list", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+		credits := &OpenAIRateLimitResetCredits{AvailableCount: 0placeholder
+
+		require.NoError(t, svc.CacheResetCreditsSnapshot(ctx, 100, credits))
+		require.Equal(t, credits, repo.extraUpdates[100][openaiQuotaResetCreditsKey])
+placeholder)
+
+	t.Run("missing expiration list preserves the cache", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+
+		err := svc.CacheResetCreditsSnapshot(ctx, 100, &OpenAIRateLimitResetCredits{AvailableCount: 1placeholder)
+
+	placeholder
+		require.Empty(t, repo.extraUpdates)
+placeholder)
+
+	t.Run("empty expiration list with a positive count preserves the cache", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+
+		err := svc.CacheResetCreditsSnapshot(ctx, 100, &OpenAIRateLimitResetCredits{
+			AvailableCount: 2,
+			Credits:        []OpenAIRateLimitResetCreditDetail{placeholder,
+	placeholder)
+
+	placeholder
+		require.Empty(t, repo.extraUpdates)
+placeholder)
+
+	t.Run("nil snapshot preserves the cache", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+
+		require.Error(t, svc.CacheResetCreditsSnapshot(ctx, 100, nil))
+		require.Empty(t, repo.extraUpdates)
+placeholder)
+
+	t.Run("repository errors are returned", func(t *testing.T) {
+		repo := &stubQuotaAccountRepo{extraUpdateErr: errors.New("database unavailable")placeholder
+		svc := &OpenAIQuotaService{accountRepo: repoplaceholder
+
+		err := svc.CacheResetCreditsSnapshot(ctx, 100, &OpenAIRateLimitResetCredits{
+			AvailableCount: 1,
+			Credits:        []OpenAIRateLimitResetCreditDetail{{ExpiresAt: "2026-07-03T04:05:06Z"placeholderplaceholder,
+	placeholder)
+
+		require.ErrorContains(t, err, "database unavailable")
+placeholder)
 placeholder
 
 // TestResetCreditGetByIDError_FailsClosed 验证守卫「失败关闭」语义：

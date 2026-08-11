@@ -82,6 +82,9 @@ placeholder
 // LinuxDoOAuthStart 启动 LinuxDo Connect OAuth 登录流程。
 // GET /api/v1/auth/oauth/linuxdo/start?redirect=/dashboard
 func (h *AuthHandler) LinuxDoOAuthStart(c *gin.Context) {
+	if !h.requireActionCaptchaForOAuthLoginStart(c) {
+		return
+placeholder
 	cfg, err := h.getLinuxDoOAuthConfig(c.Request.Context())
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -147,7 +150,7 @@ placeholder
 		return
 placeholder
 
-	c.Redirect(http.StatusFound, authURL)
+	respondOAuthStart(c, authURL)
 placeholder
 
 // LinuxDoOAuthCallback 处理 OAuth 回调：创建/登录用户，然后重定向到前端。

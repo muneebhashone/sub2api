@@ -13,21 +13,45 @@ import (
 )
 
 type userRepoStub struct {
-	user           *User
-	getErr         error
-	createErr      error
-	deleteErr      error
-	exists         bool
-	existsErr      error
-	aliasExists    bool
-	aliasErr       error
-	guardedCreates int
-	nextID         int64
-	created        []*User
-	updated        []*User
-	deletedIDs     []int64
-	usersByEmail   map[string]*User
-	getByEmailErr  error
+	user                 *User
+	usersByID            map[int64]*User
+	getErr               error
+	createErr            error
+	deleteErr            error
+	exists               bool
+	existsErr            error
+	aliasExists          bool
+	aliasErr             error
+	guardedCreates       int
+	nextID               int64
+	created              []*User
+	updated              []*User
+	deletedIDs           []int64
+	usersByEmail         map[string]*User
+	getByEmailErr        error
+	getByEmailMisses     int
+	domainCounts         map[string]int
+	domainCountErr       error
+	domainLimitErr       error
+	domainLimitedCreates int
+placeholder
+
+func (s *userRepoStub) CountUsersByEmailDomain(_ context.Context, domain string) (int, error) {
+	if s.domainCountErr != nil {
+		return 0, s.domainCountErr
+placeholder
+	return s.domainCounts[domain], nil
+placeholder
+
+func (s *userRepoStub) CreateWithEmailAliasGuardAndDomainLimit(ctx context.Context, user *User, domain string) error {
+	s.domainLimitedCreates++
+	if s.domainLimitErr != nil {
+		return s.domainLimitErr
+placeholder
+	if s.domainCounts[domain] > 0 {
+		return ErrEmailDomainRegistrationLimit
+placeholder
+	return s.CreateWithEmailAliasGuard(ctx, user)
 placeholder
 
 func (s *userRepoStub) Create(ctx context.Context, user *User) error {
@@ -61,6 +85,12 @@ func (s *userRepoStub) GetByID(ctx context.Context, id int64) (*User, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
 placeholder
+	if s.usersByID != nil {
+		if user, ok := s.usersByID[id]; ok {
+			return user, nil
+	placeholder
+		return nil, ErrUserNotFound
+placeholder
 	if s.user == nil {
 		return nil, ErrUserNotFound
 placeholder
@@ -70,6 +100,10 @@ placeholder
 func (s *userRepoStub) GetByEmail(ctx context.Context, email string) (*User, error) {
 	if s.getByEmailErr != nil {
 		return nil, s.getByEmailErr
+placeholder
+	if s.getByEmailMisses > 0 {
+		s.getByEmailMisses--
+		return nil, ErrUserNotFound
 placeholder
 	if s.usersByEmail != nil {
 		if user, ok := s.usersByEmail[email]; ok {

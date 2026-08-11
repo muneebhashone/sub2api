@@ -17,6 +17,9 @@ placeholder
 	if itemType == "message" {
 		return !strings.HasPrefix(id, "msg")
 placeholder
+	if itemType == "reasoning" {
+		return !strings.HasPrefix(id, "rs")
+placeholder
 	if isCodexToolCallInputType(itemType) {
 		return !strings.HasPrefix(id, "fc")
 placeholder

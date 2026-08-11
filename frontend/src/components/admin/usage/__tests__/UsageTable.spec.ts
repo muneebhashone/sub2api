@@ -4,7 +4,13 @@ const ipGeoMocks = vi.hoisted(() => ({
   fetchBatch: vi.fn(),
 placeholder))
 
+const appStoreMocks = vi.hoisted(() => ({
+  showSuccess: vi.fn(),
+  showError: vi.fn(),
+placeholder))
+
 vi.mock('@/utils/ipGeoLookup', () => ipGeoMocks)
+vi.mock('@/stores/app', () => ({ useAppStore: () => appStoreMocks placeholder))
 
 import { describe, expect, it, vi, beforeEach placeholder from 'vitest'
 import { mount placeholder from '@vue/test-utils'
@@ -51,6 +57,15 @@ const messages: Record<string, string> = {
   'admin.usage.billingModeToken': 'Token',
   'admin.usage.billingModePerRequest': 'Per request',
   'admin.usage.billingModeImage': 'Image',
+	'admin.usage.requestIdCopied': 'Request ID copied',
+	'keys.copied': 'Copied',
+	'keys.copyToClipboard': 'Copy to clipboard',
+	'common.copyFailed': 'Copy failed',
+	'usage.requestedModel': 'Requested',
+	'usage.sentUpstreamModel': 'Sent upstream',
+	'usage.upstreamResponseModel': 'Upstream response',
+	'usage.modelVariant': 'Possible version variant',
+	'usage.modelMismatch': 'Different model',
 placeholder
 
 vi.mock('vue-i18n', async () => {
@@ -72,6 +87,7 @@ const DataTableStub = {
         <slot name="cell-billing_mode" :row="row" />
         <slot name="cell-tokens" :row="row" />
         <slot name="cell-cost" :row="row" />
+        <slot name="cell-request_id" :row="row" />
       </div>
     </div>
   `,
@@ -240,6 +256,48 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('claude-sonnet-4-20250514')
   placeholder)
 
+	it.each([
+		{
+			name: 'possible version variant',
+			responseModel: 'gpt-5.5-2026-08-01',
+			expectedBadge: 'Possible version variant',
+	placeholder,
+		{
+			name: 'different upstream model',
+			responseModel: 'gpt-5.4',
+			expectedBadge: 'Different model',
+	placeholder,
+	])('shows a compact upstream response audit marker for $name', ({ responseModel, expectedBadge placeholder) => {
+		const wrapper = mount(UsageTable, {
+			props: {
+				data: [{
+					request_id: `req-${responseModelplaceholder`,
+					model: 'gpt-5.6-sol',
+					upstream_model: 'gpt-5.5',
+					model_mapping_chain: 'gpt-5.6-sol→gpt-5.5',
+					upstream_response_model: responseModel,
+					upstream_model_mismatch: true,
+			placeholder],
+				loading: false,
+				columns: [],
+		placeholder,
+			global: {
+				stubs: {
+					DataTable: DataTableStub,
+					EmptyState: true,
+					Icon: true,
+					Teleport: true,
+			placeholder,
+		placeholder,
+	placeholder)
+
+		const text = wrapper.text()
+		expect(text).toContain('gpt-5.6-sol')
+		expect(text).toContain('gpt-5.5')
+		expect(text).toContain(responseModel)
+		expect(text).toContain(expectedBadge)
+placeholder)
+
   it.each([
     {
       name: 'defaulted row',
@@ -360,6 +418,40 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('Per-image price')
     expect(text).toContain('not recorded')
     expect(text).not.toContain('(2K)')
+  placeholder)
+placeholder)
+
+describe('admin UsageTable request ID column', () => {
+  beforeEach(() => {
+    appStoreMocks.showSuccess.mockReset()
+    appStoreMocks.showError.mockReset()
+  placeholder)
+
+  it('renders and copies the request ID', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText placeholder placeholder)
+
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [{ ...baseImageRow, request_id: 'req-admin-visible-id' placeholder],
+        loading: false,
+        columns: [{ key: 'request_id', label: 'Request ID' placeholder],
+      placeholder,
+      global: {
+        stubs: {
+          DataTable: DataTableStub,
+          EmptyState: true,
+          Icon: true,
+          Teleport: true,
+        placeholder,
+      placeholder,
+    placeholder)
+
+    expect(wrapper.text()).toContain('req-admin-visible-id')
+    await wrapper.get('button[title="Copy to clipboard"]').trigger('click')
+
+    expect(writeText).toHaveBeenCalledWith('req-admin-visible-id')
+    expect(appStoreMocks.showSuccess).toHaveBeenCalledWith('Request ID copied')
   placeholder)
 placeholder)
 

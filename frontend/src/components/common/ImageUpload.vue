@@ -50,7 +50,7 @@
             @change="handleUpload"
           />
           <Icon name="upload" size="sm" class="mr-1.5" :stroke-width="2" />
-          {{ uploadLabel placeholderplaceholder
+          {{ resolvedUploadLabel placeholderplaceholder
         </label>
         <button
           v-if="modelValue"
@@ -59,7 +59,7 @@
           @click="$emit('update:modelValue', '')"
         >
           <Icon name="trash" size="sm" class="mr-1.5" :stroke-width="2" />
-          {{ removeLabel placeholderplaceholder
+          {{ resolvedRemoveLabel placeholderplaceholder
         </button>
       </div>
       <p v-if="hint" class="text-xs text-gray-500 dark:text-gray-400">{{ hint placeholderplaceholder</p>
@@ -70,8 +70,11 @@
 
 <script setup lang="ts">
 import { ref, computed placeholder from 'vue'
+import { useI18n placeholder from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import { sanitizeSvg placeholder from '@/utils/sanitize'
+
+const { t placeholder = useI18n()
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -84,8 +87,8 @@ const props = withDefaults(defineProps<{
 placeholder>(), {
   mode: 'image',
   size: 'md',
-  uploadLabel: 'Upload',
-  removeLabel: 'Remove',
+  uploadLabel: '',
+  removeLabel: '',
   hint: '',
   maxSize: 300 * 1024,
 placeholder)
@@ -95,6 +98,9 @@ const emit = defineEmits<{
 placeholder>()
 
 const error = ref('')
+
+const resolvedUploadLabel = computed(() => props.uploadLabel || t('common.upload'))
+const resolvedRemoveLabel = computed(() => props.removeLabel || t('common.remove'))
 
 const acceptTypes = computed(() => props.mode === 'svg' ? '.svg' : 'image/*')
 
@@ -114,7 +120,10 @@ function handleUpload(event: Event) {
   if (!file) return
 
   if (props.maxSize && file.size > props.maxSize) {
-    error.value = `File too large (${(file.size / 1024).toFixed(1)placeholder KB), max ${(props.maxSize / 1024).toFixed(0)placeholder KB`
+    error.value = t('common.fileTooLargeKb', {
+      size: (file.size / 1024).toFixed(1),
+      max: (props.maxSize / 1024).toFixed(0)
+    placeholder)
     input.value = ''
     return
   placeholder
@@ -128,7 +137,7 @@ function handleUpload(event: Event) {
     reader.readAsText(file)
   placeholder else {
     if (!file.type.startsWith('image/')) {
-      error.value = 'Please select an image file'
+      error.value = t('common.selectImageFile')
       input.value = ''
       return
     placeholder
@@ -139,7 +148,7 @@ function handleUpload(event: Event) {
   placeholder
 
   reader.onerror = () => {
-    error.value = 'Failed to read file'
+    error.value = t('common.fileReadFailed')
   placeholder
   input.value = ''
 placeholder

@@ -47,6 +47,10 @@ type GrokGenerateAuthURLRequest struct {
 	RedirectURI string `json:"redirect_uri"`
 placeholder
 
+func (h *GrokOAuthHandler) GetCapabilities(c *gin.Context) {
+	response.Success(c, h.grokOAuthService.GetCapabilities())
+placeholder
+
 func (h *GrokOAuthHandler) GenerateAuthURL(c *gin.Context) {
 	var req GrokGenerateAuthURLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -95,6 +99,17 @@ type GrokRefreshTokenRequest struct {
 	ProxyID      *int64 `json:"proxy_id"`
 placeholder
 
+type GrokSSOTokenRequest struct {
+	SSOToken string `json:"sso_token"`
+	ProxyID  *int64 `json:"proxy_id"`
+placeholder
+
+type GrokPasswordAuthorizeRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	ProxyID  *int64 `json:"proxy_id"`
+placeholder
+
 func (h *GrokOAuthHandler) RefreshToken(c *gin.Context) {
 	var req GrokRefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -113,11 +128,49 @@ placeholder
 	var proxyURL string
 	if req.ProxyID != nil {
 		proxy, err := h.adminService.GetProxy(c.Request.Context(), *req.ProxyID)
-		if err == nil && proxy != nil {
-			proxyURL = proxy.URL()
+		if err != nil {
+			response.ErrorFrom(c, err)
+			return
 	placeholder
+		if proxy == nil {
+			response.BadRequest(c, "GROK_OAUTH_PROXY_NOT_FOUND: proxy not found")
+			return
+	placeholder
+		proxyURL = proxy.URL()
 placeholder
 	tokenInfo, err := h.grokOAuthService.RefreshToken(c.Request.Context(), refreshToken, proxyURL, req.ClientID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, tokenInfo)
+placeholder
+
+// ValidateSSOToken converts a Web SSO cookie into Build OAuth tokens.
+// Response contains OAuth token info only — never echoes sso_token.
+func (h *GrokOAuthHandler) ValidateSSOToken(c *gin.Context) {
+	var req GrokSSOTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	tokenInfo, err := h.grokOAuthService.ValidateSSOToken(c.Request.Context(), req.SSOToken, req.ProxyID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+	response.Success(c, tokenInfo)
+placeholder
+
+// AuthorizePassword exchanges email/password for Build OAuth tokens via SSO conversion.
+// Response never includes password or raw sso_token.
+func (h *GrokOAuthHandler) AuthorizePassword(c *gin.Context) {
+	var req GrokPasswordAuthorizeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	tokenInfo, err := h.grokOAuthService.AuthorizePassword(c.Request.Context(), req.Email, req.Password, req.ProxyID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -412,11 +465,38 @@ placeholder
 // 配置且 Build 恒写官方地址，会吞掉导入时指定的自定义转发地址——与
 // RefreshAccountToken 的保留逻辑对齐，请求显式提供时以请求为准。
 func grokSSOImportCredentials(built map[string]any, reqCredentials map[string]any) map[string]any {
-	credentials := service.MergeCredentials(cloneGrokSSOMap(reqCredentials), built)
+	// Only merge operator config from the request — never free-form secrets
+	// (password / sso_token / cookie / etc.) into stored credentials.
+	allowedReqKeys := map[string]struct{placeholder{
+		"base_url": {placeholder, "model_mapping": {placeholder,
+		"header_override": {placeholder, "header_overrides": {placeholder, "header_override_enabled": {placeholder,
+		"custom_headers": {placeholder,
+placeholder
+	ops := map[string]any{placeholder
+	for k, v := range reqCredentials {
+		if _, ok := allowedReqKeys[k]; !ok {
+			continue
+	placeholder
+		if service.IsSensitiveCredentialKey(k) {
+			continue
+	placeholder
+		ops[k] = v
+placeholder
+	credentials := service.MergeCredentials(ops, built)
+	// Strip any sensitive keys that might have slipped in via older callers.
+	for k := range credentials {
+		if service.IsSensitiveCredentialKey(k) {
+			// Keep only keys produced by BuildAccountCredentials (tokens).
+			if k == "access_token" || k == "refresh_token" || k == "id_token" {
+				continue
+		placeholder
+			delete(credentials, k)
+	placeholder
+placeholder
 	if reqBaseURL, ok := reqCredentials["base_url"].(string); ok && strings.TrimSpace(reqBaseURL) != "" {
 		credentials["base_url"] = strings.TrimSpace(reqBaseURL)
 placeholder
-	return credentials
+	return service.SanitizeStoredCredentials(service.PlatformGrok, credentials)
 placeholder
 
 func grokSSOImportExpiry(requestExpiresAt *int64, requestAutoPause *bool, tokenInfo *service.GrokTokenInfo) (*int64, *bool) {

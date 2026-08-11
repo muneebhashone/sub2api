@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 )
@@ -246,7 +247,7 @@ placeholder
 	if originator := openAIAlphaSearchInboundHeader(c, "Originator"); originator != "" {
 		req.Header.Set("Originator", originator)
 placeholder else {
-		req.Header.Set("Originator", "codex_cli_rs")
+		req.Header.Set("Originator", openai.CodexDefaultOriginator)
 placeholder
 	if customUA := account.GetOpenAIUserAgent(); customUA != "" {
 		req.Header.Set("User-Agent", customUA)
@@ -264,8 +265,7 @@ placeholder
 		req.Header.Set("Session_ID", isolated)
 		req.Header.Set("Conversation_ID", isolated)
 placeholder
-	s.overrideBrowserUserAgent(ctx, account, req)
-	enforceCodexIdentityHeaders(req.Header)
+	enforceCodexIdentityHeadersWithUA(req.Header, s.codexIdentityOverrideUA(account))
 	account.ApplyHeaderOverrides(req.Header)
 	return req, nil
 placeholder
@@ -390,7 +390,7 @@ placeholder
 		if originator := openAIAlphaSearchInboundHeader(c, "Originator"); originator != "" {
 			req.Header.Set("Originator", originator)
 	placeholder else {
-			req.Header.Set("Originator", "codex_cli_rs")
+			req.Header.Set("Originator", openai.CodexDefaultOriginator)
 	placeholder
 		if customUA := account.GetOpenAIUserAgent(); customUA != "" {
 			req.Header.Set("User-Agent", customUA)
@@ -402,8 +402,7 @@ placeholder
 		if s.cfg != nil && s.cfg.Gateway.ForceCodexCLI {
 			req.Header.Set("User-Agent", codexCLIUserAgent)
 	placeholder
-		s.overrideBrowserUserAgent(ctx, account, req)
-		enforceCodexIdentityHeaders(req.Header)
+		enforceCodexIdentityHeadersWithUA(req.Header, s.codexIdentityOverrideUA(account))
 placeholder
 
 	account.ApplyHeaderOverrides(req.Header)

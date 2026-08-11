@@ -489,6 +489,105 @@ placeholder
 	require.True(t, repo.lastRateLimitReset.Before(after.Add(5*time.Minute).Add(2*time.Second)))
 placeholder
 
+// ---------------------------------------------------------------------------
+// TestHandleGeminiUpstreamError_PoolMode429 — 池模式账号的 429 不写账号级限流。
+//
+// 429 的标记点在重试循环内（handleClaudeCompat / forwardNativeGemini /
+// chat completions 三条路径），先于 CheckErrorPolicy 执行，池模式豁免只能落在
+// handleGeminiUpstreamError 自身；否则一次上游 429 会把账号锁到 PST 午夜，
+// 即便重试已经成功返回客户端。
+// ---------------------------------------------------------------------------
+
+func TestHandleGeminiUpstreamError_PoolMode429(t *testing.T) {
+	// 中转上游的真实 429 文案：不含 "per day"，也没有 quotaResetDelay，
+	// 解析失败后 apikey 账号会落到 PST 午夜兜底。
+	body := []byte(`{"error":{"code":429,"message":"You have exhausted your capacity on this model. Your quota will reset after 6h53m10s."placeholderplaceholder`)
+
+	tests := []struct {
+		name              string
+		account           *Account
+		expectRateLimited bool
+placeholder{
+		{
+			name: "pool_mode_apikey_stays_in_pool",
+			account: &Account{
+				ID:          600,
+				Platform:    PlatformGemini,
+				Type:        AccountTypeAPIKey,
+		placeholder"pool_mode": trueplaceholder,
+		placeholder,
+			expectRateLimited: false,
+	placeholder,
+		{
+			name: "custom_error_codes_hit_overrides_pool_mode",
+			account: &Account{
+				ID:       601,
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder
+					"pool_mode":                  true,
+					"custom_error_codes_enabled": true,
+					"custom_error_codes":         []any{float64(429)placeholder,
+			placeholder,
+		placeholder,
+			expectRateLimited: true,
+	placeholder,
+		{
+			name: "custom_error_codes_miss_skips",
+			account: &Account{
+				ID:       602,
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder
+					"pool_mode":                  true,
+					"custom_error_codes_enabled": true,
+					"custom_error_codes":         []any{float64(500)placeholder,
+			placeholder,
+		placeholder,
+			expectRateLimited: false,
+	placeholder,
+		{
+			name: "non_pool_apikey_still_rate_limited",
+			account: &Account{
+				ID:       603,
+		placeholder
+				Type:     AccountTypeAPIKey,
+		placeholder,
+			expectRateLimited: true,
+	placeholder,
+		{
+			name: "oauth_account_ignores_pool_mode_flag",
+			account: &Account{
+				ID:          604,
+				Platform:    PlatformGemini,
+				Type:        AccountTypeOAuth,
+		placeholder"pool_mode": trueplaceholder,
+		placeholder,
+			expectRateLimited: true,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &rateLimit429AccountRepoStub{placeholder
+			svc := &GeminiMessagesCompatService{
+				accountRepo:      repo,
+				rateLimitService: NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil),
+		placeholder
+
+			svc.handleGeminiUpstreamError(context.Background(), tt.account, http.StatusTooManyRequests, http.Header{placeholder, body)
+
+			if !tt.expectRateLimited {
+				require.Zero(t, repo.rateLimitCalls, "池模式账号不应被标记账号级限流")
+				return
+		placeholder
+			require.Equal(t, 1, repo.rateLimitCalls)
+			require.Equal(t, tt.account.ID, repo.lastRateLimitID)
+			require.True(t, repo.lastRateLimitReset.After(time.Now()))
+	placeholder)
+placeholder
+placeholder
+
 type geminiErrorPolicyRepo struct {
 	mockAccountRepoForGemini
 	setErrorCalls            int

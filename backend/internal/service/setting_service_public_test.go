@@ -12,6 +12,7 @@ import (
 
 type settingPublicRepoStub struct {
 	values map[string]string
+	err    error
 placeholder
 
 func (s *settingPublicRepoStub) Get(ctx context.Context, key string) (*Setting, error) {
@@ -27,6 +28,9 @@ func (s *settingPublicRepoStub) Set(ctx context.Context, key, value string) erro
 placeholder
 
 func (s *settingPublicRepoStub) GetMultiple(ctx context.Context, keys []string) (map[string]string, error) {
+	if s.err != nil {
+		return nil, s.err
+placeholder
 	out := make(map[string]string, len(keys))
 	for _, key := range keys {
 		if value, ok := s.values[key]; ok {
@@ -76,6 +80,40 @@ placeholder
 placeholder
 	require.Equal(t, 50, settings.TableDefaultPageSize)
 	require.Equal(t, []int{20, 50, 100placeholder, settings.TablePageSizeOptions)
+placeholder
+
+func TestSettingService_GetPublicSettings_ExposesCompactHomeEnabled(t *testing.T) {
+	repo := &settingPublicRepoStub{
+		values: map[string]string{
+			SettingKeyCompactHomeEnabled: "true",
+	placeholder,
+placeholder
+	svc := NewSettingService(repo, &config.Config{placeholder)
+
+	settings, err := svc.GetPublicSettings(context.Background())
+
+placeholder
+	require.True(t, settings.CompactHomeEnabled)
+
+	missingSettings, err := NewSettingService(&settingPublicRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{placeholder).
+		GetPublicSettings(context.Background())
+placeholder
+	require.False(t, missingSettings.CompactHomeEnabled)
+placeholder
+
+func TestSettingService_ChannelMonitorHideThroughputDefaultsToPrivate(t *testing.T) {
+	missing := NewSettingService(&settingPublicRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{placeholder).GetChannelMonitorRuntime(context.Background())
+	require.True(t, missing.HideThroughput)
+	public, err := NewSettingService(&settingPublicRepoStub{values: map[string]string{placeholderplaceholder, &config.Config{placeholder).GetPublicSettings(context.Background())
+placeholder
+	require.True(t, public.ChannelMonitorHideThroughput)
+
+	for _, value := range []string{"false", "0", "off", "disabled"placeholder {
+		runtime := NewSettingService(&settingPublicRepoStub{values: map[string]string{
+			SettingKeyChannelMonitorHideThroughput: value,
+placeholder &config.Config{placeholder).GetChannelMonitorRuntime(context.Background())
+		require.False(t, runtime.HideThroughput, "value=%q", value)
+placeholder
 placeholder
 
 func TestSettingService_GetPublicSettings_ExposesForceEmailOnThirdPartySignup(t *testing.T) {

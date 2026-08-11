@@ -107,6 +107,68 @@ placeholder
 	require.Equal(t, "gpt-5", byName["g-gpt"][0].Name)
 placeholder
 
+func TestListPlazaGroups_CompositeIncludesConfiguredConcretePlatforms(t *testing.T) {
+	anthropicPrice := 3e-6
+	openAIPrice := 2e-6
+	ch := Channel{
+		ID: 1, Name: "multi", Status: StatusActive, GroupIDs: []int64{10placeholder,
+		ModelPricing: []ChannelModelPricing{
+			{Platform: PlatformAnthropic, Models: []string{"shared-model"placeholder, InputPrice: &anthropicPriceplaceholder,
+			{Platform: PlatformOpenAI, Models: []string{"shared-model"placeholder, InputPrice: &openAIPriceplaceholder,
+			{Platform: "", Models: []string{"empty-platform"placeholderplaceholder,
+			{Platform: PlatformComposite, Models: []string{"nested-composite"placeholderplaceholder,
+			{Platform: "unknown-platform", Models: []string{"unknown-platform"placeholderplaceholder,
+	placeholder,
+placeholder
+	groups := []Group{{ID: 10, Name: "composite", Platform: PlatformComposite, RateMultiplier: 1placeholderplaceholder
+
+	out, err := newPlazaChannelService([]Channel{chplaceholder, groups, nil).ListPlazaGroups(context.Background())
+
+placeholder
+	require.Len(t, out, 1)
+	require.Len(t, out[0].Models, 2, "only concrete platforms are included and same-named models remain distinct")
+	require.Equal(t, PlatformAnthropic, out[0].Models[0].Platform)
+	require.Equal(t, PlatformOpenAI, out[0].Models[1].Platform)
+	require.InDelta(t, anthropicPrice, *out[0].Models[0].Pricing.InputPrice, 1e-12)
+	require.InDelta(t, openAIPrice, *out[0].Models[1].Pricing.InputPrice, 1e-12)
+placeholder
+
+func TestListPlazaGroups_CompositeAndOrdinaryGroupsDoNotLeakPlatforms(t *testing.T) {
+	ch := Channel{
+		ID: 1, Name: "multi", Status: StatusActive, GroupIDs: []int64{10, 20placeholder,
+		ModelPricing: []ChannelModelPricing{
+			{Platform: PlatformAnthropic, Models: []string{"claude-sonnet"placeholder, InputPrice: testPtrFloat64(3e-6)placeholder,
+			{Platform: PlatformOpenAI, Models: []string{"gpt-5"placeholder, InputPrice: testPtrFloat64(2e-6)placeholder,
+	placeholder,
+placeholder
+	groups := []Group{
+		{ID: 10, Name: "anthropic-only", Platform: PlatformAnthropic, RateMultiplier: 1placeholder,
+		{ID: 20, Name: "composite", Platform: PlatformComposite, RateMultiplier: 1placeholder,
+placeholder
+
+	out, err := newPlazaChannelService([]Channel{chplaceholder, groups, nil).ListPlazaGroups(context.Background())
+
+placeholder
+	require.Len(t, out, 2)
+	byName := map[string]PlazaGroup{placeholder
+	for _, group := range out {
+		byName[group.Name] = group
+placeholder
+	require.Len(t, byName["anthropic-only"].Models, 1)
+	require.Equal(t, []PlazaModel{{
+		Name: "claude-sonnet", Platform: PlatformAnthropic, Pricing: byName["anthropic-only"].Models[0].Pricing,
+placeholderplaceholder, byName["anthropic-only"].Models)
+	require.Len(t, byName["composite"].Models, 2)
+	require.Equal(t, []string{"claude-sonnet", "gpt-5"placeholder, []string{
+		byName["composite"].Models[0].Name,
+		byName["composite"].Models[1].Name,
+placeholder)
+	require.Equal(t, []string{PlatformAnthropic, PlatformOpenAIplaceholder, []string{
+		byName["composite"].Models[0].Platform,
+		byName["composite"].Models[1].Platform,
+placeholder)
+placeholder
+
 func TestListPlazaGroups_InactiveChannelSkipped(t *testing.T) {
 	inactive := plazaPricedChannel(1, "off", []int64{10placeholder, "anthropic", "claude-sonnet")
 	inactive.Status = "inactive"
@@ -171,6 +233,80 @@ placeholder
 	require.Nil(t, byName["unknown-model"].OfficialPricing)
 	// TokenPricingAbsent 条目不作为官方 token 价展示
 	require.Nil(t, byName["token-absent"].OfficialPricing)
+placeholder
+
+func TestListPlazaGroups_GroupImagePriceOverridesChannelPricing(t *testing.T) {
+	// 图片计费模型:档位价按实收口径合成(分组图片价 > 渠道档位价 > 渠道默认按次价),
+	// 分组独立倍率字段透传;未配图片价的分组保持渠道定价原样。
+	perReq := 0.2
+	tier4K := 0.3
+	imgPrice := 0.02
+	channels := []Channel{{
+		ID: 1, Name: "img-ch", Status: StatusActive, GroupIDs: []int64{10, 20placeholder,
+		ModelPricing: []ChannelModelPricing{{
+			Platform:        "openai",
+			Models:          []string{"gpt-image-2"placeholder,
+			BillingMode:     BillingModeImage,
+			PerRequestPrice: &perReq,
+			Intervals:       []PricingInterval{{TierLabel: "4K", PerRequestPrice: &tier4Kplaceholderplaceholder,
+placeholder
+placeholderplaceholder
+	groups := []Group{
+		{ID: 10, Name: "g-media", Platform: "openai", RateMultiplier: 1,
+			ImagePrice1K: &imgPrice, ImageRateIndependent: true, ImageRateMultiplier: 1placeholder,
+		{ID: 20, Name: "g-plain", Platform: "openai", RateMultiplier: 0.1placeholder,
+placeholder
+	svc := newPlazaChannelService(channels, groups, nil)
+	out, err := svc.ListPlazaGroups(context.Background())
+placeholder
+	require.Len(t, out, 2)
+	byName := map[string]PlazaGroup{placeholder
+	for _, g := range out {
+		byName[g.Name] = g
+placeholder
+
+	media := byName["g-media"]
+	require.True(t, media.ImageRateIndependent)
+	require.InDelta(t, 1.0, media.ImageRateMultiplier, 1e-9)
+	require.Len(t, media.Models, 1)
+	p := media.Models[0].Pricing
+	require.NotNil(t, p)
+	require.Len(t, p.Intervals, 3)
+	tierPrices := map[string]float64{placeholder
+	for _, iv := range p.Intervals {
+		require.NotNil(t, iv.PerRequestPrice)
+		tierPrices[iv.TierLabel] = *iv.PerRequestPrice
+placeholder
+	require.InDelta(t, 0.02, tierPrices["1K"], 1e-9, "1K 用分组图片价")
+	require.InDelta(t, 0.2, tierPrices["2K"], 1e-9, "2K 分组未配,回落渠道默认按次价")
+	require.InDelta(t, 0.3, tierPrices["4K"], 1e-9, "4K 分组未配,回落渠道档位价")
+
+	plain := byName["g-plain"]
+	require.False(t, plain.ImageRateIndependent)
+	require.Len(t, plain.Models, 1)
+	pp := plain.Models[0].Pricing
+	require.NotNil(t, pp)
+	require.Len(t, pp.Intervals, 1, "未配分组图片价:渠道定价原样")
+	require.InDelta(t, 0.2, *pp.PerRequestPrice, 1e-9)
+
+	// 合成为克隆,渠道原始定价不被修改
+	require.Len(t, channels[0].ModelPricing[0].Intervals, 1)
+placeholder
+
+func TestListPlazaGroups_GroupImagePriceIgnoredForNonImageModes(t *testing.T) {
+	// token 模式定价不受分组图片价影响。
+	imgPrice := 0.02
+	channels := []Channel{plazaPricedChannel(1, "ch", []int64{10placeholder, "openai", "gpt-5")placeholder
+	groups := []Group{{ID: 10, Name: "g", Platform: "openai", RateMultiplier: 1, ImagePrice1K: &imgPriceplaceholderplaceholder
+	svc := newPlazaChannelService(channels, groups, nil)
+	out, err := svc.ListPlazaGroups(context.Background())
+placeholder
+	require.Len(t, out, 1)
+	p := out[0].Models[0].Pricing
+	require.NotNil(t, p)
+	require.Empty(t, p.Intervals)
+	require.NotNil(t, p.InputPrice)
+	require.Nil(t, p.PerRequestPrice)
 placeholder
 
 func TestListPlazaGroups_RepoErrorsPropagate(t *testing.T) {

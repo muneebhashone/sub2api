@@ -231,7 +231,7 @@ import Icon from '@/components/icons/Icon.vue'
 import UserErrorRequestsTable from '@/components/user/UserErrorRequestsTable.vue'
 import { getPersistedPageSize placeholder from '@/composables/usePersistedPageSize'
 import { formatReasoningEffort placeholder from '@/utils/format'
-import { BILLING_MODE_IMAGE, getBillingModeLabel placeholder from '@/utils/billingMode'
+import { getBillingModeLabel, getDisplayBillingMode as resolveDisplayBillingMode placeholder from '@/utils/billingMode'
 import { resolveUsageRequestType, requestTypeToLegacyStream placeholder from '@/utils/usageRequestType'
 import type {
   ApiKey,
@@ -605,10 +605,7 @@ placeholder
 
 const getDisplayBillingMode = (
   row: Pick<UsageLog, 'billing_mode' | 'image_count'> | null | undefined
-): string | null | undefined => {
-  if ((row?.image_count ?? 0) > 0) return BILLING_MODE_IMAGE
-  return row?.billing_mode
-placeholder
+): string | null | undefined => resolveDisplayBillingMode(row)
 
 const escapeCSVValue = (value: unknown): string => {
   if (value == null) return ''

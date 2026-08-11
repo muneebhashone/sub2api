@@ -345,6 +345,53 @@ placeholder
 	require.InDelta(t, expectedActual, userRepo.lastAmount, 1e-12)
 placeholder
 
+func TestGatewayServiceRecordUsage_UsesExplicitPricingAtForPeakRate(t *testing.T) {
+	for _, platform := range []string{PlatformAnthropic, PlatformGemini, PlatformGrok, PlatformAntigravityplaceholder {
+		t.Run(platform, func(t *testing.T) {
+			groupID := int64(903)
+			usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+			userRepo := &openAIRecordUsageUserRepoStub{placeholder
+			svc := newGatewayRecordUsageServiceForTest(usageRepo, userRepo, &openAIRecordUsageSubRepoStub{placeholder)
+			svc.resolver = newOpenAITokenImageChannelPricingResolverForTest(t, groupID, "gemini-image")
+
+			pricingAt := time.Date(2026, time.January, 1, 0, 30, 0, 0, time.UTC)
+			err := svc.RecordUsage(context.Background(), &RecordUsageInput{
+				Result: &ForwardResult{
+					RequestID:  "gateway_explicit_pricing_at_" + platform,
+					Model:      "gemini-image",
+					ImageCount: 1,
+					Usage: ClaudeUsage{
+						InputTokens:       1000,
+						OutputTokens:      600,
+						ImageOutputTokens: 100,
+				placeholder,
+			placeholder,
+				APIKey: &APIKey{
+					ID:      803,
+					GroupID: i64p(groupID),
+					Group: &Group{
+						ID:                 groupID,
+						Platform:           platform,
+						RateMultiplier:     1.0,
+						SubscriptionType:   SubscriptionTypeSubscription,
+						PeakRateEnabled:    true,
+						PeakStart:          "00:00",
+						PeakEnd:            "01:00",
+						PeakRateMultiplier: 3.0,
+				placeholder,
+			placeholder,
+				User:      &User{ID: 603placeholder,
+				Account:   &Account{ID: 703, Platform: platformplaceholder,
+				PricingAt: pricingAt,
+		placeholder)
+
+		placeholder
+			require.NotNil(t, usageRepo.lastLog)
+			require.Equal(t, 3.0, usageRepo.lastLog.RateMultiplier)
+	placeholder)
+placeholder
+placeholder
+
 func TestGatewayServiceRecordUsage_UsageLogWriteErrorDoesNotSkipBilling(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: false, err: MarkUsageLogCreateNotPersisted(context.Canceled)placeholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
@@ -530,9 +577,10 @@ placeholder
 	require.NoError(t, usageRepo.lastCtxErr)
 placeholder
 
-func TestGatewayServiceRecordUsage_BillingErrorSkipsUsageLogWrite(t *testing.T) {
+func TestGatewayServiceRecordUsage_BillingErrorWritesUnsettledUsageLog(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{placeholder
-	billingRepo := &openAIRecordUsageBillingRepoStub{err: context.DeadlineExceededplaceholder
+	billingErr := errors.New("billing tx failed")
+	billingRepo := &openAIRecordUsageBillingRepoStub{err: billingErrplaceholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
 	subRepo := &openAIRecordUsageSubRepoStub{placeholder
 	svc := newGatewayRecordUsageServiceWithBillingRepoForTest(usageRepo, billingRepo, userRepo, subRepo)
@@ -552,9 +600,16 @@ func TestGatewayServiceRecordUsage_BillingErrorSkipsUsageLogWrite(t *testing.T) 
 		Account: &Account{ID: 705placeholder,
 placeholder)
 
-placeholder
+	require.ErrorIs(t, err, billingErr)
 	require.Equal(t, 1, billingRepo.calls)
-	require.Equal(t, 0, usageRepo.calls)
+	require.Equal(t, 1, usageRepo.calls)
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, 10, usageRepo.lastLog.InputTokens)
+	require.Equal(t, 6, usageRepo.lastLog.OutputTokens)
+	require.Greater(t, usageRepo.lastLog.InputCost, 0.0)
+	require.Greater(t, usageRepo.lastLog.OutputCost, 0.0)
+	require.Greater(t, usageRepo.lastLog.TotalCost, 0.0)
+	require.Zero(t, usageRepo.lastLog.ActualCost)
 placeholder
 
 func TestGatewayServiceRecordUsage_ReasoningEffortPersisted(t *testing.T) {

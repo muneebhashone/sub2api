@@ -24,18 +24,13 @@
         </svg>
         {{ t('admin.accounts.usageWindow.grokProbe') placeholderplaceholder
       </button>
-
-      <button
-        type="button"
-        class="inline-flex cursor-not-allowed items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-gray-400 opacity-70 dark:text-gray-500"
-        disabled
-        :title="t('admin.accounts.usageWindow.grokResetUnsupportedTooltip')"
-      >
-        {{ t('admin.accounts.usageWindow.grokResetUnsupported') placeholderplaceholder
-      </button>
     </div>
 
-    <div v-if="summary" class="text-[10px] text-gray-600 dark:text-gray-300">
+    <!-- Compact mode: parent already shows 7d/30d/prepaid or 24h — only surface errors. -->
+    <div
+      v-if="!compact && summary"
+      class="text-[10px] text-gray-600 dark:text-gray-300"
+    >
       {{ summary placeholderplaceholder
     </div>
     <div v-if="error" class="truncate text-[10px] text-red-600 dark:text-red-400" :title="error">
@@ -48,12 +43,17 @@
 import { computed, ref, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { adminAPI placeholder from '@/api/admin'
-import type { GrokQuotaProbeResult, GrokQuotaWindow placeholder from '@/api/admin/grok'
+import type { GrokQuotaProbeResult placeholder from '@/api/admin/grok'
 import type { Account placeholder from '@/types'
 
-const props = defineProps<{
-  account: Account
-placeholder>()
+const props = withDefaults(
+  defineProps<{
+    account: Account
+    /** When true, only show the probe button (+ errors). No duplicate weekly summary. */
+    compact?: boolean
+  placeholder>(),
+  { compact: false placeholder
+)
 
 const emit = defineEmits<{ probed: [result: GrokQuotaProbeResult] placeholder>()
 
@@ -79,42 +79,16 @@ const extractErrorMessage = (e: unknown): string => {
   )
 placeholder
 
-const formatWindow = (label: string, window?: GrokQuotaWindow | null): string | null => {
-  if (!window || window.limit == null || window.remaining == null) return null
-  return `${labelplaceholder ${window.remainingplaceholder/${window.limitplaceholder`
-placeholder
-
-const retryAfterLabel = computed(() => {
-  const seconds = data.value?.snapshot?.retry_after_seconds
-  if (seconds == null || seconds <= 0) return null
-  if (seconds < 60) return `${secondsplaceholders`
-  return `${Math.ceil(seconds / 60)placeholderm`
-placeholder)
-
 const summary = computed(() => {
-  const snapshot = data.value?.snapshot
-  if (!data.value) return ''
+  if (props.compact || !data.value) return ''
+  // Non-compact fallback (rarely used): brief weekly percent if present.
   const billing = data.value.billing
-  const parts: Array<string | null> = []
   if (billing?.period_type?.toLowerCase() === 'weekly' && billing.usage_percent != null) {
-    parts.push(t('admin.accounts.usageWindow.grokWeeklyUsage', {
+    return t('admin.accounts.usageWindow.grokWeeklyUsage', {
       percent: Math.round(Math.min(100, Math.max(0, billing.usage_percent)))
-    placeholder))
+    placeholder)
   placeholder
-  if (snapshot) {
-    parts.push(
-      formatWindow(t('admin.accounts.usageWindow.grokRequests'), snapshot.requests),
-      formatWindow(t('admin.accounts.usageWindow.grokTokens'), snapshot.tokens)
-    )
-  placeholder
-  if (retryAfterLabel.value) {
-    parts.push(t('admin.accounts.usageWindow.grokRetryAfter', { time: retryAfterLabel.value placeholder))
-  placeholder
-  if (snapshot?.entitlement_status) {
-    parts.push(snapshot.entitlement_status)
-  placeholder
-  const visibleParts = parts.filter((part): part is string => Boolean(part))
-  return visibleParts.length > 0 ? visibleParts.join(' | ') : t('admin.accounts.usageWindow.grokNoHeaders')
+  return ''
 placeholder)
 
 const truncatedError = computed(() => {

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -33,6 +34,82 @@ placeholder)
 	require.False(t, tripped)
 	tripped, _ = circuit.recordFailure(2, base.Add(2*time.Minute))
 	require.False(t, tripped, "failures outside the window must not accumulate")
+placeholder
+
+func TestOpenAIProxyStreamCircuitCollapsesBurstFailures(t *testing.T) {
+	base := time.Unix(1_800_000_000, 0)
+	circuit := newOpenAIProxyStreamCircuit(openAIProxyStreamCircuitSettings{
+		failureThreshold: 2,
+		failureWindow:    time.Minute,
+		quarantineTTL:    10 * time.Minute,
+		collapseInterval: 3 * time.Second,
+		maxEntries:       16,
+placeholder)
+
+	// One HTTP/2 connection loss kills several multiplexed streams at once:
+	// the near-simultaneous reports must count as a single failure event.
+	tripped, _ := circuit.recordFailure(1, base)
+	require.False(t, tripped)
+	tripped, _ = circuit.recordFailure(1, base.Add(time.Second))
+	require.False(t, tripped, "burst failures inside the collapse interval must merge")
+	tripped, _ = circuit.recordFailure(1, base.Add(2*time.Second))
+	require.False(t, tripped, "burst failures inside the collapse interval must merge")
+	require.False(t, circuit.isBlocked(1, base.Add(2*time.Second)))
+
+	// A second, distinct incident past the collapse interval still trips.
+	tripped, _ = circuit.recordFailure(1, base.Add(5*time.Second))
+	require.True(t, tripped)
+	require.True(t, circuit.isBlocked(1, base.Add(5*time.Second)))
+placeholder
+
+func TestOpenAIProxyStreamCircuitDisabled(t *testing.T) {
+	base := time.Unix(1_800_000_000, 0)
+	circuit := newOpenAIProxyStreamCircuit(openAIProxyStreamCircuitSettings{
+		disabled:         true,
+		failureThreshold: 1,
+		failureWindow:    time.Minute,
+		quarantineTTL:    10 * time.Minute,
+		maxEntries:       16,
+placeholder)
+
+	tripped, _ := circuit.recordFailure(1, base)
+	require.False(t, tripped)
+	require.False(t, circuit.isBlocked(1, base))
+	require.Equal(t, 0, circuit.activeBlockCount(base))
+placeholder
+
+func TestOpenAIProxyStreamCircuitActiveBlockCount(t *testing.T) {
+	base := time.Unix(1_800_000_000, 0)
+	circuit := newOpenAIProxyStreamCircuit(openAIProxyStreamCircuitSettings{
+		failureThreshold: 1,
+		failureWindow:    time.Minute,
+		quarantineTTL:    10 * time.Minute,
+		maxEntries:       16,
+placeholder)
+
+	require.Equal(t, 0, circuit.activeBlockCount(base))
+	tripped, until := circuit.recordFailure(1, base)
+	require.True(t, tripped)
+	circuit.recordFailure(2, base) // second proxy also tripped (threshold 1)
+	require.Equal(t, 2, circuit.activeBlockCount(base.Add(time.Second)))
+	require.Equal(t, 0, circuit.activeBlockCount(until), "expired quarantines must not count")
+placeholder
+
+func TestOpenAIProxyStreamQuarantineBypassContext(t *testing.T) {
+	proxyID := int64(7)
+	account := &Account{ID: 1, Platform: PlatformOpenAI, ProxyID: &proxyIDplaceholder
+	svc := &OpenAIGatewayService{placeholder
+	svc.openaiProxyStreamCircuit = newOpenAIProxyStreamCircuit(openAIProxyStreamCircuitSettings{
+		failureThreshold: 1,
+		failureWindow:    time.Minute,
+		quarantineTTL:    10 * time.Minute,
+		maxEntries:       16,
+placeholder)
+	svc.openaiProxyStreamCircuit.recordFailure(proxyID, time.Now())
+
+	ctx := context.Background()
+	require.True(t, svc.isOpenAIProxyStreamQuarantined(ctx, account))
+	require.False(t, svc.isOpenAIProxyStreamQuarantined(withOpenAIProxyStreamQuarantineBypass(ctx), account))
 placeholder
 
 func TestOpenAIProxyStreamCircuitBoundsEntries(t *testing.T) {

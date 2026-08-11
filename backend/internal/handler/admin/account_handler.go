@@ -147,6 +147,8 @@ type UpdateAccountRequest struct {
 	GroupIDs                *[]int64       `json:"group_ids"`
 	ExpiresAt               *int64         `json:"expires_at"`
 	AutoPauseOnExpired      *bool          `json:"auto_pause_on_expired"`
+	ProbeEnabled            *bool          `json:"upstream_billing_probe_enabled"`
+	RateSyncEnabled         *bool          `json:"upstream_billing_rate_sync_enabled"`
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
 placeholder
 
@@ -987,6 +989,8 @@ placeholder
 		GroupIDs:              req.GroupIDs,
 		ExpiresAt:             req.ExpiresAt,
 		AutoPauseOnExpired:    req.AutoPauseOnExpired,
+		ProbeEnabled:          req.ProbeEnabled,
+		RateSyncEnabled:       req.RateSyncEnabled,
 		SkipMixedChannelCheck: skipCheck,
 placeholder)
 	if err != nil {
@@ -1061,6 +1065,10 @@ type TestAccountRequest struct {
 	ModelID string `json:"model_id"`
 	Prompt  string `json:"prompt"`
 	Mode    string `json:"mode"`
+	// Optional media for Grok (and future) real generation tests.
+	// ImageDataURL / AudioDataURL are data:<mime>;base64,... payloads.
+	ImageDataURL string `json:"image_data_url"`
+	AudioDataURL string `json:"audio_data_url"`
 placeholder
 
 type SyncFromCRSRequest struct {
@@ -1090,8 +1098,13 @@ placeholder
 	// Allow empty body, model_id is optional
 	_ = c.ShouldBindJSON(&req)
 
+	opts := service.AccountTestOptions{
+		ImageDataURL: req.ImageDataURL,
+		AudioDataURL: req.AudioDataURL,
+placeholder
+
 	// Use AccountTestService to test the account with SSE streaming
-	if err := h.accountTestService.TestAccountConnection(c, accountID, req.ModelID, req.Prompt, req.Mode); err != nil {
+	if err := h.accountTestService.TestAccountConnection(c, accountID, req.ModelID, req.Prompt, req.Mode, opts); err != nil {
 		// Error already sent via SSE, just log
 		return
 placeholder
@@ -1411,6 +1424,9 @@ placeholder
 		return
 placeholder
 
+	// Drop SSO/password residue; re-auth must leave only OAuth tokens on disk.
+	req.Credentials = service.SanitizeStoredCredentials(existing.Platform, req.Credentials)
+
 	updatedAccount, err := h.adminService.UpdateAccount(ctx, accountID, &service.UpdateAccountInput{
 		Type:        req.Type,
 		Credentials: req.Credentials,
@@ -1434,6 +1450,20 @@ placeholder
 				"account_id", accountID,
 				"extra_keys", extraKeys,
 				"err", extraErr,
+			)
+	placeholder
+placeholder
+
+	// Successful re-auth clears the soft spending-limit reauth flag for Grok.
+	if existing.Platform == service.PlatformGrok {
+		if clearErr := h.adminService.UpdateAccountExtra(ctx, accountID, map[string]any{
+			"grok_needs_reauth":        false,
+			"grok_needs_reauth_reason": "",
+			"grok_needs_reauth_at":     "",
+	placeholder); clearErr != nil {
+			slog.Warn("apply_oauth_credentials.clear_grok_reauth_failed",
+				"account_id", accountID,
+				"err", clearErr,
 			)
 	placeholder
 placeholder
@@ -1529,6 +1559,141 @@ placeholder
 		return
 placeholder
 	response.Success(c, gin.H{"message": "reverted"placeholder)
+placeholder
+
+// BatchDelete handles deleting multiple accounts with bounded concurrency.
+// POST /api/v1/admin/accounts/batch-delete
+func (h *AccountHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		AccountIDs []int64 `json:"account_ids"`
+placeholder
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	accountIDs := normalizeInt64IDList(req.AccountIDs)
+	if len(accountIDs) == 0 {
+		response.BadRequest(c, "account_ids is required")
+		return
+placeholder
+
+	accounts, err := h.adminService.GetAccountsByIDs(c.Request.Context(), accountIDs)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	type deleteError struct {
+		AccountID int64  `json:"account_id"`
+		Error     string `json:"error"`
+placeholder
+
+	requestedIDs := make(map[int64]struct{placeholder, len(accountIDs))
+	for _, accountID := range accountIDs {
+		requestedIDs[accountID] = struct{placeholder{placeholder
+placeholder
+	accountsByID := make(map[int64]*service.Account, len(accounts))
+	for _, account := range accounts {
+		if account != nil {
+			accountsByID[account.ID] = account
+	placeholder
+placeholder
+
+	rootIDs := make([]int64, 0, len(accountIDs))
+	dependentIDs := make(map[int64][]int64)
+	failedIDs := make([]int64, 0)
+	errorsByAccount := make([]deleteError, 0)
+	for _, accountID := range accountIDs {
+		account := accountsByID[accountID]
+		if account == nil {
+			failedIDs = append(failedIDs, accountID)
+			errorsByAccount = append(errorsByAccount, deleteError{
+				AccountID: accountID,
+				Error:     "account not found",
+		placeholder)
+			continue
+	placeholder
+
+		rootID := accountID
+		visited := map[int64]struct{placeholder{accountID: {placeholderplaceholder
+		for {
+			current := accountsByID[rootID]
+			if current == nil || current.ParentAccountID == nil {
+				break
+		placeholder
+			parentID := *current.ParentAccountID
+			if _, selected := requestedIDs[parentID]; !selected {
+				break
+		placeholder
+			if _, exists := accountsByID[parentID]; !exists {
+				break
+		placeholder
+			if _, cyclic := visited[parentID]; cyclic {
+				rootID = accountID
+				break
+		placeholder
+			visited[parentID] = struct{placeholder{placeholder
+			rootID = parentID
+	placeholder
+
+		if rootID != accountID {
+			dependentIDs[rootID] = append(dependentIDs[rootID], accountID)
+			continue
+	placeholder
+		rootIDs = append(rootIDs, accountID)
+placeholder
+
+	const maxConcurrency = 5
+	g, gctx := errgroup.WithContext(c.Request.Context())
+	g.SetLimit(maxConcurrency)
+
+	var mu sync.Mutex
+	successIDs := make([]int64, 0, len(accountIDs))
+
+	// Every worker returns nil so one account failure does not cancel the remaining deletions.
+	for _, id := range rootIDs {
+		accountID := id
+		g.Go(func() error {
+			err := h.adminService.DeleteAccount(gctx, accountID)
+
+			mu.Lock()
+			defer mu.Unlock()
+			affectedIDs := append([]int64{accountIDplaceholder, dependentIDs[accountID]...)
+			if err != nil {
+				for _, affectedID := range affectedIDs {
+					failedIDs = append(failedIDs, affectedID)
+					errorsByAccount = append(errorsByAccount, deleteError{
+						AccountID: affectedID,
+						Error:     err.Error(),
+				placeholder)
+			placeholder
+				return nil
+		placeholder
+			successIDs = append(successIDs, affectedIDs...)
+			return nil
+	placeholder)
+placeholder
+
+	if err := g.Wait(); err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	sort.Slice(successIDs, func(i, j int) bool { return successIDs[i] < successIDs[j] placeholder)
+	sort.Slice(failedIDs, func(i, j int) bool { return failedIDs[i] < failedIDs[j] placeholder)
+	sort.Slice(errorsByAccount, func(i, j int) bool {
+		return errorsByAccount[i].AccountID < errorsByAccount[j].AccountID
+placeholder)
+
+	response.Success(c, gin.H{
+		"total":       len(accountIDs),
+		"success":     len(successIDs),
+		"failed":      len(failedIDs),
+		"success_ids": successIDs,
+		"failed_ids":  failedIDs,
+		"errors":      errorsByAccount,
+placeholder)
 placeholder
 
 // BatchClearError handles batch clearing account errors
@@ -2283,6 +2448,11 @@ type BatchTodayStatsRequest struct {
 	AccountIDs []int64 `json:"account_ids" binding:"required"`
 placeholder
 
+type BatchUsageRequest struct {
+	AccountIDs []int64 `json:"account_ids" binding:"required"`
+	Force      bool    `json:"force"`
+placeholder
+
 // GetBatchTodayStats 批量获取多个账号的今日统计。
 // POST /api/v1/admin/accounts/today-stats/batch
 func (h *AccountHandler) GetBatchTodayStats(c *gin.Context) {
@@ -2327,6 +2497,36 @@ placeholder
 placeholder
 	c.Header("X-Snapshot-Cache", "miss")
 	response.Success(c, payload)
+placeholder
+
+// GetBatchUsage 批量获取多个账号的 current usage。
+// POST /api/v1/admin/accounts/usage/batch
+func (h *AccountHandler) GetBatchUsage(c *gin.Context) {
+	var req BatchUsageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+
+	accountIDs := normalizeInt64IDList(req.AccountIDs)
+	if len(accountIDs) == 0 {
+		response.Success(c, gin.H{
+			"usage":  map[string]any{placeholder,
+			"errors": map[string]string{placeholder,
+	placeholder)
+		return
+placeholder
+
+	usageByAccount, errorsByAccount, err := h.accountUsageService.GetUsageBatch(c.Request.Context(), accountIDs, req.Force)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+placeholder
+
+	response.Success(c, gin.H{
+		"usage":  usageByAccount,
+		"errors": errorsByAccount,
+placeholder)
 placeholder
 
 // SetSchedulableRequest represents the request body for setting schedulable status

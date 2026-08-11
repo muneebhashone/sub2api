@@ -18,6 +18,17 @@ placeholder = vi.hoisted(() => ({
   showError: vi.fn(),
 placeholder))
 
+
+vi.mock('@/utils/featureFlags', () => ({
+  isChannelMonitorV1Mode: () => true,
+  isChannelMonitorV2Mode: () => false,
+  getChannelMonitorMode: () => 'v1' as const,
+placeholder))
+
+vi.mock('@/features/channel-monitor-v2/MonitorSettingsPanel.vue', () => ({
+  default: { name: 'MonitorSettingsPanel', template: '<div data-testid="v2-settings" />' placeholder,
+placeholder))
+
 vi.mock('@/api/admin', () => ({
   adminAPI: {
     channelMonitor: {

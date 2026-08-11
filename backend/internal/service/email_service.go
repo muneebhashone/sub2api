@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html"
 	"log/slog"
@@ -186,128 +188,117 @@ const smtpIOTimeout = 20 * time.Second
 
 // SendEmailWithConfig 使用指定配置发送邮件
 func (s *EmailService) SendEmailWithConfig(config *SMTPConfig, to, subject, body string) error {
-	// Sanitize all SMTP header fields to prevent header injection (CR/LF removal).
-	to = sanitizeEmailHeader(to)
-	subject = sanitizeEmailHeader(subject)
-
-	from := sanitizeEmailHeader(config.From)
-	if config.FromName != "" {
-		from = fmt.Sprintf("%s <%s>", sanitizeEmailHeader(config.FromName), sanitizeEmailHeader(config.From))
-placeholder
-
-	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
-		from, to, subject, body)
-
-	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
-	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
-
-	if config.UseTLS {
-		return s.sendMailTLS(addr, auth, config.From, to, []byte(msg), config.Host)
-placeholder
-
-	return s.sendMailPlain(addr, auth, config.From, to, []byte(msg), config.Host)
-placeholder
-
-// sendMailPlain sends mail without TLS using a dialer with timeout.
-func (s *EmailService) sendMailPlain(addr string, auth smtp.Auth, from, to string, msg []byte, host string) error {
-	dialer := &net.Dialer{Timeout: smtpDialTimeoutplaceholder
-	conn, err := dialer.Dial("tcp", addr)
+	message, err := buildSMTPMessage(config, to, subject, body)
 	if err != nil {
-		return fmt.Errorf("smtp dial: %w", err)
+		return err
 placeholder
-	_ = conn.SetDeadline(time.Now().Add(smtpIOTimeout))
-	defer func() { _ = conn.Close() placeholder()
 
-	client, err := smtp.NewClient(conn, host)
+	client, err := s.connectSMTP(config)
 	if err != nil {
-		return fmt.Errorf("new smtp client: %w", err)
+		return err
 placeholder
 	defer func() { _ = client.Close() placeholder()
 
-	// Opportunistic STARTTLS: upgrade to encrypted connection if the server supports it.
-	// This mirrors the behavior of smtp.SendMail which we replaced for timeout support.
-	if ok, _ := client.Extension("STARTTLS"); ok {
-		if err = client.StartTLS(&tls.Config{ServerName: host, MinVersion: tls.VersionTLS12placeholder); err != nil {
-			return fmt.Errorf("starttls: %w", err)
-	placeholder
-placeholder
-
+	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
 	if err = client.Auth(auth); err != nil {
 		return fmt.Errorf("smtp auth: %w", err)
 placeholder
-	if err = client.Mail(from); err != nil {
+	if err = client.Mail(message.envelopeFrom); err != nil {
 		return fmt.Errorf("smtp mail: %w", err)
 placeholder
-	if err = client.Rcpt(to); err != nil {
+	if err = client.Rcpt(message.envelopeTo); err != nil {
 		return fmt.Errorf("smtp rcpt: %w", err)
 placeholder
 	w, err := client.Data()
 	if err != nil {
 		return fmt.Errorf("smtp data: %w", err)
 placeholder
-	if _, err = w.Write(msg); err != nil {
+	if _, err = w.Write(message.data); err != nil {
 		return fmt.Errorf("write msg: %w", err)
 placeholder
 	if err = w.Close(); err != nil {
 		return fmt.Errorf("close writer: %w", err)
 placeholder
-	_ = client.Quit()
-	return nil
-placeholder
-
-// sendMailTLS 使用TLS发送邮件
-func (s *EmailService) sendMailTLS(addr string, auth smtp.Auth, from, to string, msg []byte, host string) error {
-	tlsConfig := &tls.Config{
-		ServerName: host,
-		// 强制 TLS 1.2+，避免协议降级导致的弱加密风险。
-		MinVersion: tls.VersionTLS12,
-placeholder
-
-	dialer := &net.Dialer{Timeout: smtpDialTimeoutplaceholder
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
-	if err != nil {
-		return fmt.Errorf("tls dial: %w", err)
-placeholder
-	_ = conn.SetDeadline(time.Now().Add(smtpIOTimeout))
-	defer func() { _ = conn.Close() placeholder()
-
-	client, err := smtp.NewClient(conn, host)
-	if err != nil {
-		return fmt.Errorf("new smtp client: %w", err)
-placeholder
-	defer func() { _ = client.Close() placeholder()
-
-	if err = client.Auth(auth); err != nil {
-		return fmt.Errorf("smtp auth: %w", err)
-placeholder
-
-	if err = client.Mail(from); err != nil {
-		return fmt.Errorf("smtp mail: %w", err)
-placeholder
-
-	if err = client.Rcpt(to); err != nil {
-		return fmt.Errorf("smtp rcpt: %w", err)
-placeholder
-
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("smtp data: %w", err)
-placeholder
-
-	_, err = w.Write(msg)
-	if err != nil {
-		return fmt.Errorf("write msg: %w", err)
-placeholder
-
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("close writer: %w", err)
-placeholder
-
 	// Email is sent successfully after w.Close(), ignore Quit errors
 	// Some SMTP servers return non-standard responses on QUIT
 	_ = client.Quit()
 	return nil
+placeholder
+
+// smtpTestRootCAs 仅供单元测试注入自签 CA，生产环境始终为 nil（走系统信任链）。
+var smtpTestRootCAs *x509.CertPool
+
+func smtpTLSConfig(host string) *tls.Config {
+	return &tls.Config{
+		ServerName: host,
+		// 强制 TLS 1.2+，避免协议降级导致的弱加密风险。
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    smtpTestRootCAs,
+placeholder
+placeholder
+
+// connectSMTP 按配置建立 SMTP 会话，发送与测试连接共用此路径，
+// 保证"测试连接成功 ⇔ 实际发信可用"：
+//   - UseTLS=true：先尝试隐式 TLS（465 语义）；若服务器以明文应答
+//     （587/25 等提交端口的 STARTTLS 语义），自动改走"明文连接 + 强制 STARTTLS"。
+//     两种方式都无法建立加密连接时报错，绝不明文继续。
+//   - UseTLS=false：明文连接后若服务器支持 STARTTLS 则机会式升级，
+//     与 smtp.SendMail 的默认行为一致。
+func (s *EmailService) connectSMTP(config *SMTPConfig) (*smtp.Client, error) {
+	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
+	dialer := &net.Dialer{Timeout: smtpDialTimeoutplaceholder
+	tlsConfig := smtpTLSConfig(config.Host)
+
+	if config.UseTLS {
+		conn, err := tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
+		if err == nil {
+			return newSMTPClient(conn, config.Host)
+	placeholder
+		var recordErr tls.RecordHeaderError
+		if !errors.As(err, &recordErr) {
+			return nil, fmt.Errorf("tls dial: %w", err)
+	placeholder
+		// SMTP 服务器先发问候语：明文问候会让 TLS 握手立刻返回
+		// RecordHeaderError，据此可靠判定对端期望 STARTTLS。
+		return s.connectSMTPStartTLS(dialer, addr, config.Host, tlsConfig, true)
+placeholder
+
+	return s.connectSMTPStartTLS(dialer, addr, config.Host, tlsConfig, false)
+placeholder
+
+// connectSMTPStartTLS 建立明文连接并按需升级 STARTTLS。
+// mandatory 为 true 时服务器必须支持 STARTTLS，否则报错。
+func (s *EmailService) connectSMTPStartTLS(dialer *net.Dialer, addr, host string, tlsConfig *tls.Config, mandatory bool) (*smtp.Client, error) {
+	conn, err := dialer.Dial("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("smtp dial: %w", err)
+placeholder
+	client, err := newSMTPClient(conn, host)
+	if err != nil {
+		return nil, err
+placeholder
+	if ok, _ := client.Extension("STARTTLS"); !ok {
+		if mandatory {
+			_ = client.Close()
+			return nil, errors.New("smtp server does not support STARTTLS")
+	placeholder
+		return client, nil
+placeholder
+	if err := client.StartTLS(tlsConfig); err != nil {
+		_ = client.Close()
+		return nil, fmt.Errorf("starttls: %w", err)
+placeholder
+	return client, nil
+placeholder
+
+func newSMTPClient(conn net.Conn, host string) (*smtp.Client, error) {
+	_ = conn.SetDeadline(time.Now().Add(smtpIOTimeout))
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("new smtp client: %w", err)
+placeholder
+	return client, nil
 placeholder
 
 // GenerateVerifyCode 生成6位数字验证码
@@ -458,49 +449,24 @@ func (s *EmailService) buildVerifyCodeEmailBody(code, siteName string) string {
 `, html.EscapeString(siteName), code)
 placeholder
 
-// TestSMTPConnectionWithConfig 使用指定配置测试SMTP连接
+// TestSMTPConnectionWithConfig 使用指定配置测试SMTP连接。
+// 与 SendEmailWithConfig 共用 connectSMTP 建连（含 STARTTLS 升级逻辑），
+// 避免出现"测试连接失败但实际发信成功"的不一致。
 func (s *EmailService) TestSMTPConnectionWithConfig(config *SMTPConfig) error {
-	addr := fmt.Sprintf("%s:%d", config.Host, config.Port)
-
-	if config.UseTLS {
-		tlsConfig := &tls.Config{
-			ServerName: config.Host,
-			// 与发送逻辑一致，显式要求 TLS 1.2+。
-			MinVersion: tls.VersionTLS12,
-	placeholder
-		conn, err := tls.Dial("tcp", addr, tlsConfig)
-		if err != nil {
-			return fmt.Errorf("tls connection failed: %w", err)
-	placeholder
-		defer func() { _ = conn.Close() placeholder()
-
-		client, err := smtp.NewClient(conn, config.Host)
-		if err != nil {
-			return fmt.Errorf("smtp client creation failed: %w", err)
-	placeholder
-		defer func() { _ = client.Close() placeholder()
-
-		auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
-		if err = client.Auth(auth); err != nil {
-			return fmt.Errorf("smtp authentication failed: %w", err)
-	placeholder
-
-		return client.Quit()
-placeholder
-
-	// 非TLS连接测试
-	client, err := smtp.Dial(addr)
+	client, err := s.connectSMTP(config)
 	if err != nil {
 		return fmt.Errorf("smtp connection failed: %w", err)
 placeholder
 	defer func() { _ = client.Close() placeholder()
 
 	auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
-	if err = client.Auth(auth); err != nil {
+	if err := client.Auth(auth); err != nil {
 		return fmt.Errorf("smtp authentication failed: %w", err)
 placeholder
 
-	return client.Quit()
+	// 认证成功即视为连接可用；与发送路径一致，忽略 QUIT 的非标准响应。
+	_ = client.Quit()
+	return nil
 placeholder
 
 // GeneratePasswordResetToken generates a secure 32-byte random token (64 hex characters)

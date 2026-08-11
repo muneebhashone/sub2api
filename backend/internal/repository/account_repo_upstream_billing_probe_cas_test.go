@@ -41,8 +41,8 @@ placeholder
 				WithArgs(int64(9)).
 				WillReturnRows(sqlmock.NewRows([]string{"protocol", "host", "port", "username", "password", "status"placeholder).
 					AddRow("http", "127.0.0.1", 3128, "user", "pass", service.StatusActive))
-			mock.ExpectExec(`(?s)`+regexp.QuoteMeta("UPDATE accounts")+`.*`+regexp.QuoteMeta("WHERE id = $2")+`.*`+regexp.QuoteMeta("AND platform = $3")+`.*`+regexp.QuoteMeta("AND type = $4")+`.*`+regexp.QuoteMeta("AND credentials = $5::jsonb")+`.*`+regexp.QuoteMeta("AND proxy_id IS NOT DISTINCT FROM $6")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe', 'null'::jsonb) = $7::jsonb")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe_enabled', 'null'::jsonb) = $8::jsonb")).
-				WithArgs(sqlmock.AnyArg(), int64(17), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test","base_url":"http://127.0.0.1:8080"placeholder`, int64(9), `{"status":"stale"placeholder`, "null").
+			mock.ExpectExec(`(?s)`+regexp.QuoteMeta("UPDATE accounts")+`.*`+regexp.QuoteMeta("WHERE id = $2")+`.*`+regexp.QuoteMeta("AND platform = $3")+`.*`+regexp.QuoteMeta("AND type = $4")+`.*`+regexp.QuoteMeta("AND credentials = $5::jsonb")+`.*`+regexp.QuoteMeta("AND proxy_id IS NOT DISTINCT FROM $6")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe', 'null'::jsonb) = $7::jsonb")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe_enabled', 'null'::jsonb) = $8::jsonb")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_rate_sync_enabled', 'null'::jsonb) = $9::jsonb")).
+				WithArgs(sqlmock.AnyArg(), int64(17), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test","base_url":"http://127.0.0.1:8080"placeholder`, int64(9), `{"status":"stale"placeholder`, "null", "null", nil).
 				WillReturnResult(sqlmock.NewResult(0, tt.affected))
 			if tt.affected > 0 {
 				mock.ExpectExec(regexp.QuoteMeta("INSERT INTO scheduler_outbox")).
@@ -75,7 +75,7 @@ placeholder
 		placeholder
 
 			txCtx := dbent.NewTxContext(context.Background(), tx)
-			err = repo.UpdateUpstreamBillingProbeSnapshot(txCtx, account, &service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder)
+			err = repo.UpdateUpstreamBillingProbeSnapshot(txCtx, account, &service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder, nil)
 
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
@@ -98,8 +98,8 @@ placeholder
 	t.Cleanup(func() { _ = client.Close() placeholder)
 
 	mock.ExpectBegin()
-	mock.ExpectExec(`(?s)`+regexp.QuoteMeta("UPDATE accounts")+`.*`+regexp.QuoteMeta("AND credentials = $5::jsonb")+`.*`+regexp.QuoteMeta("AND proxy_id IS NOT DISTINCT FROM $6")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe', 'null'::jsonb) = $7::jsonb")).
-		WithArgs(sqlmock.AnyArg(), int64(17), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test"placeholder`, nil, "null", "null").
+	mock.ExpectExec(`(?s)`+regexp.QuoteMeta("UPDATE accounts")+`.*`+regexp.QuoteMeta("rate_multiplier = CASE")+`.*`+regexp.QuoteMeta("THEN $10::numeric")+`.*`+regexp.QuoteMeta("AND credentials = $5::jsonb")+`.*`+regexp.QuoteMeta("AND proxy_id IS NOT DISTINCT FROM $6")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe', 'null'::jsonb) = $7::jsonb")).
+		WithArgs(sqlmock.AnyArg(), int64(17), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test"placeholder`, nil, "null", "true", "true", 0.065).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO scheduler_outbox")).
 		WithArgs(service.SchedulerOutboxEventAccountChanged, int64(17), nil, nil, sqlmock.AnyArg()).
@@ -112,9 +112,19 @@ placeholder
 		Platform:    service.PlatformOpenAI,
 		Type:        service.AccountTypeAPIKey,
 placeholder"api_key": "sk-test"placeholder,
+		Extra: map[string]any{
+			service.UpstreamBillingProbeEnabledExtraKey:    true,
+			service.UpstreamBillingRateSyncEnabledExtraKey: true,
+	placeholder,
 placeholder
+	rateMultiplier := 0.065
 
-	err = repo.UpdateUpstreamBillingProbeSnapshot(context.Background(), account, &service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder)
+	err = repo.UpdateUpstreamBillingProbeSnapshot(
+		context.Background(),
+		account,
+		&service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder,
+		&rateMultiplier,
+	)
 
 placeholder
 	require.NoError(t, mock.ExpectationsWereMet())
@@ -148,7 +158,7 @@ placeholder"api_key": "sk-test"placeholder,
 	placeholder,
 placeholder
 	repo := newAccountRepositoryWithSQL(client, db, nil)
-	err = repo.UpdateUpstreamBillingProbeSnapshot(dbent.NewTxContext(context.Background(), tx), account, &service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder)
+	err = repo.UpdateUpstreamBillingProbeSnapshot(dbent.NewTxContext(context.Background(), tx), account, &service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder, nil)
 
 	require.ErrorIs(t, err, service.ErrUpstreamBillingProbeIdentityChanged)
 	mock.ExpectRollback()
@@ -166,7 +176,7 @@ placeholder
 
 	mock.ExpectBegin()
 	mock.ExpectExec(`(?s)`+regexp.QuoteMeta("UPDATE accounts")+`.*`+regexp.QuoteMeta("AND proxy_id IS NOT DISTINCT FROM $6")+`.*`+regexp.QuoteMeta("COALESCE(extra -> 'upstream_billing_probe', 'null'::jsonb) = $7::jsonb")).
-		WithArgs(sqlmock.AnyArg(), int64(18), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test"placeholder`, nil, "null", "null").
+		WithArgs(sqlmock.AnyArg(), int64(18), service.PlatformOpenAI, service.AccountTypeAPIKey, `{"api_key":"sk-test"placeholder`, nil, "null", "true", "true", 0.7).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO scheduler_outbox")).WillReturnError(errors.New("outbox failed"))
 	mock.ExpectRollback()
@@ -177,9 +187,19 @@ placeholder
 		Platform:    service.PlatformOpenAI,
 		Type:        service.AccountTypeAPIKey,
 placeholder"api_key": "sk-test"placeholder,
+		Extra: map[string]any{
+			service.UpstreamBillingProbeEnabledExtraKey:    true,
+			service.UpstreamBillingRateSyncEnabledExtraKey: true,
+	placeholder,
 placeholder
+	rateMultiplier := 0.7
 
-	err = repo.UpdateUpstreamBillingProbeSnapshot(context.Background(), account, &service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder)
+	err = repo.UpdateUpstreamBillingProbeSnapshot(
+		context.Background(),
+		account,
+		&service.UpstreamBillingProbeSnapshot{Status: service.UpstreamBillingProbeStatusOKplaceholder,
+		&rateMultiplier,
+	)
 
 	require.EqualError(t, err, "outbox failed")
 	require.NoError(t, mock.ExpectationsWereMet())

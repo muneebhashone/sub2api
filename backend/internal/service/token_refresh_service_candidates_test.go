@@ -51,6 +51,7 @@ func (r *tokenRefreshCandidateRepo) ListOAuthRefreshCandidatePage(_ context.Cont
 		placeholder
 	placeholder
 		if options.ActiveOnly && account.Status != StatusActive ||
+			!account.Schedulable ||
 			account.Type != AccountTypeOAuth ||
 			!platformAllowed ||
 			options.RequireRefreshToken && strings.TrimSpace(refreshToken) == "" ||
@@ -122,6 +123,7 @@ func TestTokenRefreshService_ProcessRefreshUsesOAuthRefreshCandidates(t *testing
 				Platform:    PlatformOpenAI,
 				Type:        AccountTypeOAuth,
 				Status:      StatusActive,
+				Schedulable: true,
 		placeholder"refresh_token": "refresh-token"placeholder,
 		placeholder,
 			{
@@ -129,6 +131,7 @@ func TestTokenRefreshService_ProcessRefreshUsesOAuthRefreshCandidates(t *testing
 				Platform:    PlatformOpenAI,
 				Type:        AccountTypeOAuth,
 				Status:      StatusActive,
+				Schedulable: true,
 		placeholderplaceholder,
 		placeholder,
 			{
@@ -143,6 +146,7 @@ func TestTokenRefreshService_ProcessRefreshUsesOAuthRefreshCandidates(t *testing
 				Platform:                PlatformAntigravity,
 				Type:                    AccountTypeOAuth,
 				Status:                  StatusActive,
+				Schedulable:             true,
 				Credentials:             map[string]any{"refresh_token": "refresh-token"placeholder,
 				TempUnschedulableUntil:  &future,
 				TempUnschedulableReason: "token refresh retry exhausted: network timeout",
@@ -152,6 +156,7 @@ func TestTokenRefreshService_ProcessRefreshUsesOAuthRefreshCandidates(t *testing
 				Platform:    "other",
 				Type:        AccountTypeOAuth,
 				Status:      StatusActive,
+				Schedulable: true,
 		placeholder"refresh_token": "refresh-token"placeholder,
 		placeholder,
 			{
@@ -159,10 +164,19 @@ func TestTokenRefreshService_ProcessRefreshUsesOAuthRefreshCandidates(t *testing
 				Platform:                PlatformAntigravity,
 				Type:                    AccountTypeOAuth,
 				Status:                  StatusActive,
+				Schedulable:             true,
 				Credentials:             map[string]any{"refresh_token": "refresh-token"placeholder,
 				Extra:                   map[string]any{"privacy_mode": AntigravityPrivacySetplaceholder,
 				TempUnschedulableUntil:  &future,
 				TempUnschedulableReason: "OAuth 401: unauthorized",
+		placeholder,
+			{
+				ID:          7,
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeOAuth,
+				Status:      StatusActive,
+				Schedulable: false,
+		placeholder"refresh_token": "permanently-rejected-token"placeholder,
 		placeholder,
 	placeholder,
 placeholder

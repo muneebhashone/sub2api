@@ -3,6 +3,7 @@ import { flushPromises, shallowMount placeholder from '@vue/test-utils'
 import PaymentView from '../PaymentView.vue'
 import { PAYMENT_RECOVERY_STORAGE_KEY placeholder from '@/components/payment/paymentFlow'
 import { formatPaymentAmount placeholder from '@/components/payment/currency'
+import SubscriptionPlanCard from '@/components/payment/SubscriptionPlanCard.vue'
 import type { CheckoutInfoResponse, MethodLimit, SubscriptionPlan placeholder from '@/types/payment'
 
 const routeState = vi.hoisted(() => ({
@@ -235,6 +236,61 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
   await flushPromises()
   return wrapper
 placeholder
+
+async function mountSubscriptionPlanList(planCount: number) {
+  vi.useRealTimers()
+  routeState.path = '/purchase'
+  routeState.query = { tab: 'subscription' placeholder
+  routerReplace.mockReset().mockResolvedValue(undefined)
+  routerPush.mockReset().mockResolvedValue(undefined)
+  routerResolve.mockClear()
+  createOrder.mockReset()
+  refreshUser.mockReset()
+  fetchActiveSubscriptions.mockReset().mockResolvedValue(undefined)
+  showError.mockReset()
+  showInfo.mockReset()
+  showWarning.mockReset()
+  const basePlan = checkoutInfoWithPlansFixture().data.plans[0]
+  const plans = Array.from({ length: planCount placeholder, (_, index) => ({
+    ...basePlan,
+    id: index + 1,
+    name: `Plan ${index + 1placeholder`,
+  placeholder))
+  getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture({ plans placeholder))
+  bridgeInvoke.mockReset()
+  window.localStorage.clear()
+  ;(window as Window & { WeixinJSBridge?: { invoke: typeof bridgeInvoke placeholder placeholder).WeixinJSBridge = undefined
+
+  const wrapper = shallowMount(PaymentView, {
+    global: {
+      stubs: {
+        AppLayout: {
+          template: '<div><slot /></div>',
+        placeholder,
+        Teleport: true,
+        Transition: false,
+      placeholder,
+    placeholder,
+  placeholder)
+  await flushPromises()
+  await flushPromises()
+  return wrapper
+placeholder
+
+describe('PaymentView subscription plan grid', () => {
+  it.each([3, 4, 6])('keeps %i plans on the existing mobile/tablet/desktop grid', async (planCount) => {
+    const wrapper = await mountSubscriptionPlanList(planCount)
+    const cards = wrapper.findAllComponents(SubscriptionPlanCard)
+
+    expect(cards).toHaveLength(planCount)
+    expect([...(cards[0].element.parentElement?.classList ?? [])]).toEqual(expect.arrayContaining([
+      'grid',
+      'grid-cols-1',
+      'sm:grid-cols-2',
+      'lg:grid-cols-3',
+    ]))
+  placeholder)
+placeholder)
 
 describe('PaymentView subscription confirmation amounts', () => {
   it('shows converted CNY pay amount using the subscription rate, not the balance multiplier', async () => {

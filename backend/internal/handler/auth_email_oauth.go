@@ -59,6 +59,9 @@ func (h *AuthHandler) CompleteGoogleOAuthRegistration(c *gin.Context) {
 placeholder
 
 func (h *AuthHandler) emailOAuthStart(c *gin.Context, provider string) {
+	if !h.requireActionCaptchaForOAuthLoginStart(c) {
+		return
+placeholder
 	cfg, err := h.getEmailOAuthConfig(c.Request.Context(), provider)
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -90,7 +93,7 @@ placeholder
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BUILD_URL_FAILED", "failed to build oauth authorization url").WithCause(err))
 		return
 placeholder
-	c.Redirect(http.StatusFound, authURL)
+	respondOAuthStart(c, authURL)
 placeholder
 
 func (h *AuthHandler) emailOAuthCallback(c *gin.Context, provider string) {

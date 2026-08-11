@@ -14,12 +14,12 @@
       <!-- Header: name + badge + price -->
       <div class="mb-3 flex items-start justify-between gap-2">
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <h3 class="truncate text-base font-bold text-gray-900 dark:text-white">{{ plan.name placeholderplaceholder</h3>
-            <span :class="['shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', badgeLightClass]">
-              {{ pLabel placeholderplaceholder
-            </span>
-          </div>
+          <h3
+            :title="plan.name"
+            class="h-12 min-w-0 break-words [overflow-wrap:anywhere] text-base font-bold leading-6 text-gray-900 dark:text-white line-clamp-2"
+          >
+            {{ plan.name placeholderplaceholder
+          </h3>
           <p v-if="plan.description" class="mt-0.5 text-xs leading-relaxed text-gray-500 dark:text-dark-400 line-clamp-2">
             {{ plan.description placeholderplaceholder
           </p>
@@ -30,7 +30,12 @@
             <span :class="['text-2xl font-extrabold tracking-tight', textClass]">{{ plan.price placeholderplaceholder</span>
             <span v-if="plan.currency" class="text-xs font-medium text-gray-400 dark:text-dark-500">{{ plan.currency placeholderplaceholder</span>
           </div>
-          <span class="text-[11px] text-gray-400 dark:text-dark-500">/ {{ validitySuffix placeholderplaceholder</span>
+          <div class="flex items-center justify-end gap-1">
+            <span :class="['inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', badgeLightClass]">
+              {{ pLabel placeholderplaceholder
+            </span>
+            <span class="text-[11px] text-gray-400 dark:text-dark-500">/ {{ validitySuffix placeholderplaceholder</span>
+          </div>
           <div v-if="plan.original_price" class="mt-0.5 flex items-center justify-end gap-1.5">
             <span class="text-xs text-gray-400 line-through dark:text-dark-500">{{ planCurrencySymbol placeholderplaceholder{{ plan.original_price placeholderplaceholder<template v-if="plan.currency"> {{ plan.currency placeholderplaceholder</template></span>
             <span :class="['rounded px-1 py-0.5 text-[10px] font-semibold', discountClass]">{{ discountText placeholderplaceholder</span>

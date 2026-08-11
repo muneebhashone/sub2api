@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,13 @@ const (
 )
 
 var openAIReasoningEffortValues = []string{"minimal", "low", "medium", "high", "xhigh", "max"placeholder
+
+type openAIReasoningEffortPolicyContextKey struct{placeholder
+
+type openAIReasoningEffortPolicy struct {
+	maxEffort string
+	mappings  []ReasoningEffortMapping
+placeholder
 
 // NormalizeMaxReasoningEffort validates and canonicalizes a group policy value.
 // Empty means that the group does not impose a ceiling.
@@ -41,7 +49,7 @@ placeholder
 placeholder
 
 func reasoningEffortValuesForPlatform(platform string) []string {
-	if platform != PlatformOpenAI {
+	if platform != PlatformOpenAI && platform != PlatformComposite {
 		return nil
 placeholder
 	return openAIReasoningEffortValues
@@ -54,7 +62,11 @@ placeholder
 
 	allowedValues := reasoningEffortValuesForPlatform(platform)
 	if len(allowedValues) == 0 {
-		return "", fmt.Errorf("reasoning effort policy is only supported for platform %q", PlatformOpenAI)
+		return "", fmt.Errorf(
+			"reasoning effort policy is only supported for platforms %q and %q",
+			PlatformOpenAI,
+			PlatformComposite,
+		)
 placeholder
 
 	value := NormalizeMaxReasoningEffort(raw)
@@ -91,7 +103,7 @@ placeholder
 placeholder
 
 // NormalizeReasoningEffortMappings validates group mapping rules against the
-// fixed effort values supported by OpenAI groups.
+// fixed effort values supported by OpenAI routes.
 func NormalizeReasoningEffortMappings(platform string, raw []ReasoningEffortMapping) ([]ReasoningEffortMapping, error) {
 	if len(raw) > maxReasoningEffortMappings {
 		return nil, fmt.Errorf("reasoning effort mappings cannot exceed %d entries", maxReasoningEffortMappings)
@@ -122,6 +134,33 @@ placeholder
 		normalized = append(normalized, ReasoningEffortMapping{From: from, To: toplaceholder)
 placeholder
 	return normalized, nil
+placeholder
+
+// WithOpenAIReasoningEffortPolicy binds a group policy to a request after its
+// concrete target platform has been resolved to OpenAI. The policy is copied so
+// retries and asynchronous forwarding cannot observe later slice mutations.
+func WithOpenAIReasoningEffortPolicy(ctx context.Context, maxEffort string, mappings []ReasoningEffortMapping) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+placeholder
+	policy := openAIReasoningEffortPolicy{
+		maxEffort: maxEffort,
+		mappings:  append([]ReasoningEffortMapping(nil), mappings...),
+placeholder
+	return context.WithValue(ctx, openAIReasoningEffortPolicyContextKey{placeholder, policy)
+placeholder
+
+// ApplyOpenAIReasoningEffortPolicyFromContext applies a policy previously bound
+// to the request. An unbound request is returned byte-for-byte unchanged.
+func ApplyOpenAIReasoningEffortPolicyFromContext(ctx context.Context, body []byte) ([]byte, bool) {
+	if ctx == nil {
+		return body, false
+placeholder
+	policy, ok := ctx.Value(openAIReasoningEffortPolicyContextKey{placeholder).(openAIReasoningEffortPolicy)
+	if !ok {
+		return body, false
+placeholder
+	return ApplyOpenAIReasoningEffortPolicy(body, policy.maxEffort, policy.mappings)
 placeholder
 
 func mapReasoningEffort(raw string, mappings []ReasoningEffortMapping) (string, bool) {

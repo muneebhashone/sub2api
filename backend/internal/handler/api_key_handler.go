@@ -3,6 +3,8 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -60,6 +62,43 @@ type UpdateAPIKeyRequest struct {
 	RateLimit1d         *float64 `json:"rate_limit_1d"`
 	RateLimit7d         *float64 `json:"rate_limit_7d"`
 	ResetRateLimitUsage *bool    `json:"reset_rate_limit_usage"` // 重置限速用量
+placeholder
+
+func validAPIKeyLimit(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= 0 placeholder
+
+func validateAPIKeyCreateRequest(req CreateAPIKeyRequest) error {
+	if req.Quota != nil && !validAPIKeyLimit(*req.Quota) {
+		return errors.New("invalid quota")
+placeholder
+	if req.RateLimit5h != nil && !validAPIKeyLimit(*req.RateLimit5h) {
+		return errors.New("invalid rate_limit_5h")
+placeholder
+	if req.RateLimit1d != nil && !validAPIKeyLimit(*req.RateLimit1d) {
+		return errors.New("invalid rate_limit_1d")
+placeholder
+	if req.RateLimit7d != nil && !validAPIKeyLimit(*req.RateLimit7d) {
+		return errors.New("invalid rate_limit_7d")
+placeholder
+	if req.ExpiresInDays != nil && *req.ExpiresInDays <= 0 {
+		return errors.New("invalid expires_in_days")
+placeholder
+	return nil
+placeholder
+
+func validateAPIKeyUpdateRequest(req UpdateAPIKeyRequest) error {
+	if req.Quota != nil && !validAPIKeyLimit(*req.Quota) {
+		return errors.New("invalid quota")
+placeholder
+	if req.RateLimit5h != nil && !validAPIKeyLimit(*req.RateLimit5h) {
+		return errors.New("invalid rate_limit_5h")
+placeholder
+	if req.RateLimit1d != nil && !validAPIKeyLimit(*req.RateLimit1d) {
+		return errors.New("invalid rate_limit_1d")
+placeholder
+	if req.RateLimit7d != nil && !validAPIKeyLimit(*req.RateLimit7d) {
+		return errors.New("invalid rate_limit_7d")
+placeholder
+	return nil
 placeholder
 
 // List handles listing user's API keys with pagination
@@ -152,6 +191,10 @@ placeholder
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 placeholder
+	if err := validateAPIKeyCreateRequest(req); err != nil {
+		response.BadRequest(c, "Invalid request: numeric limits must be finite and non-negative, and expires_in_days must be greater than zero")
+		return
+placeholder
 
 	svcReq := service.CreateAPIKeyRequest{
 		Name:          req.Name,
@@ -201,6 +244,10 @@ placeholder
 	var req UpdateAPIKeyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+placeholder
+	if err := validateAPIKeyUpdateRequest(req); err != nil {
+		response.BadRequest(c, "Invalid request: numeric limits must be finite and non-negative")
 		return
 placeholder
 

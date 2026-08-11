@@ -28,7 +28,8 @@ placeholder
 // PlazaGroup 模型广场中以分组为顶层的条目。
 //
 // 与 AvailableGroupRef 相比多了 Description 与 Models；Models 来自该分组关联渠道的
-// 支持模型（按分组平台隔离，防跨平台泄漏），与「可用渠道」页口径一致。
+// 支持模型（普通分组按分组平台隔离，Composite 分组展开关联渠道已配置的
+// 具体平台），与「可用渠道」页口径一致。
 type PlazaGroup struct {
 	ID                 int64
 	Name               string
@@ -41,7 +42,11 @@ type PlazaGroup struct {
 	PeakEnd            string
 	PeakRateMultiplier float64
 	IsExclusive        bool
-	Models             []PlazaModel
+	// 图片按次实付倍率：ImageRateIndependent 为 true 时，图片计费模型的实付
+	// = 档位价 × ImageRateMultiplier，不乘分组/用户专属倍率（与计费口径一致）。
+	ImageRateIndependent bool
+	ImageRateMultiplier  float64
+	Models               []PlazaModel
 placeholder
 
 // ListPlazaGroups 返回模型广场数据：每个活跃分组附带其可用模型与定价。
@@ -50,6 +55,8 @@ placeholder
 // 平台隔离），仅把顶层从渠道换成分组：
 //   - 渠道按 lower(name) 排序后遍历，保证同名模型去重结果确定；
 //   - 同分组同名模型「先见者胜」，仅当已存条目无定价而新条目有定价时升级替换；
+//   - 图片计费模型的档位价按实收口径合成（分组图片价 > 渠道档位价 > 渠道默认按次价，
+//     见 plazaImageDisplayPricing）；
 //   - 每个模型附带 LiteLLM 官方参考价（查不到为 nil）；
 //   - 只返回 Models 非空的分组；分组按 RateMultiplier 升序（同倍率按名称），
 //     组内模型按名称排序。
@@ -70,27 +77,35 @@ placeholder
 placeholder)
 
 	byGroup := make(map[int64]*PlazaGroup, len(groups))
+	groupEnt := make(map[int64]*Group, len(groups))
 	order := make([]int64, 0, len(groups))
 	for i := range groups {
-		g := groups[i]
+		g := &groups[i]
 		byGroup[g.ID] = &PlazaGroup{
-			ID:                 g.ID,
-			Name:               g.Name,
-			Description:        g.Description,
-			Platform:           g.Platform,
-			SubscriptionType:   g.SubscriptionType,
-			RateMultiplier:     g.RateMultiplier,
-			PeakRateEnabled:    g.PeakRateEnabled,
-			PeakStart:          g.PeakStart,
-			PeakEnd:            g.PeakEnd,
-			PeakRateMultiplier: g.PeakRateMultiplier,
-			IsExclusive:        g.IsExclusive,
+			ID:                   g.ID,
+			Name:                 g.Name,
+			Description:          g.Description,
+			Platform:             g.Platform,
+			SubscriptionType:     g.SubscriptionType,
+			RateMultiplier:       g.RateMultiplier,
+			PeakRateEnabled:      g.PeakRateEnabled,
+			PeakStart:            g.PeakStart,
+			PeakEnd:              g.PeakEnd,
+			PeakRateMultiplier:   g.PeakRateMultiplier,
+			IsExclusive:          g.IsExclusive,
+			ImageRateIndependent: g.ImageRateIndependent,
+			ImageRateMultiplier:  g.ImageRateMultiplier,
 	placeholder
+		groupEnt[g.ID] = g
 		order = append(order, g.ID)
 placeholder
 
-	// modelIdx[groupID][modelName] = index into byGroup[groupID].Models
-	modelIdx := make(map[int64]map[string]int, len(groups))
+	type modelKey struct {
+		platform string
+		name     string
+placeholder
+	// modelIdx[groupID][platform+modelName] = index into byGroup[groupID].Models
+	modelIdx := make(map[int64]map[modelKey]int, len(groups))
 	for i := range channels {
 		ch := &channels[i]
 		if ch.Status != StatusActive {
@@ -107,26 +122,32 @@ placeholder
 		placeholder
 			idx := modelIdx[gid]
 			if idx == nil {
-				idx = make(map[string]int, len(supported))
+				idx = make(map[modelKey]int, len(supported))
 				modelIdx[gid] = idx
 		placeholder
 			for j := range supported {
 				m := supported[j]
-				if m.Platform != pg.Platform {
+				if pg.Platform == PlatformComposite {
+					if !isConcreteRequestPlatform(m.Platform) {
+						continue
+				placeholder
+			placeholder else if m.Platform != pg.Platform {
 					continue
 			placeholder
-				if at, seen := idx[m.Name]; seen {
+				pricing := plazaImageDisplayPricing(m.Pricing, groupEnt[gid])
+				key := modelKey{platform: m.Platform, name: m.Nameplaceholder
+				if at, seen := idx[key]; seen {
 					// 先见者胜；仅当已存条目无定价而新条目有定价时升级。
-					if pg.Models[at].Pricing == nil && m.Pricing != nil {
-						pg.Models[at].Pricing = m.Pricing
+					if pg.Models[at].Pricing == nil && pricing != nil {
+						pg.Models[at].Pricing = pricing
 				placeholder
 					continue
 			placeholder
-				idx[m.Name] = len(pg.Models)
+				idx[key] = len(pg.Models)
 				pg.Models = append(pg.Models, PlazaModel{
 					Name:     m.Name,
 					Platform: m.Platform,
-					Pricing:  m.Pricing,
+					Pricing:  pricing,
 			placeholder)
 		placeholder
 	placeholder
@@ -139,7 +160,12 @@ placeholder
 		if len(pg.Models) == 0 {
 			continue
 	placeholder
-		sort.SliceStable(pg.Models, func(i, j int) bool { return pg.Models[i].Name < pg.Models[j].Name placeholder)
+		sort.SliceStable(pg.Models, func(i, j int) bool {
+			if pg.Models[i].Name != pg.Models[j].Name {
+				return pg.Models[i].Name < pg.Models[j].Name
+		placeholder
+			return pg.Models[i].Platform < pg.Models[j].Platform
+	placeholder)
 		for j := range pg.Models {
 			pg.Models[j].OfficialPricing = s.lookupOfficialPricing(pg.Models[j].Name, officialMemo)
 	placeholder
@@ -153,6 +179,53 @@ placeholder
 		return out[i].Name < out[j].Name
 placeholder)
 	return out, nil
+placeholder
+
+// plazaImageDisplayPricing 为图片计费模型合成展示定价，使档位价与实收口径一致：
+// 每档（1K/2K/4K）单价 = 分组图片价 > 渠道同档位价 > 渠道默认按次价，无价的档不展示。
+// 分组未配任何图片价、或定价非图片模式时原样返回。返回克隆，不修改入参
+// （渠道定价指针指向缓存共享数据）。
+func plazaImageDisplayPricing(p *ChannelModelPricing, g *Group) *ChannelModelPricing {
+	if p == nil || g == nil || p.BillingMode != BillingModeImage {
+		return p
+placeholder
+	if g.ImagePrice1K == nil && g.ImagePrice2K == nil && g.ImagePrice4K == nil {
+		return p
+placeholder
+	channelTierPrice := func(label string) *float64 {
+		for i := range p.Intervals {
+			if p.Intervals[i].TierLabel == label && p.Intervals[i].PerRequestPrice != nil {
+				return p.Intervals[i].PerRequestPrice
+		placeholder
+	placeholder
+		return p.PerRequestPrice
+placeholder
+	tiers := []struct {
+		label      string
+		groupPrice *float64
+placeholder{
+		{"1K", g.ImagePrice1Kplaceholder,
+		{"2K", g.ImagePrice2Kplaceholder,
+		{"4K", g.ImagePrice4Kplaceholder,
+placeholder
+	clone := *p
+	clone.Intervals = make([]PricingInterval, 0, len(tiers))
+	for i, t := range tiers {
+		price := t.groupPrice
+		if price == nil {
+			price = channelTierPrice(t.label)
+	placeholder
+		if price == nil {
+			continue
+	placeholder
+		v := *price
+		clone.Intervals = append(clone.Intervals, PricingInterval{
+			TierLabel:       t.label,
+			PerRequestPrice: &v,
+			SortOrder:       i,
+	placeholder)
+placeholder
+	return &clone
 placeholder
 
 // lookupOfficialPricing 查询模型的 LiteLLM 官方参考价，带 memo 避免同名模型重复转换。

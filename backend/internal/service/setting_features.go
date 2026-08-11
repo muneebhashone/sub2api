@@ -11,6 +11,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // IsRegistrationEnabled 检查是否开放注册
@@ -26,6 +27,16 @@ placeholder
 // IsEmailVerifyEnabled 检查是否开启邮件验证
 func (s *SettingService) IsEmailVerifyEnabled(ctx context.Context) bool {
 	value, err := s.settingRepo.GetValue(ctx, SettingKeyEmailVerifyEnabled)
+	if err != nil {
+		return false
+placeholder
+	return value == "true"
+placeholder
+
+// IsRegistrationEmailDomainQuotaEnabled 检查白名单非空时是否放行非白名单域名限量注册。
+// 安全默认：设置缺失或查询出错时按关闭处理（保持白名单严格模式）。
+func (s *SettingService) IsRegistrationEmailDomainQuotaEnabled(ctx context.Context) bool {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyRegistrationEmailDomainQuotaEnabled)
 	if err != nil {
 		return false
 placeholder
@@ -453,6 +464,87 @@ func (s *SettingService) GetTurnstileSecretKey(ctx context.Context) string {
 		return ""
 placeholder
 	return value
+placeholder
+
+// TencentCaptchaConfig contains the credentials required by Tencent Cloud's
+// ticket verification API. It must never be returned by a public handler.
+type TencentCaptchaConfig struct {
+	Enabled        bool
+	AppID          string
+	AppSecretKey   string
+	CloudSecretID  string
+	CloudSecretKey string
+	Region         string
+placeholder
+
+// AliyunCaptchaConfig contains the credentials required by Aliyun Captcha 2.0's
+// server-side verification API. It must never be returned by a public handler.
+type AliyunCaptchaConfig struct {
+	Enabled         bool
+	AccessKeyID     string
+	AccessKeySecret string
+	SceneID         string
+	Region          string
+placeholder
+
+type CaptchaProviderConfig struct {
+	TurnstileEnabled   bool
+	TurnstileSecretKey string
+	Tencent            TencentCaptchaConfig
+	Aliyun             AliyunCaptchaConfig
+placeholder
+
+func (s *SettingService) GetCaptchaProviderConfig(ctx context.Context) (CaptchaProviderConfig, error) {
+	values, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyTurnstileEnabled,
+		SettingKeyTurnstileSecretKey,
+		SettingKeyTencentCaptchaEnabled,
+		SettingKeyTencentCaptchaAppID,
+		SettingKeyTencentCaptchaAppSecretKey,
+		SettingKeyTencentCaptchaCloudSecretID,
+		SettingKeyTencentCaptchaCloudSecretKey,
+		SettingKeyTencentCaptchaRegion,
+		SettingKeyAliyunCaptchaEnabled,
+		SettingKeyAliyunCaptchaAccessKeyID,
+		SettingKeyAliyunCaptchaAccessKeySecret,
+		SettingKeyAliyunCaptchaSceneID,
+		SettingKeyAliyunCaptchaRegion,
+placeholder)
+	if err != nil {
+		return CaptchaProviderConfig{placeholder, fmt.Errorf("read captcha provider settings: %w", err)
+placeholder
+	return CaptchaProviderConfig{
+		TurnstileEnabled:   values[SettingKeyTurnstileEnabled] == "true",
+		TurnstileSecretKey: values[SettingKeyTurnstileSecretKey],
+		Tencent: TencentCaptchaConfig{
+			Enabled:        values[SettingKeyTencentCaptchaEnabled] == "true",
+			AppID:          values[SettingKeyTencentCaptchaAppID],
+			AppSecretKey:   values[SettingKeyTencentCaptchaAppSecretKey],
+			CloudSecretID:  values[SettingKeyTencentCaptchaCloudSecretID],
+			CloudSecretKey: values[SettingKeyTencentCaptchaCloudSecretKey],
+			Region:         normalizeTencentCaptchaRegion(values[SettingKeyTencentCaptchaRegion]),
+	placeholder,
+		Aliyun: AliyunCaptchaConfig{
+			Enabled:         values[SettingKeyAliyunCaptchaEnabled] == "true",
+			AccessKeyID:     values[SettingKeyAliyunCaptchaAccessKeyID],
+			AccessKeySecret: values[SettingKeyAliyunCaptchaAccessKeySecret],
+			SceneID:         values[SettingKeyAliyunCaptchaSceneID],
+			Region:          normalizeAliyunCaptchaRegion(values[SettingKeyAliyunCaptchaRegion]),
+	placeholder,
+placeholder, nil
+placeholder
+
+func (s *SettingService) IsTencentCaptchaEnabled(ctx context.Context) bool {
+	value, err := s.settingRepo.GetValue(ctx, SettingKeyTencentCaptchaEnabled)
+	return err == nil && value == "true"
+placeholder
+
+func (s *SettingService) GetTencentCaptchaConfig(ctx context.Context) TencentCaptchaConfig {
+	config, err := s.GetCaptchaProviderConfig(ctx)
+	if err != nil {
+		return TencentCaptchaConfig{placeholder
+placeholder
+	return config.Tencent
 placeholder
 
 // IsIdentityPatchEnabled 检查是否启用身份补丁（Claude -> Gemini systemInstruction 注入）
@@ -995,6 +1087,69 @@ placeholder
 	placeholder
 placeholder
 	return out, nil // 补齐全部允许 platform key，保持与旧实现一致的下游契约
+placeholder
+
+// GetAccountSchedulingThresholds returns per-platform auto-pause thresholds (1..100).
+// 100 disables the threshold for that platform. Hot-path cached with singleflight.
+func (s *SettingService) GetAccountSchedulingThresholds(ctx context.Context) map[string]int {
+	if s == nil || s.settingRepo == nil {
+		return defaultAccountSchedulingThresholds()
+placeholder
+	if cached, ok := accountSchedulingThresholdsCache.Load().(*cachedAccountSchedulingThresholds); ok {
+		if cached != nil && len(cached.thresholds) > 0 && time.Now().UnixNano() < cached.expiresAt {
+			return cloneAccountSchedulingThresholds(cached.thresholds)
+	placeholder
+placeholder
+
+	result, err, _ := accountSchedulingThresholdsSF.Do(SettingKeyAccountSchedulingThresholds, func() (any, error) {
+		if cached, ok := accountSchedulingThresholdsCache.Load().(*cachedAccountSchedulingThresholds); ok {
+			if cached != nil && len(cached.thresholds) > 0 && time.Now().UnixNano() < cached.expiresAt {
+				return cloneAccountSchedulingThresholds(cached.thresholds), nil
+		placeholder
+	placeholder
+
+		thresholds := defaultAccountSchedulingThresholds()
+		dbCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), accountSchedulingThresholdsDBTimeout)
+		defer cancel()
+
+		raw, err := s.settingRepo.GetValue(dbCtx, SettingKeyAccountSchedulingThresholds)
+		if err != nil {
+			if errors.Is(err, ErrSettingNotFound) {
+				accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{
+					thresholds: cloneAccountSchedulingThresholds(thresholds),
+					expiresAt:  time.Now().Add(accountSchedulingThresholdsCacheTTL).UnixNano(),
+			placeholder)
+				return cloneAccountSchedulingThresholds(thresholds), nil
+		placeholder
+			slog.Warn("failed to get account scheduling thresholds, falling back to defaults", "error", err)
+			accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{
+				thresholds: cloneAccountSchedulingThresholds(thresholds),
+				expiresAt:  time.Now().Add(accountSchedulingThresholdsErrorTTL).UnixNano(),
+		placeholder)
+			return cloneAccountSchedulingThresholds(thresholds), nil
+	placeholder
+
+		if trimmed := strings.TrimSpace(raw); trimmed != "" {
+			if parsed, err := parseAccountSchedulingThresholdsSetting(trimmed); err != nil {
+				slog.Warn("failed to parse account scheduling thresholds, falling back to defaults", "error", err)
+		placeholder else {
+				thresholds = parsed
+		placeholder
+	placeholder
+
+		accountSchedulingThresholdsCache.Store(&cachedAccountSchedulingThresholds{
+			thresholds: cloneAccountSchedulingThresholds(thresholds),
+			expiresAt:  time.Now().Add(accountSchedulingThresholdsCacheTTL).UnixNano(),
+	placeholder)
+		return cloneAccountSchedulingThresholds(thresholds), nil
+placeholder)
+	if err != nil {
+		return defaultAccountSchedulingThresholds()
+placeholder
+	if thresholds, ok := result.(map[string]int); ok {
+		return cloneAccountSchedulingThresholds(thresholds)
+placeholder
+	return defaultAccountSchedulingThresholds()
 placeholder
 
 // GetAuthSourcePlatformQuotas 读取指定 auth source 的 platform quota 覆盖（仅返回有配置的平台，override 语义）。

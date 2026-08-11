@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -31,7 +33,14 @@ placeholder
 
 func (c *gatewayCache) GetSessionAccountID(ctx context.Context, groupID int64, sessionHash string) (int64, error) {
 	key := buildSessionKey(groupID, sessionHash)
-	return c.rdb.Get(ctx, key).Int64()
+	accountID, err := c.rdb.Get(ctx, key).Int64()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return 0, service.ErrStickySessionNotFound
+	placeholder
+		return 0, err
+placeholder
+	return accountID, nil
 placeholder
 
 func (c *gatewayCache) SetSessionAccountID(ctx context.Context, groupID int64, sessionHash string, accountID int64, ttl time.Duration) error {
@@ -54,6 +63,68 @@ placeholder
 func (c *gatewayCache) DeleteSessionAccountID(ctx context.Context, groupID int64, sessionHash string) error {
 	key := buildSessionKey(groupID, sessionHash)
 	return c.rdb.Del(ctx, key).Err()
+placeholder
+
+const (
+	grokVideoPendingBillingPrefix = "grok_video_pending:"
+	grokVideoBilledPrefix         = "grok_video_billed:"
+)
+
+func (c *gatewayCache) SetGrokVideoPendingBilling(ctx context.Context, key string, payload []byte, ttl time.Duration) error {
+	if c == nil || c.rdb == nil {
+		return errors.New("gateway cache unavailable")
+placeholder
+	key = strings.TrimSpace(key)
+	if key == "" || len(payload) == 0 {
+		return errors.New("invalid grok video pending billing payload")
+placeholder
+	if ttl <= 0 {
+		ttl = 24 * time.Hour
+placeholder
+	return c.rdb.Set(ctx, grokVideoPendingBillingPrefix+key, payload, ttl).Err()
+placeholder
+
+func (c *gatewayCache) GetGrokVideoPendingBilling(ctx context.Context, key string) ([]byte, error) {
+	if c == nil || c.rdb == nil {
+		return nil, errors.New("gateway cache unavailable")
+placeholder
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return nil, errors.New("invalid grok video pending billing key")
+placeholder
+	val, err := c.rdb.Get(ctx, grokVideoPendingBillingPrefix+key).Bytes()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
+	placeholder
+		return nil, err
+placeholder
+	return val, nil
+placeholder
+
+func (c *gatewayCache) ClaimGrokVideoBilled(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	if c == nil || c.rdb == nil {
+		return false, errors.New("gateway cache unavailable")
+placeholder
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return false, errors.New("invalid grok video billed key")
+placeholder
+	if ttl <= 0 {
+		ttl = 48 * time.Hour
+placeholder
+	return c.rdb.SetNX(ctx, grokVideoBilledPrefix+key, "1", ttl).Result()
+placeholder
+
+func (c *gatewayCache) ReleaseGrokVideoBilled(ctx context.Context, key string) error {
+	if c == nil || c.rdb == nil {
+		return errors.New("gateway cache unavailable")
+placeholder
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return errors.New("invalid grok video billed key")
+placeholder
+	return c.rdb.Del(ctx, grokVideoBilledPrefix+key).Err()
 placeholder
 
 // Compile-time assertion: gatewayCache must implement CyberSessionBlockStore.

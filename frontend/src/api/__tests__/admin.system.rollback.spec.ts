@@ -41,7 +41,11 @@ describe('admin system rollback API', () => {
 
     const result = await rollback('0.1.146')
 
-    expect(post).toHaveBeenCalledWith('/admin/system/rollback', { version: '0.1.146' placeholder)
+    expect(post).toHaveBeenCalledWith(
+      '/admin/system/rollback',
+      { version: '0.1.146' placeholder,
+      { timeout: 15 * 60 * 1000 placeholder
+    )
     expect(result.need_restart).toBe(true)
   placeholder)
 
@@ -50,6 +54,10 @@ describe('admin system rollback API', () => {
 
     await rollback()
 
-    expect(post).toHaveBeenCalledWith('/admin/system/rollback', undefined)
+    expect(post).toHaveBeenCalledWith(
+      '/admin/system/rollback',
+      undefined,
+      { timeout: 15 * 60 * 1000 placeholder
+    )
   placeholder)
 placeholder)

@@ -69,10 +69,14 @@ placeholder
 placeholder
 
 	if g.Platform == PlatformGrok {
-		if claudeMessagesDispatchFamily(requestedModel) != "" {
-			return xai.DefaultModelMapping()["grok"]
+		if claudeMessagesDispatchFamily(requestedModel) == "" {
+			return ""
 	placeholder
-		return ""
+		opts := xai.RuntimeModelMappingOptions()
+		if !opts.EnableCrossClientMap {
+			return ""
+	placeholder
+		return xai.ModelMappingWithOptions(opts)["claude-*"]
 placeholder
 
 	cfg := normalizeOpenAIMessagesDispatchModelConfig(g.MessagesDispatchModelConfig)
