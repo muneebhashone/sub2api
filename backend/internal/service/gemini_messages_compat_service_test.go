@@ -782,7 +782,9 @@ placeholder
 			placeholder
 				return
 		placeholder
-			require.NotNil(t, got)
+			if got == nil {
+				t.Fatalf("期望返回非 nil，实际返回 nil")
+		placeholder
 			if got.InputTokens != tt.wantUsage.InputTokens {
 				t.Errorf("InputTokens: 期望 %d，实际 %d", tt.wantUsage.InputTokens, got.InputTokens)
 		placeholder
