@@ -1568,7 +1568,7 @@ func TestOpenAIStreamingTerminalAndClientCancellationDoNotQuarantineProxy(t *tes
 		Body: &openAIStreamReadThenErrorCloser{
 			reader: strings.NewReader(strings.Join([]string{
 				"event: response.completed",
-				`data: {"type":"response.completed","response":{"status":"completed","output":[]placeholderplaceholder`,
+				`data: {"type":"response.completed","response":{"status":"completed","output":[],"usage":{"input_tokens":5,"output_tokens":3,"total_tokens":8placeholderplaceholderplaceholder`,
 				"",
 		placeholder, "\n")),
 			err: io.ErrUnexpectedEOF,
