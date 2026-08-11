@@ -102,37 +102,50 @@ placeholder
 				if entry, ok := cached.(securityAuditWSDedupeEntry); ok &&
 					entry.stage == request.Stage && entry.turn == turnNo && entry.bodyHash == bodyHash {
 					decision := entry.decision
+					logSecurityAuditDone(reqLog, request, decision, true)
 					return &decision
 			placeholder
 		placeholder
+			logSecurityAuditStart(reqLog, request, len(body), false)
 			decision := coordinator.Check(c.Request.Context(), request)
 			if decision.Kind == securityaudit.DecisionAllow {
 				c.Set(securityAuditWSDedupeContextKey, securityAuditWSDedupeEntry{
 					stage: request.Stage, turn: turnNo, bodyHash: bodyHash, decision: decision,
 			placeholder)
 		placeholder
+			logSecurityAuditDone(reqLog, request, decision, false)
 			return &decision
 	placeholder
 placeholder
-	if reqLog != nil {
-		reqLog.Info("security_audit.gateway_check_start",
-			zap.String("request_id", request.RequestID), zap.Int64("user_id", request.UserID),
-			zap.Int64("api_key_id", request.APIKeyID), zap.Int64p("group_id", request.GroupID),
-			zap.String("endpoint", request.Endpoint), zap.String("provider", request.Provider),
-			zap.String("protocol", request.Protocol), zap.String("model", request.Model), zap.String("stage", request.Stage),
-			zap.Int("body_bytes", len(body)))
-placeholder
+	logSecurityAuditStart(reqLog, request, len(body), false)
 	decision := coordinator.Check(c.Request.Context(), request)
 	if decision.AllowNextStage && cacheCompletion {
 		c.Set(securityAuditCompletedContextKey, true)
 placeholder
-	if reqLog != nil {
-		reqLog.Info("security_audit.gateway_check_done",
-			zap.String("request_id", request.RequestID), zap.String("decision", string(decision.Kind)),
-			zap.String("error_code", decision.ErrorCode), zap.Bool("allow_next_stage", decision.AllowNextStage),
-			zap.String("stage", request.Stage))
-placeholder
+	logSecurityAuditDone(reqLog, request, decision, false)
 	return &decision
+placeholder
+
+func logSecurityAuditStart(reqLog *zap.Logger, request securityaudit.Request, bodyBytes int, cached bool) {
+	if reqLog == nil {
+		return
+placeholder
+	reqLog.Info("security_audit.gateway_check_start",
+		zap.String("request_id", request.RequestID), zap.Int64("user_id", request.UserID),
+		zap.Int64("api_key_id", request.APIKeyID), zap.Int64p("group_id", request.GroupID),
+		zap.String("endpoint", request.Endpoint), zap.String("provider", request.Provider),
+		zap.String("protocol", request.Protocol), zap.String("model", request.Model), zap.String("stage", request.Stage),
+		zap.Int("body_bytes", bodyBytes), zap.Bool("cached", cached))
+placeholder
+
+func logSecurityAuditDone(reqLog *zap.Logger, request securityaudit.Request, decision securityaudit.Decision, cached bool) {
+	if reqLog == nil {
+		return
+placeholder
+	reqLog.Info("security_audit.gateway_check_done",
+		zap.String("request_id", request.RequestID), zap.String("decision", string(decision.Kind)),
+		zap.String("error_code", decision.ErrorCode), zap.Bool("allow_next_stage", decision.AllowNextStage),
+		zap.String("stage", request.Stage), zap.Bool("cached", cached))
 placeholder
 
 func securityAuditWSTurn(c *gin.Context) (int, bool) {
