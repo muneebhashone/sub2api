@@ -24,6 +24,30 @@ func TestGrokQuotaFetcherBuildUsageInfoUnknownUntilFirstSnapshot(t *testing.T) {
 	require.Contains(t, usage.Error, "unknown until billing is probed")
 placeholder
 
+func TestGrokQuotaFetcherPrefersLiveJWTTierOverStaleBillingPlan(t *testing.T) {
+	t.Parallel()
+
+	account := &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder
+			"access_token":      makeGrokOAuthJWT(map[string]any{"tier": 0placeholder),
+			"subscription_tier": "supergrok_heavy",
+	placeholder,
+		Extra: map[string]any{
+			grokBillingExtraKey: &xai.BillingSummary{
+				Plan:       "SuperGrok Heavy",
+				StatusCode: http.StatusOK,
+				UpdatedAt:  "2030-01-01T00:00:00Z",
+		placeholder,
+	placeholder,
+placeholder
+
+	usage := NewGrokQuotaFetcher().BuildUsageInfo(account)
+	require.Equal(t, "free", usage.SubscriptionTier)
+	require.Equal(t, "free", usage.SubscriptionTierRaw)
+placeholder
+
 func TestGrokQuotaFetcherUsesCredentialTierWhenBillingHasNoPlan(t *testing.T) {
 	t.Parallel()
 
