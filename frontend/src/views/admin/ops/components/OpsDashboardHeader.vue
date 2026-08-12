@@ -10,6 +10,7 @@ import { opsAPI, type OpsDashboardOverview, type OpsMetricThresholds, type OpsRe
 import type { OpsRequestDetailsPreset placeholder from './OpsRequestDetailsModal.vue'
 import { useAdminSettingsStore placeholder from '@/stores'
 import { formatNumber placeholder from '@/utils/format'
+import { formatMemorySizeMB placeholder from '../utils/opsFormatters'
 
 type RealtimeWindow = '1min' | '5min' | '30min' | '1h'
 
@@ -1462,7 +1463,7 @@ placeholder
             {{
               systemMetrics?.memory_used_mb == null || systemMetrics?.memory_total_mb == null
                 ? '-'
-                : `${formatNumber(systemMetrics.memory_used_mb)placeholder / ${formatNumber(systemMetrics.memory_total_mb)placeholder MB`
+                : `${formatMemorySizeMB(systemMetrics.memory_used_mb)placeholder / ${formatMemorySizeMB(systemMetrics.memory_total_mb)placeholder`
             placeholderplaceholder
           </div>
         </div>
