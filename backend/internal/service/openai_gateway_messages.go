@@ -443,7 +443,7 @@ placeholder
 		return s.handleAnthropicErrorResponse(resp, c, account, billingModel)
 placeholder
 	if account.Platform == PlatformGrok && account.Type == AccountTypeOAuth && !account.IsShadow() {
-		s.updateGrokUsageFromResponse(ctx, account, resp.Header, resp.StatusCode)
+		s.updateGrokUsageFromResponse(withGrokTeamRateLimitModel(ctx, upstreamModel), account, resp.Header, resp.StatusCode)
 placeholder
 
 	if account.Type == AccountTypeOAuth && promptCacheKey != "" {
