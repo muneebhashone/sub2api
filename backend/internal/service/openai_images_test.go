@@ -593,6 +593,67 @@ placeholder)
 		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityEmbeddings))
 placeholder)
 
+	t.Run("空 openai_capabilities（{placeholder）与未配置一致，不排除 OAuth 文本调度", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+				"openai_capabilities": map[string]any{placeholder,
+		placeholder,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityResponses))
+placeholder)
+
+	t.Run("空 openai_capabilities（[]any）与未配置一致，不排除 OAuth 文本调度", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+				"openai_capabilities": []any{placeholder,
+		placeholder,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+placeholder)
+
+	t.Run("空 openai_capabilities（[]string）与未配置一致，不排除 OAuth 文本调度", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+				"openai_capabilities": []string{placeholder,
+		placeholder,
+	placeholder
+
+		require.True(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+placeholder)
+
+	t.Run("非空但全 false 的 map 仍按显式禁用处理，不默认放行", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+				"openai_capabilities": map[string]any{"chat_completions": falseplaceholder,
+		placeholder,
+	placeholder
+
+		require.False(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+placeholder)
+
+	t.Run("类型异常（字符串）仍视为已配置但不含能力，不默认放行", func(t *testing.T) {
+		account := &Account{
+			Platform: PlatformOpenAI,
+			Type:     AccountTypeOAuth,
+	placeholder
+				"openai_capabilities": "chat_completions",
+		placeholder,
+	placeholder
+
+		require.False(t, account.SupportsOpenAIEndpointCapability(OpenAIEndpointCapabilityChatCompletions))
+placeholder)
+
 	t.Run("未知能力不应默认放行", func(t *testing.T) {
 		account := &Account{
 			Platform: PlatformOpenAI,
