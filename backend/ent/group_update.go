@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -784,6 +785,38 @@ placeholder
 // ClearAudioSttPricePerHour clears the value of the "audio_stt_price_per_hour" field.
 func (_u *GroupUpdate) ClearAudioSttPricePerHour() *GroupUpdate {
 	_u.mutation.ClearAudioSttPricePerHour()
+	return _u
+placeholder
+
+// SetLongContextPricingEnabled sets the "long_context_pricing_enabled" field.
+func (_u *GroupUpdate) SetLongContextPricingEnabled(v bool) *GroupUpdate {
+	_u.mutation.SetLongContextPricingEnabled(v)
+	return _u
+placeholder
+
+// SetNillableLongContextPricingEnabled sets the "long_context_pricing_enabled" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableLongContextPricingEnabled(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetLongContextPricingEnabled(*v)
+placeholder
+	return _u
+placeholder
+
+// SetModelPricing sets the "model_pricing" field.
+func (_u *GroupUpdate) SetModelPricing(v json.RawMessage) *GroupUpdate {
+	_u.mutation.SetModelPricing(v)
+	return _u
+placeholder
+
+// AppendModelPricing appends value to the "model_pricing" field.
+func (_u *GroupUpdate) AppendModelPricing(v json.RawMessage) *GroupUpdate {
+	_u.mutation.AppendModelPricing(v)
+	return _u
+placeholder
+
+// ClearModelPricing clears the value of the "model_pricing" field.
+func (_u *GroupUpdate) ClearModelPricing() *GroupUpdate {
+	_u.mutation.ClearModelPricing()
 	return _u
 placeholder
 
@@ -1696,6 +1729,20 @@ placeholder
 placeholder
 	if _u.mutation.AudioSttPricePerHourCleared() {
 		_spec.ClearField(group.FieldAudioSttPricePerHour, field.TypeFloat64)
+placeholder
+	if value, ok := _u.mutation.LongContextPricingEnabled(); ok {
+		_spec.SetField(group.FieldLongContextPricingEnabled, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.ModelPricing(); ok {
+		_spec.SetField(group.FieldModelPricing, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.AppendedModelPricing(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, group.FieldModelPricing, value)
+	placeholder)
+placeholder
+	if _u.mutation.ModelPricingCleared() {
+		_spec.ClearField(group.FieldModelPricing, field.TypeJSON)
 placeholder
 	if value, ok := _u.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
@@ -2862,6 +2909,38 @@ func (_u *GroupUpdateOne) ClearAudioSttPricePerHour() *GroupUpdateOne {
 	return _u
 placeholder
 
+// SetLongContextPricingEnabled sets the "long_context_pricing_enabled" field.
+func (_u *GroupUpdateOne) SetLongContextPricingEnabled(v bool) *GroupUpdateOne {
+	_u.mutation.SetLongContextPricingEnabled(v)
+	return _u
+placeholder
+
+// SetNillableLongContextPricingEnabled sets the "long_context_pricing_enabled" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableLongContextPricingEnabled(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetLongContextPricingEnabled(*v)
+placeholder
+	return _u
+placeholder
+
+// SetModelPricing sets the "model_pricing" field.
+func (_u *GroupUpdateOne) SetModelPricing(v json.RawMessage) *GroupUpdateOne {
+	_u.mutation.SetModelPricing(v)
+	return _u
+placeholder
+
+// AppendModelPricing appends value to the "model_pricing" field.
+func (_u *GroupUpdateOne) AppendModelPricing(v json.RawMessage) *GroupUpdateOne {
+	_u.mutation.AppendModelPricing(v)
+	return _u
+placeholder
+
+// ClearModelPricing clears the value of the "model_pricing" field.
+func (_u *GroupUpdateOne) ClearModelPricing() *GroupUpdateOne {
+	_u.mutation.ClearModelPricing()
+	return _u
+placeholder
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_u *GroupUpdateOne) SetClaudeCodeOnly(v bool) *GroupUpdateOne {
 	_u.mutation.SetClaudeCodeOnly(v)
@@ -3801,6 +3880,20 @@ placeholder
 placeholder
 	if _u.mutation.AudioSttPricePerHourCleared() {
 		_spec.ClearField(group.FieldAudioSttPricePerHour, field.TypeFloat64)
+placeholder
+	if value, ok := _u.mutation.LongContextPricingEnabled(); ok {
+		_spec.SetField(group.FieldLongContextPricingEnabled, field.TypeBool, value)
+placeholder
+	if value, ok := _u.mutation.ModelPricing(); ok {
+		_spec.SetField(group.FieldModelPricing, field.TypeJSON, value)
+placeholder
+	if value, ok := _u.mutation.AppendedModelPricing(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, group.FieldModelPricing, value)
+	placeholder)
+placeholder
+	if _u.mutation.ModelPricingCleared() {
+		_spec.ClearField(group.FieldModelPricing, field.TypeJSON)
 placeholder
 	if value, ok := _u.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)

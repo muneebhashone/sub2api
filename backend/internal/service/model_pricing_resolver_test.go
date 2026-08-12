@@ -833,3 +833,55 @@ placeholder)
 	require.InDelta(t, 15e-6, fp.OutputPricePerToken, 1e-12, "fallback OutputPricePerToken polluted")
 	require.False(t, fp.ImageOutputPriceExplicit, "fallback ImageOutputPriceExplicit polluted")
 placeholder
+
+func TestResolve_GroupPricingOverridesChannel(t *testing.T) {
+	r := newResolverWithChannel(t, []ChannelModelPricing{{
+		Platform: "anthropic", Models: []string{"claude-sonnet-4"placeholder, BillingMode: BillingModeToken,
+		InputPrice: testPtrFloat64(10e-6), OutputPrice: testPtrFloat64(20e-6),
+placeholderplaceholder)
+	group := &Group{ID: 100, ModelPricing: []ChannelModelPricing{{
+		Models: []string{"claude-sonnet-*"placeholder, BillingMode: BillingModeToken,
+		InputPrice: testPtrFloat64(1e-6), OutputPrice: testPtrFloat64(2e-6),
+placeholderplaceholderplaceholder
+	resolved := r.Resolve(context.Background(), PricingInput{Model: "claude-sonnet-4", GroupID: groupIDPtr(), Group: groupplaceholder)
+
+	require.Equal(t, PricingSourceGroup, resolved.Source)
+	require.InDelta(t, 1e-6, resolved.BasePricing.InputPricePerToken, 1e-12)
+	require.InDelta(t, 2e-6, resolved.BasePricing.OutputPricePerToken, 1e-12)
+placeholder
+
+func TestResolve_GroupLongContextToggleControlsIntervals(t *testing.T) {
+	r := NewModelPricingResolver(nil, newTestBillingServiceForResolver())
+	group := &Group{ID: 100, ModelPricing: []ChannelModelPricing{{
+		Models: []string{"claude-sonnet-4"placeholder, BillingMode: BillingModeToken,
+		Intervals: []PricingInterval{
+			{MinTokens: 0, MaxTokens: testPtrInt(200000), InputPrice: testPtrFloat64(1e-6)placeholder,
+			{MinTokens: 200000, InputPrice: testPtrFloat64(2e-6)placeholder,
+	placeholder,
+placeholderplaceholderplaceholder
+
+	resolved := r.Resolve(context.Background(), PricingInput{Model: "claude-sonnet-4", Group: groupplaceholder)
+	require.Empty(t, resolved.Intervals)
+	require.InDelta(t, 1e-6, r.GetIntervalPricing(resolved, 300000).InputPricePerToken, 1e-12)
+
+	group.LongContextPricingEnabled = true
+	resolved = r.Resolve(context.Background(), PricingInput{Model: "claude-sonnet-4", Group: groupplaceholder)
+	require.Len(t, resolved.Intervals, 2)
+	require.InDelta(t, 2e-6, r.GetIntervalPricing(resolved, 300000).InputPricePerToken, 1e-12)
+placeholder
+
+func TestCalculateCostUnified_UsesContinuousMediaUnits(t *testing.T) {
+	bs := newTestBillingServiceForResolver()
+	r := NewModelPricingResolver(nil, bs)
+	price := 0.08
+	group := &Group{ModelPricing: []ChannelModelPricing{{
+		Models: []string{"grok-voice-think-fast-2.0"placeholder, BillingMode: BillingModePerRequest,
+		PerRequestPrice: &price,
+placeholderplaceholderplaceholder
+	cost, err := bs.CalculateCostUnified(CostInput{
+		Ctx: context.Background(), Model: "grok-voice-think-fast-2.0", Group: group,
+		UsageUnits: 1.5, RateMultiplier: 1, Resolver: r,
+placeholder)
+placeholder
+	require.InDelta(t, 0.12, cost.TotalCost, 1e-12)
+placeholder

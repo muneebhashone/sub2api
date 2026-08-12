@@ -301,6 +301,10 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 placeholder
 
 	platform := NormalizeGroupPlatform(input.Platform)
+	modelPricing, err := normalizeGroupModelPricing(platform, input.ModelPricing)
+	if err != nil {
+		return nil, err
+placeholder
 	maxReasoningEffort, err := normalizeMaxReasoningEffortForPlatform(platform, input.MaxReasoningEffort)
 	if err != nil {
 		return nil, infraerrors.Newf(http.StatusBadRequest, "INVALID_MAX_REASONING_EFFORT", "%v", err)
@@ -459,6 +463,8 @@ placeholder
 		DailyLimitUSD:                   dailyLimit,
 		WeeklyLimitUSD:                  weeklyLimit,
 		MonthlyLimitUSD:                 monthlyLimit,
+		LongContextPricingEnabled:       input.LongContextPricingEnabled,
+		ModelPricing:                    modelPricing,
 		AllowImageGeneration:            allowImageGeneration,
 		AllowBatchImageGeneration:       allowBatchImageGeneration,
 		ImageRateIndependent:            input.ImageRateIndependent,
@@ -655,6 +661,16 @@ placeholder
 placeholder
 	if input.Status != "" {
 		group.Status = input.Status
+placeholder
+	if input.LongContextPricingEnabled != nil {
+		group.LongContextPricingEnabled = *input.LongContextPricingEnabled
+placeholder
+	if input.ModelPricing != nil {
+		modelPricing, normalizeErr := normalizeGroupModelPricing(group.Platform, *input.ModelPricing)
+		if normalizeErr != nil {
+			return nil, normalizeErr
+	placeholder
+		group.ModelPricing = modelPricing
 placeholder
 
 	// 订阅相关字段
@@ -953,6 +969,28 @@ placeholder
 placeholder
 
 	return group, nil
+placeholder
+
+func normalizeGroupModelPricing(platform string, pricing []ChannelModelPricing) ([]ChannelModelPricing, error) {
+	out := make([]ChannelModelPricing, len(pricing))
+	for i := range pricing {
+		out[i] = pricing[i].Clone()
+		out[i].ID = 0
+		out[i].ChannelID = 0
+		if strings.TrimSpace(out[i].Platform) == "" {
+			out[i].Platform = platform
+	placeholder
+		for j := range out[i].Models {
+			out[i].Models[j] = strings.TrimSpace(out[i].Models[j])
+	placeholder
+		if len(out[i].Models) == 0 {
+			return nil, infraerrors.New(http.StatusBadRequest, "GROUP_MODEL_PRICING_MODELS_REQUIRED", "group model pricing entry requires at least one model")
+	placeholder
+placeholder
+	if err := validatePricingEntries(out); err != nil {
+		return nil, err
+placeholder
+	return out, nil
 placeholder
 
 func (s *adminServiceImpl) DeleteGroup(ctx context.Context, id int64) error {

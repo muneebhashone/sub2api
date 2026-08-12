@@ -194,11 +194,11 @@
           </div>
         </div>
 
-        <!-- Image mode -->
-        <div v-else-if="entry.billing_mode === 'image'">
+        <!-- Image/video mode -->
+        <div v-else-if="entry.billing_mode === 'image' || entry.billing_mode === 'video'">
           <!-- Default image price (per-request, same as per_request mode) -->
           <label class="mt-3 block text-xs font-medium text-gray-500 dark:text-gray-400">
-            {{ t('admin.channels.form.defaultImagePrice') placeholderplaceholder
+            {{ entry.billing_mode === 'video' ? t('admin.channels.form.defaultVideoPrice') : t('admin.channels.form.defaultImagePrice') placeholderplaceholder
             <span class="ml-1 font-normal text-gray-400">$</span>
           </label>
           <div class="mt-1 w-48">
@@ -209,9 +209,9 @@
           <!-- Image tiers -->
           <div class="mt-3 flex items-center justify-between">
             <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {{ t('admin.channels.form.imageTiers') placeholderplaceholder
+              {{ entry.billing_mode === 'video' ? t('admin.channels.form.videoTiers') : t('admin.channels.form.imageTiers') placeholderplaceholder
             </label>
-            <button type="button" @click="addImageTier" class="text-xs text-primary-600 hover:text-primary-700">
+            <button type="button" @click="addMediaTier" class="text-xs text-primary-600 hover:text-primary-700">
               + {{ t('admin.channels.form.addTier') placeholderplaceholder
             </button>
           </div>
@@ -261,7 +261,8 @@ const collapsed = ref(props.entry.models.length > 0)
 const billingModeOptions = computed(() => [
   { value: 'token', label: t('admin.channels.billingMode.token') placeholder,
   { value: 'per_request', label: t('admin.channels.billingMode.perRequest') placeholder,
-  { value: 'image', label: t('admin.channels.billingMode.image') placeholder
+  { value: 'image', label: t('admin.channels.billingMode.image') placeholder,
+  { value: 'video', label: t('admin.channels.billingMode.video') placeholder
 ])
 
 const billingModeLabel = computed(() => {
@@ -284,9 +285,11 @@ function addInterval() {
   emit('update', { ...props.entry, intervals placeholder)
 placeholder
 
-function addImageTier() {
+function addMediaTier() {
   const intervals = [...(props.entry.intervals || [])]
-  const labels = ['1K', '2K', '4K', 'HD']
+  const labels = props.entry.billing_mode === 'video'
+    ? ['480p', '720p', '1080p']
+    : ['1K', '2K', '4K', 'HD']
   intervals.push({
     min_tokens: 0, max_tokens: null, tier_label: labels[intervals.length] || '',
     input_price: null, output_price: null, cache_write_price: null,
