@@ -48,6 +48,7 @@ placeholder
 		"/models/*modelAction":      {"gemini_v1beta_handler.go"placeholder,
 		"/tts":                      {"grok_audio.go"placeholder,
 		"/web_search":               {"gateway_web_search.go"placeholder,
+		"/x_search":                 {"gateway_web_search.go"placeholder,
 placeholder
 	excluded := map[string]string{
 		"/messages/count_tokens":     "tokenization only; it does not execute a model request",
