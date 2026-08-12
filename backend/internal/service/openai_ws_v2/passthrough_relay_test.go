@@ -202,7 +202,7 @@ placeholder, true)
 	require.Equal(t, 7, result.Usage.InputTokens)
 	require.Equal(t, 3, result.Usage.OutputTokens)
 	require.Equal(t, 2, result.Usage.CacheReadInputTokens)
-	require.NotNil(t, result.FirstTokenMs)
+	require.Nil(t, result.FirstTokenMs)
 	require.Equal(t, int64(1), result.ClientToUpstreamFrames)
 	require.Equal(t, int64(1), result.UpstreamToClientFrames)
 	require.Equal(t, int64(0), result.DroppedDownstreamFrames)
@@ -863,6 +863,114 @@ placeholder
 
 func (c *errorOnWriteFrameConn) Close() error {
 	return nil
+placeholder
+
+func TestRelay_NoSemanticOutputTerminalSequence_FirstTokenMsNil(t *testing.T) {
+	t.Parallel()
+
+	for _, terminalEvent := range []string{"response.completed", "response.done"placeholder {
+		terminalEvent := terminalEvent
+		t.Run(terminalEvent, func(t *testing.T) {
+			t.Parallel()
+
+			clientConn := newPassthroughTestFrameConn(nil, false)
+			upstreamConn := newPassthroughTestFrameConn([]passthroughTestFrame{
+				{
+					msgType: coderws.MessageText,
+					payload: []byte(`{"type":"response.created","response":{"id":"resp_no_output"placeholderplaceholder`),
+			placeholder,
+				{
+					msgType: coderws.MessageText,
+					payload: []byte(`{"type":"response.in_progress","response":{"id":"resp_no_output"placeholderplaceholder`),
+			placeholder,
+				{
+					msgType: coderws.MessageText,
+					payload: []byte(`{"type":"response.content_part.done","response_id":"resp_no_output"placeholder`),
+			placeholder,
+				{
+					msgType: coderws.MessageText,
+					payload: []byte(`{"type":"response.output_item.done","response_id":"resp_no_output"placeholder`),
+			placeholder,
+				{
+					msgType: coderws.MessageText,
+					payload: []byte(`{"type":"` + terminalEvent + `","response":{"id":"resp_no_output","usage":{"input_tokens":2,"output_tokens":0placeholderplaceholderplaceholder`),
+			placeholder,
+		placeholder, true)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			var turn RelayTurnResult
+			result, relayExit := Relay(
+				ctx,
+				clientConn,
+				upstreamConn,
+				[]byte(`{"type":"response.create","model":"gpt-5.3-codex","input":[]placeholder`),
+				RelayOptions{OnTurnComplete: func(current RelayTurnResult) { turn = current placeholderplaceholder,
+			)
+
+			require.Nil(t, relayExit)
+			require.Equal(t, terminalEvent, turn.TerminalEventType)
+			require.Nil(t, turn.FirstTokenMs)
+			require.Equal(t, terminalEvent, result.TerminalEventType)
+			require.Nil(t, result.FirstTokenMs)
+			require.Equal(t, int64(5), result.UpstreamToClientFrames)
+	placeholder)
+placeholder
+placeholder
+
+func TestRelay_NoDeltaOutputDoneEvent_RecordsFirstTokenBeforeTerminal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		donePayload string
+placeholder{
+		{
+			name:        "output text done",
+			donePayload: `{"type":"response.output_text.done","response_id":"resp_done","text":"hello"placeholder`,
+	placeholder,
+		{
+			name:        "function call arguments done",
+			donePayload: `{"type":"response.function_call_arguments.done","response_id":"resp_done","arguments":"{\"city\":\"Paris\"placeholder"placeholder`,
+	placeholder,
+placeholder
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			clientConn := newPassthroughTestFrameConn(nil, false)
+			upstreamConn := newPassthroughTestFrameConn([]passthroughTestFrame{
+				{msgType: coderws.MessageText, payload: []byte(`{"type":"response.created","response":{"id":"resp_done"placeholderplaceholder`)placeholder,
+				{msgType: coderws.MessageText, payload: []byte(tt.donePayload)placeholder,
+				{msgType: coderws.MessageText, payload: []byte(`{"type":"response.completed","response":{"id":"resp_done","usage":{"input_tokens":2,"output_tokens":1placeholderplaceholderplaceholder`)placeholder,
+		placeholder, true)
+
+			base := time.Unix(0, 0)
+			var nowTick atomic.Int64
+			nowFn := func() time.Time {
+				return base.Add(time.Duration(nowTick.Add(1)) * 10 * time.Millisecond)
+		placeholder
+			var turn RelayTurnResult
+			result, relayExit := Relay(
+				context.Background(),
+				clientConn,
+				upstreamConn,
+				[]byte(`{"type":"response.create","model":"gpt-5.3-codex","input":[]placeholder`),
+				RelayOptions{
+					Now:            nowFn,
+					OnTurnComplete: func(current RelayTurnResult) { turn = current placeholder,
+			placeholder,
+			)
+
+			require.Nil(t, relayExit)
+			require.NotNil(t, turn.FirstTokenMs)
+			require.Less(t, int64(*turn.FirstTokenMs), turn.Duration.Milliseconds())
+			require.NotNil(t, result.FirstTokenMs)
+			require.Less(t, int64(*result.FirstTokenMs), result.Duration.Milliseconds())
+	placeholder)
+placeholder
 placeholder
 
 func TestRelay_OnTurnComplete_RealOpenAIStream_FirstTokenMs(t *testing.T) {
