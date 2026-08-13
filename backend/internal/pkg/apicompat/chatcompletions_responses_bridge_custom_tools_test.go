@@ -661,6 +661,20 @@ placeholder
 	require.Len(t, out.Tools, 1)
 	assert.Empty(t, out.ToolChoice, "指向被丢弃服务端工具的 tool_choice 必须丢弃")
 
+	out, err = ResponsesToChatCompletionsRequest(&ResponsesRequest{
+		Model: "glm-5.2",
+		Input: json.RawMessage(`"hi"`),
+		Tools: []ResponsesTool{
+			{Type: "function", Name: "wait", Parameters: json.RawMessage(`{"type":"object","properties":{placeholderplaceholder`)placeholder,
+			{Type: "web_search"placeholder,
+			{Type: "x_search"placeholder,
+	placeholder,
+		ToolChoice: json.RawMessage(`{"type":"function","name":"web_search"placeholder`),
+placeholder)
+placeholder
+	require.Len(t, out.Tools, 2)
+	assert.Empty(t, out.ToolChoice, "surviving x_search must not keep a function tool_choice named web_search")
+
 	// 具名选择指向不存在的工具名。
 	out, err = ResponsesToChatCompletionsRequest(&ResponsesRequest{
 		Model:      "glm-5.2",
