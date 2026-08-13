@@ -197,7 +197,7 @@ placeholder
 func TestGrokOAuthServiceConvertFromSSOExtractsBuildClaims(t *testing.T) {
 	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{
 		ssoResponse: &xai.TokenResponse{
-			AccessToken:  makeGrokOAuthJWT(map[string]any{"sub": "user-sub", "team_id": "team-1"placeholder),
+			AccessToken:  makeGrokOAuthJWT(map[string]any{"sub": "user-sub", "team_id": "team-1", "tier": 5placeholder),
 			RefreshToken: "refresh-token",
 			IDToken:      makeGrokOAuthJWT(map[string]any{"email": "user@example.com"placeholder),
 			ExpiresIn:    3600,
@@ -210,12 +210,91 @@ placeholder
 	require.Equal(t, "user@example.com", info.Email)
 	require.Equal(t, "user-sub", info.Subject)
 	require.Equal(t, "team-1", info.TeamID)
+	require.Equal(t, "supergrok_heavy", info.SubscriptionTier)
 
 	credentials := svc.BuildAccountCredentials(info)
 	require.Equal(t, "user@example.com", credentials["email"])
 	require.Equal(t, "user-sub", credentials["sub"])
 	require.Equal(t, "team-1", credentials["team_id"])
+	require.Equal(t, "supergrok_heavy", credentials["subscription_tier"])
 	require.NotContains(t, credentials, "sso_token")
+placeholder
+
+func TestGrokOAuthServiceRefreshAccountTokenOverwritesStaleTierFromNewJWT(t *testing.T) {
+	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{
+		refreshResponse: &xai.TokenResponse{
+			AccessToken: makeGrokOAuthJWT(map[string]any{"sub": "user-sub", "tier": 0placeholder),
+			TokenType:   "Bearer",
+			ExpiresIn:   3600,
+	placeholder,
+placeholder)
+	defer svc.Stop()
+
+	account := &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder
+			"refresh_token":     "refresh-token",
+			"client_id":         "client-id",
+			"subscription_tier": "supergrok_heavy",
+	placeholder,
+placeholder
+
+	info, err := svc.RefreshAccountToken(context.Background(), account)
+placeholder
+	require.Equal(t, "free", info.SubscriptionTier)
+
+	credentials := svc.BuildAccountCredentials(info)
+	require.Equal(t, "free", credentials["subscription_tier"])
+placeholder
+
+func TestGrokOAuthServiceRefreshAccountTokenIgnoresIDTokenTierWhenAccessTokenHasNone(t *testing.T) {
+	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{
+		refreshResponse: &xai.TokenResponse{
+			AccessToken: "opaque-access-token",
+			IDToken:      makeGrokOAuthJWT(map[string]any{"tier": 5placeholder),
+			TokenType:   "Bearer",
+			ExpiresIn:   3600,
+	placeholder,
+placeholder)
+	defer svc.Stop()
+
+	account := &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder
+			"refresh_token":     "refresh-token",
+			"subscription_tier": "supergrok_lite",
+	placeholder,
+placeholder
+
+	info, err := svc.RefreshAccountToken(context.Background(), account)
+placeholder
+	require.Equal(t, "supergrok_lite", info.SubscriptionTier)
+placeholder
+
+func TestGrokOAuthServiceRefreshAccountTokenKeepsStoredTierWhenJWTHasNoClaim(t *testing.T) {
+	svc := NewGrokOAuthService(nil, &grokOAuthClientStub{
+		refreshResponse: &xai.TokenResponse{
+			AccessToken: "opaque-access-token",
+			TokenType:   "Bearer",
+			ExpiresIn:   3600,
+	placeholder,
+placeholder)
+	defer svc.Stop()
+
+	account := &Account{
+		Platform: PlatformGrok,
+		Type:     AccountTypeOAuth,
+placeholder
+			"refresh_token":     "refresh-token",
+			"subscription_tier": "supergrok_lite",
+	placeholder,
+placeholder
+
+	info, err := svc.RefreshAccountToken(context.Background(), account)
+placeholder
+	require.Equal(t, "supergrok_lite", info.SubscriptionTier)
 placeholder
 
 func TestGrokOAuthServiceValidateSSOTokenReturnsOAuthTokensWithoutPersistingSSO(t *testing.T) {

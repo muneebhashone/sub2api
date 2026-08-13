@@ -330,8 +330,14 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
-	tokenInfo.SubscriptionTier = account.GetCredential("subscription_tier")
-	tokenInfo.EntitlementStatus = account.GetCredential("entitlement_status")
+	// New access-token JWT is authoritative. Keep the stored value only when
+	// the refreshed token has no tier claim (opaque AT / missing field).
+	if strings.TrimSpace(tokenInfo.SubscriptionTier) == "" {
+		tokenInfo.SubscriptionTier = account.GetCredential("subscription_tier")
+placeholder
+	if strings.TrimSpace(tokenInfo.EntitlementStatus) == "" {
+		tokenInfo.EntitlementStatus = account.GetCredential("entitlement_status")
+placeholder
 	return tokenInfo, nil
 placeholder
 
@@ -404,8 +410,8 @@ placeholder
 	if info.TokenType == "" {
 		info.TokenType = "Bearer"
 placeholder
-	applyGrokTokenClaims(info, tokenResp.IDToken)
-	applyGrokTokenClaims(info, tokenResp.AccessToken)
+	applyGrokTokenClaims(info, tokenResp.IDToken, false)
+	applyGrokTokenClaims(info, tokenResp.AccessToken, true)
 	if existing != nil {
 		if info.Email == "" {
 			if email, _ := existing["email"].(string); email != "" {
@@ -446,7 +452,7 @@ placeholder
 	return proxy.URL(), nil
 placeholder
 
-func applyGrokTokenClaims(info *GrokTokenInfo, token string) {
+func applyGrokTokenClaims(info *GrokTokenInfo, token string, includeTier bool) {
 	if info == nil || strings.TrimSpace(token) == "" {
 		return
 placeholder
@@ -462,5 +468,10 @@ placeholder
 placeholder
 	if info.TeamID == "" {
 		info.TeamID = xai.JWTClaimString(claims, "team_id")
+placeholder
+	if includeTier {
+		if tier := xai.SubscriptionTierFromJWT(token); tier != "" {
+			info.SubscriptionTier = tier
+	placeholder
 placeholder
 placeholder

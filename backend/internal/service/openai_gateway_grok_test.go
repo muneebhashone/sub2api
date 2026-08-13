@@ -56,6 +56,8 @@ placeholder{
 		{name: "composer legacy alias", upstreamModel: "composer-2.5"placeholder,
 		{name: "provider-prefixed composer", upstreamModel: "xai/grok-composer-2.5-fast"placeholder,
 		{name: "grok 4.5", upstreamModel: "grok-4.5", wantReasoning: trueplaceholder,
+		{name: "grok 4.6", upstreamModel: "grok-4.6", wantReasoning: trueplaceholder,
+		{name: "grok 4.6 latest", upstreamModel: "grok-4.6-latest", wantReasoning: trueplaceholder,
 placeholder
 
 	bodyTemplate := []byte(`{

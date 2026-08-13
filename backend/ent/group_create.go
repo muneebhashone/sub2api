@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -559,6 +560,26 @@ placeholder
 	return _c
 placeholder
 
+// SetLongContextPricingEnabled sets the "long_context_pricing_enabled" field.
+func (_c *GroupCreate) SetLongContextPricingEnabled(v bool) *GroupCreate {
+	_c.mutation.SetLongContextPricingEnabled(v)
+	return _c
+placeholder
+
+// SetNillableLongContextPricingEnabled sets the "long_context_pricing_enabled" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableLongContextPricingEnabled(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetLongContextPricingEnabled(*v)
+placeholder
+	return _c
+placeholder
+
+// SetModelPricing sets the "model_pricing" field.
+func (_c *GroupCreate) SetModelPricing(v json.RawMessage) *GroupCreate {
+	_c.mutation.SetModelPricing(v)
+	return _c
+placeholder
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_c *GroupCreate) SetClaudeCodeOnly(v bool) *GroupCreate {
 	_c.mutation.SetClaudeCodeOnly(v)
@@ -1042,6 +1063,10 @@ placeholder
 		v := group.DefaultVideoRateMultiplier
 		_c.mutation.SetVideoRateMultiplier(v)
 placeholder
+	if _, ok := _c.mutation.LongContextPricingEnabled(); !ok {
+		v := group.DefaultLongContextPricingEnabled
+		_c.mutation.SetLongContextPricingEnabled(v)
+placeholder
 	if _, ok := _c.mutation.ClaudeCodeOnly(); !ok {
 		v := group.DefaultClaudeCodeOnly
 		_c.mutation.SetClaudeCodeOnly(v)
@@ -1236,6 +1261,9 @@ placeholder
 		if err := group.AudioSttPricePerHourValidator(v); err != nil {
 			return &ValidationError{Name: "audio_stt_price_per_hour", err: fmt.Errorf(`ent: validator failed for field "Group.audio_stt_price_per_hour": %w`, err)placeholder
 	placeholder
+placeholder
+	if _, ok := _c.mutation.LongContextPricingEnabled(); !ok {
+		return &ValidationError{Name: "long_context_pricing_enabled", err: errors.New(`ent: missing required field "Group.long_context_pricing_enabled"`)placeholder
 placeholder
 	if _, ok := _c.mutation.ClaudeCodeOnly(); !ok {
 		return &ValidationError{Name: "claude_code_only", err: errors.New(`ent: missing required field "Group.claude_code_only"`)placeholder
@@ -1483,6 +1511,14 @@ placeholder
 	if value, ok := _c.mutation.AudioSttPricePerHour(); ok {
 		_spec.SetField(group.FieldAudioSttPricePerHour, field.TypeFloat64, value)
 		_node.AudioSttPricePerHour = &value
+placeholder
+	if value, ok := _c.mutation.LongContextPricingEnabled(); ok {
+		_spec.SetField(group.FieldLongContextPricingEnabled, field.TypeBool, value)
+		_node.LongContextPricingEnabled = value
+placeholder
+	if value, ok := _c.mutation.ModelPricing(); ok {
+		_spec.SetField(group.FieldModelPricing, field.TypeJSON, value)
+		_node.ModelPricing = value
 placeholder
 	if value, ok := _c.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
@@ -2393,6 +2429,36 @@ placeholder
 // ClearAudioSttPricePerHour clears the value of the "audio_stt_price_per_hour" field.
 func (u *GroupUpsert) ClearAudioSttPricePerHour() *GroupUpsert {
 	u.SetNull(group.FieldAudioSttPricePerHour)
+	return u
+placeholder
+
+// SetLongContextPricingEnabled sets the "long_context_pricing_enabled" field.
+func (u *GroupUpsert) SetLongContextPricingEnabled(v bool) *GroupUpsert {
+	u.Set(group.FieldLongContextPricingEnabled, v)
+	return u
+placeholder
+
+// UpdateLongContextPricingEnabled sets the "long_context_pricing_enabled" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateLongContextPricingEnabled() *GroupUpsert {
+	u.SetExcluded(group.FieldLongContextPricingEnabled)
+	return u
+placeholder
+
+// SetModelPricing sets the "model_pricing" field.
+func (u *GroupUpsert) SetModelPricing(v json.RawMessage) *GroupUpsert {
+	u.Set(group.FieldModelPricing, v)
+	return u
+placeholder
+
+// UpdateModelPricing sets the "model_pricing" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateModelPricing() *GroupUpsert {
+	u.SetExcluded(group.FieldModelPricing)
+	return u
+placeholder
+
+// ClearModelPricing clears the value of the "model_pricing" field.
+func (u *GroupUpsert) ClearModelPricing() *GroupUpsert {
+	u.SetNull(group.FieldModelPricing)
 	return u
 placeholder
 
@@ -3531,6 +3597,41 @@ placeholder
 func (u *GroupUpsertOne) ClearAudioSttPricePerHour() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearAudioSttPricePerHour()
+placeholder)
+placeholder
+
+// SetLongContextPricingEnabled sets the "long_context_pricing_enabled" field.
+func (u *GroupUpsertOne) SetLongContextPricingEnabled(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetLongContextPricingEnabled(v)
+placeholder)
+placeholder
+
+// UpdateLongContextPricingEnabled sets the "long_context_pricing_enabled" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateLongContextPricingEnabled() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateLongContextPricingEnabled()
+placeholder)
+placeholder
+
+// SetModelPricing sets the "model_pricing" field.
+func (u *GroupUpsertOne) SetModelPricing(v json.RawMessage) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetModelPricing(v)
+placeholder)
+placeholder
+
+// UpdateModelPricing sets the "model_pricing" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateModelPricing() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateModelPricing()
+placeholder)
+placeholder
+
+// ClearModelPricing clears the value of the "model_pricing" field.
+func (u *GroupUpsertOne) ClearModelPricing() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearModelPricing()
 placeholder)
 placeholder
 
@@ -4886,6 +4987,41 @@ placeholder
 func (u *GroupUpsertBulk) ClearAudioSttPricePerHour() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearAudioSttPricePerHour()
+placeholder)
+placeholder
+
+// SetLongContextPricingEnabled sets the "long_context_pricing_enabled" field.
+func (u *GroupUpsertBulk) SetLongContextPricingEnabled(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetLongContextPricingEnabled(v)
+placeholder)
+placeholder
+
+// UpdateLongContextPricingEnabled sets the "long_context_pricing_enabled" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateLongContextPricingEnabled() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateLongContextPricingEnabled()
+placeholder)
+placeholder
+
+// SetModelPricing sets the "model_pricing" field.
+func (u *GroupUpsertBulk) SetModelPricing(v json.RawMessage) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetModelPricing(v)
+placeholder)
+placeholder
+
+// UpdateModelPricing sets the "model_pricing" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateModelPricing() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateModelPricing()
+placeholder)
+placeholder
+
+// ClearModelPricing clears the value of the "model_pricing" field.
+func (u *GroupUpsertBulk) ClearModelPricing() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearModelPricing()
 placeholder)
 placeholder
 

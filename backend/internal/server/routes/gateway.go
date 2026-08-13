@@ -315,6 +315,14 @@ placeholder
 		placeholder
 			h.Gateway.WebSearch(c)
 	placeholder)
+		gateway.POST("/x_search", func(c *gin.Context) {
+			if getGroupPlatform(c) != service.PlatformGrok {
+				service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
+				c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"type": "not_found_error", "message": "X Search API is not supported for this platform"placeholderplaceholder)
+				return
+		placeholder
+			h.Gateway.XSearch(c)
+	placeholder)
 placeholder
 
 	// Gemini 原生 API 兼容层（Gemini SDK/CLI 直连）
@@ -442,6 +450,14 @@ placeholder)
 			return
 	placeholder
 		h.Gateway.WebSearch(c)
+placeholder)
+	r.POST("/x_search", bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth), compositeTarget, requireGroupAnthropic, func(c *gin.Context) {
+		if getGroupPlatform(c) != service.PlatformGrok {
+			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
+			c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"type": "not_found_error", "message": "X Search API is not supported for this platform"placeholderplaceholder)
+			return
+	placeholder
+		h.Gateway.XSearch(c)
 placeholder)
 
 	// Antigravity 模型列表

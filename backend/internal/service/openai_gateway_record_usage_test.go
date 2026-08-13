@@ -256,6 +256,17 @@ func newOpenAIRecordUsageServiceForTest(usageRepo UsageLogRepository, userRepo U
 	return svc
 placeholder
 
+func openAIRecordUsageAPIKeyWithGroup(svc *OpenAIGatewayService, id int64, groupLongContext bool) *APIKey {
+	svc.resolver = NewModelPricingResolver(nil, svc.billingService)
+	return &APIKey{
+		ID: id,
+		Group: &Group{
+			ID:                        1,
+			LongContextPricingEnabled: groupLongContext,
+	placeholder,
+placeholder
+placeholder
+
 func newOpenAIRecordUsageServiceWithBillingRepoForTest(usageRepo UsageLogRepository, billingRepo UsageBillingRepository, userRepo UserRepository, subRepo UserSubscriptionRepository, rateRepo UserGroupRateRepository) *OpenAIGatewayService {
 	svc := newOpenAIRecordUsageServiceForTest(usageRepo, userRepo, subRepo, rateRepo)
 	svc.usageBillingRepo = billingRepo
@@ -1088,7 +1099,7 @@ func TestOpenAIGatewayServiceRecordUsage_Gpt54LongContextBillingDisabledByDefaul
 			Model:    "gpt-5.4-2026-03-05",
 			Duration: time.Second,
 	placeholder,
-		APIKey:  &APIKey{ID: 1014placeholder,
+		APIKey:  openAIRecordUsageAPIKeyWithGroup(svc, 1014, true),
 		User:    &User{ID: 2014placeholder,
 		Account: &Account{ID: 3014, Platform: PlatformOpenAIplaceholder,
 placeholder)
@@ -1122,7 +1133,7 @@ func TestOpenAIGatewayServiceRecordUsage_Gpt54LongContextBillingEnabledPerAccoun
 			Model:    "gpt-5.4-2026-03-05",
 			Duration: time.Second,
 	placeholder,
-		APIKey: &APIKey{ID: 1015placeholder,
+		APIKey: openAIRecordUsageAPIKeyWithGroup(svc, 1015, true),
 		User:   &User{ID: 2015placeholder,
 		Account: &Account{
 			ID:       3015,
@@ -1141,6 +1152,62 @@ placeholder
 	require.InDelta(t, expectedInput+expectedOutput, usageRepo.lastLog.TotalCost, 1e-10)
 	require.InDelta(t, (expectedInput+expectedOutput)*1.1, usageRepo.lastLog.ActualCost, 1e-10)
 	require.True(t, usageRepo.lastLog.LongContextBillingApplied)
+placeholder
+
+func TestOpenAIGatewayServiceRecordUsage_GroupAndAccountLongContextMustBothAllow(t *testing.T) {
+	tokens := OpenAIUsage{InputTokens: 300000, OutputTokens: 2000placeholder
+	baseInput := 300000 * 2.5e-6
+	baseOutput := 2000 * 15e-6
+
+	t.Run("group on account off", func(t *testing.T) {
+		usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+		svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{placeholder, &openAIRecordUsageSubRepoStub{placeholder, nil)
+		err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+			Result:  &OpenAIForwardResult{RequestID: "resp_and_off", Usage: tokens, Model: "gpt-5.4-2026-03-05", Duration: time.Secondplaceholder,
+			APIKey:  openAIRecordUsageAPIKeyWithGroup(svc, 1020, true),
+			User:    &User{ID: 2020placeholder,
+			Account: &Account{ID: 3020, Platform: PlatformOpenAIplaceholder,
+	placeholder)
+	placeholder
+		require.False(t, usageRepo.lastLog.LongContextBillingApplied)
+		require.InDelta(t, baseInput, usageRepo.lastLog.InputCost, 1e-10)
+		require.InDelta(t, baseOutput, usageRepo.lastLog.OutputCost, 1e-10)
+placeholder)
+
+	t.Run("group off account on", func(t *testing.T) {
+		usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+		svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{placeholder, &openAIRecordUsageSubRepoStub{placeholder, nil)
+		err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+			Result: &OpenAIForwardResult{RequestID: "resp_and_group_off", Usage: tokens, Model: "gpt-5.4-2026-03-05", Duration: time.Secondplaceholder,
+			APIKey: openAIRecordUsageAPIKeyWithGroup(svc, 1021, false),
+			User:   &User{ID: 2021placeholder,
+			Account: &Account{
+				ID: 3021, Platform: PlatformOpenAI,
+				Extra: map[string]any{"openai_long_context_billing_enabled": trueplaceholder,
+		placeholder,
+	placeholder)
+	placeholder
+		require.False(t, usageRepo.lastLog.LongContextBillingApplied)
+		require.InDelta(t, baseInput, usageRepo.lastLog.InputCost, 1e-10)
+placeholder)
+
+	t.Run("group on account on", func(t *testing.T) {
+		usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
+		svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{placeholder, &openAIRecordUsageSubRepoStub{placeholder, nil)
+		err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+			Result: &OpenAIForwardResult{RequestID: "resp_and_on", Usage: tokens, Model: "gpt-5.4-2026-03-05", Duration: time.Secondplaceholder,
+			APIKey: openAIRecordUsageAPIKeyWithGroup(svc, 1022, true),
+			User:   &User{ID: 2022placeholder,
+			Account: &Account{
+				ID: 3022, Platform: PlatformOpenAI,
+				Extra: map[string]any{"openai_long_context_billing_enabled": trueplaceholder,
+		placeholder,
+	placeholder)
+	placeholder
+		require.True(t, usageRepo.lastLog.LongContextBillingApplied)
+		require.InDelta(t, baseInput*2, usageRepo.lastLog.InputCost, 1e-10)
+		require.InDelta(t, baseOutput*1.5, usageRepo.lastLog.OutputCost, 1e-10)
+placeholder)
 placeholder
 
 func TestOpenAIGatewayServiceRecordUsage_SparkShadowUsesCurrentParentBillingSetting(t *testing.T) {
@@ -1177,7 +1244,7 @@ placeholder
 					Model:     "gpt-5.4-2026-03-05",
 					Duration:  time.Second,
 			placeholder,
-				APIKey: &APIKey{ID: 1016placeholder,
+				APIKey: openAIRecordUsageAPIKeyWithGroup(svc, 1016, true),
 				User:   &User{ID: 2016placeholder,
 				Account: &Account{
 					ID:              3016,

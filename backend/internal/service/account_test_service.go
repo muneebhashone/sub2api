@@ -969,6 +969,7 @@ placeholder
 		resp.Body = io.NopCloser(bytes.NewReader(responseBody))
 placeholder
 	snapshot := parseGrokQuotaSnapshot(resp.Header, resp.StatusCode, now)
+	stampGrokQuotaSnapshotForPlan(account, snapshot, grokRequestedModelFromCtx(ctx))
 	if snapshot != nil && s.accountRepo != nil {
 		resetAt, limited := grokRateLimitResetAtForAccount(account, snapshot, now)
 		if limited {
@@ -1073,7 +1074,7 @@ placeholder
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
 
-	s.observeGrokTestResponse(ctx, account, resp)
+	s.observeGrokTestResponse(withGrokTeamRateLimitModel(ctx, testModelID), account, resp)
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -1421,7 +1422,7 @@ placeholder
 		return s.sendErrorAndEnd(c, fmt.Sprintf("standalone web_search probe failed: %s", err.Error()))
 placeholder
 	defer func() { _ = resp.Body.Close() placeholder()
-	s.observeGrokTestResponse(ctx, account, resp)
+	s.observeGrokTestResponse(withGrokTeamRateLimitModel(ctx, grokDefaultResponsesModel), account, resp)
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
