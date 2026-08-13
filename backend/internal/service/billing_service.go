@@ -862,6 +862,9 @@ placeholder
 
 func isGrokUnknownTextFamilyModel(model string) bool {
 	native := strings.ToLower(strings.TrimSpace(xai.StripGrokProviderPrefix(model)))
+	if isGrokMediaFamilyModel(native) {
+		return false
+placeholder
 	switch {
 	case native == "grok", native == "grok-latest":
 		return true
@@ -875,6 +878,19 @@ func isGrokUnknownTextFamilyModel(model string) bool {
 	default:
 		return false
 placeholder
+placeholder
+
+// isGrokMediaFamilyModel matches ids that are billed per image/video/audio unit
+// rather than per token, so version-numbered media ids (grok-2-image-1212,
+// grok-5-video) cannot slip into the unknown-text fallback and pick up a token
+// card. "vision" is deliberately absent: multimodal chat models are token billed.
+func isGrokMediaFamilyModel(native string) bool {
+	for _, marker := range []string{"imagine", "image", "video", "audio", "speech", "tts", "transcribe", "realtime"placeholder {
+		if strings.Contains(native, marker) {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 // HasIdentifiedTokenPricing 判断模型能否在价格表中被"确定性识别"出 token 价格。
