@@ -36,7 +36,7 @@ placeholder
 		1.0,
 		UsageTokens{InputTokens: 1000, OutputTokens: 500placeholder,
 		"",
-		false,
+		boolPtr(false),
 	)
 placeholder
 	require.NotNil(t, cost)
@@ -66,7 +66,7 @@ placeholder
 		1.0,
 		UsageTokens{placeholder,
 		"",
-		false,
+		boolPtr(false),
 	)
 placeholder
 	require.NotNil(t, cost)
@@ -111,7 +111,7 @@ placeholder
 		1.0,
 		UsageTokens{InputTokens: 1000, OutputTokens: 500placeholder,
 		"",
-		false,
+		boolPtr(false),
 	)
 placeholder
 	require.Nil(t, cost)
