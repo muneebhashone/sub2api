@@ -602,6 +602,97 @@ placeholder
 	require.Equal(t, int64(1), okRepo.listAllCalls.Load())
 placeholder
 
+func TestGetAvailableModels_OpenAIPassthroughUsesDefaultFallback(t *testing.T) {
+	groupID := int64(10)
+
+	tests := []struct {
+		name     string
+		accounts []Account
+		want     []string
+placeholder{
+		{
+			name: "passthrough only ignores stale mapping",
+			accounts: []Account{
+				{
+					ID:          1,
+					Platform:    PlatformOpenAI,
+			placeholder"model_mapping": map[string]any{"stale-model": "upstream-model"placeholderplaceholder,
+					Extra:       map[string]any{"openai_passthrough": trueplaceholder,
+			placeholder,
+		placeholder,
+			want: nil,
+	placeholder,
+		{
+			name: "passthrough wins over ordinary account mapping",
+			accounts: []Account{
+				{
+					ID:          2,
+					Platform:    PlatformOpenAI,
+			placeholder"model_mapping": map[string]any{"configured-model": "configured-upstream"placeholderplaceholder,
+			placeholder,
+				{
+					ID:          3,
+					Platform:    PlatformOpenAI,
+			placeholder"model_mapping": map[string]any{"stale-model": "upstream-model"placeholderplaceholder,
+					Extra:       map[string]any{"openai_passthrough": trueplaceholder,
+			placeholder,
+		placeholder,
+			want: nil,
+	placeholder,
+		{
+			name: "ordinary accounts preserve mapped whitelist",
+			accounts: []Account{
+				{
+					ID:          4,
+					Platform:    PlatformOpenAI,
+			placeholder"model_mapping": map[string]any{"configured-model": "configured-upstream"placeholderplaceholder,
+			placeholder,
+		placeholder,
+			want: []string{"configured-model"placeholder,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &modelsListAccountRepoStub{byGroup: map[int64][]Account{groupID: tt.accountsplaceholderplaceholder
+			svc := &GatewayService{
+				accountRepo:        repo,
+				modelsListCache:    gocache.New(time.Minute, time.Minute),
+				modelsListCacheTTL: time.Minute,
+		placeholder
+
+			require.Equal(t, tt.want, svc.GetAvailableModels(context.Background(), &groupID, PlatformOpenAI))
+	placeholder)
+placeholder
+placeholder
+
+func TestGetAvailableModels_GlobalListPreservesMappedModelsWithOpenAIPassthrough(t *testing.T) {
+	groupID := int64(11)
+	repo := &modelsListAccountRepoStub{
+		byGroup: map[int64][]Account{
+			groupID: {
+				{
+					ID:       1,
+					Platform: PlatformOpenAI,
+					Extra:    map[string]any{"openai_passthrough": trueplaceholder,
+			placeholder,
+				{
+					ID:          2,
+					Platform:    PlatformAnthropic,
+			placeholder"model_mapping": map[string]any{"claude-mapped": "claude-upstream"placeholderplaceholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	svc := &GatewayService{
+		accountRepo:        repo,
+		modelsListCache:    gocache.New(time.Minute, time.Minute),
+		modelsListCacheTTL: time.Minute,
+placeholder
+
+	require.Equal(t, []string{"claude-mapped"placeholder, svc.GetAvailableModels(context.Background(), &groupID, ""))
+placeholder
+
 func TestGatewayHotpathHelpers_CacheTTLAndStickyContext(t *testing.T) {
 	t.Run("resolve_user_group_rate_cache_ttl", func(t *testing.T) {
 		require.Equal(t, defaultUserGroupRateCacheTTL, resolveUserGroupRateCacheTTL(nil))
