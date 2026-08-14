@@ -276,7 +276,9 @@ placeholder
 	return has
 placeholder
 
-func IsOpenAIResponsesCompactPathForTest(c *gin.Context) bool {
+// IsOpenAIResponsesCompactPath reports whether the request targets the legacy
+// /responses/compact endpoint, including its forwardable subpaths.
+func IsOpenAIResponsesCompactPath(c *gin.Context) bool {
 	return isOpenAIResponsesCompactPath(c)
 placeholder
 
