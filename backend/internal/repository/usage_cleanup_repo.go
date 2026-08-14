@@ -291,6 +291,9 @@ placeholder
 		return 0, fmt.Errorf("cleanup filters missing time range")
 placeholder
 	args = append(args, limit)
+	if db, ok := r.sql.(*sql.DB); ok {
+		return r.deleteUsageLogsBatchWithRollupInvalidation(ctx, db, whereClause, args)
+placeholder
 	query := fmt.Sprintf(`
 		WITH target AS (
 			SELECT id
@@ -301,7 +304,7 @@ placeholder
 		)
 		DELETE FROM usage_logs
 		WHERE id IN (SELECT id FROM target)
-		RETURNING id
+		RETURNING created_at
 	`, whereClause, len(args))
 
 	rows, err := r.sql.QueryContext(ctx, query, args...)
@@ -315,6 +318,68 @@ placeholder
 		deleted++
 placeholder
 	if err := rows.Err(); err != nil {
+		return 0, err
+placeholder
+	return deleted, nil
+placeholder
+
+func (r *usageCleanupRepository) deleteUsageLogsBatchWithRollupInvalidation(ctx context.Context, db *sql.DB, whereClause string, args []any) (int64, error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+placeholder
+	rollback := func(err error) (int64, error) {
+		_ = tx.Rollback()
+		return 0, err
+placeholder
+
+	if err := lockGroupUsageRollupState(ctx, tx); err != nil {
+		return rollback(err)
+placeholder
+	query := fmt.Sprintf(`
+		WITH target AS (
+			SELECT id
+			FROM usage_logs
+			WHERE %s
+			ORDER BY created_at ASC, id ASC
+			LIMIT $%d
+		)
+		DELETE FROM usage_logs
+		WHERE id IN (SELECT id FROM target)
+		RETURNING created_at
+	`, whereClause, len(args))
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return rollback(err)
+placeholder
+
+	var deleted int64
+	var earliestDeletedAt time.Time
+	for rows.Next() {
+		var deletedAt time.Time
+		if err := rows.Scan(&deletedAt); err != nil {
+			_ = rows.Close()
+			return rollback(err)
+	placeholder
+		deleted++
+		if earliestDeletedAt.IsZero() || deletedAt.Before(earliestDeletedAt) {
+			earliestDeletedAt = deletedAt
+	placeholder
+placeholder
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return rollback(err)
+placeholder
+	if err := rows.Close(); err != nil {
+		return rollback(err)
+placeholder
+
+	if deleted > 0 {
+		if err := invalidateGroupUsageRollupsAt(ctx, tx, earliestDeletedAt); err != nil {
+			return rollback(err)
+	placeholder
+placeholder
+	if err := tx.Commit(); err != nil {
 		return 0, err
 placeholder
 	return deleted, nil
