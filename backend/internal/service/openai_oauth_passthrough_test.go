@@ -735,12 +735,17 @@ placeholder
 placeholder
 
 	account := &Account{
-		ID:             123,
-		Name:           "acc",
-		Platform:       PlatformOpenAI,
-		Type:           AccountTypeOAuth,
-		Concurrency:    1,
-		Credentials:    map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder,
+		ID:          123,
+		Name:        "acc",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeOAuth,
+		Concurrency: 1,
+placeholder
+			"access_token":          "oauth-token",
+			"chatgpt_account_id":    "chatgpt-acc",
+			"model_mapping":         map[string]any{"gpt-5.1-codex": "gpt-5.1-account"placeholder,
+			"compact_model_mapping": map[string]any{"gpt-5.1-codex": "gpt-5.1-compact"placeholder,
+	placeholder,
 		Extra:          map[string]any{"openai_passthrough": trueplaceholder,
 		Status:         StatusActive,
 		Schedulable:    true,
@@ -754,7 +759,7 @@ placeholder
 
 	require.False(t, gjson.GetBytes(upstream.lastBody, "store").Exists())
 	require.False(t, gjson.GetBytes(upstream.lastBody, "stream").Exists())
-	require.Equal(t, "gpt-5.1-codex", gjson.GetBytes(upstream.lastBody, "model").String())
+	require.Equal(t, "gpt-5.1-compact", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.Equal(t, "compact me", gjson.GetBytes(upstream.lastBody, "input.0.text").String())
 	require.Equal(t, "local-test-instructions", strings.TrimSpace(gjson.GetBytes(upstream.lastBody, "instructions").String()))
 	require.Equal(t, "application/json", upstream.lastReq.Header.Get("Accept"))
@@ -2172,12 +2177,16 @@ placeholder
 placeholder
 
 	account := &Account{
-		ID:             456,
-		Name:           "apikey-acc",
-		Platform:       PlatformOpenAI,
-		Type:           AccountTypeAPIKey,
-		Concurrency:    1,
-		Credentials:    map[string]any{"api_key": "sk-api-key", "base_url": "https://api.openai.com"placeholder,
+		ID:          456,
+		Name:        "apikey-acc",
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Concurrency: 1,
+placeholder
+			"api_key":       "sk-api-key",
+			"base_url":      "https://api.openai.com",
+			"model_mapping": map[string]any{"gpt-5.2": "gpt-5.2-account"placeholder,
+	placeholder,
 		Extra:          map[string]any{"openai_passthrough": trueplaceholder,
 		Status:         StatusActive,
 		Schedulable:    true,

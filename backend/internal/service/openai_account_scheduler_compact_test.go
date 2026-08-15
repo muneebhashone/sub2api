@@ -116,6 +116,262 @@ placeholder
 	require.Nil(t, selection)
 placeholder
 
+func newOpenAICompactionSchedulerTestService(accounts []Account, advanced bool) *OpenAIGatewayService {
+	cfg := &config.Config{placeholder
+	cfg.Gateway.Scheduling.LoadBatchEnabled = false
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: accountsplaceholder,
+		cache:              &schedulerTestGatewayCache{placeholder,
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
+placeholder
+	if advanced {
+		svc.rateLimitService = newOpenAIAdvancedSchedulerRateLimitService("true")
+placeholder
+	return svc
+placeholder
+
+func selectOpenAICompactionSchedulerTestAccount(t *testing.T, svc *OpenAIGatewayService, groupID int64, requireCompact bool) (*AccountSelectionResult, error) {
+placeholder
+	selection, _, err := svc.SelectAccountWithSchedulerForCapability(
+		context.Background(),
+		&groupID,
+		"",
+		"",
+		"gpt-5.6-sol",
+		nil,
+		OpenAIUpstreamTransportAny,
+		OpenAIEndpointCapabilityResponses,
+		requireCompact,
+		false,
+		false,
+	)
+	return selection, err
+placeholder
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_NativeCompactionIgnoresLegacyCompactProbe(t *testing.T) {
+	for _, advanced := range []bool{false, trueplaceholder {
+		t.Run(map[bool]string{false: "legacy_scheduler", true: "advanced_scheduler"placeholder[advanced], func(t *testing.T) {
+			resetOpenAIAdvancedSchedulerSettingCacheForTest()
+			svc := newOpenAICompactionSchedulerTestService([]Account{{
+				ID:          71012,
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Extra: map[string]any{
+					"openai_compact_supported":   false,
+					"openai_responses_supported": true,
+			placeholder,
+	placeholder advanced)
+
+			selection, err := selectOpenAICompactionSchedulerTestAccount(t, svc, 91007, false)
+		placeholder
+			require.NotNil(t, selection)
+			require.Equal(t, int64(71012), selection.Account.ID)
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_NativeCompactionAllowsForceOff(t *testing.T) {
+	for _, advanced := range []bool{false, trueplaceholder {
+		t.Run(map[bool]string{false: "legacy_scheduler", true: "advanced_scheduler"placeholder[advanced], func(t *testing.T) {
+			resetOpenAIAdvancedSchedulerSettingCacheForTest()
+			svc := newOpenAICompactionSchedulerTestService([]Account{{
+				ID:          71013,
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Extra: map[string]any{
+					"openai_compact_mode":        OpenAICompactModeForceOff,
+					"openai_responses_supported": true,
+			placeholder,
+	placeholder advanced)
+
+			selection, err := selectOpenAICompactionSchedulerTestAccount(t, svc, 91008, false)
+		placeholder
+			require.NotNil(t, selection)
+			require.Equal(t, int64(71013), selection.Account.ID)
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_NativeCompactionRequiresResponsesCapability(t *testing.T) {
+	for _, advanced := range []bool{false, trueplaceholder {
+		t.Run(map[bool]string{false: "legacy_scheduler", true: "advanced_scheduler"placeholder[advanced], func(t *testing.T) {
+			resetOpenAIAdvancedSchedulerSettingCacheForTest()
+			svc := newOpenAICompactionSchedulerTestService([]Account{{
+				ID:          71014,
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeAPIKey,
+				Status:      StatusActive,
+				Schedulable: true,
+				Concurrency: 1,
+				Extra: map[string]any{
+					"openai_compact_mode":        OpenAICompactModeForceOn,
+					"openai_responses_supported": false,
+			placeholder,
+	placeholder advanced)
+
+			selection, err := selectOpenAICompactionSchedulerTestAccount(t, svc, 91009, false)
+			require.ErrorIs(t, err, ErrNoAvailableAccounts)
+			require.NotErrorIs(t, err, ErrNoAvailableCompactAccounts)
+			require.NotContains(t, err.Error(), "/responses/compact")
+			require.Nil(t, selection)
+	placeholder)
+placeholder
+placeholder
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_LegacyCompactionKeepsCompactEligibility(t *testing.T) {
+	for _, advanced := range []bool{false, trueplaceholder {
+		t.Run(map[bool]string{false: "legacy_scheduler", true: "advanced_scheduler"placeholder[advanced], func(t *testing.T) {
+			resetOpenAIAdvancedSchedulerSettingCacheForTest()
+			svc := newOpenAICompactionSchedulerTestService([]Account{
+				{
+					ID:          71015,
+					Platform:    PlatformOpenAI,
+					Type:        AccountTypeAPIKey,
+					Status:      StatusActive,
+					Schedulable: true,
+					Concurrency: 1,
+					Extra: map[string]any{
+						"openai_compact_supported":   false,
+						"openai_responses_supported": true,
+				placeholder,
+			placeholder,
+				{
+					ID:          71016,
+					Platform:    PlatformOpenAI,
+					Type:        AccountTypeAPIKey,
+					Status:      StatusActive,
+					Schedulable: true,
+					Concurrency: 1,
+					Extra: map[string]any{
+						"openai_compact_mode":        OpenAICompactModeForceOff,
+						"openai_responses_supported": true,
+				placeholder,
+			placeholder,
+		placeholder, advanced)
+
+			selection, err := selectOpenAICompactionSchedulerTestAccount(t, svc, 91010, true)
+			require.ErrorIs(t, err, ErrNoAvailableCompactAccounts)
+			require.Contains(t, err.Error(), "/responses/compact")
+			require.Nil(t, selection)
+	placeholder)
+placeholder
+placeholder
+
+// TestOpenAIGatewayService_SelectAccountWithScheduler_CompactRequiresResponsesCapability
+// prevents a confirmed Chat Completions-only API key from silently dropping the
+// compaction trigger through the Responses-to-Chat fallback.
+func TestOpenAIGatewayService_SelectAccountWithScheduler_CompactRequiresResponsesCapability(t *testing.T) {
+	resetOpenAIAdvancedSchedulerSettingCacheForTest()
+
+	ctx := context.Background()
+	groupID := int64(91005)
+	accounts := []Account{{
+		ID:          71050,
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Schedulable: true,
+		Concurrency: 1,
+		Extra: map[string]any{
+			"openai_compact_supported":   true,
+			"openai_responses_supported": false,
+	placeholder,
+placeholderplaceholder
+	cfg := &config.Config{placeholder
+	cfg.Gateway.Scheduling.LoadBatchEnabled = false
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: accountsplaceholder,
+		cache:              &schedulerTestGatewayCache{placeholder,
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
+placeholder
+
+	selection, _, err := svc.SelectAccountWithSchedulerForCapability(
+		ctx,
+		&groupID,
+		"",
+		"",
+		"gpt-5.4",
+		nil,
+		OpenAIUpstreamTransportAny,
+		OpenAIEndpointCapabilityResponses,
+		true,
+		false,
+		false,
+	)
+placeholder
+	require.True(t, errors.Is(err, ErrNoAvailableAccounts))
+	require.Nil(t, selection)
+placeholder
+
+func TestOpenAIGatewayService_SelectAccountWithScheduler_CompactSkipsChatOnlyAccount(t *testing.T) {
+	resetOpenAIAdvancedSchedulerSettingCacheForTest()
+
+	ctx := context.Background()
+	groupID := int64(91006)
+	accounts := []Account{
+		{
+			ID:          71060,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    10,
+			Extra: map[string]any{
+				"openai_compact_supported":   true,
+				"openai_responses_supported": false,
+		placeholder,
+	placeholder,
+		{
+			ID:          71061,
+			Platform:    PlatformOpenAI,
+			Type:        AccountTypeAPIKey,
+			Status:      StatusActive,
+			Schedulable: true,
+			Concurrency: 1,
+			Priority:    0,
+			Extra: map[string]any{
+				"openai_compact_supported":   true,
+				"openai_responses_supported": true,
+		placeholder,
+	placeholder,
+placeholder
+	cfg := &config.Config{placeholder
+	cfg.Gateway.Scheduling.LoadBatchEnabled = false
+	svc := &OpenAIGatewayService{
+		accountRepo:        schedulerTestOpenAIAccountRepo{accounts: accountsplaceholder,
+		cache:              &schedulerTestGatewayCache{placeholder,
+		cfg:                cfg,
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{placeholder),
+placeholder
+
+	selection, _, err := svc.SelectAccountWithSchedulerForCapability(
+		ctx,
+		&groupID,
+		"",
+		"",
+		"gpt-5.6-sol",
+		nil,
+		OpenAIUpstreamTransportAny,
+		OpenAIEndpointCapabilityResponses,
+		true,
+		false,
+		false,
+	)
+placeholder
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, int64(71061), selection.Account.ID)
+placeholder
+
 // TestOpenAIGatewayService_SelectAccountWithScheduler_CompactFallsBackToUnknown
 // 验证当没有"已知支持"账号时，compact 请求会回退到"未探测"账号。
 func TestOpenAIGatewayService_SelectAccountWithScheduler_CompactFallsBackToUnknown(t *testing.T) {

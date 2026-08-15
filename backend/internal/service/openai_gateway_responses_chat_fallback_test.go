@@ -53,6 +53,50 @@ placeholder
 	require.False(t, result.Stream)
 placeholder
 
+func TestForwardResponses_PassthroughFlagWithUnsupportedResponsesUsesAccountMapping(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	for _, path := range []string{"/v1/responses", "/v1/responses/compact"placeholder {
+		path := path
+		t.Run(path, func(t *testing.T) {
+			body := []byte(`{"model":"gpt-5.4-channel","input":"hello","stream":falseplaceholder`)
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body))
+			c.Request.Header.Set("Content-Type", "application/json")
+
+			upstream := &httpUpstreamRecorder{resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+				Body: io.NopCloser(strings.NewReader(
+					`{"id":"chatcmpl_mapping","object":"chat.completion","model":"gpt-5.4-account","choices":[{"index":0,"message":{"role":"assistant","content":"ok"placeholder,"finish_reason":"stop"placeholder],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2placeholderplaceholder`,
+				)),
+		placeholderplaceholder
+			svc := &OpenAIGatewayService{
+				cfg:          rawChatCompletionsTestConfig(),
+				httpUpstream: upstream,
+		placeholder
+			account := rawChatCompletionsTestAccount()
+			account.Credentials["model_mapping"] = map[string]any{
+				"gpt-5.4-channel": "gpt-5.4-account",
+		placeholder
+			account.Credentials["compact_model_mapping"] = map[string]any{
+				"gpt-5.4-account": "gpt-5.4-compact",
+		placeholder
+			account.Extra = map[string]any{
+				"openai_passthrough":                     true,
+				openai_compat.ExtraKeyResponsesSupported: false,
+		placeholder
+
+			result, err := svc.Forward(context.Background(), c, account, body)
+		placeholder
+			require.NotNil(t, result)
+			require.Equal(t, "http://upstream.example/v1/chat/completions", upstream.lastReq.URL.String())
+			require.Equal(t, "gpt-5.4-account", gjson.GetBytes(upstream.lastBody, "model").String())
+	placeholder)
+placeholder
+placeholder
+
 func TestForwardResponses_ForceChatCompletionsRoutesStreamingToChatCompletions(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
