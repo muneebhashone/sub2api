@@ -40,7 +40,7 @@ placeholder
 	upstream := &httpUpstreamRecorder{resp: &http.Response{
 		StatusCode: http.StatusOK,
 		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
-		Body:       io.NopCloser(strings.NewReader(`{"id":"compact-agent","status":"completed"placeholder`)),
+		Body:       io.NopCloser(strings.NewReader(`{"id":"compact-agent","status":"completed","output":[{"type":"compaction","id":"cmp_agent_fresh","encrypted_content":"blob"placeholder]placeholder`)),
 placeholderplaceholder
 	svc := &AccountTestService{accountRepo: repo, httpUpstream: upstreamplaceholder
 
@@ -87,7 +87,7 @@ placeholder))
 
 	upstream := &httpUpstreamRecorder{responses: []*http.Response{
 		{StatusCode: http.StatusUnauthorized, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_task_id"placeholderplaceholder`))placeholder,
-		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"id":"compact-agent","status":"completed"placeholder`))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(`{"id":"compact-agent","status":"completed","output":[{"type":"compaction","id":"cmp_agent","encrypted_content":"blob"placeholder]placeholder`))placeholder,
 placeholderplaceholder
 	invalidator := &agentIdentityWSInvalidationRecorder{placeholder
 	svc := &AccountTestService{accountRepo: repo, httpUpstream: upstream, agentIdentityWS: invalidatorplaceholder

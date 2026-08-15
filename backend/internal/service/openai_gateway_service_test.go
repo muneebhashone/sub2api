@@ -3475,7 +3475,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	usage, err := svc.handleSSEToJSON(resp, c, nil, body, "gpt-4o", "gpt-4o")
 placeholder
 	require.NotNil(t, usage)
 	require.Equal(t, 7, usage.InputTokens)
@@ -3594,7 +3594,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-5.4", "gpt-5.4")
+	usage, err := svc.handleSSEToJSON(resp, c, nil, body, "gpt-5.4", "gpt-5.4")
 placeholder
 	require.NotNil(t, usage)
 	require.Equal(t, 4, usage.ImageOutputTokens)
@@ -3621,7 +3621,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	usage, err := svc.handleSSEToJSON(resp, c, nil, body, "gpt-4o", "gpt-4o")
 placeholder
 	require.NotNil(t, usage)
 	require.Equal(t, 0, usage.InputTokens)
@@ -3645,7 +3645,7 @@ placeholder
 		`data: [DONE]`,
 placeholder, "\n"))
 
-	usage, err := svc.handleSSEToJSON(resp, c, body, "gpt-4o", "gpt-4o")
+	usage, err := svc.handleSSEToJSON(resp, c, nil, body, "gpt-4o", "gpt-4o")
 	require.Nil(t, usage)
 placeholder
 	require.Equal(t, http.StatusBadGateway, rec.Code)
