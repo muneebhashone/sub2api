@@ -34,7 +34,7 @@ placeholder
 		return ModelAvailabilityDiagnosis{HasAccountsInPool: true, HasModelSupport: trueplaceholder
 placeholder
 
-	platform = normalizeOpenAICompatiblePlatform(platform)
+	platform = NormalizeOpenAICompatiblePlatform(platform)
 	queryGroupID := groupID
 	includeGrouped := false
 	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
