@@ -71,6 +71,20 @@ func TestOpenAICompactSSEKeepalive_StopBeforeFirstBeatKeepsWriterUntouched(t *te
 	require.False(t, StopOpenAICompactSSEKeepaliveCommitted(c))
 placeholder
 
+func TestOpenAIAdjustedWrittenSizeExcludesResponsesStreamKeepalive(t *testing.T) {
+	c, rec := newCompactBridgeTestContext(t, false)
+	n, err := c.Writer.Write([]byte(":\n\n"))
+placeholder
+	recordOpenAIStreamKeepaliveBytes(c, n)
+
+	require.Equal(t, -1, OpenAICompactKeepaliveAdjustedWrittenSize(c))
+
+	_, err = c.Writer.Write([]byte("data: semantic\n\n"))
+placeholder
+	require.Equal(t, len("data: semantic\n\n"), OpenAICompactKeepaliveAdjustedWrittenSize(c))
+	require.Equal(t, ":\n\ndata: semantic\n\n", rec.Body.String())
+placeholder
+
 // 心跳已提交后，2xx 桥接续写事件而不重复提交响应头。
 func TestWriteOpenAICompactSSEBridge_AfterKeepaliveCommitAppendsEvents(t *testing.T) {
 	c, rec := newCompactBridgeTestContext(t, true)

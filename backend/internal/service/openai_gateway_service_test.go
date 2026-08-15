@@ -204,17 +204,17 @@ placeholder
 			"temp_unschedulable_enabled": true,
 			"temp_unschedulable_rules": []any{map[string]any{
 				"error_code":       float64(http.StatusBadRequest),
-				"keywords":         []any{"servers are currently overloaded"placeholder,
+				"keywords":         []any{"custom temporary outage"placeholder,
 				"duration_minutes": float64(1),
 	placeholder
 	placeholder,
 placeholder
-	body := []byte(`{"error":{"message":"Our servers are currently overloaded."placeholderplaceholder`)
+	body := []byte(`{"error":{"message":"Custom temporary outage."placeholderplaceholder`)
 	resp := &http.Response{StatusCode: http.StatusBadRequest, Header: http.Header{placeholderplaceholder
 
 	got := svc.failoverOpenAIUpstreamHTTPError(
 		context.Background(), nil, account, resp, body,
-		"Our servers are currently overloaded.", "gpt-5.4",
+		"Custom temporary outage.", "gpt-5.4",
 	)
 
 	require.Nil(t, got)
@@ -2288,7 +2288,7 @@ placeholder
 
 	go func() {
 		defer func() { _ = pw.Close() placeholder()
-		_, _ = pw.Write([]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"message\"placeholder,\"output_index\":0placeholder\n\n"))
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\",\"output_index\":0placeholder\n\n"))
 placeholder()
 
 	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "model", "model")
@@ -2320,7 +2320,7 @@ placeholder
 
 	go func() {
 		defer func() { _ = pw.Close() placeholder()
-		_, _ = pw.Write([]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"message\"placeholder,\"output_index\":0placeholder\n\n"))
+		_, _ = pw.Write([]byte("data: {\"type\":\"response.output_text.delta\",\"delta\":\"partial\",\"output_index\":0placeholder\n\n"))
 placeholder()
 
 	_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, &Account{ID: 1placeholder, time.Now(), "", "")
