@@ -14,13 +14,12 @@ placeholder
 placeholder
 
 func BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageStart(b *testing.B) {
-	svc := &GatewayService{placeholder
 	data := `{"type":"message_start","message":{"usage":{"input_tokens":123,"cache_creation_input_tokens":45,"cache_read_input_tokens":6,"cached_tokens":6,"cache_creation":{"ephemeral_5m_input_tokens":20,"ephemeral_1h_input_tokens":25placeholderplaceholderplaceholderplaceholder`
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		usage := &ClaudeUsage{placeholder
-		svc.parseSSEUsagePassthrough(data, usage)
+		parseSSEUsagePassthrough(data, usage)
 placeholder
 placeholder
 
@@ -36,13 +35,12 @@ placeholder
 placeholder
 
 func BenchmarkGatewayService_ParseSSEUsagePassthrough_MessageDelta(b *testing.B) {
-	svc := &GatewayService{placeholder
 	data := `{"type":"message_delta","usage":{"output_tokens":456,"cache_creation_input_tokens":30,"cache_read_input_tokens":7,"cached_tokens":7,"cache_creation":{"ephemeral_5m_input_tokens":10,"ephemeral_1h_input_tokens":20placeholderplaceholderplaceholder`
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		usage := &ClaudeUsage{placeholder
-		svc.parseSSEUsagePassthrough(data, usage)
+		parseSSEUsagePassthrough(data, usage)
 placeholder
 placeholder
 

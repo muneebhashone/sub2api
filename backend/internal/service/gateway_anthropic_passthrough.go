@@ -546,7 +546,7 @@ placeholder
 					ms := int(time.Since(startTime).Milliseconds())
 					firstTokenMs = &ms
 			placeholder
-				s.parseSSEUsagePassthrough(data, usage)
+				parseSSEUsagePassthrough(data, usage)
 		placeholder else {
 				trimmed := strings.TrimSpace(line)
 				if strings.HasPrefix(trimmed, "event:") && anthropicStreamEventIsTerminal(strings.TrimSpace(strings.TrimPrefix(trimmed, "event:")), "") {
@@ -625,7 +625,9 @@ placeholder
 	return line[start:], true
 placeholder
 
-func (s *GatewayService) parseSSEUsagePassthrough(data string, usage *ClaudeUsage) {
+// parseSSEUsagePassthrough 从 Anthropic SSE data 行提取 usage（包级函数：
+// Anthropic 平台 passthrough 与国产供应商原生 Anthropic 直通共用）。
+func parseSSEUsagePassthrough(data string, usage *ClaudeUsage) {
 	if usage == nil || data == "" || data == "[DONE]" {
 		return
 placeholder
@@ -730,8 +732,12 @@ placeholder
 	return usage
 placeholder
 
-func (s *GatewayService) invalidNonStreamingJSONFailoverError(
+// invalidNonStreamingJSONFailoverError 把"上游 2xx 返回非 JSON body"归一为
+// failover 错误（包级函数：Anthropic 平台 passthrough 与国产供应商原生
+// Anthropic 直通共用）。
+func invalidNonStreamingJSONFailoverError(
 	ctx context.Context,
+	rateLimitService *RateLimitService,
 	resp *http.Response,
 	account *Account,
 	body []byte,
@@ -759,11 +765,11 @@ placeholder
 		parseErr,
 	)
 
-	if s.rateLimitService != nil && account != nil {
+	if rateLimitService != nil && account != nil {
 		if len(requestedModel) > 0 {
-			s.rateLimitService.HandleUpstreamError(ctx, account, statusCode, resp.Header, body, requestedModel[0])
+			rateLimitService.HandleUpstreamError(ctx, account, statusCode, resp.Header, body, requestedModel[0])
 	placeholder else {
-			s.rateLimitService.HandleUpstreamError(ctx, account, statusCode, resp.Header, body)
+			rateLimitService.HandleUpstreamError(ctx, account, statusCode, resp.Header, body)
 	placeholder
 placeholder
 
@@ -798,7 +804,7 @@ placeholder
 	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
 		var raw json.RawMessage
 		if err := json.Unmarshal(body, &raw); err != nil {
-			return nil, s.invalidNonStreamingJSONFailoverError(ctx, resp, account, body, err)
+			return nil, invalidNonStreamingJSONFailoverError(ctx, s.rateLimitService, resp, account, body, err)
 	placeholder
 placeholder
 

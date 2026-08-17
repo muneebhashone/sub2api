@@ -42,7 +42,7 @@ placeholder
 			if err != nil {
 				return "", err
 		placeholder
-			targetURL = buildOpenAIResponsesURL(validatedURL)
+			targetURL = buildOpenAIResponsesURLForPlatform(account.Platform, validatedURL)
 	placeholder
 	default:
 		targetURL = openaiPlatformAPIURL
