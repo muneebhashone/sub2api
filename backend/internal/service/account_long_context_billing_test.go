@@ -258,18 +258,20 @@ placeholder)
 	require.Zero(t, repo.bulkUpdateCalls)
 placeholder
 
-func TestAdminServiceBulkUpdateAccountsAllowsProviderOwnedValueForNonOpenAIAccounts(t *testing.T) {
+func TestAdminServiceBulkUpdateAccountsRejectsOpenAILongContextKeyForNonOpenAIAccounts(t *testing.T) {
 	repo := &longContextBillingRepoStub{account: &Account{ID: 1, Platform: PlatformGrokplaceholderplaceholder
 	svc := &adminServiceImpl{accountRepo: repoplaceholder
 
 	result, err := svc.BulkUpdateAccounts(context.Background(), &BulkUpdateAccountsInput{
 		AccountIDs: []int64{1placeholder,
-		Extra:      map[string]any{openAILongContextBillingEnabledKey: []string{"provider-owned"placeholderplaceholder,
+		Extra:      map[string]any{openAILongContextBillingEnabledKey: trueplaceholder,
 placeholder)
 
-placeholder
-	require.NotNil(t, result)
-	require.Equal(t, 1, repo.bulkUpdateCalls)
+	require.Nil(t, result)
+	var appErr *infraerrors.ApplicationError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, "OPENAI_BULK_TARGET_INVALID", appErr.Reason)
+	require.Zero(t, repo.bulkUpdateCalls)
 placeholder
 
 func TestAdminServiceBulkUpdateAccountsRejectsMalformedValueForMixedTargetsIncludingOpenAI(t *testing.T) {
