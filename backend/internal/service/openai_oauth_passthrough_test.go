@@ -1948,6 +1948,212 @@ placeholder
 	require.Equal(t, codexCLIVersion, upstream.lastReq.Header.Get("version"))
 placeholder
 
+func TestOpenAIGatewayService_CodexFingerprintHTTPTransformedHeaderBodyParityAndDefaultCacheKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+	c.Request.Header.Set("originator", "codex_cli_rs")
+	c.Request.Header.Set("session-id", "header-session")
+	c.Request.Header.Set("x-codex-turn-metadata", `{"installation_id":"header-install","session_id":"header-session","thread_id":"header-thread","turn_id":"header-turn","window_id":"header-window","sandbox":"seatbelt"placeholder`)
+
+	body := []byte(`{"model":"gpt-5.2","stream":false,"prompt_cache_key":"body-session","client_metadata":{"session_id":"body-session","x-codex-turn-metadata":"{\"installation_id\":\"body-install\",\"session_id\":\"body-session\",\"thread_id\":\"body-thread\",\"turn_id\":\"body-turn\",\"window_id\":\"body-window\",\"sandbox\":\"seatbelt\"placeholder"placeholder,"input":[{"type":"message","role":"user","content":"hi"placeholder]placeholder`)
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: [DONE]\n\n")),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:           &config.Config{placeholder,
+		httpUpstream:  upstream,
+		toolCorrector: NewCodexToolCorrector(),
+placeholder
+	account := newTestOAuthAccount(4401, map[string]any{codexFingerprintModeExtraKey: "session"placeholder)
+	account.Name = "oauth-transformed"
+	account.Status = StatusActive
+	account.Schedulable = true
+	account.Concurrency = 1
+	account.Credentials = map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, upstream.lastReq)
+
+	seed, ok := codexFingerprintSeed(account.Extra)
+	require.True(t, ok)
+	wantInstall := resolveConvergedInstallationID(account, seed)
+	wantSession := resolveConvergedSessionID(seed)
+	wantThread := resolveConvergedThreadID(seed, "header-session")
+
+	require.Equal(t, wantInstall, upstream.lastReq.Header.Get("x-codex-installation-id"))
+	require.Equal(t, wantSession, upstream.lastReq.Header.Get("session-id"))
+	require.Equal(t, wantSession, upstream.lastReq.Header.Get("session_id"))
+	require.Equal(t, wantThread, upstream.lastReq.Header.Get("thread-id"))
+	require.Equal(t, wantThread, upstream.lastReq.Header.Get("x-client-request-id"))
+	require.Equal(t, wantThread+":0", upstream.lastReq.Header.Get("x-codex-window-id"))
+
+	require.Equal(t, wantSession, gjson.GetBytes(upstream.lastBody, "prompt_cache_key").String())
+	require.Equal(t, wantInstall, gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-installation-id").String())
+	require.Equal(t, wantSession, gjson.GetBytes(upstream.lastBody, "client_metadata.session_id").String())
+	require.Equal(t, wantThread, gjson.GetBytes(upstream.lastBody, "client_metadata.thread_id").String())
+	require.Equal(t, wantThread+":0", gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-window-id").String())
+
+	bodyTurnMetadata := gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-turn-metadata").String()
+	headerTurnMetadata := upstream.lastReq.Header.Get("x-codex-turn-metadata")
+	require.Equal(t, wantSession, gjson.Get(bodyTurnMetadata, "session_id").String())
+	require.Equal(t, wantSession, gjson.Get(headerTurnMetadata, "session_id").String())
+	require.Equal(t, gjson.Get(bodyTurnMetadata, "turn_id").String(), gjson.Get(headerTurnMetadata, "turn_id").String())
+placeholder
+
+func TestOpenAIGatewayService_CodexFingerprintHTTPRawPassthroughHeaderBodyParityAndDefaultCacheKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+	c.Request.Header.Set("originator", "codex_cli_rs")
+	c.Request.Header.Set("session-id", "header-session")
+	c.Request.Header.Set("x-codex-turn-metadata", `{"installation_id":"header-install","session_id":"header-session","thread_id":"header-thread","turn_id":"header-turn","window_id":"header-window","sandbox":"seatbelt"placeholder`)
+
+	body := []byte(`{"model":"gpt-5.6-sol","stream":false,"prompt_cache_key":"body-session","client_metadata":{"session_id":"body-session","x-codex-turn-metadata":"{\"installation_id\":\"body-install\",\"session_id\":\"body-session\",\"thread_id\":\"body-thread\",\"turn_id\":\"body-turn\",\"window_id\":\"body-window\",\"sandbox\":\"seatbelt\"placeholder"placeholder,"input":[{"type":"message","role":"user","content":"hi"placeholder]placeholder`)
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: [DONE]\n\n")),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{placeholder,
+		httpUpstream: upstream,
+placeholder
+	account := newTestOAuthAccount(4402, map[string]any{
+		codexFingerprintModeExtraKey: "session",
+		"openai_oauth_passthrough":   true,
+placeholder)
+	account.Name = "oauth-raw"
+	account.Status = StatusActive
+	account.Schedulable = true
+	account.Concurrency = 1
+	account.Credentials = map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, upstream.lastReq)
+
+	seed, ok := codexFingerprintSeed(account.Extra)
+	require.True(t, ok)
+	wantInstall := resolveConvergedInstallationID(account, seed)
+	wantSession := resolveConvergedSessionID(seed)
+	wantThread := resolveConvergedThreadID(seed, "header-session")
+
+	require.Equal(t, wantInstall, upstream.lastReq.Header.Get("x-codex-installation-id"))
+	require.Equal(t, wantSession, upstream.lastReq.Header.Get("session-id"))
+	require.Equal(t, wantSession, upstream.lastReq.Header.Get("session_id"))
+	require.Equal(t, wantThread, upstream.lastReq.Header.Get("thread-id"))
+	require.Equal(t, wantThread, upstream.lastReq.Header.Get("x-client-request-id"))
+	require.Equal(t, wantThread+":0", upstream.lastReq.Header.Get("x-codex-window-id"))
+
+	require.Equal(t, wantSession, gjson.GetBytes(upstream.lastBody, "prompt_cache_key").String())
+	require.Equal(t, wantInstall, gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-installation-id").String())
+	require.Equal(t, wantSession, gjson.GetBytes(upstream.lastBody, "client_metadata.session_id").String())
+	require.Equal(t, wantThread, gjson.GetBytes(upstream.lastBody, "client_metadata.thread_id").String())
+	require.Equal(t, wantThread+":0", gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-window-id").String())
+
+	bodyTurnMetadata := gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-turn-metadata").String()
+	headerTurnMetadata := upstream.lastReq.Header.Get("x-codex-turn-metadata")
+	require.Equal(t, wantSession, gjson.Get(bodyTurnMetadata, "session_id").String())
+	require.Equal(t, wantSession, gjson.Get(headerTurnMetadata, "session_id").String())
+	require.Equal(t, gjson.Get(bodyTurnMetadata, "turn_id").String(), gjson.Get(headerTurnMetadata, "turn_id").String())
+placeholder
+
+func TestOpenAIGatewayService_CodexFingerprintCompactDoesNotRewriteBodyCacheKeyOrMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+	c.Request.Header.Set("originator", "codex_cli_rs")
+	c.Request.Header.Set("session-id", "header-session")
+
+	body := []byte(`{"model":"gpt-5.4","stream":false,"prompt_cache_key":"body-session","client_metadata":{"session_id":"body-session"placeholder,"input":[{"type":"message","role":"user","content":"compress"placeholder]placeholder`)
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(compactProbeSSESuccessBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:           &config.Config{placeholder,
+		httpUpstream:  upstream,
+		toolCorrector: NewCodexToolCorrector(),
+placeholder
+	account := newTestOAuthAccount(4403, map[string]any{codexFingerprintModeExtraKey: "session"placeholder)
+	account.Name = "oauth-compact"
+	account.Status = StatusActive
+	account.Schedulable = true
+	account.Concurrency = 1
+	account.Credentials = map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder
+	staleIDs := resolveCodexFingerprintIDs(account, "stale-session", codexFingerprintSession)
+	require.NotNil(t, staleIDs)
+	stageCodexFingerprintIDs(c, staleIDs)
+
+	_, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, upstream.lastReq)
+
+	seed, ok := codexFingerprintSeed(account.Extra)
+	require.True(t, ok)
+	require.NotEqual(t, resolveConvergedSessionID(seed), gjson.GetBytes(upstream.lastBody, "prompt_cache_key").String())
+	require.Equal(t, "body-session", gjson.GetBytes(upstream.lastBody, "prompt_cache_key").String())
+	require.Equal(t, "body-session", gjson.GetBytes(upstream.lastBody, "client_metadata.session_id").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "client_metadata.x-codex-installation-id").Exists())
+	require.Empty(t, upstream.lastReq.Header.Get("x-codex-window-id"))
+placeholder
+
+func TestOpenAIGatewayService_CodexFingerprintMessagesBridgeDoesNotInjectBodyPromptCacheKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(nil))
+	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.144.1")
+	c.Request.Header.Set("originator", "codex_cli_rs")
+	c.Request.Header.Set("session-id", "header-session")
+
+	body := []byte(`{"model":"gpt-5.5","stream":true,"prompt_cache_key":"anthropic-metadata-session-1","client_metadata":{"session_id":"anthropic-metadata-session-1"placeholder,"input":[{"type":"message","role":"developer","content":[{"type":"input_text","text":"` + openAICompatClaudeCodeTodoGuardMarker + `"placeholder]placeholder,{"type":"message","role":"user","content":"hello"placeholder]placeholder`)
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: [DONE]\n\n")),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:           &config.Config{placeholder,
+		httpUpstream:  upstream,
+		toolCorrector: NewCodexToolCorrector(),
+placeholder
+	account := newTestOAuthAccount(4404, map[string]any{codexFingerprintModeExtraKey: "session"placeholder)
+	account.Name = "oauth-messages-bridge"
+	account.Status = StatusActive
+	account.Schedulable = true
+	account.Concurrency = 1
+	account.Credentials = map[string]any{"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-acc"placeholder
+
+	_, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, upstream.lastReq)
+
+	seed, ok := codexFingerprintSeed(account.Extra)
+	require.True(t, ok)
+	wantSession := resolveConvergedSessionID(seed)
+	require.False(t, gjson.GetBytes(upstream.lastBody, "prompt_cache_key").Exists())
+	require.Equal(t, wantSession, gjson.GetBytes(upstream.lastBody, "client_metadata.session_id").String())
+	require.Equal(t, wantSession, upstream.lastReq.Header.Get("session_id"))
+placeholder
+
 func TestOpenAIGatewayService_CodexCLIOnly_RejectsNonCodexClient(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

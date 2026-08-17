@@ -128,22 +128,24 @@ var duplicateAccountDiscardedExtraKeys = map[string]struct{placeholder{
 	"drive_storage_limit":                    {placeholder,
 	"drive_storage_usage":                    {placeholder,
 	"drive_tier_updated_at":                  {placeholder,
-	"codex_primary_used_percent":             {placeholder,
-	"codex_primary_reset_after_seconds":      {placeholder,
-	"codex_primary_window_minutes":           {placeholder,
-	"codex_secondary_used_percent":           {placeholder,
-	"codex_secondary_reset_after_seconds":    {placeholder,
-	"codex_secondary_window_minutes":         {placeholder,
-	"codex_primary_over_secondary_percent":   {placeholder,
-	"codex_usage_updated_at":                 {placeholder,
-	"codex_5h_used_percent":                  {placeholder,
-	"codex_5h_reset_after_seconds":           {placeholder,
-	"codex_5h_window_minutes":                {placeholder,
-	"codex_5h_reset_at":                      {placeholder,
-	"codex_7d_used_percent":                  {placeholder,
-	"codex_7d_reset_after_seconds":           {placeholder,
-	"codex_7d_window_minutes":                {placeholder,
-	"codex_7d_reset_at":                      {placeholder,
+	// Codex fingerprint convergence uses a per-account random seed, never copied from another account.
+	codexFingerprintSeedExtraKey:           {placeholder,
+	"codex_primary_used_percent":           {placeholder,
+	"codex_primary_reset_after_seconds":    {placeholder,
+	"codex_primary_window_minutes":         {placeholder,
+	"codex_secondary_used_percent":         {placeholder,
+	"codex_secondary_reset_after_seconds":  {placeholder,
+	"codex_secondary_window_minutes":       {placeholder,
+	"codex_primary_over_secondary_percent": {placeholder,
+	"codex_usage_updated_at":               {placeholder,
+	"codex_5h_used_percent":                {placeholder,
+	"codex_5h_reset_after_seconds":         {placeholder,
+	"codex_5h_window_minutes":              {placeholder,
+	"codex_5h_reset_at":                    {placeholder,
+	"codex_7d_used_percent":                {placeholder,
+	"codex_7d_reset_after_seconds":         {placeholder,
+	"codex_7d_window_minutes":              {placeholder,
+	"codex_7d_reset_at":                    {placeholder,
 placeholder
 
 func duplicateAccountExtra(value map[string]any) (map[string]any, error) {
@@ -404,6 +406,7 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 	delete(accountExtra, OllamaCloudUsageSessionExtraKey)
 	delete(accountExtra, OllamaCloudUsageAutoRefreshExtraKey)
 	delete(accountExtra, OllamaCloudUsageSnapshotExtraKey)
+	accountExtra = prepareCodexFingerprintExtraForCreate(input.Platform, input.Type, accountExtra)
 	account := &Account{
 		Name:        input.Name,
 		Notes:       normalizeAccountNotes(input.Notes),
@@ -651,6 +654,7 @@ placeholder
 				normalizedExtra[key] = v
 		placeholder
 	placeholder
+		normalizedExtra = prepareCodexFingerprintExtraForUpdate(account, normalizedExtra)
 		account.Extra = normalizedExtra
 		if account.Platform == PlatformAntigravity && wasOveragesEnabled && !account.IsOveragesEnabled() {
 			delete(account.Extra, "antigravity_credits_overages") // 清理旧版 overages 运行态
@@ -669,6 +673,9 @@ placeholder
 	placeholder
 		ComputeQuotaResetAt(account.Extra)
 		NormalizeFixedQuotaWindows(account.Extra)
+placeholder
+	if input.Extra == nil {
+		account.Extra = prepareCodexFingerprintExtraForUpdate(account, account.Extra)
 placeholder
 	if requestedRateSyncEnabledUpdate != nil && *requestedRateSyncEnabledUpdate {
 		if requestedProbeEnabledUpdate != nil && !*requestedProbeEnabledUpdate {
@@ -852,6 +859,7 @@ placeholder
 // UpdateAccountExtra 仅对 Extra JSONB 做 key 级合并，避免覆盖其它运行态键
 // （如 model_rate_limits / passive_usage_* 等）。
 func (s *adminServiceImpl) UpdateAccountExtra(ctx context.Context, id int64, updates map[string]any) error {
+	updates = sanitizedCodexFingerprintExtraUpdates(updates)
 	delete(updates, UpstreamBillingProbeEnabledExtraKey)
 	delete(updates, UpstreamBillingRateSyncEnabledExtraKey)
 	delete(updates, UpstreamBillingProbeExtraKey)
@@ -877,6 +885,7 @@ placeholder
 // It merges credentials/extra keys instead of overwriting the whole object.
 func (s *adminServiceImpl) BulkUpdateAccounts(ctx context.Context, input *BulkUpdateAccountsInput) (*BulkUpdateAccountsResult, error) {
 	// Managed probe/session state may only enter through dedicated typed endpoints.
+	input.Extra = sanitizedCodexFingerprintExtraUpdates(input.Extra)
 	delete(input.Extra, UpstreamBillingProbeEnabledExtraKey)
 	delete(input.Extra, UpstreamBillingRateSyncEnabledExtraKey)
 	delete(input.Extra, UpstreamBillingProbeExtraKey)
@@ -1027,9 +1036,10 @@ placeholder
 
 	// Prepare bulk updates for columns and JSONB fields.
 	repoUpdates := AccountBulkUpdate{
-		Credentials:  input.Credentials,
-		Extra:        input.Extra,
-		ProbeEnabled: input.ProbeEnabled,
+		Credentials:                input.Credentials,
+		Extra:                      input.Extra,
+		ProbeEnabled:               input.ProbeEnabled,
+		EnsureCodexFingerprintSeed: ShouldEnsureCodexFingerprintSeedForExtraUpdates(input.Extra),
 placeholder
 	if input.ProbeEnabled != nil {
 		if repoUpdates.Extra == nil {
