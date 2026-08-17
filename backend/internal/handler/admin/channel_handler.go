@@ -57,17 +57,29 @@ type updateChannelRequest struct {
 placeholder
 
 type channelModelPricingRequest struct {
-	Platform         string                   `json:"platform" binding:"omitempty,max=50"`
-	Models           []string                 `json:"models" binding:"required,min=1,max=100"`
-	BillingMode      string                   `json:"billing_mode" binding:"omitempty,oneof=token per_request image"`
-	InputPrice       *float64                 `json:"input_price" binding:"omitempty,min=0"`
-	OutputPrice      *float64                 `json:"output_price" binding:"omitempty,min=0"`
-	CacheWritePrice  *float64                 `json:"cache_write_price" binding:"omitempty,min=0"`
-	CacheReadPrice   *float64                 `json:"cache_read_price" binding:"omitempty,min=0"`
-	ImageInputPrice  *float64                 `json:"image_input_price" binding:"omitempty,min=0"`
-	ImageOutputPrice *float64                 `json:"image_output_price" binding:"omitempty,min=0"`
-	PerRequestPrice  *float64                 `json:"per_request_price" binding:"omitempty,min=0"`
-	Intervals        []pricingIntervalRequest `json:"intervals"`
+	Platform         string                     `json:"platform" binding:"omitempty,max=50"`
+	Models           []string                   `json:"models" binding:"required,min=1,max=100"`
+	BillingMode      string                     `json:"billing_mode" binding:"omitempty,oneof=token per_request image"`
+	InputPrice       *float64                   `json:"input_price" binding:"omitempty,min=0"`
+	OutputPrice      *float64                   `json:"output_price" binding:"omitempty,min=0"`
+	CacheWritePrice  *float64                   `json:"cache_write_price" binding:"omitempty,min=0"`
+	CacheReadPrice   *float64                   `json:"cache_read_price" binding:"omitempty,min=0"`
+	ImageInputPrice  *float64                   `json:"image_input_price" binding:"omitempty,min=0"`
+	ImageOutputPrice *float64                   `json:"image_output_price" binding:"omitempty,min=0"`
+	PerRequestPrice  *float64                   `json:"per_request_price" binding:"omitempty,min=0"`
+	Intervals        []pricingIntervalRequest   `json:"intervals"`
+	TimePricing      *channelTimePricingRequest `json:"time_pricing"`
+placeholder
+
+type channelTimePricingRequest struct {
+	Timezone string                            `json:"timezone"`
+	Periods  []channelTimePricingPeriodRequest `json:"periods"`
+placeholder
+
+type channelTimePricingPeriodRequest struct {
+	StartTime  string  `json:"start_time"`
+	EndTime    string  `json:"end_time"`
+	Multiplier float64 `json:"multiplier"`
 placeholder
 
 type pricingIntervalRequest struct {
@@ -108,18 +120,30 @@ type channelResponse struct {
 placeholder
 
 type channelModelPricingResponse struct {
-	ID               int64                     `json:"id"`
-	Platform         string                    `json:"platform"`
-	Models           []string                  `json:"models"`
-	BillingMode      string                    `json:"billing_mode"`
-	InputPrice       *float64                  `json:"input_price"`
-	OutputPrice      *float64                  `json:"output_price"`
-	CacheWritePrice  *float64                  `json:"cache_write_price"`
-	CacheReadPrice   *float64                  `json:"cache_read_price"`
-	ImageInputPrice  *float64                  `json:"image_input_price"`
-	ImageOutputPrice *float64                  `json:"image_output_price"`
-	PerRequestPrice  *float64                  `json:"per_request_price"`
-	Intervals        []pricingIntervalResponse `json:"intervals"`
+	ID               int64                       `json:"id"`
+	Platform         string                      `json:"platform"`
+	Models           []string                    `json:"models"`
+	BillingMode      string                      `json:"billing_mode"`
+	InputPrice       *float64                    `json:"input_price"`
+	OutputPrice      *float64                    `json:"output_price"`
+	CacheWritePrice  *float64                    `json:"cache_write_price"`
+	CacheReadPrice   *float64                    `json:"cache_read_price"`
+	ImageInputPrice  *float64                    `json:"image_input_price"`
+	ImageOutputPrice *float64                    `json:"image_output_price"`
+	PerRequestPrice  *float64                    `json:"per_request_price"`
+	Intervals        []pricingIntervalResponse   `json:"intervals"`
+	TimePricing      *channelTimePricingResponse `json:"time_pricing"`
+placeholder
+
+type channelTimePricingResponse struct {
+	Timezone string                             `json:"timezone"`
+	Periods  []channelTimePricingPeriodResponse `json:"periods"`
+placeholder
+
+type channelTimePricingPeriodResponse struct {
+	StartTime  string  `json:"start_time"`
+	EndTime    string  `json:"end_time"`
+	Multiplier float64 `json:"multiplier"`
 placeholder
 
 type pricingIntervalResponse struct {
@@ -228,7 +252,23 @@ placeholder
 		ImageOutputPrice: p.ImageOutputPrice,
 		PerRequestPrice:  p.PerRequestPrice,
 		Intervals:        intervals,
+		TimePricing:      timePricingToResponse(p.TimePricing),
 placeholder
+placeholder
+
+func timePricingToResponse(value *service.ChannelTimePricing) *channelTimePricingResponse {
+	if value == nil {
+		return nil
+placeholder
+	periods := make([]channelTimePricingPeriodResponse, 0, len(value.Periods))
+	for _, period := range value.Periods {
+		periods = append(periods, channelTimePricingPeriodResponse{
+			StartTime:  period.StartTime,
+			EndTime:    period.EndTime,
+			Multiplier: period.Multiplier,
+	placeholder)
+placeholder
+	return &channelTimePricingResponse{Timezone: value.Timezone, Periods: periodsplaceholder
 placeholder
 
 func intervalToResponse(iv service.PricingInterval) pricingIntervalResponse {
@@ -280,9 +320,25 @@ func pricingRequestToService(reqs []channelModelPricingRequest) []service.Channe
 			ImageOutputPrice: r.ImageOutputPrice,
 			PerRequestPrice:  r.PerRequestPrice,
 			Intervals:        intervals,
+			TimePricing:      timePricingRequestToService(r.TimePricing),
 	placeholder)
 placeholder
 	return result
+placeholder
+
+func timePricingRequestToService(value *channelTimePricingRequest) *service.ChannelTimePricing {
+	if value == nil {
+		return nil
+placeholder
+	periods := make([]service.ChannelTimePricingPeriod, 0, len(value.Periods))
+	for _, period := range value.Periods {
+		periods = append(periods, service.ChannelTimePricingPeriod{
+			StartTime:  period.StartTime,
+			EndTime:    period.EndTime,
+			Multiplier: period.Multiplier,
+	placeholder)
+placeholder
+	return &service.ChannelTimePricing{Timezone: value.Timezone, Periods: periodsplaceholder
 placeholder
 
 func accountStatsPricingRuleRequestToService(r accountStatsPricingRuleRequest) service.AccountStatsPricingRule {

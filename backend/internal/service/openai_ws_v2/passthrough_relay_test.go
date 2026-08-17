@@ -565,6 +565,143 @@ placeholder)
 	require.Greater(t, result.Duration.Milliseconds(), int64(0))
 placeholder
 
+func TestRelay_OnTurnComplete_UsesResponseCreateTimeAcrossPricingBoundary(t *testing.T) {
+	t.Parallel()
+
+	clientConn := newPassthroughTestFrameConn(nil, false)
+	upstreamConn := newPassthroughTestFrameConn([]passthroughTestFrame{
+		{
+			msgType: coderws.MessageText,
+			payload: []byte(`{"type":"response.completed","response":{"id":"resp_boundary","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+	placeholder,
+placeholder, true)
+
+	responseCreateAt := time.Date(2026, time.August, 17, 9, 59, 59, 0, time.UTC)
+	upstreamResponseAt := responseCreateAt.Add(time.Second)
+	var nowCalls atomic.Int64
+	nowFn := func() time.Time {
+		if nowCalls.Add(1) == 1 {
+			return responseCreateAt
+	placeholder
+		return upstreamResponseAt
+placeholder
+
+	var turn RelayTurnResult
+	_, relayExit := Relay(
+		context.Background(),
+		clientConn,
+		upstreamConn,
+		[]byte(`{"type":"response.create","model":"gpt-5.3-codex","input":[]placeholder`),
+		RelayOptions{
+			Now:            nowFn,
+			OnTurnComplete: func(current RelayTurnResult) { turn = current placeholder,
+	placeholder,
+	)
+
+	require.Nil(t, relayExit)
+	require.Equal(t, responseCreateAt, turn.StartedAt)
+placeholder
+
+func TestRelay_OnTurnComplete_UsesExplicitFirstTurnStartedAt(t *testing.T) {
+	t.Parallel()
+
+	clientConn := newPassthroughTestFrameConn(nil, false)
+	upstreamConn := newPassthroughTestFrameConn([]passthroughTestFrame{
+		{
+			msgType: coderws.MessageText,
+			payload: []byte(`{"type":"response.completed","response":{"id":"resp_initial_boundary","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+	placeholder,
+placeholder, true)
+
+	responseCreateAt := time.Date(2026, time.August, 17, 9, 59, 59, 0, time.UTC)
+	relayStartedAt := responseCreateAt.Add(time.Second)
+	var turn RelayTurnResult
+	_, relayExit := Relay(
+		context.Background(),
+		clientConn,
+		upstreamConn,
+		[]byte(`{"type":"response.create","model":"gpt-5.3-codex","input":[]placeholder`),
+		RelayOptions{
+			FirstTurnStartedAt: responseCreateAt,
+			Now:                func() time.Time { return relayStartedAt placeholder,
+			OnTurnComplete:     func(current RelayTurnResult) { turn = current placeholder,
+	placeholder,
+	)
+
+	require.Nil(t, relayExit)
+	require.Equal(t, responseCreateAt, turn.StartedAt)
+placeholder
+
+func TestRelay_OnTurnComplete_UsesSubsequentResponseCreateTimeAcrossPricingBoundary(t *testing.T) {
+	t.Parallel()
+
+	clientConn := newPassthroughTestFrameConn(nil, false)
+	upstreamConn := newPassthroughTestFrameConn(nil, false)
+	firstTurnAt := time.Date(2026, time.August, 17, 9, 0, 0, 0, time.UTC)
+	secondTurnAt := time.Date(2026, time.August, 17, 9, 59, 59, 0, time.UTC)
+	secondResponseAt := secondTurnAt.Add(time.Second)
+	var clock atomic.Int64
+	clock.Store(firstTurnAt.UnixNano())
+
+	turns := make(chan RelayTurnResult, 2)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{placeholder)
+	go func() {
+		defer close(done)
+		_, _ = Relay(
+			ctx,
+			clientConn,
+			upstreamConn,
+			[]byte(`{"type":"response.create","model":"gpt-5.3-codex","input":[]placeholder`),
+			RelayOptions{
+				Now: func() time.Time { return time.Unix(0, clock.Load()).UTC() placeholder,
+				OnTurnComplete: func(current RelayTurnResult) {
+					turns <- current
+			placeholder,
+		placeholder,
+		)
+placeholder()
+
+	require.Eventually(t, func() bool { return len(upstreamConn.Writes()) == 1 placeholder, time.Second, time.Millisecond)
+	upstreamConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.completed","response":{"id":"resp_first","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+placeholder
+	select {
+	case <-turns:
+	case <-time.After(time.Second):
+		t.Fatal("first turn did not complete")
+placeholder
+
+	clock.Store(secondTurnAt.UnixNano())
+	clientConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.create","model":"gpt-5.3-codex","input":[]placeholder`),
+placeholder
+	require.Eventually(t, func() bool { return len(upstreamConn.Writes()) == 2 placeholder, time.Second, time.Millisecond)
+	clock.Store(secondResponseAt.UnixNano())
+	upstreamConn.readCh <- passthroughTestFrame{
+		msgType: coderws.MessageText,
+		payload: []byte(`{"type":"response.completed","response":{"id":"resp_second","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+placeholder
+
+	var secondTurn RelayTurnResult
+	select {
+	case secondTurn = <-turns:
+	case <-time.After(time.Second):
+		t.Fatal("second turn did not complete")
+placeholder
+	require.Equal(t, secondTurnAt, secondTurn.StartedAt)
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("relay did not stop after cancellation")
+placeholder
+placeholder
+
 func TestRelay_BinaryFramePassthrough(t *testing.T) {
 	t.Parallel()
 

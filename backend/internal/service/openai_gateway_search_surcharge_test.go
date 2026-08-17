@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +38,7 @@ placeholder
 		UsageTokens{InputTokens: 1000, OutputTokens: 500placeholder,
 		"",
 		boolPtr(false),
+		time.Time{placeholder,
 	)
 placeholder
 	require.NotNil(t, cost)
@@ -67,6 +69,7 @@ placeholder
 		UsageTokens{placeholder,
 		"",
 		boolPtr(false),
+		time.Time{placeholder,
 	)
 placeholder
 	require.NotNil(t, cost)
@@ -112,6 +115,7 @@ placeholder
 		UsageTokens{InputTokens: 1000, OutputTokens: 500placeholder,
 		"",
 		boolPtr(false),
+		time.Time{placeholder,
 	)
 placeholder
 	require.Nil(t, cost)

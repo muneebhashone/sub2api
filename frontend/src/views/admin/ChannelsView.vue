@@ -447,6 +447,7 @@
                   :key="idx"
                   :entry="entry"
                   :platform="section.platform"
+                  enable-time-pricing
                   @update="updatePricingEntry(sIdx, idx, $event)"
                   @remove="removePricingEntry(sIdx, idx)"
                 />
@@ -632,7 +633,7 @@ import { extractApiErrorMessage placeholder from '@/utils/apiError'
 import { adminAPI placeholder from '@/api/admin'
 import type { Channel, ChannelModelPricing, CreateChannelRequest, UpdateChannelRequest, AccountStatsPricingRule placeholder from '@/api/admin/channels'
 import type { PricingFormEntry placeholder from '@/components/admin/channel/types'
-import { mTokToPerToken, perTokenToMTok, apiIntervalsToForm, formIntervalsToAPI, findModelConflict, validateIntervals placeholder from '@/components/admin/channel/types'
+import { apiIntervalsToForm, apiTimePricingToForm, createDefaultTimePricingForm, findModelConflict, formIntervalsToAPI, formTimePricingToAPI, mTokToPerToken, perTokenToMTok, validateIntervals, validateTimePricing placeholder from '@/components/admin/channel/types'
 import type { AdminGroup, GroupPlatform placeholder from '@/types'
 import type { Column placeholder from '@/components/common/types'
 import { platformTextClass, platformBadgeLightClass placeholder from '@/utils/platformColors'
@@ -859,7 +860,8 @@ function addPricingEntry(sectionIdx: number) {
     image_input_price: null,
     image_output_price: null,
     per_request_price: null,
-    intervals: []
+    intervals: [],
+    time_pricing: createDefaultTimePricingForm()
   placeholder)
 placeholder
 
@@ -892,7 +894,8 @@ async function syncLatestModels(sectionIdx: number) {
       image_input_price: null,
       image_output_price: null,
       per_request_price: null,
-      intervals: []
+      intervals: [],
+      time_pricing: createDefaultTimePricingForm()
     placeholder)
     appStore.showSuccess(t('admin.channels.form.syncModelsSuccess', { count: newModels.length placeholder))
   placeholder catch (error) {
@@ -957,7 +960,8 @@ function addRulePricingEntry(sectionIdx: number, ruleIndex: number) {
     image_input_price: null,
     image_output_price: null,
     per_request_price: null,
-    intervals: []
+    intervals: [],
+    time_pricing: createDefaultTimePricingForm()
   placeholder)
 placeholder
 
@@ -1073,7 +1077,8 @@ function accountStatsRulesToAPI(): AccountStatsPricingRule[] {
             image_input_price: mTokToPerToken(p.image_input_price),
             image_output_price: mTokToPerToken(p.image_output_price),
             per_request_price: p.per_request_price != null && p.per_request_price !== '' ? Number(p.per_request_price) : null,
-            intervals: formIntervalsToAPI(p.intervals || [])
+            intervals: formIntervalsToAPI(p.intervals || []),
+            time_pricing: null
           placeholder))
       placeholder)
     placeholder
@@ -1114,7 +1119,8 @@ function formToAPI(): { group_ids: number[], model_pricing: ChannelModelPricing[
         image_input_price: mTokToPerToken(entry.image_input_price),
         image_output_price: mTokToPerToken(entry.image_output_price),
         per_request_price: entry.per_request_price != null && entry.per_request_price !== '' ? Number(entry.per_request_price) : null,
-        intervals: formIntervalsToAPI(entry.intervals || [])
+        intervals: formIntervalsToAPI(entry.intervals || []),
+        time_pricing: formTimePricingToAPI(entry.time_pricing)
       placeholder)
     placeholder
   placeholder
@@ -1211,7 +1217,8 @@ function apiToForm(channel: Channel): PlatformSection[] {
         image_input_price: perTokenToMTok(p.image_input_price),
         image_output_price: perTokenToMTok(p.image_output_price),
         per_request_price: p.per_request_price,
-        intervals: apiIntervalsToForm(p.intervals || [])
+        intervals: apiIntervalsToForm(p.intervals || []),
+        time_pricing: apiTimePricingToForm(p.time_pricing)
       placeholder as PricingFormEntry))
 
     // Read web_search_emulation from features_config
@@ -1400,7 +1407,8 @@ function distributeRulesToPlatforms(apiRules: AccountStatsPricingRule[]) {
         image_input_price: perTokenToMTok(p.image_input_price),
         image_output_price: perTokenToMTok(p.image_output_price),
         per_request_price: p.per_request_price,
-        intervals: apiIntervalsToForm(p.intervals || [])
+        intervals: apiIntervalsToForm(p.intervals || []),
+        time_pricing: createDefaultTimePricingForm()
       placeholder as PricingFormEntry))
     placeholder
     section.account_stats_pricing_rules.push(formRule)
@@ -1517,6 +1525,20 @@ async function handleSubmit() {
         const platformLabel = t('admin.groups.platforms.' + section.platform, section.platform)
         const modelLabel = entry.models.join(', ') || t('admin.channels.form.unnamed')
         appStore.showError(`${platformLabelplaceholder - ${modelLabelplaceholder: ${intervalErrplaceholder`)
+        activeTab.value = section.platform
+        return
+      placeholder
+    placeholder
+  placeholder
+
+  // 校验时间段定价，并切换到对应平台便于修正
+  for (const section of form.platforms.filter(s => s.enabled)) {
+    for (const entry of section.model_pricing) {
+      const timePricingError = validateTimePricing(entry.time_pricing, t)
+      if (timePricingError) {
+        const platformLabel = t('admin.groups.platforms.' + section.platform, section.platform)
+        const modelLabel = entry.models.join(', ') || t('admin.channels.form.unnamed')
+        appStore.showError(`${platformLabelplaceholder - ${modelLabelplaceholder: ${timePricingErrorplaceholder`)
         activeTab.value = section.platform
         return
       placeholder

@@ -421,6 +421,49 @@ placeholder
 	require.Nil(t, r.PerRequestPrice)
 placeholder
 
+func TestPricingRequestToService_TimePricing(t *testing.T) {
+	req := channelModelPricingRequest{
+		Models:      []string{"gpt-5"placeholder,
+		BillingMode: "token",
+		TimePricing: &channelTimePricingRequest{
+			Timezone: "Asia/Shanghai",
+			Periods: []channelTimePricingPeriodRequest{{
+				StartTime: "09:00", EndTime: "12:00", Multiplier: 2,
+	placeholder
+	placeholder,
+placeholder
+
+	got := pricingRequestToService([]channelModelPricingRequest{reqplaceholder)
+	require.Equal(t, "Asia/Shanghai", got[0].TimePricing.Timezone)
+	require.Equal(t, 2.0, got[0].TimePricing.Periods[0].Multiplier)
+placeholder
+
+func TestPricingRequestToService_TimePricingNil(t *testing.T) {
+	got := pricingRequestToService([]channelModelPricingRequest{{Models: []string{"gpt-5"placeholderplaceholderplaceholder)
+	require.Nil(t, got[0].TimePricing)
+placeholder
+
+func TestPricingToResponse_TimePricing(t *testing.T) {
+	got := pricingToResponse(&service.ChannelModelPricing{
+		BillingMode: service.BillingModeToken,
+		TimePricing: &service.ChannelTimePricing{
+			Timezone: "Asia/Shanghai",
+			Periods: []service.ChannelTimePricingPeriod{{
+				StartTime: "14:00", EndTime: "18:00", Multiplier: 1.25,
+	placeholder
+	placeholder,
+placeholder)
+
+	require.NotNil(t, got.TimePricing)
+	require.Equal(t, "Asia/Shanghai", got.TimePricing.Timezone)
+	require.Equal(t, 1.25, got.TimePricing.Periods[0].Multiplier)
+placeholder
+
+func TestPricingToResponse_TimePricingNil(t *testing.T) {
+	got := pricingToResponse(&service.ChannelModelPricing{placeholder)
+	require.Nil(t, got.TimePricing)
+placeholder
+
 // ---------------------------------------------------------------------------
 // 3. SyncPricingModels handler
 // ---------------------------------------------------------------------------

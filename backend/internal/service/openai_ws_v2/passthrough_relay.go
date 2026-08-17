@@ -50,6 +50,7 @@ type RelayTurnResult struct {
 	Usage                 Usage
 	RequestID             string
 	TerminalEventType     string
+	StartedAt             time.Time
 	Duration              time.Duration
 	FirstTokenMs          *int
 placeholder
@@ -65,6 +66,8 @@ type RelayOptions struct {
 	WriteTimeout                    time.Duration
 	IdleTimeout                     time.Duration
 	UpstreamDrainTimeout            time.Duration
+	FirstTurnStartedAt              time.Time
+	TakeNextTurnStartedAt           func() time.Time
 	FirstMessageType                coderws.MessageType
 	FirstMessageSent                bool
 	StartClientAfterFirstDownstream bool
@@ -93,6 +96,7 @@ type relayState struct {
 	usage             Usage
 	requestModelMu    sync.RWMutex
 	requestModel      string
+	pendingTurnStart  atomic.Pointer[time.Time]
 	lastResponseID    string
 	lastResponseModel string
 	responseConflict  bool
@@ -114,6 +118,7 @@ type observedUpstreamEvent struct {
 	eventType        string
 	responseID       string
 	usage            Usage
+	startedAt        time.Time
 	responseModel    string
 	responseConflict bool
 	duration         time.Duration
@@ -161,6 +166,13 @@ placeholder
 placeholder
 	startAt := nowFn()
 	state := &relayState{requestModel: result.RequestModelplaceholder
+	if isClientResponseCreateFrame(firstMessageType, firstClientMessage) {
+		firstTurnStartedAt := options.FirstTurnStartedAt
+		if firstTurnStartedAt.IsZero() {
+			firstTurnStartedAt = startAt
+	placeholder
+		state.setPendingTurnStartedAt(firstTurnStartedAt)
+placeholder
 	onTrace := options.OnTrace
 
 	relayCtx, relayCancel := context.WithCancel(ctx)
@@ -178,8 +190,16 @@ placeholder
 		return upstreamConn.WriteFrame(writeCtx, msgType, payload)
 placeholder
 	writeClientFrameUpstream := func(msgType coderws.MessageType, payload []byte) error {
-		if msgType == coderws.MessageText && strings.TrimSpace(gjson.GetBytes(payload, "type").String()) == "response.create" {
+		if isClientResponseCreateFrame(msgType, payload) {
 			state.setRequestModel(strings.TrimSpace(gjson.GetBytes(payload, "model").String()))
+			turnStartedAt := time.Time{placeholder
+			if options.TakeNextTurnStartedAt != nil {
+				turnStartedAt = options.TakeNextTurnStartedAt()
+		placeholder
+			if turnStartedAt.IsZero() {
+				turnStartedAt = nowFn()
+		placeholder
+			state.setPendingTurnStartedAt(turnStartedAt)
 	placeholder
 		return writeUpstream(msgType, payload)
 placeholder
@@ -410,6 +430,13 @@ placeholder
 placeholder)
 	_ = clientConn.Close()
 	return result, nil
+placeholder
+
+func isClientResponseCreateFrame(msgType coderws.MessageType, payload []byte) bool {
+	if msgType != coderws.MessageText && msgType != coderws.MessageBinary {
+		return false
+placeholder
+	return strings.TrimSpace(gjson.GetBytes(payload, "type").String()) == "response.create"
 placeholder
 
 func runClientToUpstream(
@@ -724,6 +751,7 @@ placeholder
 			if duration < 0 {
 				duration = 0
 		placeholder
+			observed.startedAt = turnTiming.startAt
 			observed.duration = duration
 			observed.firstToken = openAIWSRelayCloneIntPtr(turnTiming.firstTokenMs)
 	placeholder
@@ -754,6 +782,7 @@ placeholder
 		Usage:                 observed.usage,
 		RequestID:             responseID,
 		TerminalEventType:     observed.eventType,
+		StartedAt:             observed.startedAt,
 		Duration:              observed.duration,
 		FirstTokenMs:          openAIWSRelayCloneIntPtr(observed.firstToken),
 placeholder)
@@ -815,12 +844,35 @@ placeholder
 placeholder
 	timing, ok := state.turnTimingByID[responseID]
 	if !ok || timing == nil || timing.startAt.IsZero() {
-		timing = &relayTurnTiming{startAt: nowplaceholder
+		startAt := state.consumePendingTurnStartedAt()
+		if startAt.IsZero() {
+			startAt = now
+	placeholder
+		timing = &relayTurnTiming{startAt: startAtplaceholder
 		state.turnTimingByID[responseID] = timing
 		state.activeTurn = timing
 		return timing
 placeholder
 	return timing
+placeholder
+
+func (s *relayState) setPendingTurnStartedAt(startedAt time.Time) {
+	if s == nil || startedAt.IsZero() {
+		return
+placeholder
+	startedAtCopy := startedAt
+	s.pendingTurnStart.Store(&startedAtCopy)
+placeholder
+
+func (s *relayState) consumePendingTurnStartedAt() time.Time {
+	if s == nil {
+		return time.Time{placeholder
+placeholder
+	startedAt := s.pendingTurnStart.Swap(nil)
+	if startedAt == nil {
+		return time.Time{placeholder
+placeholder
+	return *startedAt
 placeholder
 
 func openAIWSRelayDeleteTurnTiming(state *relayState, responseID string) (relayTurnTiming, bool) {
