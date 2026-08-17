@@ -25,6 +25,10 @@ vi.mock('@/stores', () => ({
   useAuthStore: () => authStore,
 placeholder))
 
+vi.mock('@/stores/app', () => ({
+  useAppStore: () => appStore,
+placeholder))
+
 vi.mock('vue-i18n', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-i18n')>()
   return {
@@ -53,6 +57,13 @@ placeholder
 
 function compactDestination(wrapper: ReturnType<typeof mountHome>) {
   return wrapper.get('[data-testid="compact-home"]').findComponent(RouterLinkStub).props('to')
+placeholder
+
+function modelPlazaDestination(wrapper: ReturnType<typeof mountHome>) {
+  return wrapper
+    .findAllComponents(RouterLinkStub)
+    .find((link) => link.props('to') === '/model-plaza')
+    ?.props('to')
 placeholder
 
 describe('HomeView compact mode', () => {
@@ -118,5 +129,56 @@ describe('HomeView compact mode', () => {
     expect(compactDestination(wrapper)).toBe('/admin/dashboard')
     expect(authStore.checkAuth).toHaveBeenCalledOnce()
     expect(appStore.fetchPublicSettings).not.toHaveBeenCalled()
+  placeholder)
+
+  it('shows the model plaza link to anonymous visitors when public access is enabled', () => {
+    const wrapper = mountHome({
+      compact_home_enabled: true,
+      model_plaza_enabled: true,
+      model_plaza_require_auth: false,
+    placeholder)
+
+    expect(modelPlazaDestination(wrapper)).toBe('/model-plaza')
+  placeholder)
+
+  it('hides the model plaza link from anonymous visitors when sign-in is required', () => {
+    const wrapper = mountHome({
+      compact_home_enabled: true,
+      model_plaza_enabled: true,
+      model_plaza_require_auth: true,
+    placeholder)
+
+    expect(modelPlazaDestination(wrapper)).toBeUndefined()
+  placeholder)
+
+  it('shows the model plaza link to authenticated visitors when sign-in is required', () => {
+    authStore.isAuthenticated = true
+
+    const wrapper = mountHome({
+      compact_home_enabled: true,
+      model_plaza_enabled: true,
+      model_plaza_require_auth: true,
+    placeholder)
+
+    expect(modelPlazaDestination(wrapper)).toBe('/model-plaza')
+  placeholder)
+
+  it('shows the model plaza link in the default home header', () => {
+    const wrapper = mountHome({
+      model_plaza_enabled: true,
+      model_plaza_require_auth: false,
+    placeholder)
+
+    expect(modelPlazaDestination(wrapper)).toBe('/model-plaza')
+  placeholder)
+
+  it('hides the model plaza link when the feature is disabled', () => {
+    const wrapper = mountHome({
+      compact_home_enabled: true,
+      model_plaza_enabled: false,
+      model_plaza_require_auth: false,
+    placeholder)
+
+    expect(modelPlazaDestination(wrapper)).toBeUndefined()
   placeholder)
 placeholder)
