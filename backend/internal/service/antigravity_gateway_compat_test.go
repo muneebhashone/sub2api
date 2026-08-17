@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -218,6 +219,50 @@ placeholder
 			require.Nil(t, result)
 			require.Equal(t, http.StatusBadRequest, recorder.Code)
 			require.Contains(t, recorder.Body.String(), "native OAuth account required for antigravity compatibility mode")
+	placeholder)
+placeholder
+placeholder
+
+func TestBuildAntigravityCompatGeminiBody_ConfiguresMixedToolInvocations(t *testing.T) {
+	svc := &AntigravityGatewayService{placeholder
+	tests := []struct {
+		name      string
+		tools     string
+		wantField bool
+placeholder{
+		{
+			name:      "mixed server and client tools",
+			tools:     `[{"name":"get_weather","input_schema":{"type":"object"placeholderplaceholder,{"type":"web_search_20250305","name":"web_search"placeholder]`,
+			wantField: true,
+	placeholder,
+		{
+			name:  "client tools only",
+			tools: `[{"name":"get_weather","input_schema":{"type":"object"placeholderplaceholder]`,
+	placeholder,
+		{
+			name:  "server tools only",
+			tools: `[{"type":"web_search_20250305","name":"web_search"placeholder]`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			claudeBody := []byte(`{"messages":[{"role":"user","content":"hello"placeholder],"tools":` + tt.tools + `placeholder`)
+			claudeBody = bytes.ReplaceAll(claudeBody, []byte{92placeholder, nil)
+			body, err := svc.buildAntigravityCompatGeminiBody(context.Background(), claudeBody, nil, "project-1", "gemini-2.5-flash")
+		placeholder
+
+			var wrapped map[string]any
+			require.NoError(t, json.Unmarshal(body, &wrapped))
+			request := wrapped["request"].(map[string]any)
+			toolConfig, exists := request["toolConfig"].(map[string]any)
+			if !tt.wantField {
+				require.False(t, exists)
+				return
+		placeholder
+			require.True(t, exists)
+			require.Equal(t, true, toolConfig["includeServerSideToolInvocations"])
+			require.NotContains(t, toolConfig, "include_server_side_tool_invocations")
 	placeholder)
 placeholder
 placeholder

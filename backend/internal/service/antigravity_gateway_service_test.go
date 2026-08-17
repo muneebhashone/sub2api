@@ -340,6 +340,42 @@ placeholder
 	require.Equal(t, "configured-project", wrapped["project"])
 placeholder
 
+func TestAntigravityGatewayService_ForwardGemini_PreservesServerSideToolInvocationConfig(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"placeholder]placeholder],"tools":[{"functionDeclarations":[{"name":"get_weather","parameters":{"type":"object","additionalProperties":falseplaceholderplaceholder]placeholder,{"googleSearch":{placeholderplaceholder],"toolConfig":{"includeServerSideToolInvocations":trueplaceholderplaceholder`)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+	body = bytes.ReplaceAll(body, []byte{92placeholder, nil)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-2.5-flash:generateContent", bytes.NewReader(body))
+
+	upstream := &queuedHTTPUpstreamStub{responses: []*http.Response{{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader("data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"placeholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{placeholderplaceholderplaceholder\n\n")),
+placeholderplaceholderplaceholder
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   upstream,
+placeholder
+	account := &Account{
+		ID: 103, Name: "native-gemini", Platform: PlatformAntigravity, Type: AccountTypeOAuth, Status: StatusActive, Concurrency: 1,
+placeholder"access_token": "token", "project_id": "project-103", "model_mapping": map[string]any{"gemini-2.5-flash": "gemini-2.5-flash"placeholderplaceholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-2.5-flash", "generateContent", false, body, false)
+placeholder
+	require.NotNil(t, result)
+	require.Len(t, upstream.requestBodies, 1)
+
+	var wrapped map[string]any
+	require.NoError(t, json.Unmarshal(upstream.requestBodies[0], &wrapped))
+	request := wrapped["request"].(map[string]any)
+	toolConfig := request["toolConfig"].(map[string]any)
+	require.Equal(t, true, toolConfig["includeServerSideToolInvocations"])
+	require.NotContains(t, toolConfig, "include_server_side_tool_invocations")
+placeholder
+
 func TestAntigravityGatewayService_ForwardGemini_MissingProjectReturnsLocalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	writer := httptest.NewRecorder()
