@@ -291,6 +291,13 @@ func (m *mockGatewayCacheForPlatform) ReleaseGrokVideoBilled(_ context.Context, 
 	return nil
 placeholder
 
+func (m *mockGatewayCacheForPlatform) SetReasoningContent(_ context.Context, _ string, _ string, _ time.Duration) error {
+	return nil
+placeholder
+func (m *mockGatewayCacheForPlatform) GetReasoningContent(_ context.Context, _ string) (string, error) {
+	return "", ErrReasoningContentNotFound
+placeholder
+
 type mockGroupRepoForGateway struct {
 	groups           map[int64]*Group
 	getByIDCalls     int
