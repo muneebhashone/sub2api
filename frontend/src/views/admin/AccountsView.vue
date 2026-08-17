@@ -2454,12 +2454,19 @@ onMounted(async () => {
 
   load()
   loadUpstreamBillingProbeGlobalState()
-  try {
-    const [p, g] = await Promise.all([adminAPI.proxies.getAll(), adminAPI.groups.getAll()])
-    proxies.value = p
-    groups.value = g
-  placeholder catch (error) {
-    console.error('Failed to load proxies/groups:', error)
+  const [proxiesResult, groupsResult] = await Promise.allSettled([
+    adminAPI.proxies.getAll(),
+    adminAPI.groups.getAll()
+  ])
+  if (proxiesResult.status === 'fulfilled') {
+    proxies.value = proxiesResult.value
+  placeholder else {
+    console.error('Failed to load proxies:', proxiesResult.reason)
+  placeholder
+  if (groupsResult.status === 'fulfilled') {
+    groups.value = groupsResult.value
+  placeholder else {
+    console.error('Failed to load groups:', groupsResult.reason)
   placeholder
   window.addEventListener('scroll', handleScroll, true)
   window.addEventListener('resize', handleViewportResize)

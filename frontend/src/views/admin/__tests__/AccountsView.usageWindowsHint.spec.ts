@@ -101,7 +101,10 @@ function mountView() {
         Pagination: true,
         ConfirmDialog: true,
         AccountTableActions: { template: '<div><slot name="beforeCreate" /><slot name="after" /></div>' placeholder,
-        AccountTableFilters: { template: '<div></div>' placeholder,
+        AccountTableFilters: {
+          props: ['groups'],
+          template: '<div data-test="account-filters" :data-group-count="groups.length"></div>'
+        placeholder,
         AccountBulkActionsBar: true,
         AccountActionMenu: true,
         ImportDataModal: true,
@@ -153,6 +156,16 @@ describe('admin AccountsView usage windows hint', () => {
     getBatchTodayStats.mockResolvedValue({ stats: {placeholder placeholder)
     getAllProxies.mockResolvedValue([])
     getAllGroups.mockResolvedValue([])
+  placeholder)
+
+  it('keeps groups available when loading proxies fails', async () => {
+    getAllProxies.mockRejectedValue(new Error('proxy service unavailable'))
+    getAllGroups.mockResolvedValue([{ id: 7, name: 'production' placeholder])
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="account-filters"]').attributes('data-group-count')).toBe('1')
   placeholder)
 
   it('renders an explanatory tooltip next to the usage windows column header', async () => {
