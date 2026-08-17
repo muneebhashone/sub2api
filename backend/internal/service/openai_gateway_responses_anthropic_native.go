@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -166,17 +167,52 @@ placeholder
 	var finalResp *apicompat.AnthropicResponse
 	var usage ClaudeUsage
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	// 读间隔上限：上游挂住 SSE 时中止组装（缓冲路径尚未提交响应头，可回 502）。
+	streamInterval := s.anthropicNativeStreamInterval()
+	pump := newAnthropicNativeLinePump(scanner, streamInterval)
+	defer pump.stop()
+
+	logReadErr := func(err error) {
+		if !errors.Is(err, io.EOF) && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			logger.L().Warn("openai responses via native anthropic buffered: read error",
+				zap.Error(err),
+				zap.String("request_id", requestID),
+			)
+	placeholder
+placeholder
+	onIdle := func() (*OpenAIForwardResult, error) {
+		_ = resp.Body.Close()
+		logger.L().Warn("openai responses via native anthropic buffered: data interval timeout",
+			zap.String("request_id", requestID),
+			zap.Duration("interval", streamInterval),
+		)
+		writeResponsesError(c, http.StatusBadGateway, "server_error", "Upstream stream data interval timeout")
+		return nil, fmt.Errorf("stream data interval timeout")
+placeholder
+
+	for {
+		line, rerr := pump.next()
+		if rerr != nil {
+			if errors.Is(rerr, errAnthropicNativeStreamIdle) {
+				return onIdle()
+		placeholder
+			logReadErr(rerr)
+			break
+	placeholder
 		// SSE 规范允许 `event:xxx`（冒号后无空格）：Kimi 等上游返回紧凑格式。
 		if _, ok := extractOpenAISSEEventLine(line); !ok {
 			continue
 	placeholder
 
-		if !scanner.Scan() {
+		dataLine, rerr := pump.next()
+		if rerr != nil {
+			if errors.Is(rerr, errAnthropicNativeStreamIdle) {
+				return onIdle()
+		placeholder
+			logReadErr(rerr)
 			break
 	placeholder
-		payload, ok := extractOpenAISSEDataLine(scanner.Text())
+		payload, ok := extractOpenAISSEDataLine(dataLine)
 		if !ok {
 			continue
 	placeholder
@@ -213,15 +249,6 @@ placeholder
 					finalResp.Content[idx].Input = appendRawJSON(finalResp.Content[idx].Input, event.Delta.PartialJSON)
 			placeholder
 		placeholder
-	placeholder
-placeholder
-
-	if err := scanner.Err(); err != nil {
-		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-			logger.L().Warn("openai responses via native anthropic buffered: read error",
-				zap.Error(err),
-				zap.String("request_id", requestID),
-			)
 	placeholder
 placeholder
 
@@ -326,6 +353,30 @@ placeholder
 	placeholder
 placeholder
 
+	// 读间隔上限：上游挂住 SSE（不发数据也不断连）时结束转换循环。上游 ctx 为
+	// WithoutCancel 且 http.Client 无整体 Timeout，无此界限则 scanner.Scan()
+	// 永久阻塞（见 anthropic native pump 文件注释）。
+	streamInterval := s.anthropicNativeStreamInterval()
+	pump := newAnthropicNativeLinePump(scanner, streamInterval)
+	defer pump.stop()
+
+	logReadErr := func(err error) {
+		if !errors.Is(err, io.EOF) && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			logger.L().Warn("openai responses via native anthropic stream: read error",
+				zap.Error(err),
+				zap.String("request_id", requestID),
+			)
+	placeholder
+placeholder
+	onIdle := func() (*OpenAIForwardResult, error) {
+		_ = resp.Body.Close()
+		logger.L().Warn("openai responses via native anthropic stream: data interval timeout",
+			zap.String("request_id", requestID),
+			zap.Duration("interval", streamInterval),
+		)
+		return resultWithUsage(), fmt.Errorf("stream data interval timeout")
+placeholder
+
 	processAnthropicEvent := func(event *apicompat.AnthropicStreamEvent) bool {
 		if firstChunk {
 			firstChunk = false
@@ -365,16 +416,28 @@ placeholder
 		return false
 placeholder
 
-	for scanner.Scan() {
-		line := scanner.Text()
+	for {
+		line, rerr := pump.next()
+		if rerr != nil {
+			if errors.Is(rerr, errAnthropicNativeStreamIdle) {
+				return onIdle()
+		placeholder
+			logReadErr(rerr)
+			break
+	placeholder
 		if _, ok := extractOpenAISSEEventLine(line); !ok {
 			continue
 	placeholder
 
-		if !scanner.Scan() {
+		dataLine, rerr := pump.next()
+		if rerr != nil {
+			if errors.Is(rerr, errAnthropicNativeStreamIdle) {
+				return onIdle()
+		placeholder
+			logReadErr(rerr)
 			break
 	placeholder
-		payload, ok := extractOpenAISSEDataLine(scanner.Text())
+		payload, ok := extractOpenAISSEDataLine(dataLine)
 		if !ok {
 			continue
 	placeholder
@@ -386,15 +449,6 @@ placeholder
 
 		if processAnthropicEvent(&event) {
 			return resultWithUsage(), nil
-	placeholder
-placeholder
-
-	if err := scanner.Err(); err != nil {
-		if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-			logger.L().Warn("openai responses via native anthropic stream: read error",
-				zap.Error(err),
-				zap.String("request_id", requestID),
-			)
 	placeholder
 placeholder
 
