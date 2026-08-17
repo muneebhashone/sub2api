@@ -69,7 +69,7 @@ placeholder
 	require.False(t, second.CreatedAt.IsZero())
 placeholder
 
-func TestOpsServiceRecordErrorBatch_FallsBackToSingleInsert(t *testing.T) {
+func TestOpsServiceRecordErrorBatch_DoesNotFallbackToSingleInsertsWhenBatchFails(t *testing.T) {
 	t.Parallel()
 
 	var (
@@ -94,7 +94,7 @@ placeholder
 placeholder)
 placeholder
 	require.Equal(t, 1, batchCalls)
-	require.Equal(t, 2, singleCalls)
+	require.Zero(t, singleCalls)
 placeholder
 
 func TestOpsServiceRecordErrorPersistsExplicitAccountAuthStatusZero(t *testing.T) {
