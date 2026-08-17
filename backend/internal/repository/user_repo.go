@@ -70,24 +70,25 @@ placeholder
 
 	// 统一使用 ent 的事务：保证用户与允许分组的更新原子化，
 	// 并避免基于 *sql.Tx 手动构造 ent client 导致的 ExecQuerier 断言错误。
-	tx, err := r.client.Tx(ctx)
-	if err != nil && !errors.Is(err, dbent.ErrTxStarted) {
-		return err
-placeholder
-
+	//
+	// 注意：ent 的 Client.Tx 不感知上下文中的事务（只检查 driver 类型），
+	// 因此必须显式检查 TxFromContext：当调用方已开启外部事务（如注册时的
+	// “建用户 + 占用邀请码”原子事务），直接复用其 client，由调用方统一提交/回滚，
+	// 否则用户写入会落入独立事务并自行提交，导致外层事务无法回滚（孤儿用户）。
 	var txClient *dbent.Client
 	txCtx := ctx
-	if err == nil {
-		defer func() { _ = tx.Rollback() placeholder()
+	var ownedTx *dbent.Tx
+	if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
+		txClient = existingTx.Client()
+placeholder else {
+		tx, err := r.client.Tx(ctx)
+		if err != nil {
+			return err
+	placeholder
+		ownedTx = tx
+		defer func() { _ = ownedTx.Rollback() placeholder()
 		txClient = tx.Client()
 		txCtx = dbent.NewTxContext(ctx, tx)
-placeholder else {
-		// 已处于外部事务中（ErrTxStarted），复用当前事务 client 并由调用方负责提交/回滚。
-		if existingTx := dbent.TxFromContext(ctx); existingTx != nil {
-			txClient = existingTx.Client()
-	placeholder else {
-			txClient = r.client
-	placeholder
 placeholder
 
 	lockKeys := []string{normalizedEmailUniquenessLockKey(userIn.Email)placeholder
@@ -158,8 +159,8 @@ placeholder
 		return err
 placeholder
 
-	if tx != nil {
-		if err := tx.Commit(); err != nil {
+	if ownedTx != nil {
+		if err := ownedTx.Commit(); err != nil {
 			return err
 	placeholder
 placeholder
