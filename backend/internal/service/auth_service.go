@@ -1317,9 +1317,9 @@ placeholder
 		logger.LegacyPrintf("service.auth", "[Auth] Failed to start registration transaction: %v", err)
 		return ErrServiceUnavailable
 placeholder
+	defer func() { _ = tx.Rollback() placeholder()
 	execCtx := dbent.NewTxContext(ctx, tx)
 	if err := commitUser(execCtx); err != nil {
-		_ = tx.Rollback()
 		return err
 placeholder
 	if err := tx.Commit(); err != nil {
