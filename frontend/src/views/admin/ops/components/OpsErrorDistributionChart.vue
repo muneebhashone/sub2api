@@ -146,7 +146,7 @@ placeholder))
           <div class="flex flex-wrap justify-center gap-3">
             <div v-for="item in categories" :key="item.label" class="flex items-center gap-1.5 text-xs">
               <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: item.color placeholder"></span>
-              <span class="text-gray-500 dark:text-gray-400">{{ item.count placeholderplaceholder</span>
+              <span class="text-gray-500 dark:text-gray-400">{{ item.label placeholderplaceholder {{ item.count placeholderplaceholder</span>
             </div>
           </div>
         </div>
