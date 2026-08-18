@@ -70,6 +70,16 @@ func Name(v string) predicate.ChannelMonitor {
 	return predicate.ChannelMonitor(sql.FieldEQ(FieldName, v))
 placeholder
 
+// CheckMode applies equality check predicate on the "check_mode" field. It's identical to CheckModeEQ.
+func CheckMode(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEQ(FieldCheckMode, v))
+placeholder
+
+// AccountID applies equality check predicate on the "account_id" field. It's identical to AccountIDEQ.
+func AccountID(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEQ(FieldAccountID, v))
+placeholder
+
 // APIMode applies equality check predicate on the "api_mode" field. It's identical to APIModeEQ.
 func APIMode(v string) predicate.ChannelMonitor {
 	return predicate.ChannelMonitor(sql.FieldEQ(FieldAPIMode, v))
@@ -293,6 +303,121 @@ placeholder
 // ProviderNotIn applies the NotIn predicate on the "provider" field.
 func ProviderNotIn(vs ...Provider) predicate.ChannelMonitor {
 	return predicate.ChannelMonitor(sql.FieldNotIn(FieldProvider, vs...))
+placeholder
+
+// CheckModeEQ applies the EQ predicate on the "check_mode" field.
+func CheckModeEQ(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEQ(FieldCheckMode, v))
+placeholder
+
+// CheckModeNEQ applies the NEQ predicate on the "check_mode" field.
+func CheckModeNEQ(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNEQ(FieldCheckMode, v))
+placeholder
+
+// CheckModeIn applies the In predicate on the "check_mode" field.
+func CheckModeIn(vs ...string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldIn(FieldCheckMode, vs...))
+placeholder
+
+// CheckModeNotIn applies the NotIn predicate on the "check_mode" field.
+func CheckModeNotIn(vs ...string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNotIn(FieldCheckMode, vs...))
+placeholder
+
+// CheckModeGT applies the GT predicate on the "check_mode" field.
+func CheckModeGT(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldGT(FieldCheckMode, v))
+placeholder
+
+// CheckModeGTE applies the GTE predicate on the "check_mode" field.
+func CheckModeGTE(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldGTE(FieldCheckMode, v))
+placeholder
+
+// CheckModeLT applies the LT predicate on the "check_mode" field.
+func CheckModeLT(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldLT(FieldCheckMode, v))
+placeholder
+
+// CheckModeLTE applies the LTE predicate on the "check_mode" field.
+func CheckModeLTE(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldLTE(FieldCheckMode, v))
+placeholder
+
+// CheckModeContains applies the Contains predicate on the "check_mode" field.
+func CheckModeContains(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldContains(FieldCheckMode, v))
+placeholder
+
+// CheckModeHasPrefix applies the HasPrefix predicate on the "check_mode" field.
+func CheckModeHasPrefix(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldHasPrefix(FieldCheckMode, v))
+placeholder
+
+// CheckModeHasSuffix applies the HasSuffix predicate on the "check_mode" field.
+func CheckModeHasSuffix(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldHasSuffix(FieldCheckMode, v))
+placeholder
+
+// CheckModeEqualFold applies the EqualFold predicate on the "check_mode" field.
+func CheckModeEqualFold(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEqualFold(FieldCheckMode, v))
+placeholder
+
+// CheckModeContainsFold applies the ContainsFold predicate on the "check_mode" field.
+func CheckModeContainsFold(v string) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldContainsFold(FieldCheckMode, v))
+placeholder
+
+// AccountIDEQ applies the EQ predicate on the "account_id" field.
+func AccountIDEQ(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldEQ(FieldAccountID, v))
+placeholder
+
+// AccountIDNEQ applies the NEQ predicate on the "account_id" field.
+func AccountIDNEQ(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNEQ(FieldAccountID, v))
+placeholder
+
+// AccountIDIn applies the In predicate on the "account_id" field.
+func AccountIDIn(vs ...int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldIn(FieldAccountID, vs...))
+placeholder
+
+// AccountIDNotIn applies the NotIn predicate on the "account_id" field.
+func AccountIDNotIn(vs ...int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNotIn(FieldAccountID, vs...))
+placeholder
+
+// AccountIDGT applies the GT predicate on the "account_id" field.
+func AccountIDGT(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldGT(FieldAccountID, v))
+placeholder
+
+// AccountIDGTE applies the GTE predicate on the "account_id" field.
+func AccountIDGTE(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldGTE(FieldAccountID, v))
+placeholder
+
+// AccountIDLT applies the LT predicate on the "account_id" field.
+func AccountIDLT(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldLT(FieldAccountID, v))
+placeholder
+
+// AccountIDLTE applies the LTE predicate on the "account_id" field.
+func AccountIDLTE(v int64) predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldLTE(FieldAccountID, v))
+placeholder
+
+// AccountIDIsNil applies the IsNil predicate on the "account_id" field.
+func AccountIDIsNil() predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldIsNull(FieldAccountID))
+placeholder
+
+// AccountIDNotNil applies the NotNil predicate on the "account_id" field.
+func AccountIDNotNil() predicate.ChannelMonitor {
+	return predicate.ChannelMonitor(sql.FieldNotNull(FieldAccountID))
 placeholder
 
 // APIModeEQ applies the EQ predicate on the "api_mode" field.
