@@ -1017,6 +1017,157 @@ placeholder)
     expect(wrapper.text()).toContain('24h|100')
   placeholder)
 
+  it('Grok Free 24h bar shows rolling local usage chips', async () => {
+    getUsage.mockResolvedValue({
+      grok_free_token_limit: 1_000_000,
+      grok_billing: { period_type: 'weekly', usage_percent: null, plan: '' placeholder,
+      grok_local_usage: {
+        requests: 2,
+        tokens: 250_000,
+        cost: 0,
+        standard_cost: 0
+      placeholder,
+      grok_local_usage_24h: {
+        requests: 12,
+        tokens: 750_000,
+        cost: 0.12,
+        standard_cost: 0.12,
+        user_cost: 0.04
+      placeholder
+    placeholder)
+
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({ id: 4410, platform: 'grok', type: 'oauth', extra: {placeholder placeholder)
+      placeholder,
+      global: {
+        stubs: {
+          UsageProgressBar: {
+            props: ['label', 'utilization', 'windowStats'],
+            template: '<div class="usage-bar">{{ label placeholderplaceholder|{{ utilization placeholderplaceholder|{{ windowStats?.tokens placeholderplaceholder</div>'
+          placeholder,
+          AccountQuotaInfo: true
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('24h|75|750000')
+    expect(wrapper.text()).not.toContain('|250000')
+    expect(wrapper.text()).not.toContain('7d|')
+  placeholder)
+
+  it('Grok SuperGrok and Heavy bars show period-aligned local 7d and 30d usage', async () => {
+    getUsage.mockResolvedValue({
+      subscription_tier: 'SuperGrok Heavy',
+      grok_billing: {
+        period_type: 'weekly',
+        usage_percent: 37,
+        used_percent: 12,
+        monthly_limit_cents: 150_000,
+        period_end: '2026-07-16T03:25:00Z',
+        billing_period_end: '2026-08-01T00:00:00Z',
+        plan: 'SuperGrok Heavy'
+      placeholder,
+      grok_local_usage: {
+        requests: 1,
+        tokens: 99,
+        cost: 0,
+        standard_cost: 0
+      placeholder,
+      grok_local_usage_24h: {
+        requests: 2,
+        tokens: 100,
+        cost: 0,
+        standard_cost: 0
+      placeholder,
+      grok_local_usage_7d: {
+        requests: 8,
+        tokens: 2_200_000,
+        cost: 4.42,
+        standard_cost: 4.42
+      placeholder,
+      grok_local_usage_monthly: {
+        requests: 20,
+        tokens: 8_000_000,
+        cost: 18.5,
+        standard_cost: 18.5
+      placeholder
+    placeholder)
+
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({ id: 4411, platform: 'grok', type: 'oauth', extra: {placeholder placeholder)
+      placeholder,
+      global: {
+        stubs: {
+          UsageProgressBar: {
+            props: ['label', 'utilization', 'windowStats'],
+            template: '<div class="usage-bar">{{ label placeholderplaceholder|{{ utilization placeholderplaceholder|{{ windowStats?.tokens placeholderplaceholder</div>'
+          placeholder,
+          AccountQuotaInfo: true
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('7d|37|2200000')
+    expect(wrapper.text()).toContain('30d|12|8000000')
+    expect(wrapper.text()).not.toContain('|99')
+    expect(wrapper.text()).not.toContain('|100')
+    expect(wrapper.text()).not.toContain('24h|')
+  placeholder)
+
+  it('Grok paid bars fall back to official seven_day and thirty_day window_stats', async () => {
+    getUsage.mockResolvedValue({
+      subscription_tier: 'SuperGrok',
+      grok_billing: {
+        period_type: 'weekly',
+        usage_percent: 20,
+        used_percent: 8,
+        monthly_limit_cents: 25_000,
+        plan: 'SuperGrok'
+      placeholder,
+      seven_day: {
+        utilization: 20,
+        window_stats: {
+          requests: 6,
+          tokens: 1_500_000,
+          cost: 3.1,
+          standard_cost: 3.1
+        placeholder
+      placeholder,
+      thirty_day: {
+        utilization: 8,
+        window_stats: {
+          requests: 14,
+          tokens: 4_400_000,
+          cost: 9.2,
+          standard_cost: 9.2
+        placeholder
+      placeholder
+    placeholder)
+
+    const wrapper = mount(AccountUsageCell, {
+      props: {
+        account: makeAccount({ id: 4412, platform: 'grok', type: 'oauth', extra: {placeholder placeholder)
+      placeholder,
+      global: {
+        stubs: {
+          UsageProgressBar: {
+            props: ['label', 'utilization', 'windowStats'],
+            template: '<div class="usage-bar">{{ label placeholderplaceholder|{{ utilization placeholderplaceholder|{{ windowStats?.tokens placeholderplaceholder</div>'
+          placeholder,
+          AccountQuotaInfo: true
+        placeholder
+      placeholder
+    placeholder)
+
+    await flushPromises()
+    expect(wrapper.text()).toContain('7d|20|1500000')
+    expect(wrapper.text()).toContain('30d|8|4400000')
+  placeholder)
+
   it('Key 账号在 today stats loading 时显示骨架屏', async () => {
 		const wrapper = mount(AccountUsageCell, {
 		  props: {
