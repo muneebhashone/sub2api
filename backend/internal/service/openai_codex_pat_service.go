@@ -58,7 +58,7 @@ placeholder
 placeholder
 	req.Header.Set("authorization", "Bearer "+accessToken)
 	req.Header.Set("accept", "application/json")
-	ApplyCodexCanonicalIdentity(req.Header)
+	ApplyCodexCanonicalAuthIdentity(req.Header)
 
 	resp, err := client.Do(req)
 	if err != nil {
