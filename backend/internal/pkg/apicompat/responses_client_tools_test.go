@@ -174,3 +174,30 @@ placeholder
 	require.Len(t, done, 2)
 	require.Equal(t, "pwd", done[1].Input)
 placeholder
+
+func TestResponsesClientToolStreamRestorer_RestoresAllTerminalEvents(t *testing.T) {
+	for _, eventType := range []string{
+		"response.completed",
+		"response.done",
+		"response.incomplete",
+		"response.failed",
+		"response.cancelled",
+		"response.canceled",
+placeholder {
+		t.Run(eventType, func(t *testing.T) {
+			restorer := NewResponsesClientToolStreamRestorer(ResponsesClientToolMapping{CustomTools: map[string]bool{"exec": trueplaceholderplaceholder)
+			payload := []byte(`{"type":"` + eventType + `","sequence_number":7,"response":{"id":"resp_tools","output":[{"type":"function_call","id":"item_exec","call_id":"call_exec","name":"exec","arguments":"{\"input\":\"pwd\"placeholder"placeholder]placeholderplaceholder`)
+
+			restored, changed, err := restorer.RestoreEvent(payload)
+
+		placeholder
+			require.True(t, changed)
+			require.Len(t, restored, 1)
+			require.Equal(t, eventType, gjson.GetBytes(restored[0], "type").String())
+			require.Equal(t, int64(7), gjson.GetBytes(restored[0], "sequence_number").Int())
+			require.Equal(t, "custom_tool_call", gjson.GetBytes(restored[0], "response.output.0.type").String())
+			require.Equal(t, "pwd", gjson.GetBytes(restored[0], "response.output.0.input").String())
+			require.False(t, gjson.GetBytes(restored[0], "response.output.0.arguments").Exists())
+	placeholder)
+placeholder
+placeholder
