@@ -96,6 +96,8 @@ function makeMonitor(overrides: Partial<ChannelMonitor> = {placeholder): Channel
     extra_headers: {placeholder,
     body_override_mode: 'off',
     body_override: null,
+    check_mode: 'probe',
+    account_id: null,
     ...overrides,
   placeholder
 placeholder

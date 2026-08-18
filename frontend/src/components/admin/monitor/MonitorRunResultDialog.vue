@@ -14,6 +14,7 @@
         <div class="flex flex-col">
           <span class="font-medium text-gray-900 dark:text-white">{{ r.model placeholderplaceholder</span>
           <span v-if="r.message" class="text-xs text-gray-500 dark:text-gray-400">{{ r.message placeholderplaceholder</span>
+          <MonitorQuotaView :snapshot="r.quota" class="mt-1" />
         </div>
         <div class="flex items-center gap-2">
           <span
@@ -40,6 +41,7 @@
 import { useI18n placeholder from 'vue-i18n'
 import type { CheckResult placeholder from '@/api/admin/channelMonitor'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import MonitorQuotaView from '@/components/common/MonitorQuotaView.vue'
 import { useChannelMonitorFormat placeholder from '@/composables/useChannelMonitorFormat'
 
 defineProps<{

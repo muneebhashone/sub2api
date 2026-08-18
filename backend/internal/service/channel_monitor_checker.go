@@ -170,6 +170,11 @@ placeholder
 var providerAdapters = map[string]providerAdapter{
 	MonitorProviderOpenAI: providerOpenAIChatAdapter,
 	MonitorProviderGrok:   providerGrokChatAdapter,
+	// 国产 3 家（配额模式引入）：均为 OpenAI 兼容 Chat Completions，
+	// 仅智谱路径前缀不同（/api/paas/v4/chat/completions）。
+	MonitorProviderKimi:     providerKimiChatAdapter,
+	MonitorProviderZhipu:    providerZhipuChatAdapter,
+	MonitorProviderDeepseek: providerDeepseekChatAdapter,
 	MonitorProviderAnthropic: {
 		buildPath: func(string) string { return providerAnthropicPath placeholder,
 		buildBody: func(model, prompt string) ([]byte, error) {
@@ -211,6 +216,15 @@ var providerOpenAIChatAdapter = newOpenAICompatibleChatAdapter(providerOpenAIPat
 
 //nolint:gochecknoglobals // 适配器表是只读静态数据，初始化后不变更。
 var providerGrokChatAdapter = newOpenAICompatibleChatAdapter(providerGrokPath)
+
+//nolint:gochecknoglobals // 适配器表是只读静态数据，初始化后不变更。
+var providerKimiChatAdapter = newOpenAICompatibleChatAdapter(providerOpenAIPath)
+
+//nolint:gochecknoglobals // 适配器表是只读静态数据，初始化后不变更。
+var providerZhipuChatAdapter = newOpenAICompatibleChatAdapter(providerZhipuPath)
+
+//nolint:gochecknoglobals // 适配器表是只读静态数据，初始化后不变更。
+var providerDeepseekChatAdapter = newOpenAICompatibleChatAdapter(providerOpenAIPath)
 
 func newOpenAICompatibleChatAdapter(path string) providerAdapter {
 	return providerAdapter{
@@ -255,13 +269,6 @@ func providerAdapterFor(provider, apiMode string) (providerAdapter, string, bool
 placeholder
 	adapter, ok := providerAdapters[provider]
 	return adapter, MonitorAPIModeChatCompletions, ok
-placeholder
-
-// isSupportedProvider 校验 provider 字符串是否在 adapter 表中。
-// 供 validate.go 的 validateProvider 复用，避免两份 switch 漂移。
-func isSupportedProvider(p string) bool {
-	_, ok := providerAdapters[p]
-	return ok
 placeholder
 
 // callProvider 通过 providerAdapters 分发到具体实现。
@@ -447,6 +454,10 @@ var bodyMergeKeyDenyList = map[string]map[string]bool{
 	MonitorProviderGrok:      {"model": true, "messages": true, "stream": trueplaceholder,
 	MonitorProviderAnthropic: {"model": true, "messages": trueplaceholder,
 	MonitorProviderGemini:    {"contents": trueplaceholder,
+	// 国产 3 家与 OpenAI Chat Completions 同构。
+	MonitorProviderKimi:     {"model": true, "messages": true, "stream": trueplaceholder,
+	MonitorProviderZhipu:    {"model": true, "messages": true, "stream": trueplaceholder,
+	MonitorProviderDeepseek: {"model": true, "messages": true, "stream": trueplaceholder,
 placeholder
 
 func checkAPIMode(opts *CheckOptions) string {
@@ -463,8 +474,20 @@ placeholder
 	return provider
 placeholder
 
+// isOpenAICompatibleChatProvider 该 provider 的探活请求是否为 OpenAI Chat
+// Completions 同构（replace 模式的 body 校验按 messages 必填处理）。
+func isOpenAICompatibleChatProvider(provider string) bool {
+	switch provider {
+	case MonitorProviderOpenAI, MonitorProviderGrok,
+		MonitorProviderKimi, MonitorProviderZhipu, MonitorProviderDeepseek:
+		return true
+	default:
+		return false
+placeholder
+placeholder
+
 func validateReplaceRequestBody(provider, apiMode string, body map[string]any) error {
-	if provider != MonitorProviderOpenAI && provider != MonitorProviderGrok {
+	if !isOpenAICompatibleChatProvider(provider) {
 		return nil
 placeholder
 	switch defaultAPIMode(apiMode) {

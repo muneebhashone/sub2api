@@ -623,7 +623,9 @@ placeholder
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
-		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini", "grok"placeholderplaceholder,
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini", "grok", "antigravity", "kimi", "zhipu", "deepseek"placeholderplaceholder,
+		{Name: "check_mode", Type: field.TypeString, Size: 32, Default: "probe"placeholder,
+		{Name: "account_id", Type: field.TypeInt64, Nullable: trueplaceholder,
 		{Name: "api_mode", Type: field.TypeString, Size: 32, Default: "chat_completions"placeholder,
 		{Name: "endpoint", Type: field.TypeString, Size: 500placeholder,
 		{Name: "api_key_encrypted", Type: field.TypeStringplaceholder,
@@ -648,7 +650,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "channel_monitors_channel_monitor_request_templates_request_template",
-				Columns:    []*schema.Column{ChannelMonitorsColumns[19]placeholder,
+				Columns:    []*schema.Column{ChannelMonitorsColumns[21]placeholder,
 				RefColumns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[0]placeholder,
 				OnDelete:   schema.SetNull,
 		placeholder,
@@ -657,7 +659,7 @@ placeholder
 			{
 				Name:    "channelmonitor_enabled_last_checked_at",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[11], ChannelMonitorsColumns[14]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[13], ChannelMonitorsColumns[16]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitor_provider",
@@ -667,17 +669,22 @@ placeholder
 			{
 				Name:    "channelmonitor_provider_api_mode",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[4], ChannelMonitorsColumns[5]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[4], ChannelMonitorsColumns[7]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitor_group_name",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[10]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[12]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitor_template_id",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorsColumns[19]placeholder,
+				Columns: []*schema.Column{ChannelMonitorsColumns[21]placeholder,
+		placeholder,
+			{
+				Name:    "channelmonitor_account_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelMonitorsColumns[6]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -733,6 +740,7 @@ placeholder
 		{Name: "latency_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "ping_latency_ms", Type: field.TypeInt, Nullable: trueplaceholder,
 		{Name: "message", Type: field.TypeString, Nullable: true, Size: 500, Default: ""placeholder,
+		{Name: "quota", Type: field.TypeJSON, Nullable: trueplaceholder,
 		{Name: "checked_at", Type: field.TypeTimeplaceholder,
 		{Name: "monitor_id", Type: field.TypeInt64placeholder,
 placeholder
@@ -744,7 +752,7 @@ placeholder
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "channel_monitor_histories_channel_monitors_history",
-				Columns:    []*schema.Column{ChannelMonitorHistoriesColumns[7]placeholder,
+				Columns:    []*schema.Column{ChannelMonitorHistoriesColumns[8]placeholder,
 				RefColumns: []*schema.Column{ChannelMonitorsColumns[0]placeholder,
 				OnDelete:   schema.Cascade,
 		placeholder,
@@ -753,12 +761,12 @@ placeholder
 			{
 				Name:    "channelmonitorhistory_monitor_id_model_checked_at",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[7], ChannelMonitorHistoriesColumns[1], ChannelMonitorHistoriesColumns[6]placeholder,
+				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[8], ChannelMonitorHistoriesColumns[1], ChannelMonitorHistoriesColumns[7]placeholder,
 		placeholder,
 			{
 				Name:    "channelmonitorhistory_checked_at",
 				Unique:  false,
-				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[6]placeholder,
+				Columns: []*schema.Column{ChannelMonitorHistoriesColumns[7]placeholder,
 		placeholder,
 	placeholder,
 placeholder
@@ -768,7 +776,7 @@ placeholder
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"placeholderplaceholder,
 		{Name: "name", Type: field.TypeString, Size: 100placeholder,
-		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini", "grok"placeholderplaceholder,
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"openai", "anthropic", "gemini", "grok", "antigravity", "kimi", "zhipu", "deepseek"placeholderplaceholder,
 		{Name: "api_mode", Type: field.TypeString, Size: 32, Default: "chat_completions"placeholder,
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 500, Default: ""placeholder,
 		{Name: "extra_headers", Type: field.TypeJSONplaceholder,
