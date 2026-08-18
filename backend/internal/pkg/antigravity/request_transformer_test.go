@@ -565,3 +565,59 @@ placeholder
 	require.Equal(t, "get_weather", req.Request.Tools[0].FunctionDeclarations[0].Name)
 	require.NotNil(t, req.Request.Tools[1].GoogleSearch)
 placeholder
+
+func TestGeminiToolConfig_IncludeServerSideToolInvocations(t *testing.T) {
+	functionTool := ClaudeTool{
+		Name:        "get_weather",
+		Description: "Get weather information",
+		InputSchema: map[string]any{"type": "object"placeholder,
+placeholder
+	webSearchTool := ClaudeTool{
+		Type: "web_search_20250305",
+		Name: "web_search",
+placeholder
+
+	transform := func(t *testing.T, tools []ClaudeTool) (V1InternalRequest, string) {
+	placeholder
+		body, err := TransformClaudeToGeminiWithOptions(&ClaudeRequest{
+			Model: "claude-3-5-sonnet-latest",
+			Messages: []ClaudeMessage{
+				{
+					Role:    "user",
+					Content: json.RawMessage(`[{"type":"text","text":"hello"placeholder]`),
+			placeholder,
+		placeholder,
+			Tools: tools,
+	placeholder, "project-1", "gemini-2.5-flash", DefaultTransformOptions())
+	placeholder
+
+		var req V1InternalRequest
+		require.NoError(t, json.Unmarshal(body, &req))
+		return req, string(body)
+placeholder
+
+	t.Run("mixed builtin and function tools enable server-side tool invocations", func(t *testing.T) {
+		req, raw := transform(t, []ClaudeTool{functionTool, webSearchToolplaceholder)
+
+		require.NotNil(t, req.Request.ToolConfig)
+		require.NotNil(t, req.Request.ToolConfig.IncludeServerSideToolInvocations)
+		require.True(t, *req.Request.ToolConfig.IncludeServerSideToolInvocations)
+		require.Contains(t, raw, `"includeServerSideToolInvocations":true`)
+placeholder)
+
+	t.Run("function tools only leave the flag unset", func(t *testing.T) {
+		req, raw := transform(t, []ClaudeTool{functionToolplaceholder)
+
+		require.NotNil(t, req.Request.ToolConfig)
+		require.Nil(t, req.Request.ToolConfig.IncludeServerSideToolInvocations)
+		require.NotContains(t, raw, "includeServerSideToolInvocations")
+placeholder)
+
+	t.Run("web search only leaves the flag unset", func(t *testing.T) {
+		req, raw := transform(t, []ClaudeTool{webSearchToolplaceholder)
+
+		require.NotNil(t, req.Request.ToolConfig)
+		require.Nil(t, req.Request.ToolConfig.IncludeServerSideToolInvocations)
+		require.NotContains(t, raw, "includeServerSideToolInvocations")
+placeholder)
+placeholder
