@@ -9,6 +9,11 @@
 
   html {
     @apply scroll-smooth antialiased;
+    color-scheme: light;
+  placeholder
+
+  .dark {
+    color-scheme: dark;
   placeholder
 
   body {

@@ -405,7 +405,7 @@ placeholder
 placeholder
 
 .dark .date-picker-input::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
+  filter: none;
 placeholder
 
 .date-picker-separator {
