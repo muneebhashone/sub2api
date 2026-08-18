@@ -15,12 +15,12 @@ import (
 
 const grokResponsesClientToolMappingContextKey = "grok_responses_client_tool_mapping"
 
-func adaptGrokResponsesClientTools(body []byte) ([]byte, apicompat.ResponsesClientToolMapping, error) {
+func adaptResponsesClientToolsForFunctionUpstream(body []byte, upstream string) ([]byte, apicompat.ResponsesClientToolMapping, error) {
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.UseNumber()
 	var requestBody map[string]any
 	if err := decoder.Decode(&requestBody); err != nil {
-		return body, apicompat.ResponsesClientToolMapping{placeholder, fmt.Errorf("decode Grok Responses client tools: %w", err)
+		return body, apicompat.ResponsesClientToolMapping{placeholder, fmt.Errorf("decode %s Responses client tools: %w", upstream, err)
 placeholder
 
 	mapping, changed, err := apicompat.AdaptResponsesClientTools(requestBody)
@@ -32,13 +32,21 @@ placeholder
 placeholder
 	rebuilt, err := marshalOpenAIUpstreamJSON(requestBody)
 	if err != nil {
-		return body, apicompat.ResponsesClientToolMapping{placeholder, fmt.Errorf("encode Grok Responses client tools: %w", err)
+		return body, apicompat.ResponsesClientToolMapping{placeholder, fmt.Errorf("encode %s Responses client tools: %w", upstream, err)
 placeholder
 	return rebuilt, mapping, nil
 placeholder
 
-func hasGrokResponsesClientToolMapping(mapping apicompat.ResponsesClientToolMapping) bool {
+func adaptGrokResponsesClientTools(body []byte) ([]byte, apicompat.ResponsesClientToolMapping, error) {
+	return adaptResponsesClientToolsForFunctionUpstream(body, "Grok")
+placeholder
+
+func hasResponsesClientToolMapping(mapping apicompat.ResponsesClientToolMapping) bool {
 	return len(mapping.CustomTools) > 0 || mapping.ToolSearch || len(mapping.NamespaceTools) > 0
+placeholder
+
+func hasGrokResponsesClientToolMapping(mapping apicompat.ResponsesClientToolMapping) bool {
+	return hasResponsesClientToolMapping(mapping)
 placeholder
 
 func setGrokResponsesClientToolMapping(c *gin.Context, mapping apicompat.ResponsesClientToolMapping) {
@@ -97,7 +105,7 @@ placeholder
 	return sourceErr
 placeholder
 
-func newGrokResponsesClientToolStreamBody(
+func newResponsesClientToolStreamBody(
 	source io.ReadCloser,
 	mapping apicompat.ResponsesClientToolMapping,
 	maxLineSize int,
@@ -106,6 +114,14 @@ func newGrokResponsesClientToolStreamBody(
 	body := &grokResponsesClientToolStreamBody{PipeReader: reader, source: sourceplaceholder
 	go transformGrokResponsesClientToolStream(source, writer, mapping, maxLineSize)
 	return body
+placeholder
+
+func newGrokResponsesClientToolStreamBody(
+	source io.ReadCloser,
+	mapping apicompat.ResponsesClientToolMapping,
+	maxLineSize int,
+) io.ReadCloser {
+	return newResponsesClientToolStreamBody(source, mapping, maxLineSize)
 placeholder
 
 func transformGrokResponsesClientToolStream(
