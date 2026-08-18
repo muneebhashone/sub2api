@@ -4,6 +4,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -648,6 +649,51 @@ placeholder
 	outBody := readUpstreamBodyForTest(t, req)
 	require.False(t, gjson.GetBytes(outBody, "context_management").Exists(),
 		"count_tokens API-key + 客户端未带 beta token → body strip")
+placeholder
+
+func TestBuildCountTokensRequest_StripsCacheControlOnlyFromLiteralDeferredTools(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"claude-haiku-4-5","messages":[],"tools":[{"name":"deferred","custom":{"defer_loading":trueplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"ordinary","custom":{"defer_loading":falseplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"string","custom":{"defer_loading":"true"placeholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"number","custom":{"defer_loading":1placeholder,"cache_control":{"type":"ephemeral"placeholderplaceholder,{"name":"object","custom":{"defer_loading":{placeholderplaceholder,"cache_control":{"type":"ephemeral"placeholderplaceholder]placeholder`)
+
+	tests := []struct {
+		name      string
+		account   *Account
+		token     string
+		tokenType string
+placeholder{
+		{
+			name:      "generic API key",
+			account:   &Account{Platform: PlatformAnthropic, Type: AccountTypeAPIKeyplaceholder,
+			token:     "sk-ant-test",
+			tokenType: "apikey",
+	placeholder,
+		{
+			name:      "recognized Claude Code OAuth without mimicry",
+			account:   &Account{Platform: PlatformAnthropic, Type: AccountTypeOAuthplaceholder,
+			token:     "oauth-token",
+			tokenType: "oauth",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages/count_tokens", nil)
+			svc := &GatewayService{cfg: &config.Config{placeholderplaceholder
+
+			req, wireBody, err := svc.buildCountTokensRequest(
+				context.Background(), c, tt.account, body,
+				tt.token, tt.tokenType, "claude-haiku-4-5", false,
+			)
+		placeholder
+			require.False(t, gjson.GetBytes(wireBody, "tools.0.cache_control").Exists())
+			for idx := 1; idx < 5; idx++ {
+				require.Equal(t, "ephemeral", gjson.GetBytes(wireBody, fmt.Sprintf("tools.%d.cache_control.type", idx)).String())
+		placeholder
+			require.JSONEq(t, string(wireBody), string(readUpstreamBodyForTest(t, req)))
+	placeholder)
+placeholder
 placeholder
 
 // count_tokens passthrough preserve 测试
