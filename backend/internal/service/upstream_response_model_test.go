@@ -59,6 +59,77 @@ func TestUpstreamModelMismatchThreeStateAndCaseInsensitiveComparison(t *testing.
 	require.True(t, *mismatched)
 placeholder
 
+func TestUpstreamModelMismatchTreatsGrokBuildRuntimeIDsAsAliases(t *testing.T) {
+	tests := []struct {
+		name          string
+		sentModel     string
+		responseModel string
+placeholder{
+		{
+			name:          "issue 5634 grok 4.6",
+			sentModel:     "grok-4.6",
+			responseModel: "grok-4.6-build",
+	placeholder,
+		{
+			name:          "grok 4.6 latest",
+			sentModel:     "grok-4.6-latest",
+			responseModel: "grok-4.6-build",
+	placeholder,
+		{
+			name:          "issue 5647 grok 4.5 latest",
+			sentModel:     "grok-4.5-latest",
+			responseModel: "grok-4.5-build",
+	placeholder,
+		{
+			name:          "grok 4.5 canonical",
+			sentModel:     "grok-4.5",
+			responseModel: "GROK-4.5-BUILD",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mismatch := upstreamModelMismatch(tt.sentModel, tt.responseModel)
+
+			require.NotNil(t, mismatch)
+			require.False(t, *mismatch)
+	placeholder)
+placeholder
+placeholder
+
+func TestUpstreamModelMismatchDoesNotCollapseDifferentModels(t *testing.T) {
+	tests := []struct {
+		name          string
+		sentModel     string
+		responseModel string
+placeholder{
+		{
+			name:          "different grok versions",
+			sentModel:     "grok-4.5",
+			responseModel: "grok-4.6-build",
+	placeholder,
+		{
+			name:          "unrelated build suffix",
+			sentModel:     "gpt-5.5",
+			responseModel: "gpt-5.5-build",
+	placeholder,
+		{
+			name:          "different grok runtime",
+			sentModel:     "grok-build-0.1",
+			responseModel: "grok-4.5-build",
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mismatch := upstreamModelMismatch(tt.sentModel, tt.responseModel)
+
+			require.NotNil(t, mismatch)
+			require.True(t, *mismatch)
+	placeholder)
+placeholder
+placeholder
+
 func TestObserveOpenAISSEBodyIgnoresMalformedPayload(t *testing.T) {
 	observer := &upstreamResponseModelObserver{placeholder
 	observeOpenAISSEBody(observer, "data: not-json\n\ndata: {\"type\":\"response.completed\",\"response\":{\"model\":\"gpt-5.4\"placeholderplaceholder\n\n")
