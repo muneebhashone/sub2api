@@ -218,7 +218,7 @@ placeholder{
 			expectHandleError: true,
 	placeholder,
 		{
-			name: "custom_codes_skipped_500_no_failover",
+			name: "custom_codes_skipped_500_failover",
 			account: &Account{
 				ID:       201,
 				Type:     AccountTypeAPIKey,
@@ -230,6 +230,22 @@ placeholder{
 		placeholder,
 			statusCode:        500,
 			respBody:          []byte(`{"error":"internal"placeholder`),
+			expectFailover:    true,
+			expectHandleError: false,
+	placeholder,
+		{
+			name: "custom_codes_skipped_400_no_failover",
+			account: &Account{
+				ID:       205,
+				Type:     AccountTypeAPIKey,
+		placeholder
+		placeholder
+					"custom_error_codes_enabled": true,
+					"custom_error_codes":         []any{float64(429)placeholder,
+			placeholder,
+		placeholder,
+			statusCode:        400,
+			respBody:          []byte(`{"error":"bad request"placeholder`),
 			expectFailover:    false,
 			expectHandleError: false,
 	placeholder,
@@ -311,9 +327,9 @@ placeholder
 				policy := svc.rateLimitService.CheckErrorPolicy(ctx, account, statusCode, respBody, "gemini-2.5-pro")
 				switch policy {
 				case ErrorPolicySkipped:
-					// Skipped → return error directly (no handleGeminiUpstreamError, no failover)
-					gotFailover = false
+					// Skipped → 不标记账号状态；可 failover 的状态码仍换号
 					handleErrorCalled = false
+					gotFailover = svc.skippedErrorPolicyFailoverError(c, account, statusCode, respBody, "req-test") != nil
 					goto verify
 				case ErrorPolicyMatched:
 					svc.handleGeminiUpstreamError(ctx, account, statusCode, headers, respBody)
@@ -353,12 +369,12 @@ placeholder
 placeholder
 
 // ---------------------------------------------------------------------------
-// TestPoolModeSkippedFailoverError — pool-mode accounts hitting
-// ErrorPolicySkipped must failover (align with other platform forwards)
-// instead of passing the upstream error through to the client.
+// TestSkippedErrorPolicyFailoverError — ErrorPolicySkipped（池模式、或自定义
+// 错误码未命中）不豁免换号：可 failover 的状态码返回 UpstreamFailoverError，
+// 仅池模式账号可携带同账号重试标记。
 // ---------------------------------------------------------------------------
 
-func TestPoolModeSkippedFailoverError(t *testing.T) {
+func TestSkippedErrorPolicyFailoverError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &GeminiMessagesCompatService{placeholder
 
@@ -368,6 +384,13 @@ func TestPoolModeSkippedFailoverError(t *testing.T) {
 			creds[k] = v
 	placeholder
 	placeholderID: 300, Type: AccountTypeAPIKey, Platform: PlatformGemini, Credentials: credsplaceholder
+placeholder
+	customCodesAccount := &Account{
+		ID: 301, Type: AccountTypeAPIKey, Platform: PlatformGemini,
+placeholder
+			"custom_error_codes_enabled": true,
+			"custom_error_codes":         []any{float64(429)placeholder,
+	placeholder,
 placeholder
 
 	tests := []struct {
@@ -383,13 +406,8 @@ placeholder{
 			"pool_mode_retry_status_codes": []any{float64(500)placeholder,
 	placeholder), 500, true, trueplaceholder,
 		{"pool_400_not_failover_worthy", poolAccount(nil), 400, false, falseplaceholder,
-		{"non_pool_account_keeps_passthrough", &Account{
-			ID: 301, Type: AccountTypeAPIKey, Platform: PlatformGemini,
-	placeholder
-				"custom_error_codes_enabled": true,
-				"custom_error_codes":         []any{float64(429)placeholder,
-		placeholder,
-	placeholder, 500, false, falseplaceholder,
+		{"custom_codes_miss_500_failover_no_same_account_retry", customCodesAccount, 500, true, falseplaceholder,
+		{"custom_codes_miss_400_not_failover_worthy", customCodesAccount, 400, false, falseplaceholder,
 placeholder
 
 	for _, tt := range tests {
@@ -399,7 +417,7 @@ placeholder
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
 
 			body := []byte(`{"error":{"code":"bad_response_status_code","message":"openai_error"placeholderplaceholder`)
-			failoverErr := svc.poolModeSkippedFailoverError(c, tt.account, tt.statusCode, body, "req-1")
+			failoverErr := svc.skippedErrorPolicyFailoverError(c, tt.account, tt.statusCode, body, "req-1")
 
 			if !tt.expectFailover {
 				require.Nil(t, failoverErr)
