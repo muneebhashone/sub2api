@@ -1,0 +1,311 @@
+import { defineComponent, nextTick placeholder from 'vue'
+import { flushPromises, mount, type VueWrapper placeholder from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi placeholder from 'vitest'
+
+import type { ChannelMonitor placeholder from '@/api/admin/channelMonitor'
+import MonitorFormDialog from '@/components/admin/monitor/MonitorFormDialog.vue'
+
+const {
+  listTemplates,
+  accountsList,
+  accountsGetById,
+  monitorCreate,
+  monitorUpdate,
+placeholder = vi.hoisted(() => ({
+  listTemplates: vi.fn(),
+  accountsList: vi.fn(),
+  accountsGetById: vi.fn(),
+  monitorCreate: vi.fn(),
+  monitorUpdate: vi.fn(),
+placeholder))
+
+
+vi.mock('@/utils/featureFlags', () => ({
+  isChannelMonitorV1Mode: () => true,
+  isChannelMonitorV2Mode: () => false,
+  getChannelMonitorMode: () => 'v1' as const,
+placeholder))
+
+vi.mock('@/features/channel-monitor-v2/MonitorSettingsPanel.vue', () => ({
+  default: { name: 'MonitorSettingsPanel', template: '<div data-testid="v2-settings" />' placeholder,
+placeholder))
+
+vi.mock('@/api/admin', () => ({
+  adminAPI: {
+    channelMonitor: {
+      create: monitorCreate,
+      update: monitorUpdate,
+    placeholder,
+    channelMonitorTemplate: {
+      list: listTemplates,
+    placeholder,
+    accounts: {
+      list: (...args: unknown[]) => accountsList(...args),
+      getById: (...args: unknown[]) => accountsGetById(...args),
+    placeholder,
+  placeholder,
+placeholder))
+
+vi.mock('@/api/keys', () => ({
+  keysAPI: { list: vi.fn() placeholder,
+placeholder))
+
+vi.mock('@/api/groups', () => ({
+  userGroupsAPI: { getUserGroupRates: vi.fn() placeholder,
+placeholder))
+
+vi.mock('@/stores/app', () => ({
+  useAppStore: () => ({
+    cachedPublicSettings: null,
+    showError: vi.fn(),
+    showSuccess: vi.fn(),
+  placeholder),
+placeholder))
+
+vi.mock('vue-i18n', async () => {
+  const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
+  return {
+    ...actual,
+    useI18n: () => ({ t: (key: string) => key placeholder),
+  placeholder
+placeholder)
+
+const BaseDialogStub = defineComponent({
+  props: { show: { type: Boolean, default: false placeholder placeholder,
+  template: '<div v-if="show"><slot /><slot name="footer" /></div>',
+placeholder)
+
+function makeMonitor(overrides: Partial<ChannelMonitor> = {placeholder): ChannelMonitor {
+  return {
+    id: 42,
+    name: 'primary',
+    provider: 'openai',
+    api_mode: 'chat_completions',
+    endpoint: 'https://api.example.com',
+    api_key_masked: 'sk-t***',
+    primary_model: 'gpt-4o-mini',
+    extra_models: [],
+    group_name: '',
+    enabled: true,
+    interval_seconds: 60,
+    jitter_seconds: 0,
+    last_checked_at: null,
+    created_by: 1,
+    created_at: '2026-07-16T00:00:00Z',
+    updated_at: '2026-07-16T00:00:00Z',
+    primary_status: '',
+    primary_latency_ms: null,
+    availability_7d: 0,
+    extra_models_status: [],
+    template_id: null,
+    extra_headers: {placeholder,
+    body_override_mode: 'off',
+    body_override: null,
+    check_mode: 'probe',
+    account_id: null,
+    ...overrides,
+  placeholder
+placeholder
+
+let unmountWrapper: (() => void) | undefined
+
+function mountDialog(monitor: ChannelMonitor | null = null) {
+  const wrapper = mount(MonitorFormDialog, {
+    props: { show: true, monitor placeholder,
+    global: {
+      stubs: {
+        BaseDialog: BaseDialogStub,
+        Toggle: true,
+        ModelTagInput: true,
+        MonitorKeyPickerDialog: true,
+        MonitorAdvancedRequestConfig: true,
+      placeholder,
+    placeholder,
+  placeholder)
+  unmountWrapper = () => wrapper.unmount()
+  return wrapper
+placeholder
+
+const accountTrigger = (wrapper: VueWrapper) =>
+  wrapper.get('[data-testid="monitor-linked-account"] button')
+
+const openAccountDropdown = async (wrapper: VueWrapper) => {
+  await accountTrigger(wrapper).trigger('click')
+  await nextTick()
+  const dropdown = document.body.querySelector<HTMLElement>('.select-dropdown-portal')
+  expect(dropdown).not.toBeNull()
+  return dropdown as HTMLElement
+placeholder
+
+const clickOption = (dropdown: HTMLElement, text: string) => {
+  const option = [...dropdown.querySelectorAll('.select-option')].find((el) =>
+    el.textContent?.includes(text),
+  )
+  expect(option, `option containing "${textplaceholder" not found`).toBeDefined()
+  ;(option as HTMLElement).click()
+placeholder
+
+const typeAccountSearch = async (dropdown: HTMLElement, query: string) => {
+  const input = dropdown.querySelector<HTMLInputElement>('.select-search-input')
+  expect(input).not.toBeNull()
+  input!.value = query
+  input!.dispatchEvent(new Event('input'))
+  await nextTick()
+placeholder
+
+afterEach(() => {
+  unmountWrapper?.()
+  unmountWrapper = undefined
+  document.body.innerHTML = ''
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+placeholder)
+
+describe('MonitorFormDialog linked account selector', () => {
+  beforeEach(() => {
+    listTemplates.mockReset().mockResolvedValue({ items: [] placeholder)
+    accountsList.mockReset().mockResolvedValue({ items: [] placeholder)
+    accountsGetById.mockReset()
+    monitorCreate.mockReset().mockResolvedValue({placeholder)
+    monitorUpdate.mockReset().mockResolvedValue({placeholder)
+  placeholder)
+
+  it('loads the first page of provider accounts when quota mode is enabled', async () => {
+    accountsList.mockResolvedValue({ items: [{ id: 1, name: 'a', platform: 'anthropic' placeholder] placeholder)
+    const wrapper = mountDialog()
+    await flushPromises()
+    expect(accountsList).not.toHaveBeenCalled()
+
+    await wrapper.get('[data-testid="monitor-check-mode-quota"]').trigger('click')
+    await flushPromises()
+
+    expect(accountsList).toHaveBeenCalledTimes(1)
+    expect(accountsList).toHaveBeenCalledWith(
+      1,
+      50,
+      { platform: 'anthropic' placeholder,
+      { signal: expect.any(AbortSignal) placeholder,
+    )
+  placeholder)
+
+  it('debounced typing hits server-side search and aborts the previous request', async () => {
+    vi.useFakeTimers()
+    const wrapper = mountDialog()
+    await wrapper.get('[data-testid="monitor-check-mode-quota"]').trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
+
+    const dropdown = await openAccountDropdown(wrapper)
+    await typeAccountSearch(dropdown, 'hidden')
+    expect(accountsList).toHaveBeenCalledTimes(1, 'debounce window must not fire a request')
+
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(accountsList).toHaveBeenCalledTimes(2)
+    const lastCall = accountsList.mock.calls[accountsList.mock.calls.length - 1]
+    expect(lastCall[2]).toMatchObject({ platform: 'anthropic', search: 'hidden' placeholder)
+    const firstSignal = (accountsList.mock.calls[0][3] as { signal: AbortSignal placeholder).signal
+    expect(firstSignal.aborted).toBe(true)
+  placeholder)
+
+  it('hydrates a bound account missing from the first page and keeps the binding', async () => {
+    accountsList.mockResolvedValue({ items: [{ id: 1, name: 'first page account', platform: 'anthropic' placeholder] placeholder)
+    accountsGetById.mockResolvedValue({ id: 999, name: 'hidden gem', platform: 'anthropic' placeholder)
+    const wrapper = mountDialog(makeMonitor({
+      provider: 'anthropic',
+      check_mode: 'quota',
+      account_id: 999,
+      endpoint: '',
+      primary_model: 'quota',
+    placeholder))
+    await flushPromises()
+
+    expect(accountsGetById).toHaveBeenCalledWith(999)
+    expect(accountTrigger(wrapper).text()).toContain('hidden gem (#999)')
+
+    await wrapper.get('#channel-monitor-form').trigger('submit')
+    await flushPromises()
+    expect(monitorUpdate).toHaveBeenCalledWith(42, expect.objectContaining({ account_id: 999 placeholder))
+  placeholder)
+
+  it('clears the binding with a visible hint when the bound account cannot be loaded', async () => {
+    accountsGetById.mockRejectedValue(new Error('gone'))
+    const wrapper = mountDialog(makeMonitor({
+      provider: 'anthropic',
+      check_mode: 'quota',
+      account_id: 999,
+      endpoint: '',
+      primary_model: 'quota',
+    placeholder))
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('admin.channelMonitor.form.linkedAccountMissing')
+    expect(accountTrigger(wrapper).text()).not.toContain('hidden gem')
+
+    await wrapper.get('#channel-monitor-form').trigger('submit')
+    await flushPromises()
+    expect(monitorUpdate).not.toHaveBeenCalled()
+  placeholder)
+
+  it('shows the OpenAI codex probe hint only in quota mode on openai', async () => {
+    const wrapper = mountDialog()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('openAIQuotaProbeHint')
+
+    await wrapper.get('[data-testid="monitor-check-mode-quota"]').trigger('click')
+    await flushPromises()
+    // anthropic 平台不显示。
+    expect(wrapper.text()).not.toContain('openAIQuotaProbeHint')
+
+    await wrapper.get('[data-testid="monitor-provider-openai"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('openAIQuotaProbeHint')
+  placeholder)
+
+  it('keeps a picked account visible when a later search hides it', async () => {
+    vi.useFakeTimers()
+    accountsList
+      .mockResolvedValueOnce({ items: [
+        { id: 1, name: 'alpha', platform: 'anthropic' placeholder,
+        { id: 2, name: 'beta', platform: 'anthropic' placeholder,
+      ] placeholder)
+      .mockResolvedValueOnce({ items: [{ id: 2, name: 'beta', platform: 'anthropic' placeholder] placeholder)
+    const wrapper = mountDialog()
+    await wrapper.get('[data-testid="monitor-check-mode-quota"]').trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
+
+    const dropdown = await openAccountDropdown(wrapper)
+    clickOption(dropdown, 'alpha (#1)')
+    await nextTick()
+    expect(accountTrigger(wrapper).text()).toContain('alpha (#1)')
+
+    // 搜索 beta：结果页只剩 beta，但已选中的 alpha 仍固定展示、提交仍保留绑定。
+    const reopened = await openAccountDropdown(wrapper)
+    await typeAccountSearch(reopened, 'beta')
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(accountTrigger(wrapper).text()).toContain('alpha (#1)')
+
+    await wrapper.findAll('input[type="text"]')[0].setValue('my monitor')
+    await wrapper.get('#channel-monitor-form').trigger('submit')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(monitorCreate).toHaveBeenCalledWith(expect.objectContaining({ account_id: 1 placeholder))
+  placeholder)
+
+  it('clears the account binding when the provider switches', async () => {
+    accountsList.mockResolvedValue({ items: [{ id: 1, name: 'alpha', platform: 'anthropic' placeholder] placeholder)
+    const wrapper = mountDialog()
+    await wrapper.get('[data-testid="monitor-check-mode-quota"]').trigger('click')
+    await flushPromises()
+
+    const dropdown = await openAccountDropdown(wrapper)
+    clickOption(dropdown, 'alpha (#1)')
+    await nextTick()
+    expect(accountTrigger(wrapper).text()).toContain('alpha (#1)')
+
+    await wrapper.get('[data-testid="monitor-provider-openai"]').trigger('click')
+    await flushPromises()
+
+    expect(accountTrigger(wrapper).text()).not.toContain('alpha')
+    expect(accountTrigger(wrapper).text()).toContain('linkedAccountPlaceholder')
+  placeholder)
+placeholder)

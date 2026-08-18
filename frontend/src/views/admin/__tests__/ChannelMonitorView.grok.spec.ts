@@ -10,8 +10,10 @@ import {
   PROVIDER_GROK,
 placeholder from '@/constants/channelMonitor'
 
-const { listTemplates placeholder = vi.hoisted(() => ({
+const { listTemplates, accountsList, accountsGetById placeholder = vi.hoisted(() => ({
   listTemplates: vi.fn(),
+  accountsList: vi.fn(),
+  accountsGetById: vi.fn(),
 placeholder))
 
 
@@ -33,6 +35,10 @@ vi.mock('@/api/admin', () => ({
     placeholder,
     channelMonitorTemplate: {
       list: listTemplates,
+    placeholder,
+    accounts: {
+      list: (...args: unknown[]) => accountsList(...args),
+      getById: (...args: unknown[]) => accountsGetById(...args),
     placeholder,
   placeholder,
 placeholder))
@@ -85,6 +91,8 @@ placeholder
 describe('channel monitor Grok provider', () => {
   beforeEach(() => {
     listTemplates.mockReset().mockResolvedValue({ items: [] placeholder)
+    accountsList.mockReset().mockResolvedValue({ items: [] placeholder)
+    accountsGetById.mockReset()
   placeholder)
 
   it('offers Grok in the responsive provider grid and prefills its official defaults', async () => {
