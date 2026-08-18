@@ -93,7 +93,13 @@ placeholder
 				headers.Add("x-codex-beta-features", value)
 		placeholder
 	placeholder
-		for _, name := range [...]string{"x-codex-window-id", "x-codex-installation-id"placeholder {
+		for _, name := range [...]string{
+			"x-codex-window-id",
+			"x-codex-installation-id",
+			"session-id",
+			"thread-id",
+			"x-client-request-id",
+	placeholder {
 			if value := c.Request.Header.Get(name); strings.TrimSpace(value) != "" {
 				headers.Set(name, value)
 		placeholder
@@ -128,6 +134,7 @@ placeholder
 	if metadata := strings.TrimSpace(turnMetadata); metadata != "" {
 		headers.Set(openAIWSTurnMetadataHeader, metadata)
 placeholder
+	applyStagedCodexFingerprintHeaders(c, account, headers)
 
 	if account != nil && account.Type == AccountTypeOAuth {
 		if err := resolveAndSetOpenAIChatGPTAccountHeaders(ctx, s.accountRepo, headers, account); err != nil {
