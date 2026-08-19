@@ -809,6 +809,35 @@ placeholder
 		require.Equal(t, "new", gjson.GetBytes(items[0], "text").String())
 placeholder)
 
+	t.Run("no_previous_response_id_custom_tool_history_does_not_accumulate", func(t *testing.T) {
+		previousFull := []json.RawMessage{
+			json.RawMessage(`{"type":"input_text","text":"stale"placeholder`),
+			json.RawMessage(`{"type":"custom_tool_call","id":"stale_item","call_id":"stale_call","name":"exec","input":"stale"placeholder`),
+	placeholder
+		currentPayload := []byte(`{"input":[
+			{"type":"custom_tool_call","id":"item_1","call_id":"call_1","name":"exec","input":"pwd"placeholder,
+			{"type":"custom_tool_call_output","call_id":"call_1","output":"/tmp"placeholder,
+			{"type":"input_text","text":"continue"placeholder
+		]placeholder`)
+
+		for range 3 {
+			items, exists, err := buildOpenAIWSReplayInputSequence(
+				previousFull,
+				true,
+				currentPayload,
+				false,
+			)
+		placeholder
+			require.True(t, exists)
+			require.Len(t, items, 3)
+			require.Equal(t, "custom_tool_call", gjson.GetBytes(items[0], "type").String())
+			require.Equal(t, "call_1", gjson.GetBytes(items[0], "call_id").String())
+			require.Equal(t, "custom_tool_call_output", gjson.GetBytes(items[1], "type").String())
+			require.Equal(t, "call_1", gjson.GetBytes(items[1], "call_id").String())
+			previousFull = append(items, json.RawMessage(`{"type":"custom_tool_call","id":"replayed_item","call_id":"replayed_call","name":"exec","input":"ignored"placeholder`))
+	placeholder
+placeholder)
+
 	t.Run("previous_response_id_delta_append", func(t *testing.T) {
 		items, exists, err := buildOpenAIWSReplayInputSequence(
 			lastFull,

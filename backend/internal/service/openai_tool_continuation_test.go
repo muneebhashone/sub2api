@@ -207,6 +207,14 @@ placeholder{
 			coversAllIDs: false,
 	placeholder,
 		{
+			name: "object_tool_output_requires_context_replay",
+			body: map[string]any{"input": map[string]any{
+				"type": "custom_tool_call_output", "call_id": "call_a",
+	placeholder
+			hasOutput:    true,
+			coversAllIDs: false,
+	placeholder,
+		{
 			name: "all_outputs_covered_by_context",
 			body: map[string]any{"input": []any{
 				map[string]any{"type": "function_call", "call_id": "call_a"placeholder,
