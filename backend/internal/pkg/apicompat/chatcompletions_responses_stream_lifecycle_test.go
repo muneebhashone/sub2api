@@ -214,6 +214,64 @@ placeholder
 	require.Equal(t, `{"cmd":"ls"placeholder`, argsDelta.String())
 placeholder
 
+func TestStream_InvalidToolArgumentsAreRejectedBeforeFinalize(t *testing.T) {
+	idx := 0
+	state := NewChatCompletionsToResponsesStreamState("deepseek-v4-flash")
+	chunk := &ChatCompletionsChunk{
+		Choices: []ChatChunkChoice{
+			{
+				Index: 0,
+				Delta: ChatDelta{
+					ToolCalls: []ChatToolCall{
+						{
+							Index: &idx,
+							ID:    "call_bad",
+							Type:  "function",
+							Function: ChatFunctionCall{
+								Name:      "exec_command",
+								Arguments: `{"cmd": "ssh root@HOST`,
+						placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	ChatCompletionsChunkToResponsesEvents(chunk, state)
+
+	err := state.ValidateToolCallArguments()
+	require.ErrorContains(t, err, "invalid JSON")
+placeholder
+
+func TestStream_ToolCallAtOutputLimitIsRejectedBeforeFinalize(t *testing.T) {
+	idx := 0
+	state := NewChatCompletionsToResponsesStreamState("deepseek-v4-flash")
+	chunk := &ChatCompletionsChunk{
+		Choices: []ChatChunkChoice{
+			{
+				Index: 0,
+				Delta: ChatDelta{
+					ToolCalls: []ChatToolCall{
+						{
+							Index: &idx,
+							ID:    "call_at_limit",
+							Type:  "function",
+							Function: ChatFunctionCall{
+								Name:      "exec_command",
+								Arguments: `{placeholder`,
+						placeholder,
+					placeholder,
+				placeholder,
+			placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	ChatCompletionsChunkToResponsesEvents(chunk, state)
+	state.FinishReason = "length"
+
+	require.ErrorContains(t, state.ValidateToolCallArguments(), "max output length")
+placeholder
+
 // TestStream_SSEWireComplete drives the full stream through SSE encoding and
 // asserts the function_call events carry complete fields on the wire.
 func TestStream_SSEWireComplete(t *testing.T) {
