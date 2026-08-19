@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"github.com/stretchr/testify/require"
@@ -19,18 +20,20 @@ import (
 type stubMonitorUsageSource struct {
 	usage *UsageInfo
 	err   error
-	// block 非 nil 时 GetUsage 阻塞在该 channel 上，用于并发/singleflight 测试。
+	// block 非 nil 时 GetUsageForAccount 阻塞在该 channel 上，用于并发/singleflight 测试。
 	block chan struct{placeholder
 
-	mu      sync.Mutex
-	calls   int
-	lastCtx context.Context
+	mu          sync.Mutex
+	calls       int
+	lastCtx     context.Context
+	lastAccount *Account
 placeholder
 
-func (s *stubMonitorUsageSource) GetUsage(ctx context.Context, accountID int64, force ...bool) (*UsageInfo, error) {
+func (s *stubMonitorUsageSource) GetUsageForAccount(ctx context.Context, account *Account, force ...bool) (*UsageInfo, error) {
 	s.mu.Lock()
 	s.calls++
 	s.lastCtx = ctx
+	s.lastAccount = account
 	s.mu.Unlock()
 	if s.block != nil {
 		<-s.block
@@ -44,25 +47,35 @@ func (s *stubMonitorUsageSource) getCalls() int {
 	return s.calls
 placeholder
 
-type stubMonitorCNQuotaSource struct {
-	result *CNProviderQuotaProbeResult
-	err    error
-	calls  int
+func (s *stubMonitorUsageSource) getLastAccount() *Account {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastAccount
 placeholder
 
-func (s *stubMonitorCNQuotaSource) QueryUsage(ctx context.Context, accountID int64) (*CNProviderQuotaProbeResult, error) {
+type stubMonitorCNQuotaSource struct {
+	result      *CNProviderQuotaProbeResult
+	err         error
+	calls       int
+	lastAccount *Account
+placeholder
+
+func (s *stubMonitorCNQuotaSource) QueryUsageForAccount(ctx context.Context, account *Account) (*CNProviderQuotaProbeResult, error) {
 	s.calls++
+	s.lastAccount = account
 	return s.result, s.err
 placeholder
 
 type stubMonitorCNBalanceSource struct {
-	result *CNProviderBalanceResult
-	err    error
-	calls  int
+	result      *CNProviderBalanceResult
+	err         error
+	calls       int
+	lastAccount *Account
 placeholder
 
-func (s *stubMonitorCNBalanceSource) QueryBalance(ctx context.Context, accountID int64) (*CNProviderBalanceResult, error) {
+func (s *stubMonitorCNBalanceSource) QueryBalanceForAccount(ctx context.Context, account *Account) (*CNProviderBalanceResult, error) {
 	s.calls++
+	s.lastAccount = account
 	return s.result, s.err
 placeholder
 
@@ -87,11 +100,12 @@ placeholder
 	cnBalance := &stubMonitorCNBalanceSource{placeholder
 	accounts := &stubMonitorAccountSource{accounts: make(map[int64]*Account)placeholder
 	fetcher := &ChannelMonitorQuotaFetcher{
-		usage:     usage,
-		cnQuota:   cnQuota,
-		cnBalance: cnBalance,
-		accounts:  accounts,
-		cache:     make(map[int64]monitorQuotaCacheEntry),
+		usage:            usage,
+		cnQuota:          cnQuota,
+		cnBalance:        cnBalance,
+		accounts:         accounts,
+		balanceThreshold: monitorBalanceThreshold(nil),
+		cache:            make(map[int64]monitorQuotaCacheEntry),
 placeholder
 	return fetcher, usage, cnQuota, cnBalance, accounts
 placeholder
@@ -167,9 +181,10 @@ func TestQuotaFetcher_PayGAccountUsesCNBalance(t *testing.T) {
 placeholder"account_mode": AccountModePayGplaceholder,
 placeholder
 	cnBalance.result = &CNProviderBalanceResult{
-		Success:  true,
-		Balance:  12.34,
-		Currency: "CNY",
+		Success:   true,
+		Available: true,
+		Balance:   12.34,
+		Currency:  "CNY",
 		Balances: []CNProviderBalanceEntry{
 			{Currency: "CNY", Balance: 12.34placeholder,
 			{Currency: "USD", Balance: placeholder,
@@ -185,7 +200,51 @@ placeholder
 	require.Equal(t, "CNY", snapshot.Currency)
 	require.Len(t, snapshot.Balances, 2)
 	require.Equal(t, "USD", snapshot.Balances[1].Currency)
+	require.False(t, snapshot.BalanceLow)
 	require.Empty(t, snapshot.Error)
+placeholder
+
+// P2-6：fetchUncached 只 GetByID 一次，已加载的 account 指针直传数据源，
+// 三条路由都不能让下游重载账号。
+func TestQuotaFetcher_LoadsAccountOnceAndPassesItThrough(t *testing.T) {
+	t.Run("overseas usage", func(t *testing.T) {
+		fetcher, usage, _, _, accounts := newQuotaFetcherTestSetup(t)
+		acc := &Account{ID: 21, Platform: domain.PlatformAnthropicplaceholder
+		accounts.accounts[21] = acc
+		usage.usage = &UsageInfo{placeholder
+
+		fetcher.Fetch(context.Background(), 21)
+
+		require.Equal(t, 1, accounts.calls)
+		require.Same(t, acc, usage.getLastAccount())
+		require.Equal(t, 1, usage.getCalls())
+placeholder)
+
+	t.Run("cn coding plan", func(t *testing.T) {
+		fetcher, _, cnQuota, _, accounts := newQuotaFetcherTestSetup(t)
+		acc := &Account{ID: 22, Platform: domain.PlatformKimi, Credentials: map[string]any{"account_mode": AccountModeCodingplaceholderplaceholder
+		accounts.accounts[22] = acc
+		cnQuota.result = &CNProviderQuotaProbeResult{Success: trueplaceholder
+
+		fetcher.Fetch(context.Background(), 22)
+
+		require.Equal(t, 1, accounts.calls)
+		require.Same(t, acc, cnQuota.lastAccount)
+		require.Equal(t, 1, cnQuota.calls)
+placeholder)
+
+	t.Run("cn payg", func(t *testing.T) {
+		fetcher, _, _, cnBalance, accounts := newQuotaFetcherTestSetup(t)
+		acc := &Account{ID: 23, Platform: domain.PlatformDeepseek, Credentials: map[string]any{"account_mode": AccountModePayGplaceholderplaceholder
+		accounts.accounts[23] = acc
+		cnBalance.result = &CNProviderBalanceResult{Success: true, Available: true, Balance: 1, Currency: "CNY"placeholder
+
+		fetcher.Fetch(context.Background(), 23)
+
+		require.Equal(t, 1, accounts.calls)
+		require.Same(t, acc, cnBalance.lastAccount)
+		require.Equal(t, 1, cnBalance.calls)
+placeholder)
 placeholder
 
 // --- 失败路径（Fetch 永不返回 error） ---
@@ -278,20 +337,44 @@ placeholder
 placeholder
 placeholder
 
-func TestQuotaFetcher_CNQuotaCredentialInvalidFlagPropagates(t *testing.T) {
-	fetcher, _, cnQuota, _, accounts := newQuotaFetcherTestSetup(t)
-	accounts.accounts[5] = &Account{
-		ID:          5,
-		Platform:    domain.PlatformZhipu,
-placeholder"account_mode": AccountModeCodingplaceholder,
+// 凭据失效只认 401/403（与 fetchCNBalance 口径一致）：CN quota 服务的
+// CredentialValid 仅成功路径置 true，500/429/智谱业务错误须推导为 error 而非 failed。
+func TestQuotaFetcher_CNQuotaCredentialInvalidByStatusCode(t *testing.T) {
+	cases := []struct {
+		name           string
+		accountID      int64
+		statusCode     int
+		credentialBad  bool
+		expectedStatus string
+placeholder{
+		{name: "401 unauthorized", accountID: 5, statusCode: 401, credentialBad: true, expectedStatus: MonitorStatusFailedplaceholder,
+		{name: "403 forbidden", accountID: 15, statusCode: 403, credentialBad: true, expectedStatus: MonitorStatusFailedplaceholder,
+		{name: "500 server error", accountID: 16, statusCode: 500, expectedStatus: MonitorStatusErrorplaceholder,
+		{name: "429 rate limited", accountID: 17, statusCode: 429, expectedStatus: MonitorStatusErrorplaceholder,
+		// 智谱 2xx 但业务级失败：StatusCode=200，非凭据问题。
+		{name: "200 business error", accountID: 18, statusCode: 200, expectedStatus: MonitorStatusErrorplaceholder,
 placeholder
-	cnQuota.result = &CNProviderQuotaProbeResult{Success: false, CredentialValid: false, Error: "api key expired"placeholder
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fetcher, _, cnQuota, _, accounts := newQuotaFetcherTestSetup(t)
+			accounts.accounts[tc.accountID] = &Account{
+				ID:          tc.accountID,
+				Platform:    domain.PlatformZhipu,
+		placeholder"account_mode": AccountModeCodingplaceholder,
+		placeholder
+			cnQuota.result = &CNProviderQuotaProbeResult{
+				Success:    false,
+				StatusCode: tc.statusCode,
+				Error:      "api key expired",
+		placeholder
 
-	snapshot := fetcher.Fetch(context.Background(), 5)
+			snapshot := fetcher.Fetch(context.Background(), tc.accountID)
 
-	require.False(t, snapshot.Success)
-	require.True(t, snapshot.CredentialInvalid)
-	require.Equal(t, "api key expired", snapshot.Error)
+			require.False(t, snapshot.Success)
+			require.Equal(t, tc.credentialBad, snapshot.CredentialInvalid)
+			require.Equal(t, tc.expectedStatus, deriveQuotaCheckResult(snapshot, "quota", time.Now()).Status)
+	placeholder)
+placeholder
 placeholder
 
 func TestQuotaFetcher_CNBalanceHTTP403MarksCredentialInvalid(t *testing.T) {
@@ -303,6 +386,86 @@ func TestQuotaFetcher_CNBalanceHTTP403MarksCredentialInvalid(t *testing.T) {
 
 	require.False(t, snapshot.Success)
 	require.True(t, snapshot.CredentialInvalid)
+placeholder
+
+// 余额告警口径与账号停调（CNProviderBalanceCheckService.checkOne）一致：
+// 上游标记不可用或全部币种低于阈值 → BalanceLow → degraded；任一币种达标即健康。
+func TestQuotaFetcher_CNBalanceLowMarksDegraded(t *testing.T) {
+	cases := []struct {
+		name        string
+		accountID   int64
+		result      *CNProviderBalanceResult
+		balanceLow  bool
+		wantStatus  string
+		wantMessage string
+placeholder{
+		{
+			// 审查例：余额 5/阈值 10 的账号调度器已停调，监控不能仍绿灯。
+			name:       "balance below threshold",
+			accountID:  21,
+			result:     &CNProviderBalanceResult{Success: true, Available: true, Balance: 5, Currency: "CNY"placeholder,
+			balanceLow: true,
+			wantStatus: MonitorStatusDegraded, wantMessage: "balance low: 5 CNY",
+	placeholder,
+		{
+			name:       "upstream marked unavailable",
+			accountID:  22,
+			result:     &CNProviderBalanceResult{Success: true, Available: false, Balance: 20, Currency: "CNY"placeholder,
+			balanceLow: true,
+			wantStatus: MonitorStatusDegraded, wantMessage: "balance low: 20 CNY",
+	placeholder,
+		{
+			// deepseek 双币种：任一币种（USD 20）达标即健康。
+			name:      "any currency above threshold is healthy",
+			accountID: 23,
+			result: &CNProviderBalanceResult{
+				Success: true, Available: true, Balance: 5, Currency: "CNY",
+				Balances: []CNProviderBalanceEntry{{Currency: "CNY", Balance: 5placeholder, {Currency: "USD", Balance: 20placeholderplaceholder,
+		placeholder,
+			wantStatus: MonitorStatusOperational,
+	placeholder,
+		{
+			name:       "single currency above threshold",
+			accountID:  24,
+			result:     &CNProviderBalanceResult{Success: true, Available: true, Balance: 20, Currency: "CNY"placeholder,
+			wantStatus: MonitorStatusOperational,
+	placeholder,
+placeholder
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fetcher, _, _, cnBalance, accounts := newQuotaFetcherTestSetup(t)
+			fetcher.balanceThreshold = 10
+			accounts.accounts[tc.accountID] = &Account{
+				ID:          tc.accountID,
+				Platform:    domain.PlatformKimi,
+		placeholder"account_mode": AccountModePayGplaceholder,
+		placeholder
+			cnBalance.result = tc.result
+
+			snapshot := fetcher.Fetch(context.Background(), tc.accountID)
+
+			require.True(t, snapshot.Success)
+			require.Equal(t, tc.balanceLow, snapshot.BalanceLow)
+			res := deriveQuotaCheckResult(snapshot, "quota", time.Now())
+			require.Equal(t, tc.wantStatus, res.Status)
+			if tc.wantMessage != "" {
+				require.Contains(t, res.Message, tc.wantMessage)
+		placeholder else {
+				require.Empty(t, res.Message)
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
+func TestNewChannelMonitorQuotaFetcher_ThresholdFromConfig(t *testing.T) {
+	require.InDelta(t, 0.5, NewChannelMonitorQuotaFetcher(nil, nil, nil, nil, nil).balanceThreshold, 0.0001)
+
+	cfg10 := &config.Config{Gateway: config.GatewayConfig{CNProviders: config.GatewayCNProvidersConfig{BalanceThreshold: 10placeholderplaceholderplaceholder
+	require.InDelta(t, 10, NewChannelMonitorQuotaFetcher(nil, nil, nil, nil, cfg10).balanceThreshold, 0.0001)
+
+	// 非正值（含显式 0）回退默认，避免 0 阈值下「余额=0 也不告警」。
+	cfg0 := &config.Config{Gateway: config.GatewayConfig{CNProviders: config.GatewayCNProvidersConfig{BalanceThreshold: 0placeholderplaceholderplaceholder
+	require.InDelta(t, 0.5, NewChannelMonitorQuotaFetcher(nil, nil, nil, nil, cfg0).balanceThreshold, 0.0001)
 placeholder
 
 func TestQuotaFetcher_NilDependenciesProduceErrorSnapshots(t *testing.T) {
@@ -495,10 +658,10 @@ placeholderplaceholder
 	require.Contains(t, res.Message, "95.0%")
 
 	balance := -0.5
-	depleted := &domain.MonitorQuotaSnapshot{Success: true, Balance: &balance, Currency: "CNY"placeholder
-	res = deriveQuotaCheckResult(depleted, "quota", now)
+	lowBalance := &domain.MonitorQuotaSnapshot{Success: true, BalanceLow: true, Balance: &balance, Currency: "CNY"placeholder
+	res = deriveQuotaCheckResult(lowBalance, "quota", now)
 	require.Equal(t, MonitorStatusDegraded, res.Status)
-	require.Contains(t, res.Message, "balance depleted")
+	require.Contains(t, res.Message, "balance low")
 
 	invalid := &domain.MonitorQuotaSnapshot{Success: false, CredentialInvalid: true, Error: "401 unauthorized"placeholder
 	res = deriveQuotaCheckResult(invalid, "quota", now)
