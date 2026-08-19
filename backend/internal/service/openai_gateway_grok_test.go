@@ -157,18 +157,20 @@ func TestPatchGrokResponsesBodyNormalizesReasoningEffortAliases(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name string
-		body string
-		path string
-		want string
+		name          string
+		body          string
+		upstreamModel string
+		path          string
+		want          string
 placeholder{
-		{name: "minimal nested", body: `{"input":"hi","reasoning":{"effort":"minimal"placeholderplaceholder`, path: "reasoning.effort", want: "low"placeholder,
-		{name: "xhigh snake", body: `{"input":"hi","reasoning_effort":"xhigh"placeholder`, path: "reasoning_effort", want: "high"placeholder,
-		{name: "max camel", body: `{"input":"hi","reasoningEffort":"max"placeholder`, path: "reasoning_effort", want: "high"placeholder,
+		{name: "minimal nested", body: `{"input":"hi","reasoning":{"effort":"minimal"placeholderplaceholder`, upstreamModel: "grok-4.5", path: "reasoning.effort", want: "low"placeholder,
+		{name: "xhigh stays high for 4.5", body: `{"input":"hi","reasoning_effort":"xhigh"placeholder`, upstreamModel: "grok-4.5", path: "reasoning_effort", want: "high"placeholder,
+		{name: "xhigh nested for 4.6", body: `{"input":"hi","reasoning":{"effort":"xhigh"placeholderplaceholder`, upstreamModel: "grok-4.6", path: "reasoning.effort", want: "xhigh"placeholder,
+		{name: "xhigh snake for 4.6 latest", body: `{"input":"hi","reasoning_effort":"xhigh"placeholder`, upstreamModel: "grok-4.6-latest", path: "reasoning_effort", want: "xhigh"placeholder,
 placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			patched, err := patchGrokResponsesBody([]byte(tt.body), "grok-4.5")
+			patched, err := patchGrokResponsesBody([]byte(tt.body), tt.upstreamModel)
 		placeholder
 			require.Equal(t, tt.want, gjson.GetBytes(patched, tt.path).String(), string(patched))
 			require.False(t, gjson.GetBytes(patched, "reasoningEffort").Exists())
@@ -193,6 +195,10 @@ func TestNormalizeGrokChatReasoningEffort(t *testing.T) {
 placeholder
 	require.Equal(t, "high", gjson.GetBytes(patched, "reasoning_effort").String())
 	require.False(t, gjson.GetBytes(patched, "reasoningEffort").Exists())
+
+	patched, err = normalizeGrokChatReasoningEffort([]byte(`{"reasoning_effort":"xhigh"placeholder`), "grok-4.6")
+placeholder
+	require.Equal(t, "xhigh", gjson.GetBytes(patched, "reasoning_effort").String())
 
 	patched, err = normalizeGrokChatReasoningEffort([]byte(`{"reasoning_effort":"high"placeholder`), "grok-composer-2.5-fast")
 placeholder
