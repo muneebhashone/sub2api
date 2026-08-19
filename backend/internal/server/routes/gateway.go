@@ -170,6 +170,10 @@ placeholder
 			placeholder)
 				return
 		placeholder
+			if service.IsOpenAIResponsesInputTokensRequestPath(c) && isOpenAIResponsesCompatibleGatewayPlatform(c) {
+				h.OpenAIGateway.ResponsesInputTokens(c)
+				return
+		placeholder
 			next(c)
 	placeholder
 placeholder
