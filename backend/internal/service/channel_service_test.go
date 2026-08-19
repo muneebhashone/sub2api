@@ -2041,6 +2041,9 @@ placeholder{
 		{"gemini does NOT match anthropic", PlatformGemini, PlatformAnthropic, falseplaceholder,
 		{"composite matches openai pricing", PlatformComposite, PlatformOpenAI, trueplaceholder,
 		{"composite matches gemini pricing", PlatformComposite, PlatformGemini, trueplaceholder,
+		{"composite matches kimi pricing", PlatformComposite, PlatformKimi, trueplaceholder,
+		{"composite matches zhipu pricing", PlatformComposite, PlatformZhipu, trueplaceholder,
+		{"composite matches deepseek pricing", PlatformComposite, PlatformDeepseek, trueplaceholder,
 		{"empty string matches nothing", "", PlatformAnthropic, falseplaceholder,
 		{"empty string matches empty", "", "", trueplaceholder,
 placeholder
@@ -2066,7 +2069,7 @@ placeholder{
 		{"anthropic returns itself", PlatformAnthropic, []string{PlatformAnthropicplaceholderplaceholder,
 		{"gemini returns itself", PlatformGemini, []string{PlatformGeminiplaceholderplaceholder,
 		{"openai returns itself", PlatformOpenAI, []string{PlatformOpenAIplaceholderplaceholder,
-		{"composite returns concrete platforms", PlatformComposite, []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrokplaceholderplaceholder,
+		{"composite returns concrete platforms", PlatformComposite, []string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok, PlatformKimi, PlatformZhipu, PlatformDeepseekplaceholderplaceholder,
 placeholder
 
 	for _, tt := range tests {

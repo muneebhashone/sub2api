@@ -22,19 +22,41 @@ func TestCompositeTargetPlatformAllowedResolvesKnownAllowedModel(t *testing.T) {
 	require.Equal(t, service.PlatformOpenAI, platform)
 placeholder
 
-func TestOpenAICompatibleTextTargetAllowsCompositeGrokModel(t *testing.T) {
+func TestOpenAICompatibleTextTargetAllowsCompositeProviders(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	for _, path := range []string{"/v1/messages", "/v1/chat/completions"placeholder {
-		c, _ := gin.CreateTestContext(httptest.NewRecorder())
-		c.Request = httptest.NewRequest("POST", path, nil)
-		apiKey := &service.APIKey{Group: &service.Group{Platform: service.PlatformCompositeplaceholderplaceholder
-
-		require.True(t, openAICompatibleTextTargetAllowed(c, apiKey, "grok-4.3"), "path=%s", path)
-		platform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context())
-		require.True(t, ok, "path=%s", path)
-		require.Equal(t, service.PlatformGrok, platform, "path=%s", path)
+	providers := []struct {
+		model    string
+		platform string
+placeholder{
+		{model: "grok-4.3", platform: service.PlatformGrokplaceholder,
+		{model: "kimi-k2-thinking", platform: service.PlatformKimiplaceholder,
+		{model: "glm-5.2", platform: service.PlatformZhipuplaceholder,
+		{model: "deepseek-v3.2", platform: service.PlatformDeepseekplaceholder,
 placeholder
+	for _, path := range []string{"/v1/messages", "/v1/chat/completions", "/v1/responses"placeholder {
+		for _, provider := range providers {
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = httptest.NewRequest("POST", path, nil)
+			apiKey := &service.APIKey{Group: &service.Group{Platform: service.PlatformCompositeplaceholderplaceholder
+
+			require.True(t, openAICompatibleTextTargetAllowed(c, apiKey, provider.model), "path=%s model=%s", path, provider.model)
+			platform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context())
+			require.True(t, ok, "path=%s model=%s", path, provider.model)
+			require.Equal(t, provider.platform, platform, "path=%s model=%s", path, provider.model)
+	placeholder
+placeholder
+placeholder
+
+func TestResponsesWebSocketCompositePlatformGuardAllowsOpenAICompatibleProviders(t *testing.T) {
+	for _, platform := range []string{
+		service.PlatformOpenAI, service.PlatformGrok, service.PlatformKimi,
+		service.PlatformZhipu, service.PlatformDeepseek,
+placeholder {
+		require.True(t, isOpenAICompatibleTextPlatform(platform), "platform=%s", platform)
+placeholder
+	require.False(t, isOpenAICompatibleTextPlatform(service.PlatformAnthropic))
+	require.False(t, isOpenAICompatibleTextPlatform(service.PlatformGemini))
 placeholder
 
 func TestCompositeTargetPlatformAllowedRejectsWrongOrUnknownModel(t *testing.T) {

@@ -4768,6 +4768,9 @@ const compositeRoutePlatformOptions = computed(() => [
   { value: "gemini", label: "Gemini" placeholder,
   { value: "antigravity", label: "Antigravity" placeholder,
   { value: "grok", label: "Grok" placeholder,
+  { value: "kimi", label: "Kimi" placeholder,
+  { value: "zhipu", label: "Zhipu GLM" placeholder,
+  { value: "deepseek", label: "DeepSeek" placeholder,
 ]);
 
 const compositeRouteEndpointOptions = computed(() => [

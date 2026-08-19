@@ -114,6 +114,21 @@ placeholder
 	require.Empty(t, deleted)
 placeholder
 
+func TestSchedulerBulkAccountEventScopesCNRebuildToFreshPlatform(t *testing.T) {
+	for _, platform := range []string{PlatformKimi, PlatformZhipu, PlatformDeepseekplaceholder {
+		t.Run(platform, func(t *testing.T) {
+			cache := newBulkEventSnapshotCache()
+			repo := newBulkEventAccountRepo(&Account{ID: 1, Platform: platform, GroupIDs: []int64{12placeholderplaceholder)
+			svc := newBulkEventTestService(cache, repo)
+
+			err := svc.handleBulkAccountEvent(context.Background(), bulkEventPayload([]int64{1placeholder, []int64{11placeholder), make(map[batchSeenKey]struct{placeholder))
+
+		placeholder
+			require.ElementsMatch(t, schedulerBucketsForTest([]int64{11, 12placeholder, platform), cache.capturedBuckets())
+	placeholder)
+placeholder
+placeholder
+
 func TestSchedulerBulkAccountEventRebuildsOpenAIUngroupedBucket(t *testing.T) {
 	cache := newBulkEventSnapshotCache()
 	repo := newBulkEventAccountRepo(&Account{ID: 6, Platform: PlatformOpenAIplaceholder)

@@ -25,6 +25,10 @@ placeholder{
 		{name: "learnlm", model: "learnlm-2.0-flash-experimental", platform: PlatformGemini, ok: trueplaceholder,
 		{name: "grok", model: "grok-4", platform: PlatformGrok, ok: trueplaceholder,
 		{name: "xai prefix", model: "xai/grok-4", platform: PlatformGrok, ok: trueplaceholder,
+		{name: "kimi", model: "kimi-k2-thinking", platform: PlatformKimi, ok: trueplaceholder,
+		{name: "moonshot prefix", model: "moonshot/moonshot-v1-32k", platform: PlatformKimi, ok: trueplaceholder,
+		{name: "zhipu", model: "glm-5.2", platform: PlatformZhipu, ok: trueplaceholder,
+		{name: "deepseek", model: "deepseek-v4-pro", platform: PlatformDeepseek, ok: trueplaceholder,
 		{name: "unknown", model: "llama-4-maverick", ok: falseplaceholder,
 placeholder
 
@@ -59,7 +63,14 @@ placeholder
 		platforms = append(platforms, platform)
 placeholder
 	require.ElementsMatch(t,
-		[]string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrokplaceholder,
+		[]string{PlatformAnthropic, PlatformGemini, PlatformOpenAI, PlatformAntigravity, PlatformGrok, PlatformKimi, PlatformZhipu, PlatformDeepseekplaceholder,
 		platforms,
 	)
+placeholder
+
+func TestCompositeConcretePlatformsIncludeCNProviders(t *testing.T) {
+	for _, platform := range []string{PlatformKimi, PlatformZhipu, PlatformDeepseekplaceholder {
+		require.True(t, isConcreteRequestPlatform(platform))
+		require.True(t, canCopyAccountsFromGroupPlatform(PlatformComposite, platform))
+placeholder
 placeholder
