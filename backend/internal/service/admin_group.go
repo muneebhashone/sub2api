@@ -512,7 +512,7 @@ placeholder
 		ReasoningEffortMappings:         reasoningEffortMappings,
 placeholder
 	sanitizeGroupMessagesDispatchFields(group)
-	if group.Platform != PlatformOpenAI {
+	if group.Platform != PlatformOpenAI && group.Platform != PlatformComposite {
 		group.AllowLive = false
 placeholder
 	sanitizeGroupReasoningEffortPolicy(group)
@@ -892,7 +892,7 @@ placeholder
 		group.ReasoningEffortMappings = reasoningEffortMappings
 placeholder
 	sanitizeGroupMessagesDispatchFields(group)
-	if group.Platform != PlatformOpenAI {
+	if group.Platform != PlatformOpenAI && group.Platform != PlatformComposite {
 		group.AllowLive = false
 placeholder
 	sanitizeGroupReasoningEffortPolicy(group)

@@ -134,6 +134,7 @@ placeholder
 	for path, want := range map[string]string{
 		"/v1/responses":                        "",
 		"/v1/responses/compact":                "/compact",
+		"/v1/responses/input_tokens":           "/input_tokens",
 		"/responses/compact/":                  "/compact",
 		"/backend-api/codex/responses/compact": "/compact",
 placeholder {
@@ -143,6 +144,15 @@ placeholder {
 			require.Equal(t, want, openAIResponsesRequestPathSuffix(c))
 	placeholder)
 placeholder
+placeholder
+
+func TestIsOpenAIResponsesInputTokensRequestPath(t *testing.T) {
+	for _, path := range []string{"/v1/responses/input_tokens", "/responses/input_tokens", "/backend-api/codex/responses/input_tokens"placeholder {
+		c := newResponsesSuffixTestContext(t, path)
+		require.True(t, IsOpenAIResponsesInputTokensRequestPath(c), "path=%s", path)
+placeholder
+	c := newResponsesSuffixTestContext(t, "/v1/responses/compact")
+	require.False(t, IsOpenAIResponsesInputTokensRequestPath(c))
 placeholder
 
 func TestIsOpenAIResponsesCompactPathUsesLegacyEndpointShape(t *testing.T) {

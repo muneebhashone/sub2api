@@ -87,6 +87,9 @@ placeholder))
 	require.True(t, liveEnabledForAPIKey(&service.APIKey{
 		Group: &service.Group{Platform: service.PlatformOpenAI, AllowLive: trueplaceholder,
 placeholder))
+	require.True(t, liveEnabledForAPIKey(&service.APIKey{
+		Group: &service.Group{Platform: service.PlatformComposite, AllowLive: trueplaceholder,
+placeholder))
 placeholder
 
 func TestLiveAttestationErrorIsExplicit(t *testing.T) {
