@@ -105,6 +105,13 @@ placeholder
 		return nil, policyErr
 placeholder
 	upstreamBody = updatedBody
+	if account.Platform == PlatformGrok {
+		strippedBody, stripErr := stripRedundantGrokChatViewImageTool(upstreamBody)
+		if stripErr != nil {
+			return nil, fmt.Errorf("strip redundant Grok Chat view_image tool: %w", stripErr)
+	placeholder
+		upstreamBody = strippedBody
+placeholder
 
 	// Grok Composer does not accept image_url parts directly, but Grok Build
 	// can describe the images first. Bridge only this exact failure mode.

@@ -495,6 +495,10 @@ placeholder
 	if err != nil {
 		return nil, err
 placeholder
+	out, err = stripRedundantGrokViewImageTool(out)
+	if err != nil {
+		return nil, err
+placeholder
 	out, err = sanitizeGrokReasoningNullContent(out)
 	if err != nil {
 		return nil, err
@@ -767,6 +771,69 @@ placeholder
 	return sjson.SetRawBytes(body, "tools", encodedTools)
 placeholder
 
+// An inline input_image is already visible to Grok. Keeping Codex's local
+// view_image tool in the same turn can make Grok announce a tool call without
+// actually calling it, so remove only that redundant automatic choice.
+func stripRedundantGrokViewImageTool(body []byte) ([]byte, error) {
+	input := gjson.GetBytes(body, "input")
+	if !input.IsArray() {
+		return body, nil
+placeholder
+	items := input.Array()
+	if len(items) == 0 {
+		return body, nil
+placeholder
+	current := items[len(items)-1]
+	if strings.TrimSpace(current.Get("role").String()) != "user" ||
+		!openAIJSONValueMayContainImageInput(current) {
+		return body, nil
+placeholder
+
+	toolChoice := gjson.GetBytes(body, "tool_choice")
+	if toolChoice.IsObject() && strings.TrimSpace(toolChoice.Get("type").String()) == "function" {
+		choiceName := strings.TrimSpace(toolChoice.Get("name").String())
+		if choiceName == "" {
+			choiceName = strings.TrimSpace(toolChoice.Get("function.name").String())
+	placeholder
+		if choiceName == "view_image" {
+			return body, nil
+	placeholder
+placeholder
+
+	tools := gjson.GetBytes(body, "tools")
+	if !tools.IsArray() {
+		return body, nil
+placeholder
+	filtered := make([]json.RawMessage, 0, len(tools.Array()))
+	changed := false
+	for _, tool := range tools.Array() {
+		if strings.TrimSpace(tool.Get("type").String()) == "function" &&
+			strings.TrimSpace(tool.Get("name").String()) == "view_image" {
+			changed = true
+			continue
+	placeholder
+		filtered = append(filtered, json.RawMessage(tool.Raw))
+placeholder
+	if !changed {
+		return body, nil
+placeholder
+	if len(filtered) == 0 && strings.TrimSpace(toolChoice.String()) == "required" {
+		return body, nil
+placeholder
+
+	if len(filtered) == 0 {
+		out, err := sjson.DeleteBytes(body, "tools")
+		if err != nil {
+			return nil, err
+	placeholder
+		return sjson.DeleteBytes(out, "parallel_tool_calls")
+placeholder
+	encoded, err := json.Marshal(filtered)
+	if err != nil {
+		return nil, err
+placeholder
+	return sjson.SetRawBytes(body, "tools", encoded)
+placeholder
 func grokResponsesToolDedupKey(tool gjson.Result) string {
 	toolType := strings.TrimSpace(tool.Get("type").String())
 	if toolType != "" {
