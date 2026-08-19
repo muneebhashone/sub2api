@@ -368,10 +368,9 @@ placeholder{
 			wantErr: true,
 	placeholder,
 		{
-			// response.failed 不走 error 事件分支：即便 turn 1 也会被当终止事件
-			// 原样转发（不 failover），因此改写必须在这里同样生效。
-			name: "turn1_bare_response_failed",
-			turn: 1,
+			// 后续 turn 不允许 replay，容量错误必须改写后交给客户端重试。
+			name: "turn2_bare_response_failed",
+			turn: 2,
 			body: "data: {\"type\":\"response.failed\",\"response\":{\"id\":\"resp_shed\",\"status\":\"failed\",\"error\":{\"code\":\"server_is_overloaded\",\"message\":\"Our servers are currently overloaded. Please try again later.\"placeholderplaceholderplaceholder\n\n",
 	placeholder,
 placeholder
@@ -412,6 +411,91 @@ placeholder
 placeholder
 placeholder
 
+func TestProxyOpenAIWSHTTPBridgeTurnStagesMetadataBeforeCapacityFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_shed"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.in_progress","response":{"id":"resp_shed"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.failed","response":{"id":"resp_shed","status":"failed","error":{"message":"Our servers are currently overloaded. Please try again later."placeholderplaceholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Request-Id": []string{"rid-ws-bridge-capacity"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(body)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{ID: 12, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1placeholder
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+	payload := []byte(`{"type":"response.create","model":"gpt-5","input":"hi"placeholder`)
+	var writes [][]byte
+
+	result, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), c, account, "sk-test", payload, len(payload),
+		"gpt-5", "", "", "", "", 1,
+		func(message []byte) error {
+			writes = append(writes, append([]byte(nil), message...))
+			return nil
+	placeholder,
+	)
+
+	require.Nil(t, result)
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.True(t, failoverErr.RetryableOnSameAccount)
+	require.True(t, failoverErr.RequestScopedTransient)
+	require.Empty(t, writes)
+placeholder
+
+func TestProxyOpenAIWSHTTPBridgeTurnDoesNotReplayCapacityAfterSemanticOutput(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logSink, restore := captureStructuredLog(t)
+	defer restore()
+	body := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_partial"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.output_text.delta","delta":"partial"placeholder`,
+		"",
+		`data: {"type":"response.failed","response":{"id":"resp_partial","status":"failed","error":{"code":"server_is_overloaded","message":"Our servers are currently overloaded. Please try again later."placeholderplaceholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"X-Request-Id": []string{"rid-ws-bridge-post-output"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(body)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{ID: 13, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1placeholder
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+	payload := []byte(`{"type":"response.create","model":"gpt-5","input":"hi"placeholder`)
+	var writes [][]byte
+
+	result, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), c, account, "sk-test", payload, len(payload),
+		"gpt-5", "", "", "", "", 1,
+		func(message []byte) error {
+			writes = append(writes, append([]byte(nil), message...))
+			return nil
+	placeholder,
+	)
+
+	require.NotNil(t, result)
+placeholder
+	require.Len(t, writes, 3)
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	require.Contains(t, string(writes[2]), `"code":"server_error"`)
+	require.NotContains(t, string(writes[2]), "server_is_overloaded")
+	require.True(t, logSink.ContainsMessage("gateway.failover_suppressed_after_semantic_output"))
+	require.True(t, logSink.ContainsFieldValue("path", "ws_http_bridge"))
+placeholder
+
 func TestProxyOpenAIWSHTTPBridgeTurnRequiresTerminalEvent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -423,10 +507,10 @@ func TestProxyOpenAIWSHTTPBridgeTurnRequiresTerminalEvent(t *testing.T) {
 placeholder{
 		{name: "done_without_events_fails_over", body: "data: [DONE]\n\n", wantFailover: trueplaceholder,
 		{
-			name: "created_then_done_is_truncated_not_success",
+			name: "created_then_done_fails_over_before_semantic_output",
 			body: "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_truncated\"placeholderplaceholder\n\n" +
 				"data: [DONE]\n\n",
-			wantWrites: 1,
+			wantFailover: true,
 	placeholder,
 placeholder
 	for _, tt := range tests {

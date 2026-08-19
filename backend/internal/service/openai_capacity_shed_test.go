@@ -77,6 +77,37 @@ placeholder
 	require.False(t, openAIStreamFailedEventRetryableOnSameAccount(nonPool, other, "boom"))
 placeholder
 
+func TestOpenAIHTTPCapacityShedIsRequestScopedForOAuthAccounts(t *testing.T) {
+	payload := []byte(`{"error":{"type":"server_error","message":"Our servers are currently overloaded. Please try again later."placeholderplaceholder`)
+	failoverErr := newOpenAIUpstreamFailoverError(
+		http.StatusBadRequest,
+		http.Header{"X-Request-Id": []string{"rid-http-capacity"placeholderplaceholder,
+		payload,
+		"Our servers are currently overloaded. Please try again later.",
+		false,
+	)
+
+	require.True(t, failoverErr.RetryableOnSameAccount)
+	require.True(t, failoverErr.RequestScopedTransient)
+
+	repo := &capacityShedAccountRepoStub{placeholder
+	(&GatewayService{accountRepo: repoplaceholder).TempUnscheduleRetryableError(context.Background(), 1, failoverErr)
+	require.Zero(t, repo.tempUnschedCalls)
+
+	rateLimitService := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	gateway := &OpenAIGatewayService{rateLimitService: rateLimitServiceplaceholder
+	account := &Account{ID: 1, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
+	require.False(t, gateway.handleOpenAIAccountUpstreamError(
+		context.Background(),
+		account,
+		http.StatusBadRequest,
+		nil,
+		payload,
+		"gpt-5",
+	))
+	require.Zero(t, repo.tempUnschedCalls)
+placeholder
+
 // 上游降载的真实序列是「event: error → event: response.failed」。error 帧不算
 // 客户端输出：若把它当首输出 flush，clientOutputStarted 被固化，随后的 failed
 // 事件就进不了 pre-output failover 分支，只能把致命错误原样转发给客户端。
@@ -94,11 +125,79 @@ placeholder{
 		{`{"type":"response.failed","response":{"error":{"code":"server_is_overloaded"placeholderplaceholderplaceholder`, "response.failed", falseplaceholder,
 		{`{"type":"response.created","response":{"id":"resp_1"placeholderplaceholder`, "response.created", falseplaceholder,
 		{`{"type":"response.in_progress","response":{"id":"resp_1"placeholderplaceholder`, "response.in_progress", falseplaceholder,
+		{`{"type":"response.output_item.added","item":{"type":"reasoning","summary":[]placeholderplaceholder`, "response.output_item.added", falseplaceholder,
+		{`{"type":"response.output_item.added","item":{"type":"reasoning","encrypted_content":"ciphertext"placeholderplaceholder`, "response.output_item.added", trueplaceholder,
+		{`{"type":"response.reasoning_summary_part.added","part":{"type":"summary_text","text":""placeholderplaceholder`, "response.reasoning_summary_part.added", falseplaceholder,
+		{`{"type":"response.reasoning_summary_part.added","part":{"type":"summary_text","text":"thinking"placeholderplaceholder`, "response.reasoning_summary_part.added", trueplaceholder,
+		{`{"type":"response.content_part.added","part":{"type":"output_text","text":""placeholderplaceholder`, "response.content_part.added", falseplaceholder,
 		{`{"type":"response.output_text.delta","delta":"hi"placeholder`, "response.output_text.delta", trueplaceholder,
 		{`[DONE]`, "", trueplaceholder,
 placeholder
 	for _, tc := range cases {
 		require.Equal(t, tc.want, openAIStreamDataStartsClientOutput(tc.data, tc.eventType), "data=%s type=%s", tc.data, tc.eventType)
+placeholder
+placeholder
+
+func TestOpenAIStreamMetadataPreambleAndMessageOnlyOverloadFailOver(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	largeMetadata := strings.Repeat("x", 16*1024)
+	stream := strings.Join([]string{
+		"event: response.created",
+		`data: {"type":"response.created","response":{"id":"resp_1","metadata":{"padding":"` + largeMetadata + `"placeholderplaceholderplaceholder`,
+		"",
+		"event: response.output_item.added",
+		`data: {"type":"response.output_item.added","item":{"type":"reasoning","summary":[]placeholderplaceholder`,
+		"",
+		"event: response.reasoning_summary_part.added",
+		`data: {"type":"response.reasoning_summary_part.added","part":{"type":"summary_text","text":""placeholderplaceholder`,
+		"",
+		"event: error",
+		`data: {"type":"error","error":{"type":"service_unavailable_error","message":"Our servers are currently overloaded. Please try again later."placeholderplaceholder`,
+		"",
+placeholder, "\n")
+
+	tests := []struct {
+		name string
+		run  func(*OpenAIGatewayService, *gin.Context, *http.Response, *Account) error
+placeholder{
+		{
+			name: "native",
+			run: func(svc *OpenAIGatewayService, c *gin.Context, resp *http.Response, account *Account) error {
+				_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, account, time.Now(), "model", "model")
+				return err
+		placeholder,
+	placeholder,
+		{
+			name: "passthrough",
+			run: func(svc *OpenAIGatewayService, c *gin.Context, resp *http.Response, account *Account) error {
+				_, err := svc.handleStreamingResponsePassthrough(c.Request.Context(), resp, c, account, time.Now(), "model", "model")
+				return err
+		placeholder,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &OpenAIGatewayService{cfg: &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholderplaceholder
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+			resp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(stream)),
+				Header:     http.Header{"X-Request-Id": []string{"rid-message-only-overload"placeholderplaceholder,
+		placeholder
+			account := &Account{ID: 1, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Name: "acc"placeholder
+
+			err := tt.run(svc, c, resp, account)
+		placeholder
+			var failoverErr *UpstreamFailoverError
+			require.ErrorAs(t, err, &failoverErr)
+			require.True(t, failoverErr.RetryableOnSameAccount)
+			require.True(t, failoverErr.RequestScopedTransient)
+			require.False(t, c.Writer.Written())
+			require.Empty(t, rec.Body.String())
+	placeholder)
 placeholder
 placeholder
 
@@ -149,6 +248,8 @@ placeholder
 // 并终止会话，对其余错误码执行内置退避重试。消息原样保留。
 func TestOpenAIStreamCapacityShedAfterOutputRewritesCodeForClient(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	logSink, restore := captureStructuredLog(t)
+	defer restore()
 	cfg := &config.Config{
 		Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholder,
 placeholder
@@ -188,6 +289,9 @@ placeholder
 	require.Contains(t, body, `"code":"server_error"`)
 	require.NotContains(t, body, "server_is_overloaded")
 	require.Contains(t, body, "Our servers are currently overloaded")
+	require.True(t, logSink.ContainsMessage("gateway.failover_suppressed_after_semantic_output"))
+	require.True(t, logSink.ContainsFieldValue("path", "native_sse"))
+	require.True(t, logSink.ContainsFieldValue("upstream_request_id", "rid-shed-after-output"))
 placeholder
 
 // helper 单测：只有降载码被改写，其余错误码（尤其 rate_limit_exceeded，客户端
@@ -208,6 +312,18 @@ placeholder{
 		{
 			name:        "error帧裸code改写",
 			payload:     `{"type":"error","error":{"code":"slow_down","message":"slow down"placeholderplaceholder`,
+			wantChanged: true,
+			wantContain: `"code":"server_error"`,
+	placeholder,
+		{
+			name:        "failed事件只有过载文案时补充code",
+			payload:     `{"type":"response.failed","response":{"error":{"message":"Our servers are currently overloaded. Please try again later."placeholderplaceholderplaceholder`,
+			wantChanged: true,
+			wantContain: `"code":"server_error"`,
+	placeholder,
+		{
+			name:        "error帧只有过载文案时补充code",
+			payload:     `{"type":"error","error":{"message":"Server is overloaded. Please try again later."placeholderplaceholder`,
 			wantChanged: true,
 			wantContain: `"code":"server_error"`,
 	placeholder,

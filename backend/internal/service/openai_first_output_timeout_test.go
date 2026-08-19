@@ -542,7 +542,7 @@ placeholder
 	require.Equal(t, "request-large-image", rec.Result().Header.Get("X-Request-Id"))
 placeholder
 
-func TestOpenAINativeFirstOutputTimeoutDisabledPreservesKeepaliveFlush(t *testing.T) {
+func TestOpenAINativeFirstOutputTimeoutDisabledKeepsPreamblePrivateAcrossKeepalive(t *testing.T) {
 	svc := &OpenAIGatewayService{cfg: &config.Config{Gateway: config.GatewayConfig{
 		StreamKeepaliveInterval: 1,
 		MaxLineSize:             defaultMaxLineSize,
@@ -552,7 +552,7 @@ placeholderplaceholderplaceholder
 		defer func() { _ = pw.Close() placeholder()
 		_, _ = pw.Write([]byte("data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_stalled\"placeholderplaceholder\n\n"))
 		_, _ = pw.Write([]byte("data: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_stalled\"placeholderplaceholder\n\n"))
-		time.Sleep(1100 * time.Millisecond)
+		time.Sleep(2100 * time.Millisecond)
 placeholder()
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
@@ -561,10 +561,11 @@ placeholder()
 
 	_, err := svc.handleStreamingResponse(c.Request.Context(), resp, c, &Account{ID: 1, Platform: PlatformOpenAIplaceholder, time.Now(), "model", "model")
 
-placeholder
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
 	require.Contains(t, rec.Body.String(), ":\n\n")
-	require.Contains(t, rec.Body.String(), "response.created")
-	require.Contains(t, rec.Body.String(), "response.in_progress")
+	require.NotContains(t, rec.Body.String(), "response.created")
+	require.NotContains(t, rec.Body.String(), "response.in_progress")
 placeholder
 
 func TestOpenAINativeFirstOutputFailoverKeepsAttemptHeadersPrivateAfterKeepaliveCommit(t *testing.T) {
