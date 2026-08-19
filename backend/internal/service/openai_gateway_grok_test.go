@@ -43,6 +43,107 @@ placeholder
 	require.Equal(t, "high", gjson.GetBytes(patched, "reasoning.effort").String())
 placeholder
 
+func TestPatchGrokResponsesBodyDropsRedundantViewImageForCurrentInlineImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+placeholder{
+		{
+			name: "top-level tools",
+			body: `{
+				"model":"grok-4.6",
+				"input":[{"type":"message","role":"user","content":[
+					{"type":"input_text","text":"What text is in this image?"placeholder,
+					{"type":"input_image","image_url":"data:image/png;base64,AA=="placeholder
+				]placeholder],
+				"tools":[
+					{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,
+					{"type":"function","name":"shell_command","parameters":{"type":"object"placeholderplaceholder
+				]
+		placeholder`,
+	placeholder,
+		{
+			name: "Responses Lite additional tools",
+			body: `{
+				"model":"grok-4.6",
+				"input":[
+					{"type":"additional_tools","role":"developer","tools":[
+						{"type":"function","name":"view_image","parameters":{"type":"object"placeholderplaceholder,
+						{"type":"function","name":"shell_command","parameters":{"type":"object"placeholderplaceholder
+					]placeholder,
+					{"type":"message","role":"user","content":[
+						{"type":"input_text","text":"What text is in this image?"placeholder,
+						{"type":"input_image","image_url":"data:image/png;base64,AA=="placeholder
+					]placeholder
+				]
+		placeholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			patched, err := patchGrokResponsesBody([]byte(tt.body), "grok-4.6")
+		placeholder
+			require.False(t, gjson.GetBytes(patched, `tools.#(name=="view_image")`).Exists())
+			require.Equal(t, "shell_command", gjson.GetBytes(patched, "tools.0.name").String())
+	placeholder)
+placeholder
+placeholder
+
+func TestPatchGrokResponsesBodyKeepsNonRedundantViewImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		body string
+placeholder{
+		{
+			name: "current turn has no inline image",
+			body: `{"input":[{"role":"user","content":[{"type":"input_text","text":"Inspect a local image"placeholder]placeholder],"tools":[{"type":"function","name":"view_image"placeholder]placeholder`,
+	placeholder,
+		{
+			name: "inline image is only historical",
+			body: `{"input":[{"role":"user","content":[{"type":"input_image","image_url":"data:image/png;base64,AA=="placeholder]placeholder,{"role":"assistant","content":[{"type":"output_text","text":"Done"placeholder]placeholder,{"role":"user","content":[{"type":"input_text","text":"Inspect another local image"placeholder]placeholder],"tools":[{"type":"function","name":"view_image"placeholder]placeholder`,
+	placeholder,
+		{
+			name: "view image is explicitly selected",
+			body: `{"input":[{"role":"user","content":[{"type":"input_image","image_url":"data:image/png;base64,AA=="placeholder]placeholder],"tools":[{"type":"function","name":"view_image"placeholder],"tool_choice":{"type":"function","name":"view_image"placeholderplaceholder`,
+	placeholder,
+		{
+			name: "required with view image as the only tool",
+			body: `{"input":[{"role":"user","content":[{"type":"input_image","image_url":"data:image/png;base64,AA=="placeholder]placeholder],"tools":[{"type":"function","name":"view_image"placeholder],"tool_choice":"required"placeholder`,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			patched, err := patchGrokResponsesBody([]byte(tt.body), "grok-4.6")
+		placeholder
+			require.Equal(t, "view_image", gjson.GetBytes(patched, "tools.0.name").String())
+	placeholder)
+placeholder
+placeholder
+
+func TestPatchGrokResponsesBodyDropsViewImageOnlyToolMetadata(t *testing.T) {
+	t.Parallel()
+
+	body := []byte(`{
+		"input":[{"role":"user","content":[{"type":"input_image","image_url":"data:image/png;base64,AA=="placeholder]placeholder],
+		"tools":[{"type":"function","name":"view_image"placeholder],
+		"tool_choice":"auto",
+		"parallel_tool_calls":true
+placeholder`)
+	patched, err := patchGrokResponsesBody(body, "grok-4.6")
+placeholder
+	require.False(t, gjson.GetBytes(patched, "tools").Exists())
+	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
+	require.False(t, gjson.GetBytes(patched, "parallel_tool_calls").Exists())
+placeholder
+
 func TestPatchGrokResponsesBodySanitizesComposerReasoningParameters(t *testing.T) {
 	t.Parallel()
 
