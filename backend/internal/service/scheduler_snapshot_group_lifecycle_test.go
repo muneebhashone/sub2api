@@ -441,7 +441,7 @@ placeholder
 	accounts.beforeLoad = func() {
 		held, tokenCount := cache.leaseHeldAndTokenCount()
 		require.False(t, held, "the group lifecycle lease must be released before the first account query")
-		require.Equal(t, 12, tokenCount, "all reopen tokens must be prepared before the first account query")
+		require.Equal(t, 18, tokenCount, "all reopen tokens must be prepared before the first account query")
 placeholder
 	svc := newGroupLifecycleTestService(cache, accounts, groups, config.RunModeStandard)
 	seen := make(map[batchSeenKey]struct{placeholder)
@@ -453,8 +453,8 @@ placeholder
 	registered, err := cache.retirementRaceCache.ListBuckets(context.Background())
 placeholder
 	require.Contains(t, bucketStrings(registered), historical.String())
-	require.Len(t, cache.tokens(), 12)
-	require.Equal(t, 7, accounts.callCount())
+	require.Len(t, cache.tokens(), 18)
+	require.Equal(t, 10, accounts.callCount())
 	require.Equal(t, 1, accounts.platformCallCount(PlatformOpenAI))
 	for _, bucket := range current {
 		_, published := cache.counts(bucket)
@@ -472,16 +472,16 @@ placeholder
 	require.True(t, cache.releaseDeadline)
 	require.NoError(t, cache.releaseCtxErr)
 	_, reopenHeld := cache.lifecycleMutationLeaseStates()
-	require.Len(t, reopenHeld, 12)
+	require.Len(t, reopenHeld, 18)
 	for _, held := range reopenHeld {
 		require.True(t, held)
 placeholder
 	lockTTLs, unlockCalls := cache.lockStats()
-	require.Len(t, lockTTLs, 12)
+	require.Len(t, lockTTLs, 18)
 	for _, ttl := range lockTTLs {
 		require.Equal(t, 30*time.Second, ttl)
 placeholder
-	require.Equal(t, 12, unlockCalls)
+	require.Equal(t, 18, unlockCalls)
 	requireLifecycleSeen(t, seen, groupID)
 placeholder
 
@@ -497,8 +497,8 @@ func TestSchedulerGroupLifecycleInactiveThenActiveAuthoritativelyReopens(t *test
 	groups.set(&Group{ID: groupID, Status: StatusActive, Hydrated: trueplaceholder, nil)
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), make(map[batchSeenKey]struct{placeholder)))
 
-	require.Len(t, cache.tokens(), 12)
-	require.Equal(t, 7, accounts.callCount())
+	require.Len(t, cache.tokens(), 18)
+	require.Equal(t, 10, accounts.callCount())
 	for _, bucket := range expectedGroupLifecycleBuckets(groupID) {
 		_, published := cache.counts(bucket)
 		require.Equal(t, 1, published, bucket.String())
@@ -546,15 +546,15 @@ func TestSchedulerGroupLifecycleEpochPreventsABA(t *testing.T) {
 	groups.set(&Group{ID: groupID, Status: StatusActive, Hydrated: trueplaceholder, nil)
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), make(map[batchSeenKey]struct{placeholder)))
 	firstActiveTokens := cache.tokens()
-	require.Len(t, firstActiveTokens, 12)
+	require.Len(t, firstActiveTokens, 18)
 
 	groups.set(&Group{ID: groupID, Status: StatusDisabled, Hydrated: trueplaceholder, nil)
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), make(map[batchSeenKey]struct{placeholder)))
 	groups.set(&Group{ID: groupID, Status: StatusActive, Hydrated: trueplaceholder, nil)
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), make(map[batchSeenKey]struct{placeholder)))
 	allTokens := cache.tokens()
-	require.Len(t, allTokens, 24)
-	require.Greater(t, allTokens[12].Epoch, firstActiveTokens[0].Epoch)
+	require.Len(t, allTokens, 36)
+	require.Greater(t, allTokens[18].Epoch, firstActiveTokens[0].Epoch)
 	require.ErrorIs(t, cache.SetSnapshot(context.Background(), firstActiveTokens[0].Bucket, firstActiveTokens[0], nil), ErrSchedulerBucketWriteFenced)
 placeholder
 
@@ -571,11 +571,11 @@ placeholder
 
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), seen))
 	require.Equal(t, 1, groups.callCount())
-	require.Equal(t, 7, accounts.callCount())
+	require.Equal(t, 10, accounts.callCount())
 	requireLifecycleSeen(t, seen, groupID)
 	require.NoError(t, svc.handleGroupEvent(context.Background(), ptrInt64(groupID), seen))
 	require.Equal(t, 1, groups.callCount())
-	require.Equal(t, 7, accounts.callCount())
+	require.Equal(t, 10, accounts.callCount())
 placeholder
 
 func TestSchedulerGroupLifecycleFailuresDoNotMarkSeen(t *testing.T) {
