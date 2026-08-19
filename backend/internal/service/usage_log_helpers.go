@@ -10,6 +10,13 @@ placeholder
 	return &trimmed
 placeholder
 
+func optionalStringValue(value *string) string {
+	if value == nil {
+		return ""
+placeholder
+	return strings.TrimSpace(*value)
+placeholder
+
 func forwardResultBillingModel(requestedModel, upstreamModel string) string {
 	if trimmed := strings.TrimSpace(requestedModel); trimmed != "" {
 		return trimmed

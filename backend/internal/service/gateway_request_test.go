@@ -42,6 +42,22 @@ placeholder
 	require.True(t, parsed.ThinkingEnabled)
 placeholder
 
+func TestParseGatewayRequest_AnthropicFastSpeed(t *testing.T) {
+	parsed, err := ParseGatewayRequest(
+		NewRequestBodyRef([]byte(`{"model":"claude-opus-4-8","speed":" FAST "placeholder`)),
+		domain.PlatformAnthropic,
+	)
+placeholder
+	require.Equal(t, "fast", parsed.Speed)
+
+	nonAnthropic, err := ParseGatewayRequest(
+		NewRequestBodyRef([]byte(`{"model":"gpt-5.4","speed":"fast"placeholder`)),
+		"responses",
+	)
+placeholder
+	require.Empty(t, nonAnthropic.Speed)
+placeholder
+
 func TestParseGatewayRequest_MaxTokens(t *testing.T) {
 	body := []byte(`{"model":"claude-haiku-4-5","max_tokens":1placeholder`)
 	parsed, err := ParseGatewayRequest(NewRequestBodyRef(body), "")
