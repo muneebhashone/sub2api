@@ -15,6 +15,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 const (
@@ -22,6 +23,30 @@ const (
 	openAIWSHTTPBridgeThresholdBytesDefault int64 = 15 * 1024 * 1024
 	openAIWSHTTPBridgeErrorBodyLimitBytes         = 64 * 1024
 )
+
+const openAIWSHTTPBridgeToolStateContextKey = "openai_ws_http_bridge_tool_state"
+
+type openAIWSHTTPBridgeToolState struct {
+	ClientMapping apicompat.ResponsesClientToolMapping
+	LoweredTools  json.RawMessage
+placeholder
+
+func openAIWSHTTPBridgeToolStateFromContext(c *gin.Context) (openAIWSHTTPBridgeToolState, bool) {
+	if c == nil {
+		return openAIWSHTTPBridgeToolState{placeholder, false
+placeholder
+	value, ok := c.Get(openAIWSHTTPBridgeToolStateContextKey)
+	state, typed := value.(openAIWSHTTPBridgeToolState)
+	return state, ok && typed
+placeholder
+
+func setOpenAIWSHTTPBridgeToolState(c *gin.Context, state openAIWSHTTPBridgeToolState) {
+	if c == nil {
+		return
+placeholder
+	state.LoweredTools = append(json.RawMessage(nil), state.LoweredTools...)
+	c.Set(openAIWSHTTPBridgeToolStateContextKey, state)
+placeholder
 
 // ResolveOpenAIWSClientFirstMessageTimeout returns the effective client ingress deadline.
 func ResolveOpenAIWSClientFirstMessageTimeout(cfg *config.Config) time.Duration {
@@ -189,10 +214,29 @@ placeholder
 placeholder
 	var clientToolMapping apicompat.ResponsesClientToolMapping
 	if account.Platform == PlatformOpenAI && account.Type == AccountTypeAPIKey {
-		body, clientToolMapping, err = adaptResponsesClientToolsForFunctionUpstream(body, "OpenAI WS HTTP bridge")
+		inheritedState, _ := openAIWSHTTPBridgeToolStateFromContext(c)
+		toolsPresent := gjson.GetBytes(body, "tools").Exists()
+		body, clientToolMapping, err = adaptResponsesClientToolsForFunctionUpstreamWithMapping(
+			body,
+			"OpenAI WS HTTP bridge",
+			inheritedState.ClientMapping,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("adapt OpenAI WS HTTP bridge client tools: %w", err)
 	placeholder
+		loweredTools := inheritedState.LoweredTools
+		if toolsPresent {
+			loweredTools = json.RawMessage(gjson.GetBytes(body, "tools").Raw)
+	placeholder else if len(loweredTools) > 0 {
+			body, err = sjson.SetRawBytes(body, "tools", loweredTools)
+			if err != nil {
+				return nil, fmt.Errorf("inherit OpenAI WS HTTP bridge tools: %w", err)
+		placeholder
+	placeholder
+		setOpenAIWSHTTPBridgeToolState(c, openAIWSHTTPBridgeToolState{
+			ClientMapping: clientToolMapping,
+			LoweredTools:  loweredTools,
+	placeholder)
 placeholder
 
 	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
