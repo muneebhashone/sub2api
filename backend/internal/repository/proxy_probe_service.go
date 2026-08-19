@@ -31,11 +31,27 @@ placeholder
 	if insecure {
 		log.Printf("[ProxyProbe] Warning: insecure_skip_verify is not allowed and will cause probe failure.")
 placeholder
+	// 构建探测 URL 列表：优先用配置的自定义列表，否则用内置默认列表
+	probeTargets := defaultProbeURLs
+	if cfg != nil && len(cfg.Security.ProxyProbe.URLs) > 0 {
+		probeTargets = make([]probeTarget, 0, len(cfg.Security.ProxyProbe.URLs))
+		for _, u := range cfg.Security.ProxyProbe.URLs {
+			if strings.TrimSpace(u.URL) == "" || strings.TrimSpace(u.Parser) == "" {
+				continue
+		placeholder
+			probeTargets = append(probeTargets, probeTarget{url: u.URL, parser: u.Parserplaceholder)
+	placeholder
+		if len(probeTargets) == 0 {
+			probeTargets = defaultProbeURLs
+	placeholder
+placeholder
+
 	return &proxyProbeService{
 		insecureSkipVerify: insecure,
 		allowPrivateHosts:  allowPrivate,
 		validateResolvedIP: validateResolvedIP,
 		maxResponseBytes:   maxResponseBytes,
+		probeURLs:          probeTargets,
 placeholder
 placeholder
 
@@ -44,12 +60,16 @@ const (
 	defaultProxyProbeResponseMaxBytes = int64(1024 * 1024)
 )
 
-// probeURLs 按优先级排列的探测 URL 列表
-// 某些 AI API 专用代理只允许访问特定域名，因此需要多个备选
-var probeURLs = []struct {
+// probeTarget 描述一个探测端点及其响应解析方式。
+type probeTarget struct {
 	url    string
-	parser string // "ip-api" or "ipify"
-placeholder{
+	parser string // "ip-api" / "ipify" / "chatgpt-trace"
+placeholder
+
+// defaultProbeURLs 按优先级排列的默认探测 URL 列表。
+// 某些 AI API 专用代理只允许访问特定域名，因此需要多个备选。
+// 可通过配置 security.proxy_probe.urls 覆盖。
+var defaultProbeURLs = []probeTarget{
 	{"http://ip-api.com/json/?lang=zh-CN", "ip-api"placeholder,
 	{"http://api64.ipify.org?format=json", "ipify"placeholder,
 placeholder
@@ -59,6 +79,7 @@ type proxyProbeService struct {
 	allowPrivateHosts  bool
 	validateResolvedIP bool
 	maxResponseBytes   int64
+	probeURLs          []probeTarget
 placeholder
 
 func (s *proxyProbeService) ProbeProxy(ctx context.Context, proxyURL string) (*service.ProxyExitInfo, int64, error) {
@@ -74,6 +95,10 @@ placeholder)
 placeholder
 
 	var lastErr error
+	probeURLs := s.probeURLs
+	if len(probeURLs) == 0 {
+		probeURLs = defaultProbeURLs
+placeholder
 	for _, probe := range probeURLs {
 		exitInfo, latencyMs, err := s.probeWithURL(ctx, client, probe.url, probe.parser)
 		if err == nil {
@@ -121,6 +146,8 @@ placeholder
 		return s.parseIPAPI(body, latencyMs)
 	case "ipify":
 		return s.parseIPify(body, latencyMs)
+	case "chatgpt-trace":
+		return s.parseChatGPTTrace(body, latencyMs)
 	default:
 		return nil, latencyMs, fmt.Errorf("unknown parser: %s", parser)
 placeholder
@@ -178,4 +205,36 @@ placeholder
 	return &service.ProxyExitInfo{
 		IP: result.IP,
 placeholder, latencyMs, nil
+placeholder
+
+// parseChatGPTTrace 解析 Cloudflare trace 端点（如 chatgpt.com/cdn-cgi/trace）的纯文本响应。
+// 响应按行给出键值对，其中 ip= 为出口 IP，loc= 为国家代码。
+func (s *proxyProbeService) parseChatGPTTrace(body []byte, latencyMs int64) (*service.ProxyExitInfo, int64, error) {
+	var ip, loc string
+	for _, line := range strings.Split(string(body), "\n") {
+		key, value, found := strings.Cut(strings.TrimSpace(line), "=")
+		if !found {
+			continue
+	placeholder
+		switch key {
+		case "ip":
+			ip = strings.TrimSpace(value)
+		case "loc":
+			loc = strings.TrimSpace(value)
+	placeholder
+placeholder
+	if ip == "" {
+		preview := string(body)
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+	placeholder
+		return nil, latencyMs, fmt.Errorf("chatgpt-trace: no ip= found in response (body: %s)", preview)
+placeholder
+	info := &service.ProxyExitInfo{
+		IP: ip,
+placeholder
+	if loc != "" {
+		info.CountryCode = loc
+placeholder
+	return info, latencyMs, nil
 placeholder
