@@ -37,6 +37,42 @@ placeholder
 	require.Equal(t, "user", messages[2].Role)
 placeholder
 
+func TestResponsesInputToChatMessages_SkipsInvalidEmptyCallIDOutput(t *testing.T) {
+	input := json.RawMessage(`[
+		{"type":"function_call","call_id":"","name":"exec_command","arguments":"{\"cmd\": \"ssh root@HOST"placeholder,
+		{"type":"function_call_output","call_id":"","output":"failed to parse function arguments"placeholder,
+		{"role":"user","content":"continue"placeholder
+	]`)
+
+	messages, err := responsesInputToChatMessages("", input)
+placeholder
+	require.Len(t, messages, 1)
+	require.Equal(t, "user", messages[0].Role)
+placeholder
+
+func TestChatCompletionsResponseToResponses_SkipsInvalidFunctionArguments(t *testing.T) {
+	resp := &ChatCompletionsResponse{
+		Model: "deepseek-v4-flash",
+		Choices: []ChatChoice{{
+			Message: ChatMessage{
+				Role: "assistant",
+				ToolCalls: []ChatToolCall{
+					{ID: "call_bad", Type: "function", Function: ChatFunctionCall{Name: "exec_command", Arguments: `{"cmd": "ssh root@HOST`placeholderplaceholder,
+					{ID: "call_ok", Type: "function", Function: ChatFunctionCall{Name: "exec_command", Arguments: `{placeholder`placeholderplaceholder,
+			placeholder,
+		placeholder,
+			FinishReason: "length",
+placeholder
+placeholder
+
+	out := ChatCompletionsResponseToResponses(resp, "deepseek-v4-flash", nil, false, nil)
+	require.Equal(t, "incomplete", out.Status)
+	require.Len(t, out.Output, 1)
+	require.Equal(t, "function_call", out.Output[0].Type)
+	require.Equal(t, "call_ok", out.Output[0].CallID)
+	require.Equal(t, `{placeholder`, out.Output[0].Arguments)
+placeholder
+
 func TestResponsesInputToChatMessages_KeepsChatCompletionRoles(t *testing.T) {
 	input := json.RawMessage(`[
 		{"role":"system","content":"system message"placeholder,

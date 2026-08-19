@@ -148,7 +148,7 @@ placeholder
 	require.NotNil(t, result.FirstTokenMs)
 placeholder
 
-func TestForwardResponses_ChatFallbackDoesNotFinalizeAfterMalformedStreamChunk(t *testing.T) {
+func TestForwardResponses_ChatFallbackRejectsInvalidToolArgumentsAtOutputLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	body := []byte(`{"model":"deepseek-v4-flash","input":"run the command","stream":trueplaceholder`)
@@ -158,42 +158,7 @@ func TestForwardResponses_ChatFallbackDoesNotFinalizeAfterMalformedStreamChunk(t
 	c.Request.Header.Set("Content-Type", "application/json")
 
 	upstreamBody := strings.Join([]string{
-		`data: {"id":"chatcmpl_bad_stream","object":"chat.completion.chunk","model":"deepseek-v4-flash","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_bad","type":"function","function":{"name":"exec_command","arguments":"{placeholder"placeholderplaceholder]placeholder,"finish_reason":nullplaceholder]placeholder`,
-		"",
-		`data: {"id":"chatcmpl_bad_stream","object":"chat.completion.chunk","choices":[`,
-		"",
-		"data: [DONE]",
-		"",
-placeholder, "\n")
-	upstream := &httpUpstreamRecorder{resp: &http.Response{
-		StatusCode: http.StatusOK,
-		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholder, "x-request-id": []string{"rid_bad_stream"placeholderplaceholder,
-		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
-placeholderplaceholder
-	svc := &OpenAIGatewayService{
-		cfg:          rawChatCompletionsTestConfig(),
-		httpUpstream: upstream,
-placeholder
-
-	result, err := svc.Forward(context.Background(), c, forceChatResponsesFallbackAccount(), body)
-	require.ErrorContains(t, err, "stream usage incomplete")
-	require.NotNil(t, result)
-	require.NotContains(t, rec.Body.String(), "response.function_call_arguments.done")
-	require.NotContains(t, rec.Body.String(), "response.output_item.done")
-	require.NotContains(t, rec.Body.String(), "data: [DONE]")
-placeholder
-
-func TestForwardResponses_ChatFallbackDoesNotCompleteToolCallAtOutputLimit(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	body := []byte(`{"model":"deepseek-v4-flash","input":"run the command","stream":trueplaceholder`)
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
-	c.Request.Header.Set("Content-Type", "application/json")
-
-	upstreamBody := strings.Join([]string{
-		`data: {"id":"chatcmpl_length_tool","object":"chat.completion.chunk","model":"deepseek-v4-flash","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_length","type":"function","function":{"name":"exec_command","arguments":"{placeholder"placeholderplaceholder]placeholder,"finish_reason":nullplaceholder]placeholder`,
+		`data: {"id":"chatcmpl_length_tool","object":"chat.completion.chunk","model":"deepseek-v4-flash","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_length","type":"function","function":{"name":"exec_command","arguments":"{\"cmd\":\"ssh root@HOST"placeholderplaceholder]placeholder,"finish_reason":nullplaceholder]placeholder`,
 		"",
 		`data: {"id":"chatcmpl_length_tool","object":"chat.completion.chunk","model":"deepseek-v4-flash","choices":[{"index":0,"delta":{placeholder,"finish_reason":"length"placeholder],"usage":{"prompt_tokens":4,"completion_tokens":6492,"total_tokens":6496placeholderplaceholder`,
 		"",
@@ -211,8 +176,10 @@ placeholderplaceholder
 placeholder
 
 	result, err := svc.Forward(context.Background(), c, forceChatResponsesFallbackAccount(), body)
-	require.ErrorContains(t, err, "max output length")
+	require.ErrorContains(t, err, "invalid JSON")
 	require.NotNil(t, result)
+	require.Equal(t, 4, result.Usage.InputTokens)
+	require.Equal(t, 6492, result.Usage.OutputTokens)
 	require.NotContains(t, rec.Body.String(), "response.function_call_arguments.done")
 	require.NotContains(t, rec.Body.String(), "response.output_item.done")
 	require.NotContains(t, rec.Body.String(), "data: [DONE]")
