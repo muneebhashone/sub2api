@@ -96,6 +96,42 @@ type openAIWSIngressTurnError struct {
 	wroteDownstream bool
 placeholder
 
+type openAIWSCurrentTurnFailoverError struct {
+	cause        error
+	retryPayload []byte
+placeholder
+
+func (e *openAIWSCurrentTurnFailoverError) Error() string {
+	if e == nil || e.cause == nil {
+		return "openai websocket current-turn failover"
+placeholder
+	return e.cause.Error()
+placeholder
+
+func (e *openAIWSCurrentTurnFailoverError) Unwrap() error {
+	if e == nil {
+		return nil
+placeholder
+	return e.cause
+placeholder
+
+func newOpenAIWSCurrentTurnFailoverError(cause error, retryPayload []byte) error {
+	return &openAIWSCurrentTurnFailoverError{
+		cause:        cause,
+		retryPayload: append([]byte(nil), retryPayload...),
+placeholder
+placeholder
+
+// OpenAIWSCurrentTurnRetryPayload returns an isolated copy of the payload that
+// may be retried on a replacement account without replaying the first turn.
+func OpenAIWSCurrentTurnRetryPayload(err error) ([]byte, bool) {
+	var retryErr *openAIWSCurrentTurnFailoverError
+	if !errors.As(err, &retryErr) || retryErr == nil {
+		return nil, false
+placeholder
+	return append([]byte(nil), retryErr.retryPayload...), true
+placeholder
+
 func (e *openAIWSIngressTurnError) Error() string {
 	if e == nil {
 		return ""

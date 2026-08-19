@@ -105,20 +105,25 @@ placeholder
 placeholder
 
 type openAIWSToolCallReplayCollector struct {
-	items []json.RawMessage
-	seen  map[string]struct{placeholder
+	items    []json.RawMessage
+	seen     map[string]struct{placeholder
+	allItems []json.RawMessage
+	allSeen  map[string]struct{placeholder
 placeholder
 
 func (c *openAIWSToolCallReplayCollector) AddEvent(eventType string, message []byte) {
 	switch strings.TrimSpace(eventType) {
 	case "response.output_item.done":
-		c.addItem(gjson.GetBytes(message, "item"))
+		item := gjson.GetBytes(message, "item")
+		c.addAllItem(item)
+		c.addItem(item)
 	case "response.completed", "response.done":
 		output := gjson.GetBytes(message, "response.output")
 		if !output.IsArray() {
 			return
 	placeholder
 		for _, item := range output.Array() {
+			c.addAllItem(item)
 			c.addItem(item)
 	placeholder
 placeholder
@@ -126,6 +131,35 @@ placeholder
 
 func (c *openAIWSToolCallReplayCollector) Items() []json.RawMessage {
 	return cloneOpenAIWSRawMessages(c.items)
+placeholder
+
+func (c *openAIWSToolCallReplayCollector) AllItems() []json.RawMessage {
+	return cloneOpenAIWSRawMessages(c.allItems)
+placeholder
+
+func (c *openAIWSToolCallReplayCollector) addAllItem(item gjson.Result) {
+	if !item.Exists() || item.Type != gjson.JSON {
+		return
+placeholder
+	raw := strings.TrimSpace(item.Raw)
+	if raw == "" || !strings.HasPrefix(raw, "{") || strings.TrimSpace(item.Get("type").String()) == "" {
+		return
+placeholder
+	key := strings.TrimSpace(item.Get("id").String())
+	if key == "" {
+		key = strings.TrimSpace(item.Get("call_id").String())
+placeholder
+	if key == "" {
+		key = raw
+placeholder
+	if c.allSeen == nil {
+		c.allSeen = make(map[string]struct{placeholder)
+placeholder
+	if _, ok := c.allSeen[key]; ok {
+		return
+placeholder
+	c.allSeen[key] = struct{placeholder{placeholder
+	c.allItems = append(c.allItems, json.RawMessage(raw))
 placeholder
 
 func (c *openAIWSToolCallReplayCollector) addItem(item gjson.Result) {
@@ -303,10 +337,10 @@ placeholder
 		if account.Platform == PlatformGrok {
 			shouldFailover = s.shouldFailoverGrokUpstreamError(resp.StatusCode, respBody)
 			s.handleGrokAccountUpstreamError(withGrokTeamRateLimitModel(ctx, resolveGrokWSUpstreamModel(account, body, originalModel)), account, resp.StatusCode, resp.Header, respBody)
-			if turn == 1 && shouldFailover {
+			if shouldFailover && (turn == 1 || resp.StatusCode == http.StatusTooManyRequests) {
 				return nil, newOpenAIUpstreamFailoverError(resp.StatusCode, resp.Header, respBody, upstreamMsg, false)
 		placeholder
-	placeholder else if turn == 1 && shouldFailover {
+	placeholder else if shouldFailover && (turn == 1 || resp.StatusCode == http.StatusTooManyRequests) {
 			return nil, s.handleFailoverErrorResponsePassthrough(ctx, resp, c, account, body, respBody)
 	placeholder
 		if account.Platform != PlatformGrok && (shouldFailover || shouldCooldownOpenAITransientUpstreamError(resp.StatusCode, respBody)) {
@@ -374,6 +408,7 @@ placeholder
 			result.wsReplayInput = replayInput
 			result.wsReplayInputExists = true
 	placeholder
+		result.wsAccountFailoverReplayInput = replayCollector.AllItems()
 		if imageCount > 0 {
 			result.ImageCount = imageCount
 			result.ImageSize = imageSizeTier
@@ -482,7 +517,7 @@ placeholder
 				canonicalModel := canonicalOpenAIAccountSchedulingModel(account, originalModel)
 				s.handleOpenAIAccountUpstreamError(ctx, account, accountStatus, resp.Header, upstreamMessage, canonicalModel)
 		placeholder
-			if turn == 1 && !wroteDownstream && shouldFailover {
+			if !wroteDownstream && shouldFailover && (turn == 1 || statusCode == http.StatusTooManyRequests) {
 				if account.Platform == PlatformGrok {
 					return nil, newOpenAIUpstreamFailoverError(statusCode, resp.Header, upstreamMessage, errMessage, false)
 			placeholder
