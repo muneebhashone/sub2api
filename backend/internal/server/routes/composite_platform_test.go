@@ -133,6 +133,78 @@ placeholder)
 	require.Equal(t, http.StatusNoContent, w.Code)
 placeholder
 
+func TestCompositeTargetPlatformMiddlewareRewritesNestedLiveModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	resolver := service.NewCompositeRouteResolver(compositeRouteRepoStub{
+		routes: []service.CompositeModelRoute{
+			{
+				ID:             1,
+				GroupID:        1,
+				PublicModel:    "live-alias",
+				MatchType:      service.CompositeRouteMatchExact,
+				TargetPlatform: service.PlatformOpenAI,
+				UpstreamModel:  "gpt-live",
+				Endpoint:       service.CompositeRouteEndpointAny,
+				Priority:       100,
+				Enabled:        true,
+		placeholder,
+	placeholder,
+placeholder)
+	router.Use(gin.HandlerFunc(servermiddleware.APIKeyAuthMiddleware(func(c *gin.Context) {
+		groupID := int64(1)
+		c.Set(string(servermiddleware.ContextKeyAPIKey), &service.APIKey{
+			GroupID: &groupID,
+			Group:   &service.Group{ID: groupID, Platform: service.PlatformCompositeplaceholder,
+	placeholder)
+		c.Next()
+placeholder)))
+	router.Use(compositeTargetPlatformMiddleware(resolver))
+	router.POST("/backend-api/codex/realtime/calls", func(c *gin.Context) {
+		platform, ok := service.ResolvedTargetPlatformFromContext(c.Request.Context())
+		require.True(t, ok)
+		require.Equal(t, service.PlatformOpenAI, platform)
+
+		body, err := io.ReadAll(c.Request.Body)
+	placeholder
+		require.JSONEq(t, `{"session":{"model":"gpt-live"placeholder,"sdp":"v=0"placeholder`, string(body))
+		c.Status(http.StatusNoContent)
+placeholder)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/backend-api/codex/realtime/calls",
+		strings.NewReader(`{"session":{"model":"live-alias"placeholder,"sdp":"v=0"placeholder`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+placeholder
+
+func TestCompositeRequestModelFromMultipartLiveSession(t *testing.T) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	require.NoError(t, writer.WriteField("sdp", "v=0"))
+	require.NoError(t, writer.WriteField("session", `{"model":"live-alias"placeholder`))
+	require.NoError(t, writer.Close())
+
+	require.Equal(t, "live-alias", compositeRequestModelFromBody(writer.FormDataContentType(), body.Bytes()))
+placeholder
+
+func TestCompositeCodexControlPathsUseResponsesRoutes(t *testing.T) {
+	for _, path := range []string{
+		"/v1/alpha/search",
+		"/backend-api/codex/alpha/search",
+		"/v1/live",
+		"/backend-api/codex/realtime/calls",
+placeholder {
+		require.Equal(t, service.CompositeRouteEndpointResponses, compositeRouteEndpointForPath(path), "path=%s", path)
+placeholder
+placeholder
+
 func TestCompositeTargetPlatformMiddlewareUsesExplicitRouteForMultipartImages(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
