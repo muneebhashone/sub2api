@@ -27,6 +27,7 @@ placeholder{
 		{"/v1/embeddings", EndpointEmbeddingsplaceholder,
 		{"/v1/alpha/search", EndpointAlphaSearchplaceholder,
 		{"/v1/responses", EndpointResponsesplaceholder,
+		{"/v1/responses/input_tokens", EndpointResponsesInputTokensplaceholder,
 		{"/v1/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/v1/responses/compact/detail", EndpointResponsesCompactplaceholder,
 		{"/v1/images/generations", EndpointImagesGenerationsplaceholder,
@@ -50,6 +51,7 @@ placeholder{
 
 		// Bare top-level alias route "/responses" — root vs. compact.
 		{"/responses", EndpointResponsesplaceholder,
+		{"/responses/input_tokens", EndpointResponsesInputTokensplaceholder,
 		{"/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/responses/compact/detail", EndpointResponsesCompactplaceholder,
 		{"/alpha/search", EndpointAlphaSearchplaceholder,
@@ -57,6 +59,7 @@ placeholder{
 
 		// Bare Codex direct alias route — root vs. compact.
 		{"/backend-api/codex/responses", EndpointResponsesplaceholder,
+		{"/backend-api/codex/responses/input_tokens", EndpointResponsesInputTokensplaceholder,
 		{"/backend-api/codex/responses/compact", EndpointResponsesCompactplaceholder,
 		{"/backend-api/codex/responses/compact/detail", EndpointResponsesCompactplaceholder,
 		{"/backend-api/codex/alpha/search", EndpointAlphaSearchplaceholder,
@@ -100,6 +103,7 @@ placeholder{
 
 		// OpenAI — root Responses.
 		{"openai responses root", EndpointResponses, "/v1/responses", service.PlatformOpenAI, EndpointResponsesplaceholder,
+		{"openai responses input tokens", EndpointResponsesInputTokens, "/v1/responses/input_tokens", service.PlatformOpenAI, EndpointResponsesInputTokensplaceholder,
 
 		// OpenAI — compact, raw path carries the derivable "/compact"
 		// (or nested) suffix, which must be preserved on the upstream

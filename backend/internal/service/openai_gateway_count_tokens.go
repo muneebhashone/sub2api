@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
@@ -37,6 +38,177 @@ type openAIInputTokensCountPrepared struct {
 	NormalizedModel string
 	BillingModel    string
 	UpstreamModel   string
+placeholder
+
+// ForwardResponsesInputTokens handles the native OpenAI
+// POST /v1/responses/input_tokens shape. Custom OpenAI-compatible relays often
+// implement /responses but not this preflight endpoint, so those accounts use
+// the local estimator instead of receiving a request that is known to fail.
+func (s *OpenAIGatewayService) ForwardResponsesInputTokens(
+	ctx context.Context,
+	c *gin.Context,
+	account *Account,
+	body []byte,
+) error {
+	if account == nil {
+		writeOpenAIResponsesInputTokensError(c, http.StatusServiceUnavailable, "api_error", "No available OpenAI accounts")
+		return fmt.Errorf("responses input_tokens: missing account")
+placeholder
+
+	prepared, err := prepareNativeOpenAIInputTokensCountRequest(body, account)
+	if err != nil {
+		writeOpenAIResponsesInputTokensError(c, http.StatusBadRequest, "invalid_request_error", "Failed to parse request body")
+		return err
+placeholder
+
+	if shouldEstimateOpenAIInputTokensLocally(account) {
+		writeOpenAIResponsesInputTokensFallback(c, account, prepared, 0, "custom_relay")
+		return nil
+placeholder
+
+	token, _, err := s.GetAccessToken(ctx, account)
+	if err != nil {
+		writeOpenAIResponsesInputTokensError(c, http.StatusBadGateway, "upstream_error", "Failed to get access token")
+		return fmt.Errorf("responses input_tokens: get access token: %w", err)
+placeholder
+
+	upstreamBody := ReplaceModelInBody(body, prepared.UpstreamModel)
+	upstreamReq, err := s.buildInputTokensUpstreamRequest(ctx, c, account, upstreamBody, token)
+	if err != nil {
+		writeOpenAIResponsesInputTokensError(c, http.StatusInternalServerError, "api_error", "Failed to build request")
+		return fmt.Errorf("responses input_tokens: build upstream request: %w", err)
+placeholder
+
+	proxyURL := ""
+	if account.Proxy != nil {
+		proxyURL = account.Proxy.URL()
+placeholder
+	resp, err := s.httpUpstream.Do(upstreamReq, proxyURL, account.ID, account.Concurrency)
+	if err != nil {
+		safeErr := sanitizeUpstreamErrorMessage(err.Error())
+		setOpsUpstreamError(c, 0, safeErr, "")
+		writeOpenAIResponsesInputTokensError(c, http.StatusBadGateway, "upstream_error", "Upstream request failed")
+		return fmt.Errorf("responses input_tokens: upstream request failed: %s", safeErr)
+placeholder
+	defer func() { _ = resp.Body.Close() placeholder()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		writeOpenAIResponsesInputTokensError(c, http.StatusBadGateway, "upstream_error", "Failed to read response")
+		return fmt.Errorf("responses input_tokens: read upstream response: %w", err)
+placeholder
+
+	if resp.StatusCode >= 400 {
+		if isOpenAIResponsesInputTokensUnsupported(account, resp.StatusCode, respBody) {
+			writeOpenAIResponsesInputTokensFallback(c, account, prepared, resp.StatusCode, "upstream_unsupported")
+			return nil
+	placeholder
+		if s.rateLimitService != nil {
+			s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, respBody)
+	placeholder
+		upstreamMsg := sanitizeUpstreamErrorMessage(strings.TrimSpace(extractUpstreamErrorMessage(respBody)))
+		setOpsUpstreamError(c, resp.StatusCode, upstreamMsg, "")
+		writeOpenAIResponsesInputTokensError(c, resp.StatusCode, "upstream_error", "Upstream request failed")
+		if upstreamMsg == "" {
+			return fmt.Errorf("responses input_tokens: upstream error: %d", resp.StatusCode)
+	placeholder
+		return fmt.Errorf("responses input_tokens: upstream error: %d message=%s", resp.StatusCode, upstreamMsg)
+placeholder
+
+	inputTokens := gjson.GetBytes(respBody, "input_tokens")
+	if !inputTokens.Exists() {
+		writeOpenAIResponsesInputTokensError(c, http.StatusBadGateway, "upstream_error", "Upstream response missing input_tokens")
+		return fmt.Errorf("responses input_tokens: upstream response missing input_tokens")
+placeholder
+	contentType := strings.TrimSpace(resp.Header.Get("Content-Type"))
+	if contentType == "" {
+		contentType = "application/json"
+placeholder
+	c.Data(http.StatusOK, contentType, respBody)
+	return nil
+placeholder
+
+func prepareNativeOpenAIInputTokensCountRequest(body []byte, account *Account) (*openAIInputTokensCountPrepared, error) {
+	var req openAIInputTokensCountRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		return nil, fmt.Errorf("parse responses input_tokens request: %w", err)
+placeholder
+	originalModel := strings.TrimSpace(req.Model)
+	if originalModel == "" {
+		return nil, fmt.Errorf("parse responses input_tokens request: model is required")
+placeholder
+	billingModel := resolveOpenAIForwardModel(account, originalModel, "")
+	upstreamModel := normalizeOpenAIModelForUpstream(account, billingModel)
+	req.Model = upstreamModel
+	return &openAIInputTokensCountPrepared{
+		Request:         req,
+		OriginalModel:   originalModel,
+		NormalizedModel: originalModel,
+		BillingModel:    billingModel,
+		UpstreamModel:   upstreamModel,
+placeholder, nil
+placeholder
+
+func shouldEstimateOpenAIInputTokensLocally(account *Account) bool {
+	if account == nil || account.IsGrok() || account.IsCNProvider() || account.Type == AccountTypeUpstream {
+		return true
+placeholder
+	if account.Type != AccountTypeAPIKey {
+		return false
+placeholder
+	rawBaseURL := strings.TrimSpace(account.GetCredential("base_url"))
+	if rawBaseURL == "" {
+		return false
+placeholder
+	parsed, err := url.Parse(rawBaseURL)
+	if err != nil {
+		return true
+placeholder
+	return !strings.EqualFold(parsed.Hostname(), "api.openai.com")
+placeholder
+
+func isOpenAIResponsesInputTokensUnsupported(account *Account, statusCode int, body []byte) bool {
+	if statusCode == http.StatusNotFound {
+		return true
+placeholder
+	return account != nil && account.Type == AccountTypeOAuth && isOpenAIOAuthInputTokensUnsupported(statusCode, body)
+placeholder
+
+func writeOpenAIResponsesInputTokensFallback(c *gin.Context, account *Account, prepared *openAIInputTokensCountPrepared, statusCode int, reason string) {
+	estimated := openAIInputTokensFallbackMinimum
+	if prepared != nil {
+		if got, err := estimateOpenAIInputTokens(prepared.Request); err == nil && got > 0 {
+			estimated = got
+	placeholder
+placeholder
+	accountID := int64(0)
+	upstreamModel := ""
+	if account != nil {
+		accountID = account.ID
+placeholder
+	if prepared != nil {
+		upstreamModel = prepared.UpstreamModel
+placeholder
+	logger.L().Info("openai responses input_tokens: local estimate fallback",
+		zap.Int64("account_id", accountID),
+		zap.Int("upstream_status", statusCode),
+		zap.Int("estimated_input_tokens", estimated),
+		zap.String("upstream_model", upstreamModel),
+		zap.String("reason", reason),
+	)
+	c.JSON(http.StatusOK, gin.H{
+		"object":       "response.input_tokens",
+		"input_tokens": estimated,
+placeholder)
+placeholder
+
+func writeOpenAIResponsesInputTokensError(c *gin.Context, status int, errType, message string) {
+	c.JSON(status, gin.H{
+		"error": gin.H{
+			"type":    errType,
+			"message": message,
+	placeholder,
+placeholder)
 placeholder
 
 // EstimateGrokCountTokens estimates an Anthropic-compatible count_tokens request
