@@ -115,6 +115,10 @@ placeholder
 	if account.IsAnthropicProtocol() {
 		return s.forwardResponsesViaNativeAnthropic(ctx, c, account, body, reqModel)
 placeholder
+	if account.IsAdaptiveAPIProtocol() &&
+		(account.Platform != PlatformDeepseek || isOpenAIResponsesCompactPath(c)) {
+		return s.forwardResponsesViaRawChatCompletions(ctx, c, account, body)
+placeholder
 
 	if shouldForwardOpenAIResponsesViaRawChatCompletions(account) {
 		return s.forwardResponsesViaRawChatCompletions(ctx, c, account, body)
@@ -1055,6 +1059,9 @@ func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.
 	case AccountTypeAPIKey:
 		// API Key accounts use Platform API or custom base URL
 		baseURL := account.GetOpenAIBaseURL()
+		if account.Platform == PlatformDeepseek && account.IsAdaptiveAPIProtocol() {
+			baseURL = account.GetCNProtocolBaseURL(APIProtocolResponses)
+	placeholder
 		if baseURL == "" {
 			targetURL = openaiPlatformAPIURL
 	placeholder else {

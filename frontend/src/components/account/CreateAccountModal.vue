@@ -537,7 +537,7 @@
                   : 'bg-gray-100 text-gray-500 dark:bg-dark-600 dark:text-gray-400'
               ]"
             >
-              <Icon :name="opt.value === 'anthropic' ? 'sparkles' : opt.value === 'responses' ? 'terminal' : 'chat'" size="sm" />
+              <Icon :name="opt.value === 'adaptive' ? 'swap' : opt.value === 'anthropic' ? 'sparkles' : opt.value === 'responses' ? 'terminal' : 'chat'" size="sm" />
             </div>
             <div>
               <span class="block text-sm font-medium text-gray-900 dark:text-white">{{ t(`admin.accounts.cnProviders.apiProtocol.${opt.labelKeyplaceholder`) placeholderplaceholder</span>
@@ -1250,7 +1250,7 @@
 
       <!-- API Key input (only for apikey type, excluding Antigravity which has its own fields) -->
       <div v-if="form.type === 'apikey' && form.platform !== 'antigravity'" class="space-y-4">
-        <div>
+        <div v-if="!isCNPlatform || apiProtocol !== 'adaptive'">
           <label class="input-label">{{ t('admin.accounts.baseUrl') placeholderplaceholder</label>
           <input
             v-model="apiKeyBaseUrl"
@@ -1273,6 +1273,20 @@
             :current-url="apiKeyBaseUrl"
             @select="onCnPresetSelect"
           />
+        </div>
+        <div v-else>
+          <label class="input-label">{{ t('admin.accounts.cnProviders.apiProtocol.endpoints') placeholderplaceholder</label>
+          <div class="mt-2 space-y-3">
+            <div v-for="item in cnAdaptiveProtocolOptions" :key="item.value">
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">
+                {{ t(`admin.accounts.cnProviders.apiProtocol.${item.labelKeyplaceholder`) placeholderplaceholder
+              </label>
+              <input v-model="adaptiveBaseUrls[item.value]" type="text" class="input" />
+            </div>
+          </div>
+          <p v-if="form.platform !== 'deepseek'" class="input-hint">
+            {{ t('admin.accounts.cnProviders.apiProtocol.responsesFallbackDesc') placeholderplaceholder
+          </p>
         </div>
         <div>
           <label class="input-label">{{ t('admin.accounts.apiKeyRequired') placeholderplaceholder</label>
@@ -3746,11 +3760,13 @@ import {
   applyAntigravityProjectID,
   applyHeaderOverride,
   applyInterceptWarmup,
+  defaultCNAdaptiveBaseUrls,
   defaultCNBaseUrl,
   isHeaderOverrideCapable,
   validateHeaderOverrideRows,
   type CnAccountMode,
   type CnApiProtocol,
+  type CnNativeApiProtocol,
   type HeaderOverrideRow
 placeholder from '@/components/account/credentialsBuilder'
 import { formatDateTimeLocalInput, parseDateTimeLocalInput placeholder from '@/utils/format'
@@ -3932,7 +3948,12 @@ const upstreamBillingAutoProbeEnabled = ref(true)
 const accountMode = ref<CnAccountMode>('payg')
 // API 协议决定转发端点与格式：cc=现有转换链，anthropic=原生直通（Claude Code），
 // responses=deepseek 原生 Responses 端点（Codex）。与账号类型正交。
-const apiProtocol = ref<CnApiProtocol>('chat_completions')
+const apiProtocol = ref<CnApiProtocol>('adaptive')
+const adaptiveBaseUrls = ref<Record<CnNativeApiProtocol, string>>({
+  chat_completions: '',
+  anthropic: '',
+  responses: ''
+placeholder)
 const isCNPlatform = computed(
   () => form.platform === 'kimi' || form.platform === 'zhipu' || form.platform === 'deepseek'
 )
@@ -3947,6 +3968,7 @@ placeholder)
 // 当前平台可选的协议档（responses 仅 deepseek）。
 const cnProtocolOptions = computed<Array<{ value: CnApiProtocol; labelKey: string placeholder>>(() => {
   const opts: Array<{ value: CnApiProtocol; labelKey: string placeholder> = [
+    { value: 'adaptive', labelKey: 'adaptive' placeholder,
     { value: 'chat_completions', labelKey: 'chatCompletions' placeholder,
     { value: 'anthropic', labelKey: 'anthropic' placeholder
   ]
@@ -3955,6 +3977,18 @@ const cnProtocolOptions = computed<Array<{ value: CnApiProtocol; labelKey: strin
   placeholder
   return opts
 placeholder)
+const cnAdaptiveProtocolOptions = computed<Array<{ value: CnNativeApiProtocol; labelKey: string placeholder>>(() => {
+  const opts: Array<{ value: CnNativeApiProtocol; labelKey: string placeholder> = [
+    { value: 'chat_completions', labelKey: 'chatCompletions' placeholder,
+    { value: 'anthropic', labelKey: 'anthropic' placeholder
+  ]
+  if (form.platform === 'deepseek') opts.push({ value: 'responses', labelKey: 'responses' placeholder)
+  return opts
+placeholder)
+
+function resetAdaptiveBaseUrls(platform: 'kimi' | 'zhipu' | 'deepseek', mode: CnAccountMode) {
+  adaptiveBaseUrls.value = defaultCNAdaptiveBaseUrls(platform, mode)
+placeholder
 // 当前选中平台的品牌色（选中卡片描边 / 图标底色），与 platformColors 取色一致。
 const cnAccentActiveClass = computed(() => {
   switch (form.platform) {
@@ -3981,24 +4015,44 @@ const cnAccentIconClass = computed(() => {
   placeholder
 placeholder)
 // 切换国产供应商平台：强制 apikey 类型，deepseek 无 coding 套餐故锁定 payg，
-// 协议回落 chat_completions，并把 base url 重置为该平台默认端点。
+// 协议回落 adaptive，并把 base url 重置为该平台默认端点。
 function selectCNPlatform(platform: 'kimi' | 'zhipu' | 'deepseek') {
   form.platform = platform
   form.type = 'apikey'
   accountCategory.value = 'apikey'
-  apiProtocol.value = 'chat_completions'
+  apiProtocol.value = 'adaptive'
   if (platform === 'deepseek') {
     accountMode.value = 'payg'
   placeholder
   apiKeyBaseUrl.value = defaultCNBaseUrl(platform, accountMode.value, apiProtocol.value)
+  resetAdaptiveBaseUrls(platform, accountMode.value)
 placeholder
 // 账号类型 / 协议变更时同步默认 base url。
-watch(accountMode, (mode) => {
+watch(accountMode, (mode, previousMode) => {
   if (!isCNPlatform.value) return
+  if (apiProtocol.value === 'adaptive') {
+    const previousDefaults = defaultCNAdaptiveBaseUrls(cnPresetPlatform.value, previousMode)
+    const nextDefaults = defaultCNAdaptiveBaseUrls(cnPresetPlatform.value, mode)
+    for (const item of cnAdaptiveProtocolOptions.value) {
+      if (!adaptiveBaseUrls.value[item.value] || adaptiveBaseUrls.value[item.value] === previousDefaults[item.value]) {
+        adaptiveBaseUrls.value[item.value] = nextDefaults[item.value]
+      placeholder
+    placeholder
+    apiKeyBaseUrl.value = adaptiveBaseUrls.value.chat_completions
+    return
+  placeholder
   apiKeyBaseUrl.value = defaultCNBaseUrl(form.platform, mode, apiProtocol.value)
 placeholder)
 watch(apiProtocol, (protocol) => {
   if (!isCNPlatform.value) return
+  if (protocol === 'adaptive') {
+    const defaults = defaultCNAdaptiveBaseUrls(cnPresetPlatform.value, accountMode.value)
+    for (const item of cnAdaptiveProtocolOptions.value) {
+      if (!adaptiveBaseUrls.value[item.value]) adaptiveBaseUrls.value[item.value] = defaults[item.value]
+    placeholder
+    apiKeyBaseUrl.value = adaptiveBaseUrls.value.chat_completions
+    return
+  placeholder
   apiKeyBaseUrl.value = defaultCNBaseUrl(form.platform, accountMode.value, protocol)
 placeholder)
 // 点击预设端点：同时回填 base url、账号类型与协议。
@@ -4956,7 +5010,8 @@ const resetForm = () => {
   accountCategory.value = 'oauth-based'
   addMethod.value = 'oauth'
   accountMode.value = 'payg'
-  apiProtocol.value = 'chat_completions'
+  apiProtocol.value = 'adaptive'
+  adaptiveBaseUrls.value = { chat_completions: '', anthropic: '', responses: '' placeholder
   apiKeyBaseUrl.value = 'https://api.anthropic.com'
   apiKeyValue.value = ''
   upstreamBillingAutoProbeEnabled.value = true
@@ -5425,10 +5480,19 @@ const handleSubmit = async () => {
   if (form.platform === 'kimi' || form.platform === 'zhipu' || form.platform === 'deepseek') {
     credentials.account_mode = accountMode.value
     credentials.api_protocol = apiProtocol.value
+    if (apiProtocol.value === 'adaptive') {
+      const defaults = defaultCNAdaptiveBaseUrls(form.platform, accountMode.value)
+      const protocolBaseUrls: Record<string, string> = {placeholder
+      for (const item of cnAdaptiveProtocolOptions.value) {
+        protocolBaseUrls[item.value] = (adaptiveBaseUrls.value[item.value] || defaults[item.value]).trim()
+      placeholder
+      credentials.api_base_urls = protocolBaseUrls
+      credentials.base_url = protocolBaseUrls.chat_completions
+    placeholder
     const resolvedCNBase = (
       apiKeyBaseUrl.value.trim() || defaultCNBaseUrl(form.platform, accountMode.value, apiProtocol.value)
     ).trim()
-    if (resolvedCNBase) {
+    if (apiProtocol.value !== 'adaptive' && resolvedCNBase) {
       credentials.base_url = resolvedCNBase
     placeholder
   placeholder
