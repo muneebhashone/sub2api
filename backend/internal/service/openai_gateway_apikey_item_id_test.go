@@ -39,6 +39,10 @@ placeholderplaceholder
 			{"type":"function_call","id":"item_bad_call","call_id":"call_123","name":"exec_command","arguments":"{placeholder"placeholder,
 			{"type":"message","id":"msg_valid","role":"user","content":[{"type":"input_text","text":"continue"placeholder]placeholder,
 			{"type":"function_call","id":"fc_valid","call_id":"call_456","name":"apply_patch","arguments":"{placeholder"placeholder,
+			{"type":"custom_tool_call","id":"fc_wrong_custom","call_id":"call_custom_1","name":"apply_patch","input":"patch"placeholder,
+			{"type":"custom_tool_call","id":"ctc_valid","call_id":"call_custom_2","name":"apply_patch","input":"patch"placeholder,
+			{"type":"tool_search_call","id":"fc_wrong_search","call_id":"call_search_1","arguments":{"query":"docs"placeholderplaceholder,
+			{"type":"tool_search_call","id":"tsc_valid","call_id":"call_search_2","arguments":{"query":"docs"placeholderplaceholder,
 			{"type":"function_call_output","id":"item_output","call_id":"call_123","output":"done"placeholder,
 			{"type":"web_search_call","id":"item_unconstrained"placeholder
 		]
@@ -58,9 +62,54 @@ placeholder
 	require.Equal(t, "{placeholder", gjson.GetBytes(forwarded, "input.1.arguments").String())
 	require.Equal(t, "msg_valid", gjson.GetBytes(forwarded, "input.2.id").String())
 	require.Equal(t, "fc_valid", gjson.GetBytes(forwarded, "input.3.id").String())
-	require.Equal(t, "item_output", gjson.GetBytes(forwarded, "input.4.id").String())
-	require.Equal(t, "call_123", gjson.GetBytes(forwarded, "input.4.call_id").String())
-	require.Equal(t, "item_unconstrained", gjson.GetBytes(forwarded, "input.5.id").String())
+	require.False(t, gjson.GetBytes(forwarded, "input.4.id").Exists())
+	require.Equal(t, "ctc_valid", gjson.GetBytes(forwarded, "input.5.id").String())
+	require.False(t, gjson.GetBytes(forwarded, "input.6.id").Exists())
+	require.Equal(t, "tsc_valid", gjson.GetBytes(forwarded, "input.7.id").String())
+	require.Equal(t, "item_output", gjson.GetBytes(forwarded, "input.8.id").String())
+	require.Equal(t, "call_123", gjson.GetBytes(forwarded, "input.8.call_id").String())
+	require.Equal(t, "item_unconstrained", gjson.GetBytes(forwarded, "input.9.id").String())
+placeholder
+
+func TestOpenAIGatewayService_OAuthPassthrough_SanitizesNativeToolItemIDs(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	upstreamSSE := "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_test\",\"model\":\"gpt-5.6-sol\",\"output\":[],\"usage\":{\"input_tokens\":1,\"output_tokens\":1,\"total_tokens\":2placeholderplaceholderplaceholder\n\ndata: [DONE]\n\n"
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(upstreamSSE)),
+placeholderplaceholder
+	svc := newOpenAIImageGenerationControlTestService(upstream)
+	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.144.1")
+	account := newOpenAIImageGenerationControlTestAccount()
+	account.Type = AccountTypeOAuth
+	account.Credentials = map[string]any{
+		"access_token":       "oauth-token",
+		"chatgpt_account_id": "chatgpt-account",
+placeholder
+	account.Extra = map[string]any{"openai_passthrough": trueplaceholder
+
+	body := []byte(`{
+		"model":"gpt-5.6-sol",
+		"stream":true,
+		"instructions":"test",
+		"input":[
+			{"type":"custom_tool_call","id":"fc_wrong_custom","call_id":"call_custom_1","name":"apply_patch","input":"patch"placeholder,
+			{"type":"custom_tool_call","id":"ctc_valid","call_id":"call_custom_2","name":"apply_patch","input":"patch"placeholder,
+			{"type":"tool_search_call","id":"fc_wrong_search","call_id":"call_search_1","arguments":{"query":"docs"placeholderplaceholder,
+			{"type":"tool_search_call","id":"tsc_valid","call_id":"call_search_2","arguments":{"query":"docs"placeholderplaceholder
+		]
+placeholder`)
+
+	result, err := svc.Forward(context.Background(), c, account, body)
+placeholder
+	require.NotNil(t, result)
+	require.NotNil(t, upstream.lastReq)
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.0.id").Exists())
+	require.Equal(t, "ctc_valid", gjson.GetBytes(upstream.lastBody, "input.1.id").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.2.id").Exists())
+	require.Equal(t, "tsc_valid", gjson.GetBytes(upstream.lastBody, "input.3.id").String())
 placeholder
 
 // TestOpenAIGatewayService_APIKeyPassthrough_StripsInvalidReasoningItemIDs
@@ -119,7 +168,12 @@ placeholder{
 		{"message msg id", "message", "msg_abc", falseplaceholder,
 		{"message item id", "message", "item_x", trueplaceholder,
 		{"function_call fc id", "function_call", "fc_abc", falseplaceholder,
+		{"function_call ctc id", "function_call", "ctc_abc", trueplaceholder,
 		{"function_call item id", "function_call", "item_x", trueplaceholder,
+		{"custom tool ctc id", "custom_tool_call", "ctc_abc", falseplaceholder,
+		{"custom tool fc id", "custom_tool_call", "fc_abc", trueplaceholder,
+		{"tool search tsc id", "tool_search_call", "tsc_abc", falseplaceholder,
+		{"tool search fc id", "tool_search_call", "fc_abc", trueplaceholder,
 		{"unconstrained type", "web_search_call", "ws_001", falseplaceholder,
 placeholder
 	for _, tc := range cases {

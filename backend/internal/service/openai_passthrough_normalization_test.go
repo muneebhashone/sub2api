@@ -20,6 +20,194 @@ placeholder
 	require.False(t, gjson.GetBytes(normalized, "store").Bool())
 placeholder
 
+func TestNormalizeOpenAIPassthroughOAuthBody_NormalizesCompatibilityFields(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","prompt":"hello","commands":["unsupported"],"truncation":"auto","stop_sequences":["END"],"chat_template_kwargs":{"enable_thinking":trueplaceholderplaceholder`)
+
+	normalized, changed, err := normalizeOpenAIPassthroughOAuthBody(body, false)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "hello", gjson.GetBytes(normalized, "input.0.content").String())
+	for _, field := range []string{"prompt", "commands", "truncation", "stop_sequences", "chat_template_kwargs"placeholder {
+		require.False(t, gjson.GetBytes(normalized, field).Exists(), field)
+placeholder
+placeholder
+
+func TestNormalizeOpenAIPassthroughOAuthBody_NormalizesReasoningMode(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.6-sol","input":"hello","reasoning":{"mode":"pro"placeholderplaceholder`)
+
+	normalized, changed, err := normalizeOpenAIPassthroughOAuthBody(body, false)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "max", gjson.GetBytes(normalized, "reasoning.effort").String())
+	require.False(t, gjson.GetBytes(normalized, "reasoning.mode").Exists())
+placeholder
+
+func TestNormalizeOpenAIOAuthResponsesCompatibilityBody_PreservesExplicitInput(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","input":"explicit","prompt":"legacy"placeholder`)
+
+	normalized, changed, err := normalizeOpenAIOAuthResponsesCompatibilityBody(body)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "explicit", gjson.GetBytes(normalized, "input").String())
+	require.False(t, gjson.GetBytes(normalized, "prompt").Exists())
+placeholder
+
+func TestNormalizeOpenAIResponsesWebSocketCompatibilityBody_OnlyStripsOAuthFields(t *testing.T) {
+	body := []byte(`{"type":"response.create","prompt":"hello","commands":{placeholder,"truncation":"auto","stop_sequences":["END"],"chat_template_kwargs":{"enable_thinking":trueplaceholderplaceholder`)
+
+	oauthBody, changed, err := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "hello", gjson.GetBytes(oauthBody, "input").String())
+	for _, field := range []string{"prompt", "commands", "truncation", "stop_sequences", "chat_template_kwargs"placeholder {
+		require.False(t, gjson.GetBytes(oauthBody, field).Exists(), field)
+placeholder
+
+	apiKeyBody, changed, err := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder)
+placeholder
+	require.False(t, changed)
+	require.JSONEq(t, string(body), string(apiKeyBody))
+placeholder
+
+func TestNormalizeOpenAIResponsesWebSocketCompatibilityBody_SanitizesNativeItemIDs(t *testing.T) {
+	body := []byte(`{"type":"response.create","model":"gpt-5.6-sol","input":[` +
+		`{"type":"custom_tool_call","id":"fc_wrong_custom","call_id":"call_custom_1","name":"apply_patch","input":"patch"placeholder,` +
+		`{"type":"custom_tool_call","id":"ctc_valid","call_id":"call_custom_2","name":"apply_patch","input":"patch"placeholder,` +
+		`{"type":"tool_search_call","id":"fc_wrong_search","call_id":"call_search_1","arguments":{"query":"docs"placeholderplaceholder,` +
+		`{"type":"tool_search_call","id":"tsc_valid","call_id":"call_search_2","arguments":{"query":"docs"placeholderplaceholder]placeholder`)
+
+	for _, oauth := range []bool{false, trueplaceholder {
+		accountType := AccountTypeAPIKey
+		if oauth {
+			accountType = AccountTypeOAuth
+	placeholder
+		normalized, changed, err := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, &Account{Platform: PlatformOpenAI, Type: accountTypeplaceholder)
+	placeholder
+		require.True(t, changed)
+		require.Equal(t, "response.create", gjson.GetBytes(normalized, "type").String())
+		require.False(t, gjson.GetBytes(normalized, "input.0.id").Exists())
+		require.Equal(t, "ctc_valid", gjson.GetBytes(normalized, "input.1.id").String())
+		require.False(t, gjson.GetBytes(normalized, "input.2.id").Exists())
+		require.Equal(t, "tsc_valid", gjson.GetBytes(normalized, "input.3.id").String())
+		// Native Responses call_id values are correlation keys, not item IDs.
+		require.Equal(t, "call_custom_1", gjson.GetBytes(normalized, "input.0.call_id").String())
+		require.Equal(t, "call_search_1", gjson.GetBytes(normalized, "input.2.call_id").String())
+placeholder
+placeholder
+
+func TestNormalizeOpenAIResponsesReasoningMode(t *testing.T) {
+	tests := []struct {
+		name       string
+		body       string
+		wantEffort string
+placeholder{
+		{name: "pro maps to max", body: `{"reasoning":{"mode":"pro"placeholderplaceholder`, wantEffort: "max"placeholder,
+		{name: "explicit effort wins", body: `{"reasoning":{"mode":"pro","effort":"high"placeholderplaceholder`, wantEffort: "high"placeholder,
+		{name: "other mode only removed", body: `{"reasoning":{"mode":"standard"placeholderplaceholder`placeholder,
+placeholder
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			normalized, changed, err := normalizeOpenAIResponsesReasoningMode([]byte(tt.body))
+		placeholder
+			require.True(t, changed)
+			require.False(t, gjson.GetBytes(normalized, "reasoning.mode").Exists())
+			require.Equal(t, tt.wantEffort, gjson.GetBytes(normalized, "reasoning.effort").String())
+	placeholder)
+placeholder
+placeholder
+
+func TestNormalizeOpenAIResponsesWebSocketCompatibilityBody_ReasoningModeAccountScope(t *testing.T) {
+	body := []byte(`{"type":"response.create","reasoning":{"mode":"pro"placeholderplaceholder`)
+	for _, accountType := range []string{AccountTypeOAuth, AccountTypeSetupTokenplaceholder {
+		normalized, changed, err := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, &Account{Platform: PlatformOpenAI, Type: accountTypeplaceholder)
+	placeholder
+		require.True(t, changed)
+		require.Equal(t, "max", gjson.GetBytes(normalized, "reasoning.effort").String())
+		require.False(t, gjson.GetBytes(normalized, "reasoning.mode").Exists())
+placeholder
+	apiKeyBody, changed, err := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder)
+placeholder
+	require.False(t, changed)
+	require.JSONEq(t, string(body), string(apiKeyBody))
+placeholder
+
+func TestNormalizeOpenAIResponsesWebSocketCompatibilityBody_SanitizesToolSchemas(t *testing.T) {
+	body := []byte(`{"type":"response.create","tools":[{"type":"function","name":"search","parameters":{"type":null,"properties":{"q":{"type":"string","pattern":"^(?=.*foo).+$"placeholderplaceholderplaceholderplaceholder]placeholder`)
+	for _, accountType := range []string{AccountTypeAPIKey, AccountTypeOAuthplaceholder {
+		normalized, changed, err := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, &Account{Platform: PlatformOpenAI, Type: accountTypeplaceholder)
+	placeholder
+		require.True(t, changed)
+		require.Equal(t, "object", gjson.GetBytes(normalized, "tools.0.parameters.type").String())
+		require.False(t, gjson.GetBytes(normalized, "tools.0.parameters.properties.q.pattern").Exists())
+placeholder
+placeholder
+
+func TestNormalizeOpenAIResponseFormatSchemasBody_PreservesNonStrictOptionalFields(t *testing.T) {
+	body := []byte(`{"text":{"format":{"type":"json_schema","strict":false,"schema":{"properties":{"tags":{"items":{"type":"string"placeholder,"uniqueItems":trueplaceholderplaceholder,"minProperties":1,"maxProperties":4placeholderplaceholderplaceholderplaceholder`)
+
+	normalized, changed, err := normalizeOpenAIResponseFormatSchemasBody(body)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "object", gjson.GetBytes(normalized, "text.format.schema.type").String())
+	require.Equal(t, "array", gjson.GetBytes(normalized, "text.format.schema.properties.tags.type").String())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.minProperties").Exists())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.properties.tags.uniqueItems").Exists())
+	require.Equal(t, int64(4), gjson.GetBytes(normalized, "text.format.schema.maxProperties").Int())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.required").Exists())
+placeholder
+
+func TestNormalizeOpenAIResponseFormatSchemasBody_DoesNotExpandStrictSchema(t *testing.T) {
+	body := []byte(`{"response_format":{"type":"json_schema","json_schema":{"strict":true,"schema":{"properties":{"name":{"type":"string"placeholderplaceholderplaceholderplaceholderplaceholderplaceholder`)
+
+	normalized, changed, err := normalizeOpenAIResponseFormatSchemasBody(body)
+placeholder
+	require.True(t, changed) // Safe type inference still applies.
+	require.Equal(t, "object", gjson.GetBytes(normalized, "response_format.json_schema.schema.type").String())
+	require.False(t, gjson.GetBytes(normalized, "response_format.json_schema.schema.required").Exists())
+	require.False(t, gjson.GetBytes(normalized, "response_format.json_schema.schema.additionalProperties").Exists())
+placeholder
+
+func TestNormalizeOpenAIResponseFormatSchemasBody_TraversesNestedSchemaContainers(t *testing.T) {
+	body := []byte(`{
+		"text":{"format":{"type":"json_schema","schema":{
+			"$defs":{"entry":{"properties":{"name":{"type":"string"placeholderplaceholder,"minProperties":1,"maxProperties":3placeholderplaceholder,
+			"additionalProperties":{"items":{"type":"string"placeholder,"uniqueItems":trueplaceholder,
+			"prefixItems":[{"properties":{"id":{"type":"string"placeholderplaceholder,"minProperties":1placeholder],
+			"dependentSchemas":{"kind":{"properties":{"value":{"type":"string"placeholderplaceholder,"uniqueItems":trueplaceholderplaceholder,
+			"not":{"items":{"type":"string"placeholder,"minProperties":1placeholder
+	placeholderplaceholderplaceholder
+placeholder`)
+
+	normalized, changed, err := normalizeOpenAIResponseFormatSchemasBody(body)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "object", gjson.GetBytes(normalized, "text.format.schema.$defs.entry.type").String())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.$defs.entry.minProperties").Exists())
+	require.Equal(t, int64(3), gjson.GetBytes(normalized, "text.format.schema.$defs.entry.maxProperties").Int())
+	require.Equal(t, "array", gjson.GetBytes(normalized, "text.format.schema.additionalProperties.type").String())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.additionalProperties.uniqueItems").Exists())
+	require.Equal(t, "object", gjson.GetBytes(normalized, "text.format.schema.prefixItems.0.type").String())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.prefixItems.0.minProperties").Exists())
+	require.Equal(t, "object", gjson.GetBytes(normalized, "text.format.schema.dependentSchemas.kind.type").String())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.dependentSchemas.kind.uniqueItems").Exists())
+	require.Equal(t, "array", gjson.GetBytes(normalized, "text.format.schema.not.type").String())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.not.minProperties").Exists())
+	require.False(t, gjson.GetBytes(normalized, "text.format.schema.required").Exists())
+placeholder
+
+func TestNormalizeOpenAIResponseFormatSchemasBody_PreservesExistingTypeValues(t *testing.T) {
+	body := []byte(`{"text":{"format":{"type":"json_schema","schema":{"properties":{"union":{"type":["object","null"],"properties":{"name":{"type":"string"placeholderplaceholderplaceholder,"custom":{"type":{"vendor":"shape"placeholder,"properties":{"id":{"type":"string"placeholderplaceholderplaceholder,"inferred":{"type":null,"items":{"type":"string"placeholderplaceholderplaceholderplaceholderplaceholderplaceholderplaceholder`)
+
+	normalized, changed, err := normalizeOpenAIResponseFormatSchemasBody(body)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "object", gjson.GetBytes(normalized, "text.format.schema.type").String())
+	require.Equal(t, "object", gjson.GetBytes(normalized, "text.format.schema.properties.union.type.0").String())
+	require.Equal(t, "null", gjson.GetBytes(normalized, "text.format.schema.properties.union.type.1").String())
+	require.True(t, gjson.GetBytes(normalized, "text.format.schema.properties.custom.type").IsObject())
+	require.Equal(t, "array", gjson.GetBytes(normalized, "text.format.schema.properties.inferred.type").String())
+placeholder
+
 func TestNormalizeOpenAIPassthroughOAuthBody_CompactRemovesUnsupportedUser(t *testing.T) {
 	body := []byte(`{"model":"gpt-5.4","input":"hello","user":"user_123","metadata":{"user_id":"user_123"placeholder,"stream":true,"store":trueplaceholder`)
 

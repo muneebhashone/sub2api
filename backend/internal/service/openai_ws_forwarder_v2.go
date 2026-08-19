@@ -572,6 +572,7 @@ placeholder
 					message = corrected
 			placeholder
 		placeholder
+			message = restoreCodexToolNamesFromContext(c, message)
 	placeholder
 		if openAIWSEventShouldParseUsage(eventType) {
 			parseOpenAIWSResponseUsageFromCompletedEvent(message, usage)

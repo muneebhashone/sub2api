@@ -2,10 +2,102 @@ package service
 
 import (
 	"bytes"
+	"encoding/json"
 	"sort"
+	"strings"
 
 	"github.com/tidwall/gjson"
 )
+
+func sanitizeOpenAIResponsesToolSchemaPatterns(body []byte) ([]byte, bool, error) {
+	if len(body) == 0 || !bytes.Contains(body, []byte(`"pattern"`)) {
+		return body, false, nil
+placeholder
+	var root any
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.UseNumber()
+	if err := decoder.Decode(&root); err != nil {
+		return nil, false, err
+placeholder
+	changed := false
+	var visitSchema func(any)
+	visitSchema = func(value any) {
+		node, ok := value.(map[string]any)
+		if !ok {
+			return
+	placeholder
+		if pattern, ok := node["pattern"].(string); ok && hasRegexLookaround(pattern) {
+			delete(node, "pattern")
+			changed = true
+	placeholder
+		for _, key := range []string{
+			"additionalProperties", "additionalItems", "contains", "not", "if", "then", "else",
+			"propertyNames", "unevaluatedProperties", "unevaluatedItems",
+	placeholder {
+			visitSchema(node[key])
+	placeholder
+		if items, ok := node["items"].(map[string]any); ok {
+			visitSchema(items)
+	placeholder else if items, ok := node["items"].([]any); ok {
+			for _, child := range items {
+				visitSchema(child)
+		placeholder
+	placeholder
+		for _, key := range []string{"anyOf", "oneOf", "allOf", "prefixItems"placeholder {
+			children, _ := node[key].([]any)
+			for _, child := range children {
+				visitSchema(child)
+		placeholder
+	placeholder
+		for _, key := range []string{"properties", "patternProperties", "$defs", "definitions", "dependentSchemas"placeholder {
+			children, _ := node[key].(map[string]any)
+			for _, child := range children {
+				visitSchema(child)
+		placeholder
+	placeholder
+		if dependencies, ok := node["dependencies"].(map[string]any); ok {
+			for _, child := range dependencies {
+				visitSchema(child)
+		placeholder
+	placeholder
+placeholder
+	var visitTools func(any)
+	visitTools = func(value any) {
+		switch node := value.(type) {
+		case map[string]any:
+			if parameters, ok := node["parameters"]; ok {
+				visitSchema(parameters)
+		placeholder
+			if function, ok := node["function"]; ok {
+				visitTools(function)
+		placeholder
+			if tools, ok := node["tools"]; ok {
+				visitTools(tools)
+		placeholder
+		case []any:
+			for _, child := range node {
+				visitTools(child)
+		placeholder
+	placeholder
+placeholder
+	if document, ok := root.(map[string]any); ok {
+		visitTools(document["tools"])
+		visitTools(document["input"])
+placeholder
+	if !changed {
+		return body, false, nil
+placeholder
+	sanitized, err := json.Marshal(root)
+	if err != nil {
+		return nil, false, err
+placeholder
+	return sanitized, true, nil
+placeholder
+
+func hasRegexLookaround(pattern string) bool {
+	return strings.Contains(pattern, "(?=") || strings.Contains(pattern, "(?!") ||
+		strings.Contains(pattern, "(?<=") || strings.Contains(pattern, "(?<!")
+placeholder
 
 const (
 	// 工具定义在多轮历史里最多再嵌套一层 tools，留出余量后截断，避免畸形请求体
