@@ -66,6 +66,166 @@ placeholder
 	require.Equal(t, "team__send", namespaceCall["name"])
 placeholder
 
+func TestAdaptResponsesClientTools_LowersDiscoveredToolSearchOutput(t *testing.T) {
+	requestJSON := `{
+		"tools":[{"type":"tool_search"placeholder],
+		"input":[
+			{"type":"tool_search_call","id":"tsc_client","call_id":"call_search","arguments":{"query":"codex app"placeholder,"execution":"client","status":"completed"placeholder,
+			{"type":"tool_search_output","id":"tso_client","call_id":"call_search","execution":"client","status":"completed","tools":[
+				{"type":"namespace","name":"codex_app","tools":[{"type":"function","name":"load_workspace_dependencies","description":"Load workspace dependencies","parameters":{"type":"object","properties":{placeholder,"additionalProperties":falseplaceholderplaceholder]placeholder,
+				{"type":"namespace","name":"multi_agent_v1","tools":[{"type":"function","name":"spawn_agent","description":"Spawn an agent","parameters":{"type":"object","properties":{"message":{"type":"string"placeholderplaceholder,"required":["message"],"additionalProperties":falseplaceholderplaceholder]placeholder
+			]placeholder
+		]
+placeholder`
+
+	adapt := func() map[string]any {
+		var req map[string]any
+		require.NoError(t, json.Unmarshal([]byte(requestJSON), &req))
+		_, changed, err := AdaptResponsesClientTools(req)
+	placeholder
+		require.True(t, changed)
+		return req
+placeholder
+
+	first := adapt()
+	second := adapt()
+	firstInput := requireResponsesClientToolValue[[]any](t, first["input"])
+	secondInput := requireResponsesClientToolValue[[]any](t, second["input"])
+
+	call := requireResponsesClientToolValue[map[string]any](t, firstInput[0])
+	require.Equal(t, "function_call", call["type"])
+	require.Equal(t, toolSearchProxyName, call["name"])
+	require.JSONEq(t, `{"query":"codex app"placeholder`, requireResponsesClientToolValue[string](t, call["arguments"]))
+	require.NotContains(t, call, "execution")
+
+	output := requireResponsesClientToolValue[map[string]any](t, firstInput[1])
+	require.Equal(t, map[string]any{
+		"type":    "function_call_output",
+		"call_id": "call_search",
+		"output":  output["output"],
+placeholder, output)
+	outputText := requireResponsesClientToolValue[string](t, output["output"])
+	require.JSONEq(t, `[
+		{"type":"namespace","name":"codex_app","tools":[{"type":"function","name":"load_workspace_dependencies","description":"Load workspace dependencies","parameters":{"type":"object","properties":{placeholder,"additionalProperties":falseplaceholderplaceholder]placeholder,
+		{"type":"namespace","name":"multi_agent_v1","tools":[{"type":"function","name":"spawn_agent","description":"Spawn an agent","parameters":{"type":"object","properties":{"message":{"type":"string"placeholderplaceholder,"required":["message"],"additionalProperties":falseplaceholderplaceholder]placeholder
+	]`, outputText)
+	secondOutput := requireResponsesClientToolValue[map[string]any](t, secondInput[1])
+	require.Equal(t, outputText, secondOutput["output"], "tool discovery output encoding must be deterministic")
+placeholder
+
+func TestAdaptResponsesClientTools_ToolSearchOutputEdgeCases(t *testing.T) {
+	unencodableOutput := make(chan struct{placeholder)
+	tests := []struct {
+		name             string
+		item             map[string]any
+		wantOutput       any
+		wantOutputExists bool
+		wantPrivateKeys  []string
+		wantExactOutput  bool
+placeholder{
+		{
+			name:             "absent tools and output remains visibly malformed",
+			item:             map[string]any{"type": "tool_search_output", "call_id": "call_empty", "status": "completed"placeholder,
+			wantOutputExists: false,
+			wantPrivateKeys:  []string{"status"placeholder,
+	placeholder,
+		{
+			name: "preexisting string output wins",
+			item: map[string]any{
+				"type": "tool_search_output", "call_id": "call_legacy", "output": "legacy",
+				"tools": []any{map[string]any{"type": "function", "name": "ignored"placeholderplaceholder, "execution": "client",
+		placeholder,
+			wantOutput:       "legacy",
+			wantOutputExists: true,
+			wantExactOutput:  true,
+	placeholder,
+		{
+			name: "preexisting object output remains legacy representation",
+			item: map[string]any{
+				"type": "tool_search_output", "call_id": "call_object", "output": map[string]any{"groups": []any{"github"placeholderplaceholder,
+				"tools": []any{map[string]any{"type": "function", "name": "ignored"placeholderplaceholder,
+		placeholder,
+			wantOutput:       `{"groups":["github"]placeholder`,
+			wantOutputExists: true,
+			wantExactOutput:  true,
+	placeholder,
+		{
+			name: "unencodable preexisting output remains visibly malformed",
+			item: map[string]any{
+				"type": "tool_search_output", "call_id": "call_bad_output", "output": unencodableOutput,
+				"tools": []any{map[string]any{"type": "function", "name": "retained"placeholderplaceholder, "status": "completed", "execution": "client",
+		placeholder,
+			wantOutput:       unencodableOutput,
+			wantOutputExists: true,
+			wantPrivateKeys:  []string{"tools", "status", "execution"placeholder,
+	placeholder,
+		{
+			name: "empty tools array is a valid empty output",
+			item: map[string]any{
+				"type": "tool_search_output", "call_id": "call_empty_tools",
+				"tools": []any{placeholder, "status": "completed", "execution": "client",
+		placeholder,
+			wantOutput:       `[]`,
+			wantOutputExists: true,
+			wantExactOutput:  true,
+	placeholder,
+		{
+			name: "non-array tools value is serialized directly",
+			item: map[string]any{
+				"type": "tool_search_output", "call_id": "call_malformed",
+				"tools": map[string]any{"unexpected": trueplaceholder, "status": "completed", "execution": "client",
+		placeholder,
+			wantOutput:       `{"unexpected":trueplaceholder`,
+			wantOutputExists: true,
+			wantExactOutput:  true,
+	placeholder,
+		{
+			name: "unencodable tools remains visibly malformed",
+			item: map[string]any{
+				"type": "tool_search_output", "call_id": "call_unencodable", "tools": make(chan struct{placeholder), "status": "completed",
+		placeholder,
+			wantOutputExists: false,
+			wantPrivateKeys:  []string{"tools", "status"placeholder,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := map[string]any{
+				"tools": []any{map[string]any{"type": "tool_search"placeholderplaceholder,
+				"input": []any{tt.itemplaceholder,
+		placeholder
+			_, changed, err := AdaptResponsesClientTools(req)
+		placeholder
+			require.True(t, changed)
+			input := requireResponsesClientToolValue[[]any](t, req["input"])
+			output := requireResponsesClientToolValue[map[string]any](t, input[0])
+			require.Equal(t, "function_call_output", output["type"])
+			actualOutput, outputExists := output["output"]
+			require.Equal(t, tt.wantOutputExists, outputExists)
+			if tt.wantOutputExists {
+				require.Equal(t, tt.wantOutput, actualOutput)
+		placeholder
+			if tt.wantExactOutput {
+				require.Equal(t, map[string]any{
+					"type":    "function_call_output",
+					"call_id": output["call_id"],
+					"output":  tt.wantOutput,
+			placeholder, output)
+		placeholder
+			if len(tt.wantPrivateKeys) > 0 {
+				for _, key := range tt.wantPrivateKeys {
+					require.Contains(t, output, key)
+			placeholder
+		placeholder else {
+				require.NotContains(t, output, "tools")
+				require.NotContains(t, output, "status")
+				require.NotContains(t, output, "execution")
+		placeholder
+	placeholder)
+placeholder
+placeholder
+
 func requireResponsesClientToolValue[T any](t *testing.T, value any) T {
 placeholder
 	typed, ok := value.(T)
