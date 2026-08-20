@@ -133,7 +133,7 @@ placeholder
 	if err != nil {
 		return false, err
 placeholder
-	defer upstream.Close()
+	defer func() { _ = upstream.Close() placeholder()
 	return s.ProxyGrokRealtimeConn(ctx, c, client, upstream)
 placeholder
 

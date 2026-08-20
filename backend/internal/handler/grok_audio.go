@@ -121,7 +121,7 @@ placeholder
 		return
 placeholder
 	defer release()
-	defer upstream.Close()
+	defer func() { _ = upstream.Close() placeholder()
 
 	conn, err := coderws.Accept(c.Writer, c.Request, &coderws.AcceptOptions{CompressionMode: coderws.CompressionContextTakeoverplaceholder)
 	if err != nil {
