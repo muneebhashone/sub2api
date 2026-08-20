@@ -658,7 +658,6 @@ placeholder
 placeholder
 	upstreamCtx, releaseUpstreamCtx := detachUpstreamContext(ctx)
 	defer releaseUpstreamCtx()
-	upstreamCtx = WithHTTPUpstreamProfile(upstreamCtx, HTTPUpstreamProfileGrok)
 	upstreamReq, err := http.NewRequestWithContext(upstreamCtx, endpoint.httpMethod(), targetURL, bodyReader)
 	if err != nil {
 		return nil, err
@@ -1295,6 +1294,7 @@ placeholder)
 			ResponseBody:             body,
 			ResponseHeaders:          resp.Header.Clone(),
 			RetryableOnSameAccount:   retryable,
+			RequestScopedTransient:   retryable && resp.StatusCode == http.StatusTooManyRequests,
 			SameAccountRetryDelay:    retryDelay,
 			SameAccountRetryDeadline: retryDeadline,
 	placeholder
