@@ -340,6 +340,38 @@ placeholder
 	require.Equal(t, snapshot.Status, persisted.Status)
 placeholder
 
+func TestUpstreamBillingProbeAdaptiveCNUsesChatProtocolBaseURL(t *testing.T) {
+	account := &Account{
+		ID:          18,
+		Platform:    PlatformKimi,
+		Type:        AccountTypeAPIKey,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"api_key":      "sk-sensitive",
+			"api_protocol": APIProtocolAdaptive,
+			"base_url":     "https://legacy-relay.example/v1",
+			"api_base_urls": map[string]any{
+				APIProtocolChatCompletions: "https://chat-relay.example/v1",
+		placeholder,
+	placeholder,
+		Extra: map[string]any{UpstreamBillingProbeEnabledExtraKey: trueplaceholder,
+placeholder
+	repo := &upstreamBillingProbeAccountRepo{accounts: map[int64]*Account{account.ID: accountplaceholderplaceholder
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       upstreamBillingProbeValidBody(),
+placeholderplaceholder
+	svc := newUpstreamBillingProbeTestService(repo, upstream, &upstreamBillingProbeSettingRepo{placeholder)
+
+	snapshot, err := svc.ProbeAccount(context.Background(), account.ID)
+
+placeholder
+	require.Equal(t, UpstreamBillingProbeStatusOK, snapshot.Status)
+	require.Equal(t, "https://chat-relay.example/v1/sub2api/billing", upstream.lastReq.URL.String())
+placeholder
+
 func TestUpstreamBillingProbeSyncsResolvedRateForAllAPIKeyPlatforms(t *testing.T) {
 	for _, platform := range []string{
 		PlatformOpenAI,

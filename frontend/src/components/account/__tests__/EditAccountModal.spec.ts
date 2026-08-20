@@ -374,6 +374,147 @@ describe('EditAccountModal', () => {
     placeholder)
   placeholder)
 
+  it.each([
+    ['explicit Chat Completions', 'chat_completions'],
+    ['legacy missing protocol', undefined]
+  ])('preserves a custom CN relay for %s accounts', async (_name, storedProtocol) => {
+    const account = buildAccount()
+    account.platform = 'zhipu'
+    account.credentials = {
+      api_key: 'sk-glm',
+      account_mode: 'payg',
+      base_url: 'https://relay.example.com/v1'
+    placeholder
+    if (storedProtocol) {
+      account.credentials.api_protocol = storedProtocol
+    placeholder
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false placeholder)
+
+    const wrapper = mountModal(account)
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    const submittedCredentials = updateAccountMock.mock.calls[0]?.[1]?.credentials
+    expect(submittedCredentials).toMatchObject({
+      account_mode: 'payg',
+      api_protocol: 'chat_completions',
+      base_url: 'https://relay.example.com/v1'
+    placeholder)
+    expect(submittedCredentials).not.toHaveProperty('api_base_urls')
+  placeholder)
+
+  it('uses the legacy base_url when adaptive endpoints are missing', async () => {
+    const account = buildAccount()
+    account.platform = 'zhipu'
+    account.credentials = {
+      api_key: 'sk-glm',
+      account_mode: 'payg',
+      api_protocol: 'adaptive',
+      base_url: 'https://relay.example.com/v1',
+      api_base_urls: {
+        chat_completions: '   '
+      placeholder
+    placeholder
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false placeholder)
+
+    const wrapper = mountModal(account)
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).toMatchObject({
+      api_protocol: 'adaptive',
+      base_url: 'https://relay.example.com/v1',
+      api_base_urls: {
+        chat_completions: 'https://relay.example.com/v1',
+        anthropic: 'https://open.bigmodel.cn/api/anthropic'
+      placeholder
+    placeholder)
+  placeholder)
+
+  it('carries a fixed Chat relay into Adaptive when the user switches protocols', async () => {
+    const account = buildAccount()
+    account.platform = 'zhipu'
+    account.credentials = {
+      api_key: 'sk-glm',
+      account_mode: 'payg',
+      api_protocol: 'chat_completions',
+      base_url: 'https://relay.example.com/v1'
+    placeholder
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false placeholder)
+
+    const wrapper = mountModal(account)
+    const adaptiveButton = wrapper
+      .findAll('button')
+      .find(button => button.text().includes('admin.accounts.cnProviders.apiProtocol.adaptive'))
+    expect(adaptiveButton).toBeDefined()
+    await adaptiveButton!.trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).toMatchObject({
+      api_protocol: 'adaptive',
+      base_url: 'https://relay.example.com/v1',
+      api_base_urls: {
+        chat_completions: 'https://relay.example.com/v1'
+      placeholder
+    placeholder)
+  placeholder)
+
+  it.each([
+    {
+      name: 'Anthropic',
+      platform: 'zhipu',
+      protocol: 'anthropic',
+      baseUrl: 'https://relay.example.com/anthropic',
+      expectedBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+      expectedProtocolUrls: {
+        chat_completions: 'https://open.bigmodel.cn/api/paas/v4',
+        anthropic: 'https://relay.example.com/anthropic'
+      placeholder
+    placeholder,
+    {
+      name: 'Responses',
+      platform: 'deepseek',
+      protocol: 'responses',
+      baseUrl: 'https://relay.example.com/responses',
+      expectedBaseUrl: 'https://api.deepseek.com',
+      expectedProtocolUrls: {
+        chat_completions: 'https://api.deepseek.com',
+        anthropic: 'https://api.deepseek.com/anthropic',
+        responses: 'https://relay.example.com/responses'
+      placeholder
+    placeholder
+  ])('keeps a fixed $name relay in its protocol slot when switching to Adaptive', async (testCase) => {
+    const account = buildAccount()
+    account.platform = testCase.platform
+    account.credentials = {
+      api_key: 'sk-cn',
+      account_mode: 'payg',
+      api_protocol: testCase.protocol,
+      base_url: testCase.baseUrl
+    placeholder
+    updateAccountMock.mockReset().mockResolvedValue(account)
+    checkMixedChannelRiskMock.mockReset().mockResolvedValue({ has_risk: false placeholder)
+
+    const wrapper = mountModal(account)
+    const adaptiveButton = wrapper
+      .findAll('button')
+      .find(button => button.text().includes('admin.accounts.cnProviders.apiProtocol.adaptive'))
+    expect(adaptiveButton).toBeDefined()
+    await adaptiveButton!.trigger('click')
+    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
+
+    expect(updateAccountMock).toHaveBeenCalledTimes(1)
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials).toMatchObject({
+      api_protocol: 'adaptive',
+      base_url: testCase.expectedBaseUrl,
+      api_base_urls: testCase.expectedProtocolUrls
+    placeholder)
+  placeholder)
+
   it('preserves model mappings when editing the whitelist', async () => {
     const account = buildAccount()
     account.credentials.model_mapping = {
