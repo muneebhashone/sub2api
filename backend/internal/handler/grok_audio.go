@@ -77,6 +77,20 @@ placeholder
 		h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Grok credential unavailable")
 		return
 placeholder
+	model := c.Query("model")
+	if strings.TrimSpace(model) == "" {
+		model = "grok-voice-latest"
+placeholder
+	// Complete the upstream handshake before sending HTTP 101. This keeps
+	// pre-accept failures representable as normal JSON errors to the client.
+	probeCtx, cancelProbe := context.WithTimeout(c.Request.Context(), 15*time.Second)
+	probeErr := h.gatewayService.ProbeGrokRealtime(probeCtx, selection.Account, token, model)
+	cancelProbe()
+	if probeErr != nil {
+		reqLog.Warn("grok_realtime.pre_accept_failed", zap.Error(probeErr))
+		h.errorResponse(c, http.StatusBadGateway, "upstream_error", "Grok realtime upstream unavailable")
+		return
+placeholder
 
 	conn, err := coderws.Accept(c.Writer, c.Request, &coderws.AcceptOptions{CompressionMode: coderws.CompressionContextTakeoverplaceholder)
 	if err != nil {
@@ -84,10 +98,6 @@ placeholder
 placeholder
 	defer func() { _ = conn.CloseNow() placeholder()
 
-	model := c.Query("model")
-	if strings.TrimSpace(model) == "" {
-		model = "grok-voice-latest"
-placeholder
 	started := time.Now()
 	audioObserved, proxyErr := h.gatewayService.ProxyGrokRealtime(c.Request.Context(), c, conn, selection.Account, token, model)
 	elapsed := time.Since(started)
