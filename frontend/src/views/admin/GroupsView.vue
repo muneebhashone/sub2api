@@ -4422,6 +4422,10 @@ import type {
   GroupPlatform,
   SubscriptionType,
 placeholder from "@/types";
+import {
+  CONCRETE_PLATFORM_OPTIONS,
+  GROUP_PLATFORM_OPTIONS,
+placeholder from "@/constants/platforms";
 import type { Column placeholder from "@/components/common/types";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import TablePageLayout from "@/components/layout/TablePageLayout.vue";
@@ -4740,40 +4744,15 @@ const exclusiveOptions = computed(() => [
   { value: "false", label: t("admin.groups.nonExclusive") placeholder,
 ]);
 
-const platformOptions = computed(() => [
-  { value: "anthropic", label: "Anthropic" placeholder,
-  { value: "openai", label: "OpenAI" placeholder,
-  { value: "gemini", label: "Gemini" placeholder,
-  { value: "antigravity", label: "Antigravity" placeholder,
-  { value: "grok", label: "Grok" placeholder,
-  { value: "kimi", label: "Kimi" placeholder,
-  { value: "zhipu", label: "Zhipu GLM" placeholder,
-  { value: "deepseek", label: "DeepSeek" placeholder,
-  { value: "composite", label: "Composite" placeholder,
-]);
+const platformOptions = computed(() => [...GROUP_PLATFORM_OPTIONS]);
 
 const platformFilterOptions = computed(() => [
   { value: "", label: t("admin.groups.allPlatforms") placeholder,
-  { value: "anthropic", label: "Anthropic" placeholder,
-  { value: "openai", label: "OpenAI" placeholder,
-  { value: "gemini", label: "Gemini" placeholder,
-  { value: "antigravity", label: "Antigravity" placeholder,
-  { value: "grok", label: "Grok" placeholder,
-  { value: "kimi", label: "Kimi" placeholder,
-  { value: "zhipu", label: "Zhipu GLM" placeholder,
-  { value: "deepseek", label: "DeepSeek" placeholder,
-  { value: "composite", label: "Composite" placeholder,
+  ...GROUP_PLATFORM_OPTIONS,
 ]);
 
 const compositeRoutePlatformOptions = computed(() => [
-  { value: "anthropic", label: "Anthropic" placeholder,
-  { value: "openai", label: "OpenAI" placeholder,
-  { value: "gemini", label: "Gemini" placeholder,
-  { value: "antigravity", label: "Antigravity" placeholder,
-  { value: "grok", label: "Grok" placeholder,
-  { value: "kimi", label: "Kimi" placeholder,
-  { value: "zhipu", label: "Zhipu GLM" placeholder,
-  { value: "deepseek", label: "DeepSeek" placeholder,
+  ...CONCRETE_PLATFORM_OPTIONS,
 ]);
 
 const compositeRouteEndpointOptions = computed(() => [
