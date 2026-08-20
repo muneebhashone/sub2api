@@ -1289,10 +1289,6 @@ placeholder
 export interface RateLimit429CooldownSettings {
   enabled: boolean;
   cooldown_seconds: number;
-  strategy: "cooldown" | "same_account_retry";
-  retry_interval_ms: number;
-  retry_max_duration_seconds: number;
-  max_account_switches: number;
 placeholder
 
 export async function getRateLimit429CooldownSettings(): Promise<RateLimit429CooldownSettings> {
