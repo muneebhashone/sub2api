@@ -110,17 +110,19 @@ placeholder
 
 func TestGrokSameAccountRetryMetadata_CapacityDeadline(t *testing.T) {
 	account := &Account{ID: 9107, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
-	retryable, delay, deadline := grokSameAccountRetryMetadata(account, http.StatusTooManyRequests,
+	retryable, delay, deadline, retryMax := grokSameAccountRetryMetadata(account, http.StatusTooManyRequests,
 		[]byte(`{"error":{"message":"model capacity exceeded"placeholderplaceholder`))
 	require.True(t, retryable)
 	require.Equal(t, 500*time.Millisecond, delay)
 	require.WithinDuration(t, time.Now().Add(30*time.Second), deadline, 2*time.Second)
+	require.Equal(t, 1, retryMax)
 
-	retryable, delay, deadline = grokSameAccountRetryMetadata(account, http.StatusTooManyRequests,
+	retryable, delay, deadline, retryMax = grokSameAccountRetryMetadata(account, http.StatusTooManyRequests,
 		[]byte(`{"error":{"message":"rate limit exceeded"placeholderplaceholder`))
 	require.False(t, retryable)
 	require.Zero(t, delay)
 	require.True(t, deadline.IsZero())
+	require.Zero(t, retryMax)
 placeholder
 
 func TestClassifyGrokUpstreamFailure_ValidationNoCool(t *testing.T) {
@@ -148,6 +150,15 @@ placeholder
 		require.True(t, d.ShouldFailover, body)
 		require.False(t, d.ShouldCooldown, body)
 		require.Zero(t, d.Cooldown, body)
+placeholder
+placeholder
+
+func TestClassifyGrokUpstreamFailure_CompatibilityRequiresClientError(t *testing.T) {
+	body := []byte(`{"error":{"message":"upstream failed while handling the compaction blob"placeholderplaceholder`)
+	for _, status := range []int{http.StatusBadGateway, http.StatusInternalServerErrorplaceholder {
+		d := classifyGrokUpstreamFailure(status, body, "grok-4.6")
+		require.NotEqual(t, GrokFailureCompatibility, d.Class)
+		require.True(t, d.ShouldCooldown)
 placeholder
 placeholder
 
