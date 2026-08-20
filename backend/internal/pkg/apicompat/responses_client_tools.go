@@ -212,7 +212,7 @@ func rewriteClientToolHistory(value any, adapter *ResponsesClientToolMapping) bo
 				if adapter.ToolSearch {
 					typed["type"] = "function_call_output"
 					dropInvalidLoweredFunctionItemID(typed)
-					normalizeClientToolOutput(typed)
+					normalizeToolSearchOutput(typed)
 					changed = true
 			placeholder
 		placeholder
@@ -254,6 +254,46 @@ placeholder
 		return
 placeholder
 	item["output"] = string(encoded)
+placeholder
+
+// normalizeToolSearchOutput converts both tool_search output wire shapes into
+// the string output required by function_call_output. Older clients send an
+// output field directly; newer Codex clients return discovered definitions in
+// a top-level tools field. Codex treats that field's value as the tool output,
+// so serialize the value directly rather than wrapping it in another object.
+func normalizeToolSearchOutput(item map[string]any) {
+	if output, hasOutput := item["output"]; hasOutput {
+		switch typed := output.(type) {
+		case string:
+			item["output"] = typed
+		case nil:
+			item["output"] = ""
+		default:
+			encoded, err := json.Marshal(typed)
+			if err != nil {
+				return
+		placeholder
+			item["output"] = string(encoded)
+	placeholder
+		dropToolSearchOutputPrivateFields(item)
+		return
+placeholder
+	tools, hasTools := item["tools"]
+	if !hasTools {
+		return
+placeholder
+	encoded, err := json.Marshal(tools)
+	if err != nil {
+		return
+placeholder
+	item["output"] = string(encoded)
+	dropToolSearchOutputPrivateFields(item)
+placeholder
+
+func dropToolSearchOutputPrivateFields(item map[string]any) {
+	delete(item, "tools")
+	delete(item, "status")
+	delete(item, "execution")
 placeholder
 
 func rewriteClientToolChoice(req map[string]any, adapter *ResponsesClientToolMapping) bool {
