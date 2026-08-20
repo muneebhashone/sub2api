@@ -31,10 +31,11 @@
       </div>
       <div>
         <label class="input-label">{{ t('admin.users.form.roleLabel') placeholderplaceholder</label>
-        <select v-model="form.role" class="input">
-          <option value="user">{{ t('admin.users.roles.user') placeholderplaceholder</option>
-          <option value="admin">{{ t('admin.users.roles.admin') placeholderplaceholder</option>
-        </select>
+        <Select
+          v-model="form.role"
+          :options="roleOptions"
+          :searchable="false"
+        />
       </div>
       <div>
         <label class="input-label">{{ t('admin.users.notes') placeholderplaceholder</label>
@@ -73,13 +74,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch placeholder from 'vue'
+import { computed, ref, reactive, watch placeholder from 'vue'
 import { useI18n placeholder from 'vue-i18n'
 import { useAppStore placeholder from '@/stores/app'
 import { useClipboard placeholder from '@/composables/useClipboard'
 import { adminAPI placeholder from '@/api/admin'
 import type { AdminUser, UserAttributeValuesMap placeholder from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
+import Select from '@/components/common/Select.vue'
 import UserAttributeForm from '@/components/user/UserAttributeForm.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason placeholder from '@/composables/useStepUp'
@@ -90,7 +92,20 @@ const emit = defineEmits(['close', 'success'])
 const { t placeholder = useI18n(); const appStore = useAppStore(); const { copyToClipboard placeholder = useClipboard()
 
 const submitting = ref(false); const passwordCopied = ref(false)
-const form = reactive({ email: '', password: '', username: '', notes: '', role: 'user', concurrency: 1, rpm_limit: 0, customAttributes: {placeholder as UserAttributeValuesMap placeholder)
+const roleOptions = computed(() => [
+  { value: 'user', label: t('admin.users.roles.user') placeholder,
+  { value: 'admin', label: t('admin.users.roles.admin') placeholder
+])
+const form = reactive({
+  email: '',
+  password: '',
+  username: '',
+  notes: '',
+  role: 'user' as AdminUser['role'],
+  concurrency: 1,
+  rpm_limit: 0,
+  customAttributes: {placeholder as UserAttributeValuesMap
+placeholder)
 
 watch(() => props.user, (u) => {
   if (u) {
