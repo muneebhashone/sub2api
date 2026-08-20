@@ -406,10 +406,10 @@ placeholder{
 			wantToolChoice: true,
 	placeholder,
 		{
-			name:           "malformed non-array tools remain untouched",
+			name:           "malformed non-array tools are removed",
 			body:           `{"input":"hello","tools":{"type":"function","name":"lookup"placeholder,"tool_choice":"auto"placeholder`,
-			wantTools:      true,
-			wantToolChoice: true,
+			wantTools:      false,
+			wantToolChoice: false,
 	placeholder,
 placeholder
 
