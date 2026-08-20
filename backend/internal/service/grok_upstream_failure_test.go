@@ -77,11 +77,27 @@ func TestGrokRetryableOnSameAccount_CapacityAndRateLimit(t *testing.T) {
 		[]byte(`{"error":{"message":"rate limit exceeded"placeholderplaceholder`)))
 	require.False(t, grokRetryableOnSameAccount(account, http.StatusPaymentRequired,
 		[]byte(`{"error":{"message":"You have run out of credits or need a Grok subscription"placeholderplaceholder`)))
+	poolAccount := &Account{ID: 9108, Platform: PlatformGrok, Type: AccountTypeOAuth,
+placeholder"pool_mode": trueplaceholderplaceholder
+	require.False(t, grokRetryableOnSameAccount(poolAccount, http.StatusTooManyRequests,
+		[]byte(`{"error":{"code":"subscription:free-usage-exhausted"placeholderplaceholder`)),
+		"pool free-usage must fail over instead of retrying the exhausted account")
 	require.False(t, grokRetryableOnSameAccount(account, http.StatusBadRequest,
 		[]byte(`{"error":{"message":"capacity field is invalid"placeholderplaceholder`)))
 	nonGrok := &Account{ID: 9106, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
 	require.False(t, grokRetryableOnSameAccount(nonGrok, http.StatusTooManyRequests,
 		[]byte(`{"error":{"message":"model at capacity"placeholderplaceholder`)))
+placeholder
+
+func TestShouldMarkGrokTeamModelRateLimit_ExcludesCapacity(t *testing.T) {
+	require.False(t, shouldMarkGrokTeamModelRateLimit(http.StatusTooManyRequests,
+		[]byte(`{"error":{"message":"The model is currently at capacity due to high demand"placeholderplaceholder`)))
+	require.True(t, shouldMarkGrokTeamModelRateLimit(http.StatusTooManyRequests,
+		[]byte(`{"error":{"message":"rate limit exceeded"placeholderplaceholder`)))
+	require.True(t, shouldMarkGrokTeamModelRateLimit(http.StatusBadRequest,
+		[]byte(`{"error":{"code":"subscription:free-usage-exhausted"placeholderplaceholder`)))
+	require.False(t, shouldMarkGrokTeamModelRateLimit(http.StatusBadRequest,
+		[]byte(`{"error":{"message":"invalid request"placeholderplaceholder`)))
 placeholder
 
 func TestGrokSameAccountRetryMetadata_CapacityDeadline(t *testing.T) {
@@ -116,7 +132,6 @@ placeholder
 func TestClassifyGrokUpstreamFailure_CompatibilityDoesNotCooldown(t *testing.T) {
 	cases := []string{
 		`{"error":{"message":"Could not decode the compaction blob. Ensure it is unmodified from the compact response"placeholderplaceholder`,
-		`{"error":{"message":"data did not match any variant of the untagged enum content"placeholderplaceholder`,
 		`{"code":"compaction_decode_error","message":"invalid response history"placeholder`,
 placeholder
 	for _, body := range cases {
@@ -126,6 +141,13 @@ placeholder
 		require.False(t, d.ShouldCooldown, body)
 		require.Zero(t, d.Cooldown, body)
 placeholder
+placeholder
+
+func TestClassifyGrokUpstreamFailure_GenericShapeErrorDoesNotFailover(t *testing.T) {
+	d := classifyGrokUpstreamFailure(http.StatusBadRequest,
+		[]byte(`{"error":{"message":"data did not match any variant of the untagged enum content"placeholderplaceholder`), "grok-4.6")
+	require.NotEqual(t, GrokFailureCompatibility, d.Class)
+	require.False(t, d.ShouldFailover)
 placeholder
 
 func TestShouldFailoverGrokUpstreamError_FreeUsageBody(t *testing.T) {

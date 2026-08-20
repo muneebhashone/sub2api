@@ -60,6 +60,16 @@ placeholder)
 placeholder)
 placeholder
 
+func TestSameAccountRetryDeadlineAllows(t *testing.T) {
+	require.True(t, sameAccountRetryDeadlineAllows(&service.UpstreamFailoverError{placeholder))
+	require.True(t, sameAccountRetryDeadlineAllows(&service.UpstreamFailoverError{
+		SameAccountRetryDeadline: time.Now().Add(time.Second),
+placeholder))
+	require.False(t, sameAccountRetryDeadlineAllows(&service.UpstreamFailoverError{
+		SameAccountRetryDeadline: time.Now().Add(-time.Second),
+placeholder))
+placeholder
+
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
