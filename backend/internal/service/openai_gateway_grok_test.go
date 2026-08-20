@@ -418,10 +418,9 @@ placeholder{
 			wantToolChoice: true,
 	placeholder,
 		{
-			name:           "malformed non-array tools remain untouched",
-			body:           `{"input":"hello","tools":{"type":"function","name":"lookup"placeholder,"tool_choice":"auto"placeholder`,
-			wantTools:      true,
-			wantToolChoice: true,
+			name:      "malformed non-array tools drop orphan controls",
+			body:      `{"input":"hello","tools":{"type":"function","name":"lookup"placeholder,"tool_choice":"auto"placeholder`,
+			wantTools: true,
 	placeholder,
 placeholder
 
