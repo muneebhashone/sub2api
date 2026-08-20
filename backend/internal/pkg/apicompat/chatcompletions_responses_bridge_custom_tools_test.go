@@ -34,6 +34,60 @@ placeholder
 	assert.Equal(t, "wait", out.Tools[1].Function.Name)
 placeholder
 
+func TestResponsesChatBridge_MixedCustomAndNamespaceToolNames(t *testing.T) {
+	req := &ResponsesRequest{
+		Model: "deepseek-test",
+		Input: json.RawMessage(`"run pwd"`),
+		Tools: []ResponsesTool{
+			{Type: "custom", Name: "exec", Description: "Runs a command"placeholder,
+			{Type: "namespace", Name: "functions", Tools: []ResponsesTool{
+				{Type: "function", Name: "wait", Parameters: json.RawMessage(`{"type":"object"placeholder`)placeholder,
+	placeholder
+	placeholder,
+placeholder
+
+	chatReq, err := ResponsesToChatCompletionsRequest(req)
+placeholder
+	require.Len(t, chatReq.Tools, 2)
+	assert.Equal(t, "exec", chatReq.Tools[0].Function.Name)
+	assert.Equal(t, "functions__wait", chatReq.Tools[1].Function.Name)
+
+	customTools := CustomToolNames(req.Tools)
+	namespaceTools := NamespaceToolNames(req.Tools)
+	resp := &ChatCompletionsResponse{Choices: []ChatChoice{{Message: ChatMessage{ToolCalls: []ChatToolCall{
+		{ID: "call_exact", Function: ChatFunctionCall{Name: "exec", Arguments: `{"input":"pwd"placeholder`placeholderplaceholder,
+		{ID: "call_wait", Function: ChatFunctionCall{Name: "functions__wait", Arguments: `{"cell_id":"1"placeholder`placeholderplaceholder,
+		{ID: "call_alias", Function: ChatFunctionCall{Name: "functions__exec", Arguments: `not-json`placeholderplaceholder,
+placeholderplaceholderplaceholderplaceholderplaceholder
+
+	out := ChatCompletionsResponseToResponses(resp, req.Model, customTools, FunctionToolNames(req.Tools), false, namespaceTools)
+	require.Len(t, out.Output, 3)
+	assert.Equal(t, "custom_tool_call", out.Output[0].Type)
+	assert.Equal(t, "exec", out.Output[0].Name)
+	assert.Equal(t, "pwd", out.Output[0].Input)
+	assert.Equal(t, "function_call", out.Output[1].Type)
+	assert.Equal(t, "functions", out.Output[1].Namespace)
+	assert.Equal(t, "wait", out.Output[1].Name)
+	assert.Equal(t, "custom_tool_call", out.Output[2].Type)
+	assert.Equal(t, "exec", out.Output[2].Name)
+	assert.Equal(t, "not-json", out.Output[2].Input)
+placeholder
+
+func TestChatCompletionsResponseToResponses_ExplicitFunctionOwnsCustomAliasCollision(t *testing.T) {
+	resp := &ChatCompletionsResponse{Choices: []ChatChoice{{Message: ChatMessage{ToolCalls: []ChatToolCall{{
+		ID: "call_function", Function: ChatFunctionCall{Name: "functions__exec", Arguments: `{"path":"/tmp"placeholder`placeholder,
+placeholderplaceholderplaceholderplaceholderplaceholderplaceholder
+
+	out := ChatCompletionsResponseToResponses(resp, "deepseek-test",
+		map[string]bool{"exec": trueplaceholder, map[string]bool{"functions__exec": trueplaceholder, false,
+		map[string]NamespacedToolName{"functions__wait": {Namespace: "functions", Name: "wait"placeholderplaceholder)
+
+	require.Len(t, out.Output, 1)
+	assert.Equal(t, "function_call", out.Output[0].Type)
+	assert.Equal(t, "functions__exec", out.Output[0].Name)
+	assert.Equal(t, `{"path":"/tmp"placeholder`, out.Output[0].Arguments)
+placeholder
+
 func TestResponsesToChatCompletionsRequest_AdditionalToolsItem(t *testing.T) {
 	req := &ResponsesRequest{
 		Model: "gpt-test",
@@ -173,7 +227,7 @@ func TestChatCompletionsResponseToResponses_CustomToolCallOutputItem(t *testing.
 placeholder
 placeholder
 
-	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", map[string]bool{"exec": trueplaceholder, false, nil)
+	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", map[string]bool{"exec": trueplaceholder, nil, false, nil)
 	require.Len(t, out.Output, 2)
 
 	assert.Equal(t, "custom_tool_call", out.Output[0].Type)
@@ -264,6 +318,68 @@ placeholder
 	assert.True(t, foundCustom, "response.completed 缺少 custom_tool_call 输出项")
 placeholder
 
+func TestChatCompletionsChunkToResponsesEvents_MixedCustomNamespaceAliasStream(t *testing.T) {
+	state := NewChatCompletionsToResponsesStreamState("deepseek-test")
+	state.CustomTools = map[string]bool{"exec": trueplaceholder
+	state.NamespaceTools = map[string]NamespacedToolName{
+		"functions__wait": {Namespace: "functions", Name: "wait"placeholder,
+placeholder
+
+	idx := 0
+	chunk := &ChatCompletionsChunk{Choices: []ChatChunkChoice{{Delta: ChatDelta{ToolCalls: []ChatToolCall{{
+		Index: &idx, ID: "call_alias", Function: ChatFunctionCall{Name: "functions__exec", Arguments: `not-json`placeholder,
+placeholderplaceholderplaceholderplaceholderplaceholderplaceholder
+	events := ChatCompletionsChunkToResponsesEvents(chunk, state)
+	events = append(events, FinalizeChatCompletionsResponsesStream(state)...)
+
+	for _, evt := range events {
+		if evt.Type == "response.output_item.added" && evt.Item != nil && evt.Item.Type == "custom_tool_call" {
+			assert.Equal(t, "exec", evt.Item.Name)
+	placeholder
+		if evt.Type == "response.custom_tool_call_input.done" {
+			assert.Equal(t, "exec", evt.Name)
+			assert.Equal(t, "not-json", evt.Input)
+	placeholder
+		if evt.Type == "response.output_item.done" && evt.Item != nil && evt.Item.Type == "custom_tool_call" {
+			assert.Equal(t, "exec", evt.Item.Name)
+			assert.Equal(t, "not-json", evt.Item.Input)
+	placeholder
+placeholder
+
+	final := events[len(events)-1]
+	require.Equal(t, "response.completed", final.Type)
+	require.Len(t, final.Response.Output, 1)
+	assert.Equal(t, "custom_tool_call", final.Response.Output[0].Type)
+	assert.Equal(t, "exec", final.Response.Output[0].Name)
+	assert.Equal(t, "not-json", final.Response.Output[0].Input)
+placeholder
+
+func TestChatCompletionsChunkToResponsesEvents_ExplicitFunctionOwnsCustomAliasCollision(t *testing.T) {
+	state := NewChatCompletionsToResponsesStreamState("deepseek-test")
+	state.CustomTools = map[string]bool{"exec": trueplaceholder
+	state.FunctionTools = map[string]bool{"functions__exec": trueplaceholder
+	state.NamespaceTools = map[string]NamespacedToolName{
+		"functions__wait": {Namespace: "functions", Name: "wait"placeholder,
+placeholder
+
+	idx := 0
+	chunk := &ChatCompletionsChunk{Choices: []ChatChunkChoice{{Delta: ChatDelta{ToolCalls: []ChatToolCall{{
+		Index: &idx, ID: "call_function", Function: ChatFunctionCall{Name: "functions__exec", Arguments: `{"path":"/tmp"placeholder`placeholder,
+placeholderplaceholderplaceholderplaceholderplaceholderplaceholder
+	events := ChatCompletionsChunkToResponsesEvents(chunk, state)
+	events = append(events, FinalizeChatCompletionsResponsesStream(state)...)
+
+	for _, evt := range events {
+		assert.NotEqual(t, "response.custom_tool_call_input.done", evt.Type)
+placeholder
+	final := events[len(events)-1]
+	require.Equal(t, "response.completed", final.Type)
+	require.Len(t, final.Response.Output, 1)
+	assert.Equal(t, "function_call", final.Response.Output[0].Type)
+	assert.Equal(t, "functions__exec", final.Response.Output[0].Name)
+	assert.Equal(t, `{"path":"/tmp"placeholder`, final.Response.Output[0].Arguments)
+placeholder
+
 func TestResponsesToChatCompletionsRequest_ToolSearchToolBecomesProxyFunction(t *testing.T) {
 	req := &ResponsesRequest{
 		Model: "glm-5.2",
@@ -296,7 +412,7 @@ func TestChatCompletionsResponseToResponses_ToolSearchCallOutputItem(t *testing.
 placeholder
 placeholder
 
-	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", nil, true, nil)
+	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", nil, nil, true, nil)
 	require.Len(t, out.Output, 1)
 
 	item := out.Output[0]
@@ -328,7 +444,7 @@ placeholder
 placeholder
 
 	// 客户端未声明 type=tool_search 时，同名普通 function 工具不受影响。
-	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", nil, false, nil)
+	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", nil, nil, false, nil)
 	require.Len(t, out.Output, 1)
 	assert.Equal(t, "function_call", out.Output[0].Type)
 placeholder
@@ -644,6 +760,23 @@ placeholder
 	assert.Equal(t, "tool_search", out.Tools[0].Function.Name)
 placeholder
 
+func TestResponsesToChatCompletionsRequest_RejectsDuplicateTopLevelExecutableNames(t *testing.T) {
+	for _, tools := range [][]ResponsesTool{
+		{{Type: "custom", Name: "exec"placeholder, {Type: "function", Name: "exec"placeholderplaceholder,
+		{{Type: "function", Name: "exec"placeholder, {Type: "function", Name: "exec"placeholderplaceholder,
+		{{Type: "custom", Name: "exec"placeholder, {Type: "custom", Name: "exec"placeholderplaceholder,
+placeholder {
+		_, err := ResponsesToChatCompletionsRequest(&ResponsesRequest{
+			Model: "glm-5.2",
+			Input: json.RawMessage(`"hi"`),
+			Tools: tools,
+	placeholder)
+	placeholder
+		assert.Contains(t, err.Error(), "exec")
+		assert.Contains(t, err.Error(), "cannot disambiguate")
+placeholder
+placeholder
+
 // tool_choice 指向被转换丢弃的工具（如 web_search）或不存在的名字时不能原样转发，
 // chat 上游会因选择项指向未声明工具而 400；字符串形式与指向幸存工具的选择保持转发。
 func TestResponsesToChatCompletionsRequest_DropsToolChoiceForDroppedTool(t *testing.T) {
@@ -795,7 +928,7 @@ placeholder
 		"mcp__svc__echo": {Namespace: "mcp__svc", Name: "echo"placeholder,
 placeholder
 
-	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", nil, false, nsTools)
+	out := ChatCompletionsResponseToResponses(resp, "glm-5.2", nil, nil, false, nsTools)
 	require.Len(t, out.Output, 2)
 
 	item := out.Output[0]
