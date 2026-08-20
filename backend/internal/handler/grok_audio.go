@@ -98,6 +98,12 @@ placeholder
 		cancelProbe()
 		if openErr != nil {
 			reqLog.Warn("grok_realtime.pre_accept_failed", zap.Int64("account_id", account.ID), zap.Error(openErr))
+			statusCode := http.StatusBadGateway
+			var dialErr *service.GrokRealtimeDialError
+			if errors.As(openErr, &dialErr) && dialErr.StatusCode > 0 {
+				statusCode = dialErr.StatusCode
+		placeholder
+			h.gatewayService.HandleGrokRealtimeUpstreamError(c.Request.Context(), account, statusCode, []byte(openErr.Error()))
 			release()
 			release = nil
 			failed[account.ID] = struct{placeholder{placeholder
