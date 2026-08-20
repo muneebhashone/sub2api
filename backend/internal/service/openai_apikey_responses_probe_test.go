@@ -49,6 +49,46 @@ placeholder
 	require.Equal(t, true, updates[openai_compat.ExtraKeyResponsesSupported])
 placeholder
 
+func TestProbeOpenAIAPIKeyResponsesSupportCNProviders(t *testing.T) {
+	tests := []struct {
+		name        string
+		id          int64
+		platform    string
+		protocol    string
+		wantSupport bool
+		wantMode    string
+placeholder{
+		{name: "deepseek adaptive supports responses", id: 201, platform: PlatformDeepseek, protocol: APIProtocolAdaptive, wantSupport: true, wantMode: string(openai_compat.ResponsesSupportModeForceResponses)placeholder,
+		{name: "deepseek chat clears forced responses", id: 202, platform: PlatformDeepseek, protocol: APIProtocolChatCompletions, wantSupport: false, wantMode: string(openai_compat.ResponsesSupportModeAuto)placeholder,
+		{name: "kimi adaptive falls back to chat", id: 203, platform: PlatformKimi, protocol: APIProtocolAdaptive, wantSupport: false, wantMode: string(openai_compat.ResponsesSupportModeAuto)placeholder,
+		{name: "zhipu adaptive falls back to chat", id: 204, platform: PlatformZhipu, protocol: APIProtocolAdaptive, wantSupport: false, wantMode: string(openai_compat.ResponsesSupportModeAuto)placeholder,
+placeholder
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			updateCalls := make(chan map[string]any, 1)
+			account := Account{
+				ID: tc.id, Platform: tc.platform, Type: AccountTypeAPIKey,
+		placeholder"api_key": "sk-test", "api_protocol": tc.protocolplaceholder,
+				Extra: map[string]any{
+					openai_compat.ExtraKeyResponsesMode: string(openai_compat.ResponsesSupportModeForceResponses),
+			placeholder,
+		placeholder
+			repo := &snapshotUpdateAccountRepo{
+				stubOpenAIAccountRepo: stubOpenAIAccountRepo{accounts: []Account{accountplaceholderplaceholder,
+				updateExtraCalls:      updateCalls,
+		placeholder
+			svc := &AccountTestService{accountRepo: repoplaceholder
+
+			svc.ProbeOpenAIAPIKeyResponsesSupport(context.Background(), account.ID)
+
+			updates := <-updateCalls
+			require.Equal(t, tc.wantSupport, updates[openai_compat.ExtraKeyResponsesSupported])
+			require.Equal(t, tc.wantMode, updates[openai_compat.ExtraKeyResponsesMode])
+	placeholder)
+placeholder
+placeholder
+
 func TestDecideResponsesProbeSupport(t *testing.T) {
 	fnCall := []byte(`{"output":[{"type":"reasoning"placeholder,{"type":"function_call","name":"probe_ping"placeholder]placeholder`)
 	reasoningOnly := []byte(`{"output":[{"type":"reasoning"placeholder]placeholder`)
