@@ -1073,6 +1073,7 @@ func OpsErrorLoggerMiddleware(ops *service.OpsService) gin.HandlerFunc {
 	placeholder
 		applyOpsLatencyFieldsFromContext(c, entry)
 		applyOpsUpstreamFieldsFromContext(c, entry)
+		suppressOpsUpstreamAttributionForLocalModelConfiguration(c, entry)
 
 		if apiKey != nil {
 			entry.APIKeyID = &apiKey.ID
@@ -1338,6 +1339,19 @@ placeholder
 placeholder
 placeholder
 
+func suppressOpsUpstreamAttributionForLocalModelConfiguration(c *gin.Context, entry *service.OpsInsertErrorLogInput) {
+	if entry == nil || !service.HasOpsClientBusinessLimited(c) || service.OpsClientBusinessLimitedReason(c) != service.OpsClientBusinessLimitedReasonLocalModelConfiguration {
+		return
+placeholder
+	entry.AccountID = nil
+	entry.UpstreamEndpoint = ""
+	entry.UpstreamModel = ""
+	entry.UpstreamStatusCode = nil
+	entry.UpstreamErrorMessage = nil
+	entry.UpstreamErrorDetail = nil
+	entry.UpstreamErrors = nil
+placeholder
+
 func getContextLatencyMs(c *gin.Context, key string) *int64 {
 	if c == nil || strings.TrimSpace(key) == "" {
 		return nil
@@ -1550,23 +1564,27 @@ func classifyOpsErrorLog(c *gin.Context, errType, message, code string, status i
 	phase = classifyOpsPhase(errType, message, code)
 	routingCapacityLimited := isOpsRoutingCapacityLimited(c)
 	clientBusinessLimited := service.HasOpsClientBusinessLimited(c)
+	localModelConfiguration := clientBusinessLimited && service.OpsClientBusinessLimitedReason(c) == service.OpsClientBusinessLimitedReasonLocalModelConfiguration
 	upstreamError := hasOpsUpstreamErrorContext(c)
 	accountAuthFailure := hasOpsAccountAuthFailure(c)
-	if accountAuthFailure && !routingCapacityLimited {
+	if localModelConfiguration {
+		phase = "routing"
+placeholder else if accountAuthFailure && !routingCapacityLimited {
 		phase = "account_auth"
 placeholder else if upstreamError && !routingCapacityLimited {
 		phase = "upstream"
 placeholder
-	if clientBusinessLimited && !upstreamError && !routingCapacityLimited {
+	if clientBusinessLimited && !upstreamError && !routingCapacityLimited && !localModelConfiguration {
 		phase = "auth"
 placeholder
 	if routingCapacityLimited {
 		phase = "routing"
 placeholder
 	msg := strings.ToLower(message)
-	localClientAuthError := !upstreamError && phase == "auth" && isOpsClientAuthError(code, msg)
-	localBusinessLimited := !upstreamError && classifyOpsIsBusinessLimited(errType, phase, code, status, message, localClientAuthError)
-	isBusinessLimited = routingCapacityLimited || (clientBusinessLimited && !upstreamError) || localBusinessLimited
+	effectiveUpstreamError := upstreamError && !localModelConfiguration
+	localClientAuthError := !effectiveUpstreamError && phase == "auth" && isOpsClientAuthError(code, msg)
+	localBusinessLimited := !effectiveUpstreamError && classifyOpsIsBusinessLimited(errType, phase, code, status, message, localClientAuthError)
+	isBusinessLimited = localModelConfiguration || routingCapacityLimited || (clientBusinessLimited && !effectiveUpstreamError) || localBusinessLimited
 	errorOwner = classifyOpsErrorOwner(phase, message)
 	errorSource = classifyOpsErrorSource(phase, message)
 	return phase, isBusinessLimited, errorOwner, errorSource
