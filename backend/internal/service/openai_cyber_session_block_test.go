@@ -23,57 +23,94 @@ placeholder
 	return c, []byte(body)
 placeholder
 
-// TestCyberSessionBlockKey verifies F5a key derivation: explicit session signals
-// only (header session_id/conversation_id or body prompt_cache_key), apiKey
-// isolated, and EMPTY when no explicit signal (no content-derived fallback —
-// "不退化" decision).
-func TestCyberSessionBlockKey(t *testing.T) {
+func TestCyberSessionExplicitBlockKey(t *testing.T) {
 	c1, b1 := newCyberBlockTestCtx(map[string]string{"session_id": "sess-abc"placeholder, `{placeholder`)
-	k1 := CyberSessionBlockKey(101, c1, b1)
+	k1 := CyberSessionExplicitBlockKey(101, c1, b1)
 	require.NotEmpty(t, k1)
 
 	// Same session, different apiKey → different key (isolation).
 	c2, b2 := newCyberBlockTestCtx(map[string]string{"session_id": "sess-abc"placeholder, `{placeholder`)
-	require.NotEqual(t, k1, CyberSessionBlockKey(202, c2, b2))
+	require.NotEqual(t, k1, CyberSessionExplicitBlockKey(202, c2, b2))
 
 	// Same session + same apiKey → stable key.
 	c3, b3 := newCyberBlockTestCtx(map[string]string{"session_id": "sess-abc"placeholder, `{placeholder`)
-	require.Equal(t, k1, CyberSessionBlockKey(101, c3, b3))
+	require.Equal(t, k1, CyberSessionExplicitBlockKey(101, c3, b3))
 
 	// prompt_cache_key in body counts as explicit.
 	c4, b4 := newCyberBlockTestCtx(nil, `{"prompt_cache_key":"pck-1"placeholder`)
-	require.NotEmpty(t, CyberSessionBlockKey(101, c4, b4))
+	require.NotEmpty(t, CyberSessionExplicitBlockKey(101, c4, b4))
 
 	// No explicit signal → empty key → caller must skip blocking entirely.
 	c5, b5 := newCyberBlockTestCtx(nil, `{"input":"hello world"placeholder`)
-	require.Empty(t, CyberSessionBlockKey(101, c5, b5))
+	require.Empty(t, CyberSessionExplicitBlockKey(101, c5, b5))
 
 	// conversation_id header counts as explicit; key is stable and non-empty.
 	c6, b6 := newCyberBlockTestCtx(map[string]string{"conversation_id": "conv-xyz"placeholder, `{placeholder`)
-	k6 := CyberSessionBlockKey(101, c6, b6)
+	k6 := CyberSessionExplicitBlockKey(101, c6, b6)
 	require.NotEmpty(t, k6)
 	c6b, b6b := newCyberBlockTestCtx(map[string]string{"conversation_id": "conv-xyz"placeholder, `{placeholder`)
-	require.Equal(t, k6, CyberSessionBlockKey(101, c6b, b6b), "conversation_id key must be stable")
+	require.Equal(t, k6, CyberSessionExplicitBlockKey(101, c6b, b6b), "conversation_id key must be stable")
+placeholder
+
+func TestCyberTranscriptBlockKeysRequireModelGeneratedHistory(t *testing.T) {
+	first := []byte(`{"instructions":"shared","input":[{"role":"user","content":"fixed environment"placeholder,{"role":"user","content":"question one"placeholder]placeholder`)
+	second := []byte(`{"instructions":"shared","input":[{"role":"user","content":"fixed environment"placeholder,{"role":"user","content":"question two"placeholder]placeholder`)
+	firstKeys := CyberSessionTranscriptBlockKeys(77, first)
+	secondKeys := CyberSessionTranscriptBlockKeys(77, second)
+	require.Len(t, firstKeys, 1)
+	require.Len(t, secondKeys, 1)
+	require.NotEqual(t, firstKeys[0], secondKeys[0])
+
+	hit := []byte(`{"messages":[{"role":"user","content":"setup"placeholder,{"role":"assistant","content":"ready"placeholder,{"role":"user","content":"trigger"placeholder]placeholder`)
+	continuation := []byte(`{"messages":[{"role":"user","content":"setup"placeholder,{"role":"assistant","content":"ready"placeholder,{"role":"user","content":"different trigger"placeholder,{"role":"assistant","content":"blocked"placeholder,{"role":"user","content":"continue"placeholder]placeholder`)
+	hitKeys := CyberSessionTranscriptBlockKeys(77, hit)
+	require.Len(t, hitKeys, 2)
+	require.Contains(t, CyberSessionTranscriptLookupKeys(77, continuation), hitKeys[1])
+placeholder
+
+func TestCyberTranscriptBlockKeysWebSocketResponseCreate(t *testing.T) {
+	body := []byte(`{"type":"response.create","response":{"prompt_cache_key":"ws-session","input":[{"role":"user","content":"setup"placeholder,{"role":"assistant","content":"ready"placeholder,{"role":"user","content":"trigger"placeholder]placeholderplaceholder`)
+	c, _ := newCyberBlockTestCtx(nil, string(body))
+	require.NotEmpty(t, CyberSessionExplicitBlockKey(88, c, body))
+	require.Len(t, CyberSessionTranscriptBlockKeys(88, body), 2)
 placeholder
 
 // --- fakes ---
 
 type fakeCyberBlockStore struct {
 	blocked map[string]bool
+	scopes  map[string]bool
 placeholder
 
 var _ CyberSessionBlockStore = (*fakeCyberBlockStore)(nil)
 
-func (f *fakeCyberBlockStore) SetCyberSessionBlocked(_ context.Context, key string, _ time.Duration) error {
+func (f *fakeCyberBlockStore) SetCyberSessionBlocked(_ context.Context, scopeKey string, keys []string, _ time.Duration) error {
 	if f.blocked == nil {
 		f.blocked = map[string]bool{placeholder
 placeholder
-	f.blocked[key] = true
+	for _, key := range keys {
+		f.blocked[key] = true
+placeholder
+	if scopeKey != "" {
+		if f.scopes == nil {
+			f.scopes = map[string]bool{placeholder
+	placeholder
+		f.scopes[scopeKey] = true
+placeholder
 	return nil
 placeholder
 
-func (f *fakeCyberBlockStore) IsCyberSessionBlocked(_ context.Context, key string) (bool, error) {
-	return f.blocked[key], nil
+func (f *fakeCyberBlockStore) IsCyberSessionScopeActive(_ context.Context, scopeKey string) (bool, error) {
+	return f.scopes[scopeKey], nil
+placeholder
+
+func (f *fakeCyberBlockStore) FindCyberSessionBlocked(_ context.Context, keys []string) (string, error) {
+	for _, key := range keys {
+		if f.blocked[key] {
+			return key, nil
+	placeholder
+placeholder
+	return "", nil
 placeholder
 
 // fakeSettingRepo is a minimal SettingRepository stub for unit tests.
@@ -155,25 +192,27 @@ func (c *comboCacheAndStore) GetReasoningContent(_ context.Context, _ string) (s
 	return "", ErrReasoningContentNotFound
 placeholder
 
-func (c *comboCacheAndStore) SetCyberSessionBlocked(ctx context.Context, key string, ttl time.Duration) error {
-	return c.store.SetCyberSessionBlocked(ctx, key, ttl)
+func (c *comboCacheAndStore) SetCyberSessionBlocked(ctx context.Context, scopeKey string, keys []string, ttl time.Duration) error {
+	return c.store.SetCyberSessionBlocked(ctx, scopeKey, keys, ttl)
 placeholder
-func (c *comboCacheAndStore) IsCyberSessionBlocked(ctx context.Context, key string) (bool, error) {
-	return c.store.IsCyberSessionBlocked(ctx, key)
+func (c *comboCacheAndStore) IsCyberSessionScopeActive(ctx context.Context, scopeKey string) (bool, error) {
+	return c.store.IsCyberSessionScopeActive(ctx, scopeKey)
+placeholder
+func (c *comboCacheAndStore) FindCyberSessionBlocked(ctx context.Context, keys []string) (string, error) {
+	return c.store.FindCyberSessionBlocked(ctx, keys)
 placeholder
 
 // --- tests ---
 
 // TestIsCyberSessionBlocked_EmptyKeyAndNilService covers the fail-open paths:
 // empty key, nil service, store missing → always false / no panic.
-func TestIsCyberSessionBlocked_EmptyKeyAndNilService(t *testing.T) {
+func TestFindCyberSessionBlocked_EmptyAndNilService(t *testing.T) {
 	var nilSvc *OpenAIGatewayService
-	require.False(t, nilSvc.IsCyberSessionBlocked(context.Background(), "k"))
-	require.NotPanics(t, func() { nilSvc.MarkCyberSessionBlocked(context.Background(), "k") placeholder)
+	require.Empty(t, nilSvc.FindCyberSessionBlockedForRequest(context.Background(), 1, nil, nil, "", ""))
+	require.NotPanics(t, func() { nilSvc.MarkCyberSessionBlocked(context.Background(), "", []string{"k"placeholder) placeholder)
 
 	svc := &OpenAIGatewayService{placeholder
-	require.False(t, svc.IsCyberSessionBlocked(context.Background(), ""))
-	require.False(t, svc.IsCyberSessionBlocked(context.Background(), "k"), "no store + no settings → fail-open false")
+	require.Empty(t, svc.FindCyberSessionBlockedForRequest(context.Background(), 1, nil, nil, "", ""))
 placeholder
 
 // TestCyberSessionBlock_RoundTrip exercises the type-assertion success path:
@@ -200,15 +239,42 @@ placeholder
 	ctx := context.Background()
 	const testKey = "deadbeef1234"
 
-	// Before marking: not blocked.
-	require.False(t, svc.IsCyberSessionBlocked(ctx, testKey))
+	c, body := newCyberBlockTestCtx(map[string]string{"session_id": "sess-roundtrip"placeholder, `{placeholder`)
+	explicitKey := CyberSessionExplicitBlockKey(1, c, body)
+	require.Empty(t, svc.FindCyberSessionBlockedForRequest(ctx, 1, c, body, "203.0.113.1", "client/1.0"))
 
-	// Mark as blocked.
-	svc.MarkCyberSessionBlocked(ctx, testKey)
+	svc.MarkCyberSessionBlocked(ctx, "", []string{explicitKey, testKeyplaceholder)
 
-	// After marking: blocked.
-	require.True(t, svc.IsCyberSessionBlocked(ctx, testKey))
+	require.Equal(t, explicitKey, svc.FindCyberSessionBlockedForRequest(ctx, 1, c, body, "203.0.113.1", "client/1.0"))
+placeholder
 
-	// Different key: still not blocked.
-	require.False(t, svc.IsCyberSessionBlocked(ctx, "other-key"))
+func TestFindCyberSessionBlockedForRequestUsesScopeForTranscript(t *testing.T) {
+	settingSvc := &SettingService{settingRepo: &fakeSettingRepo{vals: map[string]string{
+		SettingKeyCyberSessionBlockEnabled:    "true",
+		SettingKeyCyberSessionBlockTTLSeconds: "60",
+placeholderplaceholderplaceholder
+	combo := &comboCacheAndStore{placeholder
+	svc := &OpenAIGatewayService{cache: combo, settingService: settingSvcplaceholder
+	ctx := context.Background()
+
+	hitBody := []byte(`{"messages":[{"role":"user","content":"setup"placeholder,{"role":"assistant","content":"ready"placeholder,{"role":"user","content":"trigger"placeholder]placeholder`)
+	nextBody := []byte(`{"messages":[{"role":"user","content":"setup"placeholder,{"role":"assistant","content":"ready"placeholder,{"role":"user","content":"different trigger"placeholder,{"role":"assistant","content":"blocked"placeholder,{"role":"user","content":"continue"placeholder]placeholder`)
+	nextCtx, _ := newCyberBlockTestCtx(nil, string(nextBody))
+	const clientIP = "203.0.113.20"
+	const userAgent = "Codex CLI 1.2.3"
+	blockKey := CyberSessionTranscriptBlockKeys(9, hitBody)[1]
+
+	// Without an active source scope, transcript candidates are never blocks.
+	require.Empty(t, svc.FindCyberSessionBlockedForRequest(ctx, 9, nextCtx, nextBody, clientIP, userAgent))
+	scopeKey := CyberSessionScopeKey(9, clientIP, userAgent)
+	svc.MarkCyberSessionBlocked(ctx, scopeKey, []string{blockKeyplaceholder)
+	require.Equal(t, blockKey, svc.FindCyberSessionBlockedForRequest(ctx, 9, nextCtx, nextBody, clientIP, "Codex CLI 1.2.4"))
+placeholder
+
+func TestCyberSessionScopeKeyNormalizesUserAgentVersion(t *testing.T) {
+	base := CyberSessionScopeKey(7, "203.0.113.10", "Codex CLI 1.2.3")
+	require.NotEmpty(t, base)
+	require.Equal(t, base, CyberSessionScopeKey(7, "203.0.113.10", "Codex CLI 1.2.4"))
+	require.NotEqual(t, base, CyberSessionScopeKey(8, "203.0.113.10", "Codex CLI 1.2.3"))
+	require.NotEqual(t, base, CyberSessionScopeKey(7, "203.0.113.11", "Codex CLI 1.2.3"))
 placeholder

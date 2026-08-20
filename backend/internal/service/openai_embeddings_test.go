@@ -104,3 +104,85 @@ placeholder
 	require.Equal(t, "float", gjson.GetBytes(upstream.lastBody, "encoding_format").String())
 	require.Equal(t, int64(256), gjson.GetBytes(upstream.lastBody, "dimensions").Int())
 placeholder
+
+func TestForwardEmbeddings_AccessStateUsesTypedFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	reqBody := []byte(`{"model":"text-embedding-3-small","input":"hello"placeholder`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/embeddings", bytes.NewReader(reqBody))
+
+	upstreamBody := []byte(`{"error":{"code":"deactivated_workspace","message":"Workspace is deactivated"placeholderplaceholder`)
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusForbidden,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"placeholder,
+			"X-Request-Id": []string{"req_embeddings_access_state"placeholder,
+	placeholder,
+		Body: io.NopCloser(bytes.NewReader(upstreamBody)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:       43,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key": "sk-test",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardEmbeddings(context.Background(), c, account, reqBody, "")
+
+	require.Nil(t, result)
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.Equal(t, http.StatusForbidden, failoverErr.StatusCode)
+	require.Equal(t, GatewayFailureStageAccountAuth, failoverErr.Stage)
+	require.Equal(t, GatewayFailureScopeAccount, failoverErr.Scope)
+	require.Equal(t, OpenAIUpstreamAccessStateReason, failoverErr.Reason)
+	require.Equal(t, NextAccountRetry, failoverErr.NextAccountAction)
+	require.Equal(t, http.StatusBadGateway, failoverErr.ClientStatusCode)
+	require.Equal(t, openAIUpstreamAccessUnavailableClientMessage, failoverErr.ClientMessage)
+	require.False(t, failoverErr.RetryableOnSameAccount)
+	require.Equal(t, "req_embeddings_access_state", failoverErr.ResponseHeaders.Get("x-request-id"))
+	require.False(t, c.Writer.Written())
+placeholder
+
+func TestForwardEmbeddings_NonAccessFailoverKeepsLegacyShape(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	reqBody := []byte(`{"model":"text-embedding-3-small","input":"hello"placeholder`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/embeddings", bytes.NewReader(reqBody))
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"rate limited"placeholderplaceholder`)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: &config.Config{placeholder, httpUpstream: upstreamplaceholder
+	account := &Account{
+		ID:       44,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key": "sk-test",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardEmbeddings(context.Background(), c, account, reqBody, "")
+
+	require.Nil(t, result)
+	var failoverErr *UpstreamFailoverError
+	require.ErrorAs(t, err, &failoverErr)
+	require.Equal(t, http.StatusTooManyRequests, failoverErr.StatusCode)
+	require.Empty(t, failoverErr.Stage)
+	require.Empty(t, failoverErr.Scope)
+	require.Empty(t, failoverErr.Reason)
+	require.Zero(t, failoverErr.ClientStatusCode)
+	require.Empty(t, failoverErr.ClientMessage)
+	require.Nil(t, failoverErr.ResponseHeaders)
+	require.False(t, c.Writer.Written())
+placeholder

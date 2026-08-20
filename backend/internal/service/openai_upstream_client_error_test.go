@@ -183,6 +183,13 @@ placeholder
 				newOpenAIUpstreamErrorResponse(tc.statusCode, tc.body),
 				c, newOpenAIUpstreamErrorTestAccount(), nil,
 			)
+			if tc.name == "forbidden" {
+				var failoverErr *UpstreamFailoverError
+				require.ErrorAs(t, err, &failoverErr)
+				require.Equal(t, http.StatusForbidden, failoverErr.StatusCode)
+				require.False(t, c.Writer.Written())
+				return
+		placeholder
 
 		placeholder
 			require.Equal(t, tc.wantStatus, rec.Code)

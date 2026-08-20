@@ -37,6 +37,18 @@ func TestParseOpenAIWSResponseUsageFromCompletedEvent(t *testing.T) {
 	require.Equal(t, 19, usage.InputTokens)
 	require.Equal(t, 5, usage.OutputTokens)
 	require.Equal(t, 4, usage.CacheReadInputTokens)
+
+	parseOpenAIWSResponseUsageFromCompletedEvent(
+		[]byte(`{"type":"response.completed","response":{"usage":{"input_tokens":0,"output_tokens":0,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholderplaceholder`),
+		usage,
+	)
+	require.Equal(t, OpenAIUsage{InputTokens: 19, OutputTokens: 5, CacheReadInputTokens: 4placeholder, *usage)
+
+	parseOpenAIWSResponseUsageFromCompletedEvent(
+		[]byte(`{"type":"response.failed","response":{"usage":{"input_tokens":3,"output_tokens":0,"input_tokens_details":{"cached_tokens":0placeholderplaceholderplaceholderplaceholder`),
+		usage,
+	)
+	require.Equal(t, OpenAIUsage{InputTokens: 3placeholder, *usage)
 placeholder
 
 func TestOpenAIWSEventShouldParseUsageTerminalEvents(t *testing.T) {
@@ -54,7 +66,11 @@ placeholder {
 		require.True(t, openAIWSEventShouldParseUsage("  "+eventType+"  "), eventType)
 placeholder
 	require.False(t, openAIWSEventShouldParseUsage("response.output_text.delta"))
+	require.True(t, openAIWSEventShouldParseUsage("response.output_text.done"))
 	require.False(t, openAIWSEventShouldParseUsage(""))
+	require.False(t, openAIWSMessageShouldParseUsage("response.in_progress", []byte(`{"type":"response.in_progress"placeholder`)))
+	require.True(t, openAIWSMessageShouldParseUsage("response.in_progress", []byte(`{"type":"response.in_progress","usage":{placeholderplaceholder`)))
+	require.False(t, openAIWSMessageShouldParseUsage("response.output_text.delta", []byte(`{"type":"response.output_text.delta","usage":{placeholderplaceholder`)))
 placeholder
 
 func TestOpenAIWSErrorEventHelpers_ConsistentWithWrapper(t *testing.T) {

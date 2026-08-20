@@ -120,7 +120,7 @@ placeholder
 
 	promptCacheKey = strings.TrimSpace(promptCacheKey)
 	compatPromptCacheInjected := false
-	if promptCacheKey == "" && account.Type == AccountTypeOAuth && shouldAutoInjectPromptCacheKeyForCompat(upstreamModel) {
+	if promptCacheKey == "" && account.UsesOpenAICodexProtocol() && shouldAutoInjectPromptCacheKeyForCompat(upstreamModel) {
 		promptCacheKey = deriveCompatPromptCacheKey(&chatReq, upstreamModel)
 		compatPromptCacheInjected = promptCacheKey != ""
 placeholder
@@ -203,7 +203,7 @@ placeholder
 placeholder
 	logger.L().Debug("openai chat_completions: model mapping applied", logFields...)
 
-	if account.Type == AccountTypeOAuth {
+	if account.UsesOpenAICodexProtocol() {
 		var reqBody map[string]any
 		if err := json.Unmarshal(responsesBody, &reqBody); err != nil {
 			return nil, fmt.Errorf("unmarshal for codex transform: %w", err)
@@ -234,6 +234,9 @@ placeholder
 			return nil, fmt.Errorf("remarshal after codex transform: %w", err)
 	placeholder
 placeholder
+	// Codex transforms may normalize the model after the initial mapping pass;
+	// record the final slug immediately before policy/auth/upstream dispatch.
+	SetOpsUpstreamModel(c, upstreamModel)
 
 	if account.Type == AccountTypeAPIKey {
 		if trimmedKey := strings.TrimSpace(promptCacheKey); trimmedKey != "" {
@@ -481,6 +484,9 @@ placeholder
 		writeChatCompletionsError(c, http.StatusBadGateway, "upstream_error", message)
 		return nil, fmt.Errorf("upstream response failed: %s", message)
 placeholder
+	if strings.TrimSpace(finalResponse.Status) == "completed" {
+		logOpenAISuccessMissingUsage(c.Request.Context(), c, account, resp, &usage, "response.completed", false)
+placeholder
 
 	if requiresBillableGrokChatUsage(account, billingModel, upstreamModel, finalResponse.Model) && !hasBillableGrokChatUsage(usage) {
 		upstreamRequestID := firstNonEmpty(requestID, resp.Header.Get("xai-request-id"))
@@ -596,6 +602,7 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 	refusalDetector := newOpenAIChatSilentRefusalDetector(requestBodyLen)
 	var streamFailoverErr *UpstreamFailoverError
 	var streamNonFailoverErr error
+	terminalEventType := ""
 	// Grok chat bridge reuses Responses SSE; count native search tools for surcharge.
 	searchCount := 0
 	streamSearchSeen := make(map[string]struct{placeholder)
@@ -661,9 +668,11 @@ placeholder
 	placeholder
 		observer.ObserveOpenAI([]byte(payload), event.Type)
 		refusalDetector.ObservePayload([]byte(payload))
+		s.parseSSEUsageBytesWithType([]byte(payload), event.Type, &usage)
 
 		isTerminalEvent := isOpenAICompatResponsesTerminalEvent(event.Type)
 		if isTerminalEvent {
+			terminalEventType = strings.TrimSpace(event.Type)
 			if event.Usage != nil {
 				usage = copyOpenAIUsageFromResponsesUsage(event.Usage)
 		placeholder
@@ -671,7 +680,7 @@ placeholder
 				usage = copyOpenAIUsageFromResponsesUsage(event.Response.Usage)
 		placeholder
 	placeholder
-		if strings.TrimSpace(event.Type) == "response.failed" {
+		if strings.TrimSpace(event.Type) == "response.failed" || strings.TrimSpace(event.Type) == "error" {
 			payloadBytes := []byte(payload)
 			message := extractOpenAISSEErrorMessage(payloadBytes)
 			if hit, code, msg := detectOpenAICyberPolicy(payloadBytes); hit {
@@ -705,7 +714,11 @@ placeholder
 			placeholder
 				return true
 		placeholder
-			if openAIStreamFailedEventShouldFailover(payloadBytes, message) {
+			shouldFailover := openAIStreamFailedEventShouldFailover(payloadBytes, message)
+			if strings.TrimSpace(event.Type) == "error" {
+				shouldFailover = openAIStreamErrorEventShouldFailover(payloadBytes, message)
+		placeholder
+			if !clientOutputStarted && shouldFailover {
 				streamFailoverErr = s.newOpenAIStreamFailoverError(c, account, false, requestID, payloadBytes, message, resp.Header)
 				return true
 		placeholder
@@ -874,6 +887,7 @@ placeholder
 		if !clientDisconnected {
 			c.Writer.Flush()
 	placeholder
+		logOpenAISuccessMissingUsage(c.Request.Context(), c, account, resp, &usage, terminalEventType, clientDisconnected)
 		return resultWithUsage(), nil
 placeholder
 

@@ -13,18 +13,57 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOpenAI429FastPath_MarksOAuthAccountCoolingDown(t *testing.T) {
-	svc := &OpenAIGatewayService{placeholder
+type oauth429RateLimitRepo struct {
+	AccountRepository
+	setRateLimitedCalls int
+placeholder
+
+func (r *oauth429RateLimitRepo) SetRateLimited(context.Context, int64, time.Time) error {
+	r.setRateLimitedCalls++
+	return nil
+placeholder
+
+func TestOpenAI429FastPath_KeepsOAuthAccountSchedulableDuringRetryWindow(t *testing.T) {
+	repo := &oauth429RateLimitRepo{placeholder
+	rateLimits := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+	svc := &OpenAIGatewayService{rateLimitService: rateLimitsplaceholder
+	rateLimits.SetAccountRuntimeBlocker(svc)
 	account := &Account{ID: 42, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
 	apiKeyAccount := &Account{ID: 43, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+	setupTokenAccount := &Account{ID: 44, Platform: PlatformOpenAI, Type: AccountTypeSetupTokenplaceholder
+	grokOAuthAccount := &Account{ID: 45, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
 
 	shouldDisable := svc.handleOpenAIAccountUpstreamError(context.Background(), account, http.StatusTooManyRequests, http.Header{placeholder, nil)
 	apiKeyShouldDisable := svc.handleOpenAIAccountUpstreamError(context.Background(), apiKeyAccount, http.StatusTooManyRequests, http.Header{placeholder, nil)
 
 	require.False(t, shouldDisable)
 	require.False(t, apiKeyShouldDisable)
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(apiKeyAccount), "API-key 429 keeps the existing scheduler cooldown behavior")
+	require.Equal(t, 1, repo.setRateLimitedCalls, "only the API-key 429 should persist a scheduler block")
+	require.True(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(account, http.StatusTooManyRequests, false))
+	require.True(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(setupTokenAccount, http.StatusTooManyRequests, false))
+	require.False(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(apiKeyAccount, http.StatusTooManyRequests, false))
+	require.False(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(grokOAuthAccount, http.StatusTooManyRequests, false))
+	require.WithinDuration(t, time.Now().Add(openAIOAuth429RetryWindow), svc.openAIOAuth429RetryDeadline(account), time.Second)
+	require.WithinDuration(t, time.Now().Add(openAIOAuth429RetryWindow), svc.openAIOAuth429RetryDeadline(setupTokenAccount), time.Second)
+placeholder
+
+func TestOpenAI429FastPath_BlocksOAuthOnlyAfterRetryWindow(t *testing.T) {
+	svc := &OpenAIGatewayService{placeholder
+	account := &Account{ID: 420, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
+	svc.openaiOAuth429RetryStartedAt.Store(account.ID, time.Now().Add(-openAIOAuth429RetryWindow-time.Second))
+
+	svc.markOpenAIOAuth429RateLimited(context.Background(), account, http.Header{placeholder, nil)
+
 	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
-	require.False(t, svc.isOpenAIAccountRuntimeBlocked(apiKeyAccount))
+	require.False(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(account, http.StatusTooManyRequests, false))
+placeholder
+
+func TestOpenAI429RetryDelayHonorsBoundedRetryAfter(t *testing.T) {
+	deadline := time.Now().Add(openAIOAuth429RetryWindow)
+	require.Equal(t, openAIOAuth429RetryDelay, openAIOAuth429SameAccountRetryDelay(nil, deadline))
+	require.Equal(t, openAIOAuth429MaxRetryDelay, openAIOAuth429SameAccountRetryDelay(http.Header{"Retry-After": []string{"90"placeholderplaceholder, deadline))
 placeholder
 
 // TestOpenAI429FastPath_SkipsSparkShadow 外审第8轮 P1:spark 影子被选中后若 /responses 返回 429,
@@ -50,7 +89,7 @@ placeholder
 	svc.markOpenAIOAuth429RateLimited(context.Background(), normal, headers, nil)
 
 	require.False(t, svc.isOpenAIAccountRuntimeBlocked(shadow), "spark shadow must not be runtime-blocked by /responses global 429")
-	require.True(t, svc.isOpenAIAccountRuntimeBlocked(normal), "normal OpenAI OAuth account should still be runtime-blocked")
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(normal), "normal OpenAI OAuth account stays schedulable during its retry window")
 placeholder
 
 func TestOpenAIRuntimeBlock_AppliesToOpenAIAPIKeyWhenRateLimitServiceStopsScheduling(t *testing.T) {
@@ -347,7 +386,8 @@ placeholder
 	)
 
 	require.False(t, shouldDisable)
-	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.True(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(account, http.StatusTooManyRequests, false))
 	require.Empty(t, repo.modelRateLimitCalls)
 placeholder
 
@@ -398,7 +438,7 @@ func TestOpenAIRuntimeBlock_ClearAccountSchedulingBlock(t *testing.T) {
 	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
 placeholder
 
-func TestShouldStopOpenAIOAuth429Failover_OnlyDuringStorm(t *testing.T) {
+func TestShouldStopOpenAIOAuth429Failover_AfterBoundedFullWindows(t *testing.T) {
 	svc := &OpenAIGatewayService{placeholder
 	account := &Account{ID: 42, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder
 	apiKeyAccount := &Account{ID: 43, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
@@ -406,11 +446,9 @@ func TestShouldStopOpenAIOAuth429Failover_OnlyDuringStorm(t *testing.T) {
 
 	require.False(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusTooManyRequests, 1, &state))
 
-	for i := 0; i < openAIOAuth429StormThreshold; i++ {
-		svc.recordOpenAIOAuth429()
-placeholder
-
-	require.True(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusTooManyRequests, 1, &state))
+	require.False(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusTooManyRequests, 1, &state))
+	require.False(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusTooManyRequests, 2, &state))
+	require.True(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusTooManyRequests, 3, &state))
 	require.False(t, svc.ShouldStopOpenAIOAuth429Failover(apiKeyAccount, http.StatusTooManyRequests, 1, &state))
 	require.False(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusInternalServerError, 1, &state))
 	require.False(t, svc.ShouldStopOpenAIOAuth429Failover(account, http.StatusTooManyRequests, 0, &state))

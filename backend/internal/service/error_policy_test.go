@@ -67,6 +67,35 @@ placeholder{
 			expected:   ErrorPolicySkipped,
 	placeholder,
 		{
+			name: "global_529_bypasses_custom_error_code_filter",
+			account: &Account{
+				ID:       33,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"custom_error_codes_enabled": true,
+					"custom_error_codes":         []any{float64(429)placeholder,
+			placeholder,
+		placeholder,
+			statusCode: 529,
+			body:       []byte(`{"error":{"message":"overloaded"placeholderplaceholder`),
+			expected:   ErrorPolicyMatched,
+	placeholder,
+		{
+			name: "global_529_bypasses_pool_mode",
+			account: &Account{
+				ID:       34,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"pool_mode": true,
+			placeholder,
+		placeholder,
+			statusCode: 529,
+			body:       []byte(`{"error":{"message":"overloaded"placeholderplaceholder`),
+			expected:   ErrorPolicyMatched,
+	placeholder,
+		{
 			name: "temp_unschedulable_hit_returns_temp_unscheduled",
 			account: &Account{
 				ID:       4,

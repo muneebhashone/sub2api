@@ -75,6 +75,7 @@ placeholder
 	// 2. Resolve model mapping (same as ForwardAsChatCompletions)
 	billingModel := resolveOpenAIForwardModel(account, originalModel, defaultMappedModel)
 	upstreamModel := normalizeOpenAIModelForUpstream(account, billingModel)
+	SetOpsUpstreamModel(c, upstreamModel)
 	grokCacheIdentity := ""
 	if account.Platform == PlatformGrok {
 		// Resolve before image bridging or other body rewrites so the fallback is

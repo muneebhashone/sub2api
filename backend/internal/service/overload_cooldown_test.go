@@ -269,6 +269,44 @@ func TestHandle529_DBReadError_FallsBackToConfig(t *testing.T) {
 	require.WithinDuration(t, before.Add(7*time.Minute), accountRepo.lastOverloadEnd, 2*time.Second)
 placeholder
 
+func TestHandleUpstreamError_529BypassesPoolAndCustomCodeGates(t *testing.T) {
+	tests := []struct {
+		name        string
+		credentials map[string]any
+placeholder{
+		{
+			name:        "pool mode",
+			credentials: map[string]any{"pool_mode": trueplaceholder,
+	placeholder,
+		{
+			name: "custom code filter excludes 529",
+			credentials: map[string]any{
+				"custom_error_codes_enabled": true,
+				"custom_error_codes":         []any{float64(429)placeholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &overloadAccountRepoStub{placeholder
+			svc := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+			account := &Account{
+				ID:          101,
+				Platform:    PlatformOpenAI,
+				Type:        AccountTypeAPIKey,
+				Credentials: tt.credentials,
+		placeholder
+
+			shouldDisable := svc.HandleUpstreamError(context.Background(), account, 529, nil, []byte(`{"error":{"message":"overloaded"placeholderplaceholder`))
+
+			require.False(t, shouldDisable)
+			require.Equal(t, 1, repo.overloadCalls)
+			require.Equal(t, account.ID, repo.lastOverloadID)
+	placeholder)
+placeholder
+placeholder
+
 // ===========================================================================
 // Model: defaults & JSON round-trip
 // ===========================================================================

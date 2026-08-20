@@ -155,6 +155,33 @@ placeholder
 	require.Empty(t, rec.Body.String(), "failover path must not commit downstream output")
 placeholder
 
+func TestForwardAsAnthropic_StreamingGenericBareErrorBeforeOutputIsNotHiddenByFailover(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":32,"messages":[{"role":"user","content":"hello"placeholder],"stream":trueplaceholder`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	ssePayload := "event: error\n" +
+		`data: {"type":"error","error":{"type":"server_error","code":"upstream_error","message":"mixed tools failed"placeholderplaceholder` + "\n\n" +
+		"data: [DONE]\n\n"
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(ssePayload)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{cfg: rawChatCompletionsTestConfig(), httpUpstream: upstreamplaceholder
+
+	_, err := svc.ForwardAsAnthropic(context.Background(), c, rawChatCompletionsTestAccount(), body, "", "")
+
+placeholder
+	var failoverErr *UpstreamFailoverError
+	require.False(t, errors.As(err, &failoverErr))
+	require.Contains(t, rec.Body.String(), "mixed tools failed")
+placeholder
+
 func TestForwardAsAnthropic_BufferedResponseFailed_Failover(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

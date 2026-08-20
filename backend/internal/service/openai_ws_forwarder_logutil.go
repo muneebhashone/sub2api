@@ -161,12 +161,15 @@ placeholder
 placeholder
 
 func openAIWSEventShouldParseUsage(eventType string) bool {
-	switch strings.TrimSpace(eventType) {
-	case "response.completed", "response.done", "response.failed", "response.incomplete", "response.cancelled", "response.canceled":
+	eventType = strings.TrimSpace(eventType)
+	if eventType == "error" || openAIStreamEventTypeIsTerminal(eventType) {
 		return true
-	default:
-		return false
 placeholder
+	return strings.HasPrefix(eventType, "response.") && !strings.HasSuffix(eventType, ".delta")
+placeholder
+
+func openAIWSMessageShouldParseUsage(eventType string, message []byte) bool {
+	return openAIWSEventShouldParseUsage(eventType) && bytes.Contains(message, []byte(`"usage"`))
 placeholder
 
 func parseOpenAIWSEventEnvelope(message []byte) (eventType string, responseID string, response gjson.Result) {
@@ -193,11 +196,18 @@ placeholder
 placeholder
 
 func parseOpenAIWSResponseUsageFromCompletedEvent(message []byte, usage *OpenAIUsage) {
-	if usage == nil || len(message) == 0 {
+	if usage == nil || len(message) == 0 || !bytes.Contains(message, []byte(`"usage"`)) {
 		return
 placeholder
 	if parsedUsage, ok := extractOpenAIUsageFromJSONBytes(message); ok {
-		*usage = parsedUsage
+		if openAIStreamEventTypeIsTerminal(effectiveOpenAISSEEventType(message, "")) {
+			if !openAIUsageHasTokens(&parsedUsage) && openAIUsageHasTokens(usage) {
+				return
+		placeholder
+			*usage = parsedUsage
+	placeholder else {
+			mergeOpenAIUsageNonZero(usage, parsedUsage)
+	placeholder
 placeholder
 placeholder
 

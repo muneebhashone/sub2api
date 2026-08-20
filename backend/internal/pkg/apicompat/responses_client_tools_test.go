@@ -66,6 +66,68 @@ placeholder
 	require.Equal(t, "team__send", namespaceCall["name"])
 placeholder
 
+func TestAdaptResponsesClientTools_LowersToolSearchDiscoveryPayloadWithoutOutput(t *testing.T) {
+	req := map[string]any{
+		"tools": []any{map[string]any{"type": "tool_search"placeholderplaceholder,
+		"input": []any{map[string]any{
+			"type":      "tool_search_output",
+			"call_id":   "search_1",
+			"tools":     []any{map[string]any{"name": "github", "type": "namespace"placeholderplaceholder,
+			"status":    "completed",
+			"execution": "client",
+placeholder
+placeholder
+
+	mapping, changed, err := AdaptResponsesClientTools(req)
+placeholder
+	require.True(t, changed)
+	require.True(t, mapping.ToolSearch)
+
+	item := requireResponsesClientToolValue[map[string]any](t, requireResponsesClientToolValue[[]any](t, req["input"])[0])
+	require.Equal(t, "function_call_output", item["type"])
+	require.Equal(t, "search_1", item["call_id"])
+	require.JSONEq(t, `[{"name":"github","type":"namespace"placeholder]`, requireResponsesClientToolValue[string](t, item["output"]))
+	require.NotContains(t, item, "tools")
+	require.NotContains(t, item, "status")
+	require.NotContains(t, item, "execution")
+placeholder
+
+func TestAdaptResponsesClientTools_ToolSearchExplicitOutputTakesPriority(t *testing.T) {
+	req := map[string]any{
+		"tools": []any{map[string]any{"type": "tool_search"placeholderplaceholder,
+		"input": []any{map[string]any{
+			"type": "tool_search_output", "call_id": "search_1",
+			"output": "authoritative", "tools": []any{map[string]any{"name": "ignored"placeholderplaceholder,
+placeholder
+placeholder
+
+	_, changed, err := AdaptResponsesClientTools(req)
+placeholder
+	require.True(t, changed)
+	item := requireResponsesClientToolValue[map[string]any](t, requireResponsesClientToolValue[[]any](t, req["input"])[0])
+	require.Equal(t, "authoritative", item["output"])
+	require.NotContains(t, item, "tools")
+placeholder
+
+func TestAdaptResponsesClientTools_DoesNotInventMissingToolSearchOutput(t *testing.T) {
+	req := map[string]any{
+		"tools": []any{map[string]any{"type": "tool_search"placeholderplaceholder,
+		"input": []any{map[string]any{
+			"type": "tool_search_output", "call_id": "search_1",
+			"status": "incomplete", "execution": "client",
+placeholder
+placeholder
+
+	_, changed, err := AdaptResponsesClientTools(req)
+placeholder
+	require.True(t, changed)
+	item := requireResponsesClientToolValue[map[string]any](t, requireResponsesClientToolValue[[]any](t, req["input"])[0])
+	require.Equal(t, "function_call_output", item["type"])
+	require.NotContains(t, item, "output")
+	require.Equal(t, "incomplete", item["status"])
+	require.Equal(t, "client", item["execution"])
+placeholder
+
 func requireResponsesClientToolValue[T any](t *testing.T, value any) T {
 placeholder
 	typed, ok := value.(T)
