@@ -1323,6 +1323,13 @@ func (a *Account) GetOpenAIBaseURL() string {
 	if !a.IsOpenAI() && !a.IsCNProvider() {
 		return ""
 placeholder
+	if a.IsCNProvider() && a.IsAdaptiveAPIProtocol() {
+		if baseURLs, ok := a.Credentials["api_base_urls"].(map[string]any); ok {
+			if baseURL, ok := baseURLs[APIProtocolChatCompletions].(string); ok && strings.TrimSpace(baseURL) != "" {
+				return strings.TrimSpace(baseURL)
+		placeholder
+	placeholder
+placeholder
 	if a.Type == AccountTypeAPIKey || a.Type == AccountTypeUpstream {
 		if baseURL := strings.TrimSpace(a.GetCredential("base_url")); baseURL != "" {
 			return baseURL
@@ -1374,6 +1381,8 @@ func (a *Account) GetAPIProtocol() string {
 		return APIProtocolChatCompletions
 placeholder
 	switch strings.TrimSpace(a.GetCredential("api_protocol")) {
+	case APIProtocolAdaptive:
+		return APIProtocolAdaptive
 	case APIProtocolAnthropic:
 		return APIProtocolAnthropic
 	case APIProtocolResponses:
@@ -1386,6 +1395,66 @@ placeholder
 	return APIProtocolChatCompletions
 placeholder
 
+// IsAdaptiveAPIProtocol 报告账号是否按入站协议动态选择供应商原生端点。
+func (a *Account) IsAdaptiveAPIProtocol() bool {
+	return a.GetAPIProtocol() == APIProtocolAdaptive
+placeholder
+
+// GetCNProtocolBaseURL 返回国产供应商指定协议的上游 base URL。
+// adaptive 账号优先使用 api_base_urls 中的分协议地址，缺失时按平台和
+// account_mode 使用官方默认端点。base_url 继续作为 Chat Completions 地址兼容旧字段。
+func (a *Account) GetCNProtocolBaseURL(protocol string) string {
+	if a == nil || !a.IsCNProvider() {
+		return ""
+placeholder
+	if a.IsAdaptiveAPIProtocol() {
+		if baseURLs, ok := a.Credentials["api_base_urls"].(map[string]any); ok {
+			if baseURL, ok := baseURLs[protocol].(string); ok && strings.TrimSpace(baseURL) != "" {
+				return strings.TrimSpace(baseURL)
+		placeholder
+	placeholder
+		if protocol == APIProtocolChatCompletions {
+			if baseURL := strings.TrimSpace(a.GetCredential("base_url")); baseURL != "" {
+				return baseURL
+		placeholder
+	placeholder
+placeholder
+	return a.defaultCNProtocolBaseURL(protocol)
+placeholder
+
+func (a *Account) defaultCNProtocolBaseURL(protocol string) string {
+	switch protocol {
+	case APIProtocolAnthropic:
+		switch a.Platform {
+		case PlatformKimi:
+			if a.GetAccountMode() == AccountModeCoding {
+				return DefaultKimiCodingAnthropicBaseURL
+		placeholder
+			return DefaultKimiPayGAnthropicBaseURL
+		case PlatformZhipu:
+			return DefaultZhipuAnthropicBaseURL
+		case PlatformDeepseek:
+			return DefaultDeepseekAnthropicBaseURL
+	placeholder
+	case APIProtocolChatCompletions, APIProtocolResponses:
+		switch a.Platform {
+		case PlatformKimi:
+			if a.GetAccountMode() == AccountModeCoding {
+				return DefaultKimiCodingBaseURL
+		placeholder
+			return DefaultKimiPayGBaseURL
+		case PlatformZhipu:
+			if a.GetAccountMode() == AccountModeCoding {
+				return DefaultZhipuCodingBaseURL
+		placeholder
+			return DefaultZhipuPayGBaseURL
+		case PlatformDeepseek:
+			return DefaultDeepseekBaseURL
+	placeholder
+placeholder
+	return ""
+placeholder
+
 // IsAnthropicProtocol 报告账号是否以原生 Anthropic 协议接入上游
 // （/v1/messages 直通，适配 Claude Code 等客户端）。
 func (a *Account) IsAnthropicProtocol() bool {
@@ -1396,8 +1465,11 @@ placeholder
 // （上游路径为 {baseplaceholder/v1/messages）。优先取凭证 base_url，缺失时按
 // 供应商 × 接入模式返回默认端点。非 Anthropic 协议账号返回空串。
 func (a *Account) GetAnthropicProtocolBaseURL() string {
-	if a == nil || !a.IsAnthropicProtocol() {
+	if a == nil || (!a.IsAnthropicProtocol() && !a.IsAdaptiveAPIProtocol()) {
 		return ""
+placeholder
+	if a.IsAdaptiveAPIProtocol() {
+		return a.GetCNProtocolBaseURL(APIProtocolAnthropic)
 placeholder
 	if a.Type == AccountTypeAPIKey || a.Type == AccountTypeUpstream {
 		if baseURL := strings.TrimSpace(a.GetCredential("base_url")); baseURL != "" {
