@@ -1148,7 +1148,7 @@ placeholder
 	require.InDelta(t, usageRepo.lastLog.TotalCost*1.1, usageRepo.lastLog.ActualCost, 1e-12)
 placeholder
 
-func TestOpenAIGatewayServiceRecordUsage_Gpt54LongContextBillingDisabledByDefault(t *testing.T) {
+func TestOpenAIGatewayServiceRecordUsage_Gpt54LongContextBillingDisabledWhenGroupAndAccountOff(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{inserted: trueplaceholder
 	userRepo := &openAIRecordUsageUserRepoStub{placeholder
 	subRepo := &openAIRecordUsageSubRepoStub{placeholder
@@ -1164,7 +1164,7 @@ func TestOpenAIGatewayServiceRecordUsage_Gpt54LongContextBillingDisabledByDefaul
 			Model:    "gpt-5.4-2026-03-05",
 			Duration: time.Second,
 	placeholder,
-		APIKey:  openAIRecordUsageAPIKeyWithGroup(svc, 1014, true),
+		APIKey:  openAIRecordUsageAPIKeyWithGroup(svc, 1014, false),
 		User:    &User{ID: 2014placeholder,
 		Account: &Account{ID: 3014, Platform: PlatformOpenAIplaceholder,
 placeholder)
@@ -1219,7 +1219,7 @@ placeholder
 	require.True(t, usageRepo.lastLog.LongContextBillingApplied)
 placeholder
 
-func TestOpenAIGatewayServiceRecordUsage_GroupAndAccountLongContextMustBothAllow(t *testing.T) {
+func TestOpenAIGatewayServiceRecordUsage_GroupOrAccountLongContextAllows(t *testing.T) {
 	tokens := OpenAIUsage{InputTokens: 300000, OutputTokens: 2000placeholder
 	baseInput := 300000 * 2.5e-6
 	baseOutput := 2000 * 15e-6
@@ -1234,9 +1234,9 @@ func TestOpenAIGatewayServiceRecordUsage_GroupAndAccountLongContextMustBothAllow
 			Account: &Account{ID: 3020, Platform: PlatformOpenAIplaceholder,
 	placeholder)
 	placeholder
-		require.False(t, usageRepo.lastLog.LongContextBillingApplied)
-		require.InDelta(t, baseInput, usageRepo.lastLog.InputCost, 1e-10)
-		require.InDelta(t, baseOutput, usageRepo.lastLog.OutputCost, 1e-10)
+		require.True(t, usageRepo.lastLog.LongContextBillingApplied)
+		require.InDelta(t, baseInput*2, usageRepo.lastLog.InputCost, 1e-10)
+		require.InDelta(t, baseOutput*1.5, usageRepo.lastLog.OutputCost, 1e-10)
 placeholder)
 
 	t.Run("group off account on", func(t *testing.T) {
@@ -1252,8 +1252,9 @@ placeholder)
 		placeholder,
 	placeholder)
 	placeholder
-		require.False(t, usageRepo.lastLog.LongContextBillingApplied)
-		require.InDelta(t, baseInput, usageRepo.lastLog.InputCost, 1e-10)
+		require.True(t, usageRepo.lastLog.LongContextBillingApplied)
+		require.InDelta(t, baseInput*2, usageRepo.lastLog.InputCost, 1e-10)
+		require.InDelta(t, baseOutput*1.5, usageRepo.lastLog.OutputCost, 1e-10)
 placeholder)
 
 	t.Run("group on account on", func(t *testing.T) {
@@ -1361,7 +1362,7 @@ placeholder
 					Model:     "gpt-5.4-2026-03-05",
 					Duration:  time.Second,
 			placeholder,
-				APIKey: openAIRecordUsageAPIKeyWithGroup(svc, 1016, true),
+				APIKey: openAIRecordUsageAPIKeyWithGroup(svc, 1016, false),
 				User:   &User{ID: 2016placeholder,
 				Account: &Account{
 					ID:              3016,

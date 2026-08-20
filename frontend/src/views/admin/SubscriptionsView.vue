@@ -788,6 +788,7 @@ import {
   isOneTimeDailyQuota,
   type RemainingDurationParts
 placeholder from '@/utils/subscriptionQuota'
+import { GROUP_PLATFORM_OPTIONS placeholder from '@/constants/platforms'
 
 const { t placeholder = useI18n()
 const appStore = useAppStore()
@@ -996,10 +997,7 @@ const groupOptions = computed(() => [
 
 const platformFilterOptions = computed(() => [
   { value: '', label: t('admin.subscriptions.allPlatforms') placeholder,
-  { value: 'anthropic', label: 'Anthropic' placeholder,
-  { value: 'openai', label: 'OpenAI' placeholder,
-  { value: 'gemini', label: 'Gemini' placeholder,
-  { value: 'antigravity', label: 'Antigravity' placeholder
+  ...GROUP_PLATFORM_OPTIONS
 ])
 
 // Group options for assign (only subscription type groups)

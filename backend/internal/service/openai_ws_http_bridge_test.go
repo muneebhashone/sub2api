@@ -173,6 +173,131 @@ placeholder
 	require.Equal(t, "custom_tool_call", gjson.GetBytes(result.wsReplayInput[0], "type").String())
 placeholder
 
+func TestProxyOpenAIWSHTTPBridgeTurnGrokPromotesDiscoveryAndRestoresNamespaceSSE(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	sse := strings.Join([]string{
+		`data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"function_call","id":"item_spawn","call_id":"call_spawn","name":"multi_agent_v1__spawn_agent","status":"in_progress"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.function_call_arguments.done","sequence_number":1,"output_index":0,"item_id":"item_spawn","call_id":"call_spawn","name":"multi_agent_v1__spawn_agent","arguments":"{\"message\":\"work\"placeholder"placeholder`,
+		"",
+		`data: {"type":"response.output_item.done","sequence_number":2,"output_index":0,"item":{"type":"function_call","id":"item_spawn","call_id":"call_spawn","name":"multi_agent_v1__spawn_agent","arguments":"{\"message\":\"work\"placeholder","status":"completed"placeholderplaceholder`,
+		"",
+		`data: {"type":"response.completed","sequence_number":3,"response":{"id":"resp_spawn","status":"completed","output":[{"type":"function_call","id":"item_spawn","call_id":"call_spawn","name":"multi_agent_v1__spawn_agent","arguments":"{\"message\":\"work\"placeholder","status":"completed"placeholder],"usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`,
+		"",
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(sse)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID: 5765, Platform: PlatformGrok, Type: AccountTypeOAuth, Concurrency: 1,
+placeholder"base_url": xai.DefaultCLIBaseURLplaceholder,
+placeholder
+	payload := []byte(`{
+		"type":"response.create","model":"grok-4.5","stream":true,
+		"tools":[{"type":"tool_search"placeholder],
+		"input":[
+			{"type":"tool_search_call","call_id":"call_search","arguments":{"query":"subagent"placeholder,"status":"completed"placeholder,
+			{"type":"tool_search_output","call_id":"call_search","execution":"client","status":"completed","tools":[
+				{"type":"namespace","name":"multi_agent_v1","tools":[{"type":"function","name":"spawn_agent","parameters":{"type":"object"placeholderplaceholder]placeholder
+			]placeholder
+		]
+placeholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+	var events [][]byte
+
+	result, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), c, account, "access-token", payload, len(payload),
+		"grok-4.5", "", "", "", "", 1,
+		func(message []byte) error {
+			events = append(events, append([]byte(nil), message...))
+			return nil
+	placeholder,
+	)
+
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, "multi_agent_v1__spawn_agent", gjson.GetBytes(upstream.lastBody, "tools.1.name").String())
+	require.Equal(t, "function_call_output", gjson.GetBytes(upstream.lastBody, "input.1.type").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.1.tools").Exists())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.1.status").Exists())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input.1.execution").Exists())
+	state, ok := openAIWSHTTPBridgeToolStateFromContext(c)
+	require.True(t, ok)
+	require.Equal(t, "multi_agent_v1", state.ClientMapping.NamespaceTools["multi_agent_v1__spawn_agent"].Namespace)
+	require.Len(t, events, 4)
+	require.Equal(t, "spawn_agent", gjson.GetBytes(events[0], "item.name").String())
+	require.Equal(t, "multi_agent_v1", gjson.GetBytes(events[0], "item.namespace").String())
+	require.Equal(t, "spawn_agent", gjson.GetBytes(events[2], "item.name").String())
+	require.Equal(t, "multi_agent_v1", gjson.GetBytes(events[2], "item.namespace").String())
+	require.Equal(t, "spawn_agent", gjson.GetBytes(events[3], "response.output.0.name").String())
+	require.Equal(t, "multi_agent_v1", gjson.GetBytes(events[3], "response.output.0.namespace").String())
+placeholder
+
+func TestProxyOpenAIWSHTTPBridgeTurnGrokInheritsToolSearchAndPromotesFollowupDiscovery(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	firstSSE := "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_first\",\"output\":[],\"usage\":{\"input_tokens\":1,\"output_tokens\":1placeholderplaceholderplaceholder\n\n"
+	secondSSE := "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_second\",\"output\":[{\"type\":\"function_call\",\"id\":\"item_spawn\",\"call_id\":\"call_spawn\",\"name\":\"multi_agent_v1__spawn_agent\",\"arguments\":\"{placeholder\"placeholder],\"usage\":{\"input_tokens\":1,\"output_tokens\":1placeholderplaceholderplaceholder\n\n"
+	upstream := &httpUpstreamRecorder{responses: []*http.Response{
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(firstSSE))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(secondSSE))placeholder,
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID: 5766, Platform: PlatformGrok, Type: AccountTypeOAuth, Concurrency: 1,
+placeholder"base_url": xai.DefaultCLIBaseURL, "subscription_tier": "free"placeholder,
+placeholder
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+
+	first := []byte(`{"type":"response.create","model":"grok-4.5","stream":true,"tools":[{"type":"tool_search"placeholder],"input":"discover tools"placeholder`)
+	_, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), c, account, "access-token", first, len(first),
+		"grok-4.5", "", "", "", "grok-ws-cache", 1, func([]byte) error { return nil placeholder,
+	)
+placeholder
+
+	second := []byte(`{
+		"type":"response.create","model":"grok-4.5","stream":true,
+		"input":[{"type":"tool_search_output","call_id":"call_search","status":"completed","tools":[
+			{"type":"namespace","name":"multi_agent_v1","tools":[{"type":"function","name":"spawn_agent","parameters":{"type":"object"placeholderplaceholder]placeholder
+		]placeholder]
+placeholder`)
+	var events [][]byte
+	_, err = svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), c, account, "access-token", second, len(second),
+		"grok-4.5", "", "", "", "grok-ws-cache", 2,
+		func(message []byte) error {
+			events = append(events, append([]byte(nil), message...))
+			return nil
+	placeholder,
+	)
+
+placeholder
+	require.Len(t, upstream.bodies, 2)
+	require.Equal(t, "tool_search", gjson.GetBytes(upstream.bodies[1], "tools.0.name").String())
+	require.Equal(t, "multi_agent_v1__spawn_agent", gjson.GetBytes(upstream.bodies[1], "tools.1.name").String())
+	require.NotEqual(t, grokFreeCacheDisabledToolChoice, gjson.GetBytes(upstream.bodies[1], "tool_choice").String())
+	require.Equal(t, "grok-ws-cache", gjson.GetBytes(upstream.bodies[1], "prompt_cache_key").String())
+	require.Equal(t, "function_call_output", gjson.GetBytes(upstream.bodies[1], "input.0.type").String())
+	require.Len(t, events, 1)
+	require.Equal(t, "spawn_agent", gjson.GetBytes(events[0], "response.output.0.name").String())
+	require.Equal(t, "multi_agent_v1", gjson.GetBytes(events[0], "response.output.0.namespace").String())
+placeholder
+
 func TestOpenAIWSHTTPBridgeAPIKeyReusesClientToolMappingWhenFollowupOmitsTools(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -1005,11 +1130,13 @@ placeholder
 	require.Len(t, events, 2)
 	require.False(t, gjson.GetBytes(upstream.lastBody, `input.#(type=="additional_tools")`).Exists())
 	tools := gjson.GetBytes(upstream.lastBody, "tools").Array()
-	require.Len(t, tools, 3)
+	require.Len(t, tools, 4)
 	require.Equal(t, "function", tools[0].Get("type").String())
 	require.Equal(t, "lookup", tools[0].Get("name").String())
 	require.Equal(t, "web_search", tools[1].Get("type").String())
-	require.Equal(t, "x_search", tools[2].Get("type").String())
+	require.Equal(t, "function", tools[2].Get("type").String())
+	require.Equal(t, "apply_patch", tools[2].Get("name").String())
+	require.Equal(t, "x_search", tools[3].Get("type").String())
 	require.False(t, gjson.GetBytes(upstream.lastBody, "tool_choice").Exists())
 	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="custom")`).Exists())
 	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="namespace")`).Exists())
