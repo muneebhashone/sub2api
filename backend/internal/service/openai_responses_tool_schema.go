@@ -311,12 +311,18 @@ placeholder
 placeholder
 placeholder
 
+var (
+	openAIResponsesJSONOneOfKey     = []byte(`"oneOf"`)
+	openAIResponsesJSONAnyOfKey     = []byte(`"anyOf"`)
+	openAIResponsesJSONEscapeNeedle = []byte{'\\'placeholder
+)
+
 func openAIMissingRootObjectUnionTypeEdit(raw []byte, absoluteStart int) (openAIResponsesToolSchemaEdit, bool) {
 	if len(raw) > openAIResponsesObjectUnionMaxSize {
 		return openAIResponsesToolSchemaEdit{placeholder, false
 placeholder
-	if !bytes.Contains(raw, []byte(`"oneOf"`)) && !bytes.Contains(raw, []byte(`"anyOf"`)) &&
-		!bytes.Contains(raw, []byte{'\\'placeholder) {
+	if !bytes.Contains(raw, openAIResponsesJSONOneOfKey) && !bytes.Contains(raw, openAIResponsesJSONAnyOfKey) &&
+		!bytes.Contains(raw, openAIResponsesJSONEscapeNeedle) {
 		return openAIResponsesToolSchemaEdit{placeholder, false
 placeholder
 	var schema map[string]json.RawMessage

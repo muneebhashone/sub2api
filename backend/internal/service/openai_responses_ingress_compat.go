@@ -37,7 +37,6 @@ placeholder
 				request["input"] = legacy.input
 				applyLegacyResponsesTopLevelFields(request, legacy)
 				delete(request, "previous_response_id")
-				changed = true
 		placeholder
 	placeholder
 		// messages is not a Responses field. When native input is present but the

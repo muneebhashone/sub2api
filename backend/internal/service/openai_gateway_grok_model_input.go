@@ -371,7 +371,7 @@ placeholder
 		if !ok {
 			return "", false
 	placeholder
-		text.WriteString(value)
+		_, _ = text.WriteString(value)
 placeholder
 	if strings.TrimSpace(text.String()) == "" {
 		return "", false

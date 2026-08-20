@@ -115,10 +115,6 @@ placeholder
 	return compactCodexCallIDForItemType(itemType, candidate)
 placeholder
 
-func compactCodexCallID(id string) string {
-	return compactCodexCallIDForItemType("function_call", id)
-placeholder
-
 func compactCodexCallIDForItemType(itemType, id string) string {
 	prefix := openAIResponsesToolCallIDPrefix(itemType) + "_"
 	digest := sha256.Sum256([]byte("sub2api:codex-call-id:v1:" + id))

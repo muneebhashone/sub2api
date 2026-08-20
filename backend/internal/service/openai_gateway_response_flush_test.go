@@ -459,7 +459,7 @@ placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reader, writer := io.Pipe()
-			defer writer.Close()
+			defer func() { _ = writer.Close() placeholder()
 			recorder := newOpenAIResponseFlushRecorder()
 			resultCh, errCh := runOpenAIResponseFlushTestAsync(recorder, reader, tt.cfg)
 

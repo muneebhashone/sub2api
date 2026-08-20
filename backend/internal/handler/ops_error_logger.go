@@ -1766,7 +1766,7 @@ placeholder
 	out.Grow(len(body))
 	for frameIndex, frame := range frames {
 		if frameIndex > 0 {
-			out.WriteString("\n\n")
+			_, _ = out.WriteString("\n\n")
 	placeholder
 		_, payload := parseOpsSSEFrameEnvelope(frame)
 		trimmedPayload := bytes.TrimSpace(payload)
@@ -1779,7 +1779,7 @@ placeholder
 			replacement = `{"payload_truncated":trueplaceholder`
 	placeholder
 		if replacement == "" {
-			out.Write(frame)
+			_, _ = out.Write(frame)
 			continue
 	placeholder
 		wroteData := false
@@ -1794,9 +1794,9 @@ placeholder
 				wroteData = true
 		placeholder
 			if emittedLine {
-				out.WriteByte('\n')
+				_ = out.WriteByte('\n')
 		placeholder
-			out.Write(line)
+			_, _ = out.Write(line)
 			emittedLine = true
 	placeholder
 placeholder
