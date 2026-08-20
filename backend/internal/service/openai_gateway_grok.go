@@ -258,7 +258,7 @@ placeholder
 placeholder
 
 func isGrokInvalidEncryptedContentResponse(statusCode int, body []byte) bool {
-	if statusCode != http.StatusBadRequest {
+	if statusCode != http.StatusBadRequest && statusCode != http.StatusUnprocessableEntity {
 		return false
 placeholder
 
@@ -284,7 +284,7 @@ placeholder
 		return false
 placeholder
 
-	if strings.EqualFold(code, "invalid_encrypted_content") {
+	if strings.EqualFold(code, "invalid_encrypted_content") || strings.EqualFold(code, "invalid_compaction") || strings.EqualFold(code, "compaction_decode_error") {
 		return true
 placeholder
 	// Keep the official xAI flat-code gate so unrelated 400s are not retried.
@@ -292,12 +292,13 @@ placeholder
 		return false
 placeholder
 	// Nested OpenAI-style envelopes may omit top-level code; require decrypt text.
-	if code == "" && !strings.Contains(normalizedMessage, "decrypt") {
+	if code == "" && !strings.Contains(normalizedMessage, "decrypt") && !strings.Contains(normalizedMessage, "decode the compaction blob") {
 		return false
 placeholder
-	return strings.Contains(normalizedMessage, "encrypted_content") &&
+	return (strings.Contains(normalizedMessage, "encrypted_content") &&
 		(strings.Contains(normalizedMessage, "decrypt") ||
-			strings.Contains(normalizedMessage, "unmodified"))
+			strings.Contains(normalizedMessage, "unmodified"))) ||
+		strings.Contains(normalizedMessage, "decode the compaction blob")
 placeholder
 
 // requestHasGrokEncryptedReasoning reports whether the outbound Responses body
@@ -392,7 +393,8 @@ placeholder
 
 	hasEncryptedReasoning := false
 	for _, item := range items {
-		if strings.TrimSpace(item.Get("type").String()) == "reasoning" && item.Get("encrypted_content").Exists() {
+		if (strings.TrimSpace(item.Get("type").String()) == "reasoning" && item.Get("encrypted_content").Exists()) ||
+			(isOpenAICompactionType(strings.TrimSpace(item.Get("type").String())) && item.Get("encrypted_content").Exists()) {
 			hasEncryptedReasoning = true
 			break
 	placeholder

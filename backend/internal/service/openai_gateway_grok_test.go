@@ -2053,6 +2053,16 @@ placeholder
 placeholder
 placeholder
 
+func TestGrokCompactionBlobRecoveryStripsCompactionItem(t *testing.T) {
+	body := []byte(`{"model":"grok","input":[{"type":"compaction","id":"cmp_1","encrypted_content":"blob"placeholder,{"type":"message","role":"user","content":"hi"placeholder]placeholder`)
+	require.True(t, isGrokInvalidEncryptedContentResponse(http.StatusUnprocessableEntity, []byte(`{"code":"invalid_compaction","error":"could not decode the compaction blob"placeholder`)))
+	retry, changed, err := trimGrokInvalidEncryptedContentRetryBody(body)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, "message", gjson.GetBytes(retry, "input.0.type").String())
+	require.False(t, gjson.GetBytes(retry, "input.#(type==\"compaction\")").Exists())
+placeholder
+
 func TestForwardGrokResponsesInvalidEncryptedContentRecoveryNestedErrorShape(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
