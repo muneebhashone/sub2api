@@ -402,6 +402,13 @@ placeholder
 		if statusCode == http.StatusTooManyRequests {
 			return true
 	placeholder
+	case GrokFailureRateLimit:
+		// A transient 429 does not identify a bad credential. Give every Grok
+		// account a bounded same-account retry window before failover; the
+		// failover loop still caps attempts and the client receives 429 after it.
+		if statusCode == http.StatusTooManyRequests {
+			return true
+	placeholder
 placeholder
 	return account.IsPoolMode() && account.IsPoolModeRetryableStatus(statusCode)
 placeholder
@@ -411,7 +418,7 @@ func grokSameAccountRetryMetadata(account *Account, statusCode int, responseBody
 		return false, 0, time.Time{placeholder
 placeholder
 	decision := classifyGrokUpstreamFailure(statusCode, responseBody, "")
-	if decision.Class != GrokFailureModelCapacity {
+	if decision.Class != GrokFailureModelCapacity && decision.Class != GrokFailureRateLimit {
 		return true, 0, time.Time{placeholder
 placeholder
 	return true, 500 * time.Millisecond, time.Now().Add(30 * time.Second)

@@ -81,7 +81,7 @@ func TestGrokRetryableOnSameAccount_CapacityAndRateLimit(t *testing.T) {
 	account := &Account{ID: 9105, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
 	require.True(t, grokRetryableOnSameAccount(account, http.StatusTooManyRequests,
 		[]byte(`{"error":{"message":"The model is currently at capacity due to high demand"placeholderplaceholder`)))
-	require.False(t, grokRetryableOnSameAccount(account, http.StatusTooManyRequests,
+	require.True(t, grokRetryableOnSameAccount(account, http.StatusTooManyRequests,
 		[]byte(`{"error":{"message":"rate limit exceeded"placeholderplaceholder`)))
 	require.False(t, grokRetryableOnSameAccount(account, http.StatusPaymentRequired,
 		[]byte(`{"error":{"message":"You have run out of credits or need a Grok subscription"placeholderplaceholder`)))
@@ -118,9 +118,9 @@ func TestGrokSameAccountRetryMetadata_CapacityDeadline(t *testing.T) {
 
 	retryable, delay, deadline = grokSameAccountRetryMetadata(account, http.StatusTooManyRequests,
 		[]byte(`{"error":{"message":"rate limit exceeded"placeholderplaceholder`))
-	require.False(t, retryable)
-	require.Zero(t, delay)
-	require.True(t, deadline.IsZero())
+	require.True(t, retryable)
+	require.Equal(t, 500*time.Millisecond, delay)
+	require.WithinDuration(t, time.Now().Add(30*time.Second), deadline, 2*time.Second)
 placeholder
 
 func TestClassifyGrokUpstreamFailure_ValidationNoCool(t *testing.T) {
