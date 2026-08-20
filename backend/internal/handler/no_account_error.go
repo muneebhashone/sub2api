@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +32,29 @@ type noAccountErrorClassification struct {
 	ErrType       string
 	Message       string
 	ModelNotFound bool // true when this is a 404 model_not_found classification
+placeholder
+
+var selectionModelRateLimitedPattern = regexp.MustCompile(`(?:model_rate_limited|rate_limited)=(\d+)`)
+
+// classifySelectionFailureError preserves the scheduler's compact reason when
+// every model-capable account is temporarily rate limited.
+func classifySelectionFailureError(err error, fallback noAccountErrorClassification) noAccountErrorClassification {
+	if err == nil {
+		return fallback
+placeholder
+	match := selectionModelRateLimitedPattern.FindStringSubmatch(strings.ToLower(err.Error()))
+	if len(match) != 2 {
+		return fallback
+placeholder
+	count, parseErr := strconv.Atoi(match[1])
+	if parseErr != nil || count <= 0 {
+		return fallback
+placeholder
+	return noAccountErrorClassification{
+		Status:  http.StatusTooManyRequests,
+		ErrType: "rate_limit_error",
+		Message: "All available accounts are currently rate-limited. Please retry later.",
+placeholder
 placeholder
 
 // classifyNoAccountError decides between 404 model_not_found and 503

@@ -58,6 +58,21 @@ placeholder)
 	t.Run("nil error keeps fixed delay", func(t *testing.T) {
 		require.Equal(t, 500*time.Millisecond, sameAccountRetryDelayFor(nil, 10))
 placeholder)
+
+	t.Run("explicit oauth delay wins", func(t *testing.T) {
+		err := &service.UpstreamFailoverError{SameAccountRetryDelay: 3 * time.Secondplaceholder
+		require.Equal(t, 3*time.Second, sameAccountRetryDelayFor(err, 1))
+placeholder)
+placeholder
+
+func TestSameAccountRetryAllowedUsesDeadlineInsteadOfPoolCount(t *testing.T) {
+	err := &service.UpstreamFailoverError{
+		RetryableOnSameAccount:   true,
+		SameAccountRetryDeadline: time.Now().Add(time.Minute),
+placeholder
+	require.True(t, sameAccountRetryAllowed(err, 100, 0))
+	err.SameAccountRetryDeadline = time.Now().Add(-time.Second)
+	require.False(t, sameAccountRetryAllowed(err, 0, 100))
 placeholder
 
 // ---------------------------------------------------------------------------
@@ -313,6 +328,20 @@ placeholder)
 		mock := &mockTempUnscheduler{placeholder
 		fs := NewFailoverState(3, true)
 		err := newTestFailoverErr(400, true, false)
+
+		fs.HandleFailoverError(context.Background(), mock, 100, "openai", maxSameAccountRetries, err)
+
+		require.False(t, fs.ForceCacheBilling)
+		require.Zero(t, fs.SwitchCount)
+placeholder)
+
+	t.Run("deadline允许超过计数上限时仍不强制缓存计费", func(t *testing.T) {
+		mock := &mockTempUnscheduler{placeholder
+		fs := NewFailoverState(3, true)
+		fs.SameAccountRetryCount[100] = maxSameAccountRetries
+		err := newTestFailoverErr(http.StatusTooManyRequests, true, false)
+		err.SameAccountRetryDeadline = time.Now().Add(time.Minute)
+		err.SameAccountRetryDelay = time.Nanosecond
 
 		fs.HandleFailoverError(context.Background(), mock, 100, "openai", maxSameAccountRetries, err)
 
