@@ -30,7 +30,23 @@ placeholder)
 placeholder)
 
 	t.Run("DeepSeek max", func(t *testing.T) {
-		got := extractCCReasoningEffortFromBody([]byte(`{"reasoning_effort":"Max"placeholder`))
+		got := extractCCReasoningEffortFromBody([]byte(`{"model":"deepseek-v4-flash","reasoning_effort":"Max"placeholder`))
+		require.NotNil(t, got)
+		require.Equal(t, "max", *got)
+placeholder)
+
+	t.Run("mapped Kimi alias max", func(t *testing.T) {
+		got := extractCCReasoningEffortFromBody(
+			[]byte(`{"model":"public-alias","reasoning_effort":"max"placeholder`),
+			"kimi-k3",
+			"public-alias",
+		)
+		require.NotNil(t, got)
+		require.Equal(t, "max", *got)
+placeholder)
+
+	t.Run("legacy model max", func(t *testing.T) {
+		got := extractCCReasoningEffortFromBody([]byte(`{"model":"gpt-5.5","reasoning_effort":"max"placeholder`))
 		require.NotNil(t, got)
 		require.Equal(t, "xhigh", *got)
 placeholder)
