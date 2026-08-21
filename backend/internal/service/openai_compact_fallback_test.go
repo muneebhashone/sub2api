@@ -272,3 +272,41 @@ placeholder
 	require.NotContains(t, recorder.Body.String(), "context_length_exceeded")
 	require.Contains(t, recorder.Body.String(), "response.completed")
 placeholder
+
+func TestOpenAIGatewayForwardDoesNotRecurseWhenCompactFallbackAlsoFails(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	body := []byte(`{"model":"gpt-5.5","stream":true,"instructions":"compact-test","input":[{"type":"message","role":"user","content":"hello"placeholder,{"type":"compaction_trigger"placeholder]placeholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+	c.Request.Body = io.NopCloser(bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	MarkOpenAINativeCompactionV2(c)
+
+	failed := "event: response.failed\n" +
+		`data: {"type":"response.failed","response":{"status":"failed","error":{"code":"model_not_found","message":"model not found"placeholderplaceholderplaceholder` + "\n\n"
+	upstream := &httpUpstreamRecorder{responses: []*http.Response{
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(failed))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(failed))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(failed))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(failed))placeholder,
+		{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder, Body: io.NopCloser(strings.NewReader(failed))placeholder,
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{OpenAICompactModel: "gpt-5.4"placeholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{
+		ID: 1, Name: "openai-oauth", Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1,
+placeholder"access_token": "oauth-token", "chatgpt_account_id": "chatgpt-account"placeholder,
+		Status:      StatusActive, Schedulable: true,
+placeholder
+
+	result, err := svc.Forward(context.Background(), c, account, body)
+
+placeholder
+	require.Nil(t, result)
+	require.Len(t, upstream.bodies, 2)
+	require.Equal(t, "gpt-5.5", gjson.GetBytes(upstream.bodies[0], "model").String())
+	require.Equal(t, "gpt-5.4", gjson.GetBytes(upstream.bodies[1], "model").String())
+placeholder
