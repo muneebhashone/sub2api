@@ -91,6 +91,23 @@ describe('refreshAuthTokens', () => {
     placeholder)
   placeholder)
 
+  it('does not mistake boundary timer jitter for a completed peer refresh', async () => {
+    vi.useFakeTimers()
+    seedSession({ token_expires_at: String(Date.now() + 120_001) placeholder)
+    mockedPost.mockResolvedValueOnce(refreshedResponse())
+    const request = vi.fn(async (_name: string, callback: () => Promise<unknown>) => callback())
+    Object.defineProperty(navigator, 'locks', {
+      configurable: true,
+      value: { request placeholder
+    placeholder)
+    const { refreshAuthTokens placeholder = await import('@/api/tokenRefresh')
+
+    await expect(refreshAuthTokens()).resolves.toMatchObject({ access_token: 'new-access' placeholder)
+
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(mockedPost).toHaveBeenCalledTimes(1)
+  placeholder)
+
   it('recovers when a peer publishes the rotated token just after this request fails', async () => {
     seedSession()
     mockedPost.mockRejectedValueOnce(new Error('refresh token already used'))

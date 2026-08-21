@@ -28,7 +28,7 @@ placeholder{
 		{name: "invalid JSON", data: `{"type":`, want: falseplaceholder,
 		{name: "terminal with trailing garbage", data: `{"type":"response.completed"placeholder trailing`, want: trueplaceholder,
 		{name: "nonterminal with trailing garbage", data: `{"type":"response.output_text.delta"placeholder trailing`, want: falseplaceholder,
-		{name: "type whitespace remains nonterminal", data: `{"type":" response.completed "placeholder`, want: falseplaceholder,
+		{name: "type whitespace is normalized", data: `{"type":" response.completed "placeholder`, want: trueplaceholder,
 placeholder
 
 	for _, tt := range tests {

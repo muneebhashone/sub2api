@@ -38,6 +38,29 @@ placeholder
 placeholder
 placeholder
 
+func TestFilterHeadersAllowsReasoningIncludedByDefault(t *testing.T) {
+	src := http.Header{placeholder
+	src.Set("X-Reasoning-Included", "1")
+
+	filtered := FilterHeaders(src, CompileHeaderFilter(config.ResponseHeaderConfig{placeholder))
+	if got := filtered.Get("X-Reasoning-Included"); got != "1" {
+		t.Fatalf("expected X-Reasoning-Included passthrough, got %q", got)
+placeholder
+placeholder
+
+func TestFilterHeadersForceRemoveOverridesReasoningIncluded(t *testing.T) {
+	src := http.Header{placeholder
+	src.Set("X-Reasoning-Included", "1")
+
+	filtered := FilterHeaders(src, CompileHeaderFilter(config.ResponseHeaderConfig{
+		Enabled:     true,
+		ForceRemove: []string{"x-reasoning-included"placeholder,
+placeholder))
+	if got := filtered.Get("X-Reasoning-Included"); got != "" {
+		t.Fatalf("expected X-Reasoning-Included removal, got %q", got)
+placeholder
+placeholder
+
 func TestFilterHeadersEnabledUsesAllowlist(t *testing.T) {
 	src := http.Header{placeholder
 	src.Add("Content-Type", "application/json")

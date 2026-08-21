@@ -77,6 +77,26 @@ placeholder
 placeholder
 placeholder
 
+func TestResponsesFunctionUpstreamsLowerToolSearchDiscoveryOutput(t *testing.T) {
+	body := []byte(`{"tools":[{"type":"tool_search"placeholder],"input":[{"type":"tool_search_output","call_id":"search_1","tools":[{"type":"namespace","name":"github"placeholder],"status":"completed","execution":"client"placeholder]placeholder`)
+	adapters := map[string]func([]byte) ([]byte, apicompat.ResponsesClientToolMapping, error){
+		"OpenAI API-key": adaptOpenAIResponsesClientTools,
+		"Grok":           adaptGrokResponsesClientTools,
+placeholder
+	for name, adapt := range adapters {
+		t.Run(name, func(t *testing.T) {
+			adapted, mapping, err := adapt(body)
+		placeholder
+			require.True(t, mapping.ToolSearch)
+			require.Equal(t, "function_call_output", gjson.GetBytes(adapted, "input.0.type").String())
+			require.JSONEq(t, `[{"name":"github","type":"namespace"placeholder]`, gjson.GetBytes(adapted, "input.0.output").String())
+			require.False(t, gjson.GetBytes(adapted, "input.0.tools").Exists())
+			require.False(t, gjson.GetBytes(adapted, "input.0.status").Exists())
+			require.False(t, gjson.GetBytes(adapted, "input.0.execution").Exists())
+	placeholder)
+placeholder
+placeholder
+
 func TestClearOpenAIResponsesClientToolMappingRemovesStaleContextState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())

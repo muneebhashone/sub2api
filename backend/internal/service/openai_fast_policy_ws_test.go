@@ -348,6 +348,23 @@ placeholder
 	require.Equal(t, "response.create", gjson.GetBytes(payload, "type").String())
 placeholder
 
+func TestOpenAIWSPassthroughPolicyModelDoesNotApplyAccountMapping(t *testing.T) {
+	account := &Account{
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"model_mapping": map[string]any{"public-model": "private-model"placeholder,
+	placeholder,
+		Extra: map[string]any{"openai_passthrough": trueplaceholder,
+placeholder
+
+	responseCreate := []byte(`{"type":"response.create","model":"public-model"placeholder`)
+	require.Equal(t, "public-model", openAIWSPassthroughPolicyModelForFrame(account, responseCreate))
+
+	sessionUpdate := []byte(`{"type":"session.update","session":{"model":"public-model"placeholderplaceholder`)
+	require.Equal(t, "public-model", openAIWSPassthroughPolicyModelFromSessionFrame(account, sessionUpdate))
+placeholder
+
 // TestPolicyEnforcingFrameConn_WithoutCapturedFallbackPolicyMisses pins the
 // inverse: when the wrapper has NO capturedSessionModel fallback (model is
 // empty per-frame and no fallback is wired up), the policy fails to match

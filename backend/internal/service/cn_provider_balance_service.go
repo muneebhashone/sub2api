@@ -190,9 +190,18 @@ placeholder
 	placeholder
 		// balance_infos 逐条解析：双币种账号同时返回 CNY + USD（数组顺序即
 		// 主次序，首条为主币种）。
-		gjson.GetBytes(bodyBytes, "balance_infos").ForEach(func(_, info gjson.Result) bool {
+		balanceInfos := gjson.GetBytes(bodyBytes, "balance_infos")
+		if !balanceInfos.Exists() || !balanceInfos.IsArray() {
+			result.Error = "Invalid balance response: missing balance_infos"
+			return result, nil
+	placeholder
+		balanceInfos.ForEach(func(_, info gjson.Result) bool {
 			currency := strings.ToUpper(strings.TrimSpace(info.Get("currency").String()))
-			balance, _ := cnParseF64(info.Get("total_balance").Value())
+			totalBalance := info.Get("total_balance")
+			balance, ok := cnParseF64(totalBalance.Value())
+			if !totalBalance.Exists() || !ok {
+				return true
+		placeholder
 			if currency == "" {
 				currency = "CNY"
 		placeholder
@@ -200,7 +209,8 @@ placeholder
 			return true
 	placeholder)
 		if len(entries) == 0 {
-			entries = append(entries, CNProviderBalanceEntry{Currency: "CNY"placeholder)
+			result.Error = "Invalid balance response: no valid balance entries"
+			return result, nil
 	placeholder
 placeholder
 	result.Balances = entries

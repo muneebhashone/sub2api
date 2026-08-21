@@ -84,6 +84,24 @@ placeholder{
 			want:   true,
 	placeholder,
 		{
+			name:   "permission-denied usage guidelines is request scoped",
+			status: http.StatusForbidden,
+			body:   `{"code":"permission-denied","error":"Content violates usage guidelines. "placeholder`,
+			want:   true,
+	placeholder,
+		{
+			name:   "permission-denied entitlement stays on the account path",
+			status: http.StatusForbidden,
+			body:   `{"code":"permission-denied","error":"Access to the chat endpoint is denied"placeholder`,
+			want:   false,
+	placeholder,
+		{
+			name:   "structured account code overrides usage guidelines phrase",
+			status: http.StatusForbidden,
+			body:   `{"error":{"code":"account_suspended","message":"Content violates usage guidelines."placeholderplaceholder`,
+			want:   false,
+	placeholder,
+		{
 			name:   "wrong status",
 			status: http.StatusBadRequest,
 			body:   `{"error":{"code":"new_sensitive"placeholderplaceholder`,
@@ -277,6 +295,21 @@ placeholder
 	require.Zero(t, repo.rateLimitedCalls)
 	require.Zero(t, repo.updateCalls)
 	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestGrokPermissionDeniedContentRefusalDoesNotMutateOrFailover(t *testing.T) {
+	repo := &grokQuotaAccountRepo{placeholder
+	svc := &OpenAIGatewayService{accountRepo: repoplaceholder
+	account := &Account{ID: 4785, Platform: PlatformGrok, Type: AccountTypeOAuthplaceholder
+	body := []byte(`{"code":"permission-denied","error":"Content violates usage guidelines. "placeholder`)
+
+	svc.handleGrokAccountUpstreamError(context.Background(), account, http.StatusForbidden, nil, body)
+
+	require.Zero(t, repo.tempUnschedCalls)
+	require.Zero(t, repo.rateLimitedCalls)
+	require.Zero(t, repo.updateCalls)
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.False(t, svc.shouldFailoverGrokUpstreamError(http.StatusForbidden, body))
 placeholder
 
 func TestHandleGrokAccountUpstreamErrorEntitlement403KeepsDefaultCooldown(t *testing.T) {
