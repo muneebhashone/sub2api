@@ -1009,9 +1009,7 @@ placeholder
 placeholder
 placeholder
 
-func TestResolveAntigravityForwardBaseURL_DefaultDaily(t *testing.T) {
-	t.Setenv(antigravityForwardBaseURLEnv, "")
-
+func TestResolveAntigravityForwardBaseURL(t *testing.T) {
 	oldBaseURLs := append([]string(nil), antigravity.BaseURLs...)
 	defer func() {
 		antigravity.BaseURLs = oldBaseURLs
@@ -1019,10 +1017,46 @@ placeholder()
 
 	prodURL := "https://prod.test"
 	dailyURL := "https://daily.test"
-	antigravity.BaseURLs = []string{dailyURL, prodURLplaceholder
+	antigravity.BaseURLs = []string{prodURL, dailyURLplaceholder
 
-	resolved := resolveAntigravityForwardBaseURL()
-	require.Equal(t, dailyURL, resolved)
+	tests := []struct {
+		name    string
+		env     string
+		account *Account
+		want    string
+placeholder{
+		{
+			name: "pro defaults to daily", account: &Account{Credentials: map[string]any{"plan_type": " Pro "placeholderplaceholder,
+			want: dailyURL,
+	placeholder,
+		{
+			name: "ultra defaults to daily", account: &Account{Credentials: map[string]any{"plan_type": "ULTRA"placeholderplaceholder,
+			want: dailyURL,
+	placeholder,
+		{name: "free defaults to prod", account: &Account{Credentials: map[string]any{"plan_type": "free"placeholderplaceholder, want: prodURLplaceholder,
+		{name: "abnormal defaults to prod", account: &Account{Credentials: map[string]any{"plan_type": "Abnormal"placeholderplaceholder, want: prodURLplaceholder,
+		{name: "unknown defaults to prod", account: &Account{Credentials: map[string]any{"plan_type": "enterprise"placeholderplaceholder, want: prodURLplaceholder,
+		{name: "malformed defaults to prod", account: &Account{Credentials: map[string]any{"plan_type": map[string]any{"name": "pro"placeholderplaceholderplaceholder, want: prodURLplaceholder,
+		{name: "missing defaults to prod", account: &Account{Credentials: map[string]any{placeholderplaceholder, want: prodURLplaceholder,
+		{name: "nil account defaults to prod", account: nil, want: prodURLplaceholder,
+		{
+			name: "daily override wins for free tier", env: " daily ",
+			account: &Account{Credentials: map[string]any{"plan_type": "free"placeholderplaceholder,
+			want:    dailyURL,
+	placeholder,
+		{
+			name: "prod override wins for paid tier", env: " PROD ",
+			account: &Account{Credentials: map[string]any{"plan_type": "pro"placeholderplaceholder,
+			want:    prodURL,
+	placeholder,
+placeholder
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(antigravityForwardBaseURLEnv, tt.env)
+			require.Equal(t, tt.want, resolveAntigravityForwardBaseURL(tt.account))
+	placeholder)
+placeholder
 placeholder
 
 func TestAntigravityAccountSwitchError_Error(t *testing.T) {
