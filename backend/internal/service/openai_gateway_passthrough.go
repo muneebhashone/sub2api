@@ -83,17 +83,6 @@ placeholder
 	return needsAdaptation
 placeholder
 
-func shouldAdaptOpenAIResponsesClientTools(account *Account, c *gin.Context, body []byte) bool {
-	if account == nil || account.Type != AccountTypeAPIKey || isOpenAIResponsesCompactPath(c) ||
-		!needsOpenAIResponsesClientToolAdaptation(body) {
-		return false
-placeholder
-	if account.Platform == PlatformOpenAI {
-		return true
-placeholder
-	return account.Platform == PlatformDeepseek && account.GetAPIProtocol() == APIProtocolResponses
-placeholder
-
 func openAIResponsesClientToolMapping(c *gin.Context) (apicompat.ResponsesClientToolMapping, bool) {
 	if c == nil {
 		return apicompat.ResponsesClientToolMapping{placeholder, false
@@ -101,6 +90,17 @@ placeholder
 	value, ok := c.Get(openAIResponsesClientToolMappingContextKey)
 	mapping, typed := value.(apicompat.ResponsesClientToolMapping)
 	return mapping, ok && typed && hasOpenAIResponsesClientToolMapping(mapping)
+placeholder
+
+func setOpenAIResponsesClientToolMapping(c *gin.Context, mapping apicompat.ResponsesClientToolMapping) {
+	if c == nil {
+		return
+placeholder
+	if !hasOpenAIResponsesClientToolMapping(mapping) {
+		clearOpenAIResponsesClientToolMapping(c)
+		return
+placeholder
+	c.Set(openAIResponsesClientToolMappingContextKey, mapping)
 placeholder
 
 // clearOpenAIResponsesClientToolMapping removes mapping state from the prior
@@ -112,6 +112,15 @@ placeholder
 	if _, exists := c.Get(openAIResponsesClientToolMappingContextKey); exists {
 		c.Set(openAIResponsesClientToolMappingContextKey, apicompat.ResponsesClientToolMapping{placeholder)
 placeholder
+placeholder
+
+func restoreOpenAIResponsesClientToolPayload(c *gin.Context, payload []byte) ([]byte, error) {
+	mapping, ok := openAIResponsesClientToolMapping(c)
+	if !ok || !bytes.Contains(payload, []byte(`"function_call"`)) || !json.Valid(payload) {
+		return payload, nil
+placeholder
+	restored, _, err := apicompat.RestoreResponsesClientToolPayload(payload, mapping)
+	return restored, err
 placeholder
 
 func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
@@ -214,13 +223,14 @@ placeholder
 	placeholder
 placeholder
 
-	if shouldAdaptOpenAIResponsesClientTools(account, c, body) {
+	if account != nil && account.Platform == PlatformOpenAI && account.Type == AccountTypeAPIKey &&
+		!isOpenAIResponsesCompactPath(c) && needsOpenAIResponsesClientToolAdaptation(body) {
 		adaptedBody, mapping, adaptErr := adaptOpenAIResponsesClientTools(body)
 		if adaptErr != nil {
 			return nil, adaptErr
 	placeholder
 		body = adaptedBody
-		c.Set(openAIResponsesClientToolMappingContextKey, mapping)
+		setOpenAIResponsesClientToolMapping(c, mapping)
 placeholder
 
 	sanitizedBody, sanitized, err := sanitizeEmptyBase64InputImagesInOpenAIBody(body)
@@ -2109,11 +2119,9 @@ placeholder
 		return nil, fmt.Errorf("restore OpenAI passthrough namespace response: %w", err)
 placeholder
 	body = restoreCodexToolNamesFromContext(c, body)
-	if mapping, ok := openAIResponsesClientToolMapping(c); ok && json.Valid(body) {
-		body, _, err = apicompat.RestoreResponsesClientToolPayload(body, mapping)
-		if err != nil {
-			return nil, fmt.Errorf("restore OpenAI Responses client tools: %w", err)
-	placeholder
+	body, err = restoreOpenAIResponsesClientToolPayload(c, body)
+	if err != nil {
+		return nil, fmt.Errorf("restore OpenAI Responses client tools: %w", err)
 placeholder
 	if !writeOpenAICompactSSEBridge(c, resp.StatusCode, body) {
 		c.Data(resp.StatusCode, contentType, body)
