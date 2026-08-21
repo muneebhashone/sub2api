@@ -127,7 +127,8 @@ placeholder
 		svc.handleFailoverSideEffects(context.Background(), resp, account, []byte(`{"error":{"type":"rate_limit_error","message":"rate limited"placeholderplaceholder`))
 placeholder)
 
-	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+	require.True(t, svc.shouldRetryOpenAIOAuth429OnSameAccount(account, http.StatusTooManyRequests, false))
 placeholder
 
 func TestGetOpenAIRequestBodyMap_IgnoresLegacyContextCache(t *testing.T) {

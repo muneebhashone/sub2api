@@ -22,6 +22,47 @@ func MarkOpenAINativeCompactionV2(c *gin.Context) {
 placeholder
 placeholder
 
+// NormalizeCompactionTriggerInputOrder keeps a single compaction trigger as
+// the final Responses input item, as required by the upstream v2 wire format.
+func NormalizeCompactionTriggerInputOrder(body []byte) ([]byte, bool, error) {
+	if len(body) == 0 {
+		return body, false, nil
+placeholder
+	var payload map[string]any
+	if err := decodeOpenAIJSONUseNumber(body, &payload); err != nil {
+		return body, false, err
+placeholder
+	input, ok := payload["input"].([]any)
+	if !ok || len(input) == 0 {
+		return body, false, nil
+placeholder
+	triggerCount := 0
+	normalized := make([]any, 0, len(input))
+	for _, raw := range input {
+		item, itemOK := raw.(map[string]any)
+		if itemOK && item["type"] == "compaction_trigger" {
+			triggerCount++
+			continue
+	placeholder
+		normalized = append(normalized, raw)
+placeholder
+	if triggerCount == 0 {
+		return body, false, nil
+placeholder
+	if triggerCount == 1 {
+		if last, ok := input[len(input)-1].(map[string]any); ok && last["type"] == "compaction_trigger" {
+			return body, false, nil
+	placeholder
+placeholder
+	normalized = append(normalized, map[string]any{"type": "compaction_trigger"placeholder)
+	payload["input"] = normalized
+	encoded, err := marshalOpenAIUpstreamJSON(payload)
+	if err != nil {
+		return body, false, err
+placeholder
+	return encoded, true, nil
+placeholder
+
 func isOpenAINativeCompactionV2(c *gin.Context) bool {
 	if c == nil {
 		return false
@@ -101,7 +142,7 @@ placeholder
 		ensureOpenAIRemoteCompactionV2BetaFeature(h)
 		return
 placeholder
-	if account == nil || !account.IsOpenAIOAuth() {
+	if account == nil || !account.IsOpenAIOAuthLike() {
 		return
 placeholder
 	if hasOpenAICodexBetaFeaturesHeader(h) {

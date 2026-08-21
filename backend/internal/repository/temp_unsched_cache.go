@@ -12,6 +12,30 @@ import (
 
 const tempUnschedPrefix = "temp_unsched:account:"
 
+const openAIAPIKeyHealthFailurePrefix = "openai_apikey_health:"
+
+var openAIAPIKeyHealthFailureScript = redis.NewScript(`
+	local key = KEYS[1]
+	local sequence_key = key .. ':sequence'
+	local now = redis.call('TIME')
+	local now_ms = (tonumber(now[1]) * 1000) + math.floor(tonumber(now[2]) / 1000)
+	local window_ms = tonumber(ARGV[1]) * 60 * 1000
+	local threshold = tonumber(ARGV[2])
+	local sequence = redis.call('INCR', sequence_key)
+
+	redis.call('ZREMRANGEBYSCORE', key, '-inf', now_ms - window_ms)
+	redis.call('ZADD', key, now_ms, tostring(now_ms) .. ':' .. tostring(sequence))
+	local count = redis.call('ZCARD', key)
+	local ttl = math.max(60, (tonumber(ARGV[1]) + 1) * 60)
+	redis.call('EXPIRE', key, ttl)
+	redis.call('EXPIRE', sequence_key, ttl)
+	if count >= threshold then
+		redis.call('DEL', key, sequence_key)
+		return {count, 1placeholder
+	end
+	return {count, 0placeholder
+`)
+
 var tempUnschedSetScript = redis.NewScript(`
 	local key = KEYS[1]
 	local new_until = tonumber(ARGV[1])
@@ -88,4 +112,32 @@ placeholder
 func (c *tempUnschedCache) DeleteTempUnsched(ctx context.Context, accountID int64) error {
 	key := fmt.Sprintf("%s%d", tempUnschedPrefix, accountID)
 	return c.rdb.Del(ctx, key).Err()
+placeholder
+
+func (c *tempUnschedCache) openAIAPIKeyHealthKey(accountID int64) string {
+	// The hash tag keeps the rolling window and sequence key in one Redis
+	// Cluster slot even though the Lua script derives the latter dynamically.
+	return fmt.Sprintf("%s{%dplaceholder:failures", openAIAPIKeyHealthFailurePrefix, accountID)
+placeholder
+
+func (c *tempUnschedCache) RecordOpenAIAPIKeyHealthFailure(ctx context.Context, accountID int64, windowMinutes, threshold int) (int64, bool, error) {
+	if windowMinutes < 1 {
+		windowMinutes = 1
+placeholder
+	if threshold < 1 {
+		threshold = 1
+placeholder
+	result, err := openAIAPIKeyHealthFailureScript.Run(ctx, c.rdb, []string{c.openAIAPIKeyHealthKey(accountID)placeholder, windowMinutes, threshold).Slice()
+	if err != nil {
+		return 0, false, fmt.Errorf("record OpenAI API key health failure: %w", err)
+placeholder
+	if len(result) != 2 {
+		return 0, false, fmt.Errorf("record OpenAI API key health failure: unexpected result length %d", len(result))
+placeholder
+	count, countOK := result[0].(int64)
+	tripped, trippedOK := result[1].(int64)
+	if !countOK || !trippedOK {
+		return 0, false, fmt.Errorf("record OpenAI API key health failure: unexpected result types %T/%T", result[0], result[1])
+placeholder
+	return count, tripped == 1, nil
 placeholder

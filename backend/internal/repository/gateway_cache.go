@@ -15,6 +15,7 @@ import (
 )
 
 const stickySessionPrefix = "sticky_session:"
+const openAIResponsesSessionWindowPrefix = "openai_responses_session_window:"
 const liveCallPrefix = "live:call:"
 
 type gatewayCache struct {
@@ -29,6 +30,10 @@ placeholder
 // 格式: sticky_session:{groupIDplaceholder:{sessionHashplaceholder
 func buildSessionKey(groupID int64, sessionHash string) string {
 	return fmt.Sprintf("%s%d:%s", stickySessionPrefix, groupID, sessionHash)
+placeholder
+
+func buildOpenAIResponsesSessionWindowKey(groupID int64, sessionHash string) string {
+	return fmt.Sprintf("%s%d:%s", openAIResponsesSessionWindowPrefix, groupID, sessionHash)
 placeholder
 
 func (c *gatewayCache) GetSessionAccountID(ctx context.Context, groupID int64, sessionHash string) (int64, error) {
@@ -64,6 +69,97 @@ func (c *gatewayCache) DeleteSessionAccountID(ctx context.Context, groupID int64
 	key := buildSessionKey(groupID, sessionHash)
 	return c.rdb.Del(ctx, key).Err()
 placeholder
+
+var claimOpenAIResponsesSessionWindowScript = redis.NewScript(`
+local previous = redis.call('GET', KEYS[1])
+redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+return previous
+`)
+
+var compareAndRefreshOpenAIResponsesSessionWindowScript = redis.NewScript(`
+local current = redis.call('GET', KEYS[1])
+if current == false or current ~= ARGV[1] then
+  return 0
+end
+redis.call('PEXPIRE', KEYS[1], ARGV[2])
+return 1
+`)
+
+var compareAndDeleteOpenAIResponsesSessionWindowScript = redis.NewScript(`
+local current = redis.call('GET', KEYS[1])
+if current == false or current ~= ARGV[1] then
+  return 0
+end
+redis.call('DEL', KEYS[1])
+return 1
+`)
+
+func (c *gatewayCache) ClaimOpenAIResponsesSessionWindow(ctx context.Context, groupID int64, sessionHash string, owner []byte, ttl time.Duration) ([]byte, error) {
+	if c == nil || c.rdb == nil {
+		return nil, errors.New("gateway cache unavailable")
+placeholder
+	if len(owner) == 0 || strings.TrimSpace(sessionHash) == "" || ttl <= 0 {
+		return nil, errors.New("invalid OpenAI Responses session-window claim")
+placeholder
+	result, err := claimOpenAIResponsesSessionWindowScript.Run(
+		ctx,
+		c.rdb,
+		[]string{buildOpenAIResponsesSessionWindowKey(groupID, sessionHash)placeholder,
+		owner,
+		ttl.Milliseconds(),
+	).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil, nil
+placeholder
+	if err != nil {
+		return nil, err
+placeholder
+	switch value := result.(type) {
+	case nil:
+		return nil, nil
+	case string:
+		return []byte(value), nil
+	case []byte:
+		return append([]byte(nil), value...), nil
+	default:
+		return nil, fmt.Errorf("unexpected OpenAI Responses session-window claim result %T", result)
+placeholder
+placeholder
+
+func (c *gatewayCache) CompareAndRefreshOpenAIResponsesSessionWindow(ctx context.Context, groupID int64, sessionHash string, expected []byte, ttl time.Duration) (bool, error) {
+	if c == nil || c.rdb == nil {
+		return false, errors.New("gateway cache unavailable")
+placeholder
+	if len(expected) == 0 || strings.TrimSpace(sessionHash) == "" || ttl <= 0 {
+		return false, errors.New("invalid OpenAI Responses session-window refresh")
+placeholder
+	n, err := compareAndRefreshOpenAIResponsesSessionWindowScript.Run(
+		ctx,
+		c.rdb,
+		[]string{buildOpenAIResponsesSessionWindowKey(groupID, sessionHash)placeholder,
+		expected,
+		ttl.Milliseconds(),
+	).Int()
+	return n == 1, err
+placeholder
+
+func (c *gatewayCache) CompareAndDeleteOpenAIResponsesSessionWindow(ctx context.Context, groupID int64, sessionHash string, expected []byte) (bool, error) {
+	if c == nil || c.rdb == nil {
+		return false, errors.New("gateway cache unavailable")
+placeholder
+	if len(expected) == 0 || strings.TrimSpace(sessionHash) == "" {
+		return false, errors.New("invalid OpenAI Responses session-window delete")
+placeholder
+	n, err := compareAndDeleteOpenAIResponsesSessionWindowScript.Run(
+		ctx,
+		c.rdb,
+		[]string{buildOpenAIResponsesSessionWindowKey(groupID, sessionHash)placeholder,
+		expected,
+	).Int()
+	return n == 1, err
+placeholder
+
+var _ service.OpenAIWSSessionPreemptionCache = (*gatewayCache)(nil)
 
 const (
 	grokVideoPendingBillingPrefix = "grok_video_pending:"
@@ -173,21 +269,84 @@ placeholder
 	return val, nil
 placeholder
 
-const cyberSessionBlockPrefix = "cyber_session_block:"
+const (
+	cyberSessionBlockPrefix         = "cyber_session_block:"
+	cyberSessionScopePrefix         = "cyber_session_scope:"
+	cyberSessionRedisCommandMaxKeys = 128
+)
 
-// SetCyberSessionBlocked 把被 cyber_policy 命中的会话写入屏蔽表（TTL 自动过期）。
-// 存储值 "1" 作为存在标记（IsCyberSessionBlocked 只检查 key 是否存在，不读值）。
-func (c *gatewayCache) SetCyberSessionBlocked(ctx context.Context, key string, ttl time.Duration) error {
-	return c.rdb.Set(ctx, cyberSessionBlockPrefix+key, "1", ttl).Err()
+// SetCyberSessionBlocked writes exact blocks in bounded transactions. The
+// coarse scope is activated only after all exact blocks have been stored.
+func (c *gatewayCache) SetCyberSessionBlocked(ctx context.Context, scopeKey string, keys []string, ttl time.Duration) error {
+	if len(keys) == 0 {
+		return nil
+placeholder
+	exactKeys := make([]string, 0, cyberSessionRedisCommandMaxKeys)
+	flush := func() error {
+		if len(exactKeys) == 0 {
+			return nil
+	placeholder
+		pipe := c.rdb.TxPipeline()
+		for _, key := range exactKeys {
+			pipe.Set(ctx, cyberSessionBlockPrefix+key, "1", ttl)
+	placeholder
+		_, err := pipe.Exec(ctx)
+		exactKeys = exactKeys[:0]
+		return err
+placeholder
+	for _, key := range keys {
+		if key != "" {
+			exactKeys = append(exactKeys, key)
+			if len(exactKeys) == cyberSessionRedisCommandMaxKeys {
+				if err := flush(); err != nil {
+					return err
+			placeholder
+		placeholder
+	placeholder
+placeholder
+	if err := flush(); err != nil {
+		return err
+placeholder
+	if scopeKey != "" {
+		return c.rdb.Set(ctx, cyberSessionScopePrefix+scopeKey, "1", ttl).Err()
+placeholder
+	return nil
 placeholder
 
-// IsCyberSessionBlocked 查询会话是否在屏蔽表中。
-func (c *gatewayCache) IsCyberSessionBlocked(ctx context.Context, key string) (bool, error) {
-	n, err := c.rdb.Exists(ctx, cyberSessionBlockPrefix+key).Result()
+func (c *gatewayCache) IsCyberSessionScopeActive(ctx context.Context, scopeKey string) (bool, error) {
+	n, err := c.rdb.Exists(ctx, cyberSessionScopePrefix+scopeKey).Result()
 	if err != nil {
 		return false, err
 placeholder
 	return n > 0, nil
+placeholder
+
+// FindCyberSessionBlocked checks bounded batches in caller order and stops at
+// the first blocked key, preserving the original earliest-match behavior.
+func (c *gatewayCache) FindCyberSessionBlocked(ctx context.Context, keys []string) (string, error) {
+	if len(keys) == 0 {
+		return "", nil
+placeholder
+	for start := 0; start < len(keys); start += cyberSessionRedisCommandMaxKeys {
+		end := start + cyberSessionRedisCommandMaxKeys
+		if end > len(keys) {
+			end = len(keys)
+	placeholder
+		redisKeys := make([]string, end-start)
+		for i, key := range keys[start:end] {
+			redisKeys[i] = cyberSessionBlockPrefix + key
+	placeholder
+		values, err := c.rdb.MGet(ctx, redisKeys...).Result()
+		if err != nil {
+			return "", err
+	placeholder
+		for i, value := range values {
+			if value != nil {
+				return keys[start+i], nil
+		placeholder
+	placeholder
+placeholder
+	return "", nil
 placeholder
 
 var claimLiveControllerScript = redis.NewScript(`

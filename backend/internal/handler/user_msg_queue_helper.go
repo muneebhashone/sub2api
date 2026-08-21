@@ -121,9 +121,11 @@ placeholder
 				c.Header("X-Accel-Buffering", "no")
 				*streamStarted = true
 		placeholder
-			if _, err := fmt.Fprint(c.Writer, string(h.pingFormat)); err != nil {
+			written, err := fmt.Fprint(c.Writer, string(h.pingFormat))
+			if err != nil {
 				return nil, err
 		placeholder
+			recordGatewayStreamHeartbeat(c, written)
 			flusher.Flush()
 
 		case <-timer.C:
@@ -226,9 +228,11 @@ placeholder
 				c.Header("X-Accel-Buffering", "no")
 				*streamStarted = true
 		placeholder
-			if _, err := fmt.Fprint(c.Writer, string(h.pingFormat)); err != nil {
+			written, err := fmt.Fprint(c.Writer, string(h.pingFormat))
+			if err != nil {
 				return err
 		placeholder
+			recordGatewayStreamHeartbeat(c, written)
 			flusher.Flush()
 		case <-timer.C:
 			return nil

@@ -666,7 +666,7 @@ placeholder
 	setOpenAIResponsesNamespaceNames(c, names)
 
 	result, err := (&OpenAIGatewayService{cfg: &config.Config{placeholderplaceholder).handleNonStreamingResponsePassthrough(
-		context.Background(), resp, c, "gpt-5.5", "",
+		context.Background(), resp, c, &Account{ID: 91placeholder, "gpt-5.5", "",
 	)
 placeholder
 	require.NotNil(t, result)

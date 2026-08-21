@@ -318,7 +318,7 @@ placeholder, "\n")
 		Body:       io.NopCloser(strings.NewReader(upstreamSSE)),
 placeholder
 
-	result, err := svc.handleNonStreamingResponsePassthrough(context.Background(), resp, c, "gpt-5.5", "")
+	result, err := svc.handleNonStreamingResponsePassthrough(context.Background(), resp, c, nil, "gpt-5.5", "")
 placeholder
 	require.NotNil(t, result)
 
@@ -512,7 +512,7 @@ func TestHandleNonStreamingResponsePassthrough_CompactClientStreamBridgesToSSE(t
 	placeholder`)),
 placeholder
 
-	result, err := svc.handleNonStreamingResponsePassthrough(context.Background(), resp, c, "gpt-5.5", "")
+	result, err := svc.handleNonStreamingResponsePassthrough(context.Background(), resp, c, nil, "gpt-5.5", "")
 placeholder
 	require.NotNil(t, result)
 

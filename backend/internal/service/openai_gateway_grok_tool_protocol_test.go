@@ -106,7 +106,7 @@ placeholder
 			{"type":"function","name":"multi_agent_v1__wait_agent","parameters":{"type":"object","properties":{"timeout_ms":{"type":"integer"placeholderplaceholder,"additionalProperties":falseplaceholderplaceholder
 		],
 		"input":[
-			{"type":"function_call","call_id":"call_fixture","name":"tool_search","arguments":"{\"query\":\"subagent\"placeholder","status":"completed"placeholder,
+			{"type":"function_call","call_id":"call_fixture","name":"tool_search","arguments":"{\"query\":\"subagent\"placeholder"placeholder,
 			{"type":"function_call_output","call_id":"call_fixture","output":`+string(mustMarshalJSONForTest(t, output))+`placeholder
 		]
 placeholder`, string(patched))

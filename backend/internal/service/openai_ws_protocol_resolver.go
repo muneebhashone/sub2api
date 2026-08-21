@@ -56,7 +56,7 @@ placeholder
 	if !wsCfg.Enabled {
 		return openAIWSHTTPDecision("global_disabled")
 placeholder
-	if account.IsOpenAIOAuth() {
+	if account.IsOpenAIOAuthLike() {
 		if !wsCfg.OAuthEnabled {
 			return openAIWSHTTPDecision("oauth_disabled")
 	placeholder

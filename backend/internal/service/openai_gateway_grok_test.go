@@ -281,7 +281,7 @@ placeholder
 
 func TestPatchGrokResponsesBodyAddsDefaultFunctionParameters(t *testing.T) {
 	patched, err := patchGrokResponsesBody(
-		[]byte(`{"input":"hi","tools":[{"type":"function","name":"lookup"placeholder,{"type":"function","name":"wait","parameters":nullplaceholder]placeholder`),
+		[]byte(`{"input":"hi","tools":[{"type":"function","name":"lookup","large_id":9007199254740993placeholder,{"type":"function","name":"wait","parameters":nullplaceholder]placeholder`),
 		"grok-4.5",
 	)
 placeholder
@@ -289,6 +289,7 @@ placeholder
 		require.Equal(t, "object", tool.Get("parameters.type").String(), string(patched))
 		require.True(t, tool.Get("parameters.properties").IsObject(), string(patched))
 placeholder
+	require.Equal(t, "9007199254740993", gjson.GetBytes(patched, "tools.0.large_id").Raw)
 placeholder
 
 func TestNormalizeGrokChatReasoningEffort(t *testing.T) {
@@ -316,7 +317,7 @@ func TestPatchGrokResponsesBodyDropsNestedUnsupportedFields(t *testing.T) {
 		"tools": [
 			{"type": "function", "name": "kept_fn", "external_web_access": true, "parameters": {"type": "object", "properties": {"q": {"type": "string", "external_web_access": trueplaceholderplaceholderplaceholderplaceholder
 		],
-		"metadata": {"external_web_access": falseplaceholder
+		"metadata": {"external_web_access": false, "large_id": 9007199254740993placeholder
 placeholder`)
 
 	patched, err := patchGrokResponsesBody(body, "grok-4.3")
@@ -324,6 +325,17 @@ placeholder
 	require.True(t, json.Valid(patched))
 	require.False(t, strings.Contains(string(patched), "external_web_access"))
 	require.Equal(t, "kept_fn", gjson.GetBytes(patched, "tools.0.name").String())
+	require.Equal(t, "9007199254740993", gjson.GetBytes(patched, "metadata.large_id").Raw)
+placeholder
+
+func TestStripAnthropicThinkingSignaturesPreservesLargeIntegers(t *testing.T) {
+	body := []byte(`{"messages":[{"role":"assistant","content":[{"type":"thinking","thinking":"work","signature":"opaque"placeholder]placeholder],"metadata":{"large_id":9007199254740993placeholderplaceholder`)
+
+	patched, changed := stripAnthropicThinkingSignatures(body)
+
+	require.True(t, changed)
+	require.False(t, gjson.GetBytes(patched, "messages.0.content.0.signature").Exists())
+	require.Equal(t, "9007199254740993", gjson.GetBytes(patched, "metadata.large_id").Raw)
 placeholder
 
 func TestPatchGrokResponsesBodyFlattensNamespaceTools(t *testing.T) {
@@ -1974,6 +1986,7 @@ func TestForwardGrokResponsesRetriesInvalidEncryptedContentOnce(t *testing.T) {
 	c, _ := gin.CreateTestContext(recorder)
 	body := []byte(`{
 		"model":"grok",
+		"previous_response_id":"resp_valid_history",
 		"input":[
 			{"type":"reasoning","summary":[{"type":"summary_text","text":"keep this summary"placeholder],"encrypted_content":"encrypted-reasoning"placeholder,
 			{"type":"message","role":"user","content":[{"type":"input_text","text":"hi"placeholder]placeholder
@@ -2026,8 +2039,10 @@ placeholder
 	require.Len(t, upstream.bodies, 2)
 
 	require.Equal(t, "reasoning", gjson.GetBytes(upstream.bodies[0], "input.0.type").String())
+	require.Equal(t, "resp_valid_history", gjson.GetBytes(upstream.bodies[0], "previous_response_id").String())
 	require.Equal(t, "encrypted-reasoning", gjson.GetBytes(upstream.bodies[0], "input.0.encrypted_content").String())
 	require.Equal(t, "reasoning", gjson.GetBytes(upstream.bodies[1], "input.0.type").String())
+	require.Equal(t, "resp_valid_history", gjson.GetBytes(upstream.bodies[1], "previous_response_id").String())
 	require.False(t, gjson.GetBytes(upstream.bodies[1], "input.0.encrypted_content").Exists())
 	require.Equal(t, "keep this summary", gjson.GetBytes(upstream.bodies[1], "input.0.summary.0.text").String())
 	require.Equal(t, "message", gjson.GetBytes(upstream.bodies[1], "input.1.type").String())
@@ -2611,7 +2626,7 @@ func TestForwardAsChatCompletionsForGrokComposerBridgesImageInput(t *testing.T) 
 
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
-	body := []byte(`{"model":"grok-composer-2.5-fast","messages":[{"role":"system","content":"You are concise."placeholder,{"role":"user","content":[{"type":"text","text":"What is shown?"placeholder,{"type":"image_url","image_url":{"url":"data:image/png;base64,QUJD"placeholderplaceholder]placeholder],"stream":falseplaceholder`)
+	body := []byte(`{"model":"grok-composer-2.5-fast","messages":[{"role":"system","content":"You are concise."placeholder,{"role":"user","content":[{"type":"text","text":"What is shown?"placeholder,{"type":"image_url","image_url":{"url":"data:image/png;base64,QUJD"placeholderplaceholder]placeholder],"metadata":{"large_id":9007199254740993placeholder,"stream":falseplaceholder`)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 	c.Set("api_key", &APIKey{ID: 5501placeholder)
@@ -2660,6 +2675,7 @@ placeholder
 	require.NotEmpty(t, upstream.requests[1].Header.Get(grokConversationIDHeader))
 	require.Equal(t, "grok-composer-2.5-fast", gjson.GetBytes(upstream.bodies[1], "model").String())
 	require.False(t, strings.Contains(string(upstream.bodies[1]), "image_url"))
+	require.Equal(t, "9007199254740993", gjson.GetBytes(upstream.bodies[1], "metadata.large_id").Raw)
 	require.Contains(t, gjson.GetBytes(upstream.bodies[1], "messages.1.content").String(), "Image 1 description")
 	require.Contains(t, gjson.GetBytes(upstream.bodies[1], "messages.1.content").String(), "A small diagram with ABC letters.")
 	require.Equal(t, 14, result.Usage.InputTokens)

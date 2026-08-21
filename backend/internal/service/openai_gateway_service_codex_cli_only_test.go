@@ -327,10 +327,29 @@ func TestIsOpenAIContextWindowError(t *testing.T) {
 		"maximum context length exceeded",
 		nil,
 	))
+	require.True(t, isOpenAIContextWindowError(
+		"",
+		[]byte(`maximum context length exceeded`),
+	))
 	require.False(t, isOpenAIContextWindowError(
 		"context canceled",
 		nil,
 	))
+	require.False(t, isOpenAIContextWindowError(
+		"upstream unavailable",
+		[]byte(`{"error":{"message":"upstream unavailable","code":"upstream_error"placeholder,"echo":"context_length_exceeded maximum context length"placeholder`),
+	))
+placeholder
+
+func TestOpenAITransientAndCapacityClassificationIgnoresEchoedJSON(t *testing.T) {
+	body := []byte(`{"error":{"message":"upstream unavailable","code":"upstream_error"placeholder,"echo":"server is overloaded; selected model is at capacity"placeholder`)
+
+	require.False(t, isOpenAITransientProcessingError(http.StatusBadRequest, "upstream unavailable", body))
+	require.False(t, isOpenAIRequestScopedCapacityShed("upstream unavailable", body))
+
+	plainText := []byte(`server is overloaded; please retry later`)
+	require.True(t, isOpenAITransientProcessingError(http.StatusServiceUnavailable, "", plainText))
+	require.True(t, isOpenAIRequestScopedCapacityShed("", plainText))
 placeholder
 
 func TestShouldFailoverOpenAIUpstreamResponseContextWindow502(t *testing.T) {
@@ -339,6 +358,11 @@ func TestShouldFailoverOpenAIUpstreamResponseContextWindow502(t *testing.T) {
 
 	require.False(t, svc.shouldFailoverOpenAIUpstreamResponse(http.StatusBadGateway, "", body))
 	require.True(t, svc.shouldFailoverOpenAIUpstreamResponse(http.StatusBadGateway, "temporary upstream outage", []byte(`{"error":{"message":"temporary upstream outage"placeholderplaceholder`)))
+	require.True(t, svc.shouldFailoverOpenAIUpstreamResponse(
+		http.StatusBadGateway,
+		"temporary upstream outage",
+		[]byte(`{"error":{"message":"temporary upstream outage"placeholder,"echo":"context_length_exceeded"placeholder`),
+	))
 placeholder
 
 func TestOpenAIGatewayService_Forward_LogsInstructionsRequiredDetails(t *testing.T) {

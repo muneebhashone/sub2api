@@ -199,3 +199,74 @@ placeholder
 	_, hasInput := reqBody["input"]
 	assert.False(t, hasInput, "bare reasoning skeleton should be dropped, emptying input")
 placeholder
+
+func TestNormalizeOpenAIAPIKeyStoreFalseReasoningReplay(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","store":false,"input":[` +
+		`{"type":"reasoning","id":"rs_encrypted","call_id":"remove","encrypted_content":"cipher","summary":null,"opaque":9007199254740993placeholder,` +
+		`{"type":"reasoning","id":"rs_server_only","summary":[{"type":"summary_text","text":"drop"placeholder]placeholder,` +
+		`{"type":"item_reference","id":"rs_server_only"placeholder,` +
+		`{"type":"item_reference","id":"msg_keep"placeholder,` +
+		`{"type":"message","id":"msg_keep","role":"user","content":"continue"placeholder` +
+		`]placeholder`)
+
+	normalized, changed, err := normalizeOpenAIAPIKeyStoreFalseReasoningReplay(body, false)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, int64(3), gjson.GetBytes(normalized, "input.#").Int())
+	require.Equal(t, "reasoning", gjson.GetBytes(normalized, "input.0.type").String())
+	require.False(t, gjson.GetBytes(normalized, "input.0.id").Exists())
+	require.False(t, gjson.GetBytes(normalized, "input.0.call_id").Exists())
+	require.Equal(t, "cipher", gjson.GetBytes(normalized, "input.0.encrypted_content").String())
+	require.True(t, gjson.GetBytes(normalized, "input.0.summary").IsArray())
+	require.Equal(t, "9007199254740993", gjson.GetBytes(normalized, "input.0.opaque").Raw)
+	require.Equal(t, "msg_keep", gjson.GetBytes(normalized, "input.1.id").String())
+	require.Equal(t, "message", gjson.GetBytes(normalized, "input.2.type").String())
+placeholder
+
+func TestNormalizeOpenAIAPIKeyStoreFalseReasoningReplayRequiresExplicitStoreFalse(t *testing.T) {
+	for _, body := range []string{
+		`{"input":[{"type":"reasoning","id":"rs_keep"placeholder]placeholder`,
+		`{"store":true,"input":[{"type":"reasoning","id":"rs_keep"placeholder]placeholder`,
+placeholder {
+		normalized, changed, err := normalizeOpenAIAPIKeyStoreFalseReasoningReplay([]byte(body), false)
+	placeholder
+		require.False(t, changed)
+		require.Equal(t, body, string(normalized))
+placeholder
+placeholder
+
+func TestNormalizeOpenAIAPIKeyStoreFalseReasoningReplayKnownCompactMode(t *testing.T) {
+	body := []byte(`{"input":[{"type":"reasoning","id":"rs_drop","summary":[]placeholder,{"type":"message","content":"continue"placeholder]placeholder`)
+
+	normalized, changed, err := normalizeOpenAIAPIKeyStoreFalseReasoningReplay(body, true)
+
+placeholder
+	require.True(t, changed)
+	require.Equal(t, int64(1), gjson.GetBytes(normalized, "input.#").Int())
+	require.Equal(t, "message", gjson.GetBytes(normalized, "input.0.type").String())
+placeholder
+
+func TestNormalizeOpenAIAPIKeyStoreFalseReasoningReplayRejectsEmptyEncryptedContent(t *testing.T) {
+	for _, encrypted := range []string{"null", `""`, `"   "`, "123"placeholder {
+		body := []byte(`{"store":false,"input":[{"type":"reasoning","id":"rs_drop","encrypted_content":` + encrypted + `placeholder,{"type":"message","content":"continue"placeholder]placeholder`)
+		normalized, changed, err := normalizeOpenAIAPIKeyStoreFalseReasoningReplay(body, false)
+	placeholder
+		require.True(t, changed)
+		require.Equal(t, int64(1), gjson.GetBytes(normalized, "input.#").Int())
+		require.Equal(t, "message", gjson.GetBytes(normalized, "input.0.type").String())
+placeholder
+placeholder
+
+func TestNormalizeOpenAIParallelToolCallsWithoutTools(t *testing.T) {
+	withTools := []byte(`{"tools":[{"type":"function","name":"lookup"placeholder],"parallel_tool_calls":falseplaceholder`)
+	normalized, changed, err := normalizeOpenAIParallelToolCallsWithoutTools(withTools)
+placeholder
+	require.False(t, changed)
+	require.Equal(t, string(withTools), string(normalized))
+
+	withoutTools := []byte(`{"input":"hi","parallel_tool_calls":trueplaceholder`)
+	normalized, changed, err = normalizeOpenAIParallelToolCallsWithoutTools(withoutTools)
+placeholder
+	require.True(t, changed)
+	require.False(t, gjson.GetBytes(normalized, "parallel_tool_calls").Exists())
+placeholder
