@@ -60,6 +60,23 @@ placeholder)
 placeholder)
 placeholder
 
+func TestSameAccountRetryDeadlineAllows(t *testing.T) {
+	require.True(t, sameAccountRetryDeadlineAllows(&service.UpstreamFailoverError{placeholder))
+	require.True(t, sameAccountRetryDeadlineAllows(&service.UpstreamFailoverError{
+		SameAccountRetryDeadline: time.Now().Add(time.Second),
+placeholder))
+	require.False(t, sameAccountRetryDeadlineAllows(&service.UpstreamFailoverError{
+		SameAccountRetryDeadline: time.Now().Add(-time.Second),
+placeholder))
+placeholder
+
+func TestEffectiveSameAccountRetryLimitHonorsErrorCapAndDisabledAccount(t *testing.T) {
+	account := &service.Account{Type: service.AccountTypeAPIKey, Credentials: map[string]any{"pool_mode": true, "pool_mode_retry_count": float64(3)placeholderplaceholder
+	require.Equal(t, 1, effectiveSameAccountRetryLimit(&service.UpstreamFailoverError{SameAccountRetryMax: 1placeholder, account))
+	account.Credentials["pool_mode_retry_count"] = float64(0)
+	require.Equal(t, 0, effectiveSameAccountRetryLimit(&service.UpstreamFailoverError{SameAccountRetryMax: 1placeholder, account))
+placeholder
+
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------

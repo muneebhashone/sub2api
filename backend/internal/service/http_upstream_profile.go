@@ -9,6 +9,7 @@ type HTTPUpstreamProfile string
 const (
 	HTTPUpstreamProfileDefault HTTPUpstreamProfile = ""
 	HTTPUpstreamProfileOpenAI  HTTPUpstreamProfile = "openai"
+	HTTPUpstreamProfileGrok    HTTPUpstreamProfile = "grok"
 )
 
 type httpUpstreamProfileContextKey struct{placeholder
@@ -35,7 +36,7 @@ placeholder
 		return HTTPUpstreamProfileDefault
 placeholder
 	switch profile {
-	case HTTPUpstreamProfileOpenAI:
+	case HTTPUpstreamProfileOpenAI, HTTPUpstreamProfileGrok:
 		return profile
 	default:
 		return HTTPUpstreamProfileDefault
