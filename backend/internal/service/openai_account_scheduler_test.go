@@ -620,6 +620,59 @@ placeholder
 	require.Equal(t, openAIAccountScheduleLayerLoadBalance, decision.Layer)
 placeholder
 
+func TestOpenAIGatewayService_SelectAccountForTokenCount_DoesNotAcquireGenerationSlot(t *testing.T) {
+	ctx := context.Background()
+	groupID := int64(10115)
+	acquiredIDs := make([]int64, 0)
+	accounts := []Account{
+		{
+			ID: 36501, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
+			Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 0,
+	placeholder"openai_capabilities": []any{"chat_completions"placeholderplaceholder,
+	placeholder,
+		{
+			ID: 36502, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
+			Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 5,
+	placeholder"openai_capabilities": []any{"embeddings"placeholderplaceholder,
+	placeholder,
+		{
+			ID: 36503, Platform: PlatformGrok, Type: AccountTypeAPIKey,
+			Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 10,
+	placeholder"openai_capabilities": []any{"chat_completions"placeholderplaceholder,
+	placeholder,
+		{
+			ID: 36504, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
+			Status: StatusActive, Schedulable: true, Concurrency: 1, Priority: 15,
+	placeholder
+				"openai_capabilities": []any{"chat_completions"placeholder,
+				"model_mapping":       map[string]any{"gpt-4o": "gpt-4o"placeholder,
+		placeholder,
+	placeholder,
+placeholder
+	svc := &OpenAIGatewayService{
+		accountRepo: schedulerTestOpenAIAccountRepo{accounts: accountsplaceholder,
+		cache:       &schedulerTestGatewayCache{placeholder,
+		cfg:         &config.Config{placeholder,
+		concurrencyService: NewConcurrencyService(schedulerTestConcurrencyCache{
+			acquireResults: map[int64]bool{36501: falseplaceholder,
+			acquiredIDs:    &acquiredIDs,
+	placeholder),
+placeholder
+
+	account, err := svc.SelectAccountForTokenCount(
+		ctx,
+		&groupID,
+		"",
+		"gpt-5.1",
+		OpenAIEndpointCapabilityChatCompletions,
+		PlatformOpenAI,
+	)
+placeholder
+	require.NotNil(t, account)
+	require.Equal(t, int64(36501), account.ID)
+	require.Empty(t, acquiredIDs, "token counting must not acquire a generation slot")
+placeholder
+
 // 生图意图的 /v1/responses 请求要求 OpenAIEndpointCapabilityResponses：探测确认
 // 不支持 Responses API 的 APIKey 账号必须被排除，避免 forward 阶段降级为无法生图
 // 的 Chat Completions 直转（#4417）。

@@ -67,7 +67,7 @@ placeholder{
 			expected:   ErrorPolicySkipped,
 	placeholder,
 		{
-			name: "global_529_bypasses_custom_error_code_filter",
+			name: "custom_error_codes_excluding_529_skip_global_cooldown",
 			account: &Account{
 				ID:       33,
 				Type:     AccountTypeAPIKey,
@@ -79,16 +79,42 @@ placeholder{
 		placeholder,
 			statusCode: 529,
 			body:       []byte(`{"error":{"message":"overloaded"placeholderplaceholder`),
-			expected:   ErrorPolicyMatched,
+			expected:   ErrorPolicySkipped,
 	placeholder,
 		{
-			name: "global_529_bypasses_pool_mode",
+			name: "pool_mode_skips_global_529_cooldown",
 			account: &Account{
 				ID:       34,
 				Type:     AccountTypeAPIKey,
 				Platform: PlatformOpenAI,
 		placeholder
 					"pool_mode": true,
+			placeholder,
+		placeholder,
+			statusCode: 529,
+			body:       []byte(`{"error":{"message":"overloaded"placeholderplaceholder`),
+			expected:   ErrorPolicySkipped,
+	placeholder,
+		{
+			name: "ordinary_account_uses_global_529_cooldown",
+			account: &Account{
+				ID:       35,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder,
+			statusCode: 529,
+			body:       []byte(`{"error":{"message":"overloaded"placeholderplaceholder`),
+			expected:   ErrorPolicyMatched,
+	placeholder,
+		{
+			name: "custom_error_codes_including_529_take_precedence",
+			account: &Account{
+				ID:       36,
+				Type:     AccountTypeAPIKey,
+				Platform: PlatformOpenAI,
+		placeholder
+					"custom_error_codes_enabled": true,
+					"custom_error_codes":         []any{float64(529)placeholder,
 			placeholder,
 		placeholder,
 			statusCode: 529,

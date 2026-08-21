@@ -96,18 +96,12 @@ placeholder
 	requestPlatform := openAICompatibleRequestPlatform(c.Request.Context(), apiKey)
 	sessionHash := h.gatewayService.GenerateSessionHash(c, body)
 	requestStart := time.Now()
-	selection, _, err := h.gatewayService.SelectAccountWithSchedulerForCapability(
+	account, err := h.gatewayService.SelectAccountForTokenCount(
 		c.Request.Context(),
 		apiKey.GroupID,
-		"",
 		sessionHash,
 		routingModel,
-		nil,
-		service.OpenAIUpstreamTransportAny,
 		service.OpenAIEndpointCapabilityChatCompletions,
-		false,
-		false,
-		false,
 		requestPlatform,
 	)
 	service.SetOpsLatencyMs(c, service.OpsAuthLatencyMsKey, time.Since(requestStart).Milliseconds())
@@ -120,7 +114,7 @@ placeholder
 		h.errorResponse(c, cls.Status, cls.ErrType, cls.Message)
 		return
 placeholder
-	if selection == nil || selection.Account == nil {
+	if account == nil {
 		cls := classifyOpenAICompatibleNoAccountErrorFromGin(c, h.gatewayService, apiKey, routingModel, reqModel)
 		if !cls.ModelNotFound {
 			markOpsRoutingCapacityLimited(c)
@@ -129,16 +123,7 @@ placeholder
 		return
 placeholder
 
-	account := selection.Account
 	setOpsSelectedAccount(c, account.ID, account.Platform)
-	accountRelease, acquired := h.acquireCountTokensAccountSlot(c, apiKey.GroupID, sessionHash, selection, false, reqLog)
-	if !acquired {
-		return
-placeholder
-	if accountRelease != nil {
-		defer accountRelease()
-placeholder
-	account = selection.Account
 	if err := h.gatewayService.ForwardResponsesInputTokens(c.Request.Context(), c, account, forwardBody); err != nil {
 		reqLog.Error("openai_input_tokens.forward_failed", zap.Int64("account_id", account.ID), zap.Error(err))
 placeholder
@@ -283,18 +268,12 @@ placeholder
 	if preferredMappedModel != "" {
 		currentRoutingModel = preferredMappedModel
 placeholder
-	selection, _, err := h.gatewayService.SelectAccountWithSchedulerForCapability(
+	account, err := h.gatewayService.SelectAccountForTokenCount(
 		c.Request.Context(),
 		apiKey.GroupID,
-		"",
 		sessionHash,
 		currentRoutingModel,
-		nil,
-		service.OpenAIUpstreamTransportAny,
 		service.OpenAIEndpointCapabilityChatCompletions,
-		false,
-		false,
-		false,
 		openAICompatibleRequestPlatform(c.Request.Context(), apiKey),
 	)
 	service.SetOpsLatencyMs(c, service.OpsAuthLatencyMsKey, time.Since(requestStart).Milliseconds())
@@ -308,7 +287,7 @@ placeholder
 		h.anthropicErrorResponse(c, cls.Status, cls.ErrType, cls.Message)
 		return
 placeholder
-	if selection == nil || selection.Account == nil {
+	if account == nil {
 		cls := classifyOpenAICompatibleNoAccountErrorFromGin(c, h.gatewayService, apiKey, currentRoutingModel, reqModel)
 		if !cls.ModelNotFound {
 			markOpsRoutingCapacityLimited(c)
@@ -317,58 +296,11 @@ placeholder
 		return
 placeholder
 
-	account := selection.Account
 	setOpsSelectedAccount(c, account.ID, account.Platform)
-	accountRelease, acquired := h.acquireCountTokensAccountSlot(c, apiKey.GroupID, sessionHash, selection, true, reqLog)
-	if !acquired {
-		return
-placeholder
-	if accountRelease != nil {
-		defer accountRelease()
-placeholder
-	account = selection.Account
 	forwardBody := mappedBodyForMessages(channelMapping.Mapped, channelMapping.MappedModel)
 	defaultMappedModel := preferredMappedModel
 
 	if err := h.gatewayService.ForwardCountTokensAsAnthropic(c.Request.Context(), c, account, forwardBody, defaultMappedModel); err != nil {
 		reqLog.Error("openai_count_tokens.forward_failed", zap.Int64("account_id", account.ID), zap.Error(err))
 placeholder
-placeholder
-
-func (h *OpenAIGatewayHandler) acquireCountTokensAccountSlot(
-	c *gin.Context,
-	groupID *int64,
-	sessionHash string,
-	selection *service.AccountSelectionResult,
-	anthropicResponse bool,
-	reqLog *zap.Logger,
-) (func(), bool) {
-	writeError := func(status int, errType, message string) {
-		if anthropicResponse {
-			h.anthropicErrorResponse(c, status, errType, message)
-			return
-	placeholder
-		h.errorResponse(c, status, errType, message)
-placeholder
-	streamStarted := false
-	release, result := h.acquireOpenAIAccountSlot(
-		c,
-		groupID,
-		sessionHash,
-		selection,
-		false,
-		&streamStarted,
-		reqLog,
-		writeError,
-	)
-	if result == openAISlotAcquireOK {
-		return release, true
-placeholder
-	// Token-count requests suppress the profit gate before selection, so this
-	// is defensive only. Never forward without a slot if a stale gate appears.
-	if result == openAISlotAcquireProfitVetoed {
-		markOpsRoutingCapacityLimited(c)
-		writeError(http.StatusServiceUnavailable, "api_error", "No available accounts")
-placeholder
-	return nil, false
 placeholder

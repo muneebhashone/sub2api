@@ -176,17 +176,10 @@ placeholder
 placeholder()
 	<-inner.writeStarted
 
-	mutexAvailable := make(chan struct{placeholder)
-	go func() {
-		w.state.mu.Lock()
-		w.state.mu.Unlock()
-		close(mutexAvailable)
-placeholder()
-	select {
-	case <-mutexAvailable:
-	case <-time.After(time.Second):
+	if !w.state.mu.TryLock() {
 		t.Fatal("state mutex remained held across the delegated network write")
 placeholder
+	w.state.mu.Unlock()
 
 	releaseDone := make(chan struct{placeholder)
 	go func() {
