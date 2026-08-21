@@ -489,6 +489,7 @@ placeholder
 	pendingClientMessageBytes := int64(0)
 	capacityFailoverSuppressedLogged := false
 	clientDisconnected := false
+	officialOpenAIResponses := account != nil && account.Platform == PlatformOpenAI
 	bareErrorPending := false
 	var bareErrorPayload []byte
 	bareErrorMessage := ""
@@ -642,7 +643,15 @@ placeholder
 		replayCollector.AddEvent(eventType, upstreamMessage)
 
 		var upstreamEventErr error
-		suppressClientMessage := bareErrorPending && eventType != "response.failed"
+		if officialOpenAIResponses && bareErrorPending && (eventType == "response.completed" || eventType == "response.done") {
+			// Some upstreams emit a recoverable bare error before the authoritative
+			// successful terminal. Do not replace that terminal with a synthetic
+			// failure or retain side effects from the superseded error.
+			bareErrorPending = false
+			bareErrorPayload = nil
+			bareErrorMessage = ""
+	placeholder
+		suppressClientMessage := officialOpenAIResponses && bareErrorPending && eventType != "response.failed"
 		if eventType == "error" || eventType == "response.failed" {
 			errMessage := extractOpenAISSEErrorMessage(upstreamMessage)
 			if errMessage == "" {
@@ -677,7 +686,7 @@ placeholder
 				return nil, s.newOpenAIStreamFailoverError(c, account, true, resp.Header.Get("x-request-id"), upstreamMessage, errMessage, resp.Header)
 		placeholder
 			if account.Platform != PlatformGrok && !failureAccountSideEffectsApplied {
-				if eventType == "response.failed" || (shouldFailover && !requestScopedCapacity) {
+				if eventType == "response.failed" || (!officialOpenAIResponses && shouldFailover && !requestScopedCapacity) {
 					failureAccountSideEffectsApplied = s.handleOpenAIWSFailureAccountSideEffects(ctx, account, mappedModel, resp.Header, upstreamMessage)
 			placeholder
 		placeholder
@@ -685,7 +694,7 @@ placeholder
 				logOpenAICapacityFailoverSuppressed(ctx, account, "ws_http_bridge", resp.Header.Get("x-request-id"), eventType)
 				capacityFailoverSuppressedLogged = true
 		placeholder
-			if eventType == "error" && account.Platform == PlatformGrok {
+			if eventType == "error" && !officialOpenAIResponses {
 				upstreamEventErr = errors.New(errMessage)
 		placeholder else if eventType == "error" {
 				bareErrorPending = true

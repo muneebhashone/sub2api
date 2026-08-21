@@ -1562,10 +1562,25 @@ placeholder
 	return itemIDs
 placeholder
 
+func codexInputCallIDs(input []any) map[string]struct{placeholder {
+	callIDs := make(map[string]struct{placeholder)
+	for _, rawItem := range input {
+		item, ok := rawItem.(map[string]any)
+		if !ok || !isCodexToolCallItemType(strings.TrimSpace(firstNonEmptyString(item["type"]))) {
+			continue
+	placeholder
+		if callID := strings.TrimSpace(firstNonEmptyString(item["call_id"])); callID != "" {
+			callIDs[callID] = struct{placeholder{placeholder
+	placeholder
+placeholder
+	return callIDs
+placeholder
+
 func filterCodexInputWithOptions(input []any, opts codexInputFilterOptions) []any {
 	filtered := make([]any, 0, len(input))
 	referenceIDMappings := codexItemReferenceIDMappings(input, opts.PreserveCallIDs)
 	inputItemIDs := codexInputItemIDs(input)
+	inputCallIDs := codexInputCallIDs(input)
 	for _, item := range input {
 		m, ok := item.(map[string]any)
 		if !ok {
@@ -1629,8 +1644,14 @@ func filterCodexInputWithOptions(input []any, opts codexInputFilterOptions) []an
 			if id, ok := newItem["id"].(string); ok && strings.HasPrefix(strings.TrimSpace(id), "call_") {
 				trimmedID := strings.TrimSpace(id)
 				_, referencesExistingItem := inputItemIDs[trimmedID]
-				if normalizedID, mapped := referenceIDMappings[trimmedID]; mapped && !referencesExistingItem {
-					newItem["id"] = normalizedID
+				if !referencesExistingItem {
+					if normalizedID, mapped := referenceIDMappings[trimmedID]; mapped {
+						newItem["id"] = normalizedID
+				placeholder else if _, hasSameTurnCall := inputCallIDs[trimmedID]; !hasSameTurnCall {
+						// A bare call_* reference is a legacy function-call identifier.
+						// Normalize it even when its call item lives in an earlier turn.
+						newItem["id"] = normalizeCodexCallID(trimmedID)
+				placeholder
 			placeholder
 		placeholder
 			filtered = append(filtered, newItem)

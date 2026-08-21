@@ -59,21 +59,10 @@ placeholder
 	// 在分流到 passthrough / Codex transform / 原生 ChatCompletions 之前统一修正
 	// 显式为 null 的工具 Schema type，否则 upstream 的 400 会被归一成可重试的 502，
 	// 同一份坏定义在账号池里反复重放。
-	if shouldSanitizeOpenAIResponsesToolSchemas(account.Platform) {
-		sanitizedToolBody, toolSchemaSanitized, toolSchemaErr := sanitizeOpenAIResponsesToolParameterTypes(body)
-		if toolSchemaErr != nil {
-			return nil, fmt.Errorf("sanitize OpenAI Responses tool parameters: %w", toolSchemaErr)
-	placeholder
-		if toolSchemaSanitized {
-			body = sanitizedToolBody
-	placeholder
-		patternSanitizedBody, patternSanitized, patternErr := sanitizeOpenAIResponsesToolSchemaPatterns(body)
-		if patternErr != nil {
-			return nil, fmt.Errorf("sanitize OpenAI Responses tool schema patterns: %w", patternErr)
-	placeholder
-		if patternSanitized {
-			body = patternSanitizedBody
-	placeholder
+	if sanitizedToolBody, toolSchemaSanitized, toolSchemaErr := sanitizeOpenAIResponsesToolSchemasForPlatform(body, account.Platform); toolSchemaErr != nil {
+		return nil, toolSchemaErr
+placeholder else if toolSchemaSanitized {
+		body = sanitizedToolBody
 placeholder
 	if account.IsOpenAIOAuthLike() {
 		reasoningBody, reasoningChanged, reasoningErr := normalizeOpenAIResponsesReasoningMode(body)
@@ -1015,6 +1004,7 @@ placeholder
 			if retryBody, fallbackModel, retry := s.prepareOpenAICompactFallbackRetry(
 				c, account, requestedModel, body, resp.StatusCode, upstreamMsg, respBody, compactModelFallbackRetried,
 			); retry {
+				s.appendOpenAICompactFallbackRetryOps(c, account, resp, respBody, upstreamMsg, false)
 				fromModel := strings.TrimSpace(gjson.GetBytes(body, "model").String())
 				body = retryBody
 				requestView = newOpenAIRequestView(body)
@@ -1082,6 +1072,7 @@ placeholder
 					if retryBody, fallbackModel, retry := s.prepareOpenAICompactFallbackRetry(
 						c, account, requestedModel, body, http.StatusBadRequest, signal.message, signal.payload, compactModelFallbackRetried,
 					); retry {
+						s.appendOpenAICompactFallbackRetryOps(c, account, resp, signal.payload, signal.message, false)
 						body = retryBody
 						requestView = newOpenAIRequestView(body)
 						upstreamModel = fallbackModel
@@ -1089,6 +1080,27 @@ placeholder
 						SetOpsUpstreamModel(c, fallbackModel)
 						continue
 				placeholder
+					if resp.Body != nil {
+						_ = resp.Body.Close()
+				placeholder
+					compactResp, compactBody := openAICompactFallbackErrorResponse(resp, signal)
+					if s.shouldFailoverOpenAIUpstreamResponse(compactResp.StatusCode, signal.message, compactBody) {
+						appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+							Platform:           account.Platform,
+							AccountID:          account.ID,
+							AccountName:        account.Name,
+							UpstreamStatusCode: compactResp.StatusCode,
+							UpstreamRequestID:  compactResp.Header.Get("x-request-id"),
+							Kind:               "failover",
+							Message:            signal.message,
+					placeholder)
+						shouldDisable := s.handleFailoverSideEffects(ctx, compactResp, account, compactBody, upstreamModel)
+						return nil, s.newOpenAIAccountFailoverError(
+							account, compactResp.StatusCode, compactResp.Header, compactBody, signal.message, shouldDisable,
+							!shouldDisable && account.IsPoolMode() && (account.IsPoolModeRetryableStatus(compactResp.StatusCode) || isOpenAITransientProcessingError(compactResp.StatusCode, signal.message, compactBody)),
+						)
+				placeholder
+					return s.handleErrorResponse(ctx, compactResp, c, account, body, resolveOpenAIErrorSchedulingModel(billingModel, upstreamModel))
 			placeholder
 				return nil, err
 		placeholder

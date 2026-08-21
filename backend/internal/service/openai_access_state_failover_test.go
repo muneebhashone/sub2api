@@ -24,22 +24,59 @@ func (r *openAIStream403AccountRepo) SetError(context.Context, int64, string) er
 	return nil
 placeholder
 
+type openAIAuthPolicyAccountRepo struct {
+	AccountRepository
+	tempCalls     int
+	setErrorCalls int
+placeholder
+
+func (r *openAIAuthPolicyAccountRepo) SetTempUnschedulable(context.Context, int64, time.Time, string) error {
+	r.tempCalls++
+	return nil
+placeholder
+
+func (r *openAIAuthPolicyAccountRepo) SetError(context.Context, int64, string) error {
+	r.setErrorCalls++
+	return nil
+placeholder
+
+type openAIAuthPolicy403Counter struct {
+	counts []int64
+placeholder
+
+func (s *openAIAuthPolicy403Counter) IncrementOpenAI403Count(context.Context, int64, int) (int64, error) {
+	if len(s.counts) == 0 {
+		return 1, nil
+placeholder
+	count := s.counts[0]
+	s.counts = s.counts[1:]
+	return count, nil
+placeholder
+
+func (*openAIAuthPolicy403Counter) ResetOpenAI403Count(context.Context, int64) error {
+	return nil
+placeholder
+
 func TestOpenAIUpstreamAccessStateClassification(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
+		want bool
 placeholder{
-		{"workspace_code", `{"detail":{"code":"deactivated_workspace"placeholderplaceholder`placeholder,
-		{"disabled_account", `{"error":{"message":"Your account is disabled"placeholderplaceholder`placeholder,
-		{"suspended_workspace", `{"response":{"error":{"message":"This workspace has been suspended"placeholderplaceholderplaceholder`placeholder,
-		{"deactivated_organization", `{"detail":{"message":"The organization is deactivated"placeholderplaceholder`placeholder,
-		{"scalar_detail", `{"detail":"This workspace has been disabled"placeholder`placeholder,
-		{"suspended_org_code", `{"error":{"code":"org_suspended"placeholderplaceholder`placeholder,
+		{"workspace_code", `{"detail":{"code":"deactivated_workspace"placeholderplaceholder`, trueplaceholder,
+		{"disabled_account_message", `{"error":{"message":"Your account is disabled"placeholderplaceholder`, falseplaceholder,
+		{"suspended_workspace_message", `{"response":{"error":{"message":"This workspace has been suspended"placeholderplaceholderplaceholder`, falseplaceholder,
+		{"deactivated_organization_message", `{"detail":{"message":"The organization is deactivated"placeholderplaceholder`, falseplaceholder,
+		{"scalar_detail", `{"detail":"This workspace has been disabled"placeholder`, falseplaceholder,
+		{"suspended_org_code", `{"error":{"code":"org_suspended"placeholderplaceholder`, trueplaceholder,
 placeholder
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			body := []byte(tt.body)
-			require.True(t, isOpenAIUpstreamAccessStateError("", body))
+			require.Equal(t, tt.want, isOpenAIUpstreamAccessStateError("", body))
+			if !tt.want {
+				return
+		placeholder
 			require.True(t, (&OpenAIGatewayService{placeholder).shouldFailoverOpenAIUpstreamResponse(http.StatusForbidden, "", body))
 			require.True(t, shouldFailoverOpenAIPassthroughResponse(&Account{Type: AccountTypeOAuthplaceholder, http.StatusForbidden, body))
 
@@ -60,6 +97,93 @@ func TestOpenAIUpstreamAccessStateDoesNotScanEchoedJSON(t *testing.T) {
 	body := []byte(`{"error":{"code":"invalid_request_error","message":"Invalid input"placeholder,"echo":{"prompt":"my account is disabled"placeholderplaceholder`)
 	require.False(t, isOpenAIUpstreamAccessStateError("", body))
 	require.False(t, shouldFailoverOpenAIPassthroughResponse(&Account{Type: AccountTypeOAuthplaceholder, http.StatusBadRequest, body))
+placeholder
+
+func TestOpenAIHTTPAccessStateDoesNotTrustBadRequestMessage(t *testing.T) {
+	body := []byte(`{"error":{"type":"invalid_request_error","code":"unknown_parameter","message":"Unknown parameter: account disabled"placeholderplaceholder`)
+	svc := &OpenAIGatewayService{placeholder
+
+	require.False(t, isOpenAIUpstreamAccessStateError("", body), "free-form stream messages are not durable account evidence")
+	require.False(t, isOpenAIHTTPUpstreamAccessStateError(http.StatusBadRequest, "", body))
+	require.False(t, svc.shouldFailoverOpenAIUpstreamResponse(http.StatusBadRequest, "", body))
+	require.False(t, shouldFailoverOpenAIPassthroughResponse(&Account{Type: AccountTypeOAuthplaceholder, http.StatusBadRequest, body))
+
+	err := newOpenAIUpstreamFailoverError(http.StatusBadRequest, nil, body, "", false)
+	require.False(t, err.IsCredentialFailure())
+placeholder
+
+func TestOpenAIHTTPAccessStateBadRequestDoesNotDisableAccount(t *testing.T) {
+	repo := &openAIStream403AccountRepo{placeholder
+	svc := &OpenAIGatewayService{rateLimitService: &RateLimitService{accountRepo: repoplaceholderplaceholder
+	account := &Account{ID: 925, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: trueplaceholder
+	body := []byte(`{"error":{"code":"unknown_parameter","message":"Unknown parameter: account disabled"placeholderplaceholder`)
+
+	disabled := svc.handleOpenAIAccountUpstreamError(context.Background(), account, http.StatusBadRequest, nil, body)
+
+	require.False(t, disabled)
+	require.Zero(t, repo.setErrorCalls)
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestOpenAIStreamEchoedAccessStateMessageDoesNotDisableOrFailover(t *testing.T) {
+	repo := &openAIStream403AccountRepo{placeholder
+	svc := &OpenAIGatewayService{rateLimitService: &RateLimitService{accountRepo: repoplaceholderplaceholder
+	account := &Account{ID: 926, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: trueplaceholder
+	payload := []byte(`{"type":"response.failed","response":{"error":{"type":"invalid_request_error","code":"unknown_parameter","message":"Unknown parameter: account disabled"placeholderplaceholderplaceholder`)
+	message := extractOpenAISSEErrorMessage(payload)
+
+	require.False(t, isOpenAIUpstreamAccessStateError(message, payload))
+	require.False(t, openAIStreamFailedEventShouldFailover(payload, message))
+	status, disabled := svc.handleOpenAIStreamTerminalAccountSideEffects(nil, account, payload, message, nil)
+	require.Equal(t, http.StatusBadGateway, status)
+	require.False(t, disabled)
+	require.Zero(t, repo.setErrorCalls)
+	require.False(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestOpenAIHTTPAccessStateTrustsStructuredCode(t *testing.T) {
+	repo := &openAIStream403AccountRepo{placeholder
+	svc := &OpenAIGatewayService{rateLimitService: &RateLimitService{accountRepo: repoplaceholderplaceholder
+	account := &Account{ID: 930, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: trueplaceholder
+	body := []byte(`{"error":{"code":"organization_deactivated","message":"request rejected"placeholderplaceholder`)
+
+	require.True(t, isOpenAIHTTPUpstreamAccessStateError(http.StatusBadRequest, "", body))
+	require.True(t, svc.shouldFailoverOpenAIUpstreamResponse(http.StatusBadRequest, "", body))
+	require.True(t, svc.handleOpenAIAccountUpstreamError(context.Background(), account, http.StatusBadRequest, nil, body))
+	require.Equal(t, 1, repo.setErrorCalls)
+	require.True(t, svc.isOpenAIAccountRuntimeBlocked(account))
+placeholder
+
+func TestOpenAIHTTPAuthMessagesUseExistingStatusPolicies(t *testing.T) {
+	t.Run("oauth 401 remains recoverable", func(t *testing.T) {
+		repo := &openAIAuthPolicyAccountRepo{placeholder
+		rateLimits := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+		svc := &OpenAIGatewayService{rateLimitService: rateLimitsplaceholder
+		account := &Account{ID: 931, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true,
+	placeholder"refresh_token": "refreshable"placeholderplaceholder
+		body := []byte(`{"error":{"message":"account is disabled"placeholderplaceholder`)
+
+		require.False(t, isOpenAIHTTPUpstreamAccessStateError(http.StatusUnauthorized, "", body))
+		require.True(t, svc.handleOpenAIAccountUpstreamError(context.Background(), account, http.StatusUnauthorized, nil, body))
+		require.Zero(t, repo.setErrorCalls)
+		require.Equal(t, 1, repo.tempCalls)
+placeholder)
+
+	t.Run("403 uses counter cooldown", func(t *testing.T) {
+		repo := &openAIAuthPolicyAccountRepo{placeholder
+		counter := &openAIAuthPolicy403Counter{counts: []int64{1placeholderplaceholder
+		rateLimits := NewRateLimitService(repo, nil, &config.Config{placeholder, nil, nil)
+		rateLimits.openAI403CounterCache = counter
+		svc := &OpenAIGatewayService{rateLimitService: rateLimitsplaceholder
+		rateLimits.SetAccountRuntimeBlocker(svc)
+		account := &Account{ID: 932, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: trueplaceholder
+		body := []byte(`{"error":{"message":"workspace has been suspended"placeholderplaceholder`)
+
+		require.False(t, isOpenAIHTTPUpstreamAccessStateError(http.StatusForbidden, "", body))
+		require.True(t, svc.handleOpenAIAccountUpstreamError(context.Background(), account, http.StatusForbidden, nil, body))
+		require.Zero(t, repo.setErrorCalls)
+		require.Equal(t, 1, repo.tempCalls)
+placeholder)
 placeholder
 
 func TestOpenAICyberPolicyWrapped5xxNeverFailsOver(t *testing.T) {

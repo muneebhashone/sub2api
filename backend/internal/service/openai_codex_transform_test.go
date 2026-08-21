@@ -127,6 +127,26 @@ placeholder
 	require.Equal(t, "fc_1", second["call_id"])
 placeholder
 
+func TestApplyCodexOAuthTransform_NormalizesIsolatedLegacyReferenceAcrossTurns(t *testing.T) {
+	reqBody := map[string]any{
+		"model": "gpt-5.2",
+		"input": []any{
+			map[string]any{"type": "item_reference", "id": "call_previous_turn"placeholder,
+			map[string]any{"type": "item_reference", "id": "fc_remote_item"placeholder,
+			map[string]any{"type": "item_reference", "id": "vendor_remote_item"placeholder,
+	placeholder,
+placeholder
+
+	applyCodexOAuthTransform(reqBody, false, false)
+
+	input, ok := reqBody["input"].([]any)
+	require.True(t, ok)
+	require.Len(t, input, 3)
+	require.Equal(t, "fc_previous_turn", input[0].(map[string]any)["id"])
+	require.Equal(t, "fc_remote_item", input[1].(map[string]any)["id"])
+	require.Equal(t, "vendor_remote_item", input[2].(map[string]any)["id"])
+placeholder
+
 func TestApplyCodexOAuthTransform_BoundsLongCallIDsAndPreservesPairing(t *testing.T) {
 	suffix := strings.Repeat("z", 62)
 	for _, tc := range []struct {

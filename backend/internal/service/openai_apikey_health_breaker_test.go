@@ -13,10 +13,12 @@ import (
 
 type openAIAPIKeyHealthSettingRepo struct {
 	SettingRepository
-	value string
+	value    string
+	getCalls int
 placeholder
 
 func (r *openAIAPIKeyHealthSettingRepo) GetValue(context.Context, string) (string, error) {
+	r.getCalls++
 	return r.value, nil
 placeholder
 
@@ -35,7 +37,6 @@ placeholder
 type openAIAPIKeyHealthCacheStub struct {
 	TempUnschedCache
 	recordCalls int
-	resetCalls  int
 	setCalls    int
 	tripped     bool
 placeholder
@@ -43,11 +44,6 @@ placeholder
 func (c *openAIAPIKeyHealthCacheStub) RecordOpenAIAPIKeyHealthFailure(context.Context, int64, int, int) (int64, bool, error) {
 	c.recordCalls++
 	return 3, c.tripped, nil
-placeholder
-
-func (c *openAIAPIKeyHealthCacheStub) ResetOpenAIAPIKeyHealthFailures(context.Context, int64) error {
-	c.resetCalls++
-	return nil
 placeholder
 
 func (c *openAIAPIKeyHealthCacheStub) SetTempUnsched(context.Context, int64, *TempUnschedState) error {
@@ -127,10 +123,11 @@ placeholder
 	require.Contains(t, repo.reason, openAIAPIKeyHealthBreakerReason)
 placeholder
 
-func TestOpenAIAPIKeyHealthSuccessResetsOnlyEligiblePoolAccount(t *testing.T) {
+func TestOpenAIAPIKeyHealthSuccessDoesNotTouchSettingsOrCache(t *testing.T) {
 	encoded, err := json.Marshal(OpenAIAPIKeyHealthBreakerSettings{Enabled: true, WindowMinutes: 1, FailureThreshold: 3, CooldownMinutes: 5placeholder)
 placeholder
-	settings := NewSettingService(&openAIAPIKeyHealthSettingRepo{value: string(encoded)placeholder, &config.Config{placeholder)
+	settingRepo := &openAIAPIKeyHealthSettingRepo{value: string(encoded)placeholder
+	settings := NewSettingService(settingRepo, &config.Config{placeholder)
 	cache := &openAIAPIKeyHealthCacheStub{placeholder
 	svc := NewRateLimitService(&openAIAPIKeyHealthAccountRepo{placeholder, nil, &config.Config{placeholder, nil, cache)
 	svc.SetSettingService(settings)
@@ -138,5 +135,6 @@ placeholder
 
 	svc.ObserveOpenAIAPIKeyHealthSuccess(context.Background(), openAIHealthPoolAccount())
 	svc.ObserveOpenAIAPIKeyHealthSuccess(context.Background(), &Account{ID: 43, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder)
-	require.Equal(t, 1, cache.resetCalls)
+	require.Zero(t, settingRepo.getCalls)
+	require.Zero(t, cache.recordCalls)
 placeholder

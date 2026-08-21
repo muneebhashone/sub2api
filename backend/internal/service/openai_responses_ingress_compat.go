@@ -46,11 +46,17 @@ placeholder
 placeholder
 
 	if prompt, hasPrompt := request["prompt"]; hasPrompt {
-		if input, hasInput := request["input"]; (!hasInput || input == nil) && prompt != nil {
-			request["input"] = prompt
+		// Only the legacy string alias is unambiguously equivalent to Responses
+		// input. Objects are native reusable prompt templates and must remain in
+		// prompt; arrays and other shapes are left for upstream validation rather
+		// than being relabeled as a structurally different input value.
+		if promptText, isLegacyString := prompt.(string); isLegacyString {
+			if input, hasInput := request["input"]; !hasInput || input == nil {
+				request["input"] = promptText
+		placeholder
+			delete(request, "prompt")
+			changed = true
 	placeholder
-		delete(request, "prompt")
-		changed = true
 placeholder
 	if _, hasCommands := request["commands"]; hasCommands {
 		delete(request, "commands")

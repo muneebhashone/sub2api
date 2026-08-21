@@ -124,15 +124,7 @@ placeholder
 	return true
 placeholder
 
-func (s *RateLimitService) ObserveOpenAIAPIKeyHealthSuccess(ctx context.Context, account *Account) {
-	if s == nil || s.openAIAPIKeyHealth == nil || s.settingService == nil || !isOpenAIAPIKeyHealthBreakerAccount(account) {
-		return
-placeholder
-	settings, err := s.settingService.GetOpenAIAPIKeyHealthBreakerSettings(ctx)
-	if err != nil || settings == nil || !settings.Enabled {
-		return
-placeholder
-	if err := s.openAIAPIKeyHealth.ResetOpenAIAPIKeyHealthFailures(ctx, account.ID); err != nil {
-		logger.L().Warn("openai.apikey_health_breaker_reset_failed", zap.Int64("account_id", account.ID), zap.Error(err))
-placeholder
+func (s *RateLimitService) ObserveOpenAIAPIKeyHealthSuccess(context.Context, *Account) {
+	// Health failures are accumulated in a rolling time window. A success does
+	// not reset that window and must not add a Redis round trip to the hot path.
 placeholder

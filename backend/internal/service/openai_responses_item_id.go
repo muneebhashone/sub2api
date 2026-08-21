@@ -70,35 +70,20 @@ placeholder
 
 	type inputItem struct {
 		body        []byte
-		itemType    string
-		id          string
-		callID      string
 		stripID     bool
 		stripCallID bool
-		drop        bool
-		isObject    bool
 placeholder
 
 	items := make([]inputItem, 0)
-	strippedIDs := make(map[string]struct{placeholder)
-	validCallIDs := make(map[string]struct{placeholder)
 	input.ForEach(func(_, item gjson.Result) bool {
-		parsed := inputItem{body: []byte(item.Raw), isObject: item.IsObject()placeholder
+		parsed := inputItem{body: []byte(item.Raw)placeholder
 		if item.IsObject() {
 			itemType := item.Get("type")
 			id := item.Get("id")
-			parsed.itemType = strings.TrimSpace(itemType.String())
-			parsed.callID = strings.TrimSpace(item.Get("call_id").String())
-			parsed.stripCallID = item.Get("call_id").Exists() && shouldStripOpenAIResponsesNonPairCallID(parsed.itemType)
+			trimmedItemType := strings.TrimSpace(itemType.String())
+			parsed.stripCallID = item.Get("call_id").Exists() && shouldStripOpenAIResponsesNonPairCallID(trimmedItemType)
 			if id.Type == gjson.String {
-				parsed.id = id.String()
-				parsed.stripID = shouldStripOpenAIResponsesInputItemID(parsed.itemType, parsed.id)
-				if parsed.stripID && parsed.id != "" {
-					strippedIDs[parsed.id] = struct{placeholder{placeholder
-			placeholder
-		placeholder
-			if isCodexToolCallContextItemType(parsed.itemType) && parsed.callID != "" {
-				validCallIDs[parsed.callID] = struct{placeholder{placeholder
+				parsed.stripID = shouldStripOpenAIResponsesInputItemID(trimmedItemType, id.String())
 		placeholder
 	placeholder
 		items = append(items, parsed)
@@ -115,51 +100,8 @@ placeholder
 		return body, false, nil
 placeholder
 
-	// First decide which outputs become dangling because their call_id points at
-	// an item ID that is being removed and no call item owns that call_id. This
-	// must happen before computing retained IDs: a dropped output cannot keep an
-	// item_reference alive merely because it used to have the same id.
-	for index := range items {
-		item := &items[index]
-		if !item.isObject || !isCodexToolCallOutputItemType(item.itemType) {
-			continue
-	placeholder
-		if _, pointsAtStrippedID := strippedIDs[item.callID]; !pointsAtStrippedID {
-			continue
-	placeholder
-		if _, hasMatchingCallID := validCallIDs[item.callID]; !hasMatchingCallID {
-			item.drop = true
-	placeholder
-placeholder
-
-	removedItemIDs := make(map[string]struct{placeholder, len(strippedIDs))
-	retainedItemIDs := make(map[string]struct{placeholder, len(items))
-	for _, item := range items {
-		if item.id == "" || item.itemType == "item_reference" {
-			continue
-	placeholder
-		if item.stripID || item.drop {
-			removedItemIDs[item.id] = struct{placeholder{placeholder
-			continue
-	placeholder
-		retainedItemIDs[item.id] = struct{placeholder{placeholder
-placeholder
-	for id := range retainedItemIDs {
-		delete(removedItemIDs, id)
-placeholder
-
 	rebuiltItems := make([][]byte, 0, len(items))
 	for index, item := range items {
-		if item.isObject {
-			if item.itemType == "item_reference" {
-				if _, dangling := removedItemIDs[item.id]; dangling {
-					continue
-			placeholder
-		placeholder
-			if item.drop {
-				continue
-		placeholder
-	placeholder
 		itemBody := item.body
 		if item.stripID {
 			var err error

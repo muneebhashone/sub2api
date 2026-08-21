@@ -270,27 +270,47 @@ placeholder
 placeholder
 
 const (
-	cyberSessionBlockPrefix = "cyber_session_block:"
-	cyberSessionScopePrefix = "cyber_session_scope:"
+	cyberSessionBlockPrefix         = "cyber_session_block:"
+	cyberSessionScopePrefix         = "cyber_session_scope:"
+	cyberSessionRedisCommandMaxKeys = 128
 )
 
-// SetCyberSessionBlocked atomically writes all exact blocks and their optional
-// coarse source scope with the same TTL.
+// SetCyberSessionBlocked writes exact blocks in bounded transactions. The
+// coarse scope is activated only after all exact blocks have been stored.
 func (c *gatewayCache) SetCyberSessionBlocked(ctx context.Context, scopeKey string, keys []string, ttl time.Duration) error {
 	if len(keys) == 0 {
 		return nil
 placeholder
-	pipe := c.rdb.TxPipeline()
-	for _, key := range keys {
-		if key != "" {
+	exactKeys := make([]string, 0, cyberSessionRedisCommandMaxKeys)
+	flush := func() error {
+		if len(exactKeys) == 0 {
+			return nil
+	placeholder
+		pipe := c.rdb.TxPipeline()
+		for _, key := range exactKeys {
 			pipe.Set(ctx, cyberSessionBlockPrefix+key, "1", ttl)
 	placeholder
+		_, err := pipe.Exec(ctx)
+		exactKeys = exactKeys[:0]
+		return err
+placeholder
+	for _, key := range keys {
+		if key != "" {
+			exactKeys = append(exactKeys, key)
+			if len(exactKeys) == cyberSessionRedisCommandMaxKeys {
+				if err := flush(); err != nil {
+					return err
+			placeholder
+		placeholder
+	placeholder
+placeholder
+	if err := flush(); err != nil {
+		return err
 placeholder
 	if scopeKey != "" {
-		pipe.Set(ctx, cyberSessionScopePrefix+scopeKey, "1", ttl)
+		return c.rdb.Set(ctx, cyberSessionScopePrefix+scopeKey, "1", ttl).Err()
 placeholder
-	_, err := pipe.Exec(ctx)
-	return err
+	return nil
 placeholder
 
 func (c *gatewayCache) IsCyberSessionScopeActive(ctx context.Context, scopeKey string) (bool, error) {
@@ -301,23 +321,29 @@ placeholder
 	return n > 0, nil
 placeholder
 
-// FindCyberSessionBlocked checks transcript-prefix candidates in one Redis
-// round trip and returns the first blocked key in caller order.
+// FindCyberSessionBlocked checks bounded batches in caller order and stops at
+// the first blocked key, preserving the original earliest-match behavior.
 func (c *gatewayCache) FindCyberSessionBlocked(ctx context.Context, keys []string) (string, error) {
 	if len(keys) == 0 {
 		return "", nil
 placeholder
-	redisKeys := make([]string, len(keys))
-	for i, key := range keys {
-		redisKeys[i] = cyberSessionBlockPrefix + key
-placeholder
-	values, err := c.rdb.MGet(ctx, redisKeys...).Result()
-	if err != nil {
-		return "", err
-placeholder
-	for i, value := range values {
-		if value != nil {
-			return keys[i], nil
+	for start := 0; start < len(keys); start += cyberSessionRedisCommandMaxKeys {
+		end := start + cyberSessionRedisCommandMaxKeys
+		if end > len(keys) {
+			end = len(keys)
+	placeholder
+		redisKeys := make([]string, end-start)
+		for i, key := range keys[start:end] {
+			redisKeys[i] = cyberSessionBlockPrefix + key
+	placeholder
+		values, err := c.rdb.MGet(ctx, redisKeys...).Result()
+		if err != nil {
+			return "", err
+	placeholder
+		for i, value := range values {
+			if value != nil {
+				return keys[start+i], nil
+		placeholder
 	placeholder
 placeholder
 	return "", nil

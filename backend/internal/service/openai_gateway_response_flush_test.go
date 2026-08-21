@@ -441,6 +441,62 @@ placeholder)
 placeholder)
 placeholder
 
+func TestOpenAIResponseFlush_BareErrorFollowedByCompletedUsesCompletedTerminal(t *testing.T) {
+	body := "data: {\"type\":\"error\",\"error\":{\"code\":\"transient\",\"message\":\"retrying\"placeholderplaceholder\n\n" +
+		"data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_recovered\",\"status\":\"completed\",\"output\":[],\"usage\":{\"input_tokens\":7,\"output_tokens\":3placeholderplaceholderplaceholder\n\n"
+	recorder := newOpenAIResponseFlushRecorder()
+
+	result, err := runOpenAIResponseFlushTest(recorder, io.NopCloser(strings.NewReader(body)), config.GatewayConfig{placeholder)
+
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, 7, result.usage.InputTokens)
+	require.Equal(t, 3, result.usage.OutputTokens)
+	gotBody, _ := recorder.snapshot()
+	require.NotContains(t, gotBody, `"type":"error"`)
+	require.NotContains(t, gotBody, `"type":"response.failed"`)
+	require.Contains(t, gotBody, `"type":"response.completed"`)
+placeholder
+
+func TestOpenAIResponseFlush_CompatibleAPIKeyDoesNotUseCodexBareErrorSynthesis(t *testing.T) {
+	body := "data: {\"type\":\"error\",\"error\":{\"code\":\"provider_error\",\"message\":\"provider failed\"placeholderplaceholder\n\n"
+	recorder := newOpenAIResponseFlushRecorder()
+	account := &Account{ID: 2, Platform: PlatformOpenAI, Type: AccountTypeAPIKeyplaceholder
+
+	result, err := runOpenAIResponseFlushTestWithAccount(recorder, io.NopCloser(strings.NewReader(body)), config.GatewayConfig{placeholder, account)
+
+placeholder
+	require.NotNil(t, result)
+	gotBody, _ := recorder.snapshot()
+	require.Contains(t, gotBody, `"type":"error"`)
+	require.NotContains(t, gotBody, `"type":"response.failed"`)
+placeholder
+
+func TestOpenAIResponseFlush_RecentBareErrorAllowsCompletedBeforeIdleTimeout(t *testing.T) {
+	reader, writer := io.Pipe()
+	defer func() { _ = writer.Close() placeholder()
+	recorder := newOpenAIResponseFlushRecorder()
+	resultCh, errCh := runOpenAIResponseFlushTestAsync(recorder, reader, config.GatewayConfig{StreamDataIntervalTimeout: 1placeholder)
+
+	// Place the bare error shortly before the first ticker firing. It is fresh
+	// data, so the ticker must leave the stream open for an authoritative event.
+	time.Sleep(700 * time.Millisecond)
+	_, err := io.WriteString(writer, "data: {\"type\":\"error\",\"error\":{\"code\":\"transient\",\"message\":\"retrying\"placeholderplaceholder\n\n")
+placeholder
+	time.Sleep(500 * time.Millisecond)
+	_, err = io.WriteString(writer, "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_late\",\"status\":\"completed\",\"output\":[],\"usage\":{\"input_tokens\":5,\"output_tokens\":1placeholderplaceholderplaceholder\n\n")
+placeholder
+	require.NoError(t, writer.Close())
+
+	require.NoError(t, <-errCh)
+	result := <-resultCh
+	require.NotNil(t, result)
+	require.Equal(t, 5, result.usage.InputTokens)
+	gotBody, _ := recorder.snapshot()
+	require.Contains(t, gotBody, `"type":"response.completed"`)
+	require.NotContains(t, gotBody, `"type":"response.failed"`)
+placeholder
+
 func TestOpenAIResponseFlush_BareErrorTimeoutSynthesizesFailed(t *testing.T) {
 	tests := []struct {
 		name string
@@ -534,6 +590,10 @@ placeholder
 placeholder
 
 func runOpenAIResponseFlushTest(recorder *openAIResponseFlushRecorder, body io.ReadCloser, gatewayCfg config.GatewayConfig) (*openaiStreamingResult, error) {
+	return runOpenAIResponseFlushTestWithAccount(recorder, body, gatewayCfg, &Account{ID: 1, Platform: PlatformOpenAI, Type: AccountTypeOAuthplaceholder)
+placeholder
+
+func runOpenAIResponseFlushTestWithAccount(recorder *openAIResponseFlushRecorder, body io.ReadCloser, gatewayCfg config.GatewayConfig, account *Account) (*openaiStreamingResult, error) {
 	gin.SetMode(gin.TestMode)
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
@@ -546,7 +606,7 @@ placeholder
 		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
 		Body:       body,
 placeholder
-	return svc.handleStreamingResponse(context.Background(), resp, c, &Account{ID: 1, Platform: PlatformOpenAIplaceholder, time.Now(), "gpt-5", "gpt-5")
+	return svc.handleStreamingResponse(context.Background(), resp, c, account, time.Now(), "gpt-5", "gpt-5")
 placeholder
 
 func runOpenAIResponseFlushTestAsync(recorder *openAIResponseFlushRecorder, body io.ReadCloser, gatewayCfg config.GatewayConfig) (<-chan *openaiStreamingResult, <-chan error) {

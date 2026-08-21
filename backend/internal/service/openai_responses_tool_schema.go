@@ -26,11 +26,43 @@ const (
 
 var errOpenAIResponsesToolSchemaLimit = errors.New("OpenAI Responses tool schema safety limit exceeded")
 
-// shouldSanitizeOpenAIResponsesToolSchemas centralizes the platform boundary
-// for callers. These rewrites describe OpenAI Responses constraints, not the
-// behavior of every provider routed through the generic OpenAI gateway.
-func shouldSanitizeOpenAIResponsesToolSchemas(platform string) bool {
+// shouldRepairOpenAIResponsesNullToolSchemaType reports whether the upstream
+// path requires a concrete object type at a function tool's parameter root.
+// This defect is shared by the OpenAI, Anthropic, and CN-compatible paths.
+func shouldRepairOpenAIResponsesNullToolSchemaType(platform string) bool {
+	return platform == PlatformOpenAI || platform == PlatformAnthropic || IsCNProvider(platform)
+placeholder
+
+// shouldSanitizeOpenAIResponsesToolSchemaPatterns is intentionally narrower:
+// regex lookaround rejection is an OpenAI-specific schema constraint.
+func shouldSanitizeOpenAIResponsesToolSchemaPatterns(platform string) bool {
 	return platform == PlatformOpenAI
+placeholder
+
+func sanitizeOpenAIResponsesToolSchemasForPlatform(body []byte, platform string) ([]byte, bool, error) {
+	normalized := body
+	changed := false
+	if shouldRepairOpenAIResponsesNullToolSchemaType(platform) {
+		next, repaired, err := sanitizeOpenAIResponsesToolParameterTypes(normalized)
+		if err != nil {
+			return body, false, fmt.Errorf("sanitize OpenAI Responses tool parameters: %w", err)
+	placeholder
+		if repaired {
+			normalized = next
+			changed = true
+	placeholder
+placeholder
+	if shouldSanitizeOpenAIResponsesToolSchemaPatterns(platform) {
+		next, sanitized, err := sanitizeOpenAIResponsesToolSchemaPatterns(normalized)
+		if err != nil {
+			return body, false, fmt.Errorf("sanitize OpenAI Responses tool schema patterns: %w", err)
+	placeholder
+		if sanitized {
+			normalized = next
+			changed = true
+	placeholder
+placeholder
+	return normalized, changed, nil
 placeholder
 
 // sanitizeOpenAIResponsesToolSchemaPatterns removes only schema constraints

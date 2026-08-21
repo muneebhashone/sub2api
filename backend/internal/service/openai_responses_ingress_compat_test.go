@@ -70,3 +70,25 @@ placeholder
 	require.False(t, gjson.GetBytes(normalized, "prompt").Exists())
 	require.False(t, gjson.GetBytes(normalized, "commands").Exists())
 placeholder
+
+func TestNormalizeOpenAIResponsesLegacyIngressPreservesNativePromptTemplate(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.4","prompt":{"id":"pmpt_abc","version":"7","variables":{"topic":"ownership"placeholderplaceholderplaceholder`)
+
+	normalized, changed, err := normalizeOpenAIResponsesLegacyIngress(body)
+placeholder
+	require.False(t, changed)
+	require.JSONEq(t, string(body), string(normalized))
+	require.Equal(t, "pmpt_abc", gjson.GetBytes(normalized, "prompt.id").String())
+	require.False(t, gjson.GetBytes(normalized, "input").Exists())
+placeholder
+
+func TestNormalizeOpenAIResponsesLegacyIngressPreservesUnknownPromptShapeWhileDroppingCommands(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.4","prompt":["one","two"],"commands":[{"name":"legacy"placeholder]placeholder`)
+
+	normalized, changed, err := normalizeOpenAIResponsesLegacyIngress(body)
+placeholder
+	require.True(t, changed)
+	require.Equal(t, int64(2), gjson.GetBytes(normalized, "prompt.#").Int())
+	require.False(t, gjson.GetBytes(normalized, "input").Exists())
+	require.False(t, gjson.GetBytes(normalized, "commands").Exists())
+placeholder

@@ -151,6 +151,28 @@ placeholder
 	require.Equal(t, "call_shared", filtered[2].(map[string]any)["id"])
 placeholder
 
+func TestFilterCodexInput_NormalizesCrossTurnLegacyCallReference(t *testing.T) {
+	input := []any{
+		map[string]any{"type": "item_reference", "id": "call_previous_turn"placeholder,
+placeholder
+
+	filtered := filterCodexInputWithOptions(input, codexInputFilterOptions{PreserveReferences: trueplaceholder)
+
+	require.Equal(t, "fc_previous_turn", filtered[0].(map[string]any)["id"])
+placeholder
+
+func TestFilterCodexInput_PreservesNativeRemoteItemReferences(t *testing.T) {
+	for _, id := range []string{"fc_remote", "ctc_remote", "tsc_remote", "msg_remote", "rs_remote", "vendor_remote"placeholder {
+		t.Run(id, func(t *testing.T) {
+			input := []any{map[string]any{"type": "item_reference", "id": idplaceholderplaceholder
+
+			filtered := filterCodexInputWithOptions(input, codexInputFilterOptions{PreserveReferences: trueplaceholder)
+
+			require.Equal(t, id, filtered[0].(map[string]any)["id"])
+	placeholder)
+placeholder
+placeholder
+
 // TestFilterCodexInput_StripsItemIDFromAllToolCallInputTypes verifies that
 // item_* ids are stripped from all call-input types (not output types).
 func TestFilterCodexInput_StripsItemIDFromAllToolCallInputTypes(t *testing.T) {

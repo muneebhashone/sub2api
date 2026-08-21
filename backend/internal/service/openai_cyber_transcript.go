@@ -11,9 +11,14 @@ import (
 )
 
 type openAICyberTranscriptBlockKeys struct {
-	lookupKeys       []string
-	preLatestUserKey string
+	lookupKeys          []string
+	preLatestUserKey    string
+	lookupKeysTruncated bool
 placeholder
+
+// Bound the Redis lookup work for a single request while retaining the most
+// recent transcript prefixes, where a continuation is most likely to match.
+const maxOpenAICyberTranscriptLookupKeys = 256
 
 // deriveOpenAICyberTranscriptBlockKeys returns cumulative semantic-history
 // hashes plus the context key immediately before the latest user turn. The
@@ -53,8 +58,11 @@ placeholder
 			return openAICyberTranscriptBlockKeys{placeholder
 	placeholder
 		result := openAICyberTranscriptBlockKeys{
-			lookupKeys: make([]string, 0, int(sequence.Get("#").Int())),
+			lookupKeys: make([]string, 0, maxOpenAICyberTranscriptLookupKeys),
 	placeholder
+		nextLookupKey := 0
+		lookupKeysRotated := false
+		lastLookupKey := ""
 		// This is an entropy heuristic, not provenance proof: authenticated
 		// server-side history would be required to distinguish fixed few-shot
 		// assistant items perfectly.
@@ -71,17 +79,31 @@ placeholder
 			if strings.TrimSpace(canonical) == "" {
 				return true
 		placeholder
-			if openAICyberTranscriptItemStartsUserTurn(item) && hasModelGeneratedItem && len(result.lookupKeys) > 0 {
-				result.preLatestUserKey = result.lookupKeys[len(result.lookupKeys)-1]
+			if openAICyberTranscriptItemStartsUserTurn(item) && hasModelGeneratedItem && lastLookupKey != "" {
+				result.preLatestUserKey = lastLookupKey
 		placeholder
 			_, _ = h.Write([]byte("|item="))
 			_, _ = h.Write([]byte(canonical))
-			result.lookupKeys = append(result.lookupKeys, hex.EncodeToString(h.Sum(nil)))
+			lastLookupKey = hex.EncodeToString(h.Sum(nil))
+			if len(result.lookupKeys) < maxOpenAICyberTranscriptLookupKeys {
+				result.lookupKeys = append(result.lookupKeys, lastLookupKey)
+		placeholder else {
+				result.lookupKeys[nextLookupKey] = lastLookupKey
+				nextLookupKey = (nextLookupKey + 1) % maxOpenAICyberTranscriptLookupKeys
+				lookupKeysRotated = true
+				result.lookupKeysTruncated = true
+		placeholder
 			if openAICyberTranscriptItemIsModelGenerated(item) {
 				hasModelGeneratedItem = true
 		placeholder
 			return true
 	placeholder)
+		if lookupKeysRotated {
+			ordered := make([]string, 0, len(result.lookupKeys))
+			ordered = append(ordered, result.lookupKeys[nextLookupKey:]...)
+			ordered = append(ordered, result.lookupKeys[:nextLookupKey]...)
+			result.lookupKeys = ordered
+	placeholder
 		return result
 placeholder
 
