@@ -202,3 +202,34 @@ placeholder)
 		require.Equal(t, openai.DefaultEngineFingerprintSignalsJSON(), repo.values[SettingKeyCodexCLIOnlyEngineFingerprintSignals])
 placeholder)
 placeholder
+
+func TestMigrateGrokDefaultTextModel(t *testing.T) {
+	t.Run("upgrades legacy built-in default", func(t *testing.T) {
+		repo := &codexPolicyMigrationRepoStub{values: map[string]string{
+			SettingKeyGrokDefaultTextModel: "grok-4.5",
+	placeholderplaceholder
+		svc := NewSettingService(repo, &config.Config{placeholder)
+		require.NoError(t, svc.MigrateGrokDefaultTextModel(context.Background()))
+		require.Equal(t, "grok-4.6", repo.values[SettingKeyGrokDefaultTextModel])
+		require.Equal(t, "grok-4.6", repo.sets[SettingKeyGrokDefaultTextModel])
+placeholder)
+
+	t.Run("does not overwrite an explicit model", func(t *testing.T) {
+		repo := &codexPolicyMigrationRepoStub{values: map[string]string{
+			SettingKeyGrokDefaultTextModel: "grok-4.3",
+	placeholderplaceholder
+		svc := NewSettingService(repo, &config.Config{placeholder)
+		require.NoError(t, svc.MigrateGrokDefaultTextModel(context.Background()))
+		require.Equal(t, "grok-4.3", repo.values[SettingKeyGrokDefaultTextModel])
+		_, wrote := repo.sets[SettingKeyGrokDefaultTextModel]
+		require.False(t, wrote)
+placeholder)
+
+	t.Run("missing setting is left for normal defaults", func(t *testing.T) {
+		repo := &codexPolicyMigrationRepoStub{values: map[string]string{placeholderplaceholder
+		svc := NewSettingService(repo, &config.Config{placeholder)
+		require.NoError(t, svc.MigrateGrokDefaultTextModel(context.Background()))
+		_, wrote := repo.sets[SettingKeyGrokDefaultTextModel]
+		require.False(t, wrote)
+placeholder)
+placeholder
