@@ -7,6 +7,17 @@ import (
 	"strings"
 )
 
+type openAIResponsesLiteValidationError struct {
+	param   string
+	message string
+placeholder
+
+func (e *openAIResponsesLiteValidationError) Error() string { return e.message placeholder
+
+func newOpenAIResponsesLiteValidationError(param, format string, args ...any) error {
+	return &openAIResponsesLiteValidationError{param: param, message: fmt.Sprintf(format, args...)placeholder
+placeholder
+
 // normalizeOpenAIResponsesLiteTools applies the Responses Lite request
 // contract: reasoning must cover all turns, and private namespace declarations
 // use the input.additional_tools carrier. Other top-level tools must belong to
@@ -16,18 +27,27 @@ func normalizeOpenAIResponsesLiteTools(reqBody map[string]any) (bool, error) {
 	if reqBody == nil {
 		return false, nil
 placeholder
+	if parallel, exists := reqBody["parallel_tool_calls"]; exists {
+		if _, ok := parallel.(bool); !ok {
+			return false, newOpenAIResponsesLiteValidationError("parallel_tool_calls", "responses Lite requires parallel_tool_calls to be a boolean")
+	placeholder
+placeholder
 	if rawReasoning, exists := reqBody["reasoning"]; exists && rawReasoning != nil {
 		if _, ok := rawReasoning.(map[string]any); !ok {
-			return false, fmt.Errorf("responses Lite requires reasoning to be an object")
+			return false, newOpenAIResponsesLiteValidationError("reasoning", "responses Lite requires reasoning to be an object")
 	placeholder
 placeholder
 	rawTools, exists := reqBody["tools"]
 	if !exists || rawTools == nil {
-		return ensureOpenAIResponsesLiteReasoningContext(reqBody)
+		changed, err := ensureOpenAIResponsesLiteReasoningContext(reqBody)
+		if err != nil {
+			return false, err
+	placeholder
+		return ensureOpenAIResponsesLiteParallelToolCalls(reqBody, changed)
 placeholder
 	tools, ok := rawTools.([]any)
 	if !ok {
-		return false, fmt.Errorf("responses Lite requires tools to be an array")
+		return false, newOpenAIResponsesLiteValidationError("tools", "responses Lite requires tools to be an array")
 placeholder
 
 	topLevelTools := make([]any, 0, len(tools))
@@ -57,7 +77,11 @@ placeholder
 	placeholder
 placeholder
 	if len(namespaceTools) == 0 {
-		return ensureOpenAIResponsesLiteReasoningContext(reqBody)
+		changed, err := ensureOpenAIResponsesLiteReasoningContext(reqBody)
+		if err != nil {
+			return false, err
+	placeholder
+		return ensureOpenAIResponsesLiteParallelToolCalls(reqBody, changed)
 placeholder
 
 	input, err := appendOpenAIResponsesLiteAdditionalTools(reqBody["input"], namespaceTools)
@@ -73,7 +97,36 @@ placeholder
 placeholder else {
 		reqBody["tools"] = topLevelTools
 placeholder
+	return ensureOpenAIResponsesLiteParallelToolCalls(reqBody, true)
+placeholder
+
+func ensureOpenAIResponsesLiteParallelToolCalls(reqBody map[string]any, changed bool) (bool, error) {
+	parallel := reqBody["parallel_tool_calls"]
+	if !openAIResponsesLiteHasTools(reqBody) {
+		return changed, nil
+placeholder
+	if parallel == false {
+		return changed, nil
+placeholder
+	reqBody["parallel_tool_calls"] = false
 	return true, nil
+placeholder
+
+func openAIResponsesLiteHasTools(reqBody map[string]any) bool {
+	if tools, ok := reqBody["tools"].([]any); ok && len(tools) > 0 {
+		return true
+placeholder
+	input, _ := reqBody["input"].([]any)
+	for _, rawItem := range input {
+		item, ok := rawItem.(map[string]any)
+		if !ok || strings.TrimSpace(firstNonEmptyString(item["type"])) != "additional_tools" {
+			continue
+	placeholder
+		if tools, ok := item["tools"].([]any); ok && len(tools) > 0 {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func ensureOpenAIResponsesLiteReasoningContext(reqBody map[string]any) (bool, error) {
@@ -84,7 +137,7 @@ func ensureOpenAIResponsesLiteReasoningContext(reqBody map[string]any) (bool, er
 placeholder
 	reasoning, ok := rawReasoning.(map[string]any)
 	if !ok {
-		return false, fmt.Errorf("responses Lite requires reasoning to be an object")
+		return false, newOpenAIResponsesLiteValidationError("reasoning", "responses Lite requires reasoning to be an object")
 placeholder
 	if context, ok := reasoning["context"].(string); ok && context == "all_turns" {
 		return false, nil
