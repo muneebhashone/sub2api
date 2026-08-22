@@ -109,8 +109,9 @@ placeholder
 
 // ChannelTimePricing 渠道模型定价的分时倍率配置。
 type ChannelTimePricing struct {
-	Timezone string                     `json:"timezone"`
-	Periods  []ChannelTimePricingPeriod `json:"periods"`
+	Timezone     string                     `json:"timezone"`
+	WeekdaysOnly bool                       `json:"weekdays_only,omitempty"`
+	Periods      []ChannelTimePricingPeriod `json:"periods"`
 placeholder
 
 // ChannelTimePricingPeriod 是秒级的左闭右开分时倍率区间，并兼容历史 HH:mm 数据。
@@ -216,7 +217,10 @@ placeholder
 		copy(cp.Intervals, p.Intervals)
 placeholder
 	if p.TimePricing != nil {
-		cp.TimePricing = &ChannelTimePricing{Timezone: p.TimePricing.Timezoneplaceholder
+		cp.TimePricing = &ChannelTimePricing{
+			Timezone:     p.TimePricing.Timezone,
+			WeekdaysOnly: p.TimePricing.WeekdaysOnly,
+	placeholder
 		if p.TimePricing.Periods != nil {
 			cp.TimePricing.Periods = append([]ChannelTimePricingPeriod(nil), p.TimePricing.Periods...)
 	placeholder

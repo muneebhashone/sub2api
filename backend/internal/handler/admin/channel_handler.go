@@ -74,8 +74,9 @@ type channelModelPricingRequest struct {
 placeholder
 
 type channelTimePricingRequest struct {
-	Timezone string                            `json:"timezone"`
-	Periods  []channelTimePricingPeriodRequest `json:"periods"`
+	Timezone     string                            `json:"timezone"`
+	WeekdaysOnly bool                              `json:"weekdays_only"`
+	Periods      []channelTimePricingPeriodRequest `json:"periods"`
 placeholder
 
 type channelTimePricingPeriodRequest struct {
@@ -144,8 +145,9 @@ type channelModelPricingResponse struct {
 placeholder
 
 type channelTimePricingResponse struct {
-	Timezone string                             `json:"timezone"`
-	Periods  []channelTimePricingPeriodResponse `json:"periods"`
+	Timezone     string                             `json:"timezone"`
+	WeekdaysOnly bool                               `json:"weekdays_only"`
+	Periods      []channelTimePricingPeriodResponse `json:"periods"`
 placeholder
 
 type channelTimePricingPeriodResponse struct {
@@ -282,7 +284,11 @@ placeholder
 			Multiplier: period.Multiplier,
 	placeholder)
 placeholder
-	return &channelTimePricingResponse{Timezone: value.Timezone, Periods: periodsplaceholder
+	return &channelTimePricingResponse{
+		Timezone:     value.Timezone,
+		WeekdaysOnly: value.WeekdaysOnly,
+		Periods:      periods,
+placeholder
 placeholder
 
 func intervalToResponse(iv service.PricingInterval) pricingIntervalResponse {
@@ -374,7 +380,11 @@ placeholder
 			Multiplier: period.Multiplier,
 	placeholder)
 placeholder
-	return &service.ChannelTimePricing{Timezone: value.Timezone, Periods: periodsplaceholder
+	return &service.ChannelTimePricing{
+		Timezone:     value.Timezone,
+		WeekdaysOnly: value.WeekdaysOnly,
+		Periods:      periods,
+placeholder
 placeholder
 
 func accountStatsPricingRuleRequestToService(r accountStatsPricingRuleRequest) service.AccountStatsPricingRule {
