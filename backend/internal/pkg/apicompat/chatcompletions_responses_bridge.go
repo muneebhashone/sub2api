@@ -279,6 +279,8 @@ func buildChatMessagesFromItems(messages []ChatMessage, rawItems []json.RawMessa
 	// a user-side item ends the turn and clears it.
 	var lastTurnReasoning string
 	mediaByCallID := make(toolOutputMediaByCallID)
+	invalidFunctionCallIDs := make(map[string]struct{placeholder)
+	invalidEmptyFunctionCallOutputs := 0
 
 	reasoningForAssistant := func() string {
 		if pendingReasoning != "" {
@@ -331,6 +333,22 @@ placeholder
 			if strings.TrimSpace(arguments) == "" {
 				arguments = "{placeholder"
 		placeholder
+			callID := rawString(item["call_id"])
+			if !json.Valid([]byte(arguments)) {
+				// A previous streamed turn can leave a truncated function_call in
+				// Codex history (for example after an upstream SSE parse failure or
+				// an output-limit interruption). Do not forward that item to a
+				// Chat Completions provider, which rejects the entire request. Its
+				// matching output is skipped below as well, allowing the next user
+				// turn to self-heal instead of repeatedly replaying the poison.
+				if callID != "" {
+					invalidFunctionCallIDs[callID] = struct{placeholder{placeholder
+			placeholder else {
+					invalidEmptyFunctionCallOutputs++
+			placeholder
+				pendingReasoning = ""
+				continue
+		placeholder
 			name := rawString(item["name"])
 			// namespace 子工具的历史调用带 namespace 字段，需与请求方向的摊平
 			// 命名（namespaceChildrenToChatTools）保持一致。
@@ -338,7 +356,7 @@ placeholder
 				name = flattenNamespaceToolName(ns, name)
 		placeholder
 			toolCall := ChatToolCall{
-				ID:   rawString(item["call_id"]),
+				ID:   callID,
 				Type: "function",
 				Function: ChatFunctionCall{
 					Name:      name,
@@ -388,6 +406,15 @@ placeholder
 		case "function_call_output", "custom_tool_call_output", "tool_search_output":
 			outputRaw := bytesTrimSpace(item["output"])
 			callID := rawString(item["call_id"])
+			if callID == "" && invalidEmptyFunctionCallOutputs > 0 {
+				invalidEmptyFunctionCallOutputs--
+				pendingReasoning = ""
+				continue
+		placeholder
+			if _, skipped := invalidFunctionCallIDs[callID]; skipped {
+				pendingReasoning = ""
+				continue
+		placeholder
 			delete(mediaByCallID, callID)
 
 			outputText, media, rewritten := extractToolOutputMedia(outputRaw)
@@ -1218,6 +1245,13 @@ placeholder
 		placeholder)
 			continue
 	placeholder
+		// Ordinary Responses function_call arguments must contain valid JSON.
+		// Do not mark a truncated non-streaming Chat tool call as completed;
+		// Codex would persist it and poison the next request in the same way as
+		// the streaming variant guarded by ValidateToolCallArguments.
+		if !json.Valid([]byte(arguments)) {
+			continue
+	placeholder
 		if ns, ok := namespaceTools[toolCall.Function.Name]; ok {
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "function_call",
@@ -1404,6 +1438,33 @@ func NewChatCompletionsToResponsesStreamState(model string) *ChatCompletionsToRe
 		toolNamespace:    make(map[int]NamespacedToolName),
 		toolAnnounced:    make(map[int]bool),
 placeholder
+placeholder
+
+// ValidateToolCallArguments checks the accumulated function-call arguments
+// before the stream is finalized. A tool call whose argument stream was
+// truncated must not be emitted as a completed Responses item: Codex will
+// persist it and replay it on the next turn, where a Chat Completions provider
+// rejects the whole request.
+func (state *ChatCompletionsToResponsesStreamState) ValidateToolCallArguments() error {
+	if state == nil {
+		return nil
+placeholder
+	for idx, toolCall := range state.ToolCalls {
+		if toolCall == nil {
+			continue
+	placeholder
+		if state.toolIsCustom[idx] || state.toolIsToolSearch[idx] {
+			continue
+	placeholder
+		arguments := strings.TrimSpace(toolCall.Function.Arguments)
+		if arguments == "" {
+			continue
+	placeholder
+		if !json.Valid([]byte(arguments)) {
+			return fmt.Errorf("tool call %q (%s) arguments are invalid JSON", toolCall.ID, toolCall.Function.Name)
+	placeholder
+placeholder
+	return nil
 placeholder
 
 func (state *ChatCompletionsToResponsesStreamState) allocOutputIndex() int {
