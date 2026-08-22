@@ -1091,6 +1091,19 @@ placeholder
 			filteredTools = append(filteredTools, raw)
 	placeholder
 placeholder
+	if !grokRawToolsContainType(filteredTools, "tool_search") {
+		for index, raw := range filteredTools {
+			if !gjson.GetBytes(raw, "defer_loading").Exists() {
+				continue
+		placeholder
+			cleaned, deleteErr := sjson.DeleteBytes(raw, "defer_loading")
+			if deleteErr != nil {
+				return nil, deleteErr
+		placeholder
+			filteredTools[index] = cleaned
+			toolsChanged = true
+	placeholder
+placeholder
 
 	var err error
 	if len(filteredTools) != len(rawTools) || toolsChanged {
@@ -1123,6 +1136,15 @@ placeholder
 	placeholder
 placeholder
 	return body, nil
+placeholder
+
+func grokRawToolsContainType(tools []json.RawMessage, want string) bool {
+	for _, tool := range tools {
+		if strings.TrimSpace(gjson.GetBytes(tool, "type").String()) == want {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func deleteGrokOrphanToolControls(body []byte) ([]byte, error) {

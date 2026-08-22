@@ -66,6 +66,33 @@ placeholder
 	require.Equal(t, "team__send", namespaceCall["name"])
 placeholder
 
+func TestAdaptResponsesClientTools_RemovesDeferredFlagsWhenToolSearchIsLowered(t *testing.T) {
+	req := map[string]any{
+		"tools": []any{
+			map[string]any{"type": "tool_search"placeholder,
+			map[string]any{"type": "function", "name": "shell", "defer_loading": trueplaceholder,
+			map[string]any{"type": "function", "name": "apply_patch"placeholder,
+	placeholder,
+placeholder
+
+	_, changed, err := AdaptResponsesClientTools(req)
+placeholder
+	require.True(t, changed)
+	tools := requireResponsesClientToolValue[[]any](t, req["tools"])
+	require.Equal(t, toolSearchProxyName, requireResponsesClientToolValue[map[string]any](t, tools[0])["name"])
+	require.NotContains(t, requireResponsesClientToolValue[map[string]any](t, tools[1]), "defer_loading")
+placeholder
+
+func TestStripResponsesDeferredToolFlags_PreservesFlagsWithBuiltInToolSearch(t *testing.T) {
+	tools := []any{
+		map[string]any{"type": "tool_search"placeholder,
+		map[string]any{"type": "function", "name": "shell", "defer_loading": trueplaceholder,
+placeholder
+
+	require.False(t, stripResponsesDeferredToolFlags(tools))
+	require.Equal(t, true, requireResponsesClientToolValue[map[string]any](t, tools[1])["defer_loading"])
+placeholder
+
 func TestAdaptResponsesClientTools_LowersDiscoveredToolSearchOutput(t *testing.T) {
 	requestJSON := `{
 		"tools":[{"type":"tool_search"placeholder],

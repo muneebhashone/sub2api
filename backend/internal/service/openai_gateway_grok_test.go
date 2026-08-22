@@ -385,6 +385,16 @@ placeholder
 	require.False(t, gjson.GetBytes(patched, "tool_choice").Exists())
 placeholder
 
+func TestSanitizeGrokResponsesToolsRemovesDeferredFlagsWithToolSearch(t *testing.T) {
+	body := []byte(`{"tools":[{"type":"tool_search"placeholder,{"type":"function","name":"shell","defer_loading":trueplaceholder,{"type":"function","name":"apply_patch"placeholder]placeholder`)
+
+	patched, err := sanitizeGrokResponsesTools(body)
+placeholder
+	require.False(t, gjson.GetBytes(patched, `tools.#(type=="tool_search")`).Exists())
+	require.False(t, gjson.GetBytes(patched, `tools.#(name=="shell").defer_loading`).Exists())
+	require.True(t, gjson.GetBytes(patched, `tools.#(name=="apply_patch")`).Exists())
+placeholder
+
 func TestSanitizeGrokResponsesToolsKeepsToolChoiceOnlyWithSupportedTools(t *testing.T) {
 	t.Parallel()
 
