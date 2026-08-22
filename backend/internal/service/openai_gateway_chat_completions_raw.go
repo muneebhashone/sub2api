@@ -336,6 +336,7 @@ placeholder
 		placeholder
 	placeholder
 		line = applyOllamaCloudRawChatCompletionsSSELine(account, line)
+		line = stripEmptyChatToolCallIdentityFromSSELine(line)
 
 		writeLine(line)
 		if line == "" {
