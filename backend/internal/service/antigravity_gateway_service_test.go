@@ -340,6 +340,65 @@ placeholder
 	require.Equal(t, "configured-project", wrapped["project"])
 placeholder
 
+func TestAntigravityGatewayService_ForwardGemini_ImageUsesDefaultMappingAndOAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	writer := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(writer)
+	body := []byte(`{"contents":[{"role":"user","parts":[{"text":"draw a cat"placeholder]placeholder],"generationConfig":{"responseModalities":["TEXT","IMAGE"],"imageConfig":{"aspectRatio":"1:1"placeholderplaceholderplaceholder`)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1beta/models/gemini-3.1-flash-image:generateContent", bytes.NewReader(body))
+
+	upstream := &queuedHTTPUpstreamStub{
+		responses: []*http.Response{{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+			Body: io.NopCloser(strings.NewReader(
+				"data: {\"response\":{\"candidates\":[{\"content\":{\"parts\":[{\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"aGVsbG8=\"placeholderplaceholder]placeholder,\"finishReason\":\"STOP\"placeholder],\"usageMetadata\":{\"promptTokenCount\":1,\"candidatesTokenCount\":1placeholderplaceholderplaceholder\n\n",
+			)),
+placeholder
+		onCall: func(req *http.Request, _ *queuedHTTPUpstreamStub) {
+			require.Equal(t, "Bearer test-access-token", req.Header.Get("Authorization"))
+			require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+			require.Contains(t, req.URL.String(), "/v1internal:streamGenerateContent?alt=sse")
+	placeholder,
+placeholder
+	svc := &AntigravityGatewayService{
+		settingService: NewSettingService(&antigravitySettingRepoStub{placeholder, &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder),
+		tokenProvider:  &AntigravityTokenProvider{placeholder,
+		httpUpstream:   upstream,
+placeholder
+	account := &Account{
+		ID:          104,
+		Name:        "antigravity-image",
+		Platform:    PlatformAntigravity,
+		Type:        AccountTypeOAuth,
+		Status:      StatusActive,
+		Concurrency: 1,
+placeholder
+			"access_token": "test-access-token",
+			"project_id":   "test-project",
+	placeholder,
+placeholder
+
+	result, err := svc.ForwardGemini(context.Background(), c, account, "gemini-3.1-flash-image", "generateContent", true, body, false)
+
+placeholder
+	require.NotNil(t, result)
+	require.Equal(t, "gemini-3.1-flash-image", result.Model)
+	require.Equal(t, "gemini-3.1-flash-image", result.UpstreamModel)
+	require.Equal(t, 1, result.ImageCount)
+	require.Len(t, upstream.requestBodies, 1)
+
+	var wrapped map[string]any
+	require.NoError(t, json.Unmarshal(upstream.requestBodies[0], &wrapped))
+	require.Equal(t, "test-project", wrapped["project"])
+	require.Equal(t, "gemini-3.1-flash-image", wrapped["model"])
+	request, ok := wrapped["request"].(map[string]any)
+	require.True(t, ok)
+	generationConfig, ok := request["generationConfig"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, []any{"TEXT", "IMAGE"placeholder, generationConfig["responseModalities"])
+placeholder
+
 func TestAntigravityGatewayService_ForwardGemini_PreservesServerSideToolInvocationConfig(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	body := []byte(`{"contents":[{"role":"user","parts":[{"text":"hello"placeholder]placeholder],"tools":[{"functionDeclarations":[{"name":"get_weather","parameters":{"type":"object","additionalProperties":falseplaceholderplaceholder]placeholder,{"googleSearch":{placeholderplaceholder],"toolConfig":{"includeServerSideToolInvocations":trueplaceholderplaceholder`)
