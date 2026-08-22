@@ -140,6 +140,11 @@ placeholder{
 			body: `{"data":[{"id":"canonical-id","model":"display-model"placeholder]placeholder`,
 			want: []string{"canonical-id"placeholder,
 	placeholder,
+		{
+			name: "codex manifest uses slug",
+			body: `{"models":[{"slug":"gpt-5.6-sol"placeholder,{"slug":"gpt-5.5-codex"placeholder]placeholder`,
+			want: []string{"gpt-5.5-codex", "gpt-5.6-sol"placeholder,
+	placeholder,
 placeholder
 
 	for _, tt := range tests {
@@ -152,6 +157,53 @@ placeholder
 			require.Equal(t, tt.want, got)
 	placeholder)
 placeholder
+placeholder
+
+func TestBuildUpstreamModelsRequestSupportsOpenAIOAuth(t *testing.T) {
+	svc := &AccountTestService{cfg: upstreamModelSyncTestConfig()placeholder
+	account := &Account{
+		ID:       11,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"access_token":       "openai-oauth-token",
+			"chatgpt_account_id": "chatgpt-account",
+	placeholder,
+placeholder
+
+	req, err := svc.buildUpstreamModelsRequest(context.Background(), account)
+placeholder
+	require.Equal(t, chatgptCodexModelsURL, req.URL.Scheme+"://"+req.URL.Host+req.URL.Path)
+	require.NotEmpty(t, req.URL.Query().Get("client_version"))
+	require.Equal(t, "Bearer openai-oauth-token", req.Header.Get("Authorization"))
+	require.Equal(t, "chatgpt-account", req.Header.Get("chatgpt-account-id"))
+	require.NotEmpty(t, req.Header.Get("Originator"))
+	require.NotEmpty(t, req.Header.Get("User-Agent"))
+	require.NotEmpty(t, req.Header.Get("Version"))
+placeholder
+
+func TestFetchUpstreamSupportedModelsParsesOpenAIOAuthManifest(t *testing.T) {
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"models":[{"slug":"gpt-5.6-sol"placeholder,{"slug":"gpt-5.5-codex"placeholder]placeholder`)),
+placeholderplaceholder
+	svc := &AccountTestService{
+		httpUpstream: upstream,
+		cfg:          upstreamModelSyncTestConfig(),
+placeholder
+
+	models, err := svc.FetchUpstreamSupportedModels(context.Background(), &Account{
+		ID:       12,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeOAuth,
+placeholder
+			"access_token": "openai-oauth-token",
+	placeholder,
+placeholder)
+placeholder
+	require.Equal(t, []string{"gpt-5.5-codex", "gpt-5.6-sol"placeholder, models)
+	require.Equal(t, "Bearer openai-oauth-token", upstream.lastReq.Header.Get("Authorization"))
 placeholder
 
 func TestExtractGrokUpstreamModelIDs(t *testing.T) {
