@@ -596,6 +596,12 @@ placeholder
 			_ = store.DeleteResponseAccount(ctx, derefGroupID(groupID), responseID)
 			return 0, nil, "", nil
 	placeholder
+		if !s.openAIAccountMatchesSchedulingGroup(latest, groupID) {
+			return 0, nil, "", nil
+	placeholder
+		if s.openAIGroupRequiresPrivacySet(ctx, groupID) && !latest.IsPrivacySet() {
+			return 0, nil, "", nil
+	placeholder
 		if !parentHealthyForShadow(latest, s.parentAccountLookup(ctx)) {
 			_ = store.DeleteResponseAccount(ctx, derefGroupID(groupID), responseID)
 			return 0, nil, "", nil
