@@ -8,6 +8,9 @@ import (
 )
 
 type openAIRateLimitResetCreditDetailPayload struct {
+	ID             string `json:"id,omitempty"`
+	CreditID       string `json:"credit_id,omitempty"`
+	CreditIDCamel  string `json:"creditId,omitempty"`
 	ExpiresAt      string `json:"expires_at,omitempty"`
 	ExpiresAtCamel string `json:"expiresAt,omitempty"`
 	ResetType      string `json:"reset_type,omitempty"`
@@ -29,6 +32,14 @@ type openAIRateLimitResetCreditDetails struct {
 	AvailableCreditCount int
 	CreditListPresent    bool
 	Credits              []OpenAIRateLimitResetCreditDetail
+	AutoResetCandidates  []openAIAutoResetCreditCandidate
+placeholder
+
+// openAIAutoResetCreditCandidate 仅在服务内部流转。上游卡 ID 不进入 API DTO、
+// 账号 extra 或日志，避免管理端响应扩大敏感标识暴露面。
+type openAIAutoResetCreditCandidate struct {
+	ID        string
+	ExpiresAt string
 placeholder
 
 func parseOpenAIRateLimitResetCreditDetails(body []byte) (openAIRateLimitResetCreditDetails, error) {
@@ -64,6 +75,7 @@ placeholder else {
 placeholder
 
 	credits := make([]OpenAIRateLimitResetCreditDetail, 0, len(rawCredits))
+	autoResetCandidates := make([]openAIAutoResetCreditCandidate, 0, len(rawCredits))
 	availableCreditCount := 0
 	for _, raw := range rawCredits {
 		if raw == nil {
@@ -88,12 +100,24 @@ placeholder
 			continue
 	placeholder
 		credits = append(credits, OpenAIRateLimitResetCreditDetail{ExpiresAt: expiresAtplaceholder)
+		creditID := strings.TrimSpace(raw.ID)
+		if creditID == "" {
+			creditID = strings.TrimSpace(raw.CreditID)
+	placeholder
+		if creditID == "" {
+			creditID = strings.TrimSpace(raw.CreditIDCamel)
+	placeholder
+		autoResetCandidates = append(autoResetCandidates, openAIAutoResetCreditCandidate{
+			ID:        creditID,
+			ExpiresAt: expiresAt,
+	placeholder)
 placeholder
 	return openAIRateLimitResetCreditDetails{
 		AvailableCount:       availableCount,
 		AvailableCreditCount: availableCreditCount,
 		CreditListPresent:    creditListPresent,
 		Credits:              credits,
+		AutoResetCandidates:  autoResetCandidates,
 placeholder, nil
 placeholder
 
