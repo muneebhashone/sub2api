@@ -1174,6 +1174,7 @@ placeholder
 			UpstreamModel:                 upstreamModel,
 			UpstreamResponseModel:         observedUpstreamResponseModel(c),
 			UpstreamResponseModelConflict: observedUpstreamResponseModelConflict(c),
+			UpstreamResponseServiceTier:   observedUpstreamResponseServiceTier(c),
 			ServiceTier:                   serviceTier,
 			ReasoningEffort:               reasoningEffort,
 			Stream:                        reqStream,
