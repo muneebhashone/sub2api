@@ -471,6 +471,44 @@ placeholder {
 placeholder
 placeholder
 
+func TestCleanToolSchema_RemovesNestedDeprecatedAndNormalizesMixedScalarEnum(t *testing.T) {
+	schema := map[string]any{
+		"anyOf": []any{
+			map[string]any{
+				"type":       "string",
+				"deprecated": true,
+		placeholder,
+			map[string]any{
+				"enum": []any{"enabled", false, float64(1), nilplaceholder,
+		placeholder,
+	placeholder,
+placeholder
+
+	cleaned, ok := cleanToolSchema(schema).(map[string]any)
+	require.True(t, ok)
+	anyOf, ok := cleaned["anyOf"].([]any)
+	require.True(t, ok)
+	require.Len(t, anyOf, 2)
+
+	deprecatedSchema, ok := anyOf[0].(map[string]any)
+	require.True(t, ok)
+	require.NotContains(t, deprecatedSchema, "deprecated")
+
+	enumSchema, ok := anyOf[1].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, []any{"enabled", "false", "1", "null"placeholder, enumSchema["enum"])
+placeholder
+
+func TestCleanToolSchema_DropsEnumWithNonScalarValue(t *testing.T) {
+	schema := map[string]any{
+		"enum": []any{"valid", map[string]any{"invalid": trueplaceholderplaceholder,
+placeholder
+
+	cleaned, ok := cleanToolSchema(schema).(map[string]any)
+	require.True(t, ok)
+	require.NotContains(t, cleaned, "enum")
+placeholder
+
 func TestConvertClaudeToolsToGeminiTools_PreservesWebSearchAlongsideFunctions(t *testing.T) {
 	tools := []any{
 		map[string]any{
