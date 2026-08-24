@@ -83,6 +83,43 @@ placeholder
 	require.Equal(t, "default", *result.ServiceTier)
 placeholder
 
+func TestProxyOpenAIWSHTTPBridgeTurn_UpstreamDefaultWinsOverFastAlias(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// 客户端别名 fast 同样被上游回显的 default 覆盖：局部 observer 的
+	// ServiceTier() 是唯一计费依据，绝不回退到请求侧 fast。
+	sse := strings.Join([]string{
+		`data: {"type":"response.completed","response":{"id":"resp_tier2","status":"completed","service_tier":"default","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`,
+		``,
+placeholder, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(sse)),
+placeholderplaceholder
+	svc := &OpenAIGatewayService{
+		cfg:          &config.Config{Gateway: config.GatewayConfig{MaxLineSize: defaultMaxLineSizeplaceholderplaceholder,
+		httpUpstream: upstream,
+placeholder
+	account := &Account{ID: 5882, Platform: PlatformOpenAI, Type: AccountTypeAPIKey, Concurrency: 1placeholder
+	payload := []byte(`{"type":"response.create","model":"gpt-5.5","stream":true,"service_tier":"fast","input":"hi"placeholder`)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+
+	result, err := svc.proxyOpenAIWSHTTPBridgeTurn(
+		context.Background(), c, account, "test-token", payload, len(payload),
+		"gpt-5.5", "", "", "", "", 1,
+		func([]byte) error { return nil placeholder,
+	)
+
+placeholder
+	require.NotNil(t, result)
+	require.NotNil(t, result.ServiceTier)
+	require.Equal(t, "default", *result.ServiceTier,
+		"local observer's upstream-echoed default must win over the fast alias")
+placeholder
+
 func TestProxyOpenAIWSHTTPBridgeTurnAPIKeyAdaptsClientTools(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
