@@ -780,7 +780,7 @@ func (s usageLogScannerStub) Scan(dest ...any) error {
 placeholder
 	for i := range dest {
 		dv := reflect.ValueOf(dest[i])
-		if dv.Kind() != reflect.Ptr {
+		if dv.Kind() != reflect.Pointer {
 			return fmt.Errorf("dest[%d] is not pointer", i)
 	placeholder
 		dv.Elem().Set(reflect.ValueOf(s.values[i]))
