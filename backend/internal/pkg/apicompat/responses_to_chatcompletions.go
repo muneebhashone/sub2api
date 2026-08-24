@@ -23,10 +23,11 @@ func ResponsesToChatCompletions(resp *ResponsesResponse, model string) *ChatComp
 placeholder
 
 	out := &ChatCompletionsResponse{
-		ID:      id,
-		Object:  "chat.completion",
-		Created: time.Now().Unix(),
-		Model:   model,
+		ID:          id,
+		Object:      "chat.completion",
+		Created:     time.Now().Unix(),
+		Model:       model,
+		ServiceTier: resp.ServiceTier,
 placeholder
 
 	var contentText string
@@ -118,6 +119,7 @@ type ResponsesEventToChatState struct {
 	ID                     string
 	Model                  string
 	Created                int64
+	ServiceTier            string // upstream tier observed on response events; echoed on chunks
 	SentRole               bool
 	SawToolCall            bool
 	SawText                bool
@@ -187,12 +189,13 @@ placeholder
 
 	if state.IncludeUsage && state.Usage != nil {
 		chunks = append(chunks, ChatCompletionsChunk{
-			ID:      state.ID,
-			Object:  "chat.completion.chunk",
-			Created: state.Created,
-			Model:   state.Model,
-			Choices: []ChatChunkChoice{placeholder,
-			Usage:   state.Usage,
+			ID:          state.ID,
+			Object:      "chat.completion.chunk",
+			Created:     state.Created,
+			Model:       state.Model,
+			ServiceTier: state.ServiceTier,
+			Choices:     []ChatChunkChoice{placeholder,
+			Usage:       state.Usage,
 	placeholder)
 placeholder
 
@@ -217,6 +220,9 @@ func resToChatHandleCreated(evt *ResponsesStreamEvent, state *ResponsesEventToCh
 	placeholder
 		if state.Model == "" && evt.Response.Model != "" {
 			state.Model = evt.Response.Model
+	placeholder
+		if evt.Response.ServiceTier != "" {
+			state.ServiceTier = evt.Response.ServiceTier
 	placeholder
 placeholder
 	// Emit the role chunk.
@@ -301,6 +307,9 @@ placeholder
 		if evt.Response.Usage != nil {
 			state.Usage = chatUsageFromResponsesUsage(evt.Response.Usage)
 	placeholder
+		if evt.Response.ServiceTier != "" {
+			state.ServiceTier = evt.Response.ServiceTier
+	placeholder
 
 		switch evt.Response.Status {
 		case "incomplete":
@@ -326,12 +335,13 @@ placeholder
 
 	if state.IncludeUsage && state.Usage != nil {
 		chunks = append(chunks, ChatCompletionsChunk{
-			ID:      state.ID,
-			Object:  "chat.completion.chunk",
-			Created: state.Created,
-			Model:   state.Model,
-			Choices: []ChatChunkChoice{placeholder,
-			Usage:   state.Usage,
+			ID:          state.ID,
+			Object:      "chat.completion.chunk",
+			Created:     state.Created,
+			Model:       state.Model,
+			ServiceTier: state.ServiceTier,
+			Choices:     []ChatChunkChoice{placeholder,
+			Usage:       state.Usage,
 	placeholder)
 placeholder
 
@@ -401,10 +411,11 @@ placeholder
 
 func makeChatDeltaChunk(state *ResponsesEventToChatState, delta ChatDelta) ChatCompletionsChunk {
 	return ChatCompletionsChunk{
-		ID:      state.ID,
-		Object:  "chat.completion.chunk",
-		Created: state.Created,
-		Model:   state.Model,
+		ID:          state.ID,
+		Object:      "chat.completion.chunk",
+		Created:     state.Created,
+		Model:       state.Model,
+		ServiceTier: state.ServiceTier,
 		Choices: []ChatChunkChoice{{
 			Index:        0,
 			Delta:        delta,
@@ -416,10 +427,11 @@ placeholder
 func makeChatFinishChunk(state *ResponsesEventToChatState, finishReason string) ChatCompletionsChunk {
 	empty := ""
 	return ChatCompletionsChunk{
-		ID:      state.ID,
-		Object:  "chat.completion.chunk",
-		Created: state.Created,
-		Model:   state.Model,
+		ID:          state.ID,
+		Object:      "chat.completion.chunk",
+		Created:     state.Created,
+		Model:       state.Model,
+		ServiceTier: state.ServiceTier,
 		Choices: []ChatChunkChoice{{
 			Index:        0,
 			Delta:        ChatDelta{Content: &emptyplaceholder,
