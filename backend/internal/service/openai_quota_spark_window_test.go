@@ -189,6 +189,32 @@ placeholder
 		"shadow ResetCredit 应映射为 409 Conflict 而非 500")
 placeholder
 
+func TestResetCreditTargetedSendsStableCreditAndRedeemIDs(t *testing.T) {
+	account := &Account{
+		ID: 203, Platform: PlatformOpenAI, Type: AccountTypeOAuth,
+placeholder"chatgpt_account_id": "account-targeted"placeholder,
+placeholder
+	repo := &stubQuotaAccountRepo{accounts: map[int64]*Account{account.ID: accountplaceholderplaceholder
+	tokenCache := &stubQuotaTokenCache{tokens: map[string]string{OpenAITokenCacheKey(account): "fake-token"placeholderplaceholder
+	tokenProvider := NewOpenAITokenProvider(repo, tokenCache, nil)
+	var body map[string]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/backend-api/wham/rate-limit-reset-credits/consume", r.URL.Path)
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		w.Header().Set("content-type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"ok","windows_reset":1placeholder`))
+placeholder))
+	defer srv.Close()
+
+	svc := NewOpenAIQuotaService(repo, nil, tokenProvider, newQuotaRedirectingFactory(srv))
+	result, err := svc.ResetCreditTargeted(context.Background(), account.ID, "credit-123", "redeem-456")
+placeholder
+	require.Equal(t, "ok", result.Code)
+	require.Equal(t, map[string]string{
+		"credit_id": "credit-123", "redeem_request_id": "redeem-456",
+placeholder, body)
+placeholder
+
 func TestResetCreditAgentIdentityUsesAssertionAndRecoversInvalidTaskOnce(t *testing.T) {
 	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
 placeholder
