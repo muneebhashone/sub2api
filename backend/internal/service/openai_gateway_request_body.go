@@ -366,8 +366,7 @@ func normalizeOpenAIParallelToolCallsWithoutTools(body []byte) ([]byte, bool, er
 	if !parallel.Exists() {
 		return body, false, nil
 placeholder
-	tools := gjson.GetBytes(body, "tools")
-	if tools.IsArray() && len(tools.Array()) > 0 {
+	if openAIRequestBodyHasTools(body) {
 		return body, false, nil
 placeholder
 	normalized, err := sjson.DeleteBytes(body, "parallel_tool_calls")
@@ -375,6 +374,31 @@ placeholder
 		return body, false, fmt.Errorf("normalize parallel_tool_calls without tools: %w", err)
 placeholder
 	return normalized, true, nil
+placeholder
+
+// openAIRequestBodyHasTools is the []byte counterpart of openAIResponsesLiteHasTools:
+// besides the top-level "tools" array it also recognizes the Responses Lite carrier.
+// normalizeOpenAIResponsesLiteTools moves namespace tools into an input item of type
+// "additional_tools" and drops the top-level "tools" key; the request still carries
+// tools at that point. Looking only at the top level therefore misreads such a body as
+// "no tools" and deletes the parallel_tool_calls:false that
+// ensureOpenAIResponsesLiteParallelToolCalls had just pinned, and OpenAI falls back to
+// its default of true and rejects the request with
+// 400 unsupported_value: "X-OpenAI-Internal-Codex-Responses-Lite requires
+// `parallel_tool_calls` to be false."
+func openAIRequestBodyHasTools(body []byte) bool {
+	if tools := gjson.GetBytes(body, "tools"); tools.IsArray() && len(tools.Array()) > 0 {
+		return true
+placeholder
+	for _, item := range gjson.GetBytes(body, "input").Array() {
+		if strings.TrimSpace(item.Get("type").String()) != "additional_tools" {
+			continue
+	placeholder
+		if tools := item.Get("tools"); tools.IsArray() && len(tools.Array()) > 0 {
+			return true
+	placeholder
+placeholder
+	return false
 placeholder
 
 func normalizeOpenAIAPIKeyStoreFalseReasoningReplay(body []byte, knownStoreFalse bool) ([]byte, bool, error) {
