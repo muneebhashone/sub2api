@@ -119,6 +119,9 @@ placeholder
 			lowered = append(lowered, raw)
 	placeholder
 placeholder
+	if stripResponsesDeferredToolFlags(lowered) {
+		changed = true
+placeholder
 	if changed {
 		req["tools"] = lowered
 placeholder
@@ -139,6 +142,26 @@ placeholder
 		adapter.NamespaceTools = nil
 placeholder
 	return adapter, changed, nil
+placeholder
+
+// stripResponsesDeferredToolFlags removes defer_loading only when the final
+// declaration list no longer contains the built-in tool_search it requires.
+func stripResponsesDeferredToolFlags(tools []any) bool {
+	if hasResponsesToolSearchDeclaration(tools) {
+		return false
+placeholder
+	changed := false
+	for _, raw := range tools {
+		tool, ok := raw.(map[string]any)
+		if !ok {
+			continue
+	placeholder
+		if _, exists := tool["defer_loading"]; exists {
+			delete(tool, "defer_loading")
+			changed = true
+	placeholder
+placeholder
+	return changed
 placeholder
 
 // AdaptResponsesClientToolsWithInheritedMapping lowers client-tool history on

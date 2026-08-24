@@ -58,6 +58,21 @@ placeholder
 	require.Equal(t, map[string]any{"type": "namespace", "name": "collaboration"placeholder, reqBody["tool_choice"])
 placeholder
 
+func TestNormalizeOpenAIResponsesLiteTools_PreservesDeferredFlagsWithToolSearch(t *testing.T) {
+	reqBody := map[string]any{
+		"tools": []any{
+			map[string]any{"type": "tool_search"placeholder,
+			map[string]any{"type": "function", "name": "shell", "defer_loading": trueplaceholder,
+	placeholder,
+placeholder
+
+	_, err := normalizeOpenAIResponsesLiteTools(reqBody)
+placeholder
+	tools := reqBody["tools"].([]any)
+	require.Equal(t, "tool_search", tools[0].(map[string]any)["type"])
+	require.Equal(t, true, tools[1].(map[string]any)["defer_loading"])
+placeholder
+
 func TestNormalizeOpenAIResponsesLiteTools_RejectsConflictingAdditionalTool(t *testing.T) {
 	reqBody := map[string]any{
 		"tools": []any{map[string]any{
