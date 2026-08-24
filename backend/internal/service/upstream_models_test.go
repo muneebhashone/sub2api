@@ -394,6 +394,31 @@ placeholder
 	require.Equal(t, "Bearer openai-key", upstream.lastReq.Header.Get("Authorization"))
 placeholder
 
+func TestFetchUpstreamSupportedModelsUsesConfiguredBodyLimit(t *testing.T) {
+	t.Parallel()
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"placeholderplaceholder,
+		Body:       io.NopCloser(strings.NewReader(`{"data":[{"id":"gpt-5"placeholder]placeholder`)),
+placeholderplaceholder
+	cfg := upstreamModelSyncTestConfig()
+	cfg.Gateway.ModelsListReadMaxBytes = 8
+	svc := &AccountTestService{httpUpstream: upstream, cfg: cfgplaceholder
+
+	_, err := svc.FetchUpstreamSupportedModels(context.Background(), &Account{
+		ID:       7,
+		Platform: PlatformOpenAI,
+		Type:     AccountTypeAPIKey,
+placeholder
+			"api_key":  "openai-key",
+			"base_url": "https://openai.example.com/v1",
+	placeholder,
+placeholder)
+placeholder
+	require.Contains(t, err.Error(), "response exceeds 8 bytes")
+placeholder
+
 func TestFetchUpstreamSupportedModelsParsesGrokAPIKeyResponse(t *testing.T) {
 	t.Parallel()
 
