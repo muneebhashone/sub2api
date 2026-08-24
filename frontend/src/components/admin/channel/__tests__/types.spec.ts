@@ -146,15 +146,24 @@ placeholder)
 describe('time pricing', () => {
   it('uses a disabled Shanghai default', () => {
     const form = createDefaultTimePricingForm()
-    expect(form).toEqual({ timezone: 'Asia/Shanghai', periods: [] placeholder)
+    expect(form).toEqual({ timezone: 'Asia/Shanghai', periods: [], weekdays_only: false placeholder)
     expect(formTimePricingToAPI(form)).toBeNull()
   placeholder)
 
-  it('round-trips and formats multiplier', () => {
-    const form = apiTimePricingToForm({
+  it('defaults missing API day scope to every day', () => {
+    expect(apiTimePricingToForm({
       timezone: 'Asia/Shanghai',
       periods: [{ start_time: '09:00', end_time: '12:00', multiplier: 2 placeholder],
+    placeholder).weekdays_only).toBe(false)
+  placeholder)
+
+  it('round-trips day scope and formats multiplier', () => {
+    const form = apiTimePricingToForm({
+      timezone: 'Asia/Shanghai',
+      weekdays_only: true,
+      periods: [{ start_time: '09:00', end_time: '12:00', multiplier: 2 placeholder],
     placeholder)
+    expect(form.weekdays_only).toBe(true)
     expect(form.periods[0]).toEqual({
       start_time: '09:00:00',
       end_time: '12:00:00',
@@ -162,6 +171,7 @@ describe('time pricing', () => {
     placeholder)
     expect(formTimePricingToAPI(form)).toEqual({
       timezone: 'Asia/Shanghai',
+      weekdays_only: true,
       periods: [{ start_time: '09:00:00', end_time: '12:00:00', multiplier: 2 placeholder],
     placeholder)
   placeholder)
