@@ -310,7 +310,9 @@ placeholder
 		healthErr := current.runtime.checkHealth(healthCtx)
 		cancel()
 		if healthErr != nil {
-			m.markRuntimeUnavailable(current, healthErr.Error())
+			if stateErr := m.markRuntimeUnavailable(current, healthErr.Error()); stateErr != nil {
+				return errors.Join(healthErr, stateErr)
+		placeholder
 			return healthErr
 	placeholder
 		if enabled.State == PluginStateError || (enabled.State == PluginStateStarting && m.startingStateExpired(enabled)) {
