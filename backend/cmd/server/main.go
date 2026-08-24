@@ -153,6 +153,11 @@ placeholder
 		log.Fatalf("Failed to initialize application: %v", err)
 placeholder
 	defer app.Cleanup()
+	if app.PluginManager != nil {
+		if err := app.PluginManager.Start(context.Background()); err != nil {
+			log.Printf("Plugin manager started in degraded state: %v", err)
+	placeholder
+placeholder
 	if app.PromptAudit != nil {
 		if err := app.PromptAudit.Start(context.Background()); err != nil {
 			// Startup continues so unrelated APIs stay up. Fail-closed (unavailable)

@@ -347,6 +347,9 @@ type UpdateSettingsRequest struct {
 	ModelPlazaRequireAuth *bool   `json:"model_plaza_require_auth"`
 	ModelPlazaDescription *string `json:"model_plaza_description"`
 
+	// Plugin management menu visibility switch; plugin runtime is unaffected.
+	PluginManagementEnabled *bool `json:"plugin_management_enabled"`
+
 	// Affiliate (邀请返利) feature switch
 	AffiliateEnabled *bool `json:"affiliate_enabled"`
 
@@ -1938,6 +1941,12 @@ placeholder
 		placeholder
 			return previousSettings.ModelPlazaDescription
 	placeholder(),
+		PluginManagementEnabled: func() bool {
+			if req.PluginManagementEnabled != nil {
+				return *req.PluginManagementEnabled
+		placeholder
+			return previousSettings.PluginManagementEnabled
+	placeholder(),
 		AffiliateEnabled: func() bool {
 			if req.AffiliateEnabled != nil {
 				return *req.AffiliateEnabled
@@ -2357,9 +2366,10 @@ placeholder
 
 		AvailableChannelsEnabled: updatedSettings.AvailableChannelsEnabled,
 
-		ModelPlazaEnabled:     updatedSettings.ModelPlazaEnabled,
-		ModelPlazaRequireAuth: updatedSettings.ModelPlazaRequireAuth,
-		ModelPlazaDescription: updatedSettings.ModelPlazaDescription,
+		ModelPlazaEnabled:       updatedSettings.ModelPlazaEnabled,
+		ModelPlazaRequireAuth:   updatedSettings.ModelPlazaRequireAuth,
+		ModelPlazaDescription:   updatedSettings.ModelPlazaDescription,
+		PluginManagementEnabled: updatedSettings.PluginManagementEnabled,
 
 		AffiliateEnabled: updatedSettings.AffiliateEnabled,
 

@@ -193,6 +193,7 @@ import { useRoute, useRouter placeholder from 'vue-router'
 import { useI18n placeholder from 'vue-i18n'
 import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore placeholder from '@/stores'
 import VersionBadge from '@/components/common/VersionBadge.vue'
+import Icon from '@/components/icons/Icon.vue'
 import { sanitizeSvg placeholder from '@/utils/sanitize'
 import { sanitizeUrl placeholder from '@/utils/url'
 import { FeatureFlags, makeSidebarFlag placeholder from '@/utils/featureFlags'
@@ -472,6 +473,10 @@ const ServerIcon = {
     )
 placeholder
 
+const PluginIcon = {
+  render: () => h(Icon, { name: 'cube' placeholder)
+placeholder
+
 const BellIcon = {
   render: () =>
     h(
@@ -685,6 +690,7 @@ const flagPayment = makeSidebarFlag(FeatureFlags.payment)
 const flagAvailableChannels = makeSidebarFlag(FeatureFlags.availableChannels)
 const flagAffiliate = makeSidebarFlag(FeatureFlags.affiliate)
 const flagRiskControl = makeSidebarFlag(FeatureFlags.riskControl)
+const flagPluginManagement = makeSidebarFlag(FeatureFlags.pluginManagement)
 const flagOpsMonitoring = () => adminSettingsStore.opsMonitoringEnabled
 const flagAdminPayment = () => adminSettingsStore.paymentEnabled
 const flagBatchImageAccess = () => canUseBatchImage.value
@@ -769,6 +775,7 @@ const adminNavItems = computed((): NavItem[] => {
     placeholder,
     { path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true placeholder,
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon placeholder,
+    { path: '/admin/plugins', label: t('nav.plugins'), icon: PluginIcon, featureFlag: flagPluginManagement placeholder,
     { path: '/admin/announcements', label: t('nav.announcements'), icon: BellIcon placeholder,
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon placeholder,
     {

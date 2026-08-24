@@ -35,6 +35,7 @@ import affiliatesAPI from './affiliates'
 import riskControlAPI from './riskControl'
 import adminComplianceAPI from './compliance'
 import auditAPI from './audit'
+import pluginsAPI from './plugins'
 
 /**
  * Unified admin API object for convenient access
@@ -71,7 +72,8 @@ export const adminAPI = {
   affiliates: affiliatesAPI,
   riskControl: riskControlAPI,
   compliance: adminComplianceAPI,
-  audit: auditAPI
+  audit: auditAPI,
+  plugins: pluginsAPI
 placeholder
 
 export {
@@ -106,7 +108,8 @@ export {
   affiliatesAPI,
   riskControlAPI,
   adminComplianceAPI,
-  auditAPI
+  auditAPI,
+  pluginsAPI
 placeholder
 
 export default adminAPI
@@ -118,3 +121,9 @@ export type { ErrorPassthroughRule, CreateRuleRequest, UpdateRuleRequest placeho
 export type { BackupAgentHealth, DataManagementConfig placeholder from './dataManagement'
 export type { TLSFingerprintProfile, CreateProfileRequest, UpdateProfileRequest placeholder from './tlsFingerprintProfile'
 export type { ContentModerationConfig, ContentModerationLog, ModerationMode placeholder from './riskControl'
+export type {
+  PluginInstallation,
+  PluginCompatibility,
+  PluginUISession,
+  PluginTestResult
+placeholder from './plugins'
