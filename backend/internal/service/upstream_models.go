@@ -343,6 +343,9 @@ placeholder
 placeholder
 
 func (s *AccountTestService) buildOpenAIUpstreamModelsRequest(ctx context.Context, account *Account) (*http.Request, error) {
+	if account.IsOpenAIOAuth() {
+		return s.buildOpenAIOAuthUpstreamModelsRequest(ctx, account)
+placeholder
 	if account.Type != AccountTypeAPIKey {
 		return nil, newUpstreamModelSyncUnsupportedError(
 			fmt.Sprintf("Unsupported OpenAI account type for upstream model sync: %s", account.Type), nil,
@@ -372,6 +375,68 @@ placeholder
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	// 账号级请求头覆写：模型列表探测与真实转发保持一致的最终头
 	account.ApplyHeaderOverrides(req.Header)
+	return req, nil
+placeholder
+
+// buildOpenAIOAuthUpstreamModelsRequest uses ChatGPT's Codex model manifest.
+// OAuth subscriptions do not expose the public Platform API /v1/models endpoint,
+// so treating them like API-key accounts makes the admin sync button fail locally.
+func (s *AccountTestService) buildOpenAIOAuthUpstreamModelsRequest(ctx context.Context, account *Account) (*http.Request, error) {
+	credentialAccount, err := resolveCredentialAccount(ctx, s.accountRepo, account)
+	if err != nil {
+		return nil, newUpstreamModelSyncConfigError("Failed to resolve OpenAI account credentials", err)
+placeholder
+	if !credentialAccount.IsOpenAIOAuth() {
+		return nil, newUpstreamModelSyncUnsupportedError(
+			fmt.Sprintf("Unsupported OpenAI account type for upstream model sync: %s", credentialAccount.Type), nil,
+		)
+placeholder
+
+	modelsURL, err := buildCodexModelsManifestURL(
+		chatgptCodexModelsURL,
+		false,
+		CodexCanonicalClientVersion(),
+	)
+	if err != nil {
+		return nil, newUpstreamModelSyncConfigError("Invalid OpenAI Codex model list URL", err)
+placeholder
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, modelsURL.String(), nil)
+	if err != nil {
+		return nil, newUpstreamModelSyncConfigError("Invalid OpenAI Codex model list request", err)
+placeholder
+
+	if credentialAccount.IsOpenAIAgentIdentity() {
+		authHeaders, authErr := buildAgentIdentityAuthenticationHeaders(
+			ctx,
+			s.accountRepo,
+			s.agentIdentityWS,
+			&s.agentIdentityTaskMu,
+			credentialAccount,
+		)
+		if authErr != nil {
+			return nil, newUpstreamModelSyncUpstreamError("Failed to build OpenAI Agent Identity authentication", authErr)
+	placeholder
+		for key, values := range authHeaders {
+			for _, value := range values {
+				req.Header.Add(key, value)
+		placeholder
+	placeholder
+placeholder else {
+		accessToken := strings.TrimSpace(credentialAccount.GetOpenAIAccessToken())
+		if accessToken == "" {
+			return nil, newUpstreamModelSyncConfigError("No OpenAI access token is available", nil)
+	placeholder
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+placeholder
+
+	identity := resolveCodexOutboundIdentity(credentialAccount.GetOpenAIUserAgent())
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Originator", identity.originator)
+	req.Header.Set("User-Agent", identity.userAgent)
+	req.Header.Set("Version", identity.version)
+	setOpenAIChatGPTAccountHeaders(req.Header, credentialAccount)
+	credentialAccount.ApplyHeaderOverrides(req.Header)
+	enforceCodexIdentityHeadersWithUA(req.Header, credentialAccount.GetOpenAIUserAgent())
 	return req, nil
 placeholder
 
@@ -498,6 +563,7 @@ placeholder
 
 type upstreamModelEntry struct {
 	ID           string          `json:"id"`
+	Slug         string          `json:"slug"`
 	Model        string          `json:"model"`
 	ModelID      string          `json:"modelId"`
 	ModelIDSnake string          `json:"model_id"`
@@ -561,6 +627,9 @@ placeholder
 
 func upstreamModelEntryID(entry upstreamModelEntry) string {
 	modelID := strings.TrimSpace(entry.ID)
+	if modelID == "" {
+		modelID = strings.TrimSpace(entry.Slug)
+placeholder
 	if modelID == "" {
 		modelID = strings.TrimSpace(entry.Name)
 placeholder
