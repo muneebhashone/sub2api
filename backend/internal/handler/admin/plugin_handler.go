@@ -77,7 +77,7 @@ placeholder
 		response.BadRequest(c, err.Error())
 		return
 placeholder
-	c.JSON(http.StatusCreated, plugin)
+	response.Created(c, plugin)
 placeholder
 
 type pluginEnableRequest struct {
@@ -235,7 +235,7 @@ placeholder
 	// sandbox iframe 没有 allow-same-origin，会以不透明来源加载自己的 CSS/JS。
 	// 资源 URL 由短时随机能力 Token 保护，Bridge Token 只存在于 fragment 中。
 	c.Header("Cross-Origin-Resource-Policy", "cross-origin")
-	c.Header("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'")
+	c.Header("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; navigate-to 'none'")
 	c.Data(http.StatusOK, contentType, data)
 placeholder
 

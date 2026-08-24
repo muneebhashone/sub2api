@@ -123,6 +123,12 @@ placeholder
 	if err := json.Unmarshal(configJSON, &normalized); err != nil {
 		return nil, fmt.Errorf("解析插件规范化配置: %w", err)
 placeholder
+	if normalized == nil {
+		return nil, errors.New("插件返回的规范化配置根节点必须是对象")
+placeholder
+	if _, ok := normalized.(map[string]any); !ok {
+		return nil, errors.New("插件返回的规范化配置根节点必须是对象")
+placeholder
 	configJSON, err = json.Marshal(normalized)
 	if err != nil {
 		return nil, fmt.Errorf("序列化插件规范化配置: %w", err)
@@ -135,6 +141,24 @@ placeholder
 		return nil, fmt.Errorf("插件拒绝应用配置: %s", applied.Message)
 placeholder
 	return configJSON, nil
+placeholder
+
+func (r *pluginRuntime) checkHealth(ctx context.Context) error {
+	if r == nil || r.api == nil || r.client == nil || r.client.Exited() {
+		return errors.New("插件进程已退出")
+placeholder
+	health, err := r.api.Health(ctx, &pluginv1.HealthRequest{placeholder)
+	if err != nil {
+		return fmt.Errorf("插件健康检查失败: %w", err)
+placeholder
+	if health == nil || !health.Healthy {
+		message := "插件报告不健康"
+		if health != nil && strings.TrimSpace(health.Message) != "" {
+			message = "插件不健康: " + health.Message
+	placeholder
+		return errors.New(message)
+placeholder
+	return nil
 placeholder
 
 func (r *pluginRuntime) beginRequest() bool {
