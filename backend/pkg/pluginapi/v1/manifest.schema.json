@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sub2api.local/schemas/plugin-manifest-v1.json",
+  "title": "Sub2API Plugin Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "name", "version", "requires", "capabilities", "runtimes", "ui", "files"],
+  "properties": {
+    "schema_version": { "const": 1 placeholder,
+    "id": { "type": "string", "maxLength": 160, "pattern": "^[a-z0-9]+([._-][a-z0-9]+)+$" placeholder,
+    "name": { "type": "string", "minLength": 1, "maxLength": 160 placeholder,
+    "version": { "type": "string", "pattern": "^v?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$" placeholder,
+    "description": { "type": "string" placeholder,
+    "author": { "type": "string", "maxLength": 160 placeholder,
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sub2api", "plugin_protocol", "transport_api", "ui_bridge"],
+      "properties": {
+        "sub2api": { "type": "string", "minLength": 1 placeholder,
+        "recommended_sub2api_version": { "type": "string" placeholder,
+        "tested_sub2api_versions": { "type": "array", "items": { "type": "string" placeholder, "uniqueItems": true placeholder,
+        "plugin_protocol": { "const": 1 placeholder,
+        "transport_api": { "const": 1 placeholder,
+        "ui_bridge": { "const": 1 placeholder
+      placeholder
+    placeholder,
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "platform", "account_type"],
+        "properties": {
+          "id": { "const": "openai.oauth.outbound_transport.v1" placeholder,
+          "platform": { "const": "openai" placeholder,
+          "account_type": { "const": "oauth" placeholder
+        placeholder
+      placeholder
+    placeholder,
+    "runtimes": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z0-9]+-[a-z0-9]+$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path"],
+          "properties": { "path": { "$ref": "#/$defs/safePath" placeholder placeholder
+        placeholder
+      placeholder,
+      "additionalProperties": false
+    placeholder,
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entrypoint"],
+      "properties": { "entrypoint": { "type": "string", "pattern": "^ui/.+" placeholder placeholder
+    placeholder,
+    "files": {
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": { "$ref": "#/$defs/safePath" placeholder,
+      "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64placeholder$" placeholder
+    placeholder
+  placeholder,
+  "$defs": {
+    "safePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    placeholder
+  placeholder
+placeholder
