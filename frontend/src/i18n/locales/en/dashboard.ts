@@ -607,6 +607,8 @@ export default {
       timePricingRowHint: 'Requests made within this period ({timezoneplaceholder time) are billed at the prices in this row',
       timePricingRowHintWeekdays:
         'On weekdays (Mon–Fri) only, requests made within this period ({timezoneplaceholder time) are billed at the prices in this row; weekends use the standard prices',
+      timePricingRowHintPeak:
+        '; prices in this row exclude the peak-hour rate — where this period overlaps the peak hours {windowplaceholder, the overlapping portion is additionally multiplied by ×{multiplierplaceholder',
       timePricingWeekdays: 'Weekdays',
       timePricingRateHint: 'Effective rate {rateplaceholder × period multiplier {multiplierplaceholder',
       paidPrice: 'Your Price (Discounted)',
