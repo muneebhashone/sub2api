@@ -211,6 +211,16 @@
         </div>
       </div>
     </div>
+    <template v-if="backToList" #footer>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        data-testid="error-detail-back-to-list"
+        @click="goBack"
+      >
+        {{ t('admin.ops.errorDetail.backToList') placeholderplaceholder
+      </button>
+    </template>
   </BaseDialog>
 </template>
 
@@ -228,10 +238,12 @@ interface Props {
   show: boolean
   errorId: number | null
   errorType?: 'request' | 'upstream'
+  backToList?: boolean
 placeholder
 
 interface Emits {
   (e: 'update:show', value: boolean): void
+  (e: 'back'): void
 placeholder
 
 const props = defineProps<Props>()
@@ -361,6 +373,11 @@ placeholder
 
 function close() {
   emit('update:show', false)
+placeholder
+
+function goBack() {
+  emit('update:show', false)
+  emit('back')
 placeholder
 
 function prettyJSON(raw?: string): string {
