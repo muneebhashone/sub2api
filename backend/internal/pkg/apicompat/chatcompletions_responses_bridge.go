@@ -1212,10 +1212,11 @@ placeholder
 placeholder
 
 	out := &ResponsesResponse{
-		ID:     id,
-		Object: "response",
-		Model:  model,
-		Status: "completed",
+		ID:          id,
+		Object:      "response",
+		Model:       model,
+		Status:      "completed",
+		ServiceTier: chatServiceTier(resp),
 placeholder
 	if resp == nil {
 		out.Output = []ResponsesOutput{emptyResponsesMessageOutput()placeholder
@@ -1240,6 +1241,13 @@ placeholder
 		out.Usage = ChatUsageToResponsesUsage(resp.Usage)
 placeholder
 	return out
+placeholder
+
+func chatServiceTier(resp *ChatCompletionsResponse) string {
+	if resp == nil {
+		return ""
+placeholder
+	return resp.ServiceTier
 placeholder
 
 func chatMessageToResponsesOutput(message ChatMessage, customTools, functionTools map[string]bool, toolSearch bool, namespaceTools map[string]NamespacedToolName) []ResponsesOutput {
@@ -1414,6 +1422,7 @@ type ChatCompletionsToResponsesStreamState struct {
 	ResponseID     string
 	Model          string
 	Created        int64
+	ServiceTier    string // upstream Chat chunk service_tier, echoed on response events
 	SequenceNumber int
 	CreatedSent    bool
 	CompletedSent  bool
@@ -1544,6 +1553,9 @@ placeholder
 placeholder
 	if state.Model == "" && chunk.Model != "" {
 		state.Model = chunk.Model
+placeholder
+	if chunk.ServiceTier != "" {
+		state.ServiceTier = chunk.ServiceTier
 placeholder
 	if chunk.Usage != nil {
 		state.Usage = ChatUsageToResponsesUsage(chunk.Usage)
@@ -1701,6 +1713,7 @@ placeholder
 			Object:            "response",
 			Model:             state.Model,
 			Status:            status,
+			ServiceTier:       state.ServiceTier,
 			Output:            state.chatOutput(),
 			Usage:             state.Usage,
 			IncompleteDetails: incompleteDetails,
@@ -1716,11 +1729,12 @@ placeholder
 	state.CreatedSent = true
 	return []ResponsesStreamEvent{chatToResponsesEvent(state, "response.created", &ResponsesStreamEvent{
 		Response: &ResponsesResponse{
-			ID:     state.ResponseID,
-			Object: "response",
-			Model:  state.Model,
-			Status: "in_progress",
-			Output: []ResponsesOutput{placeholder,
+			ID:          state.ResponseID,
+			Object:      "response",
+			Model:       state.Model,
+			Status:      "in_progress",
+			ServiceTier: state.ServiceTier,
+			Output:      []ResponsesOutput{placeholder,
 	placeholder,
 placeholder)placeholder
 placeholder

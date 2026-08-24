@@ -1240,6 +1240,57 @@ placeholder
 placeholder
 placeholder
 
+// ErrInvalidOpenAIServiceTier indicates a request carried a service_tier value
+// that is not a known OpenAI tier. HTTP handlers translate it into a 400
+// invalid_request_error so malformed values are rejected up front instead of
+// being silently stripped (which would mask the user's intent to use fast
+// mode).
+type ErrInvalidOpenAIServiceTier struct {
+	Value string
+placeholder
+
+func (e *ErrInvalidOpenAIServiceTier) Error() string {
+	return fmt.Sprintf("invalid service_tier %q: must be one of auto, default, fast, flex, priority, scale", e.Value)
+placeholder
+
+const invalidOpenAIServiceTierValueMaxLen = 64
+
+func boundInvalidOpenAIServiceTierValue(raw string) string {
+	if len(raw) <= invalidOpenAIServiceTierValueMaxLen {
+		return raw
+placeholder
+	return raw[:invalidOpenAIServiceTierValueMaxLen] + "..."
+placeholder
+
+// ValidateOpenAIServiceTierField validates the service_tier field of a raw
+// OpenAI-compatible request body (/v1/responses and /v1/chat/completions).
+//
+//   - absent / null → valid, returns "" (field omitted keeps current behavior)
+//   - "fast" → normalized to "priority" (the two are equivalent; the canonical
+//     value is what reaches the OpenAI upstream)
+//   - "priority" / "flex" / "auto" / "default" / "scale" → valid, returned as-is
+//   - an explicitly present non-string value, an empty string, or any other
+//     unknown value → *ErrInvalidOpenAIServiceTier (handler maps to HTTP 400),
+//     matching OpenAI's enum validation semantics
+func ValidateOpenAIServiceTierField(body []byte) (string, error) {
+	tierResult := gjson.GetBytes(body, "service_tier")
+	if !tierResult.Exists() || tierResult.Type == gjson.Null {
+		return "", nil
+placeholder
+	if tierResult.Type != gjson.String {
+		return "", &ErrInvalidOpenAIServiceTier{Value: "<non-string>"placeholder
+placeholder
+	raw := strings.TrimSpace(tierResult.String())
+	if raw == "" {
+		return "", &ErrInvalidOpenAIServiceTier{Value: rawplaceholder
+placeholder
+	norm := normalizedOpenAIServiceTierValue(raw)
+	if norm == "" {
+		return "", &ErrInvalidOpenAIServiceTier{Value: boundInvalidOpenAIServiceTierValue(raw)placeholder
+placeholder
+	return norm, nil
+placeholder
+
 // OpenAIFastBlockedError indicates a request was rejected by the OpenAI fast
 // policy (action=block). Mirrors BetaBlockedError on the Claude side.
 type OpenAIFastBlockedError struct {
