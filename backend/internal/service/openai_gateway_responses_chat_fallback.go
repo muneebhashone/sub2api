@@ -50,6 +50,7 @@ placeholder
 		return nil, fmt.Errorf("resolve responses tools: %w", err)
 placeholder
 	customTools := apicompat.CustomToolNames(effectiveTools)
+	functionTools := apicompat.FunctionToolNames(effectiveTools)
 	toolSearch := apicompat.HasToolSearchTool(effectiveTools)
 	namespaceTools := apicompat.NamespaceToolNames(effectiveTools)
 
@@ -120,9 +121,9 @@ placeholder
 placeholder
 
 	if clientStream {
-		return s.streamChatCompletionsAsResponses(c, resp, originalModel, customTools, toolSearch, namespaceTools, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime)
+		return s.streamChatCompletionsAsResponses(c, resp, originalModel, customTools, functionTools, toolSearch, namespaceTools, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime)
 placeholder
-	return s.bufferChatCompletionsAsResponses(c, resp, originalModel, customTools, toolSearch, namespaceTools, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime)
+	return s.bufferChatCompletionsAsResponses(c, resp, originalModel, customTools, functionTools, toolSearch, namespaceTools, billingModel, upstreamModel, reasoningEffort, serviceTier, startTime)
 placeholder
 
 func (s *OpenAIGatewayService) bufferChatCompletionsAsResponses(
@@ -130,6 +131,7 @@ func (s *OpenAIGatewayService) bufferChatCompletionsAsResponses(
 	resp *http.Response,
 	originalModel string,
 	customTools map[string]bool,
+	functionTools map[string]bool,
 	toolSearch bool,
 	namespaceTools map[string]apicompat.NamespacedToolName,
 	billingModel string,
@@ -143,7 +145,7 @@ func (s *OpenAIGatewayService) bufferChatCompletionsAsResponses(
 	if err != nil {
 		return nil, err
 placeholder
-	responsesResp := apicompat.ChatCompletionsResponseToResponses(ccResp, originalModel, customTools, toolSearch, namespaceTools)
+	responsesResp := apicompat.ChatCompletionsResponseToResponses(ccResp, originalModel, customTools, functionTools, toolSearch, namespaceTools)
 	s.cacheReasoningItemsFromOutput(responsesResp.Output)
 
 	if s.responseHeaderFilter != nil {
@@ -169,6 +171,7 @@ func (s *OpenAIGatewayService) streamChatCompletionsAsResponses(
 	resp *http.Response,
 	originalModel string,
 	customTools map[string]bool,
+	functionTools map[string]bool,
 	toolSearch bool,
 	namespaceTools map[string]apicompat.NamespacedToolName,
 	billingModel string,
@@ -182,6 +185,7 @@ func (s *OpenAIGatewayService) streamChatCompletionsAsResponses(
 
 	state := apicompat.NewChatCompletionsToResponsesStreamState(originalModel)
 	state.CustomTools = customTools
+	state.FunctionTools = functionTools
 	state.ToolSearchDeclared = toolSearch
 	state.NamespaceTools = namespaceTools
 	clientDisconnected := false
