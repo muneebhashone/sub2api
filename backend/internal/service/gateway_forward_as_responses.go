@@ -285,17 +285,45 @@ func mergeAnthropicUsage(dst *ClaudeUsage, src apicompat.AnthropicUsage) {
 	if dst == nil {
 		return
 placeholder
-	if src.InputTokens > 0 {
-		dst.InputTokens = src.InputTokens
+
+	// Some Anthropic-compatible providers retain OpenAI-style prompt/cache
+	// fields. Prefer those authoritative totals or hit/miss buckets over the
+	// overloaded input_tokens field. This covers Kimi's changing stream
+	// semantics as well as GLM/DeepSeek cache aliases.
+	if src.PromptTokens > 0 || src.PromptCacheHitTokens != nil || src.PromptCacheMissTokens != nil {
+		cacheReadTokens := src.CacheReadInputTokens
+		if cacheReadTokens == 0 && src.CachedTokens > 0 {
+			cacheReadTokens = src.CachedTokens
+	placeholder
+		if cacheReadTokens == 0 && src.PromptTokensDetails != nil && src.PromptTokensDetails.CachedTokens > 0 {
+			cacheReadTokens = src.PromptTokensDetails.CachedTokens
+	placeholder
+		if cacheReadTokens == 0 && src.PromptCacheHitTokens != nil {
+			cacheReadTokens = max(*src.PromptCacheHitTokens, 0)
+	placeholder
+
+		if src.PromptCacheMissTokens != nil {
+			dst.InputTokens = max(*src.PromptCacheMissTokens, 0)
+	placeholder else {
+			dst.InputTokens = max(src.PromptTokens-cacheReadTokens-src.CacheCreationInputTokens, 0)
+	placeholder
+		dst.CacheReadInputTokens = cacheReadTokens
+		dst.CacheCreationInputTokens = src.CacheCreationInputTokens
+placeholder else {
+		if src.InputTokens > 0 {
+			dst.InputTokens = src.InputTokens
+	placeholder
+		if src.CacheReadInputTokens > 0 {
+			dst.CacheReadInputTokens = src.CacheReadInputTokens
+	placeholder else if src.CachedTokens > 0 {
+			dst.CacheReadInputTokens = src.CachedTokens
+	placeholder
+		if src.CacheCreationInputTokens > 0 {
+			dst.CacheCreationInputTokens = src.CacheCreationInputTokens
+	placeholder
 placeholder
 	if src.OutputTokens > 0 {
 		dst.OutputTokens = src.OutputTokens
-placeholder
-	if src.CacheReadInputTokens > 0 {
-		dst.CacheReadInputTokens = src.CacheReadInputTokens
-placeholder
-	if src.CacheCreationInputTokens > 0 {
-		dst.CacheCreationInputTokens = src.CacheCreationInputTokens
 placeholder
 placeholder
 
