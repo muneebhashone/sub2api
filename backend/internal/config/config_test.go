@@ -553,6 +553,15 @@ placeholder
 	require.Equal(t, 120, cfg.Gateway.OpenAIWS.ClientFirstMessageTimeoutSeconds)
 placeholder
 
+func TestLoadOpenAIWSForceHTTPFromEnv(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("GATEWAY_OPENAI_WS_FORCE_HTTP", "true")
+
+	cfg, err := Load()
+placeholder
+	require.True(t, cfg.Gateway.OpenAIWS.ForceHTTP)
+placeholder
+
 func TestLoadDefaultOpenAICompactModel(t *testing.T) {
 	resetViperWithJWTSecret(t)
 
