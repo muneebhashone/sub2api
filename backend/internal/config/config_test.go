@@ -23,6 +23,13 @@ placeholder
 	t.Setenv("JWT_SECRET", strings.Repeat("x", 32))
 placeholder
 
+func TestLoadDefaultModelsListReadMaxBytes(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+placeholder
+	require.Equal(t, DefaultModelsListReadMaxBytes, cfg.Gateway.ModelsListReadMaxBytes)
+placeholder
+
 func TestLoadTimezonePrecedence(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -1802,6 +1809,11 @@ placeholder{
 			name:    "gateway text body exceeds media body",
 			mutate:  func(c *Config) { c.Gateway.TextMaxBodySize = c.Gateway.MaxBodySize + 1 placeholder,
 			wantErr: "gateway.text_max_body_size",
+	placeholder,
+		{
+			name:    "gateway models list read limit",
+			mutate:  func(c *Config) { c.Gateway.ModelsListReadMaxBytes = 0 placeholder,
+			wantErr: "gateway.models_list_read_max_bytes",
 	placeholder,
 		{
 			name:    "gateway response header timeout",
