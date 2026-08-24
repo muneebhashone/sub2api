@@ -50,7 +50,7 @@ placeholder
 
 			captureConn := &openAIWSCaptureConn{
 				events: [][]byte{
-					[]byte(`{"type":"response.completed","response":{"id":"resp_tier_v2","status":"completed","service_tier":"default","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
+					[]byte(`{"type":"response.completed","response":{"id":"resp_tier_v2","model":"gpt-5.5","status":"completed","service_tier":"default","usage":{"input_tokens":1,"output_tokens":1placeholderplaceholderplaceholder`),
 			placeholder,
 		placeholder
 			captureDialer := &openAIWSCaptureDialer{conn: captureConnplaceholder
